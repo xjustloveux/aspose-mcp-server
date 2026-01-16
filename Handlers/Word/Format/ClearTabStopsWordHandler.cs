@@ -21,15 +21,23 @@ public class ClearTabStopsWordHandler : OperationHandlerBase<Document>
     /// <returns>Success message.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var paragraphIndex = parameters.GetOptional("paragraphIndex", 0);
+        var p = ExtractClearTabStopsParameters(parameters);
 
         var doc = context.Document;
-        var para = WordFormatHelper.GetTargetParagraph(doc, paragraphIndex);
+        var para = WordFormatHelper.GetTargetParagraph(doc, p.ParagraphIndex);
 
         var count = para.ParagraphFormat.TabStops.Count;
         para.ParagraphFormat.TabStops.Clear();
 
         MarkModified(context);
-        return Success($"Cleared {count} tab stop(s) from paragraph {paragraphIndex}");
+        return Success($"Cleared {count} tab stop(s) from paragraph {p.ParagraphIndex}");
     }
+
+    private static ClearTabStopsParameters ExtractClearTabStopsParameters(OperationParameters parameters)
+    {
+        return new ClearTabStopsParameters(
+            parameters.GetOptional("paragraphIndex", 0));
+    }
+
+    private record ClearTabStopsParameters(int ParagraphIndex);
 }

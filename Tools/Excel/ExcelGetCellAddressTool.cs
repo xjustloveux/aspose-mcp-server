@@ -62,7 +62,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -70,20 +70,37 @@ Usage examples:
         int? row,
         int? column)
     {
-        var parameters = new OperationParameters();
-
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "from_a1":
-                if (cellAddress != null) parameters.Set("cellAddress", cellAddress);
-                break;
+            "from_a1" => BuildFromA1Parameters(cellAddress),
+            "from_index" => BuildFromIndexParameters(row, column),
+            _ => new OperationParameters()
+        };
+    }
 
-            case "from_index":
-                if (row.HasValue) parameters.Set("row", row.Value);
-                if (column.HasValue) parameters.Set("column", column.Value);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for converting from A1 notation to row/column index.
+    /// </summary>
+    /// <param name="cellAddress">The cell address in A1 notation.</param>
+    /// <returns>OperationParameters configured for A1 to index conversion.</returns>
+    private static OperationParameters BuildFromA1Parameters(string? cellAddress)
+    {
+        var parameters = new OperationParameters();
+        if (cellAddress != null) parameters.Set("cellAddress", cellAddress);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for converting from row/column index to A1 notation.
+    /// </summary>
+    /// <param name="row">The row index (0-based).</param>
+    /// <param name="column">The column index (0-based).</param>
+    /// <returns>OperationParameters configured for index to A1 conversion.</returns>
+    private static OperationParameters BuildFromIndexParameters(int? row, int? column)
+    {
+        var parameters = new OperationParameters();
+        if (row.HasValue) parameters.Set("row", row.Value);
+        if (column.HasValue) parameters.Set("column", column.Value);
         return parameters;
     }
 }

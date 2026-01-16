@@ -22,11 +22,10 @@ public class RefreshExcelPivotTableHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with refresh details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var pivotTableIndex = parameters.GetOptional<int?>("pivotTableIndex");
+        var p = ExtractRefreshPivotTableParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, p.SheetIndex);
         var pivotTables = worksheet.PivotTables;
 
         if (pivotTables.Count == 0)
@@ -34,13 +33,13 @@ public class RefreshExcelPivotTableHandler : OperationHandlerBase<Workbook>
 
         var refreshedCount = 0;
 
-        if (pivotTableIndex.HasValue)
+        if (p.PivotTableIndex.HasValue)
         {
-            if (pivotTableIndex.Value < 0 || pivotTableIndex.Value >= pivotTables.Count)
+            if (p.PivotTableIndex.Value < 0 || p.PivotTableIndex.Value >= pivotTables.Count)
                 throw new ArgumentException(
-                    $"Pivot table index {pivotTableIndex.Value} is out of range (worksheet has {pivotTables.Count} pivot tables)");
+                    $"Pivot table index {p.PivotTableIndex.Value} is out of range (worksheet has {pivotTables.Count} pivot tables)");
 
-            pivotTables[pivotTableIndex.Value].CalculateData();
+            pivotTables[p.PivotTableIndex.Value].CalculateData();
             refreshedCount = 1;
         }
         else
@@ -56,4 +55,14 @@ public class RefreshExcelPivotTableHandler : OperationHandlerBase<Workbook>
 
         return Success($"Refreshed {refreshedCount} pivot table(s) in worksheet '{worksheet.Name}'.");
     }
+
+    private static RefreshPivotTableParameters ExtractRefreshPivotTableParameters(OperationParameters parameters)
+    {
+        return new RefreshPivotTableParameters(
+            parameters.GetOptional("sheetIndex", 0),
+            parameters.GetOptional<int?>("pivotTableIndex")
+        );
+    }
+
+    private record RefreshPivotTableParameters(int SheetIndex, int? PivotTableIndex);
 }

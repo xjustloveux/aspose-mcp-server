@@ -21,20 +21,37 @@ public class DeletePptSlideHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with remaining slide count.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetRequired<int>("slideIndex");
+        var p = ExtractDeletePptSlideParameters(parameters);
+
         var presentation = context.Document;
 
-        if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
+        if (p.SlideIndex < 0 || p.SlideIndex >= presentation.Slides.Count)
             throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
 
         if (presentation.Slides.Count == 1)
             throw new InvalidOperationException(
                 "Cannot delete the last slide. A presentation must have at least one slide.");
 
-        presentation.Slides.RemoveAt(slideIndex);
+        presentation.Slides.RemoveAt(p.SlideIndex);
 
         MarkModified(context);
 
-        return Success($"Slide {slideIndex} deleted ({presentation.Slides.Count} remaining).");
+        return Success($"Slide {p.SlideIndex} deleted ({presentation.Slides.Count} remaining).");
     }
+
+    /// <summary>
+    ///     Extracts parameters for delete slide operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static DeletePptSlideParameters ExtractDeletePptSlideParameters(OperationParameters parameters)
+    {
+        return new DeletePptSlideParameters(parameters.GetRequired<int>("slideIndex"));
+    }
+
+    /// <summary>
+    ///     Parameters for delete slide operation.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index (0-based).</param>
+    private record DeletePptSlideParameters(int SlideIndex);
 }

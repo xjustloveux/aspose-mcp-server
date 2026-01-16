@@ -21,15 +21,32 @@ public class GetPdfImagesHandler : OperationHandlerBase<Document>
     /// <returns>JSON string containing image information.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var pageIndex = parameters.GetOptional<int?>("pageIndex");
+        var p = ExtractGetParameters(parameters);
         var document = context.Document;
 
-        if (pageIndex is > 0)
-            return GetImagesFromSinglePage(document, pageIndex.Value);
+        if (p.PageIndex is > 0)
+            return GetImagesFromSinglePage(document, p.PageIndex.Value);
 
         return GetImagesFromAllPages(document);
     }
 
+    /// <summary>
+    ///     Extracts get parameters from the operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static GetParameters ExtractGetParameters(OperationParameters parameters)
+    {
+        return new GetParameters(
+            parameters.GetOptional<int?>("pageIndex"));
+    }
+
+    /// <summary>
+    ///     Retrieves images from a single page.
+    /// </summary>
+    /// <param name="document">The PDF document.</param>
+    /// <param name="pageIndex">The 1-based page index.</param>
+    /// <returns>JSON string containing image information from the specified page.</returns>
     private string GetImagesFromSinglePage(Document document, int pageIndex)
     {
         if (pageIndex < 1 || pageIndex > document.Pages.Count)
@@ -56,6 +73,11 @@ public class GetPdfImagesHandler : OperationHandlerBase<Document>
         });
     }
 
+    /// <summary>
+    ///     Retrieves images from all pages in the document.
+    /// </summary>
+    /// <param name="document">The PDF document.</param>
+    /// <returns>JSON string containing image information from all pages.</returns>
     private string GetImagesFromAllPages(Document document)
     {
         List<object> imageList = [];
@@ -83,6 +105,12 @@ public class GetPdfImagesHandler : OperationHandlerBase<Document>
         });
     }
 
+    /// <summary>
+    ///     Collects image information from a page's image collection.
+    /// </summary>
+    /// <param name="images">The image collection from the page.</param>
+    /// <param name="pageNum">The 1-based page number.</param>
+    /// <returns>A list of image information objects.</returns>
     private static List<object> CollectImagesFromPage(XImageCollection images, int pageNum)
     {
         List<object> imageList = [];
@@ -102,6 +130,13 @@ public class GetPdfImagesHandler : OperationHandlerBase<Document>
         return imageList;
     }
 
+    /// <summary>
+    ///     Creates an image information dictionary.
+    /// </summary>
+    /// <param name="image">The XImage object.</param>
+    /// <param name="index">The 1-based image index within the page.</param>
+    /// <param name="pageNum">The 1-based page number.</param>
+    /// <returns>A dictionary containing image information.</returns>
     private static Dictionary<string, object?> CreateImageInfo(XImage image, int index, int pageNum)
     {
         var imageInfo = new Dictionary<string, object?>
@@ -112,7 +147,7 @@ public class GetPdfImagesHandler : OperationHandlerBase<Document>
 
         try
         {
-            if (image.Width > 0 && image.Height > 0)
+            if (image is { Width: > 0, Height: > 0 })
             {
                 imageInfo["width"] = image.Width;
                 imageInfo["height"] = image.Height;
@@ -126,4 +161,10 @@ public class GetPdfImagesHandler : OperationHandlerBase<Document>
 
         return imageInfo;
     }
+
+    /// <summary>
+    ///     Parameters for getting images.
+    /// </summary>
+    /// <param name="PageIndex">The optional 1-based page index.</param>
+    private record GetParameters(int? PageIndex);
 }

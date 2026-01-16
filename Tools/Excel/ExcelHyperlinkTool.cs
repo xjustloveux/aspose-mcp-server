@@ -110,7 +110,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -123,30 +123,63 @@ Usage examples:
         var parameters = new OperationParameters();
         parameters.Set("sheetIndex", sheetIndex);
 
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "add":
-                if (cell != null) parameters.Set("cell", cell);
-                if (url != null) parameters.Set("url", url);
-                if (displayText != null) parameters.Set("displayText", displayText);
-                break;
+            "add" => BuildAddParameters(parameters, cell, url, displayText),
+            "edit" => BuildEditParameters(parameters, cell, url, displayText, hyperlinkIndex),
+            "delete" => BuildDeleteParameters(parameters, cell, hyperlinkIndex),
+            _ => parameters
+        };
+    }
 
-            case "edit":
-                if (cell != null) parameters.Set("cell", cell);
-                if (url != null) parameters.Set("url", url);
-                if (displayText != null) parameters.Set("displayText", displayText);
-                if (hyperlinkIndex.HasValue) parameters.Set("hyperlinkIndex", hyperlinkIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the add hyperlink operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="cell">The cell reference for the hyperlink.</param>
+    /// <param name="url">The URL or file path for the hyperlink.</param>
+    /// <param name="displayText">The display text for the hyperlink.</param>
+    /// <returns>OperationParameters configured for adding hyperlink.</returns>
+    private static OperationParameters BuildAddParameters(OperationParameters parameters, string? cell, string? url,
+        string? displayText)
+    {
+        if (cell != null) parameters.Set("cell", cell);
+        if (url != null) parameters.Set("url", url);
+        if (displayText != null) parameters.Set("displayText", displayText);
+        return parameters;
+    }
 
-            case "delete":
-                if (cell != null) parameters.Set("cell", cell);
-                if (hyperlinkIndex.HasValue) parameters.Set("hyperlinkIndex", hyperlinkIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the edit hyperlink operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="cell">The cell reference for the hyperlink.</param>
+    /// <param name="url">The URL or file path for the hyperlink.</param>
+    /// <param name="displayText">The display text for the hyperlink.</param>
+    /// <param name="hyperlinkIndex">The hyperlink index as alternative to cell.</param>
+    /// <returns>OperationParameters configured for editing hyperlink.</returns>
+    private static OperationParameters BuildEditParameters(OperationParameters parameters, string? cell, string? url,
+        string? displayText, int? hyperlinkIndex)
+    {
+        if (cell != null) parameters.Set("cell", cell);
+        if (url != null) parameters.Set("url", url);
+        if (displayText != null) parameters.Set("displayText", displayText);
+        if (hyperlinkIndex.HasValue) parameters.Set("hyperlinkIndex", hyperlinkIndex.Value);
+        return parameters;
+    }
 
-            case "get":
-                break;
-        }
-
+    /// <summary>
+    ///     Builds parameters for the delete hyperlink operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="cell">The cell reference for the hyperlink.</param>
+    /// <param name="hyperlinkIndex">The hyperlink index as alternative to cell.</param>
+    /// <returns>OperationParameters configured for deleting hyperlink.</returns>
+    private static OperationParameters BuildDeleteParameters(OperationParameters parameters, string? cell,
+        int? hyperlinkIndex)
+    {
+        if (cell != null) parameters.Set("cell", cell);
+        if (hyperlinkIndex.HasValue) parameters.Set("hyperlinkIndex", hyperlinkIndex.Value);
         return parameters;
     }
 }

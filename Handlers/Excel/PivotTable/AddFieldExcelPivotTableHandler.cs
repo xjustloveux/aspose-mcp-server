@@ -24,28 +24,24 @@ public class AddFieldExcelPivotTableHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with add field details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var pivotTableIndex = parameters.GetRequired<int>("pivotTableIndex");
-        var fieldName = parameters.GetRequired<string>("fieldName");
-        var fieldType = parameters.GetRequired<string>("fieldType");
-        var function = parameters.GetOptional("function", "Sum");
+        var p = ExtractAddFieldParameters(parameters);
 
         try
         {
             var workbook = context.Document;
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, p.SheetIndex);
             var pivotTables = worksheet.PivotTables;
 
-            if (pivotTableIndex < 0 || pivotTableIndex >= pivotTables.Count)
+            if (p.PivotTableIndex < 0 || p.PivotTableIndex >= pivotTables.Count)
                 throw new ArgumentException(
-                    $"Pivot table index {pivotTableIndex} is out of range (worksheet has {pivotTables.Count} pivot tables)");
+                    $"Pivot table index {p.PivotTableIndex} is out of range (worksheet has {pivotTables.Count} pivot tables)");
 
-            var pivotTable = pivotTables[pivotTableIndex];
+            var pivotTable = pivotTables[p.PivotTableIndex];
 
             var (sourceSheet, sourceRangeObj) = ExcelPivotTableHelper.ParseDataSource(
-                workbook, pivotTable, sheetIndex, pivotTableIndex, worksheet.Name);
+                workbook, pivotTable, p.SheetIndex, p.PivotTableIndex, worksheet.Name);
 
-            var fieldIndex = ExcelPivotTableHelper.FindFieldIndex(sourceSheet, sourceRangeObj, fieldName);
+            var fieldIndex = ExcelPivotTableHelper.FindFieldIndex(sourceSheet, sourceRangeObj, p.FieldName);
 
             if (fieldIndex < 0)
             {
@@ -55,18 +51,18 @@ public class AddFieldExcelPivotTableHandler : OperationHandlerBase<Workbook>
                     : " No field names found in header row.";
 
                 throw new ArgumentException(
-                    $"Field '{fieldName}' not found in pivot table source data.{availableFieldsStr} Please check that the field name matches exactly (case-sensitive).");
+                    $"Field '{p.FieldName}' not found in pivot table source data.{availableFieldsStr} Please check that the field name matches exactly (case-sensitive).");
             }
 
             try
             {
-                var pivotFieldType = ExcelPivotTableHelper.ParseFieldType(fieldType);
+                var pivotFieldType = ExcelPivotTableHelper.ParseFieldType(p.FieldType);
                 pivotTable.AddFieldToArea(pivotFieldType, fieldIndex);
 
                 if (pivotFieldType == PivotFieldType.Data && pivotTable.DataFields.Count > 0)
                 {
                     var dataField = pivotTable.DataFields[^1];
-                    dataField.Function = ExcelPivotTableHelper.ParseFunction(function);
+                    dataField.Function = ExcelPivotTableHelper.ParseFunction(p.Function);
                 }
 
                 try
@@ -80,7 +76,8 @@ public class AddFieldExcelPivotTableHandler : OperationHandlerBase<Workbook>
 
                 MarkModified(context);
 
-                return Success($"Field '{fieldName}' added as {fieldType} field to pivot table #{pivotTableIndex}.");
+                return Success(
+                    $"Field '{p.FieldName}' added as {p.FieldType} field to pivot table #{p.PivotTableIndex}.");
             }
             catch (Exception ex)
             {
@@ -88,17 +85,35 @@ public class AddFieldExcelPivotTableHandler : OperationHandlerBase<Workbook>
                 {
                     MarkModified(context);
                     return Success(
-                        $"Field '{fieldName}' may already exist in {fieldType} area of pivot table #{pivotTableIndex}.");
+                        $"Field '{p.FieldName}' may already exist in {p.FieldType} area of pivot table #{p.PivotTableIndex}.");
                 }
 
                 throw new ArgumentException(
-                    $"Failed to add field '{fieldName}' to pivot table: {ex.Message}. Field index: {fieldIndex}, Field type: {fieldType}");
+                    $"Failed to add field '{p.FieldName}' to pivot table: {ex.Message}. Field index: {fieldIndex}, Field type: {p.FieldType}");
             }
         }
         catch (Exception outerEx)
         {
             throw new ArgumentException(
-                $"Failed to add field '{fieldName}' to pivot table: {outerEx.Message}");
+                $"Failed to add field '{p.FieldName}' to pivot table: {outerEx.Message}");
         }
     }
+
+    private static AddFieldParameters ExtractAddFieldParameters(OperationParameters parameters)
+    {
+        return new AddFieldParameters(
+            parameters.GetOptional("sheetIndex", 0),
+            parameters.GetRequired<int>("pivotTableIndex"),
+            parameters.GetRequired<string>("fieldName"),
+            parameters.GetRequired<string>("fieldType"),
+            parameters.GetOptional("function", "Sum")
+        );
+    }
+
+    private record AddFieldParameters(
+        int SheetIndex,
+        int PivotTableIndex,
+        string FieldName,
+        string FieldType,
+        string Function);
 }

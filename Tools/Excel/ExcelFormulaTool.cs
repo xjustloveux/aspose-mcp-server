@@ -123,7 +123,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -137,37 +137,88 @@ Usage examples:
         var parameters = new OperationParameters();
         parameters.Set("sheetIndex", sheetIndex);
 
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "add":
-                if (cell != null) parameters.Set("cell", cell);
-                if (formula != null) parameters.Set("formula", formula);
-                parameters.Set("autoCalculate", autoCalculate);
-                break;
+            "add" => BuildAddParameters(parameters, cell, formula, autoCalculate),
+            "get" => BuildGetParameters(parameters, range),
+            "get_result" => BuildGetResultParameters(parameters, cell, calculateBeforeRead),
+            "calculate" => parameters,
+            "set_array" => BuildSetArrayParameters(parameters, range, formula, autoCalculate),
+            "get_array" => BuildCellParameters(parameters, cell),
+            _ => parameters
+        };
+    }
 
-            case "get":
-                if (range != null) parameters.Set("range", range);
-                break;
+    /// <summary>
+    ///     Builds parameters for the add formula operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="cell">The cell reference.</param>
+    /// <param name="formula">The formula to add.</param>
+    /// <param name="autoCalculate">Whether to auto-calculate after adding.</param>
+    /// <returns>OperationParameters configured for adding a formula.</returns>
+    private static OperationParameters BuildAddParameters(OperationParameters parameters, string? cell, string? formula,
+        bool autoCalculate)
+    {
+        if (cell != null) parameters.Set("cell", cell);
+        if (formula != null) parameters.Set("formula", formula);
+        parameters.Set("autoCalculate", autoCalculate);
+        return parameters;
+    }
 
-            case "get_result":
-                if (cell != null) parameters.Set("cell", cell);
-                parameters.Set("calculateBeforeRead", calculateBeforeRead);
-                break;
+    /// <summary>
+    ///     Builds parameters for the get formula operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="range">The cell range to get formulas from.</param>
+    /// <returns>OperationParameters configured for getting formulas.</returns>
+    private static OperationParameters BuildGetParameters(OperationParameters parameters, string? range)
+    {
+        if (range != null) parameters.Set("range", range);
+        return parameters;
+    }
 
-            case "calculate":
-                break;
+    /// <summary>
+    ///     Builds parameters for the get formula result operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="cell">The cell reference.</param>
+    /// <param name="calculateBeforeRead">Whether to calculate before reading.</param>
+    /// <returns>OperationParameters configured for getting formula result.</returns>
+    private static OperationParameters BuildGetResultParameters(OperationParameters parameters, string? cell,
+        bool calculateBeforeRead)
+    {
+        if (cell != null) parameters.Set("cell", cell);
+        parameters.Set("calculateBeforeRead", calculateBeforeRead);
+        return parameters;
+    }
 
-            case "set_array":
-                if (range != null) parameters.Set("range", range);
-                if (formula != null) parameters.Set("formula", formula);
-                parameters.Set("autoCalculate", autoCalculate);
-                break;
+    /// <summary>
+    ///     Builds parameters for the set array formula operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="range">The cell range for the array formula.</param>
+    /// <param name="formula">The array formula.</param>
+    /// <param name="autoCalculate">Whether to auto-calculate after setting.</param>
+    /// <returns>OperationParameters configured for setting an array formula.</returns>
+    private static OperationParameters BuildSetArrayParameters(OperationParameters parameters, string? range,
+        string? formula, bool autoCalculate)
+    {
+        if (range != null) parameters.Set("range", range);
+        if (formula != null) parameters.Set("formula", formula);
+        parameters.Set("autoCalculate", autoCalculate);
+        return parameters;
+    }
 
-            case "get_array":
-                if (cell != null) parameters.Set("cell", cell);
-                break;
-        }
-
+    /// <summary>
+    ///     Builds parameters containing only the cell reference.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="cell">The cell reference.</param>
+    /// <returns>OperationParameters with cell set.</returns>
+    private static OperationParameters BuildCellParameters(OperationParameters parameters, string? cell)
+    {
+        if (cell != null) parameters.Set("cell", cell);
         return parameters;
     }
 }

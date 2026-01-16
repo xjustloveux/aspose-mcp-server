@@ -123,7 +123,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -137,27 +137,55 @@ Usage examples:
         var parameters = new OperationParameters();
         parameters.Set("sheetIndex", sheetIndex);
 
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "insert_row":
-            case "delete_row":
-                parameters.Set("rowIndex", rowIndex);
-                parameters.Set("count", count);
-                break;
+            "insert_row" or "delete_row" => BuildRowParameters(parameters, rowIndex, count),
+            "insert_column" or "delete_column" => BuildColumnParameters(parameters, columnIndex, count),
+            "insert_cells" or "delete_cells" => BuildCellsParameters(parameters, range, shiftDirection),
+            _ => parameters
+        };
+    }
 
-            case "insert_column":
-            case "delete_column":
-                parameters.Set("columnIndex", columnIndex);
-                parameters.Set("count", count);
-                break;
+    /// <summary>
+    ///     Builds parameters for row operations (insert/delete row).
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="rowIndex">The row index (0-based).</param>
+    /// <param name="count">Number of rows to insert/delete.</param>
+    /// <returns>OperationParameters configured for row operations.</returns>
+    private static OperationParameters BuildRowParameters(OperationParameters parameters, int rowIndex, int count)
+    {
+        parameters.Set("rowIndex", rowIndex);
+        parameters.Set("count", count);
+        return parameters;
+    }
 
-            case "insert_cells":
-            case "delete_cells":
-                if (range != null) parameters.Set("range", range);
-                if (shiftDirection != null) parameters.Set("shiftDirection", shiftDirection);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for column operations (insert/delete column).
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="columnIndex">The column index (0-based).</param>
+    /// <param name="count">Number of columns to insert/delete.</param>
+    /// <returns>OperationParameters configured for column operations.</returns>
+    private static OperationParameters BuildColumnParameters(OperationParameters parameters, int columnIndex, int count)
+    {
+        parameters.Set("columnIndex", columnIndex);
+        parameters.Set("count", count);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for cell operations (insert/delete cells).
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="range">The cell range.</param>
+    /// <param name="shiftDirection">The direction to shift cells.</param>
+    /// <returns>OperationParameters configured for cell operations.</returns>
+    private static OperationParameters BuildCellsParameters(OperationParameters parameters, string? range,
+        string? shiftDirection)
+    {
+        if (range != null) parameters.Set("range", range);
+        if (shiftDirection != null) parameters.Set("shiftDirection", shiftDirection);
         return parameters;
     }
 }

@@ -23,24 +23,43 @@ public class EditPdfFormFieldHandler : OperationHandlerBase<Document>
     /// <returns>Success message with edit details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var fieldName = parameters.GetRequired<string>("fieldName");
-        var value = parameters.GetOptional<string?>("value");
-        var checkedValue = parameters.GetOptional<bool?>("checkedValue");
+        var p = ExtractEditParameters(parameters);
 
         var document = context.Document;
-        var field = document.Form.Cast<Field>().FirstOrDefault(f => f.PartialName == fieldName);
+        var field = document.Form.Cast<Field>().FirstOrDefault(f => f.PartialName == p.FieldName);
         if (field == null)
-            throw new ArgumentException($"Form field '{fieldName}' not found");
+            throw new ArgumentException($"Form field '{p.FieldName}' not found");
 
-        if (field is TextBoxField textBox && !string.IsNullOrEmpty(value))
-            textBox.Value = value;
-        else if (field is CheckboxField checkBox && checkedValue.HasValue)
-            checkBox.Checked = checkedValue.Value;
-        else if (field is RadioButtonField radioButton && !string.IsNullOrEmpty(value))
-            radioButton.Value = value;
+        if (field is TextBoxField textBox && !string.IsNullOrEmpty(p.Value))
+            textBox.Value = p.Value;
+        else if (field is CheckboxField checkBox && p.CheckedValue.HasValue)
+            checkBox.Checked = p.CheckedValue.Value;
+        else if (field is RadioButtonField radioButton && !string.IsNullOrEmpty(p.Value))
+            radioButton.Value = p.Value;
 
         MarkModified(context);
 
-        return Success($"Edited form field '{fieldName}'.");
+        return Success($"Edited form field '{p.FieldName}'.");
     }
+
+    /// <summary>
+    ///     Extracts edit parameters from the operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static EditParameters ExtractEditParameters(OperationParameters parameters)
+    {
+        return new EditParameters(
+            parameters.GetRequired<string>("fieldName"),
+            parameters.GetOptional<string?>("value"),
+            parameters.GetOptional<bool?>("checkedValue"));
+    }
+
+    /// <summary>
+    ///     Parameters for editing a form field.
+    /// </summary>
+    /// <param name="FieldName">The name of the form field to edit.</param>
+    /// <param name="Value">The value for text/radio fields.</param>
+    /// <param name="CheckedValue">The checked state for checkbox fields.</param>
+    private record EditParameters(string FieldName, string? Value, bool? CheckedValue);
 }

@@ -21,6 +21,8 @@ public class GetWordBookmarksHandler : OperationHandlerBase<Document>
     /// <returns>A JSON string containing all bookmarks information.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
+        _ = ExtractGetParameters(parameters);
+
         var doc = context.Document;
         var bookmarks = doc.Range.Bookmarks;
 
@@ -50,4 +52,20 @@ public class GetWordBookmarksHandler : OperationHandlerBase<Document>
 
         return JsonSerializer.Serialize(result, JsonDefaults.Indented);
     }
+
+    /// <summary>
+    ///     Extracts parameters for the get bookmarks operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static GetParameters ExtractGetParameters(OperationParameters parameters)
+    {
+        _ = parameters;
+        return new GetParameters();
+    }
+
+    /// <summary>
+    ///     Parameters for the get bookmarks operation.
+    /// </summary>
+    private record GetParameters;
 }

@@ -389,104 +389,93 @@ public class AuthConfig
     /// <returns>True if the argument was processed, false otherwise</returns>
     private bool ProcessApiKeyArg(string arg)
     {
-        if (arg.Equals("--auth-apikey-enabled", StringComparison.OrdinalIgnoreCase))
-        {
-            ApiKey.Enabled = true;
-            return true;
-        }
+        if (TryProcessApiKeyBooleanArg(arg)) return true;
+        if (TryProcessApiKeyModeArg(arg)) return true;
+        if (TryProcessApiKeyStringArg(arg)) return true;
+        return TryProcessApiKeyIntArg(arg);
+    }
 
-        if (arg.Equals("--auth-apikey-disabled", StringComparison.OrdinalIgnoreCase))
+    /// <summary>
+    ///     Tries to process API key boolean arguments.
+    /// </summary>
+    /// <param name="arg">The command line argument to process.</param>
+    /// <returns>True if the argument was processed as a boolean API key argument; otherwise, false.</returns>
+    private bool TryProcessApiKeyBooleanArg(string arg)
+    {
+        var booleanArgs = new Dictionary<string, Action>(StringComparer.OrdinalIgnoreCase)
         {
-            ApiKey.Enabled = false;
-            return true;
-        }
+            ["--auth-apikey-enabled"] = () => ApiKey.Enabled = true,
+            ["--auth-apikey-disabled"] = () => ApiKey.Enabled = false,
+            ["--auth-apikey-cache-enabled"] = () => ApiKey.CacheEnabled = true,
+            ["--auth-apikey-cache-disabled"] = () => ApiKey.CacheEnabled = false
+        };
 
-        if (arg.Equals("--auth-apikey-cache-enabled", StringComparison.OrdinalIgnoreCase))
-        {
-            ApiKey.CacheEnabled = true;
-            return true;
-        }
+        if (!booleanArgs.TryGetValue(arg, out var action)) return false;
+        action();
+        return true;
+    }
 
-        if (arg.Equals("--auth-apikey-cache-disabled", StringComparison.OrdinalIgnoreCase))
-        {
-            ApiKey.CacheEnabled = false;
-            return true;
-        }
-
+    /// <summary>
+    ///     Tries to process API key mode argument.
+    /// </summary>
+    /// <param name="arg">The command line argument to process.</param>
+    /// <returns>True if the argument was processed as an API key mode argument; otherwise, false.</returns>
+    private bool TryProcessApiKeyModeArg(string arg)
+    {
         var value = TryGetArgValue(arg, "--auth-apikey-mode");
-        if (value != null && Enum.TryParse<ApiKeyMode>(value, true, out var apiMode))
+        if (value == null || !Enum.TryParse<ApiKeyMode>(value, true, out var apiMode)) return false;
+        ApiKey.Mode = apiMode;
+        return true;
+    }
+
+    /// <summary>
+    ///     Tries to process API key string arguments.
+    /// </summary>
+    /// <param name="arg">The command line argument to process.</param>
+    /// <returns>True if the argument was processed as a string API key argument; otherwise, false.</returns>
+    private bool TryProcessApiKeyStringArg(string arg)
+    {
+        var stringArgs = new Dictionary<string, Action<string>>
         {
-            ApiKey.Mode = apiMode;
+            ["--auth-apikey-keys"] = ParseApiKeys,
+            ["--auth-apikey-header"] = v => ApiKey.HeaderName = v,
+            ["--auth-apikey-group-header"] = v => ApiKey.GroupIdentifierHeader = v,
+            ["--auth-apikey-introspection-auth"] = v => ApiKey.IntrospectionAuthHeader = v,
+            ["--auth-apikey-introspection-url"] = v => ApiKey.IntrospectionEndpoint = v,
+            ["--auth-apikey-custom-url"] = v => ApiKey.CustomEndpoint = v,
+            ["--auth-apikey-introspection-field"] = v => ApiKey.IntrospectionKeyField = v
+        };
+
+        foreach (var (prefix, action) in stringArgs)
+        {
+            var value = TryGetArgValue(arg, prefix);
+            if (value == null) continue;
+            action(value);
             return true;
         }
 
-        value = TryGetArgValue(arg, "--auth-apikey-keys");
-        if (value != null)
-        {
-            ParseApiKeys(value);
-            return true;
-        }
+        return false;
+    }
 
-        value = TryGetArgValue(arg, "--auth-apikey-header");
-        if (value != null)
+    /// <summary>
+    ///     Tries to process API key integer arguments.
+    /// </summary>
+    /// <param name="arg">The command line argument to process.</param>
+    /// <returns>True if the argument was processed as an integer API key argument; otherwise, false.</returns>
+    private bool TryProcessApiKeyIntArg(string arg)
+    {
+        var intArgs = new Dictionary<string, Action<int>>
         {
-            ApiKey.HeaderName = value;
-            return true;
-        }
+            ["--auth-apikey-timeout"] = v => ApiKey.ExternalTimeoutSeconds = v,
+            ["--auth-apikey-cache-ttl"] = v => ApiKey.CacheTtlSeconds = v,
+            ["--auth-apikey-cache-max-size"] = v => ApiKey.CacheMaxSize = v
+        };
 
-        value = TryGetArgValue(arg, "--auth-apikey-group-header");
-        if (value != null)
+        foreach (var (prefix, action) in intArgs)
         {
-            ApiKey.GroupIdentifierHeader = value;
-            return true;
-        }
-
-        value = TryGetArgValue(arg, "--auth-apikey-introspection-auth");
-        if (value != null)
-        {
-            ApiKey.IntrospectionAuthHeader = value;
-            return true;
-        }
-
-        value = TryGetArgValue(arg, "--auth-apikey-introspection-url");
-        if (value != null)
-        {
-            ApiKey.IntrospectionEndpoint = value;
-            return true;
-        }
-
-        value = TryGetArgValue(arg, "--auth-apikey-custom-url");
-        if (value != null)
-        {
-            ApiKey.CustomEndpoint = value;
-            return true;
-        }
-
-        value = TryGetArgValue(arg, "--auth-apikey-introspection-field");
-        if (value != null)
-        {
-            ApiKey.IntrospectionKeyField = value;
-            return true;
-        }
-
-        value = TryGetArgValue(arg, "--auth-apikey-timeout");
-        if (value != null && int.TryParse(value, out var timeout))
-        {
-            ApiKey.ExternalTimeoutSeconds = timeout;
-            return true;
-        }
-
-        value = TryGetArgValue(arg, "--auth-apikey-cache-ttl");
-        if (value != null && int.TryParse(value, out var ttl))
-        {
-            ApiKey.CacheTtlSeconds = ttl;
-            return true;
-        }
-
-        value = TryGetArgValue(arg, "--auth-apikey-cache-max-size");
-        if (value != null && int.TryParse(value, out var maxSize))
-        {
-            ApiKey.CacheMaxSize = maxSize;
+            var value = TryGetArgValue(arg, prefix);
+            if (value == null || !int.TryParse(value, out var intValue)) continue;
+            action(intValue);
             return true;
         }
 
@@ -499,139 +488,98 @@ public class AuthConfig
     /// <returns>True if the argument was processed, false otherwise</returns>
     private bool ProcessJwtArg(string arg)
     {
-        if (arg.Equals("--auth-jwt-enabled", StringComparison.OrdinalIgnoreCase))
-        {
-            Jwt.Enabled = true;
-            return true;
-        }
+        if (TryProcessJwtBooleanArg(arg)) return true;
+        if (TryProcessJwtModeArg(arg)) return true;
+        if (TryProcessJwtStringArg(arg)) return true;
+        return TryProcessJwtIntArg(arg);
+    }
 
-        if (arg.Equals("--auth-jwt-disabled", StringComparison.OrdinalIgnoreCase))
+    /// <summary>
+    ///     Tries to process JWT boolean arguments.
+    /// </summary>
+    /// <param name="arg">The command line argument to process.</param>
+    /// <returns>True if the argument was processed as a boolean JWT argument; otherwise, false.</returns>
+    private bool TryProcessJwtBooleanArg(string arg)
+    {
+        var booleanArgs = new Dictionary<string, Action>(StringComparer.OrdinalIgnoreCase)
         {
-            Jwt.Enabled = false;
-            return true;
-        }
+            ["--auth-jwt-enabled"] = () => Jwt.Enabled = true,
+            ["--auth-jwt-disabled"] = () => Jwt.Enabled = false,
+            ["--auth-jwt-cache-enabled"] = () => Jwt.CacheEnabled = true,
+            ["--auth-jwt-cache-disabled"] = () => Jwt.CacheEnabled = false
+        };
 
-        if (arg.Equals("--auth-jwt-cache-enabled", StringComparison.OrdinalIgnoreCase))
-        {
-            Jwt.CacheEnabled = true;
-            return true;
-        }
+        if (!booleanArgs.TryGetValue(arg, out var action)) return false;
+        action();
+        return true;
+    }
 
-        if (arg.Equals("--auth-jwt-cache-disabled", StringComparison.OrdinalIgnoreCase))
-        {
-            Jwt.CacheEnabled = false;
-            return true;
-        }
-
+    /// <summary>
+    ///     Tries to process JWT mode argument.
+    /// </summary>
+    /// <param name="arg">The command line argument to process.</param>
+    /// <returns>True if the argument was processed as a JWT mode argument; otherwise, false.</returns>
+    private bool TryProcessJwtModeArg(string arg)
+    {
         var value = TryGetArgValue(arg, "--auth-jwt-mode");
-        if (value != null && Enum.TryParse<JwtMode>(value, true, out var jwtMode))
+        if (value == null || !Enum.TryParse<JwtMode>(value, true, out var jwtMode)) return false;
+        Jwt.Mode = jwtMode;
+        return true;
+    }
+
+    /// <summary>
+    ///     Tries to process JWT string arguments.
+    /// </summary>
+    /// <param name="arg">The command line argument to process.</param>
+    /// <returns>True if the argument was processed as a string JWT argument; otherwise, false.</returns>
+    private bool TryProcessJwtStringArg(string arg)
+    {
+        var stringArgs = new Dictionary<string, Action<string>>
         {
-            Jwt.Mode = jwtMode;
+            ["--auth-jwt-secret"] = v => Jwt.Secret = v,
+            ["--auth-jwt-issuer"] = v => Jwt.Issuer = v,
+            ["--auth-jwt-audience"] = v => Jwt.Audience = v,
+            ["--auth-jwt-group-claim"] = v => Jwt.GroupIdentifierClaim = v,
+            ["--auth-jwt-user-claim"] = v => Jwt.UserIdClaim = v,
+            ["--auth-jwt-group-header"] = v => Jwt.GroupIdentifierHeader = v,
+            ["--auth-jwt-user-header"] = v => Jwt.UserIdHeader = v,
+            ["--auth-jwt-public-key-path"] = v => Jwt.PublicKeyPath = v,
+            ["--auth-jwt-introspection-url"] = v => Jwt.IntrospectionEndpoint = v,
+            ["--auth-jwt-client-id"] = v => Jwt.ClientId = v,
+            ["--auth-jwt-client-secret"] = v => Jwt.ClientSecret = v,
+            ["--auth-jwt-custom-url"] = v => Jwt.CustomEndpoint = v
+        };
+
+        foreach (var (prefix, action) in stringArgs)
+        {
+            var value = TryGetArgValue(arg, prefix);
+            if (value == null) continue;
+            action(value);
             return true;
         }
 
-        value = TryGetArgValue(arg, "--auth-jwt-secret");
-        if (value != null)
-        {
-            Jwt.Secret = value;
-            return true;
-        }
+        return false;
+    }
 
-        value = TryGetArgValue(arg, "--auth-jwt-issuer");
-        if (value != null)
+    /// <summary>
+    ///     Tries to process JWT integer arguments.
+    /// </summary>
+    /// <param name="arg">The command line argument to process.</param>
+    /// <returns>True if the argument was processed as an integer JWT argument; otherwise, false.</returns>
+    private bool TryProcessJwtIntArg(string arg)
+    {
+        var intArgs = new Dictionary<string, Action<int>>
         {
-            Jwt.Issuer = value;
-            return true;
-        }
+            ["--auth-jwt-timeout"] = v => Jwt.ExternalTimeoutSeconds = v,
+            ["--auth-jwt-cache-ttl"] = v => Jwt.CacheTtlSeconds = v,
+            ["--auth-jwt-cache-max-size"] = v => Jwt.CacheMaxSize = v
+        };
 
-        value = TryGetArgValue(arg, "--auth-jwt-audience");
-        if (value != null)
+        foreach (var (prefix, action) in intArgs)
         {
-            Jwt.Audience = value;
-            return true;
-        }
-
-        value = TryGetArgValue(arg, "--auth-jwt-group-claim");
-        if (value != null)
-        {
-            Jwt.GroupIdentifierClaim = value;
-            return true;
-        }
-
-        value = TryGetArgValue(arg, "--auth-jwt-user-claim");
-        if (value != null)
-        {
-            Jwt.UserIdClaim = value;
-            return true;
-        }
-
-        value = TryGetArgValue(arg, "--auth-jwt-group-header");
-        if (value != null)
-        {
-            Jwt.GroupIdentifierHeader = value;
-            return true;
-        }
-
-        value = TryGetArgValue(arg, "--auth-jwt-user-header");
-        if (value != null)
-        {
-            Jwt.UserIdHeader = value;
-            return true;
-        }
-
-        value = TryGetArgValue(arg, "--auth-jwt-public-key-path");
-        if (value != null)
-        {
-            Jwt.PublicKeyPath = value;
-            return true;
-        }
-
-        value = TryGetArgValue(arg, "--auth-jwt-introspection-url");
-        if (value != null)
-        {
-            Jwt.IntrospectionEndpoint = value;
-            return true;
-        }
-
-        value = TryGetArgValue(arg, "--auth-jwt-client-id");
-        if (value != null)
-        {
-            Jwt.ClientId = value;
-            return true;
-        }
-
-        value = TryGetArgValue(arg, "--auth-jwt-client-secret");
-        if (value != null)
-        {
-            Jwt.ClientSecret = value;
-            return true;
-        }
-
-        value = TryGetArgValue(arg, "--auth-jwt-custom-url");
-        if (value != null)
-        {
-            Jwt.CustomEndpoint = value;
-            return true;
-        }
-
-        value = TryGetArgValue(arg, "--auth-jwt-timeout");
-        if (value != null && int.TryParse(value, out var timeout))
-        {
-            Jwt.ExternalTimeoutSeconds = timeout;
-            return true;
-        }
-
-        value = TryGetArgValue(arg, "--auth-jwt-cache-ttl");
-        if (value != null && int.TryParse(value, out var ttl))
-        {
-            Jwt.CacheTtlSeconds = ttl;
-            return true;
-        }
-
-        value = TryGetArgValue(arg, "--auth-jwt-cache-max-size");
-        if (value != null && int.TryParse(value, out var maxSize))
-        {
-            Jwt.CacheMaxSize = maxSize;
+            var value = TryGetArgValue(arg, prefix);
+            if (value == null || !int.TryParse(value, out var intValue)) continue;
+            action(intValue);
             return true;
         }
 

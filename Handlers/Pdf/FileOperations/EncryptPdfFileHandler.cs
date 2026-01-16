@@ -21,15 +21,33 @@ public class EncryptPdfFileHandler : OperationHandlerBase<Document>
     /// <returns>Success message.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var userPassword = parameters.GetRequired<string>("userPassword");
-        var ownerPassword = parameters.GetRequired<string>("ownerPassword");
+        var encryptParams = ExtractEncryptParameters(parameters);
 
         var document = context.Document;
-        document.Encrypt(userPassword, ownerPassword, Permissions.PrintDocument | Permissions.ModifyContent,
+        document.Encrypt(encryptParams.UserPassword, encryptParams.OwnerPassword,
+            Permissions.PrintDocument | Permissions.ModifyContent,
             CryptoAlgorithm.AESx256);
 
         MarkModified(context);
 
         return Success("PDF encrypted with password.");
     }
+
+    /// <summary>
+    ///     Extracts encrypt parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted encrypt parameters.</returns>
+    private static EncryptParameters ExtractEncryptParameters(OperationParameters parameters)
+    {
+        return new EncryptParameters(
+            parameters.GetRequired<string>("userPassword"),
+            parameters.GetRequired<string>("ownerPassword")
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold encrypt parameters.
+    /// </summary>
+    private record EncryptParameters(string UserPassword, string OwnerPassword);
 }

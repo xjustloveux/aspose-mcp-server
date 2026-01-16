@@ -22,20 +22,16 @@ public class SetFooterHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with number of slides updated.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var footerText = parameters.GetOptional<string?>("footerText");
-        var showSlideNumber = parameters.GetOptional("showSlideNumber", true);
-        var dateText = parameters.GetOptional<string?>("dateText");
-        var slideIndices = parameters.GetOptional<int[]?>("slideIndices");
-
+        var p = ExtractSetFooterParameters(parameters);
         var presentation = context.Document;
-        var slides = GetTargetSlides(presentation, slideIndices);
-        var applyToAll = slideIndices == null || slideIndices.Length == 0;
+        var slides = GetTargetSlides(presentation, p.SlideIndices);
+        var applyToAll = p.SlideIndices == null || p.SlideIndices.Length == 0;
 
         if (applyToAll)
-            EnableMasterVisibility(presentation, footerText, showSlideNumber, dateText);
+            EnableMasterVisibility(presentation, p.FooterText, p.ShowSlideNumber, p.DateText);
 
         foreach (var slide in slides)
-            ApplyFooterSettings(slide.HeaderFooterManager, footerText, showSlideNumber, dateText);
+            ApplyFooterSettings(slide.HeaderFooterManager, p.FooterText, p.ShowSlideNumber, p.DateText);
 
         MarkModified(context);
 
@@ -116,4 +112,19 @@ public class SetFooterHandler : OperationHandlerBase<Presentation>
             manager.SetDateTimeVisibility(false);
         }
     }
+
+    private static SetFooterParameters ExtractSetFooterParameters(OperationParameters parameters)
+    {
+        return new SetFooterParameters(
+            parameters.GetOptional<string?>("footerText"),
+            parameters.GetOptional("showSlideNumber", true),
+            parameters.GetOptional<string?>("dateText"),
+            parameters.GetOptional<int[]?>("slideIndices"));
+    }
+
+    private record SetFooterParameters(
+        string? FooterText,
+        bool ShowSlideNumber,
+        string? DateText,
+        int[]? SlideIndices);
 }

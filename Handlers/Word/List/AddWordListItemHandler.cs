@@ -25,21 +25,18 @@ public class AddWordListItemHandler : OperationHandlerBase<Document>
     /// <returns>Success message with item creation details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var text = parameters.GetRequired<string>("text");
-        var styleName = parameters.GetRequired<string>("styleName");
-        var listLevel = parameters.GetOptional("listLevel", 0);
-        var applyStyleIndent = parameters.GetOptional("applyStyleIndent", true);
+        var p = ExtractAddListItemParameters(parameters);
 
-        if (string.IsNullOrEmpty(text))
+        if (string.IsNullOrEmpty(p.Text))
             throw new ArgumentException("text parameter is required for add_item operation");
-        if (string.IsNullOrEmpty(styleName))
+        if (string.IsNullOrEmpty(p.StyleName))
             throw new ArgumentException("styleName parameter is required for add_item operation");
 
         var doc = context.Document;
         var builder = new DocumentBuilder(doc);
         builder.MoveToDocumentEnd();
 
-        var style = doc.Styles[styleName];
+        var style = doc.Styles[p.StyleName];
         if (style == null)
         {
             var commonStyles = new[]
@@ -50,31 +47,47 @@ public class AddWordListItemHandler : OperationHandlerBase<Document>
             var suggestions = availableCommon.Count > 0
                 ? $"Common available styles: {string.Join(", ", availableCommon.Select(s => $"'{s}'"))}"
                 : "Use word_get_styles tool to view available styles";
-            throw new ArgumentException($"Style '{styleName}' not found. {suggestions}");
+            throw new ArgumentException($"Style '{p.StyleName}' not found. {suggestions}");
         }
 
         var para = new WordParagraph(doc)
         {
-            ParagraphFormat = { StyleName = styleName }
+            ParagraphFormat = { StyleName = p.StyleName }
         };
 
-        if (!applyStyleIndent && listLevel > 0) para.ParagraphFormat.LeftIndent = InchToPoint(0.5 * listLevel);
+        if (p is { ApplyStyleIndent: false, ListLevel: > 0 })
+            para.ParagraphFormat.LeftIndent = InchToPoint(0.5 * p.ListLevel);
 
-        var run = new WordRun(doc, text);
+        var run = new WordRun(doc, p.Text);
         para.AppendChild(run);
         builder.CurrentParagraph.ParentNode.AppendChild(para);
 
         MarkModified(context);
 
         var result = "List item added successfully\n";
-        result += $"Style: {styleName}\n";
-        result += $"Level: {listLevel}\n";
+        result += $"Style: {p.StyleName}\n";
+        result += $"Level: {p.ListLevel}\n";
 
-        if (applyStyleIndent)
+        if (p.ApplyStyleIndent)
             result += "Indent: Using style-defined indent (recommended)";
-        else if (listLevel > 0)
-            result += $"Indent: Manually set ({listLevel * 36} points)";
+        else if (p.ListLevel > 0)
+            result += $"Indent: Manually set ({p.ListLevel * 36} points)";
 
         return Success(result);
     }
+
+    private static AddListItemParameters ExtractAddListItemParameters(OperationParameters parameters)
+    {
+        return new AddListItemParameters(
+            parameters.GetRequired<string>("text"),
+            parameters.GetRequired<string>("styleName"),
+            parameters.GetOptional("listLevel", 0),
+            parameters.GetOptional("applyStyleIndent", true));
+    }
+
+    private record AddListItemParameters(
+        string Text,
+        string StyleName,
+        int ListLevel,
+        bool ApplyStyleIndent);
 }

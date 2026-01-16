@@ -25,36 +25,51 @@ public class RedactAreaHandler : OperationHandlerBase<Document>
     /// <returns>Success message with redaction details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var pageIndex = parameters.GetRequired<int>("pageIndex");
-        var x = parameters.GetRequired<double>("x");
-        var y = parameters.GetRequired<double>("y");
-        var width = parameters.GetRequired<double>("width");
-        var height = parameters.GetRequired<double>("height");
-        var fillColor = parameters.GetOptional<string?>("fillColor");
-        var overlayText = parameters.GetOptional<string?>("overlayText");
+        var p = ExtractAreaParameters(parameters);
 
         var document = context.Document;
 
-        if (pageIndex < 1 || pageIndex > document.Pages.Count)
+        if (p.PageIndex < 1 || p.PageIndex > document.Pages.Count)
             throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
 
-        var page = document.Pages[pageIndex];
-        var rect = new Rectangle(x, y, x + width, y + height);
+        var page = document.Pages[p.PageIndex];
+        var rect = new Rectangle(p.X, p.Y, p.X + p.Width, p.Y + p.Height);
 
         var redactionAnnotation = new RedactionAnnotation(page, rect);
-        ApplyRedactionStyle(redactionAnnotation, fillColor, overlayText);
+        ApplyRedactionStyle(redactionAnnotation, p.FillColor, p.OverlayText);
 
         page.Annotations.Add(redactionAnnotation);
         redactionAnnotation.Redact();
 
         MarkModified(context);
 
-        return Success($"Redaction applied to page {pageIndex}.");
+        return Success($"Redaction applied to page {p.PageIndex}.");
+    }
+
+    /// <summary>
+    ///     Extracts parameters for area operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static AreaParameters ExtractAreaParameters(OperationParameters parameters)
+    {
+        return new AreaParameters(
+            parameters.GetRequired<int>("pageIndex"),
+            parameters.GetRequired<double>("x"),
+            parameters.GetRequired<double>("y"),
+            parameters.GetRequired<double>("width"),
+            parameters.GetRequired<double>("height"),
+            parameters.GetOptional<string?>("fillColor"),
+            parameters.GetOptional<string?>("overlayText")
+        );
     }
 
     /// <summary>
     ///     Applies styling options to a redaction annotation.
     /// </summary>
+    /// <param name="annotation">The redaction annotation to style.</param>
+    /// <param name="fillColor">The fill color for the redaction area.</param>
+    /// <param name="overlayText">The optional text to display over the redacted area.</param>
     private static void ApplyRedactionStyle(RedactionAnnotation annotation, string? fillColor, string? overlayText)
     {
         if (!string.IsNullOrEmpty(fillColor))
@@ -73,4 +88,23 @@ public class RedactAreaHandler : OperationHandlerBase<Document>
             annotation.Repeat = true;
         }
     }
+
+    /// <summary>
+    ///     Parameters for area operation.
+    /// </summary>
+    /// <param name="PageIndex">The 1-based page index.</param>
+    /// <param name="X">The X coordinate of the redaction area.</param>
+    /// <param name="Y">The Y coordinate of the redaction area.</param>
+    /// <param name="Width">The width of the redaction area.</param>
+    /// <param name="Height">The height of the redaction area.</param>
+    /// <param name="FillColor">The optional fill color for the redaction.</param>
+    /// <param name="OverlayText">The optional overlay text.</param>
+    private record AreaParameters(
+        int PageIndex,
+        double X,
+        double Y,
+        double Width,
+        double Height,
+        string? FillColor,
+        string? OverlayText);
 }

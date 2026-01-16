@@ -36,49 +36,77 @@ public class SetPlaybackHandler : OperationHandlerBase<Presentation>
     /// </exception>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetOptional("slideIndex", 0);
-        var shapeIndex = parameters.GetOptional<int?>("shapeIndex");
-        var playModeStr = parameters.GetOptional("playMode", "auto");
-        var loop = parameters.GetOptional("loop", false);
-        var rewind = parameters.GetOptional("rewind", false);
-        var volumeStr = parameters.GetOptional("volume", "medium");
+        var p = ExtractPlaybackParameters(parameters);
 
-        if (!shapeIndex.HasValue)
+        if (!p.ShapeIndex.HasValue)
             throw new ArgumentException("shapeIndex is required for set_playback operation");
 
         var presentation = context.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-        var shape = PowerPointHelper.GetShape(slide, shapeIndex.Value);
+        var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
+        var shape = PowerPointHelper.GetShape(slide, p.ShapeIndex.Value);
 
-        if (!VolumeMap.TryGetValue(volumeStr, out var volume))
-            throw new ArgumentException($"Unknown volume: '{volumeStr}'. Supported values: {SupportedVolumes}");
+        if (!VolumeMap.TryGetValue(p.Volume, out var volume))
+            throw new ArgumentException($"Unknown volume: '{p.Volume}'. Supported values: {SupportedVolumes}");
 
-        var isOnClick = playModeStr.Equals("onclick", StringComparison.OrdinalIgnoreCase);
+        var isOnClick = p.PlayMode.Equals("onclick", StringComparison.OrdinalIgnoreCase);
 
         if (shape is IAudioFrame audio)
         {
             audio.PlayMode = isOnClick ? AudioPlayModePreset.OnClick : AudioPlayModePreset.Auto;
             audio.Volume = volume;
-            audio.PlayLoopMode = loop;
+            audio.PlayLoopMode = p.Loop;
         }
         else if (shape is IVideoFrame video)
         {
             video.PlayMode = isOnClick ? VideoPlayModePreset.OnClick : VideoPlayModePreset.Auto;
             video.Volume = volume;
-            video.PlayLoopMode = loop;
-            video.RewindVideo = rewind;
+            video.PlayLoopMode = p.Loop;
+            video.RewindVideo = p.Rewind;
         }
         else
         {
-            throw new ArgumentException($"Shape at index {shapeIndex} is not an audio or video frame");
+            throw new ArgumentException($"Shape at index {p.ShapeIndex} is not an audio or video frame");
         }
 
         MarkModified(context);
 
-        List<string> settings = [$"playMode={playModeStr}", $"volume={volumeStr}"];
-        if (loop) settings.Add("loop=true");
-        if (rewind && shape is IVideoFrame) settings.Add("rewind=true");
+        List<string> settings = [$"playMode={p.PlayMode}", $"volume={p.Volume}"];
+        if (p.Loop) settings.Add("loop=true");
+        if (p.Rewind && shape is IVideoFrame) settings.Add("rewind=true");
 
         return Success($"Playback settings updated ({string.Join(", ", settings)}).");
     }
+
+    /// <summary>
+    ///     Extracts playback parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted playback parameters.</returns>
+    private static PlaybackParameters ExtractPlaybackParameters(OperationParameters parameters)
+    {
+        return new PlaybackParameters(
+            parameters.GetOptional("slideIndex", 0),
+            parameters.GetOptional<int?>("shapeIndex"),
+            parameters.GetOptional("playMode", "auto"),
+            parameters.GetOptional("loop", false),
+            parameters.GetOptional("rewind", false),
+            parameters.GetOptional("volume", "medium"));
+    }
+
+    /// <summary>
+    ///     Record for holding playback parameters.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index.</param>
+    /// <param name="ShapeIndex">The shape index.</param>
+    /// <param name="PlayMode">The play mode.</param>
+    /// <param name="Loop">Whether to loop.</param>
+    /// <param name="Rewind">Whether to rewind.</param>
+    /// <param name="Volume">The volume level.</param>
+    private record PlaybackParameters(
+        int SlideIndex,
+        int? ShapeIndex,
+        string PlayMode,
+        bool Loop,
+        bool Rewind,
+        string Volume);
 }

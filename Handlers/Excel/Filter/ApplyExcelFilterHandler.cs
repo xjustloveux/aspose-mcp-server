@@ -23,17 +23,37 @@ public class ApplyExcelFilterHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with filter details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var range = parameters.GetRequired<string>("range");
+        var applyFilterParams = ExtractApplyFilterParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, applyFilterParams.SheetIndex);
 
-        ExcelHelper.CreateRange(worksheet.Cells, range);
-        worksheet.AutoFilter.Range = range;
+        ExcelHelper.CreateRange(worksheet.Cells, applyFilterParams.Range);
+        worksheet.AutoFilter.Range = applyFilterParams.Range;
 
         MarkModified(context);
 
-        return Success($"Auto filter applied to range {range} in sheet {sheetIndex}.");
+        return Success(
+            $"Auto filter applied to range {applyFilterParams.Range} in sheet {applyFilterParams.SheetIndex}.");
     }
+
+    /// <summary>
+    ///     Extracts apply filter parameters from the operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted apply filter parameters.</returns>
+    private static ApplyFilterParameters ExtractApplyFilterParameters(OperationParameters parameters)
+    {
+        return new ApplyFilterParameters(
+            parameters.GetOptional("sheetIndex", 0),
+            parameters.GetRequired<string>("range")
+        );
+    }
+
+    /// <summary>
+    ///     Parameters for apply filter operation.
+    /// </summary>
+    /// <param name="SheetIndex">The worksheet index (0-based).</param>
+    /// <param name="Range">The range to apply auto filter to.</param>
+    private record ApplyFilterParameters(int SheetIndex, string Range);
 }

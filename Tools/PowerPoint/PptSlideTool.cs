@@ -137,7 +137,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -152,44 +152,99 @@ Usage examples:
     {
         var parameters = new OperationParameters();
 
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "add":
-                parameters.Set("layoutType", layoutType);
-                break;
+            "add" => BuildAddParameters(parameters, layoutType),
+            "delete" or "clear" => BuildSlideIndexParameters(parameters, slideIndex),
+            "get_info" => parameters,
+            "move" => BuildMoveParameters(parameters, fromIndex, toIndex),
+            "duplicate" => BuildDuplicateParameters(parameters, slideIndex, insertAt),
+            "hide" => BuildHideParameters(parameters, slideIndices, hidden),
+            "edit" => BuildEditParameters(parameters, slideIndex, layoutIndex),
+            _ => parameters
+        };
+    }
 
-            case "delete":
-                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the add slide operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters to add to.</param>
+    /// <param name="layoutType">The slide layout type.</param>
+    /// <returns>OperationParameters configured for adding a slide.</returns>
+    private static OperationParameters BuildAddParameters(OperationParameters parameters, string layoutType)
+    {
+        parameters.Set("layoutType", layoutType);
+        return parameters;
+    }
 
-            case "get_info":
-                break;
+    /// <summary>
+    ///     Builds parameters for operations that require only a slide index.
+    /// </summary>
+    /// <param name="parameters">Base parameters to add to.</param>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <returns>OperationParameters configured with slide index.</returns>
+    private static OperationParameters BuildSlideIndexParameters(OperationParameters parameters, int? slideIndex)
+    {
+        if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
+        return parameters;
+    }
 
-            case "move":
-                if (fromIndex.HasValue) parameters.Set("fromIndex", fromIndex.Value);
-                if (toIndex.HasValue) parameters.Set("toIndex", toIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the move slide operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters to add to.</param>
+    /// <param name="fromIndex">The source slide index (0-based).</param>
+    /// <param name="toIndex">The target slide index (0-based).</param>
+    /// <returns>OperationParameters configured for moving a slide.</returns>
+    private static OperationParameters BuildMoveParameters(OperationParameters parameters, int? fromIndex, int? toIndex)
+    {
+        if (fromIndex.HasValue) parameters.Set("fromIndex", fromIndex.Value);
+        if (toIndex.HasValue) parameters.Set("toIndex", toIndex.Value);
+        return parameters;
+    }
 
-            case "duplicate":
-                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
-                if (insertAt.HasValue) parameters.Set("insertAt", insertAt.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the duplicate slide operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters to add to.</param>
+    /// <param name="slideIndex">The slide index (0-based) to duplicate.</param>
+    /// <param name="insertAt">The target index to insert the duplicated slide.</param>
+    /// <returns>OperationParameters configured for duplicating a slide.</returns>
+    private static OperationParameters BuildDuplicateParameters(OperationParameters parameters, int? slideIndex,
+        int? insertAt)
+    {
+        if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
+        if (insertAt.HasValue) parameters.Set("insertAt", insertAt.Value);
+        return parameters;
+    }
 
-            case "hide":
-                if (slideIndices != null) parameters.Set("slideIndices", slideIndices);
-                parameters.Set("hidden", hidden);
-                break;
+    /// <summary>
+    ///     Builds parameters for the hide/show slide operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters to add to.</param>
+    /// <param name="slideIndices">JSON array of slide indices to hide/show.</param>
+    /// <param name="hidden">Whether to hide (true) or show (false) the slides.</param>
+    /// <returns>OperationParameters configured for hiding/showing slides.</returns>
+    private static OperationParameters BuildHideParameters(OperationParameters parameters, string? slideIndices,
+        bool hidden)
+    {
+        if (slideIndices != null) parameters.Set("slideIndices", slideIndices);
+        parameters.Set("hidden", hidden);
+        return parameters;
+    }
 
-            case "clear":
-                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
-                break;
-
-            case "edit":
-                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
-                if (layoutIndex.HasValue) parameters.Set("layoutIndex", layoutIndex.Value);
-                break;
-        }
-
+    /// <summary>
+    ///     Builds parameters for the edit slide operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters to add to.</param>
+    /// <param name="slideIndex">The slide index (0-based) to edit.</param>
+    /// <param name="layoutIndex">The layout index (0-based) to apply.</param>
+    /// <returns>OperationParameters configured for editing a slide.</returns>
+    private static OperationParameters BuildEditParameters(OperationParameters parameters, int? slideIndex,
+        int? layoutIndex)
+    {
+        if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
+        if (layoutIndex.HasValue) parameters.Set("layoutIndex", layoutIndex.Value);
         return parameters;
     }
 }

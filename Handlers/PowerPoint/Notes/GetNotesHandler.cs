@@ -22,20 +22,20 @@ public class GetNotesHandler : OperationHandlerBase<Presentation>
     /// <returns>JSON string containing notes information.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetOptional<int?>("slideIndex");
+        var p = ExtractGetNotesParameters(parameters);
 
         var presentation = context.Document;
 
-        if (slideIndex.HasValue)
+        if (p.SlideIndex.HasValue)
         {
-            PowerPointHelper.ValidateCollectionIndex(slideIndex.Value, presentation.Slides.Count, "slide");
+            PowerPointHelper.ValidateCollectionIndex(p.SlideIndex.Value, presentation.Slides.Count, "slide");
 
-            var notesSlide = presentation.Slides[slideIndex.Value].NotesSlideManager.NotesSlide;
+            var notesSlide = presentation.Slides[p.SlideIndex.Value].NotesSlideManager.NotesSlide;
             var notesText = notesSlide?.NotesTextFrame?.Text;
 
             return JsonResult(new
             {
-                slideIndex = slideIndex.Value,
+                slideIndex = p.SlideIndex.Value,
                 hasNotes = !string.IsNullOrWhiteSpace(notesText),
                 notes = notesText
             });
@@ -61,4 +61,20 @@ public class GetNotesHandler : OperationHandlerBase<Presentation>
             slides = notesList
         });
     }
+
+    /// <summary>
+    ///     Extracts get notes parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted get notes parameters.</returns>
+    private static GetNotesParameters ExtractGetNotesParameters(OperationParameters parameters)
+    {
+        return new GetNotesParameters(parameters.GetOptional<int?>("slideIndex"));
+    }
+
+    /// <summary>
+    ///     Record for holding get notes parameters.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index.</param>
+    private record GetNotesParameters(int? SlideIndex);
 }

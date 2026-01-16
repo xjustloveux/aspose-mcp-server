@@ -141,7 +141,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -163,51 +163,122 @@ Usage examples:
         var parameters = new OperationParameters();
         parameters.Set("sheetIndex", sheetIndex);
 
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "add":
-                if (chartType != null) parameters.Set("chartType", chartType);
-                if (dataRange != null) parameters.Set("dataRange", dataRange);
-                if (categoryAxisDataRange != null) parameters.Set("categoryAxisDataRange", categoryAxisDataRange);
-                if (title != null) parameters.Set("title", title);
-                if (topRow.HasValue) parameters.Set("topRow", topRow.Value);
-                parameters.Set("leftColumn", leftColumn);
-                parameters.Set("width", width);
-                parameters.Set("height", height);
-                break;
+            "add" => BuildAddParameters(parameters, chartType, dataRange, categoryAxisDataRange, title, topRow,
+                leftColumn, width, height),
+            "edit" => BuildEditParameters(parameters, chartIndex, title, dataRange, categoryAxisDataRange, chartType,
+                showLegend, legendPosition),
+            "delete" => BuildChartIndexParameters(parameters, chartIndex),
+            "get" => parameters,
+            "update_data" => BuildUpdateDataParameters(parameters, chartIndex, dataRange, categoryAxisDataRange),
+            "set_properties" => BuildSetPropertiesParameters(parameters, chartIndex, title, removeTitle, legendVisible,
+                legendPosition),
+            _ => parameters
+        };
+    }
 
-            case "edit":
-                parameters.Set("chartIndex", chartIndex);
-                if (title != null) parameters.Set("title", title);
-                if (dataRange != null) parameters.Set("dataRange", dataRange);
-                if (categoryAxisDataRange != null) parameters.Set("categoryAxisDataRange", categoryAxisDataRange);
-                if (chartType != null) parameters.Set("chartType", chartType);
-                if (showLegend.HasValue) parameters.Set("showLegend", showLegend.Value);
-                if (legendPosition != null) parameters.Set("legendPosition", legendPosition);
-                break;
+    /// <summary>
+    ///     Builds parameters for the add chart operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="chartType">The chart type.</param>
+    /// <param name="dataRange">Data range for chart values.</param>
+    /// <param name="categoryAxisDataRange">Category axis data range.</param>
+    /// <param name="title">Chart title.</param>
+    /// <param name="topRow">Top row index for chart position.</param>
+    /// <param name="leftColumn">Left column index for chart position.</param>
+    /// <param name="width">Chart width in columns.</param>
+    /// <param name="height">Chart height in rows.</param>
+    /// <returns>OperationParameters configured for adding a chart.</returns>
+    private static OperationParameters BuildAddParameters(OperationParameters parameters, string? chartType,
+        string? dataRange, string? categoryAxisDataRange, string? title, int? topRow, int leftColumn, int width,
+        int height)
+    {
+        if (chartType != null) parameters.Set("chartType", chartType);
+        if (dataRange != null) parameters.Set("dataRange", dataRange);
+        if (categoryAxisDataRange != null) parameters.Set("categoryAxisDataRange", categoryAxisDataRange);
+        if (title != null) parameters.Set("title", title);
+        if (topRow.HasValue) parameters.Set("topRow", topRow.Value);
+        parameters.Set("leftColumn", leftColumn);
+        parameters.Set("width", width);
+        parameters.Set("height", height);
+        return parameters;
+    }
 
-            case "delete":
-                parameters.Set("chartIndex", chartIndex);
-                break;
+    /// <summary>
+    ///     Builds parameters for the edit chart operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="chartIndex">The chart index (0-based).</param>
+    /// <param name="title">New chart title.</param>
+    /// <param name="dataRange">New data range.</param>
+    /// <param name="categoryAxisDataRange">New category axis data range.</param>
+    /// <param name="chartType">New chart type.</param>
+    /// <param name="showLegend">Whether to show legend.</param>
+    /// <param name="legendPosition">Legend position.</param>
+    /// <returns>OperationParameters configured for editing a chart.</returns>
+    private static OperationParameters BuildEditParameters(OperationParameters parameters, int chartIndex,
+        string? title, string? dataRange, string? categoryAxisDataRange, string? chartType, bool? showLegend,
+        string? legendPosition)
+    {
+        parameters.Set("chartIndex", chartIndex);
+        if (title != null) parameters.Set("title", title);
+        if (dataRange != null) parameters.Set("dataRange", dataRange);
+        if (categoryAxisDataRange != null) parameters.Set("categoryAxisDataRange", categoryAxisDataRange);
+        if (chartType != null) parameters.Set("chartType", chartType);
+        if (showLegend.HasValue) parameters.Set("showLegend", showLegend.Value);
+        if (legendPosition != null) parameters.Set("legendPosition", legendPosition);
+        return parameters;
+    }
 
-            case "get":
-                break;
+    /// <summary>
+    ///     Builds parameters containing only the chart index.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="chartIndex">The chart index (0-based).</param>
+    /// <returns>OperationParameters with chart index set.</returns>
+    private static OperationParameters BuildChartIndexParameters(OperationParameters parameters, int chartIndex)
+    {
+        parameters.Set("chartIndex", chartIndex);
+        return parameters;
+    }
 
-            case "update_data":
-                parameters.Set("chartIndex", chartIndex);
-                if (dataRange != null) parameters.Set("dataRange", dataRange);
-                if (categoryAxisDataRange != null) parameters.Set("categoryAxisDataRange", categoryAxisDataRange);
-                break;
+    /// <summary>
+    ///     Builds parameters for the update chart data operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="chartIndex">The chart index (0-based).</param>
+    /// <param name="dataRange">New data range for chart values.</param>
+    /// <param name="categoryAxisDataRange">New category axis data range.</param>
+    /// <returns>OperationParameters configured for updating chart data.</returns>
+    private static OperationParameters BuildUpdateDataParameters(OperationParameters parameters, int chartIndex,
+        string? dataRange, string? categoryAxisDataRange)
+    {
+        parameters.Set("chartIndex", chartIndex);
+        if (dataRange != null) parameters.Set("dataRange", dataRange);
+        if (categoryAxisDataRange != null) parameters.Set("categoryAxisDataRange", categoryAxisDataRange);
+        return parameters;
+    }
 
-            case "set_properties":
-                parameters.Set("chartIndex", chartIndex);
-                if (title != null) parameters.Set("title", title);
-                parameters.Set("removeTitle", removeTitle);
-                if (legendVisible.HasValue) parameters.Set("legendVisible", legendVisible.Value);
-                if (legendPosition != null) parameters.Set("legendPosition", legendPosition);
-                break;
-        }
-
+    /// <summary>
+    ///     Builds parameters for the set chart properties operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="chartIndex">The chart index (0-based).</param>
+    /// <param name="title">New chart title.</param>
+    /// <param name="removeTitle">Whether to remove the title.</param>
+    /// <param name="legendVisible">Legend visibility.</param>
+    /// <param name="legendPosition">Legend position.</param>
+    /// <returns>OperationParameters configured for setting chart properties.</returns>
+    private static OperationParameters BuildSetPropertiesParameters(OperationParameters parameters, int chartIndex,
+        string? title, bool removeTitle, bool? legendVisible, string? legendPosition)
+    {
+        parameters.Set("chartIndex", chartIndex);
+        if (title != null) parameters.Set("title", title);
+        parameters.Set("removeTitle", removeTitle);
+        if (legendVisible.HasValue) parameters.Set("legendVisible", legendVisible.Value);
+        if (legendPosition != null) parameters.Set("legendPosition", legendPosition);
         return parameters;
     }
 }

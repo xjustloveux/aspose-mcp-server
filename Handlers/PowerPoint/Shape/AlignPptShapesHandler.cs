@@ -23,23 +23,20 @@ public class AlignPptShapesHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with alignment details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetRequired<int>("slideIndex");
-        var shapeIndices = parameters.GetRequired<int[]>("shapeIndices");
-        var align = parameters.GetRequired<string>("align");
-        var alignToSlide = parameters.GetOptional("alignToSlide", false);
+        var p = ExtractAlignPptShapesParameters(parameters);
 
-        if (shapeIndices.Length < 2)
+        if (p.ShapeIndices.Length < 2)
             throw new ArgumentException("At least 2 shapes are required for alignment");
 
         var presentation = context.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+        var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
 
-        foreach (var idx in shapeIndices)
+        foreach (var idx in p.ShapeIndices)
             PowerPointHelper.ValidateCollectionIndex(idx, slide.Shapes.Count, "shapeIndex");
 
-        var shapes = shapeIndices.Select(idx => slide.Shapes[idx]).ToArray();
+        var shapes = p.ShapeIndices.Select(idx => slide.Shapes[idx]).ToArray();
 
-        var refBox = alignToSlide
+        var refBox = p.AlignToSlide
             ? new { X = 0f, Y = 0f, W = presentation.SlideSize.Size.Width, H = presentation.SlideSize.Size.Height }
             : new
             {
@@ -50,7 +47,7 @@ public class AlignPptShapesHandler : OperationHandlerBase<Presentation>
             };
 
         foreach (var s in shapes)
-            switch (align.ToLower())
+            switch (p.Align.ToLower())
             {
                 case "left": s.X = refBox.X; break;
                 case "center": s.X = refBox.X + (refBox.W - s.Width) / 2f; break;
@@ -64,6 +61,17 @@ public class AlignPptShapesHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Aligned {shapeIndices.Length} shapes: {align}.");
+        return Success($"Aligned {p.ShapeIndices.Length} shapes: {p.Align}.");
     }
+
+    private static AlignPptShapesParameters ExtractAlignPptShapesParameters(OperationParameters parameters)
+    {
+        return new AlignPptShapesParameters(
+            parameters.GetRequired<int>("slideIndex"),
+            parameters.GetRequired<int[]>("shapeIndices"),
+            parameters.GetRequired<string>("align"),
+            parameters.GetOptional("alignToSlide", false));
+    }
+
+    private record AlignPptShapesParameters(int SlideIndex, int[] ShapeIndices, string Align, bool AlignToSlide);
 }

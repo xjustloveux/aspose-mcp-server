@@ -24,38 +24,28 @@ public class MergeCellsWordTableHandler : OperationHandlerBase<Document>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or indices are out of range.</exception>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var startRow = parameters.GetOptional<int?>("startRow");
-        var startCol = parameters.GetOptional<int?>("startCol");
-        var endRow = parameters.GetOptional<int?>("endRow");
-        var endCol = parameters.GetOptional<int?>("endCol");
-
-        if (!startRow.HasValue || !startCol.HasValue || !endRow.HasValue || !endCol.HasValue)
-            throw new ArgumentException(
-                "startRow, startCol, endRow, and endCol are all required for merge_cells operation");
-
-        var tableIndex = parameters.GetOptional("tableIndex", 0);
-        var sectionIndex = parameters.GetOptional<int?>("sectionIndex");
+        var p = ExtractMergeCellsParameters(parameters);
 
         var doc = context.Document;
-        var actualSectionIndex = sectionIndex ?? 0;
+        var actualSectionIndex = p.SectionIndex ?? 0;
         if (actualSectionIndex >= doc.Sections.Count)
             throw new ArgumentException($"Section index {actualSectionIndex} out of range");
 
         var section = doc.Sections[actualSectionIndex];
         var tables = section.Body.GetChildNodes(NodeType.Table, true).Cast<Aspose.Words.Tables.Table>().ToList();
-        if (tableIndex < 0 || tableIndex >= tables.Count)
-            throw new ArgumentException($"Table index {tableIndex} out of range");
+        if (p.TableIndex < 0 || p.TableIndex >= tables.Count)
+            throw new ArgumentException($"Table index {p.TableIndex} out of range");
 
-        var table = tables[tableIndex];
+        var table = tables[p.TableIndex];
 
-        ValidateMergeRange(table, startRow.Value, endRow.Value, startCol.Value, endCol.Value);
+        ValidateMergeRange(table, p.StartRow, p.EndRow, p.StartCol, p.EndCol);
 
-        ApplyMerge(table, startRow.Value, endRow.Value, startCol.Value, endCol.Value);
+        ApplyMerge(table, p.StartRow, p.EndRow, p.StartCol, p.EndCol);
 
         MarkModified(context);
 
         return Success(
-            $"Successfully merged cells from [{startRow.Value}, {startCol.Value}] to [{endRow.Value}, {endCol.Value}].");
+            $"Successfully merged cells from [{p.StartRow}, {p.StartCol}] to [{p.EndRow}, {p.EndCol}].");
     }
 
     /// <summary>
@@ -127,4 +117,30 @@ public class MergeCellsWordTableHandler : OperationHandlerBase<Document>
             }
         }
     }
+
+    private static MergeCellsParameters ExtractMergeCellsParameters(OperationParameters parameters)
+    {
+        var startRow = parameters.GetOptional<int?>("startRow");
+        var startCol = parameters.GetOptional<int?>("startCol");
+        var endRow = parameters.GetOptional<int?>("endRow");
+        var endCol = parameters.GetOptional<int?>("endCol");
+
+        if (!startRow.HasValue || !startCol.HasValue || !endRow.HasValue || !endCol.HasValue)
+            throw new ArgumentException(
+                "startRow, startCol, endRow, and endCol are all required for merge_cells operation");
+
+        var tableIndex = parameters.GetOptional("tableIndex", 0);
+        var sectionIndex = parameters.GetOptional<int?>("sectionIndex");
+
+        return new MergeCellsParameters(startRow.Value, startCol.Value, endRow.Value, endCol.Value, tableIndex,
+            sectionIndex);
+    }
+
+    private record MergeCellsParameters(
+        int StartRow,
+        int StartCol,
+        int EndRow,
+        int EndCol,
+        int TableIndex,
+        int? SectionIndex);
 }

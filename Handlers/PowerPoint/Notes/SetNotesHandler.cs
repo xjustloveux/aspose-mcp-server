@@ -22,18 +22,36 @@ public class SetNotesHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message indicating notes were set.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetRequired<int>("slideIndex");
-        var notes = parameters.GetRequired<string>("notes");
+        var p = ExtractSetNotesParameters(parameters);
 
         var presentation = context.Document;
-        PowerPointHelper.ValidateCollectionIndex(slideIndex, presentation.Slides.Count, "slide");
+        PowerPointHelper.ValidateCollectionIndex(p.SlideIndex, presentation.Slides.Count, "slide");
 
-        var slide = presentation.Slides[slideIndex];
+        var slide = presentation.Slides[p.SlideIndex];
         var notesSlide = slide.NotesSlideManager.NotesSlide ?? slide.NotesSlideManager.AddNotesSlide();
-        notesSlide.NotesTextFrame.Text = notes;
+        notesSlide.NotesTextFrame.Text = p.Notes;
 
         MarkModified(context);
 
-        return Success($"Notes set for slide {slideIndex}.");
+        return Success($"Notes set for slide {p.SlideIndex}.");
     }
+
+    /// <summary>
+    ///     Extracts set notes parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted set notes parameters.</returns>
+    private static SetNotesParameters ExtractSetNotesParameters(OperationParameters parameters)
+    {
+        return new SetNotesParameters(
+            parameters.GetRequired<int>("slideIndex"),
+            parameters.GetRequired<string>("notes"));
+    }
+
+    /// <summary>
+    ///     Record for holding set notes parameters.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index.</param>
+    /// <param name="Notes">The notes content.</param>
+    private record SetNotesParameters(int SlideIndex, string Notes);
 }

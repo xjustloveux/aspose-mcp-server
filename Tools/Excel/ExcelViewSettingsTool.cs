@@ -183,7 +183,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -215,71 +215,192 @@ Usage examples:
         var parameters = new OperationParameters();
         parameters.Set("sheetIndex", sheetIndex);
 
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "set_zoom":
-                parameters.Set("zoom", zoom);
-                break;
+            "set_zoom" => BuildSetZoomParameters(parameters, zoom),
+            "set_gridlines" or "set_headers" or "set_zero_values" or "show_formulas"
+                => BuildVisibilityParameters(parameters, visible),
+            "set_column_width" => BuildColumnWidthParameters(parameters, columnIndex, width),
+            "set_row_height" => BuildRowHeightParameters(parameters, rowIndex, height),
+            "set_background" => BuildBackgroundParameters(parameters, imagePath, removeBackground),
+            "set_tab_color" => BuildTabColorParameters(parameters, color),
+            "set_all" => BuildSetAllParameters(parameters, zoom, showGridlines, showRowColumnHeaders,
+                showZeroValues, displayRightToLeft),
+            "freeze_panes" => BuildFreezePanesParameters(parameters, freezeRow, freezeColumn, unfreeze),
+            "split_window" => BuildSplitWindowParameters(parameters, splitRow, splitColumn, removeSplit),
+            "auto_fit_column" => BuildAutoFitColumnParameters(parameters, columnIndex, startRow, endRow),
+            "auto_fit_row" => BuildAutoFitRowParameters(parameters, rowIndex, startColumn, endColumn),
+            _ => parameters
+        };
+    }
 
-            case "set_gridlines":
-            case "set_headers":
-            case "set_zero_values":
-            case "show_formulas":
-                parameters.Set("visible", visible);
-                break;
+    /// <summary>
+    ///     Builds parameters for the set zoom operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="zoom">The zoom percentage value (10-400).</param>
+    /// <returns>OperationParameters configured for the set zoom operation.</returns>
+    private static OperationParameters BuildSetZoomParameters(OperationParameters parameters, int zoom)
+    {
+        parameters.Set("zoom", zoom);
+        return parameters;
+    }
 
-            case "set_column_width":
-                parameters.Set("columnIndex", columnIndex);
-                parameters.Set("width", width);
-                break;
+    /// <summary>
+    ///     Builds parameters for visibility-related operations (gridlines, headers, zero values, show formulas).
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="visible">Whether the element should be visible.</param>
+    /// <returns>OperationParameters configured for the visibility operation.</returns>
+    private static OperationParameters BuildVisibilityParameters(OperationParameters parameters, bool visible)
+    {
+        parameters.Set("visible", visible);
+        return parameters;
+    }
 
-            case "set_row_height":
-                parameters.Set("rowIndex", rowIndex);
-                parameters.Set("height", height);
-                break;
+    /// <summary>
+    ///     Builds parameters for the set column width operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="columnIndex">The column index (0-based).</param>
+    /// <param name="width">The column width in characters.</param>
+    /// <returns>OperationParameters configured for the set column width operation.</returns>
+    private static OperationParameters BuildColumnWidthParameters(OperationParameters parameters, int columnIndex,
+        double width)
+    {
+        parameters.Set("columnIndex", columnIndex);
+        parameters.Set("width", width);
+        return parameters;
+    }
 
-            case "set_background":
-                if (imagePath != null) parameters.Set("imagePath", imagePath);
-                parameters.Set("removeBackground", removeBackground);
-                break;
+    /// <summary>
+    ///     Builds parameters for the set row height operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="rowIndex">The row index (0-based).</param>
+    /// <param name="height">The row height in points.</param>
+    /// <returns>OperationParameters configured for the set row height operation.</returns>
+    private static OperationParameters BuildRowHeightParameters(OperationParameters parameters, int rowIndex,
+        double height)
+    {
+        parameters.Set("rowIndex", rowIndex);
+        parameters.Set("height", height);
+        return parameters;
+    }
 
-            case "set_tab_color":
-                if (color != null) parameters.Set("color", color);
-                break;
+    /// <summary>
+    ///     Builds parameters for the set background operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="imagePath">The path to the background image file.</param>
+    /// <param name="removeBackground">Whether to remove the background image.</param>
+    /// <returns>OperationParameters configured for the set background operation.</returns>
+    private static OperationParameters BuildBackgroundParameters(OperationParameters parameters, string? imagePath,
+        bool removeBackground)
+    {
+        if (imagePath != null) parameters.Set("imagePath", imagePath);
+        parameters.Set("removeBackground", removeBackground);
+        return parameters;
+    }
 
-            case "set_all":
-                parameters.Set("zoom", zoom);
-                if (showGridlines.HasValue) parameters.Set("showGridlines", showGridlines.Value);
-                if (showRowColumnHeaders.HasValue) parameters.Set("showRowColumnHeaders", showRowColumnHeaders.Value);
-                if (showZeroValues.HasValue) parameters.Set("showZeroValues", showZeroValues.Value);
-                if (displayRightToLeft.HasValue) parameters.Set("displayRightToLeft", displayRightToLeft.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the set tab color operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="color">The tab color in hex format (e.g., '#FF0000').</param>
+    /// <returns>OperationParameters configured for the set tab color operation.</returns>
+    private static OperationParameters BuildTabColorParameters(OperationParameters parameters, string? color)
+    {
+        if (color != null) parameters.Set("color", color);
+        return parameters;
+    }
 
-            case "freeze_panes":
-                if (freezeRow.HasValue) parameters.Set("freezeRow", freezeRow.Value);
-                if (freezeColumn.HasValue) parameters.Set("freezeColumn", freezeColumn.Value);
-                parameters.Set("unfreeze", unfreeze);
-                break;
+    /// <summary>
+    ///     Builds parameters for the set all view settings operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="zoom">The zoom percentage value.</param>
+    /// <param name="showGridlines">Whether to show gridlines.</param>
+    /// <param name="showRowColumnHeaders">Whether to show row/column headers.</param>
+    /// <param name="showZeroValues">Whether to show zero values.</param>
+    /// <param name="displayRightToLeft">Whether to display right to left.</param>
+    /// <returns>OperationParameters configured for the set all operation.</returns>
+    private static OperationParameters BuildSetAllParameters(OperationParameters parameters, int zoom,
+        bool? showGridlines, bool? showRowColumnHeaders, bool? showZeroValues, bool? displayRightToLeft)
+    {
+        parameters.Set("zoom", zoom);
+        if (showGridlines.HasValue) parameters.Set("showGridlines", showGridlines.Value);
+        if (showRowColumnHeaders.HasValue) parameters.Set("showRowColumnHeaders", showRowColumnHeaders.Value);
+        if (showZeroValues.HasValue) parameters.Set("showZeroValues", showZeroValues.Value);
+        if (displayRightToLeft.HasValue) parameters.Set("displayRightToLeft", displayRightToLeft.Value);
+        return parameters;
+    }
 
-            case "split_window":
-                if (splitRow.HasValue) parameters.Set("splitRow", splitRow.Value);
-                if (splitColumn.HasValue) parameters.Set("splitColumn", splitColumn.Value);
-                parameters.Set("removeSplit", removeSplit);
-                break;
+    /// <summary>
+    ///     Builds parameters for the freeze panes operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="freezeRow">The row index to freeze at (0-based).</param>
+    /// <param name="freezeColumn">The column index to freeze at (0-based).</param>
+    /// <param name="unfreeze">Whether to remove frozen panes.</param>
+    /// <returns>OperationParameters configured for the freeze panes operation.</returns>
+    private static OperationParameters BuildFreezePanesParameters(OperationParameters parameters, int? freezeRow,
+        int? freezeColumn, bool unfreeze)
+    {
+        if (freezeRow.HasValue) parameters.Set("freezeRow", freezeRow.Value);
+        if (freezeColumn.HasValue) parameters.Set("freezeColumn", freezeColumn.Value);
+        parameters.Set("unfreeze", unfreeze);
+        return parameters;
+    }
 
-            case "auto_fit_column":
-                parameters.Set("columnIndex", columnIndex);
-                if (startRow.HasValue) parameters.Set("startRow", startRow.Value);
-                if (endRow.HasValue) parameters.Set("endRow", endRow.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the split window operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="splitRow">The row position to split at in pixels.</param>
+    /// <param name="splitColumn">The column position to split at in pixels.</param>
+    /// <param name="removeSplit">Whether to remove the window split.</param>
+    /// <returns>OperationParameters configured for the split window operation.</returns>
+    private static OperationParameters BuildSplitWindowParameters(OperationParameters parameters, int? splitRow,
+        int? splitColumn, bool removeSplit)
+    {
+        if (splitRow.HasValue) parameters.Set("splitRow", splitRow.Value);
+        if (splitColumn.HasValue) parameters.Set("splitColumn", splitColumn.Value);
+        parameters.Set("removeSplit", removeSplit);
+        return parameters;
+    }
 
-            case "auto_fit_row":
-                parameters.Set("rowIndex", rowIndex);
-                if (startColumn.HasValue) parameters.Set("startColumn", startColumn.Value);
-                if (endColumn.HasValue) parameters.Set("endColumn", endColumn.Value);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the auto fit column operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="columnIndex">The column index to auto fit (0-based).</param>
+    /// <param name="startRow">The start row index for auto fit range (0-based).</param>
+    /// <param name="endRow">The end row index for auto fit range (0-based).</param>
+    /// <returns>OperationParameters configured for the auto fit column operation.</returns>
+    private static OperationParameters BuildAutoFitColumnParameters(OperationParameters parameters, int columnIndex,
+        int? startRow, int? endRow)
+    {
+        parameters.Set("columnIndex", columnIndex);
+        if (startRow.HasValue) parameters.Set("startRow", startRow.Value);
+        if (endRow.HasValue) parameters.Set("endRow", endRow.Value);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the auto fit row operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="rowIndex">The row index to auto fit (0-based).</param>
+    /// <param name="startColumn">The start column index for auto fit range (0-based).</param>
+    /// <param name="endColumn">The end column index for auto fit range (0-based).</param>
+    /// <returns>OperationParameters configured for the auto fit row operation.</returns>
+    private static OperationParameters BuildAutoFitRowParameters(OperationParameters parameters, int rowIndex,
+        int? startColumn, int? endColumn)
+    {
+        parameters.Set("rowIndex", rowIndex);
+        if (startColumn.HasValue) parameters.Set("startColumn", startColumn.Value);
+        if (endColumn.HasValue) parameters.Set("endColumn", endColumn.Value);
         return parameters;
     }
 }

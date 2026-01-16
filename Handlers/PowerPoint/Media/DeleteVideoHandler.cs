@@ -23,21 +23,39 @@ public class DeleteVideoHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with deletion details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetOptional("slideIndex", 0);
-        var shapeIndex = parameters.GetRequired<int>("shapeIndex");
+        var p = ExtractDeleteVideoParameters(parameters);
 
         var presentation = context.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+        var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
 
-        PowerPointHelper.ValidateCollectionIndex(shapeIndex, slide.Shapes.Count, "shapeIndex");
+        PowerPointHelper.ValidateCollectionIndex(p.ShapeIndex, slide.Shapes.Count, "shapeIndex");
 
-        if (slide.Shapes[shapeIndex] is not IVideoFrame)
-            throw new ArgumentException($"Shape at index {shapeIndex} is not a video frame");
+        if (slide.Shapes[p.ShapeIndex] is not IVideoFrame)
+            throw new ArgumentException($"Shape at index {p.ShapeIndex} is not a video frame");
 
-        slide.Shapes.RemoveAt(shapeIndex);
+        slide.Shapes.RemoveAt(p.ShapeIndex);
 
         MarkModified(context);
 
-        return Success($"Video deleted from slide {slideIndex}.");
+        return Success($"Video deleted from slide {p.SlideIndex}.");
     }
+
+    /// <summary>
+    ///     Extracts delete video parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted delete video parameters.</returns>
+    private static DeleteVideoParameters ExtractDeleteVideoParameters(OperationParameters parameters)
+    {
+        return new DeleteVideoParameters(
+            parameters.GetOptional("slideIndex", 0),
+            parameters.GetRequired<int>("shapeIndex"));
+    }
+
+    /// <summary>
+    ///     Record for holding delete video parameters.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index.</param>
+    /// <param name="ShapeIndex">The shape index.</param>
+    private record DeleteVideoParameters(int SlideIndex, int ShapeIndex);
 }

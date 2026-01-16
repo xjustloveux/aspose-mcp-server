@@ -130,7 +130,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -146,31 +146,71 @@ Usage examples:
         bool includeFontInfo,
         string extractionMode)
     {
+        return operation.ToLowerInvariant() switch
+        {
+            "add" => BuildAddParameters(pageIndex, text, x, y, fontName, fontSize),
+            "edit" => BuildEditParameters(pageIndex, oldText, newText, replaceAll),
+            "extract" => BuildExtractParameters(pageIndex, includeFontInfo, extractionMode),
+            _ => new OperationParameters()
+        };
+    }
+
+    /// <summary>
+    ///     Builds parameters for the add text operation.
+    /// </summary>
+    /// <param name="pageIndex">The page index (1-based).</param>
+    /// <param name="text">The text to add.</param>
+    /// <param name="x">X position in PDF coordinates.</param>
+    /// <param name="y">Y position in PDF coordinates.</param>
+    /// <param name="fontName">The font name.</param>
+    /// <param name="fontSize">The font size.</param>
+    /// <returns>OperationParameters configured for adding text.</returns>
+    private static OperationParameters BuildAddParameters(int pageIndex, string? text, double x, double y,
+        string fontName, double fontSize)
+    {
         var parameters = new OperationParameters();
         parameters.Set("pageIndex", pageIndex);
+        if (text != null) parameters.Set("text", text);
+        parameters.Set("x", x);
+        parameters.Set("y", y);
+        parameters.Set("fontName", fontName);
+        parameters.Set("fontSize", fontSize);
+        return parameters;
+    }
 
-        switch (operation.ToLowerInvariant())
-        {
-            case "add":
-                if (text != null) parameters.Set("text", text);
-                parameters.Set("x", x);
-                parameters.Set("y", y);
-                parameters.Set("fontName", fontName);
-                parameters.Set("fontSize", fontSize);
-                break;
+    /// <summary>
+    ///     Builds parameters for the edit (replace) text operation.
+    /// </summary>
+    /// <param name="pageIndex">The page index (1-based).</param>
+    /// <param name="oldText">The text to replace.</param>
+    /// <param name="newText">The new text.</param>
+    /// <param name="replaceAll">Whether to replace all occurrences.</param>
+    /// <returns>OperationParameters configured for editing text.</returns>
+    private static OperationParameters BuildEditParameters(int pageIndex, string? oldText, string? newText,
+        bool replaceAll)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("pageIndex", pageIndex);
+        if (oldText != null) parameters.Set("oldText", oldText);
+        if (newText != null) parameters.Set("newText", newText);
+        parameters.Set("replaceAll", replaceAll);
+        return parameters;
+    }
 
-            case "edit":
-                if (oldText != null) parameters.Set("oldText", oldText);
-                if (newText != null) parameters.Set("newText", newText);
-                parameters.Set("replaceAll", replaceAll);
-                break;
-
-            case "extract":
-                parameters.Set("includeFontInfo", includeFontInfo);
-                parameters.Set("extractionMode", extractionMode);
-                break;
-        }
-
+    /// <summary>
+    ///     Builds parameters for the extract text operation.
+    /// </summary>
+    /// <param name="pageIndex">The page index (1-based).</param>
+    /// <param name="includeFontInfo">Whether to include font information.</param>
+    /// <param name="extractionMode">The text extraction mode.</param>
+    /// <returns>OperationParameters configured for extracting text.</returns>
+    private static OperationParameters BuildExtractParameters(int pageIndex, bool includeFontInfo,
+        string extractionMode)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("pageIndex", pageIndex);
+        parameters.Set("includeFontInfo", includeFontInfo);
+        parameters.Set("extractionMode", extractionMode);
         return parameters;
     }
 }

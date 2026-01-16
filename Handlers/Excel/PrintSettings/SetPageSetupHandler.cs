@@ -23,29 +23,60 @@ public class SetPageSetupHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with page setup details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var orientation = parameters.GetOptional<string?>("orientation");
-        var paperSize = parameters.GetOptional<string?>("paperSize");
-        var leftMargin = parameters.GetOptional<double?>("leftMargin");
-        var rightMargin = parameters.GetOptional<double?>("rightMargin");
-        var topMargin = parameters.GetOptional<double?>("topMargin");
-        var bottomMargin = parameters.GetOptional<double?>("bottomMargin");
-        var header = parameters.GetOptional<string?>("header");
-        var footer = parameters.GetOptional<string?>("footer");
-        var fitToPage = parameters.GetOptional<bool?>("fitToPage");
-        var fitToPagesWide = parameters.GetOptional<int?>("fitToPagesWide");
-        var fitToPagesTall = parameters.GetOptional<int?>("fitToPagesTall");
+        var setParams = ExtractSetPageSetupParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, setParams.SheetIndex);
         var pageSetup = worksheet.PageSetup;
 
-        var changes = ExcelPrintSettingsHelper.ApplyPageSetup(pageSetup, orientation, paperSize, leftMargin,
-            rightMargin, topMargin, bottomMargin, header, footer, fitToPage, fitToPagesWide, fitToPagesTall);
+        var changes = ExcelPrintSettingsHelper.ApplyPageSetup(pageSetup, setParams.Orientation, setParams.PaperSize,
+            setParams.LeftMargin, setParams.RightMargin, setParams.TopMargin, setParams.BottomMargin,
+            setParams.Header, setParams.Footer, setParams.FitToPage, setParams.FitToPagesWide,
+            setParams.FitToPagesTall);
 
         MarkModified(context);
 
         var changesStr = changes.Count > 0 ? string.Join(", ", changes) : "no changes";
         return Success($"Page setup updated ({changesStr}).");
     }
+
+    /// <summary>
+    ///     Extracts set page setup parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted set page setup parameters.</returns>
+    private static SetPageSetupParameters ExtractSetPageSetupParameters(OperationParameters parameters)
+    {
+        return new SetPageSetupParameters(
+            parameters.GetOptional("sheetIndex", 0),
+            parameters.GetOptional<string?>("orientation"),
+            parameters.GetOptional<string?>("paperSize"),
+            parameters.GetOptional<double?>("leftMargin"),
+            parameters.GetOptional<double?>("rightMargin"),
+            parameters.GetOptional<double?>("topMargin"),
+            parameters.GetOptional<double?>("bottomMargin"),
+            parameters.GetOptional<string?>("header"),
+            parameters.GetOptional<string?>("footer"),
+            parameters.GetOptional<bool?>("fitToPage"),
+            parameters.GetOptional<int?>("fitToPagesWide"),
+            parameters.GetOptional<int?>("fitToPagesTall")
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold set page setup parameters.
+    /// </summary>
+    private record SetPageSetupParameters(
+        int SheetIndex,
+        string? Orientation,
+        string? PaperSize,
+        double? LeftMargin,
+        double? RightMargin,
+        double? TopMargin,
+        double? BottomMargin,
+        string? Header,
+        string? Footer,
+        bool? FitToPage,
+        int? FitToPagesWide,
+        int? FitToPagesTall);
 }

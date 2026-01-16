@@ -129,6 +129,17 @@ Notes:
     /// <summary>
     ///     Builds OperationParameters from method parameters.
     /// </summary>
+    /// <param name="operation">The operation to perform.</param>
+    /// <param name="title">The document title.</param>
+    /// <param name="subject">The document subject.</param>
+    /// <param name="author">The document author.</param>
+    /// <param name="keywords">The document keywords.</param>
+    /// <param name="comments">The document comments.</param>
+    /// <param name="category">The document category.</param>
+    /// <param name="company">The company name.</param>
+    /// <param name="manager">The manager name.</param>
+    /// <param name="customProperties">Custom properties as JSON string.</param>
+    /// <returns>OperationParameters configured for the properties operation.</returns>
     private static OperationParameters BuildParameters(
         string operation,
         string? title,

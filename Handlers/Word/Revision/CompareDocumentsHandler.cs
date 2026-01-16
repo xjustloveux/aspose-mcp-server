@@ -26,30 +26,48 @@ public class CompareDocumentsHandler : OperationHandlerBase<Document>
     /// <exception cref="ArgumentException">Thrown when required paths are not provided.</exception>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
+        var p = ExtractCompareDocumentsParameters(parameters);
+
+        var originalDoc = new Document(p.OriginalPath);
+        var revisedDoc = new Document(p.RevisedPath);
+
+        var compareOptions = new CompareOptions
+        {
+            IgnoreFormatting = p.IgnoreFormatting,
+            IgnoreComments = p.IgnoreComments
+        };
+
+        originalDoc.Compare(revisedDoc, p.AuthorName, DateTime.Now, compareOptions);
+        var revisionCount = originalDoc.Revisions.Count;
+        originalDoc.Save(p.OutputPath);
+
+        return Success($"Comparison completed: {revisionCount} difference(s) found\nOutput: {p.OutputPath}");
+    }
+
+    private static CompareDocumentsParameters ExtractCompareDocumentsParameters(OperationParameters parameters)
+    {
         var outputPath = parameters.GetRequired<string>("outputPath");
         var originalPath = parameters.GetRequired<string>("originalPath");
         var revisedPath = parameters.GetRequired<string>("revisedPath");
-        var authorName = parameters.GetOptional("authorName", "Comparison");
-        var ignoreFormatting = parameters.GetOptional("ignoreFormatting", false);
-        var ignoreComments = parameters.GetOptional("ignoreComments", false);
 
         SecurityHelper.ValidateFilePath(originalPath, "originalPath", true);
         SecurityHelper.ValidateFilePath(revisedPath, "revisedPath", true);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
-        var originalDoc = new Document(originalPath);
-        var revisedDoc = new Document(revisedPath);
-
-        var compareOptions = new CompareOptions
-        {
-            IgnoreFormatting = ignoreFormatting,
-            IgnoreComments = ignoreComments
-        };
-
-        originalDoc.Compare(revisedDoc, authorName, DateTime.Now, compareOptions);
-        var revisionCount = originalDoc.Revisions.Count;
-        originalDoc.Save(outputPath);
-
-        return Success($"Comparison completed: {revisionCount} difference(s) found\nOutput: {outputPath}");
+        return new CompareDocumentsParameters(
+            originalPath,
+            revisedPath,
+            outputPath,
+            parameters.GetOptional("authorName", "Comparison"),
+            parameters.GetOptional("ignoreFormatting", false),
+            parameters.GetOptional("ignoreComments", false));
     }
+
+    private record CompareDocumentsParameters(
+        string OriginalPath,
+        string RevisedPath,
+        string OutputPath,
+        string AuthorName,
+        bool IgnoreFormatting,
+        bool IgnoreComments);
 }

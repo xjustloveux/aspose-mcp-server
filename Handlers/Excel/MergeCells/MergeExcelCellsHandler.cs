@@ -23,24 +23,33 @@ public class MergeExcelCellsHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with merge details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var range = parameters.GetRequired<string>("range");
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
+        var p = ExtractMergeCellsParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, p.SheetIndex);
         var cells = worksheet.Cells;
 
-        var cellRange = ExcelHelper.CreateRange(cells, range);
+        var cellRange = ExcelHelper.CreateRange(cells, p.Range);
 
         if (cellRange is { RowCount: 1, ColumnCount: 1 })
             throw new ArgumentException(
-                $"Cannot merge a single cell. Range '{range}' must include at least 2 cells.");
+                $"Cannot merge a single cell. Range '{p.Range}' must include at least 2 cells.");
 
         cellRange.Merge();
 
         MarkModified(context);
 
         return Success(
-            $"Range {range} merged ({cellRange.RowCount} rows x {cellRange.ColumnCount} columns).");
+            $"Range {p.Range} merged ({cellRange.RowCount} rows x {cellRange.ColumnCount} columns).");
     }
+
+    private static MergeCellsParameters ExtractMergeCellsParameters(OperationParameters parameters)
+    {
+        return new MergeCellsParameters(
+            parameters.GetRequired<string>("range"),
+            parameters.GetOptional("sheetIndex", 0)
+        );
+    }
+
+    private record MergeCellsParameters(string Range, int SheetIndex);
 }

@@ -25,19 +25,28 @@ public class GroupExcelColumnsHandler : OperationHandlerBase<Workbook>
     {
         ExcelGroupHelper.ValidateRequiredParams(Operation, parameters, "startColumn", "endColumn");
 
+        var p = ExtractGroupColumnsParameters(parameters);
+
+        ExcelGroupHelper.ValidateColumnRange(p.StartColumn, p.EndColumn);
+
+        var workbook = context.Document;
+        var worksheet = ExcelHelper.GetWorksheet(workbook, p.SheetIndex);
+        worksheet.Cells.GroupColumns(p.StartColumn, p.EndColumn, p.IsCollapsed);
+
+        MarkModified(context);
+
+        return Success($"Columns {p.StartColumn}-{p.EndColumn} grouped in sheet {p.SheetIndex}.");
+    }
+
+    private static GroupColumnsParameters ExtractGroupColumnsParameters(OperationParameters parameters)
+    {
         var sheetIndex = parameters.GetOptional("sheetIndex", 0);
         var startColumn = parameters.GetRequired<int>("startColumn");
         var endColumn = parameters.GetRequired<int>("endColumn");
         var isCollapsed = parameters.GetOptional("isCollapsed", false);
 
-        ExcelGroupHelper.ValidateColumnRange(startColumn, endColumn);
-
-        var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        worksheet.Cells.GroupColumns(startColumn, endColumn, isCollapsed);
-
-        MarkModified(context);
-
-        return Success($"Columns {startColumn}-{endColumn} grouped in sheet {sheetIndex}.");
+        return new GroupColumnsParameters(sheetIndex, startColumn, endColumn, isCollapsed);
     }
+
+    private record GroupColumnsParameters(int SheetIndex, int StartColumn, int EndColumn, bool IsCollapsed);
 }

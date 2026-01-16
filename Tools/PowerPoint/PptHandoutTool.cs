@@ -109,6 +109,11 @@ Usage examples:
     /// <summary>
     ///     Builds OperationParameters from method parameters.
     /// </summary>
+    /// <param name="headerText">The header text for handout pages.</param>
+    /// <param name="footerText">The footer text for handout pages.</param>
+    /// <param name="dateText">The date/time text for handout pages.</param>
+    /// <param name="showPageNumber">Whether to show page number on handout pages.</param>
+    /// <returns>OperationParameters configured for the handout operation.</returns>
     private static OperationParameters BuildParameters(
         string? headerText,
         string? footerText,

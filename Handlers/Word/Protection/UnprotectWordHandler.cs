@@ -21,7 +21,7 @@ public class UnprotectWordHandler : OperationHandlerBase<Document>
     /// <returns>Success message with unprotection details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var password = parameters.GetOptional<string?>("password");
+        var unprotectParams = ExtractUnprotectParameters(parameters);
 
         var doc = context.Document;
         var previousProtectionType = doc.ProtectionType;
@@ -31,7 +31,7 @@ public class UnprotectWordHandler : OperationHandlerBase<Document>
 
         try
         {
-            doc.Unprotect(password);
+            doc.Unprotect(unprotectParams.Password);
         }
         catch (Exception ex)
         {
@@ -48,4 +48,22 @@ public class UnprotectWordHandler : OperationHandlerBase<Document>
 
         return Success($"Protection removed successfully (was: {previousProtectionType})");
     }
+
+    /// <summary>
+    ///     Extracts unprotect parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted unprotect parameters.</returns>
+    private static UnprotectParameters ExtractUnprotectParameters(OperationParameters parameters)
+    {
+        return new UnprotectParameters(
+            parameters.GetOptional<string?>("password")
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold unprotect parameters.
+    /// </summary>
+    /// <param name="Password">The protection password.</param>
+    private record UnprotectParameters(string? Password);
 }

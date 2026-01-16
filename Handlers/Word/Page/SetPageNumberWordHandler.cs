@@ -23,18 +23,16 @@ public class SetPageNumberWordHandler : OperationHandlerBase<Document>
     /// <returns>Success message with page number details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var pageNumberFormat = parameters.GetOptional<string?>("pageNumberFormat");
-        var startingPageNumber = parameters.GetOptional<int?>("startingPageNumber");
-        var sectionIndex = parameters.GetOptional<int?>("sectionIndex");
+        var setParams = ExtractSetPageNumberParameters(parameters);
 
         var doc = context.Document;
         List<int> sectionsToUpdate;
 
-        if (sectionIndex.HasValue)
+        if (setParams.SectionIndex.HasValue)
         {
-            if (sectionIndex.Value < 0 || sectionIndex.Value >= doc.Sections.Count)
+            if (setParams.SectionIndex.Value < 0 || setParams.SectionIndex.Value >= doc.Sections.Count)
                 throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
-            sectionsToUpdate = [sectionIndex.Value];
+            sectionsToUpdate = [setParams.SectionIndex.Value];
         }
         else
         {
@@ -45,9 +43,9 @@ public class SetPageNumberWordHandler : OperationHandlerBase<Document>
         {
             var pageSetup = doc.Sections[idx].PageSetup;
 
-            if (!string.IsNullOrEmpty(pageNumberFormat))
+            if (!string.IsNullOrEmpty(setParams.PageNumberFormat))
             {
-                var numStyle = pageNumberFormat.ToLower() switch
+                var numStyle = setParams.PageNumberFormat.ToLower() switch
                 {
                     "roman" => NumberStyle.UppercaseRoman,
                     "letter" => NumberStyle.UppercaseLetter,
@@ -56,10 +54,10 @@ public class SetPageNumberWordHandler : OperationHandlerBase<Document>
                 pageSetup.PageNumberStyle = numStyle;
             }
 
-            if (startingPageNumber.HasValue)
+            if (setParams.StartingPageNumber.HasValue)
             {
                 pageSetup.RestartPageNumbering = true;
-                pageSetup.PageStartingNumber = startingPageNumber.Value;
+                pageSetup.PageStartingNumber = setParams.StartingPageNumber.Value;
             }
         }
 
@@ -67,4 +65,26 @@ public class SetPageNumberWordHandler : OperationHandlerBase<Document>
 
         return Success($"Page number settings updated for {sectionsToUpdate.Count} section(s)");
     }
+
+    /// <summary>
+    ///     Extracts set page number parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted set page number parameters.</returns>
+    private static SetPageNumberParameters ExtractSetPageNumberParameters(OperationParameters parameters)
+    {
+        return new SetPageNumberParameters(
+            parameters.GetOptional<string?>("pageNumberFormat"),
+            parameters.GetOptional<int?>("startingPageNumber"),
+            parameters.GetOptional<int?>("sectionIndex")
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold set page number parameters.
+    /// </summary>
+    /// <param name="PageNumberFormat">The page number format (arabic, roman, letter).</param>
+    /// <param name="StartingPageNumber">The starting page number.</param>
+    /// <param name="SectionIndex">The section index to apply settings to.</param>
+    private record SetPageNumberParameters(string? PageNumberFormat, int? StartingPageNumber, int? SectionIndex);
 }

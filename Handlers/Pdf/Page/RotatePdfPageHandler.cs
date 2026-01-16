@@ -25,16 +25,14 @@ public class RotatePdfPageHandler : OperationHandlerBase<Document>
     /// <exception cref="ArgumentException">Thrown when rotation value is invalid.</exception>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var rotation = parameters.GetRequired<int>("rotation");
-        var pageIndex = parameters.GetOptional<int?>("pageIndex");
-        var pageIndices = parameters.GetOptional<int[]?>("pageIndices");
+        var p = ExtractRotateParameters(parameters);
 
-        if (rotation != 0 && rotation != 90 && rotation != 180 && rotation != 270)
+        if (p.Rotation != 0 && p.Rotation != 90 && p.Rotation != 180 && p.Rotation != 270)
             throw new ArgumentException("rotation must be 0, 90, 180, or 270");
 
         var doc = context.Document;
 
-        var rotationEnum = rotation switch
+        var rotationEnum = p.Rotation switch
         {
             90 => Rotation.on90,
             180 => Rotation.on180,
@@ -43,10 +41,10 @@ public class RotatePdfPageHandler : OperationHandlerBase<Document>
         };
 
         List<int> pagesToRotate;
-        if (pageIndices is { Length: > 0 })
-            pagesToRotate = pageIndices.ToList();
-        else if (pageIndex is > 0)
-            pagesToRotate = [pageIndex.Value];
+        if (p.PageIndices is { Length: > 0 })
+            pagesToRotate = p.PageIndices.ToList();
+        else if (p.PageIndex is > 0)
+            pagesToRotate = [p.PageIndex.Value];
         else
             pagesToRotate = Enumerable.Range(1, doc.Pages.Count).ToList();
 
@@ -56,6 +54,28 @@ public class RotatePdfPageHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Rotated {pagesToRotate.Count} page(s) by {rotation} degrees.");
+        return Success($"Rotated {pagesToRotate.Count} page(s) by {p.Rotation} degrees.");
     }
+
+    /// <summary>
+    ///     Extracts parameters for rotate operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static RotateParameters ExtractRotateParameters(OperationParameters parameters)
+    {
+        return new RotateParameters(
+            parameters.GetRequired<int>("rotation"),
+            parameters.GetOptional<int?>("pageIndex"),
+            parameters.GetOptional<int[]?>("pageIndices")
+        );
+    }
+
+    /// <summary>
+    ///     Parameters for rotate operation.
+    /// </summary>
+    /// <param name="Rotation">The rotation angle (0, 90, 180, or 270 degrees).</param>
+    /// <param name="PageIndex">The optional 1-based page index.</param>
+    /// <param name="PageIndices">The optional array of 1-based page indices.</param>
+    private record RotateParameters(int Rotation, int? PageIndex, int[]? PageIndices);
 }

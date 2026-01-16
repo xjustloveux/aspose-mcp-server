@@ -23,11 +23,10 @@ public class GetSlideDetailsHandler : OperationHandlerBase<Presentation>
     /// <returns>JSON string containing detailed slide information including layout, transitions, and animations.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetRequired<int>("slideIndex");
-        var includeThumbnail = parameters.GetOptional<bool>("includeThumbnail");
+        var p = ExtractSlideDetailsParameters(parameters);
 
         var presentation = context.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+        var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
 
         var transition = slide.SlideShowTransition;
         object? transitionInfo = transition != null
@@ -62,11 +61,11 @@ public class GetSlideDetailsHandler : OperationHandlerBase<Presentation>
         var notesText = notesSlide?.NotesTextFrame?.Text;
 
         string? thumbnailBase64 = null;
-        if (includeThumbnail) thumbnailBase64 = PowerPointHelper.GenerateThumbnail(slide);
+        if (p.IncludeThumbnail) thumbnailBase64 = PowerPointHelper.GenerateThumbnail(slide);
 
         var result = new
         {
-            slideIndex,
+            slideIndex = p.SlideIndex,
             hidden = slide.Hidden,
             layout = slide.LayoutSlide?.Name,
             slideSize = new
@@ -85,4 +84,23 @@ public class GetSlideDetailsHandler : OperationHandlerBase<Presentation>
 
         return JsonResult(result);
     }
+
+    /// <summary>
+    ///     Extracts slide details parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted slide details parameters.</returns>
+    private static SlideDetailsParameters ExtractSlideDetailsParameters(OperationParameters parameters)
+    {
+        return new SlideDetailsParameters(
+            parameters.GetRequired<int>("slideIndex"),
+            parameters.GetOptional<bool>("includeThumbnail"));
+    }
+
+    /// <summary>
+    ///     Record for holding slide details parameters.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index.</param>
+    /// <param name="IncludeThumbnail">Whether to include slide thumbnail.</param>
+    private record SlideDetailsParameters(int SlideIndex, bool IncludeThumbnail);
 }

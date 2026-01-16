@@ -22,41 +22,40 @@ public class SplitWordDocumentHandler : OperationHandlerBase<Document>
     ///     Optional: splitBy (default: section)
     /// </param>
     /// <returns>Success message with split details.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when session management is not enabled.</exception>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var path = parameters.GetOptional<string?>("path");
-        var sessionId = parameters.GetOptional<string?>("sessionId");
-        var outputDir = parameters.GetOptional<string?>("outputDir");
-        var splitBy = parameters.GetOptional("splitBy", "section");
+        var p = ExtractSplitParameters(parameters);
 
-        if (string.IsNullOrEmpty(path) && string.IsNullOrEmpty(sessionId))
+        if (string.IsNullOrEmpty(p.Path) && string.IsNullOrEmpty(p.SessionId))
             throw new ArgumentException("Either path or sessionId is required for split operation");
-        if (string.IsNullOrEmpty(outputDir))
+        if (string.IsNullOrEmpty(p.OutputDir))
             throw new ArgumentException("outputDir is required for split operation");
 
-        SecurityHelper.ValidateFilePath(outputDir, "outputDir", true);
-        Directory.CreateDirectory(outputDir);
+        SecurityHelper.ValidateFilePath(p.OutputDir, "outputDir", true);
+        Directory.CreateDirectory(p.OutputDir);
 
         Document doc;
         string fileBaseName;
 
-        if (!string.IsNullOrEmpty(sessionId))
+        if (!string.IsNullOrEmpty(p.SessionId))
         {
             if (context.SessionManager == null)
                 throw new InvalidOperationException("Session management is not enabled");
 
             var identity = context.IdentityAccessor?.GetCurrentIdentity() ?? SessionIdentity.GetAnonymous();
-            doc = context.SessionManager.GetDocument<Document>(sessionId, identity);
-            fileBaseName = $"session_{sessionId}";
+            doc = context.SessionManager.GetDocument<Document>(p.SessionId, identity);
+            fileBaseName = $"session_{p.SessionId}";
         }
         else
         {
-            SecurityHelper.ValidateFilePath(path!, allowAbsolutePaths: true);
-            doc = new Document(path);
-            fileBaseName = SecurityHelper.SanitizeFileName(Path.GetFileNameWithoutExtension(path!));
+            SecurityHelper.ValidateFilePath(p.Path!, allowAbsolutePaths: true);
+            doc = new Document(p.Path);
+            fileBaseName = SecurityHelper.SanitizeFileName(Path.GetFileNameWithoutExtension(p.Path!));
         }
 
-        if (string.Equals(splitBy, "section", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(p.SplitBy, "section", StringComparison.OrdinalIgnoreCase))
         {
             for (var i = 0; i < doc.Sections.Count; i++)
             {
@@ -64,11 +63,11 @@ public class SplitWordDocumentHandler : OperationHandlerBase<Document>
                 sectionDoc.RemoveAllChildren();
                 sectionDoc.AppendChild(sectionDoc.ImportNode(doc.Sections[i], true));
 
-                var output = Path.Combine(outputDir, $"{fileBaseName}_section_{i + 1}.docx");
+                var output = Path.Combine(p.OutputDir, $"{fileBaseName}_section_{i + 1}.docx");
                 sectionDoc.Save(output);
             }
 
-            return $"Document split into {doc.Sections.Count} sections in: {outputDir}";
+            return $"Document split into {doc.Sections.Count} sections in: {p.OutputDir}";
         }
 
         doc.UpdatePageLayout();
@@ -77,10 +76,25 @@ public class SplitWordDocumentHandler : OperationHandlerBase<Document>
         for (var i = 0; i < pageCount; i++)
         {
             var pageDoc = doc.ExtractPages(i, 1);
-            var output = Path.Combine(outputDir, $"{fileBaseName}_page_{i + 1}.docx");
+            var output = Path.Combine(p.OutputDir, $"{fileBaseName}_page_{i + 1}.docx");
             pageDoc.Save(output);
         }
 
-        return $"Document split into {pageCount} pages in: {outputDir}";
+        return $"Document split into {pageCount} pages in: {p.OutputDir}";
     }
+
+    private static SplitParameters ExtractSplitParameters(OperationParameters parameters)
+    {
+        return new SplitParameters(
+            parameters.GetOptional<string?>("path"),
+            parameters.GetOptional<string?>("sessionId"),
+            parameters.GetOptional<string?>("outputDir"),
+            parameters.GetOptional("splitBy", "section"));
+    }
+
+    private record SplitParameters(
+        string? Path,
+        string? SessionId,
+        string? OutputDir,
+        string SplitBy);
 }

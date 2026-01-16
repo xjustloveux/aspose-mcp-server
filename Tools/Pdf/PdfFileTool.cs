@@ -120,19 +120,12 @@ Usage examples:
     /// </summary>
     private string ExecuteWithoutContext(string operation, string? outputPath, string[]? inputPaths)
     {
-        var parameters = new OperationParameters();
-
-        switch (operation)
+        var parameters = operation switch
         {
-            case "create":
-                if (outputPath != null) parameters.Set("outputPath", outputPath);
-                break;
-
-            case "merge":
-                if (outputPath != null) parameters.Set("outputPath", outputPath);
-                if (inputPaths != null) parameters.Set("inputPaths", inputPaths);
-                break;
-        }
+            "create" => BuildCreateParameters(outputPath),
+            "merge" => BuildMergeParameters(outputPath, inputPaths),
+            _ => new OperationParameters()
+        };
 
         var handler = _handlerRegistry.GetHandler(operation);
 
@@ -145,6 +138,32 @@ Usage examples:
         };
 
         return handler.Execute(operationContext, parameters);
+    }
+
+    /// <summary>
+    ///     Builds parameters for the create operation.
+    /// </summary>
+    /// <param name="outputPath">The output file path for the created PDF.</param>
+    /// <returns>OperationParameters configured for creating a new PDF.</returns>
+    private static OperationParameters BuildCreateParameters(string? outputPath)
+    {
+        var parameters = new OperationParameters();
+        if (outputPath != null) parameters.Set("outputPath", outputPath);
+        return parameters;
+    }
+
+    /// <summary>
+    ///     Builds parameters for the merge operation.
+    /// </summary>
+    /// <param name="outputPath">The output file path for the merged PDF.</param>
+    /// <param name="inputPaths">Array of input file paths to merge.</param>
+    /// <returns>OperationParameters configured for merging PDFs.</returns>
+    private static OperationParameters BuildMergeParameters(string? outputPath, string[]? inputPaths)
+    {
+        var parameters = new OperationParameters();
+        if (outputPath != null) parameters.Set("outputPath", outputPath);
+        if (inputPaths != null) parameters.Set("inputPaths", inputPaths);
+        return parameters;
     }
 
     /// <summary>
@@ -198,7 +217,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -213,30 +232,64 @@ Usage examples:
         string? ownerPassword,
         string? fileBaseName)
     {
-        var parameters = new OperationParameters();
-
-        switch (operation)
+        return operation switch
         {
-            case "split":
-                if (outputDir != null) parameters.Set("outputDir", outputDir);
-                parameters.Set("pagesPerFile", pagesPerFile);
-                if (startPage.HasValue) parameters.Set("startPage", startPage.Value);
-                if (endPage.HasValue) parameters.Set("endPage", endPage.Value);
-                if (fileBaseName != null) parameters.Set("fileBaseName", fileBaseName);
-                break;
+            "split" => BuildSplitParameters(outputDir, pagesPerFile, startPage, endPage, fileBaseName),
+            "compress" => BuildCompressParameters(compressImages, compressFonts, removeUnusedObjects),
+            "encrypt" => BuildEncryptParameters(userPassword, ownerPassword),
+            _ => new OperationParameters()
+        };
+    }
 
-            case "compress":
-                parameters.Set("compressImages", compressImages);
-                parameters.Set("compressFonts", compressFonts);
-                parameters.Set("removeUnusedObjects", removeUnusedObjects);
-                break;
+    /// <summary>
+    ///     Builds parameters for the split operation.
+    /// </summary>
+    /// <param name="outputDir">The output directory for split files.</param>
+    /// <param name="pagesPerFile">Number of pages per split file.</param>
+    /// <param name="startPage">The starting page number (1-based).</param>
+    /// <param name="endPage">The ending page number (1-based, inclusive).</param>
+    /// <param name="fileBaseName">The base name for output files.</param>
+    /// <returns>OperationParameters configured for splitting a PDF.</returns>
+    private static OperationParameters BuildSplitParameters(string? outputDir, int pagesPerFile, int? startPage,
+        int? endPage, string? fileBaseName)
+    {
+        var parameters = new OperationParameters();
+        if (outputDir != null) parameters.Set("outputDir", outputDir);
+        parameters.Set("pagesPerFile", pagesPerFile);
+        if (startPage.HasValue) parameters.Set("startPage", startPage.Value);
+        if (endPage.HasValue) parameters.Set("endPage", endPage.Value);
+        if (fileBaseName != null) parameters.Set("fileBaseName", fileBaseName);
+        return parameters;
+    }
 
-            case "encrypt":
-                if (userPassword != null) parameters.Set("userPassword", userPassword);
-                if (ownerPassword != null) parameters.Set("ownerPassword", ownerPassword);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the compress operation.
+    /// </summary>
+    /// <param name="compressImages">Whether to compress images.</param>
+    /// <param name="compressFonts">Whether to compress fonts.</param>
+    /// <param name="removeUnusedObjects">Whether to remove unused objects.</param>
+    /// <returns>OperationParameters configured for compressing a PDF.</returns>
+    private static OperationParameters BuildCompressParameters(bool compressImages, bool compressFonts,
+        bool removeUnusedObjects)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("compressImages", compressImages);
+        parameters.Set("compressFonts", compressFonts);
+        parameters.Set("removeUnusedObjects", removeUnusedObjects);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the encrypt operation.
+    /// </summary>
+    /// <param name="userPassword">The user password for opening the PDF.</param>
+    /// <param name="ownerPassword">The owner password for permissions control.</param>
+    /// <returns>OperationParameters configured for encrypting a PDF.</returns>
+    private static OperationParameters BuildEncryptParameters(string? userPassword, string? ownerPassword)
+    {
+        var parameters = new OperationParameters();
+        if (userPassword != null) parameters.Set("userPassword", userPassword);
+        if (ownerPassword != null) parameters.Set("ownerPassword", ownerPassword);
         return parameters;
     }
 }

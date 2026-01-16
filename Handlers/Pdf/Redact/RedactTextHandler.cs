@@ -27,25 +27,21 @@ public class RedactTextHandler : OperationHandlerBase<Document>
     /// <returns>Success message with redaction details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var textToRedact = parameters.GetRequired<string>("textToRedact");
-        var pageIndex = parameters.GetOptional<int?>("pageIndex");
-        var caseSensitive = parameters.GetOptional("caseSensitive", true);
-        var fillColor = parameters.GetOptional<string?>("fillColor");
-        var overlayText = parameters.GetOptional<string?>("overlayText");
+        var p = ExtractTextParameters(parameters);
 
         var document = context.Document;
 
-        if (pageIndex.HasValue && (pageIndex.Value < 1 || pageIndex.Value > document.Pages.Count))
+        if (p.PageIndex.HasValue && (p.PageIndex.Value < 1 || p.PageIndex.Value > document.Pages.Count))
             throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
 
         TextFragmentAbsorber absorber;
-        if (caseSensitive)
+        if (p.CaseSensitive)
         {
-            absorber = new TextFragmentAbsorber(textToRedact);
+            absorber = new TextFragmentAbsorber(p.TextToRedact);
         }
         else
         {
-            var escapedPattern = Regex.Escape(textToRedact);
+            var escapedPattern = Regex.Escape(p.TextToRedact);
             var textSearchOptions = new TextSearchOptions(true);
             absorber = new TextFragmentAbsorber($"(?i){escapedPattern}", textSearchOptions);
         }
@@ -53,8 +49,8 @@ public class RedactTextHandler : OperationHandlerBase<Document>
         var redactionCount = 0;
         var pagesAffected = new HashSet<int>();
 
-        if (pageIndex.HasValue)
-            document.Pages[pageIndex.Value].Accept(absorber);
+        if (p.PageIndex.HasValue)
+            document.Pages[p.PageIndex.Value].Accept(absorber);
         else
             document.Pages.Accept(absorber);
 
@@ -64,7 +60,7 @@ public class RedactTextHandler : OperationHandlerBase<Document>
             var rect = fragment.Rectangle;
 
             var redactionAnnotation = new RedactionAnnotation(page, rect);
-            ApplyRedactionStyle(redactionAnnotation, fillColor, overlayText);
+            ApplyRedactionStyle(redactionAnnotation, p.FillColor, p.OverlayText);
 
             page.Annotations.Add(redactionAnnotation);
             redactionAnnotation.Redact();
@@ -74,19 +70,38 @@ public class RedactTextHandler : OperationHandlerBase<Document>
         }
 
         if (redactionCount == 0)
-            return Success($"No occurrences of '{textToRedact}' found. No redactions applied.");
+            return Success($"No occurrences of '{p.TextToRedact}' found. No redactions applied.");
 
         MarkModified(context);
 
         var pageInfo = pagesAffected.Count == 1
             ? $"page {pagesAffected.First()}"
             : $"{pagesAffected.Count} pages";
-        return Success($"Redacted {redactionCount} occurrence(s) of '{textToRedact}' on {pageInfo}.");
+        return Success($"Redacted {redactionCount} occurrence(s) of '{p.TextToRedact}' on {pageInfo}.");
+    }
+
+    /// <summary>
+    ///     Extracts parameters for text operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static TextParameters ExtractTextParameters(OperationParameters parameters)
+    {
+        return new TextParameters(
+            parameters.GetRequired<string>("textToRedact"),
+            parameters.GetOptional<int?>("pageIndex"),
+            parameters.GetOptional("caseSensitive", true),
+            parameters.GetOptional<string?>("fillColor"),
+            parameters.GetOptional<string?>("overlayText")
+        );
     }
 
     /// <summary>
     ///     Applies styling options to a redaction annotation.
     /// </summary>
+    /// <param name="annotation">The redaction annotation to style.</param>
+    /// <param name="fillColor">The fill color for the redaction area.</param>
+    /// <param name="overlayText">The optional text to display over the redacted area.</param>
     private static void ApplyRedactionStyle(RedactionAnnotation annotation, string? fillColor, string? overlayText)
     {
         if (!string.IsNullOrEmpty(fillColor))
@@ -105,4 +120,19 @@ public class RedactTextHandler : OperationHandlerBase<Document>
             annotation.Repeat = true;
         }
     }
+
+    /// <summary>
+    ///     Parameters for text operation.
+    /// </summary>
+    /// <param name="TextToRedact">The text to search and redact.</param>
+    /// <param name="PageIndex">The optional 1-based page index.</param>
+    /// <param name="CaseSensitive">Whether to search case-sensitively.</param>
+    /// <param name="FillColor">The optional fill color for redaction.</param>
+    /// <param name="OverlayText">The optional overlay text.</param>
+    private record TextParameters(
+        string TextToRedact,
+        int? PageIndex,
+        bool CaseSensitive,
+        string? FillColor,
+        string? OverlayText);
 }

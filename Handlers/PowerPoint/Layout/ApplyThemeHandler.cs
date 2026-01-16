@@ -21,13 +21,13 @@ public class ApplyThemeHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with operation details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var themePath = parameters.GetRequired<string>("themePath");
+        var p = ExtractApplyThemeParameters(parameters);
 
-        if (!File.Exists(themePath))
-            throw new FileNotFoundException($"Theme file not found: {themePath}");
+        if (!File.Exists(p.ThemePath))
+            throw new FileNotFoundException($"Theme file not found: {p.ThemePath}");
 
         var presentation = context.Document;
-        using var themePresentation = new Presentation(themePath);
+        using var themePresentation = new Presentation(p.ThemePath);
 
         if (themePresentation.Masters.Count == 0)
             throw new InvalidOperationException("Theme presentation does not contain any master slides.");
@@ -54,4 +54,20 @@ public class ApplyThemeHandler : OperationHandlerBase<Presentation>
 
         return Success($"Theme applied ({copiedCount} master(s) copied, layout applied to all slides).");
     }
+
+    /// <summary>
+    ///     Extracts apply theme parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted apply theme parameters.</returns>
+    private static ApplyThemeParameters ExtractApplyThemeParameters(OperationParameters parameters)
+    {
+        return new ApplyThemeParameters(parameters.GetRequired<string>("themePath"));
+    }
+
+    /// <summary>
+    ///     Record for holding apply theme parameters.
+    /// </summary>
+    /// <param name="ThemePath">The theme file path.</param>
+    private record ApplyThemeParameters(string ThemePath);
 }

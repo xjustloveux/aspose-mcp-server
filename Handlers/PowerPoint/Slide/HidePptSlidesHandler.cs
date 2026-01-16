@@ -23,14 +23,14 @@ public class HidePptSlidesHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with hide/show details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var hidden = parameters.GetOptional("hidden", false);
-        var slideIndicesJson = parameters.GetOptional<string?>("slideIndices");
+        var p = ExtractHidePptSlidesParameters(parameters);
+
         var presentation = context.Document;
 
         int[] targets;
-        if (!string.IsNullOrWhiteSpace(slideIndicesJson))
+        if (!string.IsNullOrWhiteSpace(p.SlideIndicesJson))
         {
-            var indices = JsonSerializer.Deserialize<int[]>(slideIndicesJson);
+            var indices = JsonSerializer.Deserialize<int[]>(p.SlideIndicesJson);
             targets = indices ?? Enumerable.Range(0, presentation.Slides.Count).ToArray();
         }
         else
@@ -43,10 +43,29 @@ public class HidePptSlidesHandler : OperationHandlerBase<Presentation>
                 throw new ArgumentException($"slide index {idx} out of range");
 
         foreach (var idx in targets)
-            presentation.Slides[idx].Hidden = hidden;
+            presentation.Slides[idx].Hidden = p.Hidden;
 
         MarkModified(context);
 
-        return Success($"Set {targets.Length} slide(s) hidden={hidden}.");
+        return Success($"Set {targets.Length} slide(s) hidden={p.Hidden}.");
     }
+
+    /// <summary>
+    ///     Extracts parameters for hide slides operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static HidePptSlidesParameters ExtractHidePptSlidesParameters(OperationParameters parameters)
+    {
+        return new HidePptSlidesParameters(
+            parameters.GetOptional("hidden", false),
+            parameters.GetOptional<string?>("slideIndices"));
+    }
+
+    /// <summary>
+    ///     Parameters for hide slides operation.
+    /// </summary>
+    /// <param name="Hidden">Whether to hide or show the slides.</param>
+    /// <param name="SlideIndicesJson">JSON array of slide indices.</param>
+    private record HidePptSlidesParameters(bool Hidden, string? SlideIndicesJson);
 }

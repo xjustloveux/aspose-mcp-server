@@ -23,51 +23,83 @@ public class AddPdfFormFieldHandler : OperationHandlerBase<Document>
     /// <returns>Success message with field creation details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var pageIndex = parameters.GetRequired<int>("pageIndex");
-        var fieldType = parameters.GetRequired<string>("fieldType");
-        var fieldName = parameters.GetRequired<string>("fieldName");
-        var x = parameters.GetRequired<double>("x");
-        var y = parameters.GetRequired<double>("y");
-        var width = parameters.GetRequired<double>("width");
-        var height = parameters.GetRequired<double>("height");
-        var defaultValue = parameters.GetOptional<string?>("defaultValue");
+        var p = ExtractAddParameters(parameters);
 
         var document = context.Document;
 
-        if (pageIndex < 1 || pageIndex > document.Pages.Count)
+        if (p.PageIndex < 1 || p.PageIndex > document.Pages.Count)
             throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
 
-        if (document.Form.Cast<Field>().Any(f => f.PartialName == fieldName))
-            throw new ArgumentException($"Form field '{fieldName}' already exists");
+        if (document.Form.Cast<Field>().Any(f => f.PartialName == p.FieldName))
+            throw new ArgumentException($"Form field '{p.FieldName}' already exists");
 
-        var page = document.Pages[pageIndex];
-        var rect = new Rectangle(x, y, x + width, y + height);
+        var page = document.Pages[p.PageIndex];
+        var rect = new Rectangle(p.X, p.Y, p.X + p.Width, p.Y + p.Height);
         Field field;
 
-        switch (fieldType.ToLower())
+        switch (p.FieldType.ToLower())
         {
             case "textbox":
             case "textfield":
-                field = new TextBoxField(page, rect) { PartialName = fieldName };
-                if (!string.IsNullOrEmpty(defaultValue))
-                    ((TextBoxField)field).Value = defaultValue;
+                field = new TextBoxField(page, rect) { PartialName = p.FieldName };
+                if (!string.IsNullOrEmpty(p.DefaultValue))
+                    ((TextBoxField)field).Value = p.DefaultValue;
                 break;
             case "checkbox":
-                field = new CheckboxField(page, rect) { PartialName = fieldName };
+                field = new CheckboxField(page, rect) { PartialName = p.FieldName };
                 break;
             case "radiobutton":
-                field = new RadioButtonField(page) { PartialName = fieldName };
-                var optionName = !string.IsNullOrEmpty(defaultValue) ? defaultValue : "Option1";
+                field = new RadioButtonField(page) { PartialName = p.FieldName };
+                var optionName = !string.IsNullOrEmpty(p.DefaultValue) ? p.DefaultValue : "Option1";
                 var radioOption = new RadioButtonOptionField(page, rect) { OptionName = optionName };
                 ((RadioButtonField)field).Add(radioOption);
                 break;
             default:
-                throw new ArgumentException($"Unknown field type: {fieldType}");
+                throw new ArgumentException($"Unknown field type: {p.FieldType}");
         }
 
         document.Form.Add(field);
         MarkModified(context);
 
-        return Success($"Added {fieldType} field '{fieldName}'.");
+        return Success($"Added {p.FieldType} field '{p.FieldName}'.");
     }
+
+    /// <summary>
+    ///     Extracts add parameters from the operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static AddParameters ExtractAddParameters(OperationParameters parameters)
+    {
+        return new AddParameters(
+            parameters.GetRequired<int>("pageIndex"),
+            parameters.GetRequired<string>("fieldType"),
+            parameters.GetRequired<string>("fieldName"),
+            parameters.GetRequired<double>("x"),
+            parameters.GetRequired<double>("y"),
+            parameters.GetRequired<double>("width"),
+            parameters.GetRequired<double>("height"),
+            parameters.GetOptional<string?>("defaultValue"));
+    }
+
+    /// <summary>
+    ///     Parameters for adding a form field.
+    /// </summary>
+    /// <param name="PageIndex">The 1-based page index.</param>
+    /// <param name="FieldType">The type of form field (textbox, checkbox, radiobutton).</param>
+    /// <param name="FieldName">The name of the form field.</param>
+    /// <param name="X">The X coordinate.</param>
+    /// <param name="Y">The Y coordinate.</param>
+    /// <param name="Width">The width of the field.</param>
+    /// <param name="Height">The height of the field.</param>
+    /// <param name="DefaultValue">The optional default value.</param>
+    private record AddParameters(
+        int PageIndex,
+        string FieldType,
+        string FieldName,
+        double X,
+        double Y,
+        double Width,
+        double Height,
+        string? DefaultValue);
 }

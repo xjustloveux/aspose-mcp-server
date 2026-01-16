@@ -419,104 +419,57 @@
 
 <script>
         // 移除 code-block 和 structure-tree 內容的縮排，解決格式化後左邊空白的問題
-        document.addEventListener('DOMContentLoaded', function() {
-            const codeBlocks = document.querySelectorAll('.code-block, .structure-tree');
-            codeBlocks.forEach(function(block) {
-                const text = block.textContent || block.innerText;
-                // 檢測是否為 JSON 格式
-                const trimmedText = text.trim();
-                const isJson = (trimmedText.startsWith('{') || trimmedText.startsWith('[')) && 
-                               (trimmedText.includes('":') || trimmedText.includes('": '));
-                
-                // 移除所有行的前導空白，但保留相對縮排
-                let lines = text.split('\n');
-                // 移除開頭和結尾的空行
-                while (lines.length > 0 && lines[0].trim().length === 0) {
-                    lines.shift();
-                }
-                while (lines.length > 0 && lines[lines.length - 1].trim().length === 0) {
-                    lines.pop();
-                }
-                if (lines.length > 0) {
-                    if (isJson) {
-                        // JSON 格式：根據 JSON 結構重新計算縮排
-                        // 移除 HTML 格式化產生的統一縮排
-                        let minIndent = Infinity;
-                        lines.forEach(function(line) {
-                            if (line.trim().length > 0) {
-                                const trimmed = line.trimStart ? line.trimStart() : line.replace(/^\s+/, '');
-                                const indent = line.length - trimmed.length;
-                                if (indent < minIndent) {
-                                    minIndent = indent;
-                                }
-                            }
-                        });
-                        // 移除 HTML 縮排，獲取純 JSON 內容
-                        const jsonLines = lines.map(function(line) {
-                            if (line.trim().length === 0) {
-                                return '';
-                            }
-                            return minIndent > 0 && minIndent < Infinity ? line.substring(minIndent) : line;
-                        });
-                        
-                        // 根據 JSON 結構重新計算縮排
-                        let indentLevel = 0;
-                        const formattedLines = [];
-                        for (let i = 0; i < jsonLines.length; i++) {
-                            const line = jsonLines[i];
-                            const trimmed = line.trim();
-                            if (trimmed.length === 0) {
-                                formattedLines.push('');
-                                continue;
-                            }
-                            
-                            // 如果行以 } 或 ] 開頭，先減少縮排
-                            if (trimmed.startsWith('}') || trimmed.startsWith(']')) {
-                                indentLevel = Math.max(0, indentLevel - 1);
-                            }
-                            
-                            // 應用縮排
-                            const indented = '  '.repeat(indentLevel) + trimmed;
-                            formattedLines.push(indented);
-                            
-                            // 如果行以 { 或 [ 結尾，下一行需要增加縮排
-                            if (trimmed.endsWith('{') || trimmed.endsWith('[')) {
-                                indentLevel++;
-                            }
-                            // 如果行是單獨的 { 或 [，下一行需要縮排
-                            else if (trimmed === '{' || trimmed === '[') {
-                                indentLevel++;
-                            }
-                        }
-                        
-                        block.textContent = formattedLines.join('\n');
-                    } else {
-                        // 非 JSON 格式：移除最小縮排
-                        let minIndent = Infinity;
-                        lines.forEach(function(line) {
-                            if (line.trim().length > 0) {
-                                const trimmed = line.trimStart ? line.trimStart() : line.replace(/^\s+/, '');
-                                const indent = line.length - trimmed.length;
-                                if (indent < minIndent) {
-                                    minIndent = indent;
-                                }
-                            }
-                        });
-                        // 移除最小縮排
-                        if (minIndent > 0 && minIndent < Infinity) {
-                            const normalizedLines = lines.map(function(line) {
-                                if (line.trim().length === 0) {
-                                    return '';
-                                }
-                                return line.substring(minIndent);
-                            });
-                            block.textContent = normalizedLines.join('\n');
-                        } else {
-                            block.textContent = lines.join('\n');
-                        }
-                    }
-                }
+        function trimEmptyLines(lines) {
+            while (lines.length > 0 && lines[0].trim().length === 0) lines.shift();
+            while (lines.length > 0 && lines[lines.length - 1].trim().length === 0) lines.pop();
+            return lines;
+        }
+
+        function getMinIndent(lines) {
+            let minIndent = Infinity;
+            lines.forEach(function(line) {
+                if (line.trim().length === 0) return;
+                const trimmed = line.trimStart ? line.trimStart() : line.replace(/^\s+/, '');
+                const indent = line.length - trimmed.length;
+                if (indent < minIndent) minIndent = indent;
             });
+            return minIndent;
+        }
+
+        function removeMinIndent(lines, minIndent) {
+            return lines.map(function(line) {
+                if (line.trim().length === 0) return '';
+                return minIndent > 0 && minIndent < Infinity ? line.substring(minIndent) : line;
+            });
+        }
+
+        function formatJsonLines(jsonLines) {
+            let indentLevel = 0;
+            const formattedLines = [];
+            jsonLines.forEach(function(line) {
+                const trimmed = line.trim();
+                if (trimmed.length === 0) { formattedLines.push(''); return; }
+                if (trimmed.startsWith('}') || trimmed.startsWith(']')) indentLevel = Math.max(0, indentLevel - 1);
+                formattedLines.push('  '.repeat(indentLevel) + trimmed);
+                if (trimmed.endsWith('{') || trimmed.endsWith('[') || trimmed === '{' || trimmed === '[') indentLevel++;
+            });
+            return formattedLines;
+        }
+
+        function processCodeBlock(block) {
+            const text = block.textContent || block.innerText;
+            const trimmedText = text.trim();
+            const isJson = (trimmedText.startsWith('{') || trimmedText.startsWith('[')) &&
+                           (trimmedText.includes('":') || trimmedText.includes('": '));
+            let lines = trimEmptyLines(text.split('\n'));
+            if (lines.length === 0) return;
+            const minIndent = getMinIndent(lines);
+            const cleanLines = removeMinIndent(lines, minIndent);
+            block.textContent = isJson ? formatJsonLines(cleanLines).join('\n') : cleanLines.join('\n');
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.code-block, .structure-tree').forEach(processCodeBlock);
         });
     </script>
 

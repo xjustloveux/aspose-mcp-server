@@ -22,12 +22,11 @@ public class GetPptTableContentHandler : OperationHandlerBase<Presentation>
     /// <returns>JSON result with table content.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetOptional("slideIndex", 0);
-        var shapeIndex = parameters.GetRequired<int>("shapeIndex");
+        var getParams = ExtractGetContentParameters(parameters);
 
         var presentation = context.Document;
-        var slide = PptTableHelper.GetSlide(presentation, slideIndex);
-        var table = PptTableHelper.GetTable(slide, shapeIndex);
+        var slide = PptTableHelper.GetSlide(presentation, getParams.SlideIndex);
+        var table = PptTableHelper.GetTable(slide, getParams.ShapeIndex);
 
         var rows = new List<List<string>>();
         for (var row = 0; row < table.Rows.Count; row++)
@@ -44,8 +43,8 @@ public class GetPptTableContentHandler : OperationHandlerBase<Presentation>
 
         var result = new
         {
-            slideIndex,
-            shapeIndex,
+            slideIndex = getParams.SlideIndex,
+            shapeIndex = getParams.ShapeIndex,
             rowCount = table.Rows.Count,
             columnCount = table.Columns.Count,
             data = rows
@@ -53,4 +52,24 @@ public class GetPptTableContentHandler : OperationHandlerBase<Presentation>
 
         return JsonResult(result);
     }
+
+    /// <summary>
+    ///     Extracts get content parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted get content parameters.</returns>
+    private static GetContentParameters ExtractGetContentParameters(OperationParameters parameters)
+    {
+        return new GetContentParameters(
+            parameters.GetOptional("slideIndex", 0),
+            parameters.GetRequired<int>("shapeIndex")
+        );
+    }
+
+    /// <summary>
+    ///     Record for holding get content parameters.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index.</param>
+    /// <param name="ShapeIndex">The shape index.</param>
+    private record GetContentParameters(int SlideIndex, int ShapeIndex);
 }

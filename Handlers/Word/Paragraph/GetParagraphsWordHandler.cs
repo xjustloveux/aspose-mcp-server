@@ -26,16 +26,13 @@ public class GetParagraphsWordHandler : OperationHandlerBase<Document>
     /// <returns>JSON string containing paragraph information.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var sectionIndex = parameters.GetOptional<int?>("sectionIndex");
-        var includeEmpty = parameters.GetOptional("includeEmpty", true);
-        var styleFilter = parameters.GetOptional<string?>("styleFilter");
-        var includeCommentParagraphs = parameters.GetOptional("includeCommentParagraphs", true);
-        var includeTextboxParagraphs = parameters.GetOptional("includeTextboxParagraphs", true);
+        var getParams = ExtractGetParagraphsParameters(parameters);
 
         var doc = context.Document;
 
-        var paragraphs = GetBaseParagraphs(doc, sectionIndex, includeCommentParagraphs);
-        paragraphs = ApplyFilters(paragraphs, includeEmpty, styleFilter, includeTextboxParagraphs);
+        var paragraphs = GetBaseParagraphs(doc, getParams.SectionIndex, getParams.IncludeCommentParagraphs);
+        paragraphs = ApplyFilters(paragraphs, getParams.IncludeEmpty, getParams.StyleFilter,
+            getParams.IncludeTextboxParagraphs);
 
         var paragraphList = BuildParagraphList(paragraphs);
 
@@ -43,7 +40,13 @@ public class GetParagraphsWordHandler : OperationHandlerBase<Document>
         {
             count = paragraphs.Count,
             filters = new
-                { sectionIndex, includeEmpty, styleFilter, includeCommentParagraphs, includeTextboxParagraphs },
+            {
+                sectionIndex = getParams.SectionIndex,
+                includeEmpty = getParams.IncludeEmpty,
+                styleFilter = getParams.StyleFilter,
+                includeCommentParagraphs = getParams.IncludeCommentParagraphs,
+                includeTextboxParagraphs = getParams.IncludeTextboxParagraphs
+            },
             paragraphs = paragraphList
         };
 
@@ -163,4 +166,35 @@ public class GetParagraphsWordHandler : OperationHandlerBase<Document>
 
         return ("Body", null);
     }
+
+    /// <summary>
+    ///     Extracts get paragraphs parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted get paragraphs parameters.</returns>
+    private static GetParagraphsParameters ExtractGetParagraphsParameters(OperationParameters parameters)
+    {
+        return new GetParagraphsParameters(
+            parameters.GetOptional<int?>("sectionIndex"),
+            parameters.GetOptional("includeEmpty", true),
+            parameters.GetOptional<string?>("styleFilter"),
+            parameters.GetOptional("includeCommentParagraphs", true),
+            parameters.GetOptional("includeTextboxParagraphs", true)
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold get paragraphs parameters.
+    /// </summary>
+    /// <param name="SectionIndex">The section index to filter by.</param>
+    /// <param name="IncludeEmpty">Whether to include empty paragraphs.</param>
+    /// <param name="StyleFilter">The style name to filter by.</param>
+    /// <param name="IncludeCommentParagraphs">Whether to include paragraphs in comments.</param>
+    /// <param name="IncludeTextboxParagraphs">Whether to include paragraphs in textboxes.</param>
+    private record GetParagraphsParameters(
+        int? SectionIndex,
+        bool IncludeEmpty,
+        string? StyleFilter,
+        bool IncludeCommentParagraphs,
+        bool IncludeTextboxParagraphs);
 }

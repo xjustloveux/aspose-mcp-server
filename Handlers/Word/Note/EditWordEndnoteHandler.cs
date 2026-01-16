@@ -24,14 +24,12 @@ public class EditWordEndnoteHandler : OperationHandlerBase<Document>
     /// <returns>Success message with edit details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var newText = parameters.GetRequired<string>("text");
-        var referenceMark = parameters.GetOptional<string?>("referenceMark");
-        var noteIndex = parameters.GetOptional<int?>("noteIndex");
+        var p = ExtractEditEndnoteParameters(parameters);
 
         var doc = context.Document;
         var notes = WordNoteHelper.GetNotesFromDoc(doc, FootnoteType.Endnote);
 
-        var note = WordNoteHelper.FindNote(notes, referenceMark, noteIndex);
+        var note = WordNoteHelper.FindNote(notes, p.ReferenceMark, p.NoteIndex);
 
         if (note == null)
         {
@@ -43,14 +41,33 @@ public class EditWordEndnoteHandler : OperationHandlerBase<Document>
         }
 
         var oldText = note.ToString(SaveFormat.Text).Trim();
-        WordNoteHelper.UpdateNoteText(doc, note, newText);
+        WordNoteHelper.UpdateNoteText(doc, note, p.NewText);
 
         MarkModified(context);
 
         var result = new StringBuilder();
         result.AppendLine("Endnote edited successfully");
         result.AppendLine($"Old text: {oldText}");
-        result.AppendLine($"New text: {newText}");
+        result.AppendLine($"New text: {p.NewText}");
         return result.ToString().TrimEnd();
     }
+
+    /// <summary>
+    ///     Extracts edit endnote parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted edit endnote parameters.</returns>
+    private static EditEndnoteParameters ExtractEditEndnoteParameters(OperationParameters parameters)
+    {
+        return new EditEndnoteParameters(
+            parameters.GetRequired<string>("text"),
+            parameters.GetOptional<string?>("referenceMark"),
+            parameters.GetOptional<int?>("noteIndex")
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold edit endnote parameters.
+    /// </summary>
+    private record EditEndnoteParameters(string NewText, string? ReferenceMark, int? NoteIndex);
 }

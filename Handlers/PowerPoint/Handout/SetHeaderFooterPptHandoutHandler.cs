@@ -25,10 +25,7 @@ public class SetHeaderFooterPptHandoutHandler : OperationHandlerBase<Presentatio
     /// </exception>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var headerText = parameters.GetOptional<string?>("headerText");
-        var footerText = parameters.GetOptional<string?>("footerText");
-        var dateText = parameters.GetOptional<string?>("dateText");
-        var showPageNumber = parameters.GetOptional("showPageNumber", true);
+        var p = ExtractHeaderFooterParameters(parameters);
 
         var presentation = context.Document;
 
@@ -40,34 +37,61 @@ public class SetHeaderFooterPptHandoutHandler : OperationHandlerBase<Presentatio
 
         var manager = handoutMaster.HeaderFooterManager;
 
-        if (!string.IsNullOrEmpty(headerText))
+        if (!string.IsNullOrEmpty(p.HeaderText))
         {
-            manager.SetHeaderText(headerText);
+            manager.SetHeaderText(p.HeaderText);
             manager.SetHeaderVisibility(true);
         }
 
-        if (!string.IsNullOrEmpty(footerText))
+        if (!string.IsNullOrEmpty(p.FooterText))
         {
-            manager.SetFooterText(footerText);
+            manager.SetFooterText(p.FooterText);
             manager.SetFooterVisibility(true);
         }
 
-        if (!string.IsNullOrEmpty(dateText))
+        if (!string.IsNullOrEmpty(p.DateText))
         {
-            manager.SetDateTimeText(dateText);
+            manager.SetDateTimeText(p.DateText);
             manager.SetDateTimeVisibility(true);
         }
 
-        manager.SetSlideNumberVisibility(showPageNumber);
+        manager.SetSlideNumberVisibility(p.ShowPageNumber);
 
         MarkModified(context);
 
         List<string> settings = [];
-        if (!string.IsNullOrEmpty(headerText)) settings.Add("header");
-        if (!string.IsNullOrEmpty(footerText)) settings.Add("footer");
-        if (!string.IsNullOrEmpty(dateText)) settings.Add("date");
-        settings.Add(showPageNumber ? "page number shown" : "page number hidden");
+        if (!string.IsNullOrEmpty(p.HeaderText)) settings.Add("header");
+        if (!string.IsNullOrEmpty(p.FooterText)) settings.Add("footer");
+        if (!string.IsNullOrEmpty(p.DateText)) settings.Add("date");
+        settings.Add(p.ShowPageNumber ? "page number shown" : "page number hidden");
 
         return Success($"Handout master header/footer updated ({string.Join(", ", settings)}).");
     }
+
+    /// <summary>
+    ///     Extracts header/footer parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted header/footer parameters.</returns>
+    private static HeaderFooterParameters ExtractHeaderFooterParameters(OperationParameters parameters)
+    {
+        return new HeaderFooterParameters(
+            parameters.GetOptional<string?>("headerText"),
+            parameters.GetOptional<string?>("footerText"),
+            parameters.GetOptional<string?>("dateText"),
+            parameters.GetOptional("showPageNumber", true));
+    }
+
+    /// <summary>
+    ///     Record for holding header/footer parameters.
+    /// </summary>
+    /// <param name="HeaderText">The header text.</param>
+    /// <param name="FooterText">The footer text.</param>
+    /// <param name="DateText">The date text.</param>
+    /// <param name="ShowPageNumber">Whether to show page numbers.</param>
+    private record HeaderFooterParameters(
+        string? HeaderText,
+        string? FooterText,
+        string? DateText,
+        bool ShowPageNumber);
 }

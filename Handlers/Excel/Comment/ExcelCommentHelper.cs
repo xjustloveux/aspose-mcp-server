@@ -15,7 +15,8 @@ public static class ExcelCommentHelper
     /// <summary>
     ///     Regex pattern for validating Excel cell addresses (e.g., A1, B2, AA100).
     /// </summary>
-    private static readonly Regex CellAddressRegex = new(@"^[A-Za-z]{1,3}\d+$", RegexOptions.Compiled);
+    private static readonly Regex CellAddressRegex =
+        new(@"^[A-Za-z]{1,3}\d+$", RegexOptions.Compiled, TimeSpan.FromSeconds(1));
 
     /// <summary>
     ///     Validates the cell address format.

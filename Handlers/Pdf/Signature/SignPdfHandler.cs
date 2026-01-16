@@ -24,38 +24,30 @@ public class SignPdfHandler : OperationHandlerBase<Document>
     /// <returns>Success message with signature details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var certificatePath = parameters.GetRequired<string>("certificatePath");
-        var password = parameters.GetRequired<string>("password");
-        var pageIndex = parameters.GetOptional("pageIndex", 1);
-        var reason = parameters.GetOptional("reason", "Document Signed");
-        var location = parameters.GetOptional("location", "");
-        var x = parameters.GetOptional("x", 100.0);
-        var y = parameters.GetOptional("y", 100.0);
-        var width = parameters.GetOptional("width", 200.0);
-        var height = parameters.GetOptional("height", 100.0);
+        var p = ExtractSignParameters(parameters);
 
-        SecurityHelper.ValidateFilePath(certificatePath, "certificatePath", true);
+        SecurityHelper.ValidateFilePath(p.CertificatePath, "certificatePath", true);
 
-        if (!File.Exists(certificatePath))
-            throw new FileNotFoundException($"Certificate file not found: {certificatePath}", certificatePath);
+        if (!File.Exists(p.CertificatePath))
+            throw new FileNotFoundException($"Certificate file not found: {p.CertificatePath}", p.CertificatePath);
 
         var document = context.Document;
 
-        if (pageIndex < 1 || pageIndex > document.Pages.Count)
+        if (p.PageIndex < 1 || p.PageIndex > document.Pages.Count)
             throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
 
-        var signatureField = new SignatureField(document.Pages[pageIndex],
-            new Rectangle(x, y, x + width, y + height))
+        var signatureField = new SignatureField(document.Pages[p.PageIndex],
+            new Rectangle(p.X, p.Y, p.X + p.Width, p.Y + p.Height))
         {
             Name = $"Signature_{DateTime.Now:yyyyMMddHHmmss}"
         };
 
         document.Form.Add(signatureField);
 
-        var pkcs = new PKCS7(certificatePath, password)
+        var pkcs = new PKCS7(p.CertificatePath, p.Password)
         {
-            Reason = reason,
-            Location = location,
+            Reason = p.Reason,
+            Location = p.Location,
             Date = DateTime.Now
         };
 
@@ -63,6 +55,49 @@ public class SignPdfHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Document signed on page {pageIndex}.");
+        return Success($"Document signed on page {p.PageIndex}.");
     }
+
+    /// <summary>
+    ///     Extracts parameters for sign operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static SignParameters ExtractSignParameters(OperationParameters parameters)
+    {
+        return new SignParameters(
+            parameters.GetRequired<string>("certificatePath"),
+            parameters.GetRequired<string>("password"),
+            parameters.GetOptional("pageIndex", 1),
+            parameters.GetOptional("reason", "Document Signed"),
+            parameters.GetOptional("location", ""),
+            parameters.GetOptional("x", 100.0),
+            parameters.GetOptional("y", 100.0),
+            parameters.GetOptional("width", 200.0),
+            parameters.GetOptional("height", 100.0)
+        );
+    }
+
+    /// <summary>
+    ///     Parameters for sign operation.
+    /// </summary>
+    /// <param name="CertificatePath">The path to the certificate file.</param>
+    /// <param name="Password">The certificate password.</param>
+    /// <param name="PageIndex">The 1-based page index.</param>
+    /// <param name="Reason">The signing reason.</param>
+    /// <param name="Location">The signing location.</param>
+    /// <param name="X">The X coordinate of the signature.</param>
+    /// <param name="Y">The Y coordinate of the signature.</param>
+    /// <param name="Width">The width of the signature.</param>
+    /// <param name="Height">The height of the signature.</param>
+    private record SignParameters(
+        string CertificatePath,
+        string Password,
+        int PageIndex,
+        string Reason,
+        string Location,
+        double X,
+        double Y,
+        double Width,
+        double Height);
 }

@@ -22,28 +22,27 @@ public class ConvertWordDocumentHandler : OperationHandlerBase<Document>
     ///     Optional: format (inferred from outputPath if not provided)
     /// </param>
     /// <returns>Success message with conversion details.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or format is unsupported.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when session management is not enabled.</exception>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var path = parameters.GetOptional<string?>("path");
-        var sessionId = parameters.GetOptional<string?>("sessionId");
-        var outputPath = parameters.GetOptional<string?>("outputPath");
-        var format = parameters.GetOptional<string?>("format");
+        var p = ExtractConvertParameters(parameters);
 
-        if (string.IsNullOrEmpty(path) && string.IsNullOrEmpty(sessionId))
+        if (string.IsNullOrEmpty(p.Path) && string.IsNullOrEmpty(p.SessionId))
             throw new ArgumentException("Either path or sessionId is required for convert operation");
-        if (string.IsNullOrEmpty(outputPath))
+        if (string.IsNullOrEmpty(p.OutputPath))
             throw new ArgumentException("outputPath is required for convert operation");
 
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+        SecurityHelper.ValidateFilePath(p.OutputPath, "outputPath", true);
 
-        var outputDir = Path.GetDirectoryName(outputPath);
+        var outputDir = Path.GetDirectoryName(p.OutputPath);
         if (!string.IsNullOrEmpty(outputDir))
             Directory.CreateDirectory(outputDir);
 
-        var formatLower = format?.ToLower();
+        var formatLower = p.Format?.ToLower();
         if (string.IsNullOrEmpty(formatLower))
         {
-            var extension = Path.GetExtension(outputPath).TrimStart('.').ToLower();
+            var extension = Path.GetExtension(p.OutputPath).TrimStart('.').ToLower();
             formatLower = extension switch
             {
                 "pdf" => "pdf",
@@ -63,20 +62,20 @@ public class ConvertWordDocumentHandler : OperationHandlerBase<Document>
         Document doc;
         string sourceDescription;
 
-        if (!string.IsNullOrEmpty(sessionId))
+        if (!string.IsNullOrEmpty(p.SessionId))
         {
             if (context.SessionManager == null)
                 throw new InvalidOperationException("Session management is not enabled");
 
             var identity = context.IdentityAccessor?.GetCurrentIdentity() ?? SessionIdentity.GetAnonymous();
-            doc = context.SessionManager.GetDocument<Document>(sessionId, identity);
-            sourceDescription = $"session {sessionId}";
+            doc = context.SessionManager.GetDocument<Document>(p.SessionId, identity);
+            sourceDescription = $"session {p.SessionId}";
         }
         else
         {
-            SecurityHelper.ValidateFilePath(path!, allowAbsolutePaths: true);
-            doc = new Document(path);
-            sourceDescription = path!;
+            SecurityHelper.ValidateFilePath(p.Path!, allowAbsolutePaths: true);
+            doc = new Document(p.Path);
+            sourceDescription = p.Path!;
         }
 
         var saveFormat = formatLower switch
@@ -90,10 +89,25 @@ public class ConvertWordDocumentHandler : OperationHandlerBase<Document>
             "odt" => SaveFormat.Odt,
             "epub" => SaveFormat.Epub,
             "xps" => SaveFormat.Xps,
-            _ => throw new ArgumentException($"Unsupported format: {format}")
+            _ => throw new ArgumentException($"Unsupported format: {p.Format}")
         };
 
-        doc.Save(outputPath, saveFormat);
-        return $"Document converted from {sourceDescription} to {outputPath} ({formatLower})";
+        doc.Save(p.OutputPath, saveFormat);
+        return $"Document converted from {sourceDescription} to {p.OutputPath} ({formatLower})";
     }
+
+    private static ConvertParameters ExtractConvertParameters(OperationParameters parameters)
+    {
+        return new ConvertParameters(
+            parameters.GetOptional<string?>("path"),
+            parameters.GetOptional<string?>("sessionId"),
+            parameters.GetOptional<string?>("outputPath"),
+            parameters.GetOptional<string?>("format"));
+    }
+
+    private record ConvertParameters(
+        string? Path,
+        string? SessionId,
+        string? OutputPath,
+        string? Format);
 }

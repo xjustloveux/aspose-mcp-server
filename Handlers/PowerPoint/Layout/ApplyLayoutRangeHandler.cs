@@ -21,10 +21,9 @@ public class ApplyLayoutRangeHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with operation details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndicesJson = parameters.GetRequired<string>("slideIndices");
-        var layoutStr = parameters.GetRequired<string>("layout");
+        var p = ExtractApplyLayoutRangeParameters(parameters);
 
-        var slideIndicesArray = PptLayoutHelper.ParseSlideIndicesJson(slideIndicesJson);
+        var slideIndicesArray = PptLayoutHelper.ParseSlideIndicesJson(p.SlideIndicesJson);
         if (slideIndicesArray == null || slideIndicesArray.Length == 0)
             throw new ArgumentException("slideIndices is required for apply_layout_range operation");
 
@@ -32,13 +31,33 @@ public class ApplyLayoutRangeHandler : OperationHandlerBase<Presentation>
 
         PptLayoutHelper.ValidateSlideIndices(slideIndicesArray, presentation.Slides.Count);
 
-        var layout = PptLayoutHelper.FindLayoutByType(presentation, layoutStr);
+        var layout = PptLayoutHelper.FindLayoutByType(presentation, p.Layout);
 
         foreach (var idx in slideIndicesArray)
             presentation.Slides[idx].LayoutSlide = layout;
 
         MarkModified(context);
 
-        return Success($"Layout '{layoutStr}' applied to {slideIndicesArray.Length} slide(s).");
+        return Success($"Layout '{p.Layout}' applied to {slideIndicesArray.Length} slide(s).");
     }
+
+    /// <summary>
+    ///     Extracts apply layout range parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted apply layout range parameters.</returns>
+    private static ApplyLayoutRangeParameters ExtractApplyLayoutRangeParameters(OperationParameters parameters)
+    {
+        return new ApplyLayoutRangeParameters(
+            parameters.GetRequired<string>("slideIndices"),
+            parameters.GetRequired<string>("layout")
+        );
+    }
+
+    /// <summary>
+    ///     Record for holding apply layout range parameters.
+    /// </summary>
+    /// <param name="SlideIndicesJson">The JSON array of slide indices.</param>
+    /// <param name="Layout">The layout type string.</param>
+    private record ApplyLayoutRangeParameters(string SlideIndicesJson, string Layout);
 }

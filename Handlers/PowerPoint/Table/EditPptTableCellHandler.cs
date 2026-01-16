@@ -16,38 +16,51 @@ public class EditPptTableCellHandler : OperationHandlerBase<Presentation>
     /// </summary>
     /// <param name="context">The document context.</param>
     /// <param name="parameters">
-    ///     Required: shapeIndex, rowIndex, columnIndex, text
-    ///     Optional: slideIndex
+    ///     Required: shapeIndex, rowIndex, columnIndex, text.
+    ///     Optional: slideIndex.
     /// </param>
     /// <returns>Success message with update details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetOptional("slideIndex", 0);
-        var shapeIndex = parameters.GetOptional<int?>("shapeIndex");
-        var rowIndex = parameters.GetOptional<int?>("rowIndex");
-        var columnIndex = parameters.GetOptional<int?>("columnIndex");
-        var text = parameters.GetOptional<string?>("text");
-
-        if (!shapeIndex.HasValue)
-            throw new ArgumentException("shapeIndex is required for edit_cell operation");
-        if (!rowIndex.HasValue)
-            throw new ArgumentException("rowIndex is required for edit_cell operation");
-        if (!columnIndex.HasValue)
-            throw new ArgumentException("columnIndex is required for edit_cell operation");
-        if (text == null)
-            throw new ArgumentException("text is required for edit_cell operation");
+        var cellParams = ExtractEditCellParameters(parameters);
 
         var presentation = context.Document;
-        var slide = PptTableHelper.GetSlide(presentation, slideIndex);
-        var table = PptTableHelper.GetTable(slide, shapeIndex.Value);
+        var slide = PptTableHelper.GetSlide(presentation, cellParams.SlideIndex);
+        var table = PptTableHelper.GetTable(slide, cellParams.ShapeIndex);
 
-        PptTableHelper.ValidateRowIndex(table, rowIndex.Value);
-        PptTableHelper.ValidateColumnIndex(table, columnIndex.Value);
+        PptTableHelper.ValidateRowIndex(table, cellParams.RowIndex);
+        PptTableHelper.ValidateColumnIndex(table, cellParams.ColumnIndex);
 
-        table[rowIndex.Value, columnIndex.Value].TextFrame.Text = text;
+        table[cellParams.RowIndex, cellParams.ColumnIndex].TextFrame.Text = cellParams.Text;
 
         MarkModified(context);
 
-        return Success($"Cell [{rowIndex.Value},{columnIndex.Value}] updated.");
+        return Success($"Cell [{cellParams.RowIndex},{cellParams.ColumnIndex}] updated.");
     }
+
+    /// <summary>
+    ///     Extracts edit cell parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted edit cell parameters.</returns>
+    private static EditCellParameters ExtractEditCellParameters(OperationParameters parameters)
+    {
+        return new EditCellParameters(
+            parameters.GetOptional("slideIndex", 0),
+            parameters.GetRequired<int>("shapeIndex"),
+            parameters.GetRequired<int>("rowIndex"),
+            parameters.GetRequired<int>("columnIndex"),
+            parameters.GetRequired<string>("text")
+        );
+    }
+
+    /// <summary>
+    ///     Record for holding edit cell parameters.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index.</param>
+    /// <param name="ShapeIndex">The shape index.</param>
+    /// <param name="RowIndex">The row index.</param>
+    /// <param name="ColumnIndex">The column index.</param>
+    /// <param name="Text">The text to set.</param>
+    private record EditCellParameters(int SlideIndex, int ShapeIndex, int RowIndex, int ColumnIndex, string Text);
 }

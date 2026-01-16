@@ -29,110 +29,185 @@ public class CreateWordTableHandler : OperationHandlerBase<Document>
     /// <exception cref="ArgumentException">Thrown when sectionIndex is out of range or tableData JSON is invalid.</exception>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var paragraphIndex = parameters.GetOptional("paragraphIndex", -1);
-        var rows = parameters.GetOptional<int?>("rows");
-        var columns = parameters.GetOptional<int?>("columns");
-        var tableData = parameters.GetOptional<string?>("tableData");
-        var tableWidth = parameters.GetOptional<double?>("tableWidth");
-        var autoFit = parameters.GetOptional("autoFit", true);
-        var hasHeader = parameters.GetOptional("hasHeader", true);
-        var headerBackgroundColor = parameters.GetOptional<string?>("headerBackgroundColor");
-        var cellBackgroundColor = parameters.GetOptional<string?>("cellBackgroundColor");
-        var alternatingRowColor = parameters.GetOptional<string?>("alternatingRowColor");
-        var rowColors = parameters.GetOptional<string?>("rowColors");
-        var cellColors = parameters.GetOptional<string?>("cellColors");
-        var mergeCells = parameters.GetOptional<string?>("mergeCells");
-        var fontName = parameters.GetOptional<string?>("fontName");
-        var fontSize = parameters.GetOptional<double?>("fontSize");
-        var verticalAlignment = parameters.GetOptional("verticalAlignment", "center");
-        var sectionIndex = parameters.GetOptional<int?>("sectionIndex");
-
+        var tableParams = ExtractTableParameters(parameters);
         var doc = context.Document;
         var builder = new DocumentBuilder(doc);
 
+        var (section, actualSectionIndex) = ValidateAndGetSection(doc, tableParams.SectionIndex);
+        var parsedTableData = ParseTableData(tableParams.TableData);
+        var (numRows, numCols) = CalculateTableDimensions(parsedTableData, tableParams.Rows, tableParams.Columns);
+
+        MoveToInsertPosition(builder, section, tableParams.ParagraphIndex, actualSectionIndex);
+        var table = BuildTable(builder, numRows, numCols, parsedTableData, tableParams);
+        FinalizeTable(table, tableParams);
+
+        MarkModified(context);
+        return Success($"Successfully created table with {numRows} rows and {numCols} columns.");
+    }
+
+    /// <summary>
+    ///     Extracts table creation parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted table creation parameters.</returns>
+    private static TableCreationParameters ExtractTableParameters(OperationParameters parameters)
+    {
+        return new TableCreationParameters(
+            parameters.GetOptional("paragraphIndex", -1),
+            parameters.GetOptional<int?>("rows"),
+            parameters.GetOptional<int?>("columns"),
+            parameters.GetOptional<string?>("tableData"),
+            parameters.GetOptional<double?>("tableWidth"),
+            parameters.GetOptional("autoFit", true),
+            parameters.GetOptional("hasHeader", true),
+            parameters.GetOptional<string?>("headerBackgroundColor"),
+            parameters.GetOptional<string?>("cellBackgroundColor"),
+            parameters.GetOptional<string?>("alternatingRowColor"),
+            parameters.GetOptional<string?>("rowColors"),
+            parameters.GetOptional<string?>("cellColors"),
+            parameters.GetOptional<string?>("mergeCells"),
+            parameters.GetOptional<string?>("fontName"),
+            parameters.GetOptional<double?>("fontSize"),
+            parameters.GetOptional("verticalAlignment", "center"),
+            parameters.GetOptional<int?>("sectionIndex")
+        );
+    }
+
+    /// <summary>
+    ///     Validates and gets the target section.
+    /// </summary>
+    /// <param name="doc">The Word document.</param>
+    /// <param name="sectionIndex">The section index.</param>
+    /// <returns>A tuple containing the section and actual index.</returns>
+    /// <exception cref="ArgumentException">Thrown when section index is out of range.</exception>
+    private static (Section section, int actualIndex) ValidateAndGetSection(Document doc, int? sectionIndex)
+    {
         var actualSectionIndex = sectionIndex ?? 0;
         if (actualSectionIndex < 0 || actualSectionIndex >= doc.Sections.Count)
             throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
+        return (doc.Sections[actualSectionIndex], actualSectionIndex);
+    }
 
-        var section = doc.Sections[actualSectionIndex];
+    /// <summary>
+    ///     Calculates the table dimensions.
+    /// </summary>
+    /// <param name="parsedData">The parsed table data.</param>
+    /// <param name="rows">The specified number of rows.</param>
+    /// <param name="columns">The specified number of columns.</param>
+    /// <returns>A tuple containing the number of rows and columns.</returns>
+    private static (int numRows, int numCols) CalculateTableDimensions(List<List<string>>? parsedData, int? rows,
+        int? columns)
+    {
+        if (parsedData is { Count: > 0 })
+            return (parsedData.Count, parsedData.Max(r => r.Count));
+        return (rows ?? 3, columns ?? 3);
+    }
 
-        var parsedTableData = ParseTableData(tableData);
-
-        int numRows, numCols;
-        if (parsedTableData is { Count: > 0 })
-        {
-            numRows = parsedTableData.Count;
-            numCols = parsedTableData.Max(r => r.Count);
-        }
-        else
-        {
-            numRows = rows ?? 3;
-            numCols = columns ?? 3;
-        }
-
+    /// <summary>
+    ///     Moves the builder to the insert position.
+    /// </summary>
+    /// <param name="builder">The document builder.</param>
+    /// <param name="section">The document section.</param>
+    /// <param name="paragraphIndex">The paragraph index.</param>
+    /// <param name="sectionIndex">The section index.</param>
+    private static void MoveToInsertPosition(DocumentBuilder builder, Section section, int paragraphIndex,
+        int sectionIndex)
+    {
         var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
-
         if (paragraphIndex >= 0 && paragraphIndex < paragraphs.Count)
             builder.MoveTo(paragraphs[paragraphIndex]);
         else
-            builder.MoveToSection(actualSectionIndex);
+            builder.MoveToSection(sectionIndex);
+    }
 
+    /// <summary>
+    ///     Builds the table with the specified dimensions and data.
+    /// </summary>
+    /// <param name="builder">The document builder.</param>
+    /// <param name="numRows">The number of rows.</param>
+    /// <param name="numCols">The number of columns.</param>
+    /// <param name="parsedTableData">The parsed table data.</param>
+    /// <param name="p">The table creation parameters.</param>
+    /// <returns>The created table.</returns>
+    private static Aspose.Words.Tables.Table BuildTable(DocumentBuilder builder, int numRows, int numCols,
+        List<List<string>>? parsedTableData, TableCreationParameters p)
+    {
+        var colorContext = CreateColorContext(p);
         var table = builder.StartTable();
-
-        var rowColorsDict = !string.IsNullOrEmpty(rowColors)
-            ? WordTableHelper.ParseColorDictionary(JsonNode.Parse(rowColors))
-            : new Dictionary<int, string>();
-        var cellColorsList = !string.IsNullOrEmpty(cellColors)
-            ? WordTableHelper.ParseCellColors(JsonNode.Parse(cellColors))
-            : [];
-        var mergeCellsList = !string.IsNullOrEmpty(mergeCells)
-            ? WordTableHelper.ParseMergeCells(JsonNode.Parse(mergeCells))
-            : [];
 
         for (var i = 0; i < numRows; i++)
         {
             for (var j = 0; j < numCols; j++)
-            {
-                builder.InsertCell();
-
-                if (builder.CurrentParagraph.ParentNode is Cell cell)
-                {
-                    cell.CellFormat.VerticalAlignment = WordTableHelper.GetVerticalAlignment(verticalAlignment);
-                    ApplyCellBackgroundColor(cell, i, j, cellColorsList, rowColorsDict, hasHeader,
-                        headerBackgroundColor, alternatingRowColor, cellBackgroundColor);
-                }
-
-                var cellText = "";
-                if (parsedTableData != null && i < parsedTableData.Count && j < parsedTableData[i].Count)
-                    cellText = parsedTableData[i][j];
-
-                if (fontSize.HasValue)
-                    builder.Font.Size = fontSize.Value;
-
-                if (!string.IsNullOrEmpty(fontName))
-                    builder.Font.Name = fontName;
-
-                builder.Font.Bold = hasHeader && i == 0;
-
-                WriteCellText(builder, cellText);
-            }
-
+                InsertTableCell(builder, i, j, parsedTableData, p, colorContext);
             builder.EndRow();
         }
 
         builder.EndTable();
+        return table;
+    }
 
-        if (tableWidth.HasValue)
-            table.PreferredWidth = PreferredWidth.FromPoints(tableWidth.Value);
+    /// <summary>
+    ///     Creates the color context from parameters.
+    /// </summary>
+    /// <param name="p">The table creation parameters.</param>
+    /// <returns>The color context.</returns>
+    private static ColorContext CreateColorContext(TableCreationParameters p)
+    {
+        return new ColorContext(
+            !string.IsNullOrEmpty(p.RowColors) ? WordTableHelper.ParseColorDictionary(JsonNode.Parse(p.RowColors)) : [],
+            !string.IsNullOrEmpty(p.CellColors) ? WordTableHelper.ParseCellColors(JsonNode.Parse(p.CellColors)) : []
+        );
+    }
 
-        table.AllowAutoFit = autoFit;
+    /// <summary>
+    ///     Inserts a cell into the table.
+    /// </summary>
+    /// <param name="builder">The document builder.</param>
+    /// <param name="row">The row index.</param>
+    /// <param name="col">The column index.</param>
+    /// <param name="parsedTableData">The parsed table data.</param>
+    /// <param name="p">The table creation parameters.</param>
+    /// <param name="colorContext">The color context.</param>
+    private static void InsertTableCell(DocumentBuilder builder, int row, int col,
+        List<List<string>>? parsedTableData, TableCreationParameters p, ColorContext colorContext)
+    {
+        builder.InsertCell();
+
+        if (builder.CurrentParagraph.ParentNode is Cell cell)
+        {
+            cell.CellFormat.VerticalAlignment = WordTableHelper.GetVerticalAlignment(p.VerticalAlignment);
+            ApplyCellBackgroundColor(cell, row, col, colorContext.CellColors, colorContext.RowColors, p.HasHeader,
+                p.HeaderBackgroundColor, p.AlternatingRowColor, p.CellBackgroundColor);
+        }
+
+        var cellText = parsedTableData != null && row < parsedTableData.Count && col < parsedTableData[row].Count
+            ? parsedTableData[row][col]
+            : "";
+
+        if (p.FontSize.HasValue) builder.Font.Size = p.FontSize.Value;
+        if (!string.IsNullOrEmpty(p.FontName)) builder.Font.Name = p.FontName;
+        builder.Font.Bold = p.HasHeader && row == 0;
+
+        WriteCellText(builder, cellText);
+    }
+
+    /// <summary>
+    ///     Finalizes the table with width, auto-fit, and merge settings.
+    /// </summary>
+    /// <param name="table">The table to finalize.</param>
+    /// <param name="p">The table creation parameters.</param>
+    private static void FinalizeTable(Aspose.Words.Tables.Table table, TableCreationParameters p)
+    {
+        if (p.TableWidth.HasValue)
+            table.PreferredWidth = PreferredWidth.FromPoints(p.TableWidth.Value);
+        table.AllowAutoFit = p.AutoFit;
+
+        var mergeCellsList = !string.IsNullOrEmpty(p.MergeCells)
+            ? WordTableHelper.ParseMergeCells(JsonNode.Parse(p.MergeCells))
+            : [];
 
         foreach (var merge in mergeCellsList)
             WordTableHelper.ApplyMergeCells(table, merge.startRow, merge.endRow, merge.startCol, merge.endCol);
-
-        MarkModified(context);
-
-        return Success($"Successfully created table with {numRows} rows and {numCols} columns.");
     }
 
     /// <summary>
@@ -220,4 +295,33 @@ public class CreateWordTableHandler : OperationHandlerBase<Document>
             builder.Write(cellText);
         }
     }
+
+    /// <summary>
+    ///     Record to hold table creation parameters.
+    /// </summary>
+    private record TableCreationParameters(
+        int ParagraphIndex,
+        int? Rows,
+        int? Columns,
+        string? TableData,
+        double? TableWidth,
+        bool AutoFit,
+        bool HasHeader,
+        string? HeaderBackgroundColor,
+        string? CellBackgroundColor,
+        string? AlternatingRowColor,
+        string? RowColors,
+        string? CellColors,
+        string? MergeCells,
+        string? FontName,
+        double? FontSize,
+        string VerticalAlignment,
+        int? SectionIndex);
+
+    /// <summary>
+    ///     Record to hold color context for table cells.
+    /// </summary>
+    private record ColorContext(
+        Dictionary<int, string> RowColors,
+        List<(int row, int col, string color)> CellColors);
 }

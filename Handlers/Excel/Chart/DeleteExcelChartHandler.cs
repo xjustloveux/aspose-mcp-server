@@ -22,18 +22,35 @@ public class DeleteExcelChartHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with deletion details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var chartIndex = parameters.GetOptional("chartIndex", 0);
+        var deleteParams = ExtractDeleteParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var chart = ExcelChartHelper.GetChart(worksheet, chartIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, deleteParams.SheetIndex);
+        var chart = ExcelChartHelper.GetChart(worksheet, deleteParams.ChartIndex);
 
-        var chartName = chart.Name ?? $"Chart {chartIndex}";
-        worksheet.Charts.RemoveAt(chartIndex);
+        var chartName = chart.Name ?? $"Chart {deleteParams.ChartIndex}";
+        worksheet.Charts.RemoveAt(deleteParams.ChartIndex);
 
         MarkModified(context);
 
-        return Success($"Chart #{chartIndex} ({chartName}) deleted, {worksheet.Charts.Count} remaining");
+        return Success($"Chart #{deleteParams.ChartIndex} ({chartName}) deleted, {worksheet.Charts.Count} remaining");
     }
+
+    /// <summary>
+    ///     Extracts delete parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted delete parameters.</returns>
+    private static DeleteParameters ExtractDeleteParameters(OperationParameters parameters)
+    {
+        return new DeleteParameters(
+            parameters.GetOptional("sheetIndex", 0),
+            parameters.GetOptional("chartIndex", 0)
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold delete chart parameters.
+    /// </summary>
+    private record DeleteParameters(int SheetIndex, int ChartIndex);
 }

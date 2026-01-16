@@ -107,7 +107,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -116,25 +116,56 @@ Usage examples:
         string? range,
         string? comment)
     {
+        return operation.ToLowerInvariant() switch
+        {
+            "add" => BuildAddParameters(sheetIndex, name, range, comment),
+            "delete" => BuildDeleteParameters(sheetIndex, name),
+            "get" => BuildGetParameters(sheetIndex),
+            _ => new OperationParameters()
+        };
+    }
+
+    /// <summary>
+    ///     Builds parameters for the add named range operation.
+    /// </summary>
+    /// <param name="sheetIndex">The sheet index (0-based).</param>
+    /// <param name="name">The name for the range.</param>
+    /// <param name="range">The cell range (e.g., 'A1:C10').</param>
+    /// <param name="comment">Optional comment for the named range.</param>
+    /// <returns>OperationParameters configured for adding a named range.</returns>
+    private static OperationParameters BuildAddParameters(int sheetIndex, string? name, string? range, string? comment)
+    {
         var parameters = new OperationParameters();
         parameters.Set("sheetIndex", sheetIndex);
+        if (name != null) parameters.Set("name", name);
+        if (range != null) parameters.Set("range", range);
+        if (comment != null) parameters.Set("comment", comment);
+        return parameters;
+    }
 
-        switch (operation.ToLowerInvariant())
-        {
-            case "add":
-                if (name != null) parameters.Set("name", name);
-                if (range != null) parameters.Set("range", range);
-                if (comment != null) parameters.Set("comment", comment);
-                break;
+    /// <summary>
+    ///     Builds parameters for the delete named range operation.
+    /// </summary>
+    /// <param name="sheetIndex">The sheet index (0-based).</param>
+    /// <param name="name">The name of the range to delete.</param>
+    /// <returns>OperationParameters configured for deleting a named range.</returns>
+    private static OperationParameters BuildDeleteParameters(int sheetIndex, string? name)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("sheetIndex", sheetIndex);
+        if (name != null) parameters.Set("name", name);
+        return parameters;
+    }
 
-            case "delete":
-                if (name != null) parameters.Set("name", name);
-                break;
-
-            case "get":
-                break;
-        }
-
+    /// <summary>
+    ///     Builds parameters for the get named ranges operation.
+    /// </summary>
+    /// <param name="sheetIndex">The sheet index (0-based).</param>
+    /// <returns>OperationParameters configured for getting named ranges.</returns>
+    private static OperationParameters BuildGetParameters(int sheetIndex)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("sheetIndex", sheetIndex);
         return parameters;
     }
 }

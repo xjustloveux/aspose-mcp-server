@@ -23,12 +23,12 @@ public class GetUsedRangeHandler : OperationHandlerBase<Workbook>
     /// <returns>JSON string containing the used range information.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
+        var usedRangeParams = ExtractGetUsedRangeParameters(parameters);
 
         try
         {
             var workbook = context.Document;
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, usedRangeParams.SheetIndex);
             var cells = worksheet.Cells;
 
             string? rangeAddress = null;
@@ -42,7 +42,7 @@ public class GetUsedRangeHandler : OperationHandlerBase<Workbook>
             var result = new
             {
                 worksheetName = worksheet.Name,
-                sheetIndex,
+                sheetIndex = usedRangeParams.SheetIndex,
                 firstRow = cells.MinDataRow,
                 lastRow = cells.MaxDataRow,
                 firstColumn = cells.MinDataColumn,
@@ -57,4 +57,20 @@ public class GetUsedRangeHandler : OperationHandlerBase<Workbook>
             throw new ArgumentException($"Excel operation failed: {ex.Message}");
         }
     }
+
+    /// <summary>
+    ///     Extracts get used range parameters from the operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted get used range parameters.</returns>
+    private static GetUsedRangeParameters ExtractGetUsedRangeParameters(OperationParameters parameters)
+    {
+        return new GetUsedRangeParameters(parameters.GetOptional("sheetIndex", 0));
+    }
+
+    /// <summary>
+    ///     Parameters for get used range operation.
+    /// </summary>
+    /// <param name="SheetIndex">The worksheet index (0-based).</param>
+    private record GetUsedRangeParameters(int SheetIndex);
 }

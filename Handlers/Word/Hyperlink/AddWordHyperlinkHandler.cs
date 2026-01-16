@@ -24,35 +24,57 @@ public class AddWordHyperlinkHandler : OperationHandlerBase<Document>
     /// <returns>Success message with hyperlink details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var text = parameters.GetOptional<string?>("text");
-        var url = parameters.GetOptional<string?>("url");
-        var subAddress = parameters.GetOptional<string?>("subAddress");
-        var paragraphIndex = parameters.GetOptional<int?>("paragraphIndex");
-        var tooltip = parameters.GetOptional<string?>("tooltip");
+        var p = ExtractAddHyperlinkParameters(parameters);
 
-        if (string.IsNullOrEmpty(url) && string.IsNullOrEmpty(subAddress))
+        if (string.IsNullOrEmpty(p.Url) && string.IsNullOrEmpty(p.SubAddress))
             throw new ArgumentException("Either 'url' or 'subAddress' must be provided for add operation");
 
-        ValidateUrlIfPresent(url);
+        ValidateUrlIfPresent(p.Url);
 
         var doc = context.Document;
         var builder = new DocumentBuilder(doc);
 
-        PositionBuilder(doc, builder, paragraphIndex);
-        InsertHyperlink(builder, text, url, subAddress);
-        ApplyHyperlinkSettings(doc, url, subAddress, tooltip);
+        PositionBuilder(doc, builder, p.ParagraphIndex);
+        InsertHyperlink(builder, p.Text, p.Url, p.SubAddress);
+        ApplyHyperlinkSettings(doc, p.Url, p.SubAddress, p.Tooltip);
 
         MarkModified(context);
 
-        return BuildResultMessage(text, url, subAddress, tooltip, paragraphIndex);
+        return BuildResultMessage(p);
     }
 
+    /// <summary>
+    ///     Extracts add hyperlink parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted add hyperlink parameters.</returns>
+    private static AddHyperlinkParameters ExtractAddHyperlinkParameters(OperationParameters parameters)
+    {
+        return new AddHyperlinkParameters(
+            parameters.GetOptional<string?>("text"),
+            parameters.GetOptional<string?>("url"),
+            parameters.GetOptional<string?>("subAddress"),
+            parameters.GetOptional<int?>("paragraphIndex"),
+            parameters.GetOptional<string?>("tooltip")
+        );
+    }
+
+    /// <summary>
+    ///     Validates URL format if a URL is provided.
+    /// </summary>
+    /// <param name="url">The URL to validate.</param>
     private static void ValidateUrlIfPresent(string? url)
     {
         if (!string.IsNullOrEmpty(url))
             WordHyperlinkHelper.ValidateUrlFormat(url);
     }
 
+    /// <summary>
+    ///     Positions the document builder at the correct location.
+    /// </summary>
+    /// <param name="doc">The Word document.</param>
+    /// <param name="builder">The document builder.</param>
+    /// <param name="paragraphIndex">The paragraph index to position at.</param>
     private static void PositionBuilder(Document doc, DocumentBuilder builder, int? paragraphIndex)
     {
         if (!paragraphIndex.HasValue)
@@ -67,6 +89,11 @@ public class AddWordHyperlinkHandler : OperationHandlerBase<Document>
             PositionAfterParagraph(doc, builder, paragraphIndex.Value);
     }
 
+    /// <summary>
+    ///     Positions the builder at the start of the document.
+    /// </summary>
+    /// <param name="doc">The Word document.</param>
+    /// <param name="builder">The document builder.</param>
     private static void PositionAtDocumentStart(Document doc, DocumentBuilder builder)
     {
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
@@ -82,6 +109,14 @@ public class AddWordHyperlinkHandler : OperationHandlerBase<Document>
         }
     }
 
+    /// <summary>
+    ///     Positions the builder after the specified paragraph.
+    /// </summary>
+    /// <param name="doc">The Word document.</param>
+    /// <param name="builder">The document builder.</param>
+    /// <param name="paragraphIndex">The paragraph index to position after.</param>
+    /// <exception cref="ArgumentException">Thrown when paragraph index is out of range.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when paragraph or parent node cannot be found.</exception>
     private static void PositionAfterParagraph(Document doc, DocumentBuilder builder, int paragraphIndex)
     {
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
@@ -102,6 +137,13 @@ public class AddWordHyperlinkHandler : OperationHandlerBase<Document>
         builder.MoveTo(newPara);
     }
 
+    /// <summary>
+    ///     Inserts a hyperlink using the document builder.
+    /// </summary>
+    /// <param name="builder">The document builder.</param>
+    /// <param name="text">The display text.</param>
+    /// <param name="url">The URL.</param>
+    /// <param name="subAddress">The sub-address (bookmark).</param>
     private static void InsertHyperlink(DocumentBuilder builder, string? text, string? url, string? subAddress)
     {
         if (!string.IsNullOrEmpty(subAddress))
@@ -110,6 +152,13 @@ public class AddWordHyperlinkHandler : OperationHandlerBase<Document>
             builder.InsertHyperlink(text ?? "", url!, false);
     }
 
+    /// <summary>
+    ///     Applies additional settings to the inserted hyperlink.
+    /// </summary>
+    /// <param name="doc">The Word document.</param>
+    /// <param name="url">The URL.</param>
+    /// <param name="subAddress">The sub-address.</param>
+    /// <param name="tooltip">The tooltip text.</param>
     private static void ApplyHyperlinkSettings(Document doc, string? url, string? subAddress, string? tooltip)
     {
         var fields = doc.Range.Fields;
@@ -127,18 +176,27 @@ public class AddWordHyperlinkHandler : OperationHandlerBase<Document>
         }
     }
 
-    private static string BuildResultMessage(string? text, string? url, string? subAddress, string? tooltip,
-        int? paragraphIndex)
+    /// <summary>
+    ///     Builds the result message for a successful hyperlink addition.
+    /// </summary>
+    /// <param name="p">The add hyperlink parameters.</param>
+    /// <returns>A formatted result message.</returns>
+    private static string BuildResultMessage(AddHyperlinkParameters p)
     {
         var result = "Hyperlink added successfully\n";
-        result += $"Display text: {text}\n";
-        if (!string.IsNullOrEmpty(url)) result += $"URL: {url}\n";
-        if (!string.IsNullOrEmpty(subAddress)) result += $"SubAddress (bookmark): {subAddress}\n";
-        if (!string.IsNullOrEmpty(tooltip)) result += $"Tooltip: {tooltip}\n";
-        result += GetInsertPositionMessage(paragraphIndex);
+        result += $"Display text: {p.Text}\n";
+        if (!string.IsNullOrEmpty(p.Url)) result += $"URL: {p.Url}\n";
+        if (!string.IsNullOrEmpty(p.SubAddress)) result += $"SubAddress (bookmark): {p.SubAddress}\n";
+        if (!string.IsNullOrEmpty(p.Tooltip)) result += $"Tooltip: {p.Tooltip}\n";
+        result += GetInsertPositionMessage(p.ParagraphIndex);
         return result;
     }
 
+    /// <summary>
+    ///     Gets the insert position description message.
+    /// </summary>
+    /// <param name="paragraphIndex">The paragraph index.</param>
+    /// <returns>A message describing the insert position.</returns>
     private static string GetInsertPositionMessage(int? paragraphIndex)
     {
         if (!paragraphIndex.HasValue)
@@ -148,4 +206,14 @@ public class AddWordHyperlinkHandler : OperationHandlerBase<Document>
             ? "Insert position: beginning of document"
             : $"Insert position: after paragraph #{paragraphIndex.Value}";
     }
+
+    /// <summary>
+    ///     Record to hold add hyperlink parameters.
+    /// </summary>
+    private record AddHyperlinkParameters(
+        string? Text,
+        string? Url,
+        string? SubAddress,
+        int? ParagraphIndex,
+        string? Tooltip);
 }

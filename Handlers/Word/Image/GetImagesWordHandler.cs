@@ -25,25 +25,40 @@ public class GetImagesWordHandler : OperationHandlerBase<Document>
     /// <returns>A JSON string containing image information.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var sectionIndex = parameters.GetOptional("sectionIndex", 0);
+        var p = ExtractGetImagesParameters(parameters);
         var doc = context.Document;
-        var shapes = WordImageHelper.GetAllImages(doc, sectionIndex);
+        var shapes = WordImageHelper.GetAllImages(doc, p.SectionIndex);
 
         if (shapes.Count == 0)
-            return CreateEmptyResult(sectionIndex);
+            return CreateEmptyResult(p.SectionIndex);
 
         var imageList = BuildImageList(shapes);
 
         var result = new
         {
             count = shapes.Count,
-            sectionIndex = sectionIndex == -1 ? (int?)null : sectionIndex,
+            sectionIndex = p.SectionIndex == -1 ? (int?)null : p.SectionIndex,
             images = imageList
         };
 
         return JsonSerializer.Serialize(result, JsonDefaults.Indented);
     }
 
+    /// <summary>
+    ///     Extracts get images parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted get images parameters.</returns>
+    private static GetImagesParameters ExtractGetImagesParameters(OperationParameters parameters)
+    {
+        return new GetImagesParameters(parameters.GetOptional("sectionIndex", 0));
+    }
+
+    /// <summary>
+    ///     Creates an empty result when no images are found.
+    /// </summary>
+    /// <param name="sectionIndex">The section index searched.</param>
+    /// <returns>A JSON string with the empty result.</returns>
     private static string CreateEmptyResult(int sectionIndex)
     {
         var emptyResult = new
@@ -58,6 +73,11 @@ public class GetImagesWordHandler : OperationHandlerBase<Document>
         return JsonSerializer.Serialize(emptyResult, JsonDefaults.Indented);
     }
 
+    /// <summary>
+    ///     Builds the list of image information objects.
+    /// </summary>
+    /// <param name="shapes">The list of image shapes.</param>
+    /// <returns>A list of image information objects.</returns>
     private static List<object> BuildImageList(List<WordShape> shapes)
     {
         List<object> imageList = [];
@@ -66,6 +86,12 @@ public class GetImagesWordHandler : OperationHandlerBase<Document>
         return imageList;
     }
 
+    /// <summary>
+    ///     Builds the information dictionary for a single image.
+    /// </summary>
+    /// <param name="shape">The image shape.</param>
+    /// <param name="index">The image index.</param>
+    /// <returns>A dictionary containing image information.</returns>
     private static Dictionary<string, object?> BuildImageInfo(WordShape shape, int index)
     {
         var (alignment, position, contextText) = GetPositionAndContext(shape);
@@ -89,6 +115,11 @@ public class GetImagesWordHandler : OperationHandlerBase<Document>
         return imageInfo;
     }
 
+    /// <summary>
+    ///     Gets the position and context information for an image.
+    /// </summary>
+    /// <param name="shape">The image shape.</param>
+    /// <returns>A tuple containing alignment, position, and context text.</returns>
     private static (string? alignment, object? position, string? contextText) GetPositionAndContext(WordShape shape)
     {
         if (shape.IsInline)
@@ -97,6 +128,11 @@ public class GetImagesWordHandler : OperationHandlerBase<Document>
         return GetFloatingPositionAndContext(shape);
     }
 
+    /// <summary>
+    ///     Gets position and context for an inline image.
+    /// </summary>
+    /// <param name="shape">The inline image shape.</param>
+    /// <returns>A tuple containing alignment, position, and context text.</returns>
     private static (string? alignment, object? position, string? contextText) GetInlinePositionAndContext(
         WordShape shape)
     {
@@ -110,6 +146,11 @@ public class GetImagesWordHandler : OperationHandlerBase<Document>
         return (null, new { x = shape.Left, y = shape.Top }, null);
     }
 
+    /// <summary>
+    ///     Gets position and context for a floating image.
+    /// </summary>
+    /// <param name="shape">The floating image shape.</param>
+    /// <returns>A tuple containing alignment, position, and context text.</returns>
     private static (string? alignment, object? position, string? contextText) GetFloatingPositionAndContext(
         WordShape shape)
     {
@@ -129,12 +170,22 @@ public class GetImagesWordHandler : OperationHandlerBase<Document>
         return (null, position, contextText);
     }
 
+    /// <summary>
+    ///     Truncates text to a maximum length.
+    /// </summary>
+    /// <param name="text">The text to truncate.</param>
+    /// <returns>The truncated text or null if empty.</returns>
     private static string? TruncateText(string text)
     {
         if (string.IsNullOrEmpty(text)) return null;
         return text.Length > 30 ? text[..30] + "..." : text;
     }
 
+    /// <summary>
+    ///     Adds image data information to the info dictionary.
+    /// </summary>
+    /// <param name="imageInfo">The image info dictionary.</param>
+    /// <param name="shape">The image shape.</param>
     private static void AddImageDataInfo(Dictionary<string, object?> imageInfo, WordShape shape)
     {
         if (shape.ImageData == null) return;
@@ -144,10 +195,20 @@ public class GetImagesWordHandler : OperationHandlerBase<Document>
         imageInfo["originalSize"] = new { widthPixels = imageSize.WidthPixels, heightPixels = imageSize.HeightPixels };
     }
 
+    /// <summary>
+    ///     Adds optional properties to the info dictionary.
+    /// </summary>
+    /// <param name="imageInfo">The image info dictionary.</param>
+    /// <param name="shape">The image shape.</param>
     private static void AddOptionalProperties(Dictionary<string, object?> imageInfo, WordShape shape)
     {
         if (!string.IsNullOrEmpty(shape.HRef)) imageInfo["hyperlink"] = shape.HRef;
         if (!string.IsNullOrEmpty(shape.AlternativeText)) imageInfo["altText"] = shape.AlternativeText;
         if (!string.IsNullOrEmpty(shape.Title)) imageInfo["title"] = shape.Title;
     }
+
+    /// <summary>
+    ///     Record to hold get images parameters.
+    /// </summary>
+    private record GetImagesParameters(int SectionIndex);
 }

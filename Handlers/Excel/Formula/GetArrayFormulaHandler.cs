@@ -23,17 +23,16 @@ public class GetArrayFormulaHandler : OperationHandlerBase<Workbook>
     /// <returns>JSON string containing array formula information.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var cell = parameters.GetRequired<string>("cell");
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
+        var getParams = ExtractGetArrayParameters(parameters);
 
-        var worksheet = ExcelHelper.GetWorksheet(context.Document, sheetIndex);
-        var cellObj = worksheet.Cells[cell];
+        var worksheet = ExcelHelper.GetWorksheet(context.Document, getParams.SheetIndex);
+        var cellObj = worksheet.Cells[getParams.Cell];
 
         if (!cellObj.IsArrayFormula)
         {
             var notFoundResult = new
             {
-                cell,
+                cell = getParams.Cell,
                 isArrayFormula = false,
                 message = "No array formula found in this cell"
             };
@@ -57,7 +56,7 @@ public class GetArrayFormulaHandler : OperationHandlerBase<Workbook>
 
         var result = new
         {
-            cell,
+            cell = getParams.Cell,
             isArrayFormula = true,
             formula = formula ?? "(empty)",
             arrayRange = arrayRange ?? "Unable to determine"
@@ -65,4 +64,22 @@ public class GetArrayFormulaHandler : OperationHandlerBase<Workbook>
 
         return JsonResult(result);
     }
+
+    /// <summary>
+    ///     Extracts get array parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted get array parameters.</returns>
+    private static GetArrayParameters ExtractGetArrayParameters(OperationParameters parameters)
+    {
+        return new GetArrayParameters(
+            parameters.GetRequired<string>("cell"),
+            parameters.GetOptional("sheetIndex", 0)
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold get array formula parameters.
+    /// </summary>
+    private record GetArrayParameters(string Cell, int SheetIndex);
 }

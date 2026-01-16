@@ -45,6 +45,11 @@ public class AddPptTextHandler : OperationHandlerBase<Presentation>
         return Success($"Text added to slide {slideIndex}.");
     }
 
+    /// <summary>
+    ///     Extracts font parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted font parameters.</returns>
     private static FontParameters ExtractFontParameters(OperationParameters parameters)
     {
         return new FontParameters(
@@ -56,6 +61,11 @@ public class AddPptTextHandler : OperationHandlerBase<Presentation>
         );
     }
 
+    /// <summary>
+    ///     Extracts shape parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted shape parameters.</returns>
     private static ShapeParameters ExtractShapeParameters(OperationParameters parameters)
     {
         return new ShapeParameters(
@@ -66,6 +76,13 @@ public class AddPptTextHandler : OperationHandlerBase<Presentation>
         );
     }
 
+    /// <summary>
+    ///     Gets an existing shape or creates a new one.
+    /// </summary>
+    /// <param name="slide">The slide.</param>
+    /// <param name="shapeIndex">The optional shape index.</param>
+    /// <param name="shapeParams">The shape parameters for new shape creation.</param>
+    /// <returns>The AutoShape.</returns>
     private static IAutoShape GetOrCreateShape(ISlide slide, int? shapeIndex, ShapeParameters shapeParams)
     {
         if (shapeIndex.HasValue)
@@ -82,6 +99,11 @@ public class AddPptTextHandler : OperationHandlerBase<Presentation>
         return shape;
     }
 
+    /// <summary>
+    ///     Applies font formatting to the text frame.
+    /// </summary>
+    /// <param name="textFrame">The text frame to format.</param>
+    /// <param name="fontParams">The font parameters.</param>
     private static void ApplyFontFormatting(ITextFrame textFrame, FontParameters fontParams)
     {
         if (textFrame.Paragraphs.Count == 0) return;
@@ -92,6 +114,11 @@ public class AddPptTextHandler : OperationHandlerBase<Presentation>
         ApplyFontProperties(portion, fontParams);
     }
 
+    /// <summary>
+    ///     Applies font properties to a text portion.
+    /// </summary>
+    /// <param name="portion">The text portion.</param>
+    /// <param name="fontParams">The font parameters.</param>
     private static void ApplyFontProperties(IPortion portion, FontParameters fontParams)
     {
         if (!string.IsNullOrEmpty(fontParams.FontName))
@@ -113,7 +140,22 @@ public class AddPptTextHandler : OperationHandlerBase<Presentation>
         }
     }
 
+    /// <summary>
+    ///     Record for holding font formatting parameters.
+    /// </summary>
+    /// <param name="FontName">The font name.</param>
+    /// <param name="FontSize">The font size.</param>
+    /// <param name="Bold">Whether text is bold.</param>
+    /// <param name="Italic">Whether text is italic.</param>
+    /// <param name="Color">The text color.</param>
     private record FontParameters(string? FontName, float? FontSize, bool? Bold, bool? Italic, string? Color);
 
+    /// <summary>
+    ///     Record for holding shape dimension parameters.
+    /// </summary>
+    /// <param name="X">The X position.</param>
+    /// <param name="Y">The Y position.</param>
+    /// <param name="Width">The width.</param>
+    /// <param name="Height">The height.</param>
     private record ShapeParameters(float X, float Y, float Width, float Height);
 }

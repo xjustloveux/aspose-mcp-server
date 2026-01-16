@@ -129,7 +129,7 @@ Note: When deleting images, the indices of remaining images will be re-ordered."
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -145,29 +145,61 @@ Note: When deleting images, the indices of remaining images will be re-ordered."
         var parameters = new OperationParameters();
         parameters.Set("sheetIndex", sheetIndex);
 
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "add":
-                if (imagePath != null) parameters.Set("imagePath", imagePath);
-                if (cell != null) parameters.Set("cell", cell);
-                if (width.HasValue) parameters.Set("width", width.Value);
-                if (height.HasValue) parameters.Set("height", height.Value);
-                parameters.Set("keepAspectRatio", keepAspectRatio);
-                break;
+            "add" => BuildAddParameters(parameters, imagePath, cell, width, height, keepAspectRatio),
+            "delete" => BuildDeleteParameters(parameters, imageIndex),
+            "get" => parameters,
+            "extract" => BuildExtractParameters(parameters, imageIndex, exportPath),
+            _ => parameters
+        };
+    }
 
-            case "delete":
-                if (imageIndex.HasValue) parameters.Set("imageIndex", imageIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the add image operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="imagePath">The path to the image file.</param>
+    /// <param name="cell">The top-left cell reference.</param>
+    /// <param name="width">The image width in pixels.</param>
+    /// <param name="height">The image height in pixels.</param>
+    /// <param name="keepAspectRatio">Whether to keep aspect ratio when resizing.</param>
+    /// <returns>OperationParameters configured for adding image.</returns>
+    private static OperationParameters BuildAddParameters(OperationParameters parameters, string? imagePath,
+        string? cell, int? width, int? height, bool keepAspectRatio)
+    {
+        if (imagePath != null) parameters.Set("imagePath", imagePath);
+        if (cell != null) parameters.Set("cell", cell);
+        if (width.HasValue) parameters.Set("width", width.Value);
+        if (height.HasValue) parameters.Set("height", height.Value);
+        parameters.Set("keepAspectRatio", keepAspectRatio);
+        return parameters;
+    }
 
-            case "get":
-                break;
+    /// <summary>
+    ///     Builds parameters for the delete image operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="imageIndex">The index of image to delete.</param>
+    /// <returns>OperationParameters configured for deleting image.</returns>
+    private static OperationParameters BuildDeleteParameters(OperationParameters parameters, int? imageIndex)
+    {
+        if (imageIndex.HasValue) parameters.Set("imageIndex", imageIndex.Value);
+        return parameters;
+    }
 
-            case "extract":
-                if (imageIndex.HasValue) parameters.Set("imageIndex", imageIndex.Value);
-                if (exportPath != null) parameters.Set("exportPath", exportPath);
-                break;
-        }
-
+    /// <summary>
+    ///     Builds parameters for the extract image operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="imageIndex">The index of image to extract.</param>
+    /// <param name="exportPath">The path to export the extracted image.</param>
+    /// <returns>OperationParameters configured for extracting image.</returns>
+    private static OperationParameters BuildExtractParameters(OperationParameters parameters, int? imageIndex,
+        string? exportPath)
+    {
+        if (imageIndex.HasValue) parameters.Set("imageIndex", imageIndex.Value);
+        if (exportPath != null) parameters.Set("exportPath", exportPath);
         return parameters;
     }
 }

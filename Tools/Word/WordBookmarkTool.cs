@@ -113,7 +113,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -124,33 +124,73 @@ Usage examples:
         string? newText,
         bool keepText)
     {
-        var parameters = new OperationParameters();
-
-        switch (operation.ToLower())
+        return operation.ToLower() switch
         {
-            case "add":
-                if (name != null) parameters.Set("name", name);
-                if (text != null) parameters.Set("text", text);
-                if (paragraphIndex.HasValue) parameters.Set("paragraphIndex", paragraphIndex.Value);
-                break;
+            "add" => BuildAddParameters(name, text, paragraphIndex),
+            "edit" => BuildEditParameters(name, newName, newText, text),
+            "delete" => BuildDeleteParameters(name, keepText),
+            "goto" or "get" => BuildGotoParameters(name),
+            _ => new OperationParameters()
+        };
+    }
 
-            case "edit":
-                if (name != null) parameters.Set("name", name);
-                if (newName != null) parameters.Set("newName", newName);
-                if (newText != null) parameters.Set("newText", newText);
-                else if (text != null) parameters.Set("newText", text);
-                break;
+    /// <summary>
+    ///     Builds parameters for the add operation.
+    /// </summary>
+    /// <param name="name">The bookmark name.</param>
+    /// <param name="text">The text content for the bookmark.</param>
+    /// <param name="paragraphIndex">The paragraph index (0-based, -1 for beginning).</param>
+    /// <returns>OperationParameters configured for adding a bookmark.</returns>
+    private static OperationParameters BuildAddParameters(string? name, string? text, int? paragraphIndex)
+    {
+        var parameters = new OperationParameters();
+        if (name != null) parameters.Set("name", name);
+        if (text != null) parameters.Set("text", text);
+        if (paragraphIndex.HasValue) parameters.Set("paragraphIndex", paragraphIndex.Value);
+        return parameters;
+    }
 
-            case "delete":
-                if (name != null) parameters.Set("name", name);
-                parameters.Set("keepText", keepText);
-                break;
+    /// <summary>
+    ///     Builds parameters for the edit operation.
+    /// </summary>
+    /// <param name="name">The bookmark name to edit.</param>
+    /// <param name="newName">The new bookmark name.</param>
+    /// <param name="newText">The new text content.</param>
+    /// <param name="text">The text content (alternative to newText).</param>
+    /// <returns>OperationParameters configured for editing a bookmark.</returns>
+    private static OperationParameters BuildEditParameters(string? name, string? newName, string? newText, string? text)
+    {
+        var parameters = new OperationParameters();
+        if (name != null) parameters.Set("name", name);
+        if (newName != null) parameters.Set("newName", newName);
+        if (newText != null) parameters.Set("newText", newText);
+        else if (text != null) parameters.Set("newText", text);
+        return parameters;
+    }
 
-            case "goto":
-                if (name != null) parameters.Set("name", name);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the delete operation.
+    /// </summary>
+    /// <param name="name">The bookmark name to delete.</param>
+    /// <param name="keepText">Whether to keep the text when deleting.</param>
+    /// <returns>OperationParameters configured for deleting a bookmark.</returns>
+    private static OperationParameters BuildDeleteParameters(string? name, bool keepText)
+    {
+        var parameters = new OperationParameters();
+        if (name != null) parameters.Set("name", name);
+        parameters.Set("keepText", keepText);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the goto or get operation.
+    /// </summary>
+    /// <param name="name">The bookmark name to navigate to or get.</param>
+    /// <returns>OperationParameters configured for goto or get bookmark.</returns>
+    private static OperationParameters BuildGotoParameters(string? name)
+    {
+        var parameters = new OperationParameters();
+        if (name != null) parameters.Set("name", name);
         return parameters;
     }
 }

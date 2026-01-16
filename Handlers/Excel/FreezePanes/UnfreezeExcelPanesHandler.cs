@@ -22,10 +22,10 @@ public class UnfreezeExcelPanesHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
+        var p = ExtractUnfreezeParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, p.SheetIndex);
 
         worksheet.UnFreezePanes();
 
@@ -33,4 +33,13 @@ public class UnfreezeExcelPanesHandler : OperationHandlerBase<Workbook>
 
         return Success("Unfrozen panes.");
     }
+
+    private static UnfreezeParameters ExtractUnfreezeParameters(OperationParameters parameters)
+    {
+        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
+
+        return new UnfreezeParameters(sheetIndex);
+    }
+
+    private record UnfreezeParameters(int SheetIndex);
 }

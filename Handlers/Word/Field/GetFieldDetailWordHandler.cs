@@ -24,19 +24,16 @@ public class GetFieldDetailWordHandler : OperationHandlerBase<Document>
     /// <returns>A JSON string containing the field details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var fieldIndex = parameters.GetOptional<int?>("fieldIndex");
-
-        if (!fieldIndex.HasValue)
-            throw new ArgumentException("fieldIndex is required for get_field_detail operation");
+        var p = ExtractGetFieldDetailParameters(parameters);
 
         var document = context.Document;
         var fields = document.Range.Fields.ToList();
 
-        if (fieldIndex.Value < 0 || fieldIndex.Value >= fields.Count)
+        if (p.FieldIndex < 0 || p.FieldIndex >= fields.Count)
             throw new ArgumentException(
-                $"Field index {fieldIndex.Value} is out of range (document has {fields.Count} fields)");
+                $"Field index {p.FieldIndex} is out of range (document has {fields.Count} fields)");
 
-        var field = fields[fieldIndex.Value];
+        var field = fields[p.FieldIndex];
 
         string? address = null, screenTip = null, bookmarkName = null;
         if (field is FieldHyperlink hyperlinkField)
@@ -51,7 +48,7 @@ public class GetFieldDetailWordHandler : OperationHandlerBase<Document>
 
         var result = new
         {
-            index = fieldIndex.Value,
+            index = p.FieldIndex,
             type = field.Type.ToString(),
             typeCode = (int)field.Type,
             code = field.GetFieldCode(),
@@ -65,4 +62,26 @@ public class GetFieldDetailWordHandler : OperationHandlerBase<Document>
 
         return JsonSerializer.Serialize(result, JsonDefaults.Indented);
     }
+
+    /// <summary>
+    ///     Extracts and validates parameters for the get field detail operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    /// <exception cref="ArgumentException">Thrown when fieldIndex is not provided.</exception>
+    private static GetFieldDetailParameters ExtractGetFieldDetailParameters(OperationParameters parameters)
+    {
+        var fieldIndex = parameters.GetOptional<int?>("fieldIndex");
+
+        if (!fieldIndex.HasValue)
+            throw new ArgumentException("fieldIndex is required for get_field_detail operation");
+
+        return new GetFieldDetailParameters(fieldIndex.Value);
+    }
+
+    /// <summary>
+    ///     Parameters for the get field detail operation.
+    /// </summary>
+    /// <param name="FieldIndex">The index of the field to get details for.</param>
+    private record GetFieldDetailParameters(int FieldIndex);
 }

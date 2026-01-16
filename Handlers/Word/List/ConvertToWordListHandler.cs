@@ -24,33 +24,30 @@ public class ConvertToWordListHandler : OperationHandlerBase<Document>
     /// <returns>Success message with conversion details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var startIndex = parameters.GetRequired<int>("startParagraphIndex");
-        var endIndex = parameters.GetRequired<int>("endParagraphIndex");
-        var listType = parameters.GetOptional("listType", "bullet");
-        var numberFormat = parameters.GetOptional("numberFormat", "arabic");
+        var p = ExtractConvertToListParameters(parameters);
 
         var doc = context.Document;
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
 
-        if (startIndex < 0 || startIndex >= paragraphs.Count)
+        if (p.StartIndex < 0 || p.StartIndex >= paragraphs.Count)
             throw new ArgumentException(
-                $"Start paragraph index {startIndex} is out of range (document has {paragraphs.Count} paragraphs)");
+                $"Start paragraph index {p.StartIndex} is out of range (document has {paragraphs.Count} paragraphs)");
 
-        if (endIndex < 0 || endIndex >= paragraphs.Count)
+        if (p.EndIndex < 0 || p.EndIndex >= paragraphs.Count)
             throw new ArgumentException(
-                $"End paragraph index {endIndex} is out of range (document has {paragraphs.Count} paragraphs)");
+                $"End paragraph index {p.EndIndex} is out of range (document has {paragraphs.Count} paragraphs)");
 
-        if (startIndex > endIndex)
+        if (p.StartIndex > p.EndIndex)
             throw new ArgumentException(
-                $"Start index ({startIndex}) must be less than or equal to end index ({endIndex})");
+                $"Start index ({p.StartIndex}) must be less than or equal to end index ({p.EndIndex})");
 
-        var list = doc.Lists.Add(listType == "number"
+        var list = doc.Lists.Add(p.ListType == "number"
             ? ListTemplate.NumberDefault
             : ListTemplate.BulletDefault);
 
-        if (listType == "number")
+        if (p.ListType == "number")
         {
-            var numStyle = numberFormat.ToLower() switch
+            var numStyle = p.NumberFormat.ToLower() switch
             {
                 "roman" => NumberStyle.UppercaseRoman,
                 "letter" => NumberStyle.UppercaseLetter,
@@ -62,7 +59,7 @@ public class ConvertToWordListHandler : OperationHandlerBase<Document>
 
         var convertedCount = 0;
         var skippedCount = 0;
-        for (var i = startIndex; i <= endIndex; i++)
+        for (var i = p.StartIndex; i <= p.EndIndex; i++)
         {
             var para = paragraphs[i];
 
@@ -87,12 +84,27 @@ public class ConvertToWordListHandler : OperationHandlerBase<Document>
         MarkModified(context);
 
         var result = "Paragraphs converted to list successfully\n";
-        result += $"Range: paragraph {startIndex} to {endIndex}\n";
-        result += $"List type: {listType}\n";
-        if (listType == "number") result += $"Number format: {numberFormat}\n";
+        result += $"Range: paragraph {p.StartIndex} to {p.EndIndex}\n";
+        result += $"List type: {p.ListType}\n";
+        if (p.ListType == "number") result += $"Number format: {p.NumberFormat}\n";
         result += $"Converted: {convertedCount} paragraphs";
         if (skippedCount > 0) result += $"\nSkipped: {skippedCount} paragraphs (already list items or empty)";
 
         return Success(result);
     }
+
+    private static ConvertToListParameters ExtractConvertToListParameters(OperationParameters parameters)
+    {
+        return new ConvertToListParameters(
+            parameters.GetRequired<int>("startParagraphIndex"),
+            parameters.GetRequired<int>("endParagraphIndex"),
+            parameters.GetOptional("listType", "bullet"),
+            parameters.GetOptional("numberFormat", "arabic"));
+    }
+
+    private record ConvertToListParameters(
+        int StartIndex,
+        int EndIndex,
+        string ListType,
+        string NumberFormat);
 }

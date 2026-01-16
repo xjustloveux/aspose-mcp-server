@@ -27,39 +27,45 @@ public class FormatWordTextHandler : OperationHandlerBase<Document>
     /// <exception cref="InvalidOperationException">Thrown when the paragraph has no runs.</exception>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var paragraphIndex = parameters.GetRequired<int>("paragraphIndex");
-        var runIndex = parameters.GetOptional<int?>("runIndex");
-        var sectionIndex = parameters.GetOptional("sectionIndex", 0);
-        var fontName = parameters.GetOptional<string?>("fontName");
-        var fontNameAscii = parameters.GetOptional<string?>("fontNameAscii");
-        var fontNameFarEast = parameters.GetOptional<string?>("fontNameFarEast");
-        var fontSize = parameters.GetOptional<double?>("fontSize");
-        var bold = parameters.GetOptional<bool?>("bold");
-        var italic = parameters.GetOptional<bool?>("italic");
-        var underline = parameters.GetOptional<string?>("underline");
-        var color = parameters.GetOptional<string?>("color");
-        var strikethrough = parameters.GetOptional<bool?>("strikethrough");
-        var superscript = parameters.GetOptional<bool?>("superscript");
-        var subscript = parameters.GetOptional<bool?>("subscript");
+        var p = ExtractFormatParameters(parameters);
 
         var doc = context.Document;
 
-        ValidateSectionIndex(doc, sectionIndex);
-        var section = doc.Sections[sectionIndex];
+        ValidateSectionIndex(doc, p.SectionIndex);
+        var section = doc.Sections[p.SectionIndex];
         var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
 
-        ValidateParagraphIndex(paragraphs, paragraphIndex, sectionIndex);
-        var para = paragraphs[paragraphIndex];
+        ValidateParagraphIndex(paragraphs, p.ParagraphIndex, p.SectionIndex);
+        var para = paragraphs[p.ParagraphIndex];
 
-        var runs = EnsureRuns(doc, para, paragraphIndex);
-        var runsToFormat = GetRunsToFormat(runs, runIndex);
+        var runs = EnsureRuns(doc, para, p.ParagraphIndex);
+        var runsToFormat = GetRunsToFormat(runs, p.RunIndex);
 
-        var changes = ApplyFormatting(runsToFormat, fontName, fontNameAscii, fontNameFarEast,
-            fontSize, bold, italic, underline, color, strikethrough, superscript, subscript);
+        var changes = ApplyFormatting(runsToFormat, p.FontName, p.FontNameAscii, p.FontNameFarEast,
+            p.FontSize, p.Bold, p.Italic, p.Underline, p.Color, p.Strikethrough, p.Superscript, p.Subscript);
 
         MarkModified(context);
 
-        return BuildResultMessage(paragraphIndex, runIndex, runsToFormat.Count, changes);
+        return BuildResultMessage(p.ParagraphIndex, p.RunIndex, runsToFormat.Count, changes);
+    }
+
+    private static FormatParameters ExtractFormatParameters(OperationParameters parameters)
+    {
+        return new FormatParameters(
+            parameters.GetRequired<int>("paragraphIndex"),
+            parameters.GetOptional<int?>("runIndex"),
+            parameters.GetOptional("sectionIndex", 0),
+            parameters.GetOptional<string?>("fontName"),
+            parameters.GetOptional<string?>("fontNameAscii"),
+            parameters.GetOptional<string?>("fontNameFarEast"),
+            parameters.GetOptional<double?>("fontSize"),
+            parameters.GetOptional<bool?>("bold"),
+            parameters.GetOptional<bool?>("italic"),
+            parameters.GetOptional<string?>("underline"),
+            parameters.GetOptional<string?>("color"),
+            parameters.GetOptional<bool?>("strikethrough"),
+            parameters.GetOptional<bool?>("superscript"),
+            parameters.GetOptional<bool?>("subscript"));
     }
 
     /// <summary>
@@ -264,4 +270,20 @@ public class FormatWordTextHandler : OperationHandlerBase<Document>
 
         return Success(result);
     }
+
+    private record FormatParameters(
+        int ParagraphIndex,
+        int? RunIndex,
+        int SectionIndex,
+        string? FontName,
+        string? FontNameAscii,
+        string? FontNameFarEast,
+        double? FontSize,
+        bool? Bold,
+        bool? Italic,
+        string? Underline,
+        string? Color,
+        bool? Strikethrough,
+        bool? Superscript,
+        bool? Subscript);
 }

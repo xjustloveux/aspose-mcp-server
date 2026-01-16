@@ -20,7 +20,25 @@ public class AddShapeWordHandler : OperationHandlerBase<Document>
     ///     Optional: x, y
     /// </param>
     /// <returns>Success message with shape details.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing.</exception>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    {
+        var p = ExtractAddShapeParameters(parameters);
+
+        var shapeTypeEnum = WordShapeHelper.ParseShapeType(p.ShapeType);
+
+        var doc = context.Document;
+        var builder = new DocumentBuilder(doc);
+        var shape = builder.InsertShape(shapeTypeEnum, p.Width, p.Height);
+        shape.Left = p.X;
+        shape.Top = p.Y;
+
+        MarkModified(context);
+
+        return $"Successfully added {p.ShapeType} shape.";
+    }
+
+    private static AddShapeParameters ExtractAddShapeParameters(OperationParameters parameters)
     {
         var shapeType = parameters.GetOptional<string?>("shapeType");
         var width = parameters.GetOptional<double?>("width");
@@ -35,16 +53,13 @@ public class AddShapeWordHandler : OperationHandlerBase<Document>
         if (!height.HasValue)
             throw new ArgumentException("height is required for add operation");
 
-        var shapeTypeEnum = WordShapeHelper.ParseShapeType(shapeType);
-
-        var doc = context.Document;
-        var builder = new DocumentBuilder(doc);
-        var shape = builder.InsertShape(shapeTypeEnum, width.Value, height.Value);
-        shape.Left = x;
-        shape.Top = y;
-
-        MarkModified(context);
-
-        return $"Successfully added {shapeType} shape.";
+        return new AddShapeParameters(shapeType, width.Value, height.Value, x, y);
     }
+
+    private record AddShapeParameters(
+        string ShapeType,
+        double Width,
+        double Height,
+        double X,
+        double Y);
 }

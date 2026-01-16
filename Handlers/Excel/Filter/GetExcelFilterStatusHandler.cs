@@ -22,10 +22,10 @@ public class GetExcelFilterStatusHandler : OperationHandlerBase<Workbook>
     /// <returns>JSON result with filter status information.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
+        var filterStatusParams = ExtractFilterStatusParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, filterStatusParams.SheetIndex);
         var autoFilter = worksheet.AutoFilter;
 
         var rangeProperty = autoFilter.Range;
@@ -62,4 +62,22 @@ public class GetExcelFilterStatusHandler : OperationHandlerBase<Workbook>
             filterColumns = filterColumnsList
         });
     }
+
+    /// <summary>
+    ///     Extracts filter status parameters from the operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted filter status parameters.</returns>
+    private static FilterStatusParameters ExtractFilterStatusParameters(OperationParameters parameters)
+    {
+        return new FilterStatusParameters(
+            parameters.GetOptional("sheetIndex", 0)
+        );
+    }
+
+    /// <summary>
+    ///     Parameters for get filter status operation.
+    /// </summary>
+    /// <param name="SheetIndex">The worksheet index (0-based).</param>
+    private record FilterStatusParameters(int SheetIndex);
 }

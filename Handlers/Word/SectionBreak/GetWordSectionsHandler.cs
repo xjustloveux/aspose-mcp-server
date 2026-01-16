@@ -21,18 +21,18 @@ public class GetWordSectionsHandler : OperationHandlerBase<Document>
     /// <returns>JSON string containing section information.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var sectionIndex = parameters.GetOptional<int?>("sectionIndex");
+        var p = ExtractGetWordSectionsParameters(parameters);
 
         var doc = context.Document;
 
-        if (sectionIndex.HasValue)
+        if (p.SectionIndex.HasValue)
         {
-            if (sectionIndex.Value < 0 || sectionIndex.Value >= doc.Sections.Count)
+            if (p.SectionIndex.Value < 0 || p.SectionIndex.Value >= doc.Sections.Count)
                 throw new ArgumentException(
-                    $"sectionIndex must be between 0 and {doc.Sections.Count - 1}, got: {sectionIndex.Value}");
+                    $"sectionIndex must be between 0 and {doc.Sections.Count - 1}, got: {p.SectionIndex.Value}");
 
-            var section = doc.Sections[sectionIndex.Value];
-            var sectionInfo = WordSectionHelper.BuildSectionInfo(section, sectionIndex.Value);
+            var section = doc.Sections[p.SectionIndex.Value];
+            var sectionInfo = WordSectionHelper.BuildSectionInfo(section, p.SectionIndex.Value);
 
             var result = new
             {
@@ -60,4 +60,12 @@ public class GetWordSectionsHandler : OperationHandlerBase<Document>
             return JsonResult(result);
         }
     }
+
+    private static GetWordSectionsParameters ExtractGetWordSectionsParameters(OperationParameters parameters)
+    {
+        return new GetWordSectionsParameters(
+            parameters.GetOptional<int?>("sectionIndex"));
+    }
+
+    private record GetWordSectionsParameters(int? SectionIndex);
 }

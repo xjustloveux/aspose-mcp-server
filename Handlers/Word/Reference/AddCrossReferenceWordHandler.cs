@@ -22,37 +22,53 @@ public class AddCrossReferenceWordHandler : OperationHandlerBase<Document>
     /// <returns>Success message indicating cross-reference was added.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
+        var p = ExtractAddCrossReferenceParameters(parameters);
+
+        var validTypes = new[] { "Heading", "Bookmark", "Figure", "Table", "Equation" };
+        if (!validTypes.Contains(p.ReferenceType, StringComparer.OrdinalIgnoreCase))
+            throw new ArgumentException(
+                $"Invalid referenceType: {p.ReferenceType}. Valid types are: {string.Join(", ", validTypes)}");
+
+        var doc = context.Document;
+        var builder = new DocumentBuilder(doc);
+        builder.MoveToDocumentEnd();
+
+        if (!string.IsNullOrEmpty(p.ReferenceText))
+            builder.Write(p.ReferenceText);
+
+        var fieldCode = p.InsertAsHyperlink ? $"REF {p.TargetName} \\h" : $"REF {p.TargetName}";
+
+        builder.InsertField(fieldCode);
+        if (p.IncludeAboveBelow)
+            builder.Write(" (above)");
+
+        MarkModified(context);
+
+        return Success($"Cross-reference added (Type: {p.ReferenceType})");
+    }
+
+    private static AddCrossReferenceParameters ExtractAddCrossReferenceParameters(OperationParameters parameters)
+    {
         var referenceType = parameters.GetOptional<string?>("referenceType");
-        var referenceText = parameters.GetOptional<string?>("referenceText");
         var targetName = parameters.GetOptional<string?>("targetName");
-        var insertAsHyperlink = parameters.GetOptional("insertAsHyperlink", true);
-        var includeAboveBelow = parameters.GetOptional("includeAboveBelow", false);
 
         if (string.IsNullOrEmpty(referenceType))
             throw new ArgumentException("referenceType is required for add_cross_reference operation");
         if (string.IsNullOrEmpty(targetName))
             throw new ArgumentException("targetName is required for add_cross_reference operation");
 
-        var validTypes = new[] { "Heading", "Bookmark", "Figure", "Table", "Equation" };
-        if (!validTypes.Contains(referenceType, StringComparer.OrdinalIgnoreCase))
-            throw new ArgumentException(
-                $"Invalid referenceType: {referenceType}. Valid types are: {string.Join(", ", validTypes)}");
-
-        var doc = context.Document;
-        var builder = new DocumentBuilder(doc);
-        builder.MoveToDocumentEnd();
-
-        if (!string.IsNullOrEmpty(referenceText))
-            builder.Write(referenceText);
-
-        var fieldCode = insertAsHyperlink ? $"REF {targetName} \\h" : $"REF {targetName}";
-
-        builder.InsertField(fieldCode);
-        if (includeAboveBelow)
-            builder.Write(" (above)");
-
-        MarkModified(context);
-
-        return Success($"Cross-reference added (Type: {referenceType})");
+        return new AddCrossReferenceParameters(
+            referenceType,
+            targetName,
+            parameters.GetOptional<string?>("referenceText"),
+            parameters.GetOptional("insertAsHyperlink", true),
+            parameters.GetOptional("includeAboveBelow", false));
     }
+
+    private record AddCrossReferenceParameters(
+        string ReferenceType,
+        string TargetName,
+        string? ReferenceText,
+        bool InsertAsHyperlink,
+        bool IncludeAboveBelow);
 }

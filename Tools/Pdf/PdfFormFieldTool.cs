@@ -134,7 +134,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -150,36 +150,80 @@ Usage examples:
         bool? checkedValue,
         int limit)
     {
-        var parameters = new OperationParameters();
-
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "add":
-                if (pageIndex.HasValue) parameters.Set("pageIndex", pageIndex.Value);
-                if (fieldType != null) parameters.Set("fieldType", fieldType);
-                if (fieldName != null) parameters.Set("fieldName", fieldName);
-                if (x.HasValue) parameters.Set("x", x.Value);
-                if (y.HasValue) parameters.Set("y", y.Value);
-                if (width.HasValue) parameters.Set("width", width.Value);
-                if (height.HasValue) parameters.Set("height", height.Value);
-                if (defaultValue != null) parameters.Set("defaultValue", defaultValue);
-                break;
+            "add" => BuildAddParameters(pageIndex, fieldType, fieldName, x, y, width, height, defaultValue),
+            "delete" => BuildDeleteParameters(fieldName),
+            "edit" => BuildEditParameters(fieldName, value, checkedValue),
+            "get" => BuildGetParameters(limit),
+            _ => new OperationParameters()
+        };
+    }
 
-            case "delete":
-                if (fieldName != null) parameters.Set("fieldName", fieldName);
-                break;
+    /// <summary>
+    ///     Builds parameters for the add form field operation.
+    /// </summary>
+    /// <param name="pageIndex">The page index (1-based) to add the field to.</param>
+    /// <param name="fieldType">The field type (TextBox, CheckBox, RadioButton).</param>
+    /// <param name="fieldName">The field name.</param>
+    /// <param name="x">The X position in PDF coordinates.</param>
+    /// <param name="y">The Y position in PDF coordinates.</param>
+    /// <param name="width">The field width.</param>
+    /// <param name="height">The field height.</param>
+    /// <param name="defaultValue">The default value of the field.</param>
+    /// <returns>OperationParameters configured for adding a form field.</returns>
+    private static OperationParameters BuildAddParameters(int? pageIndex, string? fieldType, string? fieldName,
+        double? x, double? y, double? width, double? height, string? defaultValue)
+    {
+        var parameters = new OperationParameters();
+        if (pageIndex.HasValue) parameters.Set("pageIndex", pageIndex.Value);
+        if (fieldType != null) parameters.Set("fieldType", fieldType);
+        if (fieldName != null) parameters.Set("fieldName", fieldName);
+        if (x.HasValue) parameters.Set("x", x.Value);
+        if (y.HasValue) parameters.Set("y", y.Value);
+        if (width.HasValue) parameters.Set("width", width.Value);
+        if (height.HasValue) parameters.Set("height", height.Value);
+        if (defaultValue != null) parameters.Set("defaultValue", defaultValue);
+        return parameters;
+    }
 
-            case "edit":
-                if (fieldName != null) parameters.Set("fieldName", fieldName);
-                if (value != null) parameters.Set("value", value);
-                if (checkedValue.HasValue) parameters.Set("checkedValue", checkedValue.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the delete form field operation.
+    /// </summary>
+    /// <param name="fieldName">The field name to delete.</param>
+    /// <returns>OperationParameters configured for deleting a form field.</returns>
+    private static OperationParameters BuildDeleteParameters(string? fieldName)
+    {
+        var parameters = new OperationParameters();
+        if (fieldName != null) parameters.Set("fieldName", fieldName);
+        return parameters;
+    }
 
-            case "get":
-                parameters.Set("limit", limit);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the edit form field operation.
+    /// </summary>
+    /// <param name="fieldName">The field name to edit.</param>
+    /// <param name="value">The new field value.</param>
+    /// <param name="checkedValue">The checked state for CheckBox or RadioButton.</param>
+    /// <returns>OperationParameters configured for editing a form field.</returns>
+    private static OperationParameters BuildEditParameters(string? fieldName, string? value, bool? checkedValue)
+    {
+        var parameters = new OperationParameters();
+        if (fieldName != null) parameters.Set("fieldName", fieldName);
+        if (value != null) parameters.Set("value", value);
+        if (checkedValue.HasValue) parameters.Set("checkedValue", checkedValue.Value);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the get form fields operation.
+    /// </summary>
+    /// <param name="limit">The maximum number of fields to return.</param>
+    /// <returns>OperationParameters configured for getting form fields.</returns>
+    private static OperationParameters BuildGetParameters(int limit)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("limit", limit);
         return parameters;
     }
 }

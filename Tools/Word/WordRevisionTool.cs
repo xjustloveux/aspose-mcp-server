@@ -151,32 +151,32 @@ Notes:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
         int? revisionIndex,
         string action)
     {
-        var parameters = new OperationParameters();
-
-        switch (operation)
+        return operation switch
         {
-            case "get_revisions":
-                // No additional parameters needed
-                break;
+            "get_revisions" or "accept_all" or "reject_all" => new OperationParameters(),
+            "manage" => BuildManageParameters(revisionIndex, action),
+            _ => new OperationParameters()
+        };
+    }
 
-            case "accept_all":
-            case "reject_all":
-                // No additional parameters needed
-                break;
-
-            case "manage":
-                if (revisionIndex.HasValue) parameters.Set("revisionIndex", revisionIndex.Value);
-                parameters.Set("action", action);
-                break;
-        }
-
+    /// <summary>
+    ///     Builds parameters for the manage operation.
+    /// </summary>
+    /// <param name="revisionIndex">The revision index (0-based).</param>
+    /// <param name="action">The action to perform: accept, reject.</param>
+    /// <returns>OperationParameters configured for managing a specific revision.</returns>
+    private static OperationParameters BuildManageParameters(int? revisionIndex, string action)
+    {
+        var parameters = new OperationParameters();
+        if (revisionIndex.HasValue) parameters.Set("revisionIndex", revisionIndex.Value);
+        parameters.Set("action", action);
         return parameters;
     }
 }

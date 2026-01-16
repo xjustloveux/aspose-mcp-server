@@ -24,32 +24,38 @@ public class DeleteRangeWordTextHandler : OperationHandlerBase<Document>
     /// <exception cref="ArgumentException">Thrown when indices are out of range.</exception>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var startParagraphIndex = parameters.GetRequired<int>("startParagraphIndex");
-        var startCharIndex = parameters.GetRequired<int>("startCharIndex");
-        var endParagraphIndex = parameters.GetRequired<int>("endParagraphIndex");
-        var endCharIndex = parameters.GetRequired<int>("endCharIndex");
-        var sectionIndex = parameters.GetOptional("sectionIndex", 0);
+        var p = ExtractDeleteRangeParameters(parameters);
 
         var doc = context.Document;
 
-        ValidateSectionIndex(doc, sectionIndex);
-        var section = doc.Sections[sectionIndex];
+        ValidateSectionIndex(doc, p.SectionIndex);
+        var section = doc.Sections[p.SectionIndex];
         var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
 
-        ValidateParagraphIndices(paragraphs, startParagraphIndex, endParagraphIndex);
+        ValidateParagraphIndices(paragraphs, p.StartParagraphIndex, p.EndParagraphIndex);
 
-        var startPara = paragraphs[startParagraphIndex];
-        var endPara = paragraphs[endParagraphIndex];
+        var startPara = paragraphs[p.StartParagraphIndex];
+        var endPara = paragraphs[p.EndParagraphIndex];
 
-        if (startParagraphIndex == endParagraphIndex)
-            DeleteWithinSameParagraph(startPara, startCharIndex, endCharIndex);
+        if (p.StartParagraphIndex == p.EndParagraphIndex)
+            DeleteWithinSameParagraph(startPara, p.StartCharIndex, p.EndCharIndex);
         else
-            DeleteAcrossParagraphs(paragraphs, startPara, endPara, startParagraphIndex, endParagraphIndex,
-                startCharIndex, endCharIndex);
+            DeleteAcrossParagraphs(paragraphs, startPara, endPara, p.StartParagraphIndex, p.EndParagraphIndex,
+                p.StartCharIndex, p.EndCharIndex);
 
         MarkModified(context);
 
         return Success("Text range deleted.");
+    }
+
+    private static DeleteRangeParameters ExtractDeleteRangeParameters(OperationParameters parameters)
+    {
+        return new DeleteRangeParameters(
+            parameters.GetRequired<int>("startParagraphIndex"),
+            parameters.GetRequired<int>("startCharIndex"),
+            parameters.GetRequired<int>("endParagraphIndex"),
+            parameters.GetRequired<int>("endCharIndex"),
+            parameters.GetOptional("sectionIndex", 0));
     }
 
     /// <summary>
@@ -229,4 +235,11 @@ public class DeleteRangeWordTextHandler : OperationHandlerBase<Document>
                 runs[i].Remove();
         }
     }
+
+    private record DeleteRangeParameters(
+        int StartParagraphIndex,
+        int StartCharIndex,
+        int EndParagraphIndex,
+        int EndCharIndex,
+        int SectionIndex);
 }

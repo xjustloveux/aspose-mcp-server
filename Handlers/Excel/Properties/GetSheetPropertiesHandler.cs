@@ -22,19 +22,19 @@ public class GetSheetPropertiesHandler : OperationHandlerBase<Workbook>
     /// <returns>JSON result with worksheet properties.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
+        var getParams = ExtractGetSheetPropertiesParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, getParams.SheetIndex);
         var pageSetup = worksheet.PageSetup;
 
         var result = new
         {
             name = worksheet.Name,
-            index = sheetIndex,
+            index = getParams.SheetIndex,
             isVisible = worksheet.IsVisible,
             tabColor = worksheet.TabColor.ToString(),
-            isSelected = workbook.Worksheets.ActiveSheetIndex == sheetIndex,
+            isSelected = workbook.Worksheets.ActiveSheetIndex == getParams.SheetIndex,
             dataRowCount = worksheet.Cells.MaxDataRow + 1,
             dataColumnCount = worksheet.Cells.MaxDataColumn + 1,
             isProtected = worksheet.Protection.IsProtectedWithPassword,
@@ -56,4 +56,21 @@ public class GetSheetPropertiesHandler : OperationHandlerBase<Workbook>
 
         return JsonResult(result);
     }
+
+    /// <summary>
+    ///     Extracts get sheet properties parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted get sheet properties parameters.</returns>
+    private static GetSheetPropertiesParameters ExtractGetSheetPropertiesParameters(OperationParameters parameters)
+    {
+        return new GetSheetPropertiesParameters(
+            parameters.GetOptional("sheetIndex", 0)
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold get sheet properties parameters.
+    /// </summary>
+    private record GetSheetPropertiesParameters(int SheetIndex);
 }

@@ -198,7 +198,7 @@ Important notes for 'get' operation:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -235,72 +235,184 @@ Important notes for 'get' operation:
     {
         var parameters = new OperationParameters();
 
-        switch (operation.ToLower())
+        return operation.ToLower() switch
         {
-            case "insert":
-                if (text != null) parameters.Set("text", text);
-                if (paragraphIndex.HasValue) parameters.Set("paragraphIndex", paragraphIndex.Value);
-                if (styleName != null) parameters.Set("styleName", styleName);
-                if (alignment != null) parameters.Set("alignment", alignment);
-                if (indentLeft.HasValue) parameters.Set("indentLeft", indentLeft.Value);
-                if (indentRight.HasValue) parameters.Set("indentRight", indentRight.Value);
-                if (firstLineIndent.HasValue) parameters.Set("firstLineIndent", firstLineIndent.Value);
-                if (spaceBefore.HasValue) parameters.Set("spaceBefore", spaceBefore.Value);
-                if (spaceAfter.HasValue) parameters.Set("spaceAfter", spaceAfter.Value);
-                break;
+            "insert" => BuildInsertParameters(parameters, text, paragraphIndex, styleName, alignment, indentLeft,
+                indentRight, firstLineIndent, spaceBefore, spaceAfter),
+            "delete" => BuildDeleteParameters(parameters, paragraphIndex),
+            "edit" => BuildEditParameters(parameters, paragraphIndex, sectionIndex, text, styleName, alignment,
+                fontName, fontNameAscii, fontNameFarEast, fontSize, bold, italic, underline, color, indentLeft,
+                indentRight, firstLineIndent, spaceBefore, spaceAfter, lineSpacing, lineSpacingRule, tabStops),
+            "get" => BuildGetParameters(parameters, sectionIndex, includeEmpty, styleFilter, includeCommentParagraphs,
+                includeTextboxParagraphs),
+            "get_format" => BuildGetFormatParameters(parameters, paragraphIndex, includeRunDetails),
+            "copy_format" => BuildCopyFormatParameters(parameters, sourceParagraphIndex, targetParagraphIndex),
+            "merge" => BuildMergeParameters(parameters, startParagraphIndex, endParagraphIndex),
+            _ => parameters
+        };
+    }
 
-            case "delete":
-                if (paragraphIndex.HasValue) parameters.Set("paragraphIndex", paragraphIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the insert paragraph operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="text">The text content for the paragraph.</param>
+    /// <param name="paragraphIndex">The paragraph index (0-based, -1 for last paragraph).</param>
+    /// <param name="styleName">The style name to apply (e.g., 'Heading 1', 'Normal').</param>
+    /// <param name="alignment">The text alignment: 'left', 'center', 'right', 'justify'.</param>
+    /// <param name="indentLeft">The left indent in points.</param>
+    /// <param name="indentRight">The right indent in points.</param>
+    /// <param name="firstLineIndent">The first line indent in points.</param>
+    /// <param name="spaceBefore">The space before paragraph in points.</param>
+    /// <param name="spaceAfter">The space after paragraph in points.</param>
+    /// <returns>OperationParameters configured for the insert operation.</returns>
+    private static OperationParameters BuildInsertParameters(OperationParameters parameters, string? text,
+        int? paragraphIndex, string? styleName, string? alignment, double? indentLeft, double? indentRight,
+        double? firstLineIndent, double? spaceBefore, double? spaceAfter)
+    {
+        if (text != null) parameters.Set("text", text);
+        if (paragraphIndex.HasValue) parameters.Set("paragraphIndex", paragraphIndex.Value);
+        if (styleName != null) parameters.Set("styleName", styleName);
+        if (alignment != null) parameters.Set("alignment", alignment);
+        if (indentLeft.HasValue) parameters.Set("indentLeft", indentLeft.Value);
+        if (indentRight.HasValue) parameters.Set("indentRight", indentRight.Value);
+        if (firstLineIndent.HasValue) parameters.Set("firstLineIndent", firstLineIndent.Value);
+        if (spaceBefore.HasValue) parameters.Set("spaceBefore", spaceBefore.Value);
+        if (spaceAfter.HasValue) parameters.Set("spaceAfter", spaceAfter.Value);
+        return parameters;
+    }
 
-            case "edit":
-                if (paragraphIndex.HasValue) parameters.Set("paragraphIndex", paragraphIndex.Value);
-                if (sectionIndex.HasValue) parameters.Set("sectionIndex", sectionIndex.Value);
-                if (text != null) parameters.Set("text", text);
-                if (styleName != null) parameters.Set("styleName", styleName);
-                if (alignment != null) parameters.Set("alignment", alignment);
-                if (fontName != null) parameters.Set("fontName", fontName);
-                if (fontNameAscii != null) parameters.Set("fontNameAscii", fontNameAscii);
-                if (fontNameFarEast != null) parameters.Set("fontNameFarEast", fontNameFarEast);
-                if (fontSize.HasValue) parameters.Set("fontSize", fontSize.Value);
-                if (bold.HasValue) parameters.Set("bold", bold.Value);
-                if (italic.HasValue) parameters.Set("italic", italic.Value);
-                if (underline.HasValue) parameters.Set("underline", underline.Value);
-                if (color != null) parameters.Set("color", color);
-                if (indentLeft.HasValue) parameters.Set("indentLeft", indentLeft.Value);
-                if (indentRight.HasValue) parameters.Set("indentRight", indentRight.Value);
-                if (firstLineIndent.HasValue) parameters.Set("firstLineIndent", firstLineIndent.Value);
-                if (spaceBefore.HasValue) parameters.Set("spaceBefore", spaceBefore.Value);
-                if (spaceAfter.HasValue) parameters.Set("spaceAfter", spaceAfter.Value);
-                if (lineSpacing.HasValue) parameters.Set("lineSpacing", lineSpacing.Value);
-                if (lineSpacingRule != null) parameters.Set("lineSpacingRule", lineSpacingRule);
-                if (tabStops != null) parameters.Set("tabStops", tabStops);
-                break;
+    /// <summary>
+    ///     Builds parameters for the delete paragraph operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="paragraphIndex">The paragraph index to delete (0-based).</param>
+    /// <returns>OperationParameters configured for the delete operation.</returns>
+    private static OperationParameters BuildDeleteParameters(OperationParameters parameters, int? paragraphIndex)
+    {
+        if (paragraphIndex.HasValue) parameters.Set("paragraphIndex", paragraphIndex.Value);
+        return parameters;
+    }
 
-            case "get":
-                if (sectionIndex.HasValue) parameters.Set("sectionIndex", sectionIndex.Value);
-                parameters.Set("includeEmpty", includeEmpty);
-                if (styleFilter != null) parameters.Set("styleFilter", styleFilter);
-                parameters.Set("includeCommentParagraphs", includeCommentParagraphs);
-                parameters.Set("includeTextboxParagraphs", includeTextboxParagraphs);
-                break;
+    /// <summary>
+    ///     Builds parameters for the edit paragraph operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="paragraphIndex">The paragraph index (0-based).</param>
+    /// <param name="sectionIndex">The section index (0-based).</param>
+    /// <param name="text">The text content for the paragraph.</param>
+    /// <param name="styleName">The style name to apply.</param>
+    /// <param name="alignment">The text alignment: 'left', 'center', 'right', 'justify'.</param>
+    /// <param name="fontName">The font name.</param>
+    /// <param name="fontNameAscii">The font name for ASCII characters.</param>
+    /// <param name="fontNameFarEast">The font name for Far East characters.</param>
+    /// <param name="fontSize">The font size in points.</param>
+    /// <param name="bold">Whether to make text bold.</param>
+    /// <param name="italic">Whether to make text italic.</param>
+    /// <param name="underline">Whether to underline text.</param>
+    /// <param name="color">The text color in hex format.</param>
+    /// <param name="indentLeft">The left indent in points.</param>
+    /// <param name="indentRight">The right indent in points.</param>
+    /// <param name="firstLineIndent">The first line indent in points.</param>
+    /// <param name="spaceBefore">The space before paragraph in points.</param>
+    /// <param name="spaceAfter">The space after paragraph in points.</param>
+    /// <param name="lineSpacing">The line spacing multiplier.</param>
+    /// <param name="lineSpacingRule">The line spacing rule: 'single', 'oneAndHalf', 'double', etc.</param>
+    /// <param name="tabStops">The custom tab stops array.</param>
+    /// <returns>OperationParameters configured for the edit operation.</returns>
+    private static OperationParameters BuildEditParameters(OperationParameters parameters, int? paragraphIndex,
+        int? sectionIndex, string? text, string? styleName, string? alignment, string? fontName, string? fontNameAscii,
+        string? fontNameFarEast, double? fontSize, bool? bold, bool? italic, bool? underline, string? color,
+        double? indentLeft, double? indentRight, double? firstLineIndent, double? spaceBefore, double? spaceAfter,
+        double? lineSpacing, string? lineSpacingRule, JsonArray? tabStops)
+    {
+        if (paragraphIndex.HasValue) parameters.Set("paragraphIndex", paragraphIndex.Value);
+        if (sectionIndex.HasValue) parameters.Set("sectionIndex", sectionIndex.Value);
+        if (text != null) parameters.Set("text", text);
+        if (styleName != null) parameters.Set("styleName", styleName);
+        if (alignment != null) parameters.Set("alignment", alignment);
+        if (fontName != null) parameters.Set("fontName", fontName);
+        if (fontNameAscii != null) parameters.Set("fontNameAscii", fontNameAscii);
+        if (fontNameFarEast != null) parameters.Set("fontNameFarEast", fontNameFarEast);
+        if (fontSize.HasValue) parameters.Set("fontSize", fontSize.Value);
+        if (bold.HasValue) parameters.Set("bold", bold.Value);
+        if (italic.HasValue) parameters.Set("italic", italic.Value);
+        if (underline.HasValue) parameters.Set("underline", underline.Value);
+        if (color != null) parameters.Set("color", color);
+        if (indentLeft.HasValue) parameters.Set("indentLeft", indentLeft.Value);
+        if (indentRight.HasValue) parameters.Set("indentRight", indentRight.Value);
+        if (firstLineIndent.HasValue) parameters.Set("firstLineIndent", firstLineIndent.Value);
+        if (spaceBefore.HasValue) parameters.Set("spaceBefore", spaceBefore.Value);
+        if (spaceAfter.HasValue) parameters.Set("spaceAfter", spaceAfter.Value);
+        if (lineSpacing.HasValue) parameters.Set("lineSpacing", lineSpacing.Value);
+        if (lineSpacingRule != null) parameters.Set("lineSpacingRule", lineSpacingRule);
+        if (tabStops != null) parameters.Set("tabStops", tabStops);
+        return parameters;
+    }
 
-            case "get_format":
-                if (paragraphIndex.HasValue) parameters.Set("paragraphIndex", paragraphIndex.Value);
-                parameters.Set("includeRunDetails", includeRunDetails);
-                break;
+    /// <summary>
+    ///     Builds parameters for the get paragraphs operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="sectionIndex">The section index (0-based).</param>
+    /// <param name="includeEmpty">Whether to include empty paragraphs.</param>
+    /// <param name="styleFilter">The filter by style name.</param>
+    /// <param name="includeCommentParagraphs">Whether to include paragraphs inside nested structures.</param>
+    /// <param name="includeTextboxParagraphs">Whether to include paragraphs inside TextBox/Shape objects.</param>
+    /// <returns>OperationParameters configured for the get operation.</returns>
+    private static OperationParameters BuildGetParameters(OperationParameters parameters, int? sectionIndex,
+        bool includeEmpty, string? styleFilter, bool includeCommentParagraphs, bool includeTextboxParagraphs)
+    {
+        if (sectionIndex.HasValue) parameters.Set("sectionIndex", sectionIndex.Value);
+        parameters.Set("includeEmpty", includeEmpty);
+        if (styleFilter != null) parameters.Set("styleFilter", styleFilter);
+        parameters.Set("includeCommentParagraphs", includeCommentParagraphs);
+        parameters.Set("includeTextboxParagraphs", includeTextboxParagraphs);
+        return parameters;
+    }
 
-            case "copy_format":
-                if (sourceParagraphIndex.HasValue) parameters.Set("sourceParagraphIndex", sourceParagraphIndex.Value);
-                if (targetParagraphIndex.HasValue) parameters.Set("targetParagraphIndex", targetParagraphIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the get format operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="paragraphIndex">The paragraph index (0-based).</param>
+    /// <param name="includeRunDetails">Whether to include detailed run-level formatting.</param>
+    /// <returns>OperationParameters configured for the get format operation.</returns>
+    private static OperationParameters BuildGetFormatParameters(OperationParameters parameters, int? paragraphIndex,
+        bool includeRunDetails)
+    {
+        if (paragraphIndex.HasValue) parameters.Set("paragraphIndex", paragraphIndex.Value);
+        parameters.Set("includeRunDetails", includeRunDetails);
+        return parameters;
+    }
 
-            case "merge":
-                if (startParagraphIndex.HasValue) parameters.Set("startParagraphIndex", startParagraphIndex.Value);
-                if (endParagraphIndex.HasValue) parameters.Set("endParagraphIndex", endParagraphIndex.Value);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the copy format operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="sourceParagraphIndex">The source paragraph index (0-based).</param>
+    /// <param name="targetParagraphIndex">The target paragraph index (0-based).</param>
+    /// <returns>OperationParameters configured for the copy format operation.</returns>
+    private static OperationParameters BuildCopyFormatParameters(OperationParameters parameters,
+        int? sourceParagraphIndex, int? targetParagraphIndex)
+    {
+        if (sourceParagraphIndex.HasValue) parameters.Set("sourceParagraphIndex", sourceParagraphIndex.Value);
+        if (targetParagraphIndex.HasValue) parameters.Set("targetParagraphIndex", targetParagraphIndex.Value);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the merge paragraphs operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="startParagraphIndex">The start paragraph index (0-based).</param>
+    /// <param name="endParagraphIndex">The end paragraph index (0-based).</param>
+    /// <returns>OperationParameters configured for the merge operation.</returns>
+    private static OperationParameters BuildMergeParameters(OperationParameters parameters, int? startParagraphIndex,
+        int? endParagraphIndex)
+    {
+        if (startParagraphIndex.HasValue) parameters.Set("startParagraphIndex", startParagraphIndex.Value);
+        if (endParagraphIndex.HasValue) parameters.Set("endParagraphIndex", endParagraphIndex.Value);
         return parameters;
     }
 }

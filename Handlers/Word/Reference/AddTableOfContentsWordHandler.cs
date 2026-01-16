@@ -22,37 +22,32 @@ public class AddTableOfContentsWordHandler : OperationHandlerBase<Document>
     /// <returns>Success message indicating TOC was added.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var position = parameters.GetOptional("position", "start");
-        var title = parameters.GetOptional("title", "Table of Contents");
-        var maxLevel = parameters.GetOptional("maxLevel", 3);
-        var hyperlinks = parameters.GetOptional("hyperlinks", true);
-        var pageNumbers = parameters.GetOptional("pageNumbers", true);
-        var rightAlignPageNumbers = parameters.GetOptional("rightAlignPageNumbers", true);
+        var p = ExtractAddTableOfContentsParameters(parameters);
 
         var doc = context.Document;
         var builder = new DocumentBuilder(doc);
 
-        if (position == "end")
+        if (p.Position == "end")
             builder.MoveToDocumentEnd();
         else
             builder.MoveToDocumentStart();
 
-        if (!string.IsNullOrEmpty(title))
+        if (!string.IsNullOrEmpty(p.Title))
         {
             builder.ParagraphFormat.StyleIdentifier = StyleIdentifier.Heading1;
-            builder.Writeln(title);
+            builder.Writeln(p.Title);
             builder.ParagraphFormat.StyleIdentifier = StyleIdentifier.Normal;
         }
 
-        var switches = $"\\o \"1-{maxLevel}\"";
+        var switches = $"\\o \"1-{p.MaxLevel}\"";
 
-        if (!hyperlinks)
+        if (!p.Hyperlinks)
             switches += " \\n";
 
-        if (!pageNumbers)
+        if (!p.PageNumbers)
             switches += " \\p \"\"";
 
-        if (!rightAlignPageNumbers)
+        if (!p.RightAlignPageNumbers)
             switches += " \\l";
 
         builder.InsertTableOfContents(switches);
@@ -62,4 +57,23 @@ public class AddTableOfContentsWordHandler : OperationHandlerBase<Document>
 
         return Success("Table of contents added");
     }
+
+    private static AddTableOfContentsParameters ExtractAddTableOfContentsParameters(OperationParameters parameters)
+    {
+        return new AddTableOfContentsParameters(
+            parameters.GetOptional("position", "start"),
+            parameters.GetOptional("title", "Table of Contents"),
+            parameters.GetOptional("maxLevel", 3),
+            parameters.GetOptional("hyperlinks", true),
+            parameters.GetOptional("pageNumbers", true),
+            parameters.GetOptional("rightAlignPageNumbers", true));
+    }
+
+    private record AddTableOfContentsParameters(
+        string Position,
+        string Title,
+        int MaxLevel,
+        bool Hyperlinks,
+        bool PageNumbers,
+        bool RightAlignPageNumbers);
 }

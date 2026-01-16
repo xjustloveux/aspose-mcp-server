@@ -22,17 +22,17 @@ public class GetPdfPageDetailsHandler : OperationHandlerBase<Document>
     /// <exception cref="ArgumentException">Thrown when pageIndex is out of range.</exception>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var pageIndex = parameters.GetRequired<int>("pageIndex");
+        var p = ExtractGetDetailsParameters(parameters);
 
         var doc = context.Document;
 
-        if (pageIndex < 1 || pageIndex > doc.Pages.Count)
+        if (p.PageIndex < 1 || p.PageIndex > doc.Pages.Count)
             throw new ArgumentException($"pageIndex must be between 1 and {doc.Pages.Count}");
 
-        var page = doc.Pages[pageIndex];
+        var page = doc.Pages[p.PageIndex];
         var result = new
         {
-            pageIndex,
+            pageIndex = p.PageIndex,
             width = page.Rect.Width,
             height = page.Rect.Height,
             rotation = page.Rotate.ToString(),
@@ -57,4 +57,22 @@ public class GetPdfPageDetailsHandler : OperationHandlerBase<Document>
 
         return JsonResult(result);
     }
+
+    /// <summary>
+    ///     Extracts parameters for get_details operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static GetDetailsParameters ExtractGetDetailsParameters(OperationParameters parameters)
+    {
+        return new GetDetailsParameters(
+            parameters.GetRequired<int>("pageIndex")
+        );
+    }
+
+    /// <summary>
+    ///     Parameters for get_details operation.
+    /// </summary>
+    /// <param name="PageIndex">The 1-based page index.</param>
+    private record GetDetailsParameters(int PageIndex);
 }

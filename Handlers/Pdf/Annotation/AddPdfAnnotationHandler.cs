@@ -23,30 +23,48 @@ public class AddPdfAnnotationHandler : OperationHandlerBase<Document>
     /// <returns>Success message with annotation details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var pageIndex = parameters.GetRequired<int>("pageIndex");
-        var text = parameters.GetRequired<string>("text");
-        var x = parameters.GetOptional("x", 100.0);
-        var y = parameters.GetOptional("y", 700.0);
+        var addParams = ExtractAddParameters(parameters);
 
         var document = context.Document;
 
-        if (pageIndex < 1 || pageIndex > document.Pages.Count)
+        if (addParams.PageIndex < 1 || addParams.PageIndex > document.Pages.Count)
             throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
 
-        var page = document.Pages[pageIndex];
-        var annotation = new TextAnnotation(page, new Rectangle(x, y, x + 200, y + 50))
-        {
-            Title = "Comment",
-            Subject = "Annotation",
-            Contents = text,
-            Open = false,
-            Icon = TextIcon.Note
-        };
+        var page = document.Pages[addParams.PageIndex];
+        var annotation =
+            new TextAnnotation(page, new Rectangle(addParams.X, addParams.Y, addParams.X + 200, addParams.Y + 50))
+            {
+                Title = "Comment",
+                Subject = "Annotation",
+                Contents = addParams.Text,
+                Open = false,
+                Icon = TextIcon.Note
+            };
 
         page.Annotations.Add(annotation);
 
         MarkModified(context);
 
-        return Success($"Added annotation to page {pageIndex}.");
+        return Success($"Added annotation to page {addParams.PageIndex}.");
     }
+
+    /// <summary>
+    ///     Extracts add parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted add parameters.</returns>
+    private static AddParameters ExtractAddParameters(OperationParameters parameters)
+    {
+        return new AddParameters(
+            parameters.GetRequired<int>("pageIndex"),
+            parameters.GetRequired<string>("text"),
+            parameters.GetOptional("x", 100.0),
+            parameters.GetOptional("y", 700.0)
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold add annotation parameters.
+    /// </summary>
+    private record AddParameters(int PageIndex, string Text, double X, double Y);
 }

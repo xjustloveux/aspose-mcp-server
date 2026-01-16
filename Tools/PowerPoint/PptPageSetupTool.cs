@@ -127,7 +127,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -141,33 +141,74 @@ Usage examples:
         int firstNumber,
         int[]? slideIndices)
     {
-        var parameters = new OperationParameters();
-
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "set_size":
-                if (preset != null) parameters.Set("preset", preset);
-                if (width.HasValue) parameters.Set("width", width.Value);
-                if (height.HasValue) parameters.Set("height", height.Value);
-                break;
+            "set_size" => BuildSetSizeParameters(preset, width, height),
+            "set_orientation" => BuildSetOrientationParameters(orientation),
+            "set_footer" => BuildSetFooterParameters(footerText, dateText, showSlideNumber, slideIndices),
+            "set_slide_numbering" => BuildSetSlideNumberingParameters(showSlideNumber, firstNumber),
+            _ => new OperationParameters()
+        };
+    }
 
-            case "set_orientation":
-                if (orientation != null) parameters.Set("orientation", orientation);
-                break;
+    /// <summary>
+    ///     Builds parameters for the set slide size operation.
+    /// </summary>
+    /// <param name="preset">The preset size (OnScreen16x9, OnScreen16x10, Letter, A4, Banner, Custom).</param>
+    /// <param name="width">The custom width in points when preset is Custom.</param>
+    /// <param name="height">The custom height in points when preset is Custom.</param>
+    /// <returns>OperationParameters configured for setting slide size.</returns>
+    private static OperationParameters BuildSetSizeParameters(string? preset, double? width, double? height)
+    {
+        var parameters = new OperationParameters();
+        if (preset != null) parameters.Set("preset", preset);
+        if (width.HasValue) parameters.Set("width", width.Value);
+        if (height.HasValue) parameters.Set("height", height.Value);
+        return parameters;
+    }
 
-            case "set_footer":
-                if (footerText != null) parameters.Set("footerText", footerText);
-                if (dateText != null) parameters.Set("dateText", dateText);
-                parameters.Set("showSlideNumber", showSlideNumber);
-                if (slideIndices != null) parameters.Set("slideIndices", slideIndices);
-                break;
+    /// <summary>
+    ///     Builds parameters for the set slide orientation operation.
+    /// </summary>
+    /// <param name="orientation">The orientation (Portrait or Landscape).</param>
+    /// <returns>OperationParameters configured for setting slide orientation.</returns>
+    private static OperationParameters BuildSetOrientationParameters(string? orientation)
+    {
+        var parameters = new OperationParameters();
+        if (orientation != null) parameters.Set("orientation", orientation);
+        return parameters;
+    }
 
-            case "set_slide_numbering":
-                parameters.Set("showSlideNumber", showSlideNumber);
-                parameters.Set("firstNumber", firstNumber);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the set footer operation.
+    /// </summary>
+    /// <param name="footerText">The footer text.</param>
+    /// <param name="dateText">The date/time text.</param>
+    /// <param name="showSlideNumber">Whether to show slide number.</param>
+    /// <param name="slideIndices">The slide indices to apply footer to.</param>
+    /// <returns>OperationParameters configured for setting footer.</returns>
+    private static OperationParameters BuildSetFooterParameters(string? footerText, string? dateText,
+        bool showSlideNumber, int[]? slideIndices)
+    {
+        var parameters = new OperationParameters();
+        if (footerText != null) parameters.Set("footerText", footerText);
+        if (dateText != null) parameters.Set("dateText", dateText);
+        parameters.Set("showSlideNumber", showSlideNumber);
+        if (slideIndices != null) parameters.Set("slideIndices", slideIndices);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the set slide numbering operation.
+    /// </summary>
+    /// <param name="showSlideNumber">Whether to show slide number.</param>
+    /// <param name="firstNumber">The first slide number.</param>
+    /// <returns>OperationParameters configured for setting slide numbering.</returns>
+    private static OperationParameters BuildSetSlideNumberingParameters(bool showSlideNumber, int firstNumber)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("showSlideNumber", showSlideNumber);
+        parameters.Set("firstNumber", firstNumber);
         return parameters;
     }
 }

@@ -22,19 +22,28 @@ public class DeleteExcelSheetHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with operation details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetRequired<int>("sheetIndex");
+        var p = ExtractDeleteExcelSheetParameters(parameters);
 
         var workbook = context.Document;
-        ExcelHelper.ValidateSheetIndex(sheetIndex, workbook);
+        ExcelHelper.ValidateSheetIndex(p.SheetIndex, workbook);
 
         if (workbook.Worksheets.Count <= 1)
             throw new InvalidOperationException("Cannot delete the last worksheet");
 
-        var sheetName = workbook.Worksheets[sheetIndex].Name;
-        workbook.Worksheets.RemoveAt(sheetIndex);
+        var sheetName = workbook.Worksheets[p.SheetIndex].Name;
+        workbook.Worksheets.RemoveAt(p.SheetIndex);
 
         MarkModified(context);
 
-        return Success($"Worksheet '{sheetName}' (index {sheetIndex}) deleted.");
+        return Success($"Worksheet '{sheetName}' (index {p.SheetIndex}) deleted.");
     }
+
+    private static DeleteExcelSheetParameters ExtractDeleteExcelSheetParameters(OperationParameters parameters)
+    {
+        var sheetIndex = parameters.GetRequired<int>("sheetIndex");
+
+        return new DeleteExcelSheetParameters(sheetIndex);
+    }
+
+    private record DeleteExcelSheetParameters(int SheetIndex);
 }

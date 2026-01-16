@@ -23,21 +23,13 @@ public class AddExcelDataValidationHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with validation details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var range = parameters.GetRequired<string>("range");
-        var validationType = parameters.GetRequired<string>("validationType");
-        var formula1 = parameters.GetRequired<string>("formula1");
-        var formula2 = parameters.GetOptional<string?>("formula2");
-        var operatorType = parameters.GetOptional<string?>("operatorType");
-        var inCellDropDown = parameters.GetOptional("inCellDropDown", true);
-        var errorMessage = parameters.GetOptional<string?>("errorMessage");
-        var inputMessage = parameters.GetOptional<string?>("inputMessage");
+        var addParams = ExtractAddParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, addParams.SheetIndex);
         var cells = worksheet.Cells;
 
-        var cellRange = ExcelHelper.CreateRange(cells, range);
+        var cellRange = ExcelHelper.CreateRange(cells, addParams.Range);
 
         var area = new CellArea
         {
@@ -49,32 +41,58 @@ public class AddExcelDataValidationHandler : OperationHandlerBase<Workbook>
         var validationIndex = worksheet.Validations.Add(area);
         var validation = worksheet.Validations[validationIndex];
 
-        var vType = ExcelDataValidationHelper.ParseValidationType(validationType);
+        var vType = ExcelDataValidationHelper.ParseValidationType(addParams.ValidationType);
         validation.Type = vType;
-        validation.Formula1 = formula1;
+        validation.Formula1 = addParams.Formula1;
 
-        if (!string.IsNullOrEmpty(formula2))
-            validation.Formula2 = formula2;
+        if (!string.IsNullOrEmpty(addParams.Formula2))
+            validation.Formula2 = addParams.Formula2;
 
-        validation.Operator = ExcelDataValidationHelper.ParseOperatorType(operatorType, formula2);
+        validation.Operator = ExcelDataValidationHelper.ParseOperatorType(addParams.OperatorType, addParams.Formula2);
 
-        if (!string.IsNullOrEmpty(errorMessage))
+        if (!string.IsNullOrEmpty(addParams.ErrorMessage))
         {
-            validation.ErrorMessage = errorMessage;
+            validation.ErrorMessage = addParams.ErrorMessage;
             validation.ShowError = true;
         }
 
-        if (!string.IsNullOrEmpty(inputMessage))
+        if (!string.IsNullOrEmpty(addParams.InputMessage))
         {
-            validation.InputMessage = inputMessage;
+            validation.InputMessage = addParams.InputMessage;
             validation.ShowInput = true;
         }
 
         if (vType == ValidationType.List)
-            validation.InCellDropDown = inCellDropDown;
+            validation.InCellDropDown = addParams.InCellDropDown;
 
         MarkModified(context);
 
-        return Success($"Data validation added to range {range} (type: {validationType}, index: {validationIndex}).");
+        return Success(
+            $"Data validation added to range {addParams.Range} (type: {addParams.ValidationType}, index: {validationIndex}).");
     }
+
+    private static AddParameters ExtractAddParameters(OperationParameters parameters)
+    {
+        return new AddParameters(
+            parameters.GetOptional("sheetIndex", 0),
+            parameters.GetRequired<string>("range"),
+            parameters.GetRequired<string>("validationType"),
+            parameters.GetRequired<string>("formula1"),
+            parameters.GetOptional<string?>("formula2"),
+            parameters.GetOptional<string?>("operatorType"),
+            parameters.GetOptional("inCellDropDown", true),
+            parameters.GetOptional<string?>("errorMessage"),
+            parameters.GetOptional<string?>("inputMessage"));
+    }
+
+    private record AddParameters(
+        int SheetIndex,
+        string Range,
+        string ValidationType,
+        string Formula1,
+        string? Formula2,
+        string? OperatorType,
+        bool InCellDropDown,
+        string? ErrorMessage,
+        string? InputMessage);
 }

@@ -125,6 +125,17 @@ Usage examples:
     /// <summary>
     ///     Builds OperationParameters from method parameters.
     /// </summary>
+    /// <param name="text">The watermark text.</param>
+    /// <param name="opacity">The opacity (0.0 to 1.0).</param>
+    /// <param name="fontSize">The font size in points.</param>
+    /// <param name="fontName">The font name.</param>
+    /// <param name="rotation">The rotation angle in degrees.</param>
+    /// <param name="color">The watermark color name or hex code.</param>
+    /// <param name="pageRange">The page range to apply watermark.</param>
+    /// <param name="isBackground">Whether watermark is placed behind text content.</param>
+    /// <param name="horizontalAlignment">The horizontal alignment.</param>
+    /// <param name="verticalAlignment">The vertical alignment.</param>
+    /// <returns>OperationParameters configured for the watermark operation.</returns>
     private static OperationParameters BuildParameters(
         string? text,
         double opacity,

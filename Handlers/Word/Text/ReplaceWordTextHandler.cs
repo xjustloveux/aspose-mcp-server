@@ -25,30 +25,42 @@ public class ReplaceWordTextHandler : OperationHandlerBase<Document>
     /// <exception cref="ArgumentException">Thrown when find or replace parameters are missing.</exception>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var find = parameters.GetRequired<string>("find");
-        var replace = parameters.GetRequired<string>("replace");
-        var useRegex = parameters.GetOptional("useRegex", false);
-        var replaceInFields = parameters.GetOptional("replaceInFields", false);
+        var p = ExtractReplaceParameters(parameters);
 
         var doc = context.Document;
 
         var options = new FindReplaceOptions();
-        if (!replaceInFields)
+        if (!p.ReplaceInFields)
             options.ReplacingCallback = new FieldSkipReplacingCallback();
 
-        if (useRegex)
-            doc.Range.Replace(new Regex(find), replace, options);
+        if (p.UseRegex)
+            doc.Range.Replace(new Regex(p.Find, RegexOptions.None, TimeSpan.FromSeconds(30)), p.Replace, options);
         else
-            doc.Range.Replace(find, replace, options);
+            doc.Range.Replace(p.Find, p.Replace, options);
 
         MarkModified(context);
 
         var result = "Text replaced in document.";
-        if (!replaceInFields)
+        if (!p.ReplaceInFields)
             result += " Note: Fields (such as hyperlinks) were excluded from replacement.";
 
         return Success(result);
     }
+
+    private static ReplaceParameters ExtractReplaceParameters(OperationParameters parameters)
+    {
+        return new ReplaceParameters(
+            parameters.GetRequired<string>("find"),
+            parameters.GetRequired<string>("replace"),
+            parameters.GetOptional("useRegex", false),
+            parameters.GetOptional("replaceInFields", false));
+    }
+
+    private record ReplaceParameters(
+        string Find,
+        string Replace,
+        bool UseRegex,
+        bool ReplaceInFields);
 }
 
 /// <summary>

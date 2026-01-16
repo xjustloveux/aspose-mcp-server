@@ -23,19 +23,16 @@ public class AddFormulaHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with formula details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var cell = parameters.GetRequired<string>("cell");
-        var formula = parameters.GetRequired<string>("formula");
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var autoCalculate = parameters.GetOptional("autoCalculate", true);
+        var addParams = ExtractAddParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, addParams.SheetIndex);
 
-        var cellObj = worksheet.Cells[cell];
-        cellObj.Formula = formula;
+        var cellObj = worksheet.Cells[addParams.Cell];
+        cellObj.Formula = addParams.Formula;
 
         string? warningMessage = null;
-        if (autoCalculate)
+        if (addParams.AutoCalculate)
         {
             workbook.CalculateFormula();
             _ = cellObj.Value;
@@ -59,8 +56,28 @@ public class AddFormulaHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        var result = $"Formula added to {cell}: {formula}";
+        var result = $"Formula added to {addParams.Cell}: {addParams.Formula}";
         if (!string.IsNullOrEmpty(warningMessage)) result += $".{warningMessage}";
         return result;
     }
+
+    /// <summary>
+    ///     Extracts add parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted add parameters.</returns>
+    private static AddParameters ExtractAddParameters(OperationParameters parameters)
+    {
+        return new AddParameters(
+            parameters.GetRequired<string>("cell"),
+            parameters.GetRequired<string>("formula"),
+            parameters.GetOptional("sheetIndex", 0),
+            parameters.GetOptional("autoCalculate", true)
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold add formula parameters.
+    /// </summary>
+    private record AddParameters(string Cell, string Formula, int SheetIndex, bool AutoCalculate);
 }

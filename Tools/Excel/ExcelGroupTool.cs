@@ -110,7 +110,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -124,31 +124,77 @@ Usage examples:
         var parameters = new OperationParameters();
         parameters.Set("sheetIndex", sheetIndex);
 
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "group_rows":
-                if (startRow.HasValue) parameters.Set("startRow", startRow.Value);
-                if (endRow.HasValue) parameters.Set("endRow", endRow.Value);
-                parameters.Set("isCollapsed", isCollapsed);
-                break;
+            "group_rows" => BuildGroupRowsParameters(parameters, startRow, endRow, isCollapsed),
+            "ungroup_rows" => BuildUngroupRowsParameters(parameters, startRow, endRow),
+            "group_columns" => BuildGroupColumnsParameters(parameters, startColumn, endColumn, isCollapsed),
+            "ungroup_columns" => BuildUngroupColumnsParameters(parameters, startColumn, endColumn),
+            _ => parameters
+        };
+    }
 
-            case "ungroup_rows":
-                if (startRow.HasValue) parameters.Set("startRow", startRow.Value);
-                if (endRow.HasValue) parameters.Set("endRow", endRow.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the group rows operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="startRow">The start row index.</param>
+    /// <param name="endRow">The end row index.</param>
+    /// <param name="isCollapsed">Whether to collapse the group initially.</param>
+    /// <returns>OperationParameters configured for grouping rows.</returns>
+    private static OperationParameters BuildGroupRowsParameters(OperationParameters parameters, int? startRow,
+        int? endRow, bool isCollapsed)
+    {
+        if (startRow.HasValue) parameters.Set("startRow", startRow.Value);
+        if (endRow.HasValue) parameters.Set("endRow", endRow.Value);
+        parameters.Set("isCollapsed", isCollapsed);
+        return parameters;
+    }
 
-            case "group_columns":
-                if (startColumn.HasValue) parameters.Set("startColumn", startColumn.Value);
-                if (endColumn.HasValue) parameters.Set("endColumn", endColumn.Value);
-                parameters.Set("isCollapsed", isCollapsed);
-                break;
+    /// <summary>
+    ///     Builds parameters for the ungroup rows operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="startRow">The start row index.</param>
+    /// <param name="endRow">The end row index.</param>
+    /// <returns>OperationParameters configured for ungrouping rows.</returns>
+    private static OperationParameters BuildUngroupRowsParameters(OperationParameters parameters, int? startRow,
+        int? endRow)
+    {
+        if (startRow.HasValue) parameters.Set("startRow", startRow.Value);
+        if (endRow.HasValue) parameters.Set("endRow", endRow.Value);
+        return parameters;
+    }
 
-            case "ungroup_columns":
-                if (startColumn.HasValue) parameters.Set("startColumn", startColumn.Value);
-                if (endColumn.HasValue) parameters.Set("endColumn", endColumn.Value);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the group columns operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="startColumn">The start column index.</param>
+    /// <param name="endColumn">The end column index.</param>
+    /// <param name="isCollapsed">Whether to collapse the group initially.</param>
+    /// <returns>OperationParameters configured for grouping columns.</returns>
+    private static OperationParameters BuildGroupColumnsParameters(OperationParameters parameters, int? startColumn,
+        int? endColumn, bool isCollapsed)
+    {
+        if (startColumn.HasValue) parameters.Set("startColumn", startColumn.Value);
+        if (endColumn.HasValue) parameters.Set("endColumn", endColumn.Value);
+        parameters.Set("isCollapsed", isCollapsed);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the ungroup columns operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="startColumn">The start column index.</param>
+    /// <param name="endColumn">The end column index.</param>
+    /// <returns>OperationParameters configured for ungrouping columns.</returns>
+    private static OperationParameters BuildUngroupColumnsParameters(OperationParameters parameters, int? startColumn,
+        int? endColumn)
+    {
+        if (startColumn.HasValue) parameters.Set("startColumn", startColumn.Value);
+        if (endColumn.HasValue) parameters.Set("endColumn", endColumn.Value);
         return parameters;
     }
 }

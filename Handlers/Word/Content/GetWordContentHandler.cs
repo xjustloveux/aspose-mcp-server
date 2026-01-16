@@ -22,8 +22,7 @@ public class GetWordContentHandler : OperationHandlerBase<Document>
     /// <returns>Document content as plain text.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var maxChars = parameters.GetOptional<int?>("maxChars");
-        var offset = parameters.GetOptional("offset", 0);
+        var p = ExtractGetContentParameters(parameters);
 
         var document = context.Document;
         var fullText = WordContentHelper.CleanText(document.GetText());
@@ -31,31 +30,51 @@ public class GetWordContentHandler : OperationHandlerBase<Document>
 
         string content;
         var hasMore = false;
-        if (offset >= totalLength)
+        if (p.Offset >= totalLength)
         {
             content = "";
         }
-        else if (maxChars.HasValue)
+        else if (p.MaxChars.HasValue)
         {
-            var endIndex = Math.Min(offset + maxChars.Value, totalLength);
-            content = fullText.Substring(offset, endIndex - offset);
+            var endIndex = Math.Min(p.Offset + p.MaxChars.Value, totalLength);
+            content = fullText.Substring(p.Offset, endIndex - p.Offset);
             hasMore = endIndex < totalLength;
         }
         else
         {
-            content = offset > 0 ? fullText.Substring(offset) : fullText;
+            content = p.Offset > 0 ? fullText.Substring(p.Offset) : fullText;
         }
 
         var sb = new StringBuilder();
         sb.AppendLine("=== Document Content ===");
-        if (maxChars.HasValue || offset > 0)
+        if (p.MaxChars.HasValue || p.Offset > 0)
         {
-            sb.AppendLine($"[Showing chars {offset} to {offset + content.Length} of {totalLength}]");
+            sb.AppendLine($"[Showing chars {p.Offset} to {p.Offset + content.Length} of {totalLength}]");
             if (hasMore)
-                sb.AppendLine($"[More content available, use offset={offset + content.Length} to continue]");
+                sb.AppendLine($"[More content available, use offset={p.Offset + content.Length} to continue]");
         }
 
         sb.AppendLine(content);
         return sb.ToString();
     }
+
+    /// <summary>
+    ///     Extracts parameters for the get content operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static GetContentParameters ExtractGetContentParameters(OperationParameters parameters)
+    {
+        var maxChars = parameters.GetOptional<int?>("maxChars");
+        var offset = parameters.GetOptional("offset", 0);
+
+        return new GetContentParameters(maxChars, offset);
+    }
+
+    /// <summary>
+    ///     Parameters for the get content operation.
+    /// </summary>
+    /// <param name="MaxChars">The maximum number of characters to return.</param>
+    /// <param name="Offset">The character offset to start from.</param>
+    private record GetContentParameters(int? MaxChars, int Offset);
 }

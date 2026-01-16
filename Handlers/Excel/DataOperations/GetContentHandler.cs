@@ -24,18 +24,17 @@ public class GetContentHandler : OperationHandlerBase<Workbook>
     /// <returns>JSON string containing the range content.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var range = parameters.GetOptional<string?>("range");
+        var contentParams = ExtractGetContentParameters(parameters);
 
         try
         {
             var workbook = context.Document;
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, contentParams.SheetIndex);
             var cells = worksheet.Cells;
 
-            if (!string.IsNullOrEmpty(range))
+            if (!string.IsNullOrEmpty(contentParams.Range))
             {
-                var cellRange = ExcelHelper.CreateRange(cells, range);
+                var cellRange = ExcelHelper.CreateRange(cells, contentParams.Range);
                 var options = new ExportTableOptions { ExportColumnName = false };
                 var dataTable = cells.ExportDataTable(cellRange.FirstRow, cellRange.FirstColumn,
                     cellRange.RowCount, cellRange.ColumnCount, options);
@@ -61,6 +60,19 @@ public class GetContentHandler : OperationHandlerBase<Workbook>
     }
 
     /// <summary>
+    ///     Extracts get content parameters from the operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted get content parameters.</returns>
+    private static GetContentParameters ExtractGetContentParameters(OperationParameters parameters)
+    {
+        return new GetContentParameters(
+            parameters.GetOptional("sheetIndex", 0),
+            parameters.GetOptional<string?>("range")
+        );
+    }
+
+    /// <summary>
     ///     Converts a DataTable to a list of dictionaries for JSON serialization.
     /// </summary>
     /// <param name="dataTable">The DataTable to convert.</param>
@@ -82,4 +94,11 @@ public class GetContentHandler : OperationHandlerBase<Workbook>
 
         return rows;
     }
+
+    /// <summary>
+    ///     Parameters for get content operation.
+    /// </summary>
+    /// <param name="SheetIndex">The worksheet index (0-based).</param>
+    /// <param name="Range">The cell range to get content from, or null for entire used range.</param>
+    private record GetContentParameters(int SheetIndex, string? Range);
 }

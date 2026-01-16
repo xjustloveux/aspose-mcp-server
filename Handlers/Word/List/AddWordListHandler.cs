@@ -26,30 +26,52 @@ public class AddWordListHandler : OperationHandlerBase<Document>
     /// <returns>Success message with list creation details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var items = parameters.GetRequired<JsonArray>("items");
-        var listType = parameters.GetOptional("listType", "bullet");
-        var bulletChar = parameters.GetOptional("bulletChar", "•");
-        var numberFormat = parameters.GetOptional("numberFormat", "arabic");
-        var continuePrevious = parameters.GetOptional("continuePrevious", false);
+        var p = ExtractAddListParameters(parameters);
 
-        if (items.Count == 0)
+        if (p.Items.Count == 0)
             throw new ArgumentException("items parameter is required and cannot be empty");
 
-        var parsedItems = WordListHelper.ParseItems(items);
+        var parsedItems = WordListHelper.ParseItems(p.Items);
         var doc = context.Document;
         var builder = new DocumentBuilder(doc);
         builder.MoveToDocumentEnd();
 
-        var (list, isContinuing) = GetOrCreateList(doc, continuePrevious, listType, bulletChar, numberFormat);
+        var (list, isContinuing) = GetOrCreateList(doc, p.ContinuePrevious, p.ListType, p.BulletChar, p.NumberFormat);
 
         WriteListItems(builder, list, parsedItems);
 
         builder.ListFormat.RemoveNumbers();
         MarkModified(context);
 
-        return Success(BuildResultMessage(isContinuing, listType, bulletChar, numberFormat, list, parsedItems.Count));
+        return Success(BuildResultMessage(isContinuing, p.ListType, p.BulletChar, p.NumberFormat, list,
+            parsedItems.Count));
     }
 
+    /// <summary>
+    ///     Extracts add list parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted add list parameters.</returns>
+    private static AddListParameters ExtractAddListParameters(OperationParameters parameters)
+    {
+        return new AddListParameters(
+            parameters.GetRequired<JsonArray>("items"),
+            parameters.GetOptional("listType", "bullet"),
+            parameters.GetOptional("bulletChar", "\u2022"),
+            parameters.GetOptional("numberFormat", "arabic"),
+            parameters.GetOptional("continuePrevious", false)
+        );
+    }
+
+    /// <summary>
+    ///     Gets an existing list to continue or creates a new one.
+    /// </summary>
+    /// <param name="doc">The Word document.</param>
+    /// <param name="continuePrevious">Whether to continue a previous list.</param>
+    /// <param name="listType">The list type (bullet, number, custom).</param>
+    /// <param name="bulletChar">The bullet character for custom lists.</param>
+    /// <param name="numberFormat">The number format for numbered lists.</param>
+    /// <returns>A tuple containing the list and whether it's continuing a previous list.</returns>
     private static (WordList list, bool isContinuing) GetOrCreateList(Document doc, bool continuePrevious,
         string listType, string bulletChar, string numberFormat)
     {
@@ -64,6 +86,11 @@ public class AddWordListHandler : OperationHandlerBase<Document>
         return (newList, false);
     }
 
+    /// <summary>
+    ///     Finds the most recent list in the document.
+    /// </summary>
+    /// <param name="doc">The Word document.</param>
+    /// <returns>The most recent list or null if none found.</returns>
     private static WordList? FindExistingList(Document doc)
     {
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
@@ -74,6 +101,14 @@ public class AddWordListHandler : OperationHandlerBase<Document>
         return null;
     }
 
+    /// <summary>
+    ///     Creates a new list with the specified type and formatting.
+    /// </summary>
+    /// <param name="doc">The Word document.</param>
+    /// <param name="listType">The list type.</param>
+    /// <param name="bulletChar">The bullet character.</param>
+    /// <param name="numberFormat">The number format.</param>
+    /// <returns>The newly created list.</returns>
     private static WordList CreateNewList(Document doc, string listType, string bulletChar, string numberFormat)
     {
         var list = doc.Lists.Add(listType == "number" ? ListTemplate.NumberDefault : ListTemplate.BulletDefault);
@@ -92,6 +127,11 @@ public class AddWordListHandler : OperationHandlerBase<Document>
         return list;
     }
 
+    /// <summary>
+    ///     Parses a number format string to NumberStyle enum.
+    /// </summary>
+    /// <param name="numberFormat">The number format string.</param>
+    /// <returns>The corresponding NumberStyle enum value.</returns>
     private static NumberStyle ParseNumberStyle(string numberFormat)
     {
         return numberFormat.ToLower() switch
@@ -102,6 +142,12 @@ public class AddWordListHandler : OperationHandlerBase<Document>
         };
     }
 
+    /// <summary>
+    ///     Writes list items to the document.
+    /// </summary>
+    /// <param name="builder">The document builder.</param>
+    /// <param name="list">The list to write items to.</param>
+    /// <param name="parsedItems">The parsed list items.</param>
     private static void WriteListItems(DocumentBuilder builder, WordList list,
         List<(string text, int level)> parsedItems)
     {
@@ -113,6 +159,16 @@ public class AddWordListHandler : OperationHandlerBase<Document>
         }
     }
 
+    /// <summary>
+    ///     Builds the result message for a successful list addition.
+    /// </summary>
+    /// <param name="isContinuing">Whether the list continues a previous one.</param>
+    /// <param name="listType">The list type.</param>
+    /// <param name="bulletChar">The bullet character.</param>
+    /// <param name="numberFormat">The number format.</param>
+    /// <param name="list">The created list.</param>
+    /// <param name="itemCount">The number of items added.</param>
+    /// <returns>The result message.</returns>
     private static string BuildResultMessage(bool isContinuing, string listType, string bulletChar,
         string numberFormat, WordList list, int itemCount)
     {
@@ -132,4 +188,14 @@ public class AddWordListHandler : OperationHandlerBase<Document>
         result += $"Item count: {itemCount}";
         return result;
     }
+
+    /// <summary>
+    ///     Record to hold add list parameters.
+    /// </summary>
+    private record AddListParameters(
+        JsonArray Items,
+        string ListType,
+        string BulletChar,
+        string NumberFormat,
+        bool ContinuePrevious);
 }

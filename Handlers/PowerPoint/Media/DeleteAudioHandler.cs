@@ -23,21 +23,39 @@ public class DeleteAudioHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with deletion details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetOptional("slideIndex", 0);
-        var shapeIndex = parameters.GetRequired<int>("shapeIndex");
+        var p = ExtractDeleteAudioParameters(parameters);
 
         var presentation = context.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+        var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
 
-        PowerPointHelper.ValidateCollectionIndex(shapeIndex, slide.Shapes.Count, "shapeIndex");
+        PowerPointHelper.ValidateCollectionIndex(p.ShapeIndex, slide.Shapes.Count, "shapeIndex");
 
-        if (slide.Shapes[shapeIndex] is not IAudioFrame)
-            throw new ArgumentException($"Shape at index {shapeIndex} is not an audio frame");
+        if (slide.Shapes[p.ShapeIndex] is not IAudioFrame)
+            throw new ArgumentException($"Shape at index {p.ShapeIndex} is not an audio frame");
 
-        slide.Shapes.RemoveAt(shapeIndex);
+        slide.Shapes.RemoveAt(p.ShapeIndex);
 
         MarkModified(context);
 
-        return Success($"Audio deleted from slide {slideIndex}.");
+        return Success($"Audio deleted from slide {p.SlideIndex}.");
     }
+
+    /// <summary>
+    ///     Extracts delete audio parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted delete audio parameters.</returns>
+    private static DeleteAudioParameters ExtractDeleteAudioParameters(OperationParameters parameters)
+    {
+        return new DeleteAudioParameters(
+            parameters.GetOptional("slideIndex", 0),
+            parameters.GetRequired<int>("shapeIndex"));
+    }
+
+    /// <summary>
+    ///     Record for holding delete audio parameters.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index.</param>
+    /// <param name="ShapeIndex">The shape index.</param>
+    private record DeleteAudioParameters(int SlideIndex, int ShapeIndex);
 }

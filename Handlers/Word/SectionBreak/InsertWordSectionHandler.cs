@@ -23,21 +23,19 @@ public class InsertWordSectionHandler : OperationHandlerBase<Document>
     /// <returns>Success message with section insertion details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var sectionBreakType = parameters.GetRequired<string>("sectionBreakType");
-        var insertAtParagraphIndex = parameters.GetOptional<int?>("insertAtParagraphIndex");
-        var sectionIndex = parameters.GetOptional<int?>("sectionIndex");
+        var p = ExtractInsertWordSectionParameters(parameters);
 
-        if (string.IsNullOrEmpty(sectionBreakType))
+        if (string.IsNullOrEmpty(p.SectionBreakType))
             throw new ArgumentException("sectionBreakType is required for insert operation");
 
         var doc = context.Document;
         var builder = new DocumentBuilder(doc);
 
-        var breakType = WordSectionHelper.GetSectionStart(sectionBreakType);
+        var breakType = WordSectionHelper.GetSectionStart(p.SectionBreakType);
 
-        if (insertAtParagraphIndex.HasValue && insertAtParagraphIndex.Value != -1)
+        if (p.InsertAtParagraphIndex.HasValue && p.InsertAtParagraphIndex.Value != -1)
         {
-            var actualSectionIndex = sectionIndex ?? 0;
+            var actualSectionIndex = p.SectionIndex ?? 0;
             if (actualSectionIndex < 0 || actualSectionIndex >= doc.Sections.Count)
                 throw new ArgumentException(
                     $"sectionIndex must be between 0 and {doc.Sections.Count - 1}, got: {actualSectionIndex}");
@@ -48,11 +46,11 @@ public class InsertWordSectionHandler : OperationHandlerBase<Document>
             if (paragraphs.Count == 0)
                 throw new ArgumentException("Section has no paragraphs to insert section break after");
 
-            if (insertAtParagraphIndex.Value < 0 || insertAtParagraphIndex.Value >= paragraphs.Count)
+            if (p.InsertAtParagraphIndex.Value < 0 || p.InsertAtParagraphIndex.Value >= paragraphs.Count)
                 throw new ArgumentException(
-                    $"insertAtParagraphIndex must be between 0 and {paragraphs.Count - 1}, got: {insertAtParagraphIndex.Value}");
+                    $"insertAtParagraphIndex must be between 0 and {paragraphs.Count - 1}, got: {p.InsertAtParagraphIndex.Value}");
 
-            builder.MoveTo(paragraphs[insertAtParagraphIndex.Value]);
+            builder.MoveTo(paragraphs[p.InsertAtParagraphIndex.Value]);
         }
         else
         {
@@ -64,6 +62,19 @@ public class InsertWordSectionHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Section break inserted ({sectionBreakType})");
+        return Success($"Section break inserted ({p.SectionBreakType})");
     }
+
+    private static InsertWordSectionParameters ExtractInsertWordSectionParameters(OperationParameters parameters)
+    {
+        return new InsertWordSectionParameters(
+            parameters.GetRequired<string>("sectionBreakType"),
+            parameters.GetOptional<int?>("insertAtParagraphIndex"),
+            parameters.GetOptional<int?>("sectionIndex"));
+    }
+
+    private record InsertWordSectionParameters(
+        string SectionBreakType,
+        int? InsertAtParagraphIndex,
+        int? SectionIndex);
 }

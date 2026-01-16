@@ -111,6 +111,13 @@ Usage examples:
     /// <summary>
     ///     Builds OperationParameters from method parameters.
     /// </summary>
+    /// <param name="slideIndices">Slide indices to apply as JSON array.</param>
+    /// <param name="fontName">The font name to apply.</param>
+    /// <param name="fontSize">The font size to apply.</param>
+    /// <param name="bold">Whether to apply bold formatting.</param>
+    /// <param name="italic">Whether to apply italic formatting.</param>
+    /// <param name="color">The text color (hex or named color).</param>
+    /// <returns>OperationParameters configured for text formatting.</returns>
     private static OperationParameters BuildParameters(
         string? slideIndices,
         string? fontName,

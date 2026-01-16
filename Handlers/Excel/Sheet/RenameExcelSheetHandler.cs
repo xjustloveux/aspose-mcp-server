@@ -22,14 +22,13 @@ public class RenameExcelSheetHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with operation details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetRequired<int>("sheetIndex");
-        var newName = parameters.GetRequired<string>("newName");
+        var p = ExtractRenameExcelSheetParameters(parameters);
 
-        newName = newName.Trim();
+        var newName = p.NewName.Trim();
         ExcelSheetHelper.ValidateSheetName(newName, "newName");
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, p.SheetIndex);
         var oldName = worksheet.Name;
 
         var duplicate = workbook.Worksheets.Any(ws =>
@@ -43,4 +42,14 @@ public class RenameExcelSheetHandler : OperationHandlerBase<Workbook>
 
         return Success($"Worksheet '{oldName}' renamed to '{newName}'.");
     }
+
+    private static RenameExcelSheetParameters ExtractRenameExcelSheetParameters(OperationParameters parameters)
+    {
+        var sheetIndex = parameters.GetRequired<int>("sheetIndex");
+        var newName = parameters.GetRequired<string>("newName");
+
+        return new RenameExcelSheetParameters(sheetIndex, newName);
+    }
+
+    private record RenameExcelSheetParameters(int SheetIndex, string NewName);
 }

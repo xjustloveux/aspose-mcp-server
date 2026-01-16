@@ -24,72 +24,91 @@ public class EditExcelDataValidationHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with changes details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var validationIndex = parameters.GetRequired<int>("validationIndex");
-        var validationType = parameters.GetOptional<string?>("validationType");
-        var formula1 = parameters.GetOptional<string?>("formula1");
-        var formula2 = parameters.GetOptional<string?>("formula2");
-        var operatorType = parameters.GetOptional<string?>("operatorType");
-        var inCellDropDown = parameters.GetOptional<bool?>("inCellDropDown");
-        var errorMessage = parameters.GetOptional<string?>("errorMessage");
-        var inputMessage = parameters.GetOptional<string?>("inputMessage");
+        var editParams = ExtractEditParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, editParams.SheetIndex);
         var validations = worksheet.Validations;
 
-        ExcelDataValidationHelper.ValidateCollectionIndex(validationIndex, validations.Count, "data validation");
+        ExcelDataValidationHelper.ValidateCollectionIndex(editParams.ValidationIndex, validations.Count,
+            "data validation");
 
-        var validation = validations[validationIndex];
+        var validation = validations[editParams.ValidationIndex];
         List<string> changes = [];
 
-        if (!string.IsNullOrEmpty(validationType))
+        if (!string.IsNullOrEmpty(editParams.ValidationType))
         {
-            validation.Type = ExcelDataValidationHelper.ParseValidationType(validationType);
-            changes.Add($"Type={validationType}");
+            validation.Type = ExcelDataValidationHelper.ParseValidationType(editParams.ValidationType);
+            changes.Add($"Type={editParams.ValidationType}");
         }
 
-        if (!string.IsNullOrEmpty(formula1))
+        if (!string.IsNullOrEmpty(editParams.Formula1))
         {
-            validation.Formula1 = formula1;
-            changes.Add($"Formula1={formula1}");
+            validation.Formula1 = editParams.Formula1;
+            changes.Add($"Formula1={editParams.Formula1}");
         }
 
-        if (formula2 != null)
+        if (editParams.Formula2 != null)
         {
-            validation.Formula2 = formula2;
-            changes.Add($"Formula2={formula2}");
+            validation.Formula2 = editParams.Formula2;
+            changes.Add($"Formula2={editParams.Formula2}");
         }
 
-        if (!string.IsNullOrEmpty(operatorType))
+        if (!string.IsNullOrEmpty(editParams.OperatorType))
         {
-            validation.Operator = ExcelDataValidationHelper.ParseOperatorType(operatorType, formula2);
-            changes.Add($"Operator={operatorType}");
+            validation.Operator =
+                ExcelDataValidationHelper.ParseOperatorType(editParams.OperatorType, editParams.Formula2);
+            changes.Add($"Operator={editParams.OperatorType}");
         }
 
-        if (inCellDropDown.HasValue)
+        if (editParams.InCellDropDown.HasValue)
         {
-            validation.InCellDropDown = inCellDropDown.Value;
-            changes.Add($"InCellDropDown={inCellDropDown.Value}");
+            validation.InCellDropDown = editParams.InCellDropDown.Value;
+            changes.Add($"InCellDropDown={editParams.InCellDropDown.Value}");
         }
 
-        if (errorMessage != null)
+        if (editParams.ErrorMessage != null)
         {
-            validation.ErrorMessage = errorMessage;
-            validation.ShowError = !string.IsNullOrEmpty(errorMessage);
-            changes.Add($"ErrorMessage={errorMessage}");
+            validation.ErrorMessage = editParams.ErrorMessage;
+            validation.ShowError = !string.IsNullOrEmpty(editParams.ErrorMessage);
+            changes.Add($"ErrorMessage={editParams.ErrorMessage}");
         }
 
-        if (inputMessage != null)
+        if (editParams.InputMessage != null)
         {
-            validation.InputMessage = inputMessage;
-            validation.ShowInput = !string.IsNullOrEmpty(inputMessage);
-            changes.Add($"InputMessage={inputMessage}");
+            validation.InputMessage = editParams.InputMessage;
+            validation.ShowInput = !string.IsNullOrEmpty(editParams.InputMessage);
+            changes.Add($"InputMessage={editParams.InputMessage}");
         }
 
         MarkModified(context);
 
         var changesStr = changes.Count > 0 ? string.Join(", ", changes) : "No changes";
-        return Success($"Edited data validation #{validationIndex} ({changesStr}).");
+        return Success($"Edited data validation #{editParams.ValidationIndex} ({changesStr}).");
     }
+
+    private static EditParameters ExtractEditParameters(OperationParameters parameters)
+    {
+        return new EditParameters(
+            parameters.GetOptional("sheetIndex", 0),
+            parameters.GetRequired<int>("validationIndex"),
+            parameters.GetOptional<string?>("validationType"),
+            parameters.GetOptional<string?>("formula1"),
+            parameters.GetOptional<string?>("formula2"),
+            parameters.GetOptional<string?>("operatorType"),
+            parameters.GetOptional<bool?>("inCellDropDown"),
+            parameters.GetOptional<string?>("errorMessage"),
+            parameters.GetOptional<string?>("inputMessage"));
+    }
+
+    private record EditParameters(
+        int SheetIndex,
+        int ValidationIndex,
+        string? ValidationType,
+        string? Formula1,
+        string? Formula2,
+        string? OperatorType,
+        bool? InCellDropDown,
+        string? ErrorMessage,
+        string? InputMessage);
 }

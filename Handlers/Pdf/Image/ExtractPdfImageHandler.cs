@@ -23,49 +23,47 @@ public class ExtractPdfImageHandler : OperationHandlerBase<Document>
     /// <returns>Success message with extraction details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var pageIndex = parameters.GetOptional("pageIndex", 1);
-        var imageIndex = parameters.GetOptional<int?>("imageIndex");
-        var outputPath = parameters.GetOptional<string?>("outputPath");
-        var outputDir = parameters.GetOptional<string?>("outputDir");
+        var p = ExtractExtractParameters(parameters);
 
-        if (!string.IsNullOrEmpty(outputPath))
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
-        if (!string.IsNullOrEmpty(outputDir))
-            SecurityHelper.ValidateFilePath(outputDir, "outputDir", true);
+        if (!string.IsNullOrEmpty(p.OutputPath))
+            SecurityHelper.ValidateFilePath(p.OutputPath, "outputPath", true);
+        if (!string.IsNullOrEmpty(p.OutputDir))
+            SecurityHelper.ValidateFilePath(p.OutputDir, "outputDir", true);
 
-        var targetDir = outputDir ??
-                        Path.GetDirectoryName(outputPath) ?? Path.GetDirectoryName(context.SourcePath) ?? ".";
+        var targetDir = p.OutputDir ??
+                        Path.GetDirectoryName(p.OutputPath) ?? Path.GetDirectoryName(context.SourcePath) ?? ".";
         Directory.CreateDirectory(targetDir);
 
         var document = context.Document;
-        var actualPageIndex = pageIndex < 1 ? 1 : pageIndex;
+        var actualPageIndex = p.PageIndex < 1 ? 1 : p.PageIndex;
         if (actualPageIndex > document.Pages.Count)
             throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
 
         var page = document.Pages[actualPageIndex];
         var images = page.Resources?.Images;
         if (images == null || images.Count == 0)
-            return Success($"No images found on page {pageIndex}.");
+            return Success($"No images found on page {p.PageIndex}.");
 
-        if (imageIndex is > 0)
+        if (p.ImageIndex is > 0)
         {
-            if (imageIndex.Value < 1 || imageIndex.Value > images.Count)
+            if (p.ImageIndex.Value < 1 || p.ImageIndex.Value > images.Count)
                 throw new ArgumentException($"imageIndex must be between 1 and {images.Count}");
 
-            var image = images[imageIndex.Value];
-            var fileName = outputPath ?? Path.Combine(targetDir, $"page_{pageIndex}_image_{imageIndex.Value}.png");
+            var image = images[p.ImageIndex.Value];
+            var fileName = p.OutputPath ??
+                           Path.Combine(targetDir, $"page_{p.PageIndex}_image_{p.ImageIndex.Value}.png");
             using var imageStream = new FileStream(fileName, FileMode.Create);
 #pragma warning disable CA1416
             image.Save(imageStream, ImageFormat.Png);
 #pragma warning restore CA1416
-            return Success($"Extracted image {imageIndex.Value} from page {pageIndex} to: {fileName}");
+            return Success($"Extracted image {p.ImageIndex.Value} from page {p.PageIndex} to: {fileName}");
         }
 
         var count = 0;
         for (var i = 1; i <= images.Count; i++)
         {
             var image = images[i];
-            var fileName = Path.Combine(targetDir, $"page_{pageIndex}_image_{i}.png");
+            var fileName = Path.Combine(targetDir, $"page_{p.PageIndex}_image_{i}.png");
             using var imageStream = new FileStream(fileName, FileMode.Create);
 #pragma warning disable CA1416
             image.Save(imageStream, ImageFormat.Png);
@@ -73,6 +71,29 @@ public class ExtractPdfImageHandler : OperationHandlerBase<Document>
             count++;
         }
 
-        return Success($"Extracted {count} image(s) from page {pageIndex} to: {targetDir}");
+        return Success($"Extracted {count} image(s) from page {p.PageIndex} to: {targetDir}");
     }
+
+    /// <summary>
+    ///     Extracts extract parameters from the operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static ExtractParameters ExtractExtractParameters(OperationParameters parameters)
+    {
+        return new ExtractParameters(
+            parameters.GetOptional("pageIndex", 1),
+            parameters.GetOptional<int?>("imageIndex"),
+            parameters.GetOptional<string?>("outputPath"),
+            parameters.GetOptional<string?>("outputDir"));
+    }
+
+    /// <summary>
+    ///     Parameters for extracting images.
+    /// </summary>
+    /// <param name="PageIndex">The 1-based page index.</param>
+    /// <param name="ImageIndex">The optional 1-based image index.</param>
+    /// <param name="OutputPath">The optional output file path.</param>
+    /// <param name="OutputDir">The optional output directory.</param>
+    private record ExtractParameters(int PageIndex, int? ImageIndex, string? OutputPath, string? OutputDir);
 }

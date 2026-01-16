@@ -24,29 +24,27 @@ public class EditPdfTextHandler : OperationHandlerBase<Document>
     /// <returns>Success message with replacement count.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var oldText = parameters.GetRequired<string>("oldText");
-        var newText = parameters.GetRequired<string>("newText");
-        var pageIndex = parameters.GetOptional("pageIndex", 1);
-        var replaceAll = parameters.GetOptional("replaceAll", false);
+        var p = ExtractEditParameters(parameters);
 
-        if (string.IsNullOrEmpty(oldText))
+        if (string.IsNullOrEmpty(p.OldText))
             throw new ArgumentException("oldText is required for edit operation");
-        if (string.IsNullOrEmpty(newText))
+        if (string.IsNullOrEmpty(p.NewText))
             throw new ArgumentException("newText is required for edit operation");
 
         var document = context.Document;
-        if (pageIndex < 1 || pageIndex > document.Pages.Count)
+        if (p.PageIndex < 1 || p.PageIndex > document.Pages.Count)
             throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
 
-        var page = document.Pages[pageIndex];
+        var page = document.Pages[p.PageIndex];
 
-        var textFragmentAbsorber = new TextFragmentAbsorber(oldText);
+        var textFragmentAbsorber = new TextFragmentAbsorber(p.OldText);
         page.Accept(textFragmentAbsorber);
 
         var fragments = textFragmentAbsorber.TextFragments;
-        var normalizedOldText = Regex.Replace(oldText, @"\s+", " ").Trim();
+        var normalizedOldText =
+            Regex.Replace(p.OldText, @"\s+", " ", RegexOptions.None, TimeSpan.FromSeconds(5)).Trim();
 
-        if (fragments.Count == 0 && normalizedOldText != oldText)
+        if (fragments.Count == 0 && normalizedOldText != p.OldText)
         {
             textFragmentAbsorber = new TextFragmentAbsorber(normalizedOldText);
             page.Accept(textFragmentAbsorber);
@@ -60,22 +58,46 @@ public class EditPdfTextHandler : OperationHandlerBase<Document>
             var pageText = textAbsorber.Text ?? "";
             var preview = pageText.Length > 200 ? pageText[..200] + "..." : pageText;
             throw new ArgumentException(
-                $"Text '{oldText}' not found on page {pageIndex}. Page text preview: {preview}");
+                $"Text '{p.OldText}' not found on page {p.PageIndex}. Page text preview: {preview}");
         }
 
-        var finalReplaceCount = replaceAll ? fragments.Count : 1;
+        var finalReplaceCount = p.ReplaceAll ? fragments.Count : 1;
         var replacedCount = 0;
 
         foreach (var fragment in fragments)
         {
             if (replacedCount >= finalReplaceCount)
                 break;
-            fragment.Text = newText;
+            fragment.Text = p.NewText;
             replacedCount++;
         }
 
         MarkModified(context);
 
-        return Success($"Replaced {replacedCount} occurrence(s) of '{oldText}' on page {pageIndex}.");
+        return Success($"Replaced {replacedCount} occurrence(s) of '{p.OldText}' on page {p.PageIndex}.");
     }
+
+    /// <summary>
+    ///     Extracts parameters for edit operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static EditParameters ExtractEditParameters(OperationParameters parameters)
+    {
+        return new EditParameters(
+            parameters.GetRequired<string>("oldText"),
+            parameters.GetRequired<string>("newText"),
+            parameters.GetOptional("pageIndex", 1),
+            parameters.GetOptional("replaceAll", false)
+        );
+    }
+
+    /// <summary>
+    ///     Parameters for edit operation.
+    /// </summary>
+    /// <param name="OldText">The text to find.</param>
+    /// <param name="NewText">The replacement text.</param>
+    /// <param name="PageIndex">The 1-based page index.</param>
+    /// <param name="ReplaceAll">Whether to replace all occurrences.</param>
+    private record EditParameters(string OldText, string NewText, int PageIndex, bool ReplaceAll);
 }

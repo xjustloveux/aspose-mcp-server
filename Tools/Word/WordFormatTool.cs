@@ -194,7 +194,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -225,61 +225,150 @@ Usage examples:
         double lineWidth,
         string lineColor)
     {
-        var parameters = new OperationParameters();
-
-        switch (operation.ToLower())
+        return operation.ToLower() switch
         {
-            case "get_run_format":
-                parameters.Set("paragraphIndex", paragraphIndex ?? 0);
-                if (runIndex.HasValue) parameters.Set("runIndex", runIndex.Value);
-                parameters.Set("includeInherited", includeInherited);
-                break;
+            "get_run_format" => BuildGetRunFormatParameters(paragraphIndex, runIndex, includeInherited),
+            "set_run_format" => BuildSetRunFormatParameters(paragraphIndex, runIndex, fontName, fontNameAscii,
+                fontNameFarEast, fontSize, bold, italic, underline, color),
+            "get_tab_stops" => BuildGetTabStopsParameters(location, paragraphIndex, sectionIndex, allParagraphs,
+                includeStyle),
+            "add_tab_stop" => BuildAddTabStopParameters(paragraphIndex, tabPosition, tabAlignment, tabLeader),
+            "clear_tab_stops" => BuildClearTabStopsParameters(paragraphIndex),
+            "set_paragraph_border" => BuildSetParagraphBorderParameters(paragraphIndex, borderPosition, borderTop,
+                borderBottom, borderLeft, borderRight, lineStyle, lineWidth, lineColor),
+            _ => new OperationParameters()
+        };
+    }
 
-            case "set_run_format":
-                parameters.Set("paragraphIndex", paragraphIndex ?? 0);
-                if (runIndex.HasValue) parameters.Set("runIndex", runIndex.Value);
-                if (fontName != null) parameters.Set("fontName", fontName);
-                if (fontNameAscii != null) parameters.Set("fontNameAscii", fontNameAscii);
-                if (fontNameFarEast != null) parameters.Set("fontNameFarEast", fontNameFarEast);
-                if (fontSize.HasValue) parameters.Set("fontSize", fontSize.Value);
-                if (bold.HasValue) parameters.Set("bold", bold.Value);
-                if (italic.HasValue) parameters.Set("italic", italic.Value);
-                if (underline.HasValue) parameters.Set("underline", underline.Value);
-                if (color != null) parameters.Set("color", color);
-                break;
+    /// <summary>
+    ///     Builds parameters for the get_run_format operation.
+    /// </summary>
+    /// <param name="paragraphIndex">The paragraph index (0-based).</param>
+    /// <param name="runIndex">The run index within the paragraph (0-based).</param>
+    /// <param name="includeInherited">Whether to include inherited format from paragraph/style.</param>
+    /// <returns>OperationParameters configured for getting run format.</returns>
+    private static OperationParameters BuildGetRunFormatParameters(int? paragraphIndex, int? runIndex,
+        bool includeInherited)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("paragraphIndex", paragraphIndex ?? 0);
+        if (runIndex.HasValue) parameters.Set("runIndex", runIndex.Value);
+        parameters.Set("includeInherited", includeInherited);
+        return parameters;
+    }
 
-            case "get_tab_stops":
-                parameters.Set("location", location);
-                parameters.Set("paragraphIndex", paragraphIndex ?? 0);
-                parameters.Set("sectionIndex", sectionIndex);
-                parameters.Set("allParagraphs", allParagraphs);
-                parameters.Set("includeStyle", includeStyle);
-                break;
+    /// <summary>
+    ///     Builds parameters for the set_run_format operation.
+    /// </summary>
+    /// <param name="paragraphIndex">The paragraph index (0-based).</param>
+    /// <param name="runIndex">The run index within the paragraph (0-based).</param>
+    /// <param name="fontName">The font name.</param>
+    /// <param name="fontNameAscii">The font name for ASCII characters.</param>
+    /// <param name="fontNameFarEast">The font name for Far East characters.</param>
+    /// <param name="fontSize">The font size in points.</param>
+    /// <param name="bold">Whether the text is bold.</param>
+    /// <param name="italic">Whether the text is italic.</param>
+    /// <param name="underline">Whether the text is underlined.</param>
+    /// <param name="color">The text color in hex format.</param>
+    /// <returns>OperationParameters configured for setting run format.</returns>
+    private static OperationParameters BuildSetRunFormatParameters(int? paragraphIndex, int? runIndex, string? fontName,
+        string? fontNameAscii, string? fontNameFarEast, double? fontSize, bool? bold, bool? italic, bool? underline,
+        string? color)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("paragraphIndex", paragraphIndex ?? 0);
+        if (runIndex.HasValue) parameters.Set("runIndex", runIndex.Value);
+        if (fontName != null) parameters.Set("fontName", fontName);
+        if (fontNameAscii != null) parameters.Set("fontNameAscii", fontNameAscii);
+        if (fontNameFarEast != null) parameters.Set("fontNameFarEast", fontNameFarEast);
+        if (fontSize.HasValue) parameters.Set("fontSize", fontSize.Value);
+        if (bold.HasValue) parameters.Set("bold", bold.Value);
+        if (italic.HasValue) parameters.Set("italic", italic.Value);
+        if (underline.HasValue) parameters.Set("underline", underline.Value);
+        if (color != null) parameters.Set("color", color);
+        return parameters;
+    }
 
-            case "add_tab_stop":
-                parameters.Set("paragraphIndex", paragraphIndex ?? 0);
-                parameters.Set("tabPosition", tabPosition ?? 0.0);
-                parameters.Set("tabAlignment", tabAlignment);
-                parameters.Set("tabLeader", tabLeader);
-                break;
+    /// <summary>
+    ///     Builds parameters for the get_tab_stops operation.
+    /// </summary>
+    /// <param name="location">Where to get tab stops from: header, footer, body.</param>
+    /// <param name="paragraphIndex">The paragraph index (0-based).</param>
+    /// <param name="sectionIndex">The section index (0-based).</param>
+    /// <param name="allParagraphs">Whether to read tab stops from all paragraphs.</param>
+    /// <param name="includeStyle">Whether to include tab stops from paragraph style.</param>
+    /// <returns>OperationParameters configured for getting tab stops.</returns>
+    private static OperationParameters BuildGetTabStopsParameters(string location, int? paragraphIndex,
+        int sectionIndex,
+        bool allParagraphs, bool includeStyle)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("location", location);
+        parameters.Set("paragraphIndex", paragraphIndex ?? 0);
+        parameters.Set("sectionIndex", sectionIndex);
+        parameters.Set("allParagraphs", allParagraphs);
+        parameters.Set("includeStyle", includeStyle);
+        return parameters;
+    }
 
-            case "clear_tab_stops":
-                parameters.Set("paragraphIndex", paragraphIndex ?? 0);
-                break;
+    /// <summary>
+    ///     Builds parameters for the add_tab_stop operation.
+    /// </summary>
+    /// <param name="paragraphIndex">The paragraph index (0-based).</param>
+    /// <param name="tabPosition">The tab stop position in points.</param>
+    /// <param name="tabAlignment">The tab alignment: left, center, right, decimal.</param>
+    /// <param name="tabLeader">The tab leader: none, dots, dashes, line.</param>
+    /// <returns>OperationParameters configured for adding a tab stop.</returns>
+    private static OperationParameters BuildAddTabStopParameters(int? paragraphIndex, double? tabPosition,
+        string tabAlignment, string tabLeader)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("paragraphIndex", paragraphIndex ?? 0);
+        parameters.Set("tabPosition", tabPosition ?? 0.0);
+        parameters.Set("tabAlignment", tabAlignment);
+        parameters.Set("tabLeader", tabLeader);
+        return parameters;
+    }
 
-            case "set_paragraph_border":
-                parameters.Set("paragraphIndex", paragraphIndex ?? 0);
-                if (borderPosition != null) parameters.Set("borderPosition", borderPosition);
-                parameters.Set("borderTop", borderTop);
-                parameters.Set("borderBottom", borderBottom);
-                parameters.Set("borderLeft", borderLeft);
-                parameters.Set("borderRight", borderRight);
-                parameters.Set("lineStyle", lineStyle);
-                parameters.Set("lineWidth", lineWidth);
-                parameters.Set("lineColor", lineColor);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the clear_tab_stops operation.
+    /// </summary>
+    /// <param name="paragraphIndex">The paragraph index (0-based).</param>
+    /// <returns>OperationParameters configured for clearing tab stops.</returns>
+    private static OperationParameters BuildClearTabStopsParameters(int? paragraphIndex)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("paragraphIndex", paragraphIndex ?? 0);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the set_paragraph_border operation.
+    /// </summary>
+    /// <param name="paragraphIndex">The paragraph index (0-based).</param>
+    /// <param name="borderPosition">The border position shortcut: all, top-bottom, left-right, box.</param>
+    /// <param name="borderTop">Whether to show the top border.</param>
+    /// <param name="borderBottom">Whether to show the bottom border.</param>
+    /// <param name="borderLeft">Whether to show the left border.</param>
+    /// <param name="borderRight">Whether to show the right border.</param>
+    /// <param name="lineStyle">The border line style: none, single, double, dotted, dashed, thick.</param>
+    /// <param name="lineWidth">The border line width in points.</param>
+    /// <param name="lineColor">The border line color in hex format.</param>
+    /// <returns>OperationParameters configured for setting paragraph border.</returns>
+    private static OperationParameters BuildSetParagraphBorderParameters(int? paragraphIndex, string? borderPosition,
+        bool borderTop, bool borderBottom, bool borderLeft, bool borderRight, string lineStyle, double lineWidth,
+        string lineColor)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("paragraphIndex", paragraphIndex ?? 0);
+        if (borderPosition != null) parameters.Set("borderPosition", borderPosition);
+        parameters.Set("borderTop", borderTop);
+        parameters.Set("borderBottom", borderBottom);
+        parameters.Set("borderLeft", borderLeft);
+        parameters.Set("borderRight", borderRight);
+        parameters.Set("lineStyle", lineStyle);
+        parameters.Set("lineWidth", lineWidth);
+        parameters.Set("lineColor", lineColor);
         return parameters;
     }
 }

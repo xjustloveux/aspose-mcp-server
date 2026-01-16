@@ -21,27 +21,26 @@ public class CopyParagraphFormatWordHandler : OperationHandlerBase<Document>
     /// <returns>Success message.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var sourceParagraphIndex = parameters.GetOptional<int?>("sourceParagraphIndex");
-        var targetParagraphIndex = parameters.GetOptional<int?>("targetParagraphIndex");
+        var copyParams = ExtractCopyParagraphFormatParameters(parameters);
 
-        if (!sourceParagraphIndex.HasValue)
+        if (!copyParams.SourceParagraphIndex.HasValue)
             throw new ArgumentException("sourceParagraphIndex parameter is required for copy_format operation");
-        if (!targetParagraphIndex.HasValue)
+        if (!copyParams.TargetParagraphIndex.HasValue)
             throw new ArgumentException("targetParagraphIndex parameter is required for copy_format operation");
 
         var doc = context.Document;
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
 
-        if (sourceParagraphIndex.Value < 0 || sourceParagraphIndex.Value >= paragraphs.Count)
+        if (copyParams.SourceParagraphIndex.Value < 0 || copyParams.SourceParagraphIndex.Value >= paragraphs.Count)
             throw new ArgumentException(
-                $"Source paragraph index {sourceParagraphIndex.Value} is out of range. The document has {paragraphs.Count} paragraphs (valid indices: 0-{paragraphs.Count - 1}).");
+                $"Source paragraph index {copyParams.SourceParagraphIndex.Value} is out of range. The document has {paragraphs.Count} paragraphs (valid indices: 0-{paragraphs.Count - 1}).");
 
-        if (targetParagraphIndex.Value < 0 || targetParagraphIndex.Value >= paragraphs.Count)
+        if (copyParams.TargetParagraphIndex.Value < 0 || copyParams.TargetParagraphIndex.Value >= paragraphs.Count)
             throw new ArgumentException(
-                $"Target paragraph index {targetParagraphIndex.Value} is out of range. The document has {paragraphs.Count} paragraphs (valid indices: 0-{paragraphs.Count - 1}).");
+                $"Target paragraph index {copyParams.TargetParagraphIndex.Value} is out of range. The document has {paragraphs.Count} paragraphs (valid indices: 0-{paragraphs.Count - 1}).");
 
-        var sourcePara = paragraphs[sourceParagraphIndex.Value] as Aspose.Words.Paragraph;
-        var targetPara = paragraphs[targetParagraphIndex.Value] as Aspose.Words.Paragraph;
+        var sourcePara = paragraphs[copyParams.SourceParagraphIndex.Value] as Aspose.Words.Paragraph;
+        var targetPara = paragraphs[copyParams.TargetParagraphIndex.Value] as Aspose.Words.Paragraph;
 
         if (sourcePara == null || targetPara == null)
             throw new InvalidOperationException("Unable to get paragraphs");
@@ -66,9 +65,29 @@ public class CopyParagraphFormatWordHandler : OperationHandlerBase<Document>
         MarkModified(context);
 
         var result = "Paragraph format copied successfully\n";
-        result += $"Source paragraph: #{sourceParagraphIndex.Value}\n";
-        result += $"Target paragraph: #{targetParagraphIndex.Value}";
+        result += $"Source paragraph: #{copyParams.SourceParagraphIndex.Value}\n";
+        result += $"Target paragraph: #{copyParams.TargetParagraphIndex.Value}";
 
         return result;
     }
+
+    /// <summary>
+    ///     Extracts copy paragraph format parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted copy paragraph format parameters.</returns>
+    private static CopyParagraphFormatParameters ExtractCopyParagraphFormatParameters(OperationParameters parameters)
+    {
+        return new CopyParagraphFormatParameters(
+            parameters.GetOptional<int?>("sourceParagraphIndex"),
+            parameters.GetOptional<int?>("targetParagraphIndex")
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold copy paragraph format parameters.
+    /// </summary>
+    /// <param name="SourceParagraphIndex">The source paragraph index.</param>
+    /// <param name="TargetParagraphIndex">The target paragraph index.</param>
+    private record CopyParagraphFormatParameters(int? SourceParagraphIndex, int? TargetParagraphIndex);
 }

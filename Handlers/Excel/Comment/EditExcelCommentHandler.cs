@@ -23,6 +23,36 @@ public class EditExcelCommentHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with operation details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
+        var editParams = ExtractEditParameters(parameters);
+
+        ExcelCommentHelper.ValidateCellAddress(editParams.Cell);
+
+        try
+        {
+            var workbook = context.Document;
+            var worksheet = ExcelHelper.GetWorksheet(workbook, editParams.SheetIndex);
+            var cellObj = worksheet.Cells[editParams.Cell];
+            var commentObj = worksheet.Comments[cellObj.Name];
+
+            if (commentObj == null)
+                throw new ArgumentException($"No comment found on cell {editParams.Cell}");
+
+            commentObj.Note = editParams.Comment;
+            if (!string.IsNullOrEmpty(editParams.Author))
+                commentObj.Author = editParams.Author;
+
+            MarkModified(context);
+
+            return Success($"Comment edited on cell {editParams.Cell} in sheet {editParams.SheetIndex}.");
+        }
+        catch (CellsException ex)
+        {
+            throw new ArgumentException($"Excel operation failed for cell '{editParams.Cell}': {ex.Message}");
+        }
+    }
+
+    private static EditParameters ExtractEditParameters(OperationParameters parameters)
+    {
         var sheetIndex = parameters.GetOptional("sheetIndex", 0);
         var cell = parameters.GetOptional<string?>("cell");
         var comment = parameters.GetOptional<string?>("comment");
@@ -33,29 +63,8 @@ public class EditExcelCommentHandler : OperationHandlerBase<Workbook>
         if (string.IsNullOrEmpty(comment))
             throw new ArgumentException("comment is required for edit operation");
 
-        ExcelCommentHelper.ValidateCellAddress(cell);
-
-        try
-        {
-            var workbook = context.Document;
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-            var cellObj = worksheet.Cells[cell];
-            var commentObj = worksheet.Comments[cellObj.Name];
-
-            if (commentObj == null)
-                throw new ArgumentException($"No comment found on cell {cell}");
-
-            commentObj.Note = comment;
-            if (!string.IsNullOrEmpty(author))
-                commentObj.Author = author;
-
-            MarkModified(context);
-
-            return Success($"Comment edited on cell {cell} in sheet {sheetIndex}.");
-        }
-        catch (CellsException ex)
-        {
-            throw new ArgumentException($"Excel operation failed for cell '{cell}': {ex.Message}");
-        }
+        return new EditParameters(sheetIndex, cell, comment, author);
     }
+
+    private record EditParameters(int SheetIndex, string Cell, string Comment, string? Author);
 }

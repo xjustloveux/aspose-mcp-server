@@ -22,15 +22,32 @@ public class ClearPptSlideHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with clear details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetRequired<int>("slideIndex");
+        var p = ExtractClearPptSlideParameters(parameters);
+
         var presentation = context.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+        var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
 
         while (slide.Shapes.Count > 0)
             slide.Shapes.RemoveAt(0);
 
         MarkModified(context);
 
-        return Success($"Cleared all shapes from slide {slideIndex}.");
+        return Success($"Cleared all shapes from slide {p.SlideIndex}.");
     }
+
+    /// <summary>
+    ///     Extracts parameters for clear slide operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static ClearPptSlideParameters ExtractClearPptSlideParameters(OperationParameters parameters)
+    {
+        return new ClearPptSlideParameters(parameters.GetRequired<int>("slideIndex"));
+    }
+
+    /// <summary>
+    ///     Parameters for clear slide operation.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index (0-based).</param>
+    private record ClearPptSlideParameters(int SlideIndex);
 }

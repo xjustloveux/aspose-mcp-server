@@ -22,16 +22,16 @@ public class GetSheetInfoHandler : OperationHandlerBase<Workbook>
     /// <returns>JSON result with sheet information.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var targetSheetIndex = parameters.GetOptional<int?>("targetSheetIndex");
+        var getParams = ExtractGetSheetInfoParameters(parameters);
 
         var workbook = context.Document;
 
         List<object> sheetList = [];
 
-        if (targetSheetIndex.HasValue)
+        if (getParams.TargetSheetIndex.HasValue)
         {
-            var worksheet = ExcelHelper.GetWorksheet(workbook, targetSheetIndex.Value);
-            sheetList.Add(CreateSheetInfo(worksheet, targetSheetIndex.Value));
+            var worksheet = ExcelHelper.GetWorksheet(workbook, getParams.TargetSheetIndex.Value);
+            sheetList.Add(CreateSheetInfo(worksheet, getParams.TargetSheetIndex.Value));
         }
         else
         {
@@ -78,4 +78,21 @@ public class GetSheetInfoHandler : OperationHandlerBase<Workbook>
             }
         };
     }
+
+    /// <summary>
+    ///     Extracts get sheet info parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted get sheet info parameters.</returns>
+    private static GetSheetInfoParameters ExtractGetSheetInfoParameters(OperationParameters parameters)
+    {
+        return new GetSheetInfoParameters(
+            parameters.GetOptional<int?>("targetSheetIndex")
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold get sheet info parameters.
+    /// </summary>
+    private record GetSheetInfoParameters(int? TargetSheetIndex);
 }

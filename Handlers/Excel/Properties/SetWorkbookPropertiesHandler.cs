@@ -24,49 +24,64 @@ public class SetWorkbookPropertiesHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var title = parameters.GetOptional<string?>("title");
-        var subject = parameters.GetOptional<string?>("subject");
-        var author = parameters.GetOptional<string?>("author");
-        var keywords = parameters.GetOptional<string?>("keywords");
-        var comments = parameters.GetOptional<string?>("comments");
-        var category = parameters.GetOptional<string?>("category");
-        var company = parameters.GetOptional<string?>("company");
-        var manager = parameters.GetOptional<string?>("manager");
-        var customPropertiesJson = parameters.GetOptional<string?>("customProperties");
+        var setParams = ExtractSetWorkbookPropertiesParameters(parameters);
 
         var workbook = context.Document;
         var props = workbook.BuiltInDocumentProperties;
 
-        if (!string.IsNullOrEmpty(title)) props.Title = title;
-        if (!string.IsNullOrEmpty(subject)) props.Subject = subject;
-        if (!string.IsNullOrEmpty(author)) props.Author = author;
-        if (!string.IsNullOrEmpty(keywords)) props.Keywords = keywords;
-        if (!string.IsNullOrEmpty(comments)) props.Comments = comments;
-        if (!string.IsNullOrEmpty(category)) props.Category = category;
-        if (!string.IsNullOrEmpty(company)) props.Company = company;
-        if (!string.IsNullOrEmpty(manager)) props.Manager = manager;
-
-        if (!string.IsNullOrEmpty(customPropertiesJson))
-            try
-            {
-                var customProps = JsonNode.Parse(customPropertiesJson)?.AsObject();
-                if (customProps != null)
-                    foreach (var kvp in customProps)
-                    {
-                        var value = kvp.Value?.GetValue<string>() ?? "";
-                        var existingProp = FindCustomProperty(workbook.CustomDocumentProperties, kvp.Key);
-                        if (existingProp != null)
-                            workbook.CustomDocumentProperties.Remove(kvp.Key);
-                        workbook.CustomDocumentProperties.Add(kvp.Key, value);
-                    }
-            }
-            catch (JsonException ex)
-            {
-                throw new ArgumentException($"Invalid JSON format for customProperties: {ex.Message}");
-            }
+        SetBuiltInProperties(props, setParams);
+        SetCustomProperties(workbook, setParams.CustomProperties);
 
         MarkModified(context);
         return Success("Workbook properties updated successfully.");
+    }
+
+    /// <summary>
+    ///     Sets the built-in document properties from the parameters.
+    /// </summary>
+    /// <param name="props">The built-in document properties collection.</param>
+    /// <param name="setParams">The set workbook properties parameters.</param>
+    private static void SetBuiltInProperties(BuiltInDocumentPropertyCollection props,
+        SetWorkbookPropertiesParameters setParams)
+    {
+        if (!string.IsNullOrEmpty(setParams.Title)) props.Title = setParams.Title;
+        if (!string.IsNullOrEmpty(setParams.Subject)) props.Subject = setParams.Subject;
+        if (!string.IsNullOrEmpty(setParams.Author)) props.Author = setParams.Author;
+        if (!string.IsNullOrEmpty(setParams.Keywords)) props.Keywords = setParams.Keywords;
+        if (!string.IsNullOrEmpty(setParams.Comments)) props.Comments = setParams.Comments;
+        if (!string.IsNullOrEmpty(setParams.Category)) props.Category = setParams.Category;
+        if (!string.IsNullOrEmpty(setParams.Company)) props.Company = setParams.Company;
+        if (!string.IsNullOrEmpty(setParams.Manager)) props.Manager = setParams.Manager;
+    }
+
+    /// <summary>
+    ///     Sets the custom document properties from a JSON string.
+    /// </summary>
+    /// <param name="workbook">The workbook to update.</param>
+    /// <param name="customPropertiesJson">The JSON string containing custom properties.</param>
+    /// <exception cref="ArgumentException">Thrown when the JSON format is invalid.</exception>
+    private static void SetCustomProperties(Workbook workbook, string? customPropertiesJson)
+    {
+        if (string.IsNullOrEmpty(customPropertiesJson)) return;
+
+        try
+        {
+            var customProps = JsonNode.Parse(customPropertiesJson)?.AsObject();
+            if (customProps == null) return;
+
+            foreach (var kvp in customProps)
+            {
+                var value = kvp.Value?.GetValue<string>() ?? "";
+                var existingProp = FindCustomProperty(workbook.CustomDocumentProperties, kvp.Key);
+                if (existingProp != null)
+                    workbook.CustomDocumentProperties.Remove(kvp.Key);
+                workbook.CustomDocumentProperties.Add(kvp.Key, value);
+            }
+        }
+        catch (JsonException ex)
+        {
+            throw new ArgumentException($"Invalid JSON format for customProperties: {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -80,4 +95,39 @@ public class SetWorkbookPropertiesHandler : OperationHandlerBase<Workbook>
         return customProperties
             .FirstOrDefault(prop => string.Equals(prop.Name, name, StringComparison.OrdinalIgnoreCase));
     }
+
+    /// <summary>
+    ///     Extracts set workbook properties parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted set workbook properties parameters.</returns>
+    private static SetWorkbookPropertiesParameters ExtractSetWorkbookPropertiesParameters(
+        OperationParameters parameters)
+    {
+        return new SetWorkbookPropertiesParameters(
+            parameters.GetOptional<string?>("title"),
+            parameters.GetOptional<string?>("subject"),
+            parameters.GetOptional<string?>("author"),
+            parameters.GetOptional<string?>("keywords"),
+            parameters.GetOptional<string?>("comments"),
+            parameters.GetOptional<string?>("category"),
+            parameters.GetOptional<string?>("company"),
+            parameters.GetOptional<string?>("manager"),
+            parameters.GetOptional<string?>("customProperties")
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold set workbook properties parameters.
+    /// </summary>
+    private record SetWorkbookPropertiesParameters(
+        string? Title,
+        string? Subject,
+        string? Author,
+        string? Keywords,
+        string? Comments,
+        string? Category,
+        string? Company,
+        string? Manager,
+        string? CustomProperties);
 }

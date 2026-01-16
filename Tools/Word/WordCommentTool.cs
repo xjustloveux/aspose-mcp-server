@@ -114,7 +114,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -127,31 +127,67 @@ Usage examples:
         int? commentIndex,
         string? replyText)
     {
-        var parameters = new OperationParameters();
-
-        switch (operation.ToLower())
+        return operation.ToLower() switch
         {
-            case "add":
-                if (text != null) parameters.Set("text", text);
-                parameters.Set("author", author ?? "Comment Author");
-                if (authorInitial != null) parameters.Set("authorInitial", authorInitial);
-                if (paragraphIndex.HasValue) parameters.Set("paragraphIndex", paragraphIndex.Value);
-                if (startRunIndex.HasValue) parameters.Set("startRunIndex", startRunIndex.Value);
-                if (endRunIndex.HasValue) parameters.Set("endRunIndex", endRunIndex.Value);
-                break;
+            "add" => BuildAddParameters(text, author, authorInitial, paragraphIndex, startRunIndex, endRunIndex),
+            "delete" => BuildDeleteParameters(commentIndex),
+            "reply" => BuildReplyParameters(commentIndex, replyText, text, author, authorInitial),
+            _ => new OperationParameters()
+        };
+    }
 
-            case "delete":
-                if (commentIndex.HasValue) parameters.Set("commentIndex", commentIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the add comment operation.
+    /// </summary>
+    /// <param name="text">The comment text content.</param>
+    /// <param name="author">The comment author name.</param>
+    /// <param name="authorInitial">The author initials.</param>
+    /// <param name="paragraphIndex">The paragraph index (0-based).</param>
+    /// <param name="startRunIndex">The start run index.</param>
+    /// <param name="endRunIndex">The end run index.</param>
+    /// <returns>OperationParameters configured for adding a comment.</returns>
+    private static OperationParameters BuildAddParameters(string? text, string? author, string? authorInitial,
+        int? paragraphIndex, int? startRunIndex, int? endRunIndex)
+    {
+        var parameters = new OperationParameters();
+        if (text != null) parameters.Set("text", text);
+        parameters.Set("author", author ?? "Comment Author");
+        if (authorInitial != null) parameters.Set("authorInitial", authorInitial);
+        if (paragraphIndex.HasValue) parameters.Set("paragraphIndex", paragraphIndex.Value);
+        if (startRunIndex.HasValue) parameters.Set("startRunIndex", startRunIndex.Value);
+        if (endRunIndex.HasValue) parameters.Set("endRunIndex", endRunIndex.Value);
+        return parameters;
+    }
 
-            case "reply":
-                if (commentIndex.HasValue) parameters.Set("commentIndex", commentIndex.Value);
-                parameters.Set("replyText", replyText ?? text);
-                parameters.Set("author", author ?? "Reply Author");
-                if (authorInitial != null) parameters.Set("authorInitial", authorInitial);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the delete comment operation.
+    /// </summary>
+    /// <param name="commentIndex">The comment index (0-based).</param>
+    /// <returns>OperationParameters configured for deleting a comment.</returns>
+    private static OperationParameters BuildDeleteParameters(int? commentIndex)
+    {
+        var parameters = new OperationParameters();
+        if (commentIndex.HasValue) parameters.Set("commentIndex", commentIndex.Value);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the reply to comment operation.
+    /// </summary>
+    /// <param name="commentIndex">The comment index (0-based).</param>
+    /// <param name="replyText">The reply text content.</param>
+    /// <param name="text">Fallback text content if replyText is null.</param>
+    /// <param name="author">The reply author name.</param>
+    /// <param name="authorInitial">The author initials.</param>
+    /// <returns>OperationParameters configured for replying to a comment.</returns>
+    private static OperationParameters BuildReplyParameters(int? commentIndex, string? replyText, string? text,
+        string? author, string? authorInitial)
+    {
+        var parameters = new OperationParameters();
+        if (commentIndex.HasValue) parameters.Set("commentIndex", commentIndex.Value);
+        parameters.Set("replyText", replyText ?? text);
+        parameters.Set("author", author ?? "Reply Author");
+        if (authorInitial != null) parameters.Set("authorInitial", authorInitial);
         return parameters;
     }
 }

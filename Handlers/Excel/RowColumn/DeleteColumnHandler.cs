@@ -23,17 +23,26 @@ public class DeleteColumnHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with deletion details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
+        var p = ExtractDeleteColumnParameters(parameters);
+
+        var workbook = context.Document;
+        var worksheet = ExcelHelper.GetWorksheet(workbook, p.SheetIndex);
+
+        worksheet.Cells.DeleteColumns(p.ColumnIndex, p.Count, true);
+
+        MarkModified(context);
+
+        return Success($"Deleted {p.Count} column(s) starting from column {p.ColumnIndex}.");
+    }
+
+    private static DeleteColumnParameters ExtractDeleteColumnParameters(OperationParameters parameters)
+    {
         var sheetIndex = parameters.GetOptional("sheetIndex", 0);
         var columnIndex = parameters.GetRequired<int>("columnIndex");
         var count = parameters.GetOptional("count", 1);
 
-        var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-
-        worksheet.Cells.DeleteColumns(columnIndex, count, true);
-
-        MarkModified(context);
-
-        return Success($"Deleted {count} column(s) starting from column {columnIndex}.");
+        return new DeleteColumnParameters(sheetIndex, columnIndex, count);
     }
+
+    private record DeleteColumnParameters(int SheetIndex, int ColumnIndex, int Count);
 }

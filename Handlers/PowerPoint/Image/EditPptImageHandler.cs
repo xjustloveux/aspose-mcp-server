@@ -23,52 +23,90 @@ public class EditPptImageHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with edit details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetRequired<int>("slideIndex");
-        var imageIndex = parameters.GetRequired<int>("imageIndex");
-        var imagePath = parameters.GetOptional<string?>("imagePath");
-        var x = parameters.GetOptional("x", 100f);
-        var y = parameters.GetOptional("y", 100f);
-        var width = parameters.GetOptional<float?>("width");
-        var height = parameters.GetOptional<float?>("height");
-        var jpegQuality = parameters.GetOptional<int?>("jpegQuality");
-        var maxWidth = parameters.GetOptional<int?>("maxWidth");
-        var maxHeight = parameters.GetOptional<int?>("maxHeight");
+        var p = ExtractEditParameters(parameters);
 
         var presentation = context.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+        var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
         var pictures = PptImageHelper.GetPictureFrames(slide);
 
-        PptImageHelper.ValidateImageIndex(imageIndex, slideIndex, pictures.Count);
+        PptImageHelper.ValidateImageIndex(p.ImageIndex, p.SlideIndex, pictures.Count);
 
-        var pictureFrame = pictures[imageIndex];
+        var pictureFrame = pictures[p.ImageIndex];
         List<string> changes = [];
 
-        if (!string.IsNullOrEmpty(imagePath) && File.Exists(imagePath))
+        if (!string.IsNullOrEmpty(p.ImagePath) && File.Exists(p.ImagePath))
         {
-            var newImage = PptImageHelper.ProcessAndAddImage(presentation, imagePath, jpegQuality, maxWidth, maxHeight,
+            var newImage = PptImageHelper.ProcessAndAddImage(presentation, p.ImagePath, p.JpegQuality, p.MaxWidth,
+                p.MaxHeight,
                 out var processingDetails);
             pictureFrame.PictureFormat.Picture.Image = newImage;
             changes.AddRange(processingDetails);
         }
 
-        pictureFrame.X = x;
-        pictureFrame.Y = y;
+        pictureFrame.X = p.X;
+        pictureFrame.Y = p.Y;
 
-        if (width.HasValue)
+        if (p.Width.HasValue)
         {
-            pictureFrame.Width = width.Value;
-            changes.Add($"width={width.Value}");
+            pictureFrame.Width = p.Width.Value;
+            changes.Add($"width={p.Width.Value}");
         }
 
-        if (height.HasValue)
+        if (p.Height.HasValue)
         {
-            pictureFrame.Height = height.Value;
-            changes.Add($"height={height.Value}");
+            pictureFrame.Height = p.Height.Value;
+            changes.Add($"height={p.Height.Value}");
         }
 
         MarkModified(context);
 
         var changesStr = changes.Count > 0 ? string.Join(", ", changes) : "position updated";
-        return Success($"Image {imageIndex} on slide {slideIndex} updated ({changesStr}).");
+        return Success($"Image {p.ImageIndex} on slide {p.SlideIndex} updated ({changesStr}).");
     }
+
+    /// <summary>
+    ///     Extracts edit parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted edit parameters.</returns>
+    private static EditParameters ExtractEditParameters(OperationParameters parameters)
+    {
+        return new EditParameters(
+            parameters.GetRequired<int>("slideIndex"),
+            parameters.GetRequired<int>("imageIndex"),
+            parameters.GetOptional<string?>("imagePath"),
+            parameters.GetOptional("x", 100f),
+            parameters.GetOptional("y", 100f),
+            parameters.GetOptional<float?>("width"),
+            parameters.GetOptional<float?>("height"),
+            parameters.GetOptional<int?>("jpegQuality"),
+            parameters.GetOptional<int?>("maxWidth"),
+            parameters.GetOptional<int?>("maxHeight")
+        );
+    }
+
+    /// <summary>
+    ///     Record for holding edit image parameters.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index.</param>
+    /// <param name="ImageIndex">The image index.</param>
+    /// <param name="ImagePath">The optional new image path.</param>
+    /// <param name="X">The X coordinate.</param>
+    /// <param name="Y">The Y coordinate.</param>
+    /// <param name="Width">The optional width.</param>
+    /// <param name="Height">The optional height.</param>
+    /// <param name="JpegQuality">The optional JPEG quality.</param>
+    /// <param name="MaxWidth">The optional maximum width.</param>
+    /// <param name="MaxHeight">The optional maximum height.</param>
+    private record EditParameters(
+        int SlideIndex,
+        int ImageIndex,
+        string? ImagePath,
+        float X,
+        float Y,
+        float? Width,
+        float? Height,
+        int? JpegQuality,
+        int? MaxWidth,
+        int? MaxHeight);
 }

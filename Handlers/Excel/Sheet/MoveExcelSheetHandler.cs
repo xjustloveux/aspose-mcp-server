@@ -22,35 +22,44 @@ public class MoveExcelSheetHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with operation details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetRequired<int>("sheetIndex");
-        var targetIndex = parameters.GetOptional<int?>("targetIndex");
-        var insertAt = parameters.GetOptional<int?>("insertAt");
+        var p = ExtractMoveExcelSheetParameters(parameters);
 
-        if (!targetIndex.HasValue && !insertAt.HasValue)
+        if (!p.TargetIndex.HasValue && !p.InsertAt.HasValue)
             throw new ArgumentException("Either targetIndex or insertAt is required for move operation");
 
-        var finalTargetIndex = targetIndex ?? insertAt!.Value;
+        var finalTargetIndex = p.TargetIndex ?? p.InsertAt!.Value;
 
         var workbook = context.Document;
 
-        if (sheetIndex < 0 || sheetIndex >= workbook.Worksheets.Count)
+        if (p.SheetIndex < 0 || p.SheetIndex >= workbook.Worksheets.Count)
             throw new ArgumentException(
-                $"Worksheet index {sheetIndex} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
+                $"Worksheet index {p.SheetIndex} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
 
         if (finalTargetIndex < 0 || finalTargetIndex >= workbook.Worksheets.Count)
             throw new ArgumentException(
                 $"Target index {finalTargetIndex} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
 
-        if (sheetIndex == finalTargetIndex)
-            return Success($"Worksheet is already at position {sheetIndex}, no move needed.");
+        if (p.SheetIndex == finalTargetIndex)
+            return Success($"Worksheet is already at position {p.SheetIndex}, no move needed.");
 
-        var sheetName = workbook.Worksheets[sheetIndex].Name;
-        var worksheet = workbook.Worksheets[sheetIndex];
+        var sheetName = workbook.Worksheets[p.SheetIndex].Name;
+        var worksheet = workbook.Worksheets[p.SheetIndex];
 
         worksheet.MoveTo(finalTargetIndex);
 
         MarkModified(context);
 
-        return Success($"Worksheet '{sheetName}' moved from position {sheetIndex} to {finalTargetIndex}.");
+        return Success($"Worksheet '{sheetName}' moved from position {p.SheetIndex} to {finalTargetIndex}.");
     }
+
+    private static MoveExcelSheetParameters ExtractMoveExcelSheetParameters(OperationParameters parameters)
+    {
+        var sheetIndex = parameters.GetRequired<int>("sheetIndex");
+        var targetIndex = parameters.GetOptional<int?>("targetIndex");
+        var insertAt = parameters.GetOptional<int?>("insertAt");
+
+        return new MoveExcelSheetParameters(sheetIndex, targetIndex, insertAt);
+    }
+
+    private record MoveExcelSheetParameters(int SheetIndex, int? TargetIndex, int? InsertAt);
 }

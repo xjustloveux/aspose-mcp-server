@@ -146,7 +146,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -164,46 +164,112 @@ Usage examples:
         var parameters = new OperationParameters();
         parameters.Set("slideIndex", slideIndex);
 
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "add":
-                if (rows.HasValue) parameters.Set("rows", rows.Value);
-                if (columns.HasValue) parameters.Set("columns", columns.Value);
-                parameters.Set("x", x);
-                parameters.Set("y", y);
-                if (data != null) parameters.Set("data", data);
-                break;
+            "add" => BuildAddParameters(parameters, rows, columns, x, y, data),
+            "edit" => BuildEditParameters(parameters, shapeIndex, data),
+            "delete" or "get_content" => BuildShapeIndexParameters(parameters, shapeIndex),
+            "insert_row" or "delete_row" => BuildRowParameters(parameters, shapeIndex, rowIndex),
+            "insert_column" or "delete_column" => BuildColumnParameters(parameters, shapeIndex, columnIndex),
+            "edit_cell" => BuildEditCellParameters(parameters, shapeIndex, rowIndex, columnIndex, text),
+            _ => parameters
+        };
+    }
 
-            case "edit":
-                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
-                if (data != null) parameters.Set("data", data);
-                break;
+    /// <summary>
+    ///     Builds parameters for the add table operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="rows">The number of rows for the table.</param>
+    /// <param name="columns">The number of columns for the table.</param>
+    /// <param name="x">The X position in points.</param>
+    /// <param name="y">The Y position in points.</param>
+    /// <param name="data">The 2D array of cell data as JSON.</param>
+    /// <returns>OperationParameters configured for the add operation.</returns>
+    private static OperationParameters BuildAddParameters(OperationParameters parameters, int? rows, int? columns,
+        float x, float y, string? data)
+    {
+        if (rows.HasValue) parameters.Set("rows", rows.Value);
+        if (columns.HasValue) parameters.Set("columns", columns.Value);
+        parameters.Set("x", x);
+        parameters.Set("y", y);
+        if (data != null) parameters.Set("data", data);
+        return parameters;
+    }
 
-            case "delete":
-            case "get_content":
-                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the edit table operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="shapeIndex">The shape index of the table (0-based).</param>
+    /// <param name="data">The 2D array of cell data as JSON.</param>
+    /// <returns>OperationParameters configured for the edit operation.</returns>
+    private static OperationParameters BuildEditParameters(OperationParameters parameters, int? shapeIndex,
+        string? data)
+    {
+        if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+        if (data != null) parameters.Set("data", data);
+        return parameters;
+    }
 
-            case "insert_row":
-            case "delete_row":
-                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
-                if (rowIndex.HasValue) parameters.Set("rowIndex", rowIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for shape index-based operations (delete, get_content).
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="shapeIndex">The shape index of the table (0-based).</param>
+    /// <returns>OperationParameters configured for shape index-based operations.</returns>
+    private static OperationParameters BuildShapeIndexParameters(OperationParameters parameters, int? shapeIndex)
+    {
+        if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+        return parameters;
+    }
 
-            case "insert_column":
-            case "delete_column":
-                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
-                if (columnIndex.HasValue) parameters.Set("columnIndex", columnIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for row operations (insert_row, delete_row).
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="shapeIndex">The shape index of the table (0-based).</param>
+    /// <param name="rowIndex">The row index (0-based).</param>
+    /// <returns>OperationParameters configured for row operations.</returns>
+    private static OperationParameters BuildRowParameters(OperationParameters parameters, int? shapeIndex,
+        int? rowIndex)
+    {
+        if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+        if (rowIndex.HasValue) parameters.Set("rowIndex", rowIndex.Value);
+        return parameters;
+    }
 
-            case "edit_cell":
-                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
-                if (rowIndex.HasValue) parameters.Set("rowIndex", rowIndex.Value);
-                if (columnIndex.HasValue) parameters.Set("columnIndex", columnIndex.Value);
-                if (text != null) parameters.Set("text", text);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for column operations (insert_column, delete_column).
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="shapeIndex">The shape index of the table (0-based).</param>
+    /// <param name="columnIndex">The column index (0-based).</param>
+    /// <returns>OperationParameters configured for column operations.</returns>
+    private static OperationParameters BuildColumnParameters(OperationParameters parameters, int? shapeIndex,
+        int? columnIndex)
+    {
+        if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+        if (columnIndex.HasValue) parameters.Set("columnIndex", columnIndex.Value);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the edit cell operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="shapeIndex">The shape index of the table (0-based).</param>
+    /// <param name="rowIndex">The row index (0-based).</param>
+    /// <param name="columnIndex">The column index (0-based).</param>
+    /// <param name="text">The cell text content.</param>
+    /// <returns>OperationParameters configured for the edit cell operation.</returns>
+    private static OperationParameters BuildEditCellParameters(OperationParameters parameters, int? shapeIndex,
+        int? rowIndex, int? columnIndex, string? text)
+    {
+        if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+        if (rowIndex.HasValue) parameters.Set("rowIndex", rowIndex.Value);
+        if (columnIndex.HasValue) parameters.Set("columnIndex", columnIndex.Value);
+        if (text != null) parameters.Set("text", text);
         return parameters;
     }
 }

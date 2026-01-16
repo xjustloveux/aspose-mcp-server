@@ -23,10 +23,10 @@ public class GetExcelPivotTablesHandler : OperationHandlerBase<Workbook>
     /// <returns>JSON result with pivot table information.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
+        var p = ExtractGetPivotTablesParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, p.SheetIndex);
         var pivotTables = worksheet.PivotTables;
 
         if (pivotTables.Count == 0)
@@ -135,4 +135,13 @@ public class GetExcelPivotTablesHandler : OperationHandlerBase<Workbook>
             items = pivotTableList
         });
     }
+
+    private static GetPivotTablesParameters ExtractGetPivotTablesParameters(OperationParameters parameters)
+    {
+        return new GetPivotTablesParameters(
+            parameters.GetOptional("sheetIndex", 0)
+        );
+    }
+
+    private record GetPivotTablesParameters(int SheetIndex);
 }

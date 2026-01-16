@@ -21,24 +21,42 @@ public class DeletePdfAttachmentHandler : OperationHandlerBase<Document>
     /// <returns>Success message.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var attachmentName = parameters.GetRequired<string>("attachmentName");
+        var deleteParams = ExtractDeleteParameters(parameters);
 
         var document = context.Document;
         var embeddedFiles = document.EmbeddedFiles;
 
-        var (found, actualName, attachmentNames) = PdfAttachmentHelper.FindAttachment(embeddedFiles, attachmentName);
+        var (found, actualName, attachmentNames) =
+            PdfAttachmentHelper.FindAttachment(embeddedFiles, deleteParams.AttachmentName);
 
         if (!found)
         {
             var availableNames = string.Join(", ", attachmentNames);
             throw new ArgumentException(
-                $"Attachment '{attachmentName}' not found. Available attachments: {(string.IsNullOrEmpty(availableNames) ? "(none)" : availableNames)}");
+                $"Attachment '{deleteParams.AttachmentName}' not found. Available attachments: {(string.IsNullOrEmpty(availableNames) ? "(none)" : availableNames)}");
         }
 
         embeddedFiles.Delete(actualName);
 
         MarkModified(context);
 
-        return Success($"Deleted attachment '{attachmentName}'.");
+        return Success($"Deleted attachment '{deleteParams.AttachmentName}'.");
     }
+
+    /// <summary>
+    ///     Extracts delete parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted delete parameters.</returns>
+    private static DeleteParameters ExtractDeleteParameters(OperationParameters parameters)
+    {
+        return new DeleteParameters(
+            parameters.GetRequired<string>("attachmentName")
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold delete attachment parameters.
+    /// </summary>
+    private record DeleteParameters(string AttachmentName);
 }

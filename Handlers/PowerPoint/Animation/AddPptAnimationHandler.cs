@@ -23,25 +23,51 @@ public class AddPptAnimationHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with animation details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetRequired<int>("slideIndex");
-        var shapeIndex = parameters.GetRequired<int>("shapeIndex");
-        var effectTypeStr = parameters.GetOptional<string?>("effectType");
-        var effectSubtypeStr = parameters.GetOptional<string?>("effectSubtype");
-        var triggerTypeStr = parameters.GetOptional<string?>("triggerType");
+        var p = ExtractAddAnimationParameters(parameters);
 
         var presentation = context.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-        PowerPointHelper.ValidateShapeIndex(shapeIndex, slide);
-        var shape = slide.Shapes[shapeIndex];
+        var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
+        PowerPointHelper.ValidateShapeIndex(p.ShapeIndex, slide);
+        var shape = slide.Shapes[p.ShapeIndex];
 
-        var effectType = PptAnimationHelper.ParseEffectType(effectTypeStr ?? "Fade");
-        var effectSubtype = PptAnimationHelper.ParseEffectSubtype(effectSubtypeStr);
-        var triggerType = PptAnimationHelper.ParseTriggerType(triggerTypeStr);
+        var effectType = PptAnimationHelper.ParseEffectType(p.EffectType ?? "Fade");
+        var effectSubtype = PptAnimationHelper.ParseEffectSubtype(p.EffectSubtype);
+        var triggerType = PptAnimationHelper.ParseTriggerType(p.TriggerType);
 
         slide.Timeline.MainSequence.AddEffect(shape, effectType, effectSubtype, triggerType);
 
         MarkModified(context);
 
-        return Success($"Animation '{effectTypeStr ?? "Fade"}' added to shape {shapeIndex} on slide {slideIndex}.");
+        return Success($"Animation '{p.EffectType ?? "Fade"}' added to shape {p.ShapeIndex} on slide {p.SlideIndex}.");
     }
+
+    /// <summary>
+    ///     Extracts add animation parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted add animation parameters.</returns>
+    private static AddAnimationParameters ExtractAddAnimationParameters(OperationParameters parameters)
+    {
+        return new AddAnimationParameters(
+            parameters.GetRequired<int>("slideIndex"),
+            parameters.GetRequired<int>("shapeIndex"),
+            parameters.GetOptional<string?>("effectType"),
+            parameters.GetOptional<string?>("effectSubtype"),
+            parameters.GetOptional<string?>("triggerType"));
+    }
+
+    /// <summary>
+    ///     Record for holding add animation parameters.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index.</param>
+    /// <param name="ShapeIndex">The shape index.</param>
+    /// <param name="EffectType">The optional effect type.</param>
+    /// <param name="EffectSubtype">The optional effect subtype.</param>
+    /// <param name="TriggerType">The optional trigger type.</param>
+    private record AddAnimationParameters(
+        int SlideIndex,
+        int ShapeIndex,
+        string? EffectType,
+        string? EffectSubtype,
+        string? TriggerType);
 }

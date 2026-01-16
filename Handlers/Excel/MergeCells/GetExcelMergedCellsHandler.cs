@@ -22,10 +22,10 @@ public class GetExcelMergedCellsHandler : OperationHandlerBase<Workbook>
     /// <returns>JSON string containing the merged cells information.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
+        var p = ExtractGetMergedCellsParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, p.SheetIndex);
         var mergedCells = worksheet.Cells.MergedCells;
 
         if (mergedCells == null || mergedCells.Count == 0)
@@ -76,4 +76,13 @@ public class GetExcelMergedCellsHandler : OperationHandlerBase<Workbook>
 
         return JsonResult(result);
     }
+
+    private static GetMergedCellsParameters ExtractGetMergedCellsParameters(OperationParameters parameters)
+    {
+        return new GetMergedCellsParameters(
+            parameters.GetOptional("sheetIndex", 0)
+        );
+    }
+
+    private record GetMergedCellsParameters(int SheetIndex);
 }

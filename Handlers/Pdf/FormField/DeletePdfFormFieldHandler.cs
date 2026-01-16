@@ -22,16 +22,33 @@ public class DeletePdfFormFieldHandler : OperationHandlerBase<Document>
     /// <returns>Success message with deletion details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var fieldName = parameters.GetRequired<string>("fieldName");
+        var p = ExtractDeleteParameters(parameters);
 
         var document = context.Document;
 
-        if (document.Form.Cast<Field>().All(f => f.PartialName != fieldName))
-            throw new ArgumentException($"Form field '{fieldName}' not found");
+        if (document.Form.Cast<Field>().All(f => f.PartialName != p.FieldName))
+            throw new ArgumentException($"Form field '{p.FieldName}' not found");
 
-        document.Form.Delete(fieldName);
+        document.Form.Delete(p.FieldName);
         MarkModified(context);
 
-        return Success($"Deleted form field '{fieldName}'.");
+        return Success($"Deleted form field '{p.FieldName}'.");
     }
+
+    /// <summary>
+    ///     Extracts delete parameters from the operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static DeleteParameters ExtractDeleteParameters(OperationParameters parameters)
+    {
+        return new DeleteParameters(
+            parameters.GetRequired<string>("fieldName"));
+    }
+
+    /// <summary>
+    ///     Parameters for deleting a form field.
+    /// </summary>
+    /// <param name="FieldName">The name of the form field to delete.</param>
+    private record DeleteParameters(string FieldName);
 }

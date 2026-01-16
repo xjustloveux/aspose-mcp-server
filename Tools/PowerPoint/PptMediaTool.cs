@@ -136,7 +136,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -156,38 +156,88 @@ Usage examples:
         var parameters = new OperationParameters();
         parameters.Set("slideIndex", slideIndex);
 
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "add_audio":
-                if (audioPath != null) parameters.Set("audioPath", audioPath);
-                parameters.Set("x", x);
-                parameters.Set("y", y);
-                parameters.Set("width", width ?? 80f);
-                parameters.Set("height", height ?? 80f);
-                break;
+            "add_audio" => BuildAddAudioParameters(parameters, audioPath, x, y, width, height),
+            "add_video" => BuildAddVideoParameters(parameters, videoPath, x, y, width, height),
+            "delete_audio" or "delete_video" => BuildDeleteMediaParameters(parameters, shapeIndex),
+            "set_playback" => BuildSetPlaybackParameters(parameters, shapeIndex, playMode, loop, rewind, volume),
+            _ => parameters
+        };
+    }
 
-            case "add_video":
-                if (videoPath != null) parameters.Set("videoPath", videoPath);
-                parameters.Set("x", x);
-                parameters.Set("y", y);
-                parameters.Set("width", width ?? 320f);
-                parameters.Set("height", height ?? 240f);
-                break;
+    /// <summary>
+    ///     Builds parameters for the add audio operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters with slide index.</param>
+    /// <param name="audioPath">The audio file path to embed.</param>
+    /// <param name="x">The X position in points.</param>
+    /// <param name="y">The Y position in points.</param>
+    /// <param name="width">The width in points.</param>
+    /// <param name="height">The height in points.</param>
+    /// <returns>OperationParameters configured for adding audio.</returns>
+    private static OperationParameters BuildAddAudioParameters(OperationParameters parameters, string? audioPath,
+        float x, float y, float? width, float? height)
+    {
+        if (audioPath != null) parameters.Set("audioPath", audioPath);
+        parameters.Set("x", x);
+        parameters.Set("y", y);
+        parameters.Set("width", width ?? 80f);
+        parameters.Set("height", height ?? 80f);
+        return parameters;
+    }
 
-            case "delete_audio":
-            case "delete_video":
-                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the add video operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters with slide index.</param>
+    /// <param name="videoPath">The video file path to embed.</param>
+    /// <param name="x">The X position in points.</param>
+    /// <param name="y">The Y position in points.</param>
+    /// <param name="width">The width in points.</param>
+    /// <param name="height">The height in points.</param>
+    /// <returns>OperationParameters configured for adding video.</returns>
+    private static OperationParameters BuildAddVideoParameters(OperationParameters parameters, string? videoPath,
+        float x, float y, float? width, float? height)
+    {
+        if (videoPath != null) parameters.Set("videoPath", videoPath);
+        parameters.Set("x", x);
+        parameters.Set("y", y);
+        parameters.Set("width", width ?? 320f);
+        parameters.Set("height", height ?? 240f);
+        return parameters;
+    }
 
-            case "set_playback":
-                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
-                parameters.Set("playMode", playMode);
-                parameters.Set("loop", loop);
-                parameters.Set("rewind", rewind);
-                parameters.Set("volume", volume);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the delete media operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters with slide index.</param>
+    /// <param name="shapeIndex">The shape index (0-based).</param>
+    /// <returns>OperationParameters configured for deleting media.</returns>
+    private static OperationParameters BuildDeleteMediaParameters(OperationParameters parameters, int? shapeIndex)
+    {
+        if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the set playback operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters with slide index.</param>
+    /// <param name="shapeIndex">The shape index (0-based).</param>
+    /// <param name="playMode">The playback mode (auto or onclick).</param>
+    /// <param name="loop">Whether to loop playback.</param>
+    /// <param name="rewind">Whether to rewind video after play.</param>
+    /// <param name="volume">The volume level (mute, low, medium, loud).</param>
+    /// <returns>OperationParameters configured for setting playback options.</returns>
+    private static OperationParameters BuildSetPlaybackParameters(OperationParameters parameters, int? shapeIndex,
+        string playMode, bool loop, bool rewind, string volume)
+    {
+        if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+        parameters.Set("playMode", playMode);
+        parameters.Set("loop", loop);
+        parameters.Set("rewind", rewind);
+        parameters.Set("volume", volume);
         return parameters;
     }
 }

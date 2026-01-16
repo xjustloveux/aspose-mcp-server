@@ -22,7 +22,7 @@ public class UpdateTableOfContentsWordHandler : OperationHandlerBase<Document>
     /// <returns>Success message or info message if no TOC found.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var tocIndex = parameters.GetOptional<int?>("tocIndex");
+        var p = ExtractUpdateTableOfContentsParameters(parameters);
 
         var doc = context.Document;
         var tocFields = doc.Range.Fields
@@ -40,11 +40,11 @@ public class UpdateTableOfContentsWordHandler : OperationHandlerBase<Document>
             return message;
         }
 
-        if (tocIndex.HasValue)
+        if (p.TocIndex.HasValue)
         {
-            if (tocIndex.Value < 0 || tocIndex.Value >= tocFields.Count)
+            if (p.TocIndex.Value < 0 || p.TocIndex.Value >= tocFields.Count)
                 throw new ArgumentException($"tocIndex must be between 0 and {tocFields.Count - 1}");
-            tocFields[tocIndex.Value].Update();
+            tocFields[p.TocIndex.Value].Update();
         }
         else
         {
@@ -56,7 +56,16 @@ public class UpdateTableOfContentsWordHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        var updatedCount = tocIndex.HasValue ? 1 : tocFields.Count;
+        var updatedCount = p.TocIndex.HasValue ? 1 : tocFields.Count;
         return Success($"Updated {updatedCount} table of contents field(s)");
     }
+
+    private static UpdateTableOfContentsParameters ExtractUpdateTableOfContentsParameters(
+        OperationParameters parameters)
+    {
+        return new UpdateTableOfContentsParameters(
+            parameters.GetOptional<int?>("tocIndex"));
+    }
+
+    private record UpdateTableOfContentsParameters(int? TocIndex);
 }

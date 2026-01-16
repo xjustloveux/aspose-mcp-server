@@ -122,7 +122,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -136,36 +136,66 @@ Usage examples:
     {
         var parameters = new OperationParameters();
 
-        switch (operation.ToLower())
+        return operation.ToLower() switch
         {
-            case "add_footnote":
-            case "add_endnote":
-                if (text != null) parameters.Set("text", text);
-                if (paragraphIndex.HasValue) parameters.Set("paragraphIndex", paragraphIndex.Value);
-                parameters.Set("sectionIndex", sectionIndex);
-                if (referenceText != null) parameters.Set("referenceText", referenceText);
-                if (customMark != null) parameters.Set("customMark", customMark);
-                break;
+            "add_footnote" or "add_endnote" => BuildAddNoteParameters(parameters, text, paragraphIndex, sectionIndex,
+                referenceText, customMark),
+            "delete_footnote" or "delete_endnote" => BuildDeleteNoteParameters(parameters, referenceMark, noteIndex),
+            "edit_footnote" or "edit_endnote" => BuildEditNoteParameters(parameters, referenceMark, noteIndex, text),
+            _ => parameters
+        };
+    }
 
-            case "delete_footnote":
-            case "delete_endnote":
-                if (referenceMark != null) parameters.Set("referenceMark", referenceMark);
-                if (noteIndex.HasValue) parameters.Set("noteIndex", noteIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the add footnote/endnote operations.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="text">The note text content.</param>
+    /// <param name="paragraphIndex">The paragraph index (0-based, -1 for document end).</param>
+    /// <param name="sectionIndex">The section index (0-based).</param>
+    /// <param name="referenceText">The reference text in document to insert note at.</param>
+    /// <param name="customMark">The custom note mark.</param>
+    /// <returns>OperationParameters configured for the add note operation.</returns>
+    private static OperationParameters BuildAddNoteParameters(OperationParameters parameters, string? text,
+        int? paragraphIndex, int sectionIndex, string? referenceText, string? customMark)
+    {
+        if (text != null) parameters.Set("text", text);
+        if (paragraphIndex.HasValue) parameters.Set("paragraphIndex", paragraphIndex.Value);
+        parameters.Set("sectionIndex", sectionIndex);
+        if (referenceText != null) parameters.Set("referenceText", referenceText);
+        if (customMark != null) parameters.Set("customMark", customMark);
+        return parameters;
+    }
 
-            case "edit_footnote":
-            case "edit_endnote":
-                if (referenceMark != null) parameters.Set("referenceMark", referenceMark);
-                if (noteIndex.HasValue) parameters.Set("noteIndex", noteIndex.Value);
-                if (text != null) parameters.Set("text", text);
-                break;
+    /// <summary>
+    ///     Builds parameters for the delete footnote/endnote operations.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="referenceMark">The reference mark of the note to delete.</param>
+    /// <param name="noteIndex">The note index (0-based).</param>
+    /// <returns>OperationParameters configured for the delete note operation.</returns>
+    private static OperationParameters BuildDeleteNoteParameters(OperationParameters parameters, string? referenceMark,
+        int? noteIndex)
+    {
+        if (referenceMark != null) parameters.Set("referenceMark", referenceMark);
+        if (noteIndex.HasValue) parameters.Set("noteIndex", noteIndex.Value);
+        return parameters;
+    }
 
-            case "get_footnotes":
-            case "get_endnotes":
-                // No additional parameters needed
-                break;
-        }
-
+    /// <summary>
+    ///     Builds parameters for the edit footnote/endnote operations.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="referenceMark">The reference mark of the note to edit.</param>
+    /// <param name="noteIndex">The note index (0-based).</param>
+    /// <param name="text">The updated note text content.</param>
+    /// <returns>OperationParameters configured for the edit note operation.</returns>
+    private static OperationParameters BuildEditNoteParameters(OperationParameters parameters, string? referenceMark,
+        int? noteIndex, string? text)
+    {
+        if (referenceMark != null) parameters.Set("referenceMark", referenceMark);
+        if (noteIndex.HasValue) parameters.Set("noteIndex", noteIndex.Value);
+        if (text != null) parameters.Set("text", text);
         return parameters;
     }
 }

@@ -122,7 +122,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -135,37 +135,83 @@ Usage examples:
         string? url,
         int? targetPage)
     {
-        var parameters = new OperationParameters();
-
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "add":
-                parameters.Set("pageIndex", pageIndex);
-                parameters.Set("x", x);
-                parameters.Set("y", y);
-                parameters.Set("width", width);
-                parameters.Set("height", height);
-                if (url != null) parameters.Set("url", url);
-                if (targetPage.HasValue) parameters.Set("targetPage", targetPage.Value);
-                break;
+            "add" => BuildAddParameters(pageIndex, x, y, width, height, url, targetPage),
+            "delete" => BuildDeleteParameters(pageIndex, linkIndex),
+            "edit" => BuildEditParameters(pageIndex, linkIndex, url, targetPage),
+            "get" => BuildGetParameters(pageIndex),
+            _ => new OperationParameters()
+        };
+    }
 
-            case "delete":
-                parameters.Set("pageIndex", pageIndex);
-                parameters.Set("linkIndex", linkIndex);
-                break;
+    /// <summary>
+    ///     Builds parameters for the add link operation.
+    /// </summary>
+    /// <param name="pageIndex">The page index (1-based) to add the link to.</param>
+    /// <param name="x">The X position of the link area in PDF coordinates.</param>
+    /// <param name="y">The Y position of the link area in PDF coordinates.</param>
+    /// <param name="width">The width of the link area in PDF points.</param>
+    /// <param name="height">The height of the link area in PDF points.</param>
+    /// <param name="url">The URL to link to.</param>
+    /// <param name="targetPage">The target page number (1-based) for internal links.</param>
+    /// <returns>OperationParameters configured for adding a link.</returns>
+    private static OperationParameters BuildAddParameters(int pageIndex, double x, double y, double width,
+        double height,
+        string? url, int? targetPage)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("pageIndex", pageIndex);
+        parameters.Set("x", x);
+        parameters.Set("y", y);
+        parameters.Set("width", width);
+        parameters.Set("height", height);
+        if (url != null) parameters.Set("url", url);
+        if (targetPage.HasValue) parameters.Set("targetPage", targetPage.Value);
+        return parameters;
+    }
 
-            case "edit":
-                parameters.Set("pageIndex", pageIndex);
-                parameters.Set("linkIndex", linkIndex);
-                if (url != null) parameters.Set("url", url);
-                if (targetPage.HasValue) parameters.Set("targetPage", targetPage.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the delete link operation.
+    /// </summary>
+    /// <param name="pageIndex">The page index (1-based) containing the link.</param>
+    /// <param name="linkIndex">The link index (0-based) to delete.</param>
+    /// <returns>OperationParameters configured for deleting a link.</returns>
+    private static OperationParameters BuildDeleteParameters(int pageIndex, int linkIndex)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("pageIndex", pageIndex);
+        parameters.Set("linkIndex", linkIndex);
+        return parameters;
+    }
 
-            case "get":
-                if (pageIndex > 0) parameters.Set("pageIndex", pageIndex);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the edit link operation.
+    /// </summary>
+    /// <param name="pageIndex">The page index (1-based) containing the link.</param>
+    /// <param name="linkIndex">The link index (0-based) to edit.</param>
+    /// <param name="url">The new URL to link to.</param>
+    /// <param name="targetPage">The new target page number (1-based) for internal links.</param>
+    /// <returns>OperationParameters configured for editing a link.</returns>
+    private static OperationParameters BuildEditParameters(int pageIndex, int linkIndex, string? url, int? targetPage)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("pageIndex", pageIndex);
+        parameters.Set("linkIndex", linkIndex);
+        if (url != null) parameters.Set("url", url);
+        if (targetPage.HasValue) parameters.Set("targetPage", targetPage.Value);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the get links operation.
+    /// </summary>
+    /// <param name="pageIndex">The page index (1-based) to get links from.</param>
+    /// <returns>OperationParameters configured for getting links.</returns>
+    private static OperationParameters BuildGetParameters(int pageIndex)
+    {
+        var parameters = new OperationParameters();
+        if (pageIndex > 0) parameters.Set("pageIndex", pageIndex);
         return parameters;
     }
 }

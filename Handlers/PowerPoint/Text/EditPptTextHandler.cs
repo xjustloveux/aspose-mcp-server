@@ -23,18 +23,48 @@ public class EditPptTextHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with edit details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetOptional("slideIndex", 0);
-        var shapeIndex = parameters.GetRequired<int>("shapeIndex");
-        var text = parameters.GetOptional<string?>("text");
-        var fontName = parameters.GetOptional<string?>("fontName");
-        var fontSize = parameters.GetOptional<float?>("fontSize");
-        var bold = parameters.GetOptional<bool?>("bold");
-        var italic = parameters.GetOptional<bool?>("italic");
-        var color = parameters.GetOptional<string?>("color");
-
+        var textParams = ExtractTextParameters(parameters);
         var presentation = context.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+        var slide = PowerPointHelper.GetSlide(presentation, textParams.SlideIndex);
+        var shape = GetTextShape(slide, textParams.ShapeIndex);
 
+        if (!string.IsNullOrEmpty(textParams.Text))
+            shape.TextFrame.Text = textParams.Text;
+
+        ApplyFormattingToAllPortions(shape, textParams);
+
+        MarkModified(context);
+
+        return Success($"Text edited in shape {textParams.ShapeIndex} on slide {textParams.SlideIndex}.");
+    }
+
+    /// <summary>
+    ///     Extracts text parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted text parameters.</returns>
+    private static TextParameters ExtractTextParameters(OperationParameters parameters)
+    {
+        return new TextParameters(
+            parameters.GetOptional("slideIndex", 0),
+            parameters.GetRequired<int>("shapeIndex"),
+            parameters.GetOptional<string?>("text"),
+            parameters.GetOptional<string?>("fontName"),
+            parameters.GetOptional<float?>("fontSize"),
+            parameters.GetOptional<bool?>("bold"),
+            parameters.GetOptional<bool?>("italic"),
+            parameters.GetOptional<string?>("color")
+        );
+    }
+
+    /// <summary>
+    ///     Gets a text shape from the slide.
+    /// </summary>
+    /// <param name="slide">The slide.</param>
+    /// <param name="shapeIndex">The shape index.</param>
+    /// <returns>The AutoShape.</returns>
+    private static IAutoShape GetTextShape(ISlide slide, int shapeIndex)
+    {
         if (shapeIndex < 0 || shapeIndex >= slide.Shapes.Count)
             throw new ArgumentException(
                 $"shapeIndex must be between 0 and {slide.Shapes.Count - 1}, got: {shapeIndex}");
@@ -45,34 +75,67 @@ public class EditPptTextHandler : OperationHandlerBase<Presentation>
         if (shape.TextFrame == null)
             throw new ArgumentException("Shape does not support text");
 
-        if (!string.IsNullOrEmpty(text))
-            shape.TextFrame.Text = text;
-
-        if (shape.TextFrame.Paragraphs.Count > 0)
-            foreach (var paragraph in shape.TextFrame.Paragraphs)
-            foreach (var portion in paragraph.Portions)
-            {
-                if (!string.IsNullOrEmpty(fontName))
-                    portion.PortionFormat.LatinFont = new FontData(fontName);
-
-                if (fontSize.HasValue)
-                    portion.PortionFormat.FontHeight = fontSize.Value;
-
-                if (bold.HasValue)
-                    portion.PortionFormat.FontBold = bold.Value ? NullableBool.True : NullableBool.False;
-
-                if (italic.HasValue)
-                    portion.PortionFormat.FontItalic = italic.Value ? NullableBool.True : NullableBool.False;
-
-                if (!string.IsNullOrEmpty(color))
-                {
-                    portion.PortionFormat.FillFormat.FillType = FillType.Solid;
-                    portion.PortionFormat.FillFormat.SolidFillColor.Color = ColorHelper.ParseColor(color);
-                }
-            }
-
-        MarkModified(context);
-
-        return Success($"Text edited in shape {shapeIndex} on slide {slideIndex}.");
+        return shape;
     }
+
+    /// <summary>
+    ///     Applies formatting to all portions in the shape.
+    /// </summary>
+    /// <param name="shape">The AutoShape.</param>
+    /// <param name="p">The text parameters.</param>
+    private static void ApplyFormattingToAllPortions(IAutoShape shape, TextParameters p)
+    {
+        if (shape.TextFrame.Paragraphs.Count == 0) return;
+
+        foreach (var paragraph in shape.TextFrame.Paragraphs)
+        foreach (var portion in paragraph.Portions)
+            ApplyPortionFormatting(portion, p);
+    }
+
+    /// <summary>
+    ///     Applies formatting to a text portion.
+    /// </summary>
+    /// <param name="portion">The text portion.</param>
+    /// <param name="p">The text parameters.</param>
+    private static void ApplyPortionFormatting(IPortion portion, TextParameters p)
+    {
+        if (!string.IsNullOrEmpty(p.FontName))
+            portion.PortionFormat.LatinFont = new FontData(p.FontName);
+
+        if (p.FontSize.HasValue)
+            portion.PortionFormat.FontHeight = p.FontSize.Value;
+
+        if (p.Bold.HasValue)
+            portion.PortionFormat.FontBold = p.Bold.Value ? NullableBool.True : NullableBool.False;
+
+        if (p.Italic.HasValue)
+            portion.PortionFormat.FontItalic = p.Italic.Value ? NullableBool.True : NullableBool.False;
+
+        if (!string.IsNullOrEmpty(p.Color))
+        {
+            portion.PortionFormat.FillFormat.FillType = FillType.Solid;
+            portion.PortionFormat.FillFormat.SolidFillColor.Color = ColorHelper.ParseColor(p.Color);
+        }
+    }
+
+    /// <summary>
+    ///     Record for holding text editing parameters.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index.</param>
+    /// <param name="ShapeIndex">The shape index.</param>
+    /// <param name="Text">The optional text content.</param>
+    /// <param name="FontName">The optional font name.</param>
+    /// <param name="FontSize">The optional font size.</param>
+    /// <param name="Bold">The optional bold setting.</param>
+    /// <param name="Italic">The optional italic setting.</param>
+    /// <param name="Color">The optional text color.</param>
+    private record TextParameters(
+        int SlideIndex,
+        int ShapeIndex,
+        string? Text,
+        string? FontName,
+        float? FontSize,
+        bool? Bold,
+        bool? Italic,
+        string? Color);
 }

@@ -24,24 +24,19 @@ public class AddExcelConditionalFormattingHandler : OperationHandlerBase<Workboo
     /// <returns>Success message with formatting details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var range = parameters.GetRequired<string>("range");
-        var conditionStr = parameters.GetRequired<string>("condition");
-        var value = parameters.GetRequired<string>("value");
-        var formula2 = parameters.GetOptional<string?>("formula2");
-        var backgroundColor = parameters.GetOptional("backgroundColor", "Yellow");
+        var addParams = ExtractAddParameters(parameters);
 
-        ExcelConditionalFormattingHelper.ValidateRange(range);
+        ExcelConditionalFormattingHelper.ValidateRange(addParams.Range);
 
         try
         {
             var workbook = context.Document;
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, addParams.SheetIndex);
 
             var formatIndex = worksheet.ConditionalFormattings.Add();
             var fcs = worksheet.ConditionalFormattings[formatIndex];
 
-            var cellRange = ExcelHelper.CreateRange(worksheet.Cells, range);
+            var cellRange = ExcelHelper.CreateRange(worksheet.Cells, addParams.Range);
             fcs.AddArea(new CellArea
             {
                 StartRow = cellRange.FirstRow,
@@ -53,24 +48,24 @@ public class AddExcelConditionalFormattingHandler : OperationHandlerBase<Workboo
             var conditionIndex = fcs.AddCondition(FormatConditionType.CellValue);
             var fc = fcs[conditionIndex];
 
-            var operatorType = ExcelConditionalFormattingHelper.ParseOperatorType(conditionStr);
+            var operatorType = ExcelConditionalFormattingHelper.ParseOperatorType(addParams.Condition);
             fc.Operator = operatorType;
 
             string? warningMessage = null;
-            if (!ExcelConditionalFormattingHelper.IsValidCondition(conditionStr))
+            if (!ExcelConditionalFormattingHelper.IsValidCondition(addParams.Condition))
                 warningMessage =
-                    $" Warning: Condition type '{conditionStr}' may not be supported. Valid types are: GreaterThan, LessThan, Between, Equal.";
+                    $" Warning: Condition type '{addParams.Condition}' may not be supported. Valid types are: GreaterThan, LessThan, Between, Equal.";
 
-            fc.Formula1 = value;
+            fc.Formula1 = addParams.Value;
             if (operatorType == OperatorType.Between)
             {
-                if (!string.IsNullOrEmpty(formula2))
+                if (!string.IsNullOrEmpty(addParams.Formula2))
                 {
-                    fc.Formula2 = formula2;
+                    fc.Formula2 = addParams.Formula2;
                 }
-                else if (value.Contains(','))
+                else if (addParams.Value.Contains(','))
                 {
-                    var parts = value.Split(',');
+                    var parts = addParams.Value.Split(',');
                     if (parts.Length >= 2)
                     {
                         fc.Formula1 = parts[0].Trim();
@@ -80,17 +75,37 @@ public class AddExcelConditionalFormattingHandler : OperationHandlerBase<Workboo
             }
 
             fc.Style.Pattern = BackgroundType.Solid;
-            fc.Style.ForegroundColor = ColorHelper.ParseColor(backgroundColor, Color.Yellow);
+            fc.Style.ForegroundColor = ColorHelper.ParseColor(addParams.BackgroundColor, Color.Yellow);
 
             workbook.CalculateFormula();
 
             MarkModified(context);
 
-            return Success($"Conditional formatting added to range {range} ({conditionStr}).{warningMessage ?? ""}");
+            return Success(
+                $"Conditional formatting added to range {addParams.Range} ({addParams.Condition}).{warningMessage ?? ""}");
         }
         catch (CellsException ex)
         {
-            throw new ArgumentException($"Excel operation failed for range '{range}': {ex.Message}");
+            throw new ArgumentException($"Excel operation failed for range '{addParams.Range}': {ex.Message}");
         }
     }
+
+    private static AddParameters ExtractAddParameters(OperationParameters parameters)
+    {
+        return new AddParameters(
+            parameters.GetOptional("sheetIndex", 0),
+            parameters.GetRequired<string>("range"),
+            parameters.GetRequired<string>("condition"),
+            parameters.GetRequired<string>("value"),
+            parameters.GetOptional<string?>("formula2"),
+            parameters.GetOptional("backgroundColor", "Yellow"));
+    }
+
+    private record AddParameters(
+        int SheetIndex,
+        string Range,
+        string Condition,
+        string Value,
+        string? Formula2,
+        string BackgroundColor);
 }

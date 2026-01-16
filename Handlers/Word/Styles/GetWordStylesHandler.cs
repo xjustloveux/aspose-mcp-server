@@ -25,12 +25,12 @@ public class GetWordStylesHandler : OperationHandlerBase<Document>
     /// <returns>JSON string containing style information.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var includeBuiltIn = parameters.GetOptional("includeBuiltIn", false);
+        var p = ExtractGetWordStylesParameters(parameters);
         var doc = context.Document;
 
         List<WordStyle> paraStyles;
 
-        if (includeBuiltIn)
+        if (p.IncludeBuiltIn)
         {
             paraStyles = doc.Styles
                 .Where(s => s.Type == StyleType.Paragraph)
@@ -91,8 +91,8 @@ public class GetWordStylesHandler : OperationHandlerBase<Document>
         var result = new
         {
             count = paraStyles.Count,
-            includeBuiltIn,
-            note = includeBuiltIn
+            includeBuiltIn = p.IncludeBuiltIn,
+            note = p.IncludeBuiltIn
                 ? null
                 : "Showing custom styles and built-in styles actually used in the document",
             paragraphStyles = styleList
@@ -100,4 +100,12 @@ public class GetWordStylesHandler : OperationHandlerBase<Document>
 
         return JsonResult(result);
     }
+
+    private static GetWordStylesParameters ExtractGetWordStylesParameters(OperationParameters parameters)
+    {
+        return new GetWordStylesParameters(
+            parameters.GetOptional("includeBuiltIn", false));
+    }
+
+    private record GetWordStylesParameters(bool IncludeBuiltIn);
 }

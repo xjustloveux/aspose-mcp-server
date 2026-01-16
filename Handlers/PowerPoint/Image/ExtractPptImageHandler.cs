@@ -24,17 +24,40 @@ public class ExtractPptImageHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with extraction details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var path = context.SourcePath;
+        var path = ValidateSourcePath(context.SourcePath);
+        var extractParams = ExtractImageParameters(parameters, path);
+
+        Directory.CreateDirectory(extractParams.OutputDir);
+
+        var (count, skippedCount) = ExtractAllImages(context.Document, extractParams);
+
+        return Success(BuildResultMessage(count, skippedCount, extractParams));
+    }
+
+    /// <summary>
+    ///     Validates the source path.
+    /// </summary>
+    /// <param name="path">The source path to validate.</param>
+    /// <returns>The validated path.</returns>
+    private static string ValidateSourcePath(string? path)
+    {
         if (string.IsNullOrEmpty(path))
             throw new ArgumentException("path is required for extract operation");
-
         SecurityHelper.ValidateFilePath(path, "path", true);
+        return path;
+    }
 
-        var outputDir = parameters.GetOptional<string?>("outputDir");
+    /// <summary>
+    ///     Extracts image parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <param name="path">The source file path.</param>
+    /// <returns>The extraction parameters.</returns>
+    private static ExtractionParameters ExtractImageParameters(OperationParameters parameters, string path)
+    {
+        var outputDir = parameters.GetOptional<string?>("outputDir") ?? Path.GetDirectoryName(path) ?? ".";
         var formatStr = parameters.GetOptional("format", "png");
         var skipDuplicates = parameters.GetOptional("skipDuplicates", false);
-
-        var actualOutputDir = outputDir ?? Path.GetDirectoryName(path) ?? ".";
 
 #pragma warning disable CA1416
         var format = formatStr.ToLower() switch
@@ -45,9 +68,17 @@ public class ExtractPptImageHandler : OperationHandlerBase<Presentation>
         var extension = format.Equals(ImageFormat.Png) ? "png" : "jpg";
 #pragma warning restore CA1416
 
-        Directory.CreateDirectory(actualOutputDir);
+        return new ExtractionParameters(outputDir, format, extension, skipDuplicates);
+    }
 
-        var presentation = context.Document;
+    /// <summary>
+    ///     Extracts all images from the presentation.
+    /// </summary>
+    /// <param name="presentation">The presentation to extract images from.</param>
+    /// <param name="p">The extraction parameters.</param>
+    /// <returns>A tuple containing the extracted count and skipped count.</returns>
+    private static (int count, int skippedCount) ExtractAllImages(Presentation presentation, ExtractionParameters p)
+    {
         var count = 0;
         var skippedCount = 0;
         var exportedHashes = new HashSet<string>();
@@ -59,30 +90,63 @@ public class ExtractPptImageHandler : OperationHandlerBase<Presentation>
             foreach (var shape in slide.Shapes)
                 if (shape is PictureFrame { PictureFormat.Picture.Image: not null } pic)
                 {
-                    var image = pic.PictureFormat.Picture.Image;
-
-                    if (skipDuplicates)
-                    {
-                        var hash = PptImageHelper.ComputeImageHash(image.BinaryData);
-                        if (!exportedHashes.Add(hash))
-                        {
-                            skippedCount++;
-                            continue;
-                        }
-                    }
-
-                    var fileName = Path.Combine(actualOutputDir, $"slide{slideNum}_img{++count}.{extension}");
-                    var systemImage = image.SystemImage;
-#pragma warning disable CA1416
-                    systemImage.Save(fileName, format);
-#pragma warning restore CA1416
+                    var extracted = TryExtractImage(pic, slideNum, ref count, p, exportedHashes);
+                    if (!extracted) skippedCount++;
                 }
         }
 
-        var result = $"Extracted {count} images. Output: {Path.GetFullPath(actualOutputDir)}";
-        if (skipDuplicates && skippedCount > 0)
-            result += $" (skipped {skippedCount} duplicates)";
-
-        return Success(result);
+        return (count, skippedCount);
     }
+
+    /// <summary>
+    ///     Tries to extract an image from a picture frame.
+    /// </summary>
+    /// <param name="pic">The picture frame.</param>
+    /// <param name="slideNum">The slide number.</param>
+    /// <param name="count">The current extraction count.</param>
+    /// <param name="p">The extraction parameters.</param>
+    /// <param name="exportedHashes">The set of exported image hashes.</param>
+    /// <returns>True if the image was extracted, false if skipped.</returns>
+    private static bool TryExtractImage(PictureFrame pic, int slideNum, ref int count,
+        ExtractionParameters p, HashSet<string> exportedHashes)
+    {
+        var image = pic.PictureFormat.Picture.Image;
+
+        if (p.SkipDuplicates)
+        {
+            var hash = PptImageHelper.ComputeImageHash(image.BinaryData);
+            if (!exportedHashes.Add(hash))
+                return false;
+        }
+
+        var fileName = Path.Combine(p.OutputDir, $"slide{slideNum}_img{++count}.{p.Extension}");
+#pragma warning disable CA1416
+        image.SystemImage.Save(fileName, p.Format);
+#pragma warning restore CA1416
+        return true;
+    }
+
+    /// <summary>
+    ///     Builds the result message.
+    /// </summary>
+    /// <param name="count">The number of extracted images.</param>
+    /// <param name="skippedCount">The number of skipped duplicates.</param>
+    /// <param name="p">The extraction parameters.</param>
+    /// <returns>The result message.</returns>
+    private static string BuildResultMessage(int count, int skippedCount, ExtractionParameters p)
+    {
+        var result = $"Extracted {count} images. Output: {Path.GetFullPath(p.OutputDir)}";
+        if (p.SkipDuplicates && skippedCount > 0)
+            result += $" (skipped {skippedCount} duplicates)";
+        return result;
+    }
+
+    /// <summary>
+    ///     Record for holding extraction parameters.
+    /// </summary>
+    /// <param name="OutputDir">The output directory.</param>
+    /// <param name="Format">The image format.</param>
+    /// <param name="Extension">The file extension.</param>
+    /// <param name="SkipDuplicates">Whether to skip duplicate images.</param>
+    private record ExtractionParameters(string OutputDir, ImageFormat Format, string Extension, bool SkipDuplicates);
 }

@@ -119,7 +119,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -137,38 +137,92 @@ Usage examples:
     {
         var parameters = new OperationParameters();
 
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "create":
-                if (path != null) parameters.Set("path", path);
-                if (outputPath != null) parameters.Set("outputPath", outputPath);
-                if (sheetName != null) parameters.Set("sheetName", sheetName);
-                break;
+            "create" => BuildCreateParameters(parameters, path, outputPath, sheetName),
+            "convert" => BuildConvertParameters(parameters, inputPath, sessionId, outputPath, format),
+            "merge" => BuildMergeParameters(parameters, path, outputPath, inputPaths, mergeSheets),
+            "split" => BuildSplitParameters(parameters, inputPath, path, sessionId, outputDirectory, sheetIndices,
+                outputFileNamePattern),
+            _ => parameters
+        };
+    }
 
-            case "convert":
-                if (inputPath != null) parameters.Set("inputPath", inputPath);
-                if (sessionId != null) parameters.Set("sessionId", sessionId);
-                if (outputPath != null) parameters.Set("outputPath", outputPath);
-                if (format != null) parameters.Set("format", format);
-                break;
+    /// <summary>
+    ///     Builds parameters for the create workbook operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters.</param>
+    /// <param name="path">The output file path.</param>
+    /// <param name="outputPath">Alternative output file path.</param>
+    /// <param name="sheetName">The initial sheet name.</param>
+    /// <returns>OperationParameters configured for creating workbook.</returns>
+    private static OperationParameters BuildCreateParameters(OperationParameters parameters, string? path,
+        string? outputPath, string? sheetName)
+    {
+        if (path != null) parameters.Set("path", path);
+        if (outputPath != null) parameters.Set("outputPath", outputPath);
+        if (sheetName != null) parameters.Set("sheetName", sheetName);
+        return parameters;
+    }
 
-            case "merge":
-                if (path != null) parameters.Set("path", path);
-                if (outputPath != null) parameters.Set("outputPath", outputPath);
-                if (inputPaths != null) parameters.Set("inputPaths", inputPaths);
-                parameters.Set("mergeSheets", mergeSheets);
-                break;
+    /// <summary>
+    ///     Builds parameters for the convert workbook operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters.</param>
+    /// <param name="inputPath">The input file path.</param>
+    /// <param name="sessionId">The session ID for in-memory workbook.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="format">The output format.</param>
+    /// <returns>OperationParameters configured for converting workbook.</returns>
+    private static OperationParameters BuildConvertParameters(OperationParameters parameters, string? inputPath,
+        string? sessionId, string? outputPath, string? format)
+    {
+        if (inputPath != null) parameters.Set("inputPath", inputPath);
+        if (sessionId != null) parameters.Set("sessionId", sessionId);
+        if (outputPath != null) parameters.Set("outputPath", outputPath);
+        if (format != null) parameters.Set("format", format);
+        return parameters;
+    }
 
-            case "split":
-                if (inputPath != null) parameters.Set("inputPath", inputPath);
-                if (path != null) parameters.Set("path", path);
-                if (sessionId != null) parameters.Set("sessionId", sessionId);
-                if (outputDirectory != null) parameters.Set("outputDirectory", outputDirectory);
-                if (sheetIndices != null) parameters.Set("sheetIndices", sheetIndices);
-                parameters.Set("outputFileNamePattern", outputFileNamePattern);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the merge workbooks operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters.</param>
+    /// <param name="path">The output file path.</param>
+    /// <param name="outputPath">Alternative output file path.</param>
+    /// <param name="inputPaths">The input file paths to merge.</param>
+    /// <param name="mergeSheets">Whether to merge sheets with the same name.</param>
+    /// <returns>OperationParameters configured for merging workbooks.</returns>
+    private static OperationParameters BuildMergeParameters(OperationParameters parameters, string? path,
+        string? outputPath, string[]? inputPaths, bool mergeSheets)
+    {
+        if (path != null) parameters.Set("path", path);
+        if (outputPath != null) parameters.Set("outputPath", outputPath);
+        if (inputPaths != null) parameters.Set("inputPaths", inputPaths);
+        parameters.Set("mergeSheets", mergeSheets);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the split workbook operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters.</param>
+    /// <param name="inputPath">The input file path.</param>
+    /// <param name="path">Alternative input file path.</param>
+    /// <param name="sessionId">The session ID for in-memory workbook.</param>
+    /// <param name="outputDirectory">The output directory path.</param>
+    /// <param name="sheetIndices">The sheet indices to split.</param>
+    /// <param name="outputFileNamePattern">The output file name pattern.</param>
+    /// <returns>OperationParameters configured for splitting workbook.</returns>
+    private static OperationParameters BuildSplitParameters(OperationParameters parameters, string? inputPath,
+        string? path, string? sessionId, string? outputDirectory, int[]? sheetIndices, string outputFileNamePattern)
+    {
+        if (inputPath != null) parameters.Set("inputPath", inputPath);
+        if (path != null) parameters.Set("path", path);
+        if (sessionId != null) parameters.Set("sessionId", sessionId);
+        if (outputDirectory != null) parameters.Set("outputDirectory", outputDirectory);
+        if (sheetIndices != null) parameters.Set("sheetIndices", sheetIndices);
+        parameters.Set("outputFileNamePattern", outputFileNamePattern);
         return parameters;
     }
 }

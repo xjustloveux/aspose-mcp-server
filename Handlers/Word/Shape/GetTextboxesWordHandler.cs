@@ -22,7 +22,7 @@ public class GetTextboxesWordHandler : OperationHandlerBase<Document>
     /// <returns>Formatted string containing textbox information.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var includeContent = parameters.GetOptional("includeContent", true);
+        var p = ExtractGetTextboxesParameters(parameters);
 
         var doc = context.Document;
         var shapes = WordShapeHelper.FindAllTextboxes(doc);
@@ -46,7 +46,7 @@ public class GetTextboxesWordHandler : OperationHandlerBase<Document>
             result.AppendLine($"Height: {textbox.Height} pt");
             result.AppendLine($"Position: X={textbox.Left}, Y={textbox.Top}");
 
-            if (includeContent)
+            if (p.IncludeContent)
             {
                 var textboxText = textbox.GetText().Trim();
                 if (!string.IsNullOrEmpty(textboxText))
@@ -65,4 +65,13 @@ public class GetTextboxesWordHandler : OperationHandlerBase<Document>
 
         return result.ToString();
     }
+
+    private static GetTextboxesParameters ExtractGetTextboxesParameters(OperationParameters parameters)
+    {
+        var includeContent = parameters.GetOptional("includeContent", true);
+
+        return new GetTextboxesParameters(includeContent);
+    }
+
+    private record GetTextboxesParameters(bool IncludeContent);
 }

@@ -68,34 +68,68 @@ public static class ExcelRangeHelper
 
         if (colCount == 0) return;
 
+        var data2D = Build2DArray(dataArray, rowCount, colCount);
+        worksheet.Cells.ImportTwoDimensionArray(data2D, startRow, startCol);
+        HandleCellReferences(workbook, worksheet, dataArray, startRow, startCol);
+    }
+
+    /// <summary>
+    ///     Builds a 2D object array from a JSON array for importing into Excel.
+    /// </summary>
+    /// <param name="dataArray">The source JSON array.</param>
+    /// <param name="rowCount">The number of rows.</param>
+    /// <param name="colCount">The number of columns.</param>
+    /// <returns>A 2D object array suitable for Excel import.</returns>
+    private static object[,] Build2DArray(JsonArray dataArray, int rowCount, int colCount)
+    {
         var data2D = new object[rowCount, colCount];
 
         for (var i = 0; i < rowCount; i++)
             if (dataArray[i] is JsonArray rowArray)
                 for (var j = 0; j < colCount; j++)
-                    if (j < rowArray.Count)
-                        data2D[i, j] = ValueHelper.ParseValue(rowArray[j]?.GetValue<string>() ?? "");
-                    else
-                        data2D[i, j] = "";
+                    data2D[i, j] = j < rowArray.Count
+                        ? ValueHelper.ParseValue(rowArray[j]?.GetValue<string>() ?? "")
+                        : "";
 
-        worksheet.Cells.ImportTwoDimensionArray(data2D, startRow, startCol);
+        return data2D;
+    }
 
-        // Handle potential cell references
-        for (var i = 0; i < rowCount; i++)
+    /// <summary>
+    ///     Handles cell reference values by formatting them as text to prevent automatic formula interpretation.
+    /// </summary>
+    /// <param name="workbook">The workbook.</param>
+    /// <param name="worksheet">The worksheet.</param>
+    /// <param name="dataArray">The data array.</param>
+    /// <param name="startRow">The starting row.</param>
+    /// <param name="startCol">The starting column.</param>
+    private static void HandleCellReferences(Workbook workbook, Worksheet worksheet, JsonArray dataArray,
+        int startRow, int startCol)
+    {
+        for (var i = 0; i < dataArray.Count; i++)
             if (dataArray[i] is JsonArray rowArray)
                 for (var j = 0; j < rowArray.Count; j++)
                 {
                     var cellValue = rowArray[j]?.GetValue<string>() ?? "";
-
                     if (LooksLikeCellReference(cellValue) && ValueHelper.ParseValue(cellValue) is string)
-                    {
-                        var cellObj = worksheet.Cells[startRow + i, startCol + j];
-                        var style = workbook.CreateStyle();
-                        style.Number = TextFormatNumber;
-                        cellObj.SetStyle(style);
-                        cellObj.PutValue(cellValue, true);
-                    }
+                        SetCellAsText(workbook, worksheet, startRow + i, startCol + j, cellValue);
                 }
+    }
+
+    /// <summary>
+    ///     Sets a cell value as text format to prevent formula interpretation.
+    /// </summary>
+    /// <param name="workbook">The workbook.</param>
+    /// <param name="worksheet">The worksheet.</param>
+    /// <param name="row">The row index.</param>
+    /// <param name="col">The column index.</param>
+    /// <param name="value">The text value to set.</param>
+    private static void SetCellAsText(Workbook workbook, Worksheet worksheet, int row, int col, string value)
+    {
+        var cellObj = worksheet.Cells[row, col];
+        var style = workbook.CreateStyle();
+        style.Number = TextFormatNumber;
+        cellObj.SetStyle(style);
+        cellObj.PutValue(value, true);
     }
 
     /// <summary>

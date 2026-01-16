@@ -29,21 +29,18 @@ public class ExecuteMailMergeHandler : OperationHandlerBase<Document>
     /// </exception>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var outputPath = parameters.GetRequired<string>("outputPath");
-        var data = parameters.GetOptional<string?>("data");
-        var dataArray = parameters.GetOptional<string?>("dataArray");
-        var cleanupOptions = parameters.GetOptional<string?>("cleanupOptions");
+        var p = ExtractMailMergeParameters(parameters);
 
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+        SecurityHelper.ValidateFilePath(p.OutputPath, "outputPath", true);
 
         JsonObject? dataObject = null;
         JsonArray? dataArrayObject = null;
 
-        if (!string.IsNullOrEmpty(data))
-            dataObject = JsonNode.Parse(data) as JsonObject;
+        if (!string.IsNullOrEmpty(p.Data))
+            dataObject = JsonNode.Parse(p.Data) as JsonObject;
 
-        if (!string.IsNullOrEmpty(dataArray))
-            dataArrayObject = JsonNode.Parse(dataArray) as JsonArray;
+        if (!string.IsNullOrEmpty(p.DataArray))
+            dataArrayObject = JsonNode.Parse(p.DataArray) as JsonArray;
 
         if (dataObject == null && dataArrayObject == null)
             throw new ArgumentException(
@@ -53,15 +50,24 @@ public class ExecuteMailMergeHandler : OperationHandlerBase<Document>
             throw new ArgumentException(
                 "Cannot specify both 'data' and 'dataArray'. Use 'data' for single record or 'dataArray' for multiple records");
 
-        var cleanupOptionsFlags = ParseCleanupOptions(cleanupOptions);
+        var cleanupOptionsFlags = ParseCleanupOptions(p.CleanupOptions);
 
         if (dataArrayObject is { Count: > 0 })
-            return ExecuteMultipleRecords(context, outputPath, dataArrayObject, cleanupOptionsFlags);
+            return ExecuteMultipleRecords(context, p.OutputPath, dataArrayObject, cleanupOptionsFlags);
 
         if (dataObject != null)
-            return ExecuteSingleRecord(context, outputPath, dataObject, cleanupOptionsFlags);
+            return ExecuteSingleRecord(context, p.OutputPath, dataObject, cleanupOptionsFlags);
 
         throw new ArgumentException("No data provided for mail merge");
+    }
+
+    private static MailMergeParameters ExtractMailMergeParameters(OperationParameters parameters)
+    {
+        return new MailMergeParameters(
+            parameters.GetRequired<string>("outputPath"),
+            parameters.GetOptional<string?>("data"),
+            parameters.GetOptional<string?>("dataArray"),
+            parameters.GetOptional<string?>("cleanupOptions"));
     }
 
     /// <summary>
@@ -190,4 +196,10 @@ public class ExecuteMailMergeHandler : OperationHandlerBase<Document>
 
         return options;
     }
+
+    private record MailMergeParameters(
+        string OutputPath,
+        string? Data,
+        string? DataArray,
+        string? CleanupOptions);
 }

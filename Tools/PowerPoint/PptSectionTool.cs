@@ -113,7 +113,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -123,29 +123,54 @@ Usage examples:
         string? newName,
         bool keepSlides)
     {
-        var parameters = new OperationParameters();
-
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "add":
-                if (name != null) parameters.Set("name", name);
-                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
-                break;
+            "add" => BuildAddParameters(name, slideIndex),
+            "rename" => BuildRenameParameters(sectionIndex, newName),
+            "delete" => BuildDeleteParameters(sectionIndex, keepSlides),
+            _ => new OperationParameters()
+        };
+    }
 
-            case "rename":
-                if (sectionIndex.HasValue) parameters.Set("sectionIndex", sectionIndex.Value);
-                if (newName != null) parameters.Set("newName", newName);
-                break;
+    /// <summary>
+    ///     Builds parameters for the add section operation.
+    /// </summary>
+    /// <param name="name">The section name.</param>
+    /// <param name="slideIndex">The start slide index for the section (0-based).</param>
+    /// <returns>OperationParameters configured for adding a section.</returns>
+    private static OperationParameters BuildAddParameters(string? name, int? slideIndex)
+    {
+        var parameters = new OperationParameters();
+        if (name != null) parameters.Set("name", name);
+        if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
+        return parameters;
+    }
 
-            case "delete":
-                if (sectionIndex.HasValue) parameters.Set("sectionIndex", sectionIndex.Value);
-                parameters.Set("keepSlides", keepSlides);
-                break;
+    /// <summary>
+    ///     Builds parameters for the rename section operation.
+    /// </summary>
+    /// <param name="sectionIndex">The section index (0-based).</param>
+    /// <param name="newName">The new section name.</param>
+    /// <returns>OperationParameters configured for renaming a section.</returns>
+    private static OperationParameters BuildRenameParameters(int? sectionIndex, string? newName)
+    {
+        var parameters = new OperationParameters();
+        if (sectionIndex.HasValue) parameters.Set("sectionIndex", sectionIndex.Value);
+        if (newName != null) parameters.Set("newName", newName);
+        return parameters;
+    }
 
-            case "get":
-                break;
-        }
-
+    /// <summary>
+    ///     Builds parameters for the delete section operation.
+    /// </summary>
+    /// <param name="sectionIndex">The section index (0-based).</param>
+    /// <param name="keepSlides">Whether to keep slides in the presentation.</param>
+    /// <returns>OperationParameters configured for deleting a section.</returns>
+    private static OperationParameters BuildDeleteParameters(int? sectionIndex, bool keepSlides)
+    {
+        var parameters = new OperationParameters();
+        if (sectionIndex.HasValue) parameters.Set("sectionIndex", sectionIndex.Value);
+        parameters.Set("keepSlides", keepSlides);
         return parameters;
     }
 }

@@ -26,116 +26,201 @@ public class AddImageWordHandler : OperationHandlerBase<Document>
     /// <returns>Success message with image details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var imagePath = parameters.GetOptional<string?>("imagePath");
-        var width = parameters.GetOptional<double?>("width");
-        var height = parameters.GetOptional<double?>("height");
-        var alignment = parameters.GetOptional("alignment", "left");
-        var textWrapping = parameters.GetOptional("textWrapping", "inline");
-        var caption = parameters.GetOptional<string?>("caption");
-        var captionPosition = parameters.GetOptional("captionPosition", "below");
-        var linkUrl = parameters.GetOptional<string?>("linkUrl");
-        var alternativeText = parameters.GetOptional<string?>("alternativeText");
-        var title = parameters.GetOptional<string?>("title");
-
-        if (string.IsNullOrEmpty(imagePath) || !IOFile.Exists(imagePath))
-            throw new FileNotFoundException($"Image file not found: {imagePath}");
+        var imageParams = ExtractImageParameters(parameters);
+        ValidateImagePath(imageParams.ImagePath);
 
         var doc = context.Document;
         var builder = new DocumentBuilder(doc);
         builder.MoveToDocumentEnd();
 
-        if (!string.IsNullOrEmpty(caption) && captionPosition == "above")
-            WordImageHelper.InsertCaption(builder, caption, alignment);
-
-        WordShape shape;
-        if (textWrapping == "inline")
-        {
-            // For inline images, alignment is controlled by paragraph alignment
-            var paraAlignment = WordImageHelper.GetAlignment(alignment);
-            builder.ParagraphFormat.Alignment = paraAlignment;
-            shape = builder.InsertImage(imagePath);
-
-            if (width.HasValue)
-                shape.Width = width.Value;
-
-            if (height.HasValue)
-                shape.Height = height.Value;
-
-            var currentPara = builder.CurrentParagraph;
-            if (currentPara != null)
-            {
-                currentPara.ParagraphFormat.Alignment = paraAlignment;
-                currentPara.ParagraphFormat.ClearFormatting();
-                currentPara.ParagraphFormat.Alignment = paraAlignment;
-            }
-
-            builder.ParagraphFormat.Alignment = paraAlignment;
-        }
-        else
-        {
-            // For floating images, use shape positioning with relative alignment
-            shape = builder.InsertImage(imagePath);
-            shape.WrapType = WordImageHelper.GetWrapType(textWrapping);
-
-            if (width.HasValue)
-                shape.Width = width.Value;
-
-            if (height.HasValue)
-                shape.Height = height.Value;
-
-            shape.RelativeHorizontalPosition = RelativeHorizontalPosition.Column;
-            shape.RelativeVerticalPosition = RelativeVerticalPosition.Paragraph;
-            if (alignment == "center")
-                shape.HorizontalAlignment = HorizontalAlignment.Center;
-            else if (alignment == "right")
-                shape.HorizontalAlignment = HorizontalAlignment.Right;
-            else
-                shape.HorizontalAlignment = HorizontalAlignment.Left;
-        }
-
-        if (!string.IsNullOrEmpty(linkUrl))
-            shape.HRef = linkUrl;
-
-        if (!string.IsNullOrEmpty(alternativeText))
-            shape.AlternativeText = alternativeText;
-
-        if (!string.IsNullOrEmpty(title))
-            shape.Title = title;
-        if (!string.IsNullOrEmpty(caption) && captionPosition == "below")
-        {
-            builder.Writeln(); // New line after image
-            WordImageHelper.InsertCaption(builder, caption, alignment);
-        }
-
-        if (textWrapping != "inline")
-        {
-            builder.ParagraphFormat.Alignment = ParagraphAlignment.Left;
-        }
-        else
-        {
-            // For inline images, ensure the paragraph alignment is preserved
-            var currentPara = builder.CurrentParagraph;
-            if (currentPara != null)
-            {
-                var paraAlignment = WordImageHelper.GetAlignment(alignment);
-                currentPara.ParagraphFormat.Alignment = paraAlignment;
-            }
-        }
+        InsertCaptionIfAbove(builder, imageParams);
+        var shape = InsertImage(builder, imageParams);
+        ApplyShapeProperties(shape, imageParams);
+        InsertCaptionIfBelow(builder, imageParams);
+        FinalizeAlignment(builder, imageParams);
 
         MarkModified(context);
+        return BuildResultMessage(imageParams);
+    }
 
-        var result = "Image added successfully\n";
-        result += $"Image: {Path.GetFileName(imagePath)}\n";
-        if (width.HasValue || height.HasValue)
-            result +=
-                $"Size: {(width.HasValue ? width.Value.ToString(CultureInfo.InvariantCulture) : "auto")} x {(height.HasValue ? height.Value.ToString(CultureInfo.InvariantCulture) : "auto")} pt\n";
-        result += $"Alignment: {alignment}\n";
-        result += $"Text wrapping: {textWrapping}\n";
-        if (!string.IsNullOrEmpty(linkUrl)) result += $"Hyperlink: {linkUrl}\n";
-        if (!string.IsNullOrEmpty(alternativeText)) result += $"Alt text: {alternativeText}\n";
-        if (!string.IsNullOrEmpty(title)) result += $"Title: {title}\n";
-        if (!string.IsNullOrEmpty(caption)) result += $"Caption: {caption} ({captionPosition})\n";
+    /// <summary>
+    ///     Extracts image parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted image parameters.</returns>
+    private static ImageParameters ExtractImageParameters(OperationParameters parameters)
+    {
+        return new ImageParameters(
+            parameters.GetOptional<string?>("imagePath"),
+            parameters.GetOptional<double?>("width"),
+            parameters.GetOptional<double?>("height"),
+            parameters.GetOptional("alignment", "left"),
+            parameters.GetOptional("textWrapping", "inline"),
+            parameters.GetOptional<string?>("caption"),
+            parameters.GetOptional("captionPosition", "below"),
+            parameters.GetOptional<string?>("linkUrl"),
+            parameters.GetOptional<string?>("alternativeText"),
+            parameters.GetOptional<string?>("title")
+        );
+    }
 
+    /// <summary>
+    ///     Validates that the image path exists.
+    /// </summary>
+    /// <param name="imagePath">The image path to validate.</param>
+    /// <exception cref="FileNotFoundException">Thrown when the image file is not found.</exception>
+    private static void ValidateImagePath(string? imagePath)
+    {
+        if (string.IsNullOrEmpty(imagePath) || !IOFile.Exists(imagePath))
+            throw new FileNotFoundException($"Image file not found: {imagePath}");
+    }
+
+    /// <summary>
+    ///     Inserts a caption above the image if configured.
+    /// </summary>
+    /// <param name="builder">The document builder.</param>
+    /// <param name="p">The image parameters.</param>
+    private static void InsertCaptionIfAbove(DocumentBuilder builder, ImageParameters p)
+    {
+        if (!string.IsNullOrEmpty(p.Caption) && p.CaptionPosition == "above")
+            WordImageHelper.InsertCaption(builder, p.Caption, p.Alignment);
+    }
+
+    /// <summary>
+    ///     Inserts the image into the document.
+    /// </summary>
+    /// <param name="builder">The document builder.</param>
+    /// <param name="p">The image parameters.</param>
+    /// <returns>The inserted shape.</returns>
+    private static WordShape InsertImage(DocumentBuilder builder, ImageParameters p)
+    {
+        return p.TextWrapping == "inline"
+            ? InsertInlineImage(builder, p)
+            : InsertFloatingImage(builder, p);
+    }
+
+    /// <summary>
+    ///     Inserts an inline image.
+    /// </summary>
+    /// <param name="builder">The document builder.</param>
+    /// <param name="p">The image parameters.</param>
+    /// <returns>The inserted shape.</returns>
+    private static WordShape InsertInlineImage(DocumentBuilder builder, ImageParameters p)
+    {
+        var paraAlignment = WordImageHelper.GetAlignment(p.Alignment);
+        builder.ParagraphFormat.Alignment = paraAlignment;
+        var shape = builder.InsertImage(p.ImagePath);
+
+        if (p.Width.HasValue) shape.Width = p.Width.Value;
+        if (p.Height.HasValue) shape.Height = p.Height.Value;
+
+        var currentPara = builder.CurrentParagraph;
+        if (currentPara != null)
+        {
+            currentPara.ParagraphFormat.Alignment = paraAlignment;
+            currentPara.ParagraphFormat.ClearFormatting();
+            currentPara.ParagraphFormat.Alignment = paraAlignment;
+        }
+
+        builder.ParagraphFormat.Alignment = paraAlignment;
+        return shape;
+    }
+
+    /// <summary>
+    ///     Inserts a floating image with text wrapping.
+    /// </summary>
+    /// <param name="builder">The document builder.</param>
+    /// <param name="p">The image parameters.</param>
+    /// <returns>The inserted shape.</returns>
+    private static WordShape InsertFloatingImage(DocumentBuilder builder, ImageParameters p)
+    {
+        var shape = builder.InsertImage(p.ImagePath);
+        shape.WrapType = WordImageHelper.GetWrapType(p.TextWrapping);
+
+        if (p.Width.HasValue) shape.Width = p.Width.Value;
+        if (p.Height.HasValue) shape.Height = p.Height.Value;
+
+        shape.RelativeHorizontalPosition = RelativeHorizontalPosition.Column;
+        shape.RelativeVerticalPosition = RelativeVerticalPosition.Paragraph;
+        shape.HorizontalAlignment = p.Alignment switch
+        {
+            "center" => HorizontalAlignment.Center,
+            "right" => HorizontalAlignment.Right,
+            _ => HorizontalAlignment.Left
+        };
+        return shape;
+    }
+
+    /// <summary>
+    ///     Applies additional properties to the shape.
+    /// </summary>
+    /// <param name="shape">The shape to configure.</param>
+    /// <param name="p">The image parameters.</param>
+    private static void ApplyShapeProperties(WordShape shape, ImageParameters p)
+    {
+        if (!string.IsNullOrEmpty(p.LinkUrl)) shape.HRef = p.LinkUrl;
+        if (!string.IsNullOrEmpty(p.AlternativeText)) shape.AlternativeText = p.AlternativeText;
+        if (!string.IsNullOrEmpty(p.Title)) shape.Title = p.Title;
+    }
+
+    /// <summary>
+    ///     Inserts a caption below the image if configured.
+    /// </summary>
+    /// <param name="builder">The document builder.</param>
+    /// <param name="p">The image parameters.</param>
+    private static void InsertCaptionIfBelow(DocumentBuilder builder, ImageParameters p)
+    {
+        if (!string.IsNullOrEmpty(p.Caption) && p.CaptionPosition == "below")
+        {
+            builder.Writeln();
+            WordImageHelper.InsertCaption(builder, p.Caption, p.Alignment);
+        }
+    }
+
+    /// <summary>
+    ///     Finalizes the paragraph alignment after image insertion.
+    /// </summary>
+    /// <param name="builder">The document builder.</param>
+    /// <param name="p">The image parameters.</param>
+    private static void FinalizeAlignment(DocumentBuilder builder, ImageParameters p)
+    {
+        if (p.TextWrapping != "inline")
+            builder.ParagraphFormat.Alignment = ParagraphAlignment.Left;
+        else if (builder.CurrentParagraph != null)
+            builder.CurrentParagraph.ParagraphFormat.Alignment = WordImageHelper.GetAlignment(p.Alignment);
+    }
+
+    /// <summary>
+    ///     Builds the result message for a successful image addition.
+    /// </summary>
+    /// <param name="p">The image parameters.</param>
+    /// <returns>The formatted result message.</returns>
+    private static string BuildResultMessage(ImageParameters p)
+    {
+        var result = $"Image added successfully\nImage: {Path.GetFileName(p.ImagePath)}\n";
+        if (p.Width.HasValue || p.Height.HasValue)
+            result += $"Size: {(p.Width.HasValue ? p.Width.Value.ToString(CultureInfo.InvariantCulture) : "auto")} x " +
+                      $"{(p.Height.HasValue ? p.Height.Value.ToString(CultureInfo.InvariantCulture) : "auto")} pt\n";
+        result += $"Alignment: {p.Alignment}\nText wrapping: {p.TextWrapping}\n";
+        if (!string.IsNullOrEmpty(p.LinkUrl)) result += $"Hyperlink: {p.LinkUrl}\n";
+        if (!string.IsNullOrEmpty(p.AlternativeText)) result += $"Alt text: {p.AlternativeText}\n";
+        if (!string.IsNullOrEmpty(p.Title)) result += $"Title: {p.Title}\n";
+        if (!string.IsNullOrEmpty(p.Caption)) result += $"Caption: {p.Caption} ({p.CaptionPosition})\n";
         return result.TrimEnd();
     }
+
+    /// <summary>
+    ///     Record to hold image insertion parameters.
+    /// </summary>
+    private record ImageParameters(
+        string? ImagePath,
+        double? Width,
+        double? Height,
+        string Alignment,
+        string TextWrapping,
+        string? Caption,
+        string CaptionPosition,
+        string? LinkUrl,
+        string? AlternativeText,
+        string? Title);
 }

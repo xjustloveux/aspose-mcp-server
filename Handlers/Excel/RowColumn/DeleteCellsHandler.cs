@@ -23,15 +23,13 @@ public class DeleteCellsHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with deletion details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var range = parameters.GetRequired<string>("range");
-        var shiftDirection = parameters.GetRequired<string>("shiftDirection");
+        var p = ExtractDeleteCellsParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, p.SheetIndex);
 
-        var rangeObj = ExcelHelper.CreateRange(worksheet.Cells, range);
-        var shiftType = string.Equals(shiftDirection, "left", StringComparison.OrdinalIgnoreCase)
+        var rangeObj = ExcelHelper.CreateRange(worksheet.Cells, p.Range);
+        var shiftType = string.Equals(p.ShiftDirection, "left", StringComparison.OrdinalIgnoreCase)
             ? ShiftType.Left
             : ShiftType.Up;
 
@@ -44,6 +42,17 @@ public class DeleteCellsHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Cells deleted in range {range}, shifted {shiftDirection}.");
+        return Success($"Cells deleted in range {p.Range}, shifted {p.ShiftDirection}.");
     }
+
+    private static DeleteCellsParameters ExtractDeleteCellsParameters(OperationParameters parameters)
+    {
+        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
+        var range = parameters.GetRequired<string>("range");
+        var shiftDirection = parameters.GetRequired<string>("shiftDirection");
+
+        return new DeleteCellsParameters(sheetIndex, range, shiftDirection);
+    }
+
+    private record DeleteCellsParameters(int SheetIndex, string Range, string ShiftDirection);
 }

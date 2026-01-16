@@ -20,16 +20,16 @@ public class UnprotectExcelHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex, password
     /// </param>
     /// <returns>Success message with unprotection details.</returns>
+    /// <exception cref="ArgumentException">Thrown when incorrect password is provided.</exception>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional<int?>("sheetIndex");
-        var password = parameters.GetOptional<string?>("password");
+        var p = ExtractUnprotectExcelParameters(parameters);
 
         var workbook = context.Document;
 
-        if (sheetIndex.HasValue)
+        if (p.SheetIndex.HasValue)
         {
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex.Value);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, p.SheetIndex.Value);
 
             if (!worksheet.IsProtected)
             {
@@ -39,7 +39,7 @@ public class UnprotectExcelHandler : OperationHandlerBase<Workbook>
 
             try
             {
-                worksheet.Unprotect(password);
+                worksheet.Unprotect(p.Password);
             }
             catch (Exception ex)
             {
@@ -51,8 +51,28 @@ public class UnprotectExcelHandler : OperationHandlerBase<Workbook>
             return Success($"Worksheet '{worksheet.Name}' protection removed successfully.");
         }
 
-        workbook.Unprotect(password);
+        workbook.Unprotect(p.Password);
         MarkModified(context);
         return Success("Workbook protection removed successfully.");
     }
+
+    /// <summary>
+    ///     Extracts parameters for UnprotectExcel operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>Extracted parameters.</returns>
+    private static UnprotectExcelParameters ExtractUnprotectExcelParameters(OperationParameters parameters)
+    {
+        return new UnprotectExcelParameters(
+            parameters.GetOptional<int?>("sheetIndex"),
+            parameters.GetOptional<string?>("password")
+        );
+    }
+
+    /// <summary>
+    ///     Parameters for UnprotectExcel operation.
+    /// </summary>
+    /// <param name="SheetIndex">The sheet index (optional).</param>
+    /// <param name="Password">The password for unprotection (optional).</param>
+    private record UnprotectExcelParameters(int? SheetIndex, string? Password);
 }

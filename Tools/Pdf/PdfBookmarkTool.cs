@@ -108,7 +108,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -116,29 +116,54 @@ Usage examples:
         int? pageIndex,
         int? bookmarkIndex)
     {
-        var parameters = new OperationParameters();
-
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "add":
-                if (title != null) parameters.Set("title", title);
-                if (pageIndex.HasValue) parameters.Set("pageIndex", pageIndex.Value);
-                break;
+            "add" => BuildAddParameters(title, pageIndex),
+            "delete" => BuildDeleteParameters(bookmarkIndex),
+            "edit" => BuildEditParameters(bookmarkIndex, title, pageIndex),
+            _ => new OperationParameters()
+        };
+    }
 
-            case "delete":
-                if (bookmarkIndex.HasValue) parameters.Set("bookmarkIndex", bookmarkIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the add bookmark operation.
+    /// </summary>
+    /// <param name="title">The bookmark title.</param>
+    /// <param name="pageIndex">The target page index (1-based).</param>
+    /// <returns>OperationParameters configured for adding a bookmark.</returns>
+    private static OperationParameters BuildAddParameters(string? title, int? pageIndex)
+    {
+        var parameters = new OperationParameters();
+        if (title != null) parameters.Set("title", title);
+        if (pageIndex.HasValue) parameters.Set("pageIndex", pageIndex.Value);
+        return parameters;
+    }
 
-            case "edit":
-                if (bookmarkIndex.HasValue) parameters.Set("bookmarkIndex", bookmarkIndex.Value);
-                if (title != null) parameters.Set("title", title);
-                if (pageIndex.HasValue) parameters.Set("pageIndex", pageIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the delete bookmark operation.
+    /// </summary>
+    /// <param name="bookmarkIndex">The bookmark index (1-based) to delete.</param>
+    /// <returns>OperationParameters configured for deleting a bookmark.</returns>
+    private static OperationParameters BuildDeleteParameters(int? bookmarkIndex)
+    {
+        var parameters = new OperationParameters();
+        if (bookmarkIndex.HasValue) parameters.Set("bookmarkIndex", bookmarkIndex.Value);
+        return parameters;
+    }
 
-            case "get":
-                break;
-        }
-
+    /// <summary>
+    ///     Builds parameters for the edit bookmark operation.
+    /// </summary>
+    /// <param name="bookmarkIndex">The bookmark index (1-based) to edit.</param>
+    /// <param name="title">The new bookmark title.</param>
+    /// <param name="pageIndex">The new target page index (1-based).</param>
+    /// <returns>OperationParameters configured for editing a bookmark.</returns>
+    private static OperationParameters BuildEditParameters(int? bookmarkIndex, string? title, int? pageIndex)
+    {
+        var parameters = new OperationParameters();
+        if (bookmarkIndex.HasValue) parameters.Set("bookmarkIndex", bookmarkIndex.Value);
+        if (title != null) parameters.Set("title", title);
+        if (pageIndex.HasValue) parameters.Set("pageIndex", pageIndex.Value);
         return parameters;
     }
 }

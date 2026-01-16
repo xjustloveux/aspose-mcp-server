@@ -106,7 +106,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -115,21 +115,42 @@ Usage examples:
         string? imagePath,
         bool applyToAll)
     {
+        return operation.ToLowerInvariant() switch
+        {
+            "set" => BuildSetParameters(slideIndex, color, imagePath, applyToAll),
+            "get" => BuildGetParameters(slideIndex),
+            _ => new OperationParameters()
+        };
+    }
+
+    /// <summary>
+    ///     Builds parameters for the set background operation.
+    /// </summary>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <param name="color">Hex color value for background.</param>
+    /// <param name="imagePath">Path to background image.</param>
+    /// <param name="applyToAll">Whether to apply background to all slides.</param>
+    /// <returns>OperationParameters configured for setting background.</returns>
+    private static OperationParameters BuildSetParameters(int slideIndex, string? color, string? imagePath,
+        bool applyToAll)
+    {
         var parameters = new OperationParameters();
         parameters.Set("slideIndex", slideIndex);
+        if (color != null) parameters.Set("color", color);
+        if (imagePath != null) parameters.Set("imagePath", imagePath);
+        parameters.Set("applyToAll", applyToAll);
+        return parameters;
+    }
 
-        switch (operation.ToLowerInvariant())
-        {
-            case "set":
-                if (color != null) parameters.Set("color", color);
-                if (imagePath != null) parameters.Set("imagePath", imagePath);
-                parameters.Set("applyToAll", applyToAll);
-                break;
-
-            case "get":
-                break;
-        }
-
+    /// <summary>
+    ///     Builds parameters for the get background operation.
+    /// </summary>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <returns>OperationParameters configured for getting background info.</returns>
+    private static OperationParameters BuildGetParameters(int slideIndex)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("slideIndex", slideIndex);
         return parameters;
     }
 }

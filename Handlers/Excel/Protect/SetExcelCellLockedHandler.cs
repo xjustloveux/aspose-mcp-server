@@ -21,23 +21,22 @@ public class SetExcelCellLockedHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0), locked (default: false)
     /// </param>
     /// <returns>Success message with cell lock status details.</returns>
+    /// <exception cref="ArgumentException">Thrown when range is empty or null.</exception>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var range = parameters.GetRequired<string>("range");
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var locked = parameters.GetOptional("locked", false);
+        var p = ExtractSetExcelCellLockedParameters(parameters);
 
-        if (string.IsNullOrEmpty(range))
+        if (string.IsNullOrEmpty(p.Range))
             throw new ArgumentException("range is required for set_cell_locked operation");
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, p.SheetIndex);
         var cells = worksheet.Cells;
 
-        var cellRange = ExcelHelper.CreateRange(cells, range);
+        var cellRange = ExcelHelper.CreateRange(cells, p.Range);
 
         var style = workbook.CreateStyle();
-        style.IsLocked = locked;
+        style.IsLocked = p.Locked;
 
         var styleFlag = new StyleFlag { Locked = true };
         cellRange.ApplyStyle(style, styleFlag);
@@ -45,6 +44,28 @@ public class SetExcelCellLockedHandler : OperationHandlerBase<Workbook>
         MarkModified(context);
 
         return Success(
-            $"Cell lock status set to {(locked ? "locked" : "unlocked")} for range {range} in sheet {sheetIndex}.");
+            $"Cell lock status set to {(p.Locked ? "locked" : "unlocked")} for range {p.Range} in sheet {p.SheetIndex}.");
     }
+
+    /// <summary>
+    ///     Extracts parameters for SetExcelCellLocked operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>Extracted parameters.</returns>
+    private static SetExcelCellLockedParameters ExtractSetExcelCellLockedParameters(OperationParameters parameters)
+    {
+        return new SetExcelCellLockedParameters(
+            parameters.GetRequired<string>("range"),
+            parameters.GetOptional("sheetIndex", 0),
+            parameters.GetOptional("locked", false)
+        );
+    }
+
+    /// <summary>
+    ///     Parameters for SetExcelCellLocked operation.
+    /// </summary>
+    /// <param name="Range">The cell range to lock/unlock.</param>
+    /// <param name="SheetIndex">The sheet index.</param>
+    /// <param name="Locked">Whether to lock the cells.</param>
+    private record SetExcelCellLockedParameters(string Range, int SheetIndex, bool Locked);
 }

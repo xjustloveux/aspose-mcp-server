@@ -24,17 +24,14 @@ public class AddExcelPivotTableHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with add details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var sourceRange = parameters.GetRequired<string>("sourceRange");
-        var destCell = parameters.GetRequired<string>("destCell");
-        var name = parameters.GetOptional<string?>("name");
+        var p = ExtractAddPivotTableParameters(parameters);
 
-        var pivotName = name ?? "PivotTable1";
+        var pivotName = p.Name ?? "PivotTable1";
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, p.SheetIndex);
 
         var pivotTables = worksheet.PivotTables;
-        var pivotIndex = pivotTables.Add($"={worksheet.Name}!{sourceRange}", destCell, pivotName);
+        var pivotIndex = pivotTables.Add($"={worksheet.Name}!{p.SourceRange}", p.DestCell, pivotName);
         var pivotTable = pivotTables[pivotIndex];
 
         pivotTable.AddFieldToArea(PivotFieldType.Row, 0);
@@ -46,4 +43,16 @@ public class AddExcelPivotTableHandler : OperationHandlerBase<Workbook>
 
         return Success($"Pivot table '{pivotName}' added to worksheet.");
     }
+
+    private static AddPivotTableParameters ExtractAddPivotTableParameters(OperationParameters parameters)
+    {
+        return new AddPivotTableParameters(
+            parameters.GetOptional("sheetIndex", 0),
+            parameters.GetRequired<string>("sourceRange"),
+            parameters.GetRequired<string>("destCell"),
+            parameters.GetOptional<string?>("name")
+        );
+    }
+
+    private record AddPivotTableParameters(int SheetIndex, string SourceRange, string DestCell, string? Name);
 }

@@ -177,7 +177,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -205,67 +205,174 @@ Usage examples:
     {
         var parameters = new OperationParameters();
 
-        switch (operation)
+        return operation switch
         {
-            case "insert_field":
-                if (fieldType != null) parameters.Set("fieldType", fieldType);
-                if (fieldArgument != null) parameters.Set("fieldArgument", fieldArgument);
-                if (paragraphIndex.HasValue) parameters.Set("paragraphIndex", paragraphIndex.Value);
-                parameters.Set("insertAtStart", insertAtStart);
-                break;
+            "insert_field" => BuildInsertFieldParameters(parameters, fieldType, fieldArgument, paragraphIndex,
+                insertAtStart),
+            "edit_field" => BuildEditFieldParameters(parameters, fieldIndex, fieldCode, lockField, unlockField,
+                updateField),
+            "delete_field" => BuildDeleteFieldParameters(parameters, fieldIndex, keepResult),
+            "update_field" => BuildUpdateFieldParameters(parameters, fieldIndex, updateAll),
+            "get_fields" => BuildGetFieldsParameters(parameters, includeCode, includeResult),
+            "get_field_detail" => BuildFieldIndexParameters(parameters, fieldIndex),
+            "add_form_field" => BuildAddFormFieldParameters(parameters, formFieldType, fieldName, defaultValue, options,
+                checkedValue),
+            "edit_form_field" =>
+                BuildEditFormFieldParameters(parameters, fieldName, value, checkedValue, selectedIndex),
+            "delete_form_field" => BuildDeleteFormFieldParameters(parameters, fieldName, fieldNames),
+            _ => parameters
+        };
+    }
 
-            case "edit_field":
-                if (fieldIndex.HasValue) parameters.Set("fieldIndex", fieldIndex.Value);
-                if (fieldCode != null) parameters.Set("fieldCode", fieldCode);
-                if (lockField.HasValue) parameters.Set("lockField", lockField.Value);
-                if (unlockField.HasValue) parameters.Set("unlockField", unlockField.Value);
-                parameters.Set("updateField", updateField);
-                break;
+    /// <summary>
+    ///     Builds parameters for the insert field operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="fieldType">The field type (e.g., 'DATE', 'TIME', 'PAGE', 'NUMPAGES', 'AUTHOR').</param>
+    /// <param name="fieldArgument">The field argument.</param>
+    /// <param name="paragraphIndex">The paragraph index (0-based, -1 for document end).</param>
+    /// <param name="insertAtStart">Whether to insert at start of paragraph.</param>
+    /// <returns>OperationParameters configured for the insert field operation.</returns>
+    private static OperationParameters BuildInsertFieldParameters(OperationParameters parameters, string? fieldType,
+        string? fieldArgument, int? paragraphIndex, bool insertAtStart)
+    {
+        if (fieldType != null) parameters.Set("fieldType", fieldType);
+        if (fieldArgument != null) parameters.Set("fieldArgument", fieldArgument);
+        if (paragraphIndex.HasValue) parameters.Set("paragraphIndex", paragraphIndex.Value);
+        parameters.Set("insertAtStart", insertAtStart);
+        return parameters;
+    }
 
-            case "delete_field":
-                if (fieldIndex.HasValue) parameters.Set("fieldIndex", fieldIndex.Value);
-                parameters.Set("keepResult", keepResult);
-                break;
+    /// <summary>
+    ///     Builds parameters for the edit field operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="fieldIndex">The field index (0-based).</param>
+    /// <param name="fieldCode">The new field code.</param>
+    /// <param name="lockField">Whether to lock the field.</param>
+    /// <param name="unlockField">Whether to unlock the field.</param>
+    /// <param name="updateField">Whether to update field after editing.</param>
+    /// <returns>OperationParameters configured for the edit field operation.</returns>
+    private static OperationParameters BuildEditFieldParameters(OperationParameters parameters, int? fieldIndex,
+        string? fieldCode, bool? lockField, bool? unlockField, bool updateField)
+    {
+        if (fieldIndex.HasValue) parameters.Set("fieldIndex", fieldIndex.Value);
+        if (fieldCode != null) parameters.Set("fieldCode", fieldCode);
+        if (lockField.HasValue) parameters.Set("lockField", lockField.Value);
+        if (unlockField.HasValue) parameters.Set("unlockField", unlockField.Value);
+        parameters.Set("updateField", updateField);
+        return parameters;
+    }
 
-            case "update_field":
-                if (fieldIndex.HasValue) parameters.Set("fieldIndex", fieldIndex.Value);
-                if (updateAll.HasValue) parameters.Set("updateAll", updateAll.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the delete field operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="fieldIndex">The field index (0-based).</param>
+    /// <param name="keepResult">Whether to keep field result text after deletion.</param>
+    /// <returns>OperationParameters configured for the delete field operation.</returns>
+    private static OperationParameters BuildDeleteFieldParameters(OperationParameters parameters, int? fieldIndex,
+        bool keepResult)
+    {
+        if (fieldIndex.HasValue) parameters.Set("fieldIndex", fieldIndex.Value);
+        parameters.Set("keepResult", keepResult);
+        return parameters;
+    }
 
-            case "get_fields":
-                parameters.Set("includeCode", includeCode);
-                parameters.Set("includeResult", includeResult);
-                break;
+    /// <summary>
+    ///     Builds parameters for the update field operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="fieldIndex">The field index (0-based).</param>
+    /// <param name="updateAll">Whether to update all fields.</param>
+    /// <returns>OperationParameters configured for the update field operation.</returns>
+    private static OperationParameters BuildUpdateFieldParameters(OperationParameters parameters, int? fieldIndex,
+        bool? updateAll)
+    {
+        if (fieldIndex.HasValue) parameters.Set("fieldIndex", fieldIndex.Value);
+        if (updateAll.HasValue) parameters.Set("updateAll", updateAll.Value);
+        return parameters;
+    }
 
-            case "get_field_detail":
-                if (fieldIndex.HasValue) parameters.Set("fieldIndex", fieldIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the get fields operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="includeCode">Whether to include field code in results.</param>
+    /// <param name="includeResult">Whether to include field result in results.</param>
+    /// <returns>OperationParameters configured for the get fields operation.</returns>
+    private static OperationParameters BuildGetFieldsParameters(OperationParameters parameters, bool includeCode,
+        bool includeResult)
+    {
+        parameters.Set("includeCode", includeCode);
+        parameters.Set("includeResult", includeResult);
+        return parameters;
+    }
 
-            case "add_form_field":
-                if (formFieldType != null) parameters.Set("formFieldType", formFieldType);
-                if (fieldName != null) parameters.Set("fieldName", fieldName);
-                if (defaultValue != null) parameters.Set("defaultValue", defaultValue);
-                if (options != null) parameters.Set("options", options);
-                if (checkedValue.HasValue) parameters.Set("checkedValue", checkedValue.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for field index-based operations (get_field_detail).
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="fieldIndex">The field index (0-based).</param>
+    /// <returns>OperationParameters configured for field index-based operations.</returns>
+    private static OperationParameters BuildFieldIndexParameters(OperationParameters parameters, int? fieldIndex)
+    {
+        if (fieldIndex.HasValue) parameters.Set("fieldIndex", fieldIndex.Value);
+        return parameters;
+    }
 
-            case "edit_form_field":
-                if (fieldName != null) parameters.Set("fieldName", fieldName);
-                if (value != null) parameters.Set("value", value);
-                if (checkedValue.HasValue) parameters.Set("checkedValue", checkedValue.Value);
-                if (selectedIndex.HasValue) parameters.Set("selectedIndex", selectedIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the add form field operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="formFieldType">The form field type: 'TextInput', 'CheckBox', 'DropDown'.</param>
+    /// <param name="fieldName">The field name.</param>
+    /// <param name="defaultValue">The default value.</param>
+    /// <param name="options">The options for dropdown fields.</param>
+    /// <param name="checkedValue">The checked state for checkbox fields.</param>
+    /// <returns>OperationParameters configured for the add form field operation.</returns>
+    private static OperationParameters BuildAddFormFieldParameters(OperationParameters parameters,
+        string? formFieldType, string? fieldName, string? defaultValue, string[]? options, bool? checkedValue)
+    {
+        if (formFieldType != null) parameters.Set("formFieldType", formFieldType);
+        if (fieldName != null) parameters.Set("fieldName", fieldName);
+        if (defaultValue != null) parameters.Set("defaultValue", defaultValue);
+        if (options != null) parameters.Set("options", options);
+        if (checkedValue.HasValue) parameters.Set("checkedValue", checkedValue.Value);
+        return parameters;
+    }
 
-            case "delete_form_field":
-                if (fieldName != null) parameters.Set("fieldName", fieldName);
-                if (fieldNames != null) parameters.Set("fieldNames", fieldNames);
-                break;
+    /// <summary>
+    ///     Builds parameters for the edit form field operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="fieldName">The field name.</param>
+    /// <param name="value">The new value for text input fields.</param>
+    /// <param name="checkedValue">The checked state for checkbox fields.</param>
+    /// <param name="selectedIndex">The selected option index for dropdown fields.</param>
+    /// <returns>OperationParameters configured for the edit form field operation.</returns>
+    private static OperationParameters BuildEditFormFieldParameters(OperationParameters parameters, string? fieldName,
+        string? value, bool? checkedValue, int? selectedIndex)
+    {
+        if (fieldName != null) parameters.Set("fieldName", fieldName);
+        if (value != null) parameters.Set("value", value);
+        if (checkedValue.HasValue) parameters.Set("checkedValue", checkedValue.Value);
+        if (selectedIndex.HasValue) parameters.Set("selectedIndex", selectedIndex.Value);
+        return parameters;
+    }
 
-            case "get_form_fields":
-                // No additional parameters needed
-                break;
-        }
-
+    /// <summary>
+    ///     Builds parameters for the delete form field operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="fieldName">The field name to delete.</param>
+    /// <param name="fieldNames">The array of field names to delete.</param>
+    /// <returns>OperationParameters configured for the delete form field operation.</returns>
+    private static OperationParameters BuildDeleteFormFieldParameters(OperationParameters parameters, string? fieldName,
+        string[]? fieldNames)
+    {
+        if (fieldName != null) parameters.Set("fieldName", fieldName);
+        if (fieldNames != null) parameters.Set("fieldNames", fieldNames);
         return parameters;
     }
 }

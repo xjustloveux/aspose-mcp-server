@@ -151,7 +151,7 @@ Notes:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -171,38 +171,88 @@ Notes:
         bool insertAsHyperlink,
         bool includeAboveBelow)
     {
-        var parameters = new OperationParameters();
-
-        switch (operation.ToLower())
+        return operation.ToLower() switch
         {
-            case "add_table_of_contents":
-                parameters.Set("position", position);
-                parameters.Set("title", title);
-                parameters.Set("maxLevel", maxLevel);
-                parameters.Set("hyperlinks", hyperlinks);
-                parameters.Set("pageNumbers", pageNumbers);
-                parameters.Set("rightAlignPageNumbers", rightAlignPageNumbers);
-                break;
+            "add_table_of_contents" => BuildAddTableOfContentsParameters(position, title, maxLevel, hyperlinks,
+                pageNumbers, rightAlignPageNumbers),
+            "update_table_of_contents" => BuildUpdateTableOfContentsParameters(tocIndex),
+            "add_index" => BuildAddIndexParameters(indexEntries, insertIndexAtEnd, headingStyle),
+            "add_cross_reference" => BuildAddCrossReferenceParameters(referenceType, referenceText, targetName,
+                insertAsHyperlink, includeAboveBelow),
+            _ => new OperationParameters()
+        };
+    }
 
-            case "update_table_of_contents":
-                if (tocIndex.HasValue) parameters.Set("tocIndex", tocIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the add_table_of_contents operation.
+    /// </summary>
+    /// <param name="position">The insert position: start, end.</param>
+    /// <param name="title">The table of contents title.</param>
+    /// <param name="maxLevel">The maximum heading level to include.</param>
+    /// <param name="hyperlinks">Whether to enable clickable hyperlinks.</param>
+    /// <param name="pageNumbers">Whether to show page numbers.</param>
+    /// <param name="rightAlignPageNumbers">Whether to right-align page numbers.</param>
+    /// <returns>OperationParameters configured for adding table of contents.</returns>
+    private static OperationParameters BuildAddTableOfContentsParameters(string position, string title, int maxLevel,
+        bool hyperlinks, bool pageNumbers, bool rightAlignPageNumbers)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("position", position);
+        parameters.Set("title", title);
+        parameters.Set("maxLevel", maxLevel);
+        parameters.Set("hyperlinks", hyperlinks);
+        parameters.Set("pageNumbers", pageNumbers);
+        parameters.Set("rightAlignPageNumbers", rightAlignPageNumbers);
+        return parameters;
+    }
 
-            case "add_index":
-                if (indexEntries != null) parameters.Set("indexEntries", indexEntries);
-                parameters.Set("insertIndexAtEnd", insertIndexAtEnd);
-                parameters.Set("headingStyle", headingStyle);
-                break;
+    /// <summary>
+    ///     Builds parameters for the update_table_of_contents operation.
+    /// </summary>
+    /// <param name="tocIndex">The TOC field index (0-based).</param>
+    /// <returns>OperationParameters configured for updating table of contents.</returns>
+    private static OperationParameters BuildUpdateTableOfContentsParameters(int? tocIndex)
+    {
+        var parameters = new OperationParameters();
+        if (tocIndex.HasValue) parameters.Set("tocIndex", tocIndex.Value);
+        return parameters;
+    }
 
-            case "add_cross_reference":
-                if (referenceType != null) parameters.Set("referenceType", referenceType);
-                if (referenceText != null) parameters.Set("referenceText", referenceText);
-                if (targetName != null) parameters.Set("targetName", targetName);
-                parameters.Set("insertAsHyperlink", insertAsHyperlink);
-                parameters.Set("includeAboveBelow", includeAboveBelow);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the add_index operation.
+    /// </summary>
+    /// <param name="indexEntries">The array of index entries as JSON string.</param>
+    /// <param name="insertIndexAtEnd">Whether to insert INDEX field at end of document.</param>
+    /// <param name="headingStyle">The heading style for index.</param>
+    /// <returns>OperationParameters configured for adding index.</returns>
+    private static OperationParameters BuildAddIndexParameters(string? indexEntries, bool insertIndexAtEnd,
+        string headingStyle)
+    {
+        var parameters = new OperationParameters();
+        if (indexEntries != null) parameters.Set("indexEntries", indexEntries);
+        parameters.Set("insertIndexAtEnd", insertIndexAtEnd);
+        parameters.Set("headingStyle", headingStyle);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the add_cross_reference operation.
+    /// </summary>
+    /// <param name="referenceType">The reference type: Heading, Bookmark, Figure, Table, Equation.</param>
+    /// <param name="referenceText">The text to insert before reference.</param>
+    /// <param name="targetName">The target name (heading text, bookmark name, etc.).</param>
+    /// <param name="insertAsHyperlink">Whether to insert as hyperlink.</param>
+    /// <param name="includeAboveBelow">Whether to include 'above' or 'below' text.</param>
+    /// <returns>OperationParameters configured for adding cross-reference.</returns>
+    private static OperationParameters BuildAddCrossReferenceParameters(string? referenceType, string? referenceText,
+        string? targetName, bool insertAsHyperlink, bool includeAboveBelow)
+    {
+        var parameters = new OperationParameters();
+        if (referenceType != null) parameters.Set("referenceType", referenceType);
+        if (referenceText != null) parameters.Set("referenceText", referenceText);
+        if (targetName != null) parameters.Set("targetName", targetName);
+        parameters.Set("insertAsHyperlink", insertAsHyperlink);
+        parameters.Set("includeAboveBelow", includeAboveBelow);
         return parameters;
     }
 }

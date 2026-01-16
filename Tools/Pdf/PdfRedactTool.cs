@@ -124,7 +124,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -138,29 +138,57 @@ Usage examples:
         string? fillColor,
         string? overlayText)
     {
-        var parameters = new OperationParameters();
-
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "area":
-                if (pageIndex.HasValue) parameters.Set("pageIndex", pageIndex.Value);
-                if (x.HasValue) parameters.Set("x", x.Value);
-                if (y.HasValue) parameters.Set("y", y.Value);
-                if (width.HasValue) parameters.Set("width", width.Value);
-                if (height.HasValue) parameters.Set("height", height.Value);
-                if (fillColor != null) parameters.Set("fillColor", fillColor);
-                if (overlayText != null) parameters.Set("overlayText", overlayText);
-                break;
+            "area" => BuildAreaParameters(pageIndex, x, y, width, height, fillColor, overlayText),
+            "text" => BuildTextParameters(pageIndex, textToRedact, caseSensitive, fillColor, overlayText),
+            _ => new OperationParameters()
+        };
+    }
 
-            case "text":
-                if (pageIndex.HasValue) parameters.Set("pageIndex", pageIndex.Value);
-                if (textToRedact != null) parameters.Set("textToRedact", textToRedact);
-                parameters.Set("caseSensitive", caseSensitive);
-                if (fillColor != null) parameters.Set("fillColor", fillColor);
-                if (overlayText != null) parameters.Set("overlayText", overlayText);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the area redaction operation.
+    /// </summary>
+    /// <param name="pageIndex">The page index (1-based).</param>
+    /// <param name="x">X position of redaction area.</param>
+    /// <param name="y">Y position of redaction area.</param>
+    /// <param name="width">Width of redaction area.</param>
+    /// <param name="height">Height of redaction area.</param>
+    /// <param name="fillColor">Fill color for redaction.</param>
+    /// <param name="overlayText">Text to display over redacted area.</param>
+    /// <returns>OperationParameters configured for area redaction.</returns>
+    private static OperationParameters BuildAreaParameters(int? pageIndex, double? x, double? y, double? width,
+        double? height, string? fillColor, string? overlayText)
+    {
+        var parameters = new OperationParameters();
+        if (pageIndex.HasValue) parameters.Set("pageIndex", pageIndex.Value);
+        if (x.HasValue) parameters.Set("x", x.Value);
+        if (y.HasValue) parameters.Set("y", y.Value);
+        if (width.HasValue) parameters.Set("width", width.Value);
+        if (height.HasValue) parameters.Set("height", height.Value);
+        if (fillColor != null) parameters.Set("fillColor", fillColor);
+        if (overlayText != null) parameters.Set("overlayText", overlayText);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the text search redaction operation.
+    /// </summary>
+    /// <param name="pageIndex">The page index (1-based, optional).</param>
+    /// <param name="textToRedact">The text to search and redact.</param>
+    /// <param name="caseSensitive">Whether the search is case sensitive.</param>
+    /// <param name="fillColor">Fill color for redaction.</param>
+    /// <param name="overlayText">Text to display over redacted area.</param>
+    /// <returns>OperationParameters configured for text redaction.</returns>
+    private static OperationParameters BuildTextParameters(int? pageIndex, string? textToRedact, bool caseSensitive,
+        string? fillColor, string? overlayText)
+    {
+        var parameters = new OperationParameters();
+        if (pageIndex.HasValue) parameters.Set("pageIndex", pageIndex.Value);
+        if (textToRedact != null) parameters.Set("textToRedact", textToRedact);
+        parameters.Set("caseSensitive", caseSensitive);
+        if (fillColor != null) parameters.Set("fillColor", fillColor);
+        if (overlayText != null) parameters.Set("overlayText", overlayText);
         return parameters;
     }
 }

@@ -106,27 +106,44 @@ WARNING: Merging cells will only keep the value of the top-left cell. All other 
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
         int sheetIndex,
         string? range)
     {
+        return operation.ToLowerInvariant() switch
+        {
+            "merge" or "unmerge" => BuildMergeUnmergeParameters(sheetIndex, range),
+            "get" => BuildGetParameters(sheetIndex),
+            _ => new OperationParameters()
+        };
+    }
+
+    /// <summary>
+    ///     Builds parameters for the merge or unmerge cells operation.
+    /// </summary>
+    /// <param name="sheetIndex">The sheet index (0-based).</param>
+    /// <param name="range">The cell range to merge/unmerge (e.g., 'A1:C3').</param>
+    /// <returns>OperationParameters configured for merge/unmerge operation.</returns>
+    private static OperationParameters BuildMergeUnmergeParameters(int sheetIndex, string? range)
+    {
         var parameters = new OperationParameters();
         parameters.Set("sheetIndex", sheetIndex);
+        if (range != null) parameters.Set("range", range);
+        return parameters;
+    }
 
-        switch (operation.ToLowerInvariant())
-        {
-            case "merge":
-            case "unmerge":
-                if (range != null) parameters.Set("range", range);
-                break;
-
-            case "get":
-                break;
-        }
-
+    /// <summary>
+    ///     Builds parameters for the get merged cells operation.
+    /// </summary>
+    /// <param name="sheetIndex">The sheet index (0-based).</param>
+    /// <returns>OperationParameters configured for getting merged cells.</returns>
+    private static OperationParameters BuildGetParameters(int sheetIndex)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("sheetIndex", sheetIndex);
         return parameters;
     }
 }

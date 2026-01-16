@@ -22,23 +22,21 @@ public class CompressPdfFileHandler : OperationHandlerBase<Document>
     /// <returns>Success message with compression statistics.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var compressImages = parameters.GetOptional("compressImages", true);
-        var compressFonts = parameters.GetOptional("compressFonts", true);
-        var removeUnusedObjects = parameters.GetOptional("removeUnusedObjects", true);
+        var compressParams = ExtractCompressParameters(parameters);
 
         var document = context.Document;
         var optimizationOptions = new OptimizationOptions();
 
-        if (compressImages)
+        if (compressParams.CompressImages)
         {
             optimizationOptions.ImageCompressionOptions.CompressImages = true;
             optimizationOptions.ImageCompressionOptions.ImageQuality = 75;
         }
 
-        if (compressFonts)
+        if (compressParams.CompressFonts)
             optimizationOptions.SubsetFonts = true;
 
-        if (removeUnusedObjects)
+        if (compressParams.RemoveUnusedObjects)
         {
             optimizationOptions.LinkDuplcateStreams = true;
             optimizationOptions.RemoveUnusedObjects = true;
@@ -51,4 +49,23 @@ public class CompressPdfFileHandler : OperationHandlerBase<Document>
 
         return Success("PDF compressed.");
     }
+
+    /// <summary>
+    ///     Extracts compress parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted compress parameters.</returns>
+    private static CompressParameters ExtractCompressParameters(OperationParameters parameters)
+    {
+        return new CompressParameters(
+            parameters.GetOptional("compressImages", true),
+            parameters.GetOptional("compressFonts", true),
+            parameters.GetOptional("removeUnusedObjects", true)
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold compress parameters.
+    /// </summary>
+    private record CompressParameters(bool CompressImages, bool CompressFonts, bool RemoveUnusedObjects);
 }

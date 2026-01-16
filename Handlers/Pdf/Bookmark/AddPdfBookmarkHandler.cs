@@ -22,23 +22,40 @@ public class AddPdfBookmarkHandler : OperationHandlerBase<Document>
     /// <returns>Success message with bookmark details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var title = parameters.GetRequired<string>("title");
-        var pageIndex = parameters.GetRequired<int>("pageIndex");
+        var addParams = ExtractAddParameters(parameters);
 
         var document = context.Document;
 
-        if (pageIndex < 1 || pageIndex > document.Pages.Count)
+        if (addParams.PageIndex < 1 || addParams.PageIndex > document.Pages.Count)
             throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
 
         var bookmark = new OutlineItemCollection(document.Outlines)
         {
-            Title = title,
-            Action = new GoToAction(document.Pages[pageIndex])
+            Title = addParams.Title,
+            Action = new GoToAction(document.Pages[addParams.PageIndex])
         };
 
         document.Outlines.Add(bookmark);
         MarkModified(context);
 
-        return Success($"Added bookmark '{title}' pointing to page {pageIndex}.");
+        return Success($"Added bookmark '{addParams.Title}' pointing to page {addParams.PageIndex}.");
     }
+
+    /// <summary>
+    ///     Extracts add parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted add parameters.</returns>
+    private static AddParameters ExtractAddParameters(OperationParameters parameters)
+    {
+        return new AddParameters(
+            parameters.GetRequired<string>("title"),
+            parameters.GetRequired<int>("pageIndex")
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold add bookmark parameters.
+    /// </summary>
+    private record AddParameters(string Title, int PageIndex);
 }

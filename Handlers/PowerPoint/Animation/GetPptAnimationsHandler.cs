@@ -23,11 +23,10 @@ public class GetPptAnimationsHandler : OperationHandlerBase<Presentation>
     /// <returns>JSON string containing the animation information.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetRequired<int>("slideIndex");
-        var shapeIndex = parameters.GetOptional<int?>("shapeIndex");
+        var p = ExtractGetAnimationsParameters(parameters);
 
         var presentation = context.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+        var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
         var sequence = slide.Timeline.MainSequence;
 
         List<object> animations = [];
@@ -35,10 +34,10 @@ public class GetPptAnimationsHandler : OperationHandlerBase<Presentation>
 
         foreach (var effect in sequence)
         {
-            if (shapeIndex.HasValue)
+            if (p.ShapeIndex.HasValue)
             {
                 var targetShapeIndex = slide.Shapes.IndexOf(effect.TargetShape);
-                if (targetShapeIndex != shapeIndex.Value)
+                if (targetShapeIndex != p.ShapeIndex.Value)
                     continue;
             }
 
@@ -62,12 +61,31 @@ public class GetPptAnimationsHandler : OperationHandlerBase<Presentation>
 
         var result = new
         {
-            slideIndex,
-            filterByShapeIndex = shapeIndex,
+            slideIndex = p.SlideIndex,
+            filterByShapeIndex = p.ShapeIndex,
             totalAnimationsOnSlide = sequence.Count,
             animations
         };
 
         return JsonResult(result);
     }
+
+    /// <summary>
+    ///     Extracts get animations parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted get animations parameters.</returns>
+    private static GetAnimationsParameters ExtractGetAnimationsParameters(OperationParameters parameters)
+    {
+        return new GetAnimationsParameters(
+            parameters.GetRequired<int>("slideIndex"),
+            parameters.GetOptional<int?>("shapeIndex"));
+    }
+
+    /// <summary>
+    ///     Record for holding get animations parameters.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index.</param>
+    /// <param name="ShapeIndex">The optional shape index filter.</param>
+    private record GetAnimationsParameters(int SlideIndex, int? ShapeIndex);
 }

@@ -23,19 +23,41 @@ public class ReplacePptTextHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with replacement count.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var findText = parameters.GetRequired<string>("findText");
-        var replaceText = parameters.GetRequired<string>("replaceText");
-        var matchCase = parameters.GetOptional("matchCase", false);
+        var replaceParams = ExtractReplaceParameters(parameters);
 
         var presentation = context.Document;
-        var comparison = matchCase ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+        var comparison = replaceParams.MatchCase ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
         var replacements = 0;
 
         foreach (var slide in presentation.Slides)
-            replacements += PptTextHelper.ProcessShapesForReplace(slide.Shapes, findText, replaceText, comparison);
+            replacements += PptTextHelper.ProcessShapesForReplace(slide.Shapes, replaceParams.FindText,
+                replaceParams.ReplaceText, comparison);
 
         MarkModified(context);
 
-        return Success($"Replaced '{findText}' with '{replaceText}' ({replacements} occurrences).");
+        return Success(
+            $"Replaced '{replaceParams.FindText}' with '{replaceParams.ReplaceText}' ({replacements} occurrences).");
     }
+
+    /// <summary>
+    ///     Extracts replace parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted replace parameters.</returns>
+    private static ReplaceParameters ExtractReplaceParameters(OperationParameters parameters)
+    {
+        return new ReplaceParameters(
+            parameters.GetRequired<string>("findText"),
+            parameters.GetRequired<string>("replaceText"),
+            parameters.GetOptional("matchCase", false)
+        );
+    }
+
+    /// <summary>
+    ///     Record for holding replace text parameters.
+    /// </summary>
+    /// <param name="FindText">The text to find.</param>
+    /// <param name="ReplaceText">The text to replace with.</param>
+    /// <param name="MatchCase">Whether to match case.</param>
+    private record ReplaceParameters(string FindText, string ReplaceText, bool MatchCase);
 }

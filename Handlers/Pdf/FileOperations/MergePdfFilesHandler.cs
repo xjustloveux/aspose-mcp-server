@@ -22,21 +22,20 @@ public class MergePdfFilesHandler : OperationHandlerBase<Document>
     /// <returns>Success message with merge count and output path.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var outputPath = parameters.GetRequired<string>("outputPath");
-        var inputPaths = parameters.GetRequired<string[]>("inputPaths");
+        var mergeParams = ExtractMergeParameters(parameters);
 
-        if (inputPaths.Length == 0)
+        if (mergeParams.InputPaths.Length == 0)
             throw new ArgumentException("inputPaths is required for merge operation");
 
-        SecurityHelper.ValidateArraySize(inputPaths, "inputPaths");
+        SecurityHelper.ValidateArraySize(mergeParams.InputPaths, "inputPaths");
 
-        var validPaths = inputPaths.Where(p => !string.IsNullOrEmpty(p)).ToList();
+        var validPaths = mergeParams.InputPaths.Where(p => !string.IsNullOrEmpty(p)).ToList();
         if (validPaths.Count == 0)
             throw new ArgumentException("At least one input path is required");
 
         foreach (var inputPath in validPaths)
             SecurityHelper.ValidateFilePath(inputPath, "inputPaths", true);
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+        SecurityHelper.ValidateFilePath(mergeParams.OutputPath, "outputPath", true);
 
         using var mergedDocument = new Document(validPaths[0]);
         for (var i = 1; i < validPaths.Count; i++)
@@ -45,8 +44,26 @@ public class MergePdfFilesHandler : OperationHandlerBase<Document>
             mergedDocument.Pages.Add(doc.Pages);
         }
 
-        mergedDocument.Save(outputPath);
+        mergedDocument.Save(mergeParams.OutputPath);
 
-        return Success($"Merged {validPaths.Count} PDF documents. Output: {outputPath}");
+        return Success($"Merged {validPaths.Count} PDF documents. Output: {mergeParams.OutputPath}");
     }
+
+    /// <summary>
+    ///     Extracts merge parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted merge parameters.</returns>
+    private static MergeParameters ExtractMergeParameters(OperationParameters parameters)
+    {
+        return new MergeParameters(
+            parameters.GetRequired<string>("outputPath"),
+            parameters.GetRequired<string[]>("inputPaths")
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold merge parameters.
+    /// </summary>
+    private record MergeParameters(string OutputPath, string[] InputPaths);
 }

@@ -23,15 +23,13 @@ public class GetFormulaResultHandler : OperationHandlerBase<Workbook>
     /// <returns>JSON string containing formula result information.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var cell = parameters.GetRequired<string>("cell");
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var calculateBeforeRead = parameters.GetOptional("calculateBeforeRead", true);
+        var getParams = ExtractGetResultParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var cellObj = worksheet.Cells[cell];
+        var worksheet = ExcelHelper.GetWorksheet(workbook, getParams.SheetIndex);
+        var cellObj = worksheet.Cells[getParams.Cell];
 
-        if (calculateBeforeRead) workbook.CalculateFormula();
+        if (getParams.CalculateBeforeRead) workbook.CalculateFormula();
 
         var calculatedValue = cellObj.Value;
 
@@ -44,7 +42,7 @@ public class GetFormulaResultHandler : OperationHandlerBase<Workbook>
 
         var result = new
         {
-            cell,
+            cell = getParams.Cell,
             formula = cellObj.Formula,
             calculatedValue = calculatedValue?.ToString() ?? "(empty)",
             valueType = cellObj.Type.ToString()
@@ -52,4 +50,23 @@ public class GetFormulaResultHandler : OperationHandlerBase<Workbook>
 
         return JsonResult(result);
     }
+
+    /// <summary>
+    ///     Extracts get result parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted get result parameters.</returns>
+    private static GetResultParameters ExtractGetResultParameters(OperationParameters parameters)
+    {
+        return new GetResultParameters(
+            parameters.GetRequired<string>("cell"),
+            parameters.GetOptional("sheetIndex", 0),
+            parameters.GetOptional("calculateBeforeRead", true)
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold get formula result parameters.
+    /// </summary>
+    private record GetResultParameters(string Cell, int SheetIndex, bool CalculateBeforeRead);
 }

@@ -23,42 +23,57 @@ public class FindReplaceHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with replacement count.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var findText = parameters.GetOptional<string?>("findText");
-        var replaceText = parameters.GetOptional<string?>("replaceText");
-        var sheetIndex = parameters.GetOptional<int?>("sheetIndex");
-        var matchCase = parameters.GetOptional("matchCase", false);
-        var matchEntireCell = parameters.GetOptional("matchEntireCell", false);
+        var findReplaceParams = ExtractFindReplaceParameters(parameters);
 
-        if (string.IsNullOrEmpty(findText))
+        if (string.IsNullOrEmpty(findReplaceParams.FindText))
             throw new ArgumentException("findText is required for find_replace operation");
-        if (replaceText == null)
+        if (findReplaceParams.ReplaceText == null)
             throw new ArgumentException("replaceText is required for find_replace operation");
 
         try
         {
             var workbook = context.Document;
             var totalReplacements = 0;
-            var lookAt = matchEntireCell ? LookAtType.EntireContent : LookAtType.Contains;
+            var lookAt = findReplaceParams.MatchEntireCell ? LookAtType.EntireContent : LookAtType.Contains;
 
-            if (sheetIndex.HasValue)
+            if (findReplaceParams.SheetIndex.HasValue)
             {
-                var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex.Value);
-                totalReplacements += ReplaceInWorksheet(worksheet, findText, replaceText, matchCase, lookAt);
+                var worksheet = ExcelHelper.GetWorksheet(workbook, findReplaceParams.SheetIndex.Value);
+                totalReplacements += ReplaceInWorksheet(worksheet, findReplaceParams.FindText,
+                    findReplaceParams.ReplaceText, findReplaceParams.MatchCase, lookAt);
             }
             else
             {
                 foreach (var worksheet in workbook.Worksheets)
-                    totalReplacements += ReplaceInWorksheet(worksheet, findText, replaceText, matchCase, lookAt);
+                    totalReplacements += ReplaceInWorksheet(worksheet, findReplaceParams.FindText,
+                        findReplaceParams.ReplaceText, findReplaceParams.MatchCase, lookAt);
             }
 
             MarkModified(context);
 
-            return Success($"Replaced '{findText}' with '{replaceText}' ({totalReplacements} replacements).");
+            return Success(
+                $"Replaced '{findReplaceParams.FindText}' with '{findReplaceParams.ReplaceText}' ({totalReplacements} replacements).");
         }
         catch (CellsException ex)
         {
             throw new ArgumentException($"Excel operation failed: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    ///     Extracts find and replace parameters from the operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted find and replace parameters.</returns>
+    private static FindReplaceParameters ExtractFindReplaceParameters(OperationParameters parameters)
+    {
+        return new FindReplaceParameters(
+            parameters.GetOptional<string?>("findText"),
+            parameters.GetOptional<string?>("replaceText"),
+            parameters.GetOptional<int?>("sheetIndex"),
+            parameters.GetOptional("matchCase", false),
+            parameters.GetOptional("matchEntireCell", false)
+        );
     }
 
     /// <summary>
@@ -108,4 +123,19 @@ public class FindReplaceHandler : OperationHandlerBase<Workbook>
 
         return count;
     }
+
+    /// <summary>
+    ///     Parameters for find and replace operation.
+    /// </summary>
+    /// <param name="FindText">The text to find.</param>
+    /// <param name="ReplaceText">The text to replace with.</param>
+    /// <param name="SheetIndex">The worksheet index (0-based), or null to search all sheets.</param>
+    /// <param name="MatchCase">Whether to match case.</param>
+    /// <param name="MatchEntireCell">Whether to match entire cell content.</param>
+    private record FindReplaceParameters(
+        string? FindText,
+        string? ReplaceText,
+        int? SheetIndex,
+        bool MatchCase,
+        bool MatchEntireCell);
 }

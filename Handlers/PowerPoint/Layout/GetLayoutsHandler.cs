@@ -22,20 +22,20 @@ public class GetLayoutsHandler : OperationHandlerBase<Presentation>
     /// <returns>JSON string containing layout information.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var masterIndex = parameters.GetOptional<int?>("masterIndex");
+        var p = ExtractGetLayoutsParameters(parameters);
 
         var presentation = context.Document;
 
-        if (masterIndex.HasValue)
+        if (p.MasterIndex.HasValue)
         {
-            PowerPointHelper.ValidateCollectionIndex(masterIndex.Value, presentation.Masters.Count, "master");
+            PowerPointHelper.ValidateCollectionIndex(p.MasterIndex.Value, presentation.Masters.Count, "master");
 
-            var master = presentation.Masters[masterIndex.Value];
+            var master = presentation.Masters[p.MasterIndex.Value];
             var layoutsList = PptLayoutHelper.BuildLayoutsList(master.LayoutSlides);
 
             var result = new
             {
-                masterIndex = masterIndex.Value,
+                masterIndex = p.MasterIndex.Value,
                 count = master.LayoutSlides.Count,
                 layouts = layoutsList
             };
@@ -66,4 +66,20 @@ public class GetLayoutsHandler : OperationHandlerBase<Presentation>
             return JsonResult(result);
         }
     }
+
+    /// <summary>
+    ///     Extracts get layouts parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted get layouts parameters.</returns>
+    private static GetLayoutsParameters ExtractGetLayoutsParameters(OperationParameters parameters)
+    {
+        return new GetLayoutsParameters(parameters.GetOptional<int?>("masterIndex"));
+    }
+
+    /// <summary>
+    ///     Record for holding get layouts parameters.
+    /// </summary>
+    /// <param name="MasterIndex">The optional master index.</param>
+    private record GetLayoutsParameters(int? MasterIndex);
 }

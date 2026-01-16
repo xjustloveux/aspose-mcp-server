@@ -67,6 +67,11 @@ for arg in "$@"; do
             echo -e "  ${GRAY}./publish.sh --all --clean${NC}"
             exit 0
             ;;
+        *)
+            echo -e "${RED}Unknown argument: $arg${NC}"
+            echo -e "Use --help for usage information"
+            exit 1
+            ;;
     esac
 done
 

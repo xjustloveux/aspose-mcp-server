@@ -23,36 +23,68 @@ public class AddAudioHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with audio details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetOptional("slideIndex", 0);
-        var audioPath = parameters.GetRequired<string>("audioPath");
-        var x = parameters.GetOptional("x", 100f);
-        var y = parameters.GetOptional("y", 100f);
-        var width = parameters.GetOptional("width", 50f);
-        var height = parameters.GetOptional("height", 50f);
-        var hideIcon = parameters.GetOptional("hideIcon", false);
-        var playAcrossSlides = parameters.GetOptional("playAcrossSlides", false);
+        var p = ExtractAddAudioParameters(parameters);
 
-        SecurityHelper.ValidateFilePath(audioPath, "audioPath", true);
+        SecurityHelper.ValidateFilePath(p.AudioPath, "audioPath", true);
 
-        if (!File.Exists(audioPath))
-            throw new FileNotFoundException($"Audio file not found: {audioPath}", audioPath);
+        if (!File.Exists(p.AudioPath))
+            throw new FileNotFoundException($"Audio file not found: {p.AudioPath}", p.AudioPath);
 
         var presentation = context.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+        var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
 
-        using var audioStream = new FileStream(audioPath, FileMode.Open, FileAccess.Read);
+        using var audioStream = new FileStream(p.AudioPath, FileMode.Open, FileAccess.Read);
         var audio = presentation.Audios.AddAudio(audioStream, LoadingStreamBehavior.ReadStreamAndRelease);
-        var audioFrame = slide.Shapes.AddAudioFrameEmbedded(x, y, width, height, audio);
+        var audioFrame = slide.Shapes.AddAudioFrameEmbedded(p.X, p.Y, p.Width, p.Height, audio);
 
-        if (hideIcon)
+        if (p.HideIcon)
             audioFrame.HideAtShowing = true;
 
-        if (playAcrossSlides)
+        if (p.PlayAcrossSlides)
             audioFrame.PlayAcrossSlides = true;
 
         MarkModified(context);
 
         return Success(
-            $"Audio embedded into slide {slideIndex} at position ({audioFrame.X:F0}, {audioFrame.Y:F0}) with dimensions {audioFrame.Width:F0}x{audioFrame.Height:F0}.");
+            $"Audio embedded into slide {p.SlideIndex} at position ({audioFrame.X:F0}, {audioFrame.Y:F0}) with dimensions {audioFrame.Width:F0}x{audioFrame.Height:F0}.");
     }
+
+    /// <summary>
+    ///     Extracts add audio parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted add audio parameters.</returns>
+    private static AddAudioParameters ExtractAddAudioParameters(OperationParameters parameters)
+    {
+        return new AddAudioParameters(
+            parameters.GetOptional("slideIndex", 0),
+            parameters.GetRequired<string>("audioPath"),
+            parameters.GetOptional("x", 100f),
+            parameters.GetOptional("y", 100f),
+            parameters.GetOptional("width", 50f),
+            parameters.GetOptional("height", 50f),
+            parameters.GetOptional("hideIcon", false),
+            parameters.GetOptional("playAcrossSlides", false));
+    }
+
+    /// <summary>
+    ///     Record for holding add audio parameters.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index.</param>
+    /// <param name="AudioPath">The audio file path.</param>
+    /// <param name="X">The X position.</param>
+    /// <param name="Y">The Y position.</param>
+    /// <param name="Width">The width.</param>
+    /// <param name="Height">The height.</param>
+    /// <param name="HideIcon">Whether to hide the audio icon.</param>
+    /// <param name="PlayAcrossSlides">Whether to play across slides.</param>
+    private record AddAudioParameters(
+        int SlideIndex,
+        string AudioPath,
+        float X,
+        float Y,
+        float Width,
+        float Height,
+        bool HideIcon,
+        bool PlayAcrossSlides);
 }

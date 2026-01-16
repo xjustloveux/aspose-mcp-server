@@ -114,7 +114,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -124,35 +124,78 @@ Usage examples:
         double x,
         double y)
     {
-        var parameters = new OperationParameters();
-
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "add":
-                if (pageIndex.HasValue) parameters.Set("pageIndex", pageIndex.Value);
-                if (text != null) parameters.Set("text", text);
-                parameters.Set("x", x);
-                parameters.Set("y", y);
-                break;
+            "add" => BuildAddParameters(pageIndex, text, x, y),
+            "delete" => BuildDeleteParameters(pageIndex, annotationIndex),
+            "edit" => BuildEditParameters(pageIndex, annotationIndex, text, x, y),
+            "get" => BuildGetParameters(pageIndex),
+            _ => new OperationParameters()
+        };
+    }
 
-            case "delete":
-                if (pageIndex.HasValue) parameters.Set("pageIndex", pageIndex.Value);
-                if (annotationIndex.HasValue) parameters.Set("annotationIndex", annotationIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the add annotation operation.
+    /// </summary>
+    /// <param name="pageIndex">The page index (1-based) to add the annotation to.</param>
+    /// <param name="text">The annotation text content.</param>
+    /// <param name="x">The X position in points.</param>
+    /// <param name="y">The Y position in points.</param>
+    /// <returns>OperationParameters configured for adding an annotation.</returns>
+    private static OperationParameters BuildAddParameters(int? pageIndex, string? text, double x, double y)
+    {
+        var parameters = new OperationParameters();
+        if (pageIndex.HasValue) parameters.Set("pageIndex", pageIndex.Value);
+        if (text != null) parameters.Set("text", text);
+        parameters.Set("x", x);
+        parameters.Set("y", y);
+        return parameters;
+    }
 
-            case "edit":
-                if (pageIndex.HasValue) parameters.Set("pageIndex", pageIndex.Value);
-                if (annotationIndex.HasValue) parameters.Set("annotationIndex", annotationIndex.Value);
-                if (text != null) parameters.Set("text", text);
-                parameters.Set("x", x);
-                parameters.Set("y", y);
-                break;
+    /// <summary>
+    ///     Builds parameters for the delete annotation operation.
+    /// </summary>
+    /// <param name="pageIndex">The page index (1-based) containing the annotation.</param>
+    /// <param name="annotationIndex">The annotation index (1-based) to delete.</param>
+    /// <returns>OperationParameters configured for deleting an annotation.</returns>
+    private static OperationParameters BuildDeleteParameters(int? pageIndex, int? annotationIndex)
+    {
+        var parameters = new OperationParameters();
+        if (pageIndex.HasValue) parameters.Set("pageIndex", pageIndex.Value);
+        if (annotationIndex.HasValue) parameters.Set("annotationIndex", annotationIndex.Value);
+        return parameters;
+    }
 
-            case "get":
-                if (pageIndex.HasValue) parameters.Set("pageIndex", pageIndex.Value);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the edit annotation operation.
+    /// </summary>
+    /// <param name="pageIndex">The page index (1-based) containing the annotation.</param>
+    /// <param name="annotationIndex">The annotation index (1-based) to edit.</param>
+    /// <param name="text">The new annotation text content.</param>
+    /// <param name="x">The new X position in points.</param>
+    /// <param name="y">The new Y position in points.</param>
+    /// <returns>OperationParameters configured for editing an annotation.</returns>
+    private static OperationParameters BuildEditParameters(int? pageIndex, int? annotationIndex, string? text,
+        double x, double y)
+    {
+        var parameters = new OperationParameters();
+        if (pageIndex.HasValue) parameters.Set("pageIndex", pageIndex.Value);
+        if (annotationIndex.HasValue) parameters.Set("annotationIndex", annotationIndex.Value);
+        if (text != null) parameters.Set("text", text);
+        parameters.Set("x", x);
+        parameters.Set("y", y);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the get annotations operation.
+    /// </summary>
+    /// <param name="pageIndex">The page index (1-based) to get annotations from.</param>
+    /// <returns>OperationParameters configured for getting annotations.</returns>
+    private static OperationParameters BuildGetParameters(int? pageIndex)
+    {
+        var parameters = new OperationParameters();
+        if (pageIndex.HasValue) parameters.Set("pageIndex", pageIndex.Value);
         return parameters;
     }
 }

@@ -130,7 +130,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -146,31 +146,55 @@ Usage examples:
         int height,
         string? imagePath)
     {
-        var parameters = new OperationParameters();
-
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "sign":
-                if (certificatePath != null) parameters.Set("certificatePath", certificatePath);
-                if (certificatePassword != null) parameters.Set("password", certificatePassword);
-                parameters.Set("reason", reason);
-                parameters.Set("location", location);
-                parameters.Set("pageIndex", pageIndex);
-                parameters.Set("x", x);
-                parameters.Set("y", y);
-                parameters.Set("width", width);
-                parameters.Set("height", height);
-                if (imagePath != null) parameters.Set("imagePath", imagePath);
-                break;
+            "sign" => BuildSignParameters(certificatePath, certificatePassword, reason, location, pageIndex, x, y,
+                width, height, imagePath),
+            "delete" => BuildDeleteParameters(signatureIndex),
+            _ => new OperationParameters()
+        };
+    }
 
-            case "delete":
-                parameters.Set("signatureIndex", signatureIndex);
-                break;
+    /// <summary>
+    ///     Builds parameters for the sign PDF operation.
+    /// </summary>
+    /// <param name="certificatePath">Path to the certificate file (.pfx).</param>
+    /// <param name="certificatePassword">The certificate password.</param>
+    /// <param name="reason">The reason for signing.</param>
+    /// <param name="location">The location of signing.</param>
+    /// <param name="pageIndex">The page index to place signature (1-based).</param>
+    /// <param name="x">X position of signature.</param>
+    /// <param name="y">Y position of signature.</param>
+    /// <param name="width">Width of signature rectangle.</param>
+    /// <param name="height">Height of signature rectangle.</param>
+    /// <param name="imagePath">Path to signature appearance image.</param>
+    /// <returns>OperationParameters configured for signing a PDF.</returns>
+    private static OperationParameters BuildSignParameters(string? certificatePath, string? certificatePassword,
+        string reason, string location, int pageIndex, int x, int y, int width, int height, string? imagePath)
+    {
+        var parameters = new OperationParameters();
+        if (certificatePath != null) parameters.Set("certificatePath", certificatePath);
+        if (certificatePassword != null) parameters.Set("password", certificatePassword);
+        parameters.Set("reason", reason);
+        parameters.Set("location", location);
+        parameters.Set("pageIndex", pageIndex);
+        parameters.Set("x", x);
+        parameters.Set("y", y);
+        parameters.Set("width", width);
+        parameters.Set("height", height);
+        if (imagePath != null) parameters.Set("imagePath", imagePath);
+        return parameters;
+    }
 
-            case "get":
-                break;
-        }
-
+    /// <summary>
+    ///     Builds parameters for the delete signature operation.
+    /// </summary>
+    /// <param name="signatureIndex">The signature index to delete (0-based).</param>
+    /// <returns>OperationParameters configured for deleting a signature.</returns>
+    private static OperationParameters BuildDeleteParameters(int signatureIndex)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("signatureIndex", signatureIndex);
         return parameters;
     }
 }

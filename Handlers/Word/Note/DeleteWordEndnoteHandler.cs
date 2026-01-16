@@ -22,34 +22,33 @@ public class DeleteWordEndnoteHandler : OperationHandlerBase<Document>
     /// <returns>Success message with deletion details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var referenceMark = parameters.GetOptional<string?>("referenceMark");
-        var noteIndex = parameters.GetOptional<int?>("noteIndex");
+        var p = ExtractDeleteEndnoteParameters(parameters);
 
         var doc = context.Document;
         var notes = WordNoteHelper.GetNotesFromDoc(doc, FootnoteType.Endnote);
 
         var deletedCount = 0;
 
-        if (!string.IsNullOrEmpty(referenceMark))
+        if (!string.IsNullOrEmpty(p.ReferenceMark))
         {
-            var note = notes.FirstOrDefault(f => f.ReferenceMark == referenceMark);
+            var note = notes.FirstOrDefault(f => f.ReferenceMark == p.ReferenceMark);
             if (note != null)
             {
                 note.Remove();
                 deletedCount = 1;
             }
         }
-        else if (noteIndex.HasValue)
+        else if (p.NoteIndex.HasValue)
         {
-            if (noteIndex.Value >= 0 && noteIndex.Value < notes.Count)
+            if (p.NoteIndex.Value >= 0 && p.NoteIndex.Value < notes.Count)
             {
-                notes[noteIndex.Value].Remove();
+                notes[p.NoteIndex.Value].Remove();
                 deletedCount = 1;
             }
             else
             {
                 throw new ArgumentException(
-                    $"Note index {noteIndex.Value} is out of range (document has {notes.Count} endnotes, valid index: 0-{notes.Count - 1})");
+                    $"Note index {p.NoteIndex.Value} is out of range (document has {notes.Count} endnotes, valid index: 0-{notes.Count - 1})");
             }
         }
         else
@@ -65,4 +64,22 @@ public class DeleteWordEndnoteHandler : OperationHandlerBase<Document>
 
         return Success($"Deleted {deletedCount} endnote(s)");
     }
+
+    /// <summary>
+    ///     Extracts delete endnote parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted delete endnote parameters.</returns>
+    private static DeleteEndnoteParameters ExtractDeleteEndnoteParameters(OperationParameters parameters)
+    {
+        return new DeleteEndnoteParameters(
+            parameters.GetOptional<string?>("referenceMark"),
+            parameters.GetOptional<int?>("noteIndex")
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold delete endnote parameters.
+    /// </summary>
+    private record DeleteEndnoteParameters(string? ReferenceMark, int? NoteIndex);
 }

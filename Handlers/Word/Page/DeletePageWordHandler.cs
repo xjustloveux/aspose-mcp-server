@@ -21,39 +21,58 @@ public class DeletePageWordHandler : OperationHandlerBase<Document>
     /// <returns>Success message with page deletion details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var pageIndex = parameters.GetOptional<int?>("pageIndex");
+        var deleteParams = ExtractDeletePageParameters(parameters);
 
-        if (!pageIndex.HasValue)
+        if (!deleteParams.PageIndex.HasValue)
             throw new ArgumentException("pageIndex parameter is required for delete_page operation");
 
         var doc = context.Document;
         var pageCount = doc.PageCount;
 
-        if (pageIndex.Value < 0 || pageIndex.Value >= pageCount)
+        if (deleteParams.PageIndex.Value < 0 || deleteParams.PageIndex.Value >= pageCount)
             throw new ArgumentException(
                 $"pageIndex must be between 0 and {pageCount - 1} (document has {pageCount} pages)");
 
         var resultDoc = new Document();
         resultDoc.RemoveAllChildren();
 
-        if (pageIndex.Value > 0)
+        if (deleteParams.PageIndex.Value > 0)
         {
-            var beforePages = doc.ExtractPages(0, pageIndex.Value);
+            var beforePages = doc.ExtractPages(0, deleteParams.PageIndex.Value);
             foreach (var section in beforePages.Sections.Cast<Section>())
                 resultDoc.AppendChild(resultDoc.ImportNode(section, true));
         }
 
-        if (pageIndex.Value < pageCount - 1)
+        if (deleteParams.PageIndex.Value < pageCount - 1)
         {
-            var afterPages = doc.ExtractPages(pageIndex.Value + 1, pageCount - pageIndex.Value - 1);
+            var afterPages = doc.ExtractPages(deleteParams.PageIndex.Value + 1,
+                pageCount - deleteParams.PageIndex.Value - 1);
             foreach (var section in afterPages.Sections.Cast<Section>())
                 resultDoc.AppendChild(resultDoc.ImportNode(section, true));
         }
 
-        // Store the result document for special handling
         context.ResultDocument = resultDoc;
         MarkModified(context);
 
-        return Success($"Page {pageIndex.Value} deleted successfully (document now has {resultDoc.PageCount} pages)");
+        return Success(
+            $"Page {deleteParams.PageIndex.Value} deleted successfully (document now has {resultDoc.PageCount} pages)");
     }
+
+    /// <summary>
+    ///     Extracts delete page parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted delete page parameters.</returns>
+    private static DeletePageParameters ExtractDeletePageParameters(OperationParameters parameters)
+    {
+        return new DeletePageParameters(
+            parameters.GetOptional<int?>("pageIndex")
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold delete page parameters.
+    /// </summary>
+    /// <param name="PageIndex">The 0-based page index to delete.</param>
+    private record DeletePageParameters(int? PageIndex);
 }

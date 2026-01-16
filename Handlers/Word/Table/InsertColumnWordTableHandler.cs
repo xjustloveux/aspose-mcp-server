@@ -28,50 +28,43 @@ public class InsertColumnWordTableHandler : OperationHandlerBase<Document>
     /// <exception cref="InvalidOperationException">Thrown when the table has no rows.</exception>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var columnIndex = parameters.GetOptional<int?>("columnIndex");
-        if (!columnIndex.HasValue)
-            throw new ArgumentException("columnIndex is required for insert_column operation");
-
-        var tableIndex = parameters.GetOptional("tableIndex", 0);
-        var columnData = parameters.GetOptional<string?>("columnData");
-        var insertBefore = parameters.GetOptional("insertBefore", false);
-        var sectionIndex = parameters.GetOptional<int?>("sectionIndex");
+        var p = ExtractInsertColumnParameters(parameters);
 
         var doc = context.Document;
-        var actualSectionIndex = sectionIndex ?? 0;
+        var actualSectionIndex = p.SectionIndex ?? 0;
         if (actualSectionIndex >= doc.Sections.Count)
             throw new ArgumentException($"Section index {actualSectionIndex} out of range");
 
         var section = doc.Sections[actualSectionIndex];
         var tables = section.Body.GetChildNodes(NodeType.Table, true).Cast<Aspose.Words.Tables.Table>().ToList();
-        if (tableIndex < 0 || tableIndex >= tables.Count)
-            throw new ArgumentException($"Table index {tableIndex} out of range");
+        if (p.TableIndex < 0 || p.TableIndex >= tables.Count)
+            throw new ArgumentException($"Table index {p.TableIndex} out of range");
 
-        var table = tables[tableIndex];
+        var table = tables[p.TableIndex];
         if (table.Rows.Count == 0)
-            throw new InvalidOperationException($"Table {tableIndex} has no rows");
+            throw new InvalidOperationException($"Table {p.TableIndex} has no rows");
 
         var firstRow = table.Rows[0];
-        if (columnIndex.Value < 0 || columnIndex.Value >= firstRow.Cells.Count)
-            throw new ArgumentException($"Column index {columnIndex.Value} out of range");
+        if (p.ColumnIndex < 0 || p.ColumnIndex >= firstRow.Cells.Count)
+            throw new ArgumentException($"Column index {p.ColumnIndex} out of range");
 
         JsonArray? dataArray = null;
-        if (!string.IsNullOrEmpty(columnData))
+        if (!string.IsNullOrEmpty(p.ColumnData))
             try
             {
-                dataArray = JsonNode.Parse(columnData)?.AsArray();
+                dataArray = JsonNode.Parse(p.ColumnData)?.AsArray();
             }
             catch
             {
                 throw new ArgumentException("Invalid columnData JSON format");
             }
 
-        var insertPosition = insertBefore ? columnIndex.Value : columnIndex.Value + 1;
+        var insertPosition = p.InsertBefore ? p.ColumnIndex : p.ColumnIndex + 1;
 
         for (var rowIdx = 0; rowIdx < table.Rows.Count; rowIdx++)
         {
             var row = table.Rows[rowIdx];
-            var newCell = CreateNewCell(doc, row, columnIndex.Value);
+            var newCell = CreateNewCell(doc, row, p.ColumnIndex);
 
             PopulateCellContent(doc, newCell, dataArray, rowIdx);
 
@@ -88,7 +81,7 @@ public class InsertColumnWordTableHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        var insertedIndex = insertBefore ? columnIndex.Value : columnIndex.Value + 1;
+        var insertedIndex = p.InsertBefore ? p.ColumnIndex : p.ColumnIndex + 1;
         return Success($"Successfully inserted column at index {insertedIndex}.");
     }
 
@@ -174,4 +167,25 @@ public class InsertColumnWordTableHandler : OperationHandlerBase<Document>
             para.AppendChild(new Run(doc, text));
         }
     }
+
+    private static InsertColumnParameters ExtractInsertColumnParameters(OperationParameters parameters)
+    {
+        var columnIndex = parameters.GetOptional<int?>("columnIndex");
+        if (!columnIndex.HasValue)
+            throw new ArgumentException("columnIndex is required for insert_column operation");
+
+        var tableIndex = parameters.GetOptional("tableIndex", 0);
+        var columnData = parameters.GetOptional<string?>("columnData");
+        var insertBefore = parameters.GetOptional("insertBefore", false);
+        var sectionIndex = parameters.GetOptional<int?>("sectionIndex");
+
+        return new InsertColumnParameters(columnIndex.Value, tableIndex, columnData, insertBefore, sectionIndex);
+    }
+
+    private record InsertColumnParameters(
+        int ColumnIndex,
+        int TableIndex,
+        string? ColumnData,
+        bool InsertBefore,
+        int? SectionIndex);
 }

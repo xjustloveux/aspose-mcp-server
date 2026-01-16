@@ -23,41 +23,50 @@ public class CopyExcelSheetHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with operation details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetRequired<int>("sheetIndex");
-        var targetIndex = parameters.GetOptional<int?>("targetIndex");
-        var copyToPath = parameters.GetOptional<string?>("copyToPath");
+        var p = ExtractCopyExcelSheetParameters(parameters);
 
-        if (!string.IsNullOrEmpty(copyToPath))
-            SecurityHelper.ValidateFilePath(copyToPath, "copyToPath", true);
+        if (!string.IsNullOrEmpty(p.CopyToPath))
+            SecurityHelper.ValidateFilePath(p.CopyToPath, "copyToPath", true);
 
         var workbook = context.Document;
 
-        if (sheetIndex < 0 || sheetIndex >= workbook.Worksheets.Count)
+        if (p.SheetIndex < 0 || p.SheetIndex >= workbook.Worksheets.Count)
             throw new ArgumentException(
-                $"Worksheet index {sheetIndex} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
+                $"Worksheet index {p.SheetIndex} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
 
-        var sourceSheet = workbook.Worksheets[sheetIndex];
+        var sourceSheet = workbook.Worksheets[p.SheetIndex];
         var sheetName = sourceSheet.Name;
 
-        if (!string.IsNullOrEmpty(copyToPath))
+        if (!string.IsNullOrEmpty(p.CopyToPath))
         {
             using var targetWorkbook = new Workbook();
             targetWorkbook.Worksheets[0].Copy(sourceSheet);
             targetWorkbook.Worksheets[0].Name = sheetName;
-            targetWorkbook.Save(copyToPath);
-            return Success($"Worksheet '{sheetName}' copied to external file. Output: {copyToPath}");
+            targetWorkbook.Save(p.CopyToPath);
+            return Success($"Worksheet '{sheetName}' copied to external file. Output: {p.CopyToPath}");
         }
 
-        targetIndex ??= workbook.Worksheets.Count;
+        var targetIndex = p.TargetIndex ?? workbook.Worksheets.Count;
 
-        if (targetIndex.Value < 0 || targetIndex.Value > workbook.Worksheets.Count)
+        if (targetIndex < 0 || targetIndex > workbook.Worksheets.Count)
             throw new ArgumentException(
-                $"Target index {targetIndex.Value} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
+                $"Target index {targetIndex} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
 
-        _ = workbook.Worksheets.AddCopy(sheetIndex);
+        _ = workbook.Worksheets.AddCopy(p.SheetIndex);
 
         MarkModified(context);
 
-        return Success($"Worksheet '{sheetName}' copied to position {targetIndex.Value}.");
+        return Success($"Worksheet '{sheetName}' copied to position {targetIndex}.");
     }
+
+    private static CopyExcelSheetParameters ExtractCopyExcelSheetParameters(OperationParameters parameters)
+    {
+        var sheetIndex = parameters.GetRequired<int>("sheetIndex");
+        var targetIndex = parameters.GetOptional<int?>("targetIndex");
+        var copyToPath = parameters.GetOptional<string?>("copyToPath");
+
+        return new CopyExcelSheetParameters(sheetIndex, targetIndex, copyToPath);
+    }
+
+    private record CopyExcelSheetParameters(int SheetIndex, int? TargetIndex, string? CopyToPath);
 }

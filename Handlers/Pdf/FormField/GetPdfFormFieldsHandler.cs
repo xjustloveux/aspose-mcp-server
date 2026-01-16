@@ -24,7 +24,7 @@ public class GetPdfFormFieldsHandler : OperationHandlerBase<Document>
     /// <returns>JSON string containing form field information.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var limit = parameters.GetOptional("limit", 100);
+        var p = ExtractGetParameters(parameters);
 
         var document = context.Document;
 
@@ -40,7 +40,7 @@ public class GetPdfFormFieldsHandler : OperationHandlerBase<Document>
         }
 
         List<object> fieldList = [];
-        foreach (var field in document.Form.Cast<Field>().Take(limit))
+        foreach (var field in document.Form.Cast<Field>().Take(p.Limit))
         {
             var fieldInfo = new Dictionary<string, object?>
             {
@@ -61,9 +61,26 @@ public class GetPdfFormFieldsHandler : OperationHandlerBase<Document>
         {
             count = fieldList.Count,
             totalCount,
-            truncated = totalCount > limit,
+            truncated = totalCount > p.Limit,
             items = fieldList
         };
         return JsonSerializer.Serialize(result, JsonDefaults.Indented);
     }
+
+    /// <summary>
+    ///     Extracts get parameters from the operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static GetParameters ExtractGetParameters(OperationParameters parameters)
+    {
+        return new GetParameters(
+            parameters.GetOptional("limit", 100));
+    }
+
+    /// <summary>
+    ///     Parameters for getting form fields.
+    /// </summary>
+    /// <param name="Limit">The maximum number of fields to return.</param>
+    private record GetParameters(int Limit);
 }

@@ -23,24 +23,21 @@ public class FlipPptShapeHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with flip details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetRequired<int>("slideIndex");
-        var shapeIndex = parameters.GetRequired<int>("shapeIndex");
-        var flipHorizontal = parameters.GetOptional<bool?>("flipHorizontal");
-        var flipVertical = parameters.GetOptional<bool?>("flipVertical");
+        var p = ExtractFlipPptShapeParameters(parameters);
 
-        if (!flipHorizontal.HasValue && !flipVertical.HasValue)
+        if (!p.FlipHorizontal.HasValue && !p.FlipVertical.HasValue)
             throw new ArgumentException("At least one of flipHorizontal or flipVertical must be provided");
 
         var presentation = context.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-        var shape = PowerPointHelper.GetShape(slide, shapeIndex);
+        var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
+        var shape = PowerPointHelper.GetShape(slide, p.ShapeIndex);
 
         var currentFrame = shape.Frame;
-        var newFlipH = flipHorizontal.HasValue
-            ? flipHorizontal.Value ? NullableBool.True : NullableBool.False
+        var newFlipH = p.FlipHorizontal.HasValue
+            ? p.FlipHorizontal.Value ? NullableBool.True : NullableBool.False
             : currentFrame.FlipH;
-        var newFlipV = flipVertical.HasValue
-            ? flipVertical.Value ? NullableBool.True : NullableBool.False
+        var newFlipV = p.FlipVertical.HasValue
+            ? p.FlipVertical.Value ? NullableBool.True : NullableBool.False
             : currentFrame.FlipV;
 
         shape.Frame = new ShapeFrame(
@@ -50,9 +47,32 @@ public class FlipPptShapeHandler : OperationHandlerBase<Presentation>
         MarkModified(context);
 
         List<string> flipDesc = [];
-        if (flipHorizontal.HasValue) flipDesc.Add($"H={flipHorizontal.Value}");
-        if (flipVertical.HasValue) flipDesc.Add($"V={flipVertical.Value}");
+        if (p.FlipHorizontal.HasValue) flipDesc.Add($"H={p.FlipHorizontal.Value}");
+        if (p.FlipVertical.HasValue) flipDesc.Add($"V={p.FlipVertical.Value}");
 
-        return Success($"Shape {shapeIndex} flipped ({string.Join(", ", flipDesc)}).");
+        return Success($"Shape {p.ShapeIndex} flipped ({string.Join(", ", flipDesc)}).");
     }
+
+    /// <summary>
+    ///     Extracts parameters for flip shape operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static FlipPptShapeParameters ExtractFlipPptShapeParameters(OperationParameters parameters)
+    {
+        return new FlipPptShapeParameters(
+            parameters.GetRequired<int>("slideIndex"),
+            parameters.GetRequired<int>("shapeIndex"),
+            parameters.GetOptional<bool?>("flipHorizontal"),
+            parameters.GetOptional<bool?>("flipVertical"));
+    }
+
+    /// <summary>
+    ///     Parameters for flip shape operation.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index (0-based).</param>
+    /// <param name="ShapeIndex">The shape index to flip.</param>
+    /// <param name="FlipHorizontal">Whether to flip horizontally.</param>
+    /// <param name="FlipVertical">Whether to flip vertically.</param>
+    private record FlipPptShapeParameters(int SlideIndex, int ShapeIndex, bool? FlipHorizontal, bool? FlipVertical);
 }

@@ -23,66 +23,114 @@ public class InsertFieldWordHandler : OperationHandlerBase<Document>
     /// <returns>Success message with field details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var fieldType = parameters.GetOptional<string?>("fieldType");
-        var fieldArgument = parameters.GetOptional<string?>("fieldArgument");
-        var paragraphIndex = parameters.GetOptional<int?>("paragraphIndex");
-        var insertAtStart = parameters.GetOptional("insertAtStart", false);
-
-        if (string.IsNullOrEmpty(fieldType))
-            throw new ArgumentException("fieldType is required for insert_field operation");
-
+        var fieldParams = ExtractFieldParameters(parameters);
         var document = context.Document;
         var builder = new DocumentBuilder(document);
 
-        if (paragraphIndex.HasValue)
-        {
-            var paragraphs = document.GetChildNodes(NodeType.Paragraph, true);
-            if (paragraphIndex.Value == -1)
-            {
-                builder.MoveToDocumentEnd();
-            }
-            else if (paragraphIndex.Value >= 0 && paragraphIndex.Value < paragraphs.Count)
-            {
-                if (paragraphs[paragraphIndex.Value] is WordParagraph targetPara)
-                {
-                    if (insertAtStart)
-                    {
-                        builder.MoveTo(targetPara);
-                        if (targetPara.Runs.Count > 0)
-                            builder.MoveTo(targetPara.Runs[0]);
-                    }
-                    else
-                    {
-                        builder.MoveTo(targetPara);
-                        if (targetPara.Runs.Count > 0)
-                            builder.MoveTo(targetPara.Runs[^1]);
-                    }
-                }
-                else
-                {
-                    throw new InvalidOperationException($"Unable to find paragraph at index {paragraphIndex.Value}");
-                }
-            }
-            else
-            {
-                throw new ArgumentException(
-                    $"Paragraph index {paragraphIndex.Value} is out of range (document has {paragraphs.Count} paragraphs)");
-            }
-        }
-        else
-        {
-            builder.MoveToDocumentEnd();
-        }
+        MoveToInsertPosition(builder, document, fieldParams.ParagraphIndex, fieldParams.InsertAtStart);
 
-        var code = fieldType.ToUpper();
-        if (!string.IsNullOrEmpty(fieldArgument))
-            code += " " + fieldArgument;
-
+        var code = BuildFieldCode(fieldParams.FieldType, fieldParams.FieldArgument);
         var field = builder.InsertField(code);
         field.Update();
 
         MarkModified(context);
 
+        return BuildResultMessage(fieldParams.FieldType, fieldParams.FieldArgument, code, field);
+    }
+
+    /// <summary>
+    ///     Extracts and validates field parameters from the operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted field parameters.</returns>
+    /// <exception cref="ArgumentException">Thrown when fieldType is not provided.</exception>
+    private static FieldParameters ExtractFieldParameters(OperationParameters parameters)
+    {
+        var fieldType = parameters.GetOptional<string?>("fieldType");
+        if (string.IsNullOrEmpty(fieldType))
+            throw new ArgumentException("fieldType is required for insert_field operation");
+
+        return new FieldParameters(
+            fieldType,
+            parameters.GetOptional<string?>("fieldArgument"),
+            parameters.GetOptional<int?>("paragraphIndex"),
+            parameters.GetOptional("insertAtStart", false)
+        );
+    }
+
+    /// <summary>
+    ///     Moves the document builder to the insertion position.
+    /// </summary>
+    /// <param name="builder">The document builder.</param>
+    /// <param name="document">The Word document.</param>
+    /// <param name="paragraphIndex">The target paragraph index.</param>
+    /// <param name="insertAtStart">Whether to insert at the start of the paragraph.</param>
+    private static void MoveToInsertPosition(DocumentBuilder builder, Document document,
+        int? paragraphIndex, bool insertAtStart)
+    {
+        if (!paragraphIndex.HasValue)
+        {
+            builder.MoveToDocumentEnd();
+            return;
+        }
+
+        if (paragraphIndex.Value == -1)
+        {
+            builder.MoveToDocumentEnd();
+            return;
+        }
+
+        var paragraphs = document.GetChildNodes(NodeType.Paragraph, true);
+        ValidateAndMoveToPararaph(builder, paragraphs, paragraphIndex.Value, insertAtStart);
+    }
+
+    /// <summary>
+    ///     Validates the paragraph index and moves the builder to the target paragraph.
+    /// </summary>
+    /// <param name="builder">The document builder.</param>
+    /// <param name="paragraphs">The collection of paragraphs.</param>
+    /// <param name="index">The target paragraph index.</param>
+    /// <param name="insertAtStart">Whether to insert at the start of the paragraph.</param>
+    /// <exception cref="ArgumentException">Thrown when paragraph index is out of range.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when paragraph cannot be found.</exception>
+    private static void ValidateAndMoveToPararaph(DocumentBuilder builder, NodeCollection paragraphs,
+        int index, bool insertAtStart)
+    {
+        if (index < 0 || index >= paragraphs.Count)
+            throw new ArgumentException(
+                $"Paragraph index {index} is out of range (document has {paragraphs.Count} paragraphs)");
+
+        if (paragraphs[index] is not WordParagraph targetPara)
+            throw new InvalidOperationException($"Unable to find paragraph at index {index}");
+
+        builder.MoveTo(targetPara);
+        if (targetPara.Runs.Count > 0)
+            builder.MoveTo(insertAtStart ? targetPara.Runs[0] : targetPara.Runs[^1]);
+    }
+
+    /// <summary>
+    ///     Builds the field code from the field type and argument.
+    /// </summary>
+    /// <param name="fieldType">The field type.</param>
+    /// <param name="fieldArgument">The optional field argument.</param>
+    /// <returns>The constructed field code.</returns>
+    private static string BuildFieldCode(string fieldType, string? fieldArgument)
+    {
+        var code = fieldType.ToUpper();
+        return string.IsNullOrEmpty(fieldArgument) ? code : $"{code} {fieldArgument}";
+    }
+
+    /// <summary>
+    ///     Builds the result message for the field insertion.
+    /// </summary>
+    /// <param name="fieldType">The field type.</param>
+    /// <param name="fieldArgument">The field argument.</param>
+    /// <param name="code">The field code.</param>
+    /// <param name="field">The inserted field.</param>
+    /// <returns>The result message.</returns>
+    private static string BuildResultMessage(string fieldType, string? fieldArgument, string code,
+        Aspose.Words.Fields.Field field)
+    {
         var result = $"Field inserted successfully\nField type: {fieldType}\n";
         if (!string.IsNullOrEmpty(fieldArgument))
             result += $"Field argument: {fieldArgument}\n";
@@ -101,4 +149,13 @@ public class InsertFieldWordHandler : OperationHandlerBase<Document>
 
         return result;
     }
+
+    /// <summary>
+    ///     Record to hold field insertion parameters.
+    /// </summary>
+    /// <param name="FieldType">The field type.</param>
+    /// <param name="FieldArgument">The field argument.</param>
+    /// <param name="ParagraphIndex">The paragraph index.</param>
+    /// <param name="InsertAtStart">Whether to insert at the start of the paragraph.</param>
+    private record FieldParameters(string FieldType, string? FieldArgument, int? ParagraphIndex, bool InsertAtStart);
 }

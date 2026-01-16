@@ -23,35 +23,58 @@ public class AddPptImageHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with image addition details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetRequired<int>("slideIndex");
-        var imagePath = parameters.GetRequired<string>("imagePath");
-        var x = parameters.GetOptional("x", 100f);
-        var y = parameters.GetOptional("y", 100f);
-        var width = parameters.GetOptional<float?>("width");
-        var height = parameters.GetOptional<float?>("height");
+        var p = ExtractAddParameters(parameters);
 
-        if (!File.Exists(imagePath))
-            throw new FileNotFoundException($"Image file not found: {imagePath}");
+        if (!File.Exists(p.ImagePath))
+            throw new FileNotFoundException($"Image file not found: {p.ImagePath}");
 
         var presentation = context.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+        var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
 
         IPPImage pictureImage;
         int pixelWidth, pixelHeight;
 
-        using (var fileStream = new FileStream(imagePath, FileMode.Open, FileAccess.Read))
+        using (var fileStream = new FileStream(p.ImagePath, FileMode.Open, FileAccess.Read))
         {
             pictureImage = presentation.Images.AddImage(fileStream);
             pixelWidth = pictureImage.Width;
             pixelHeight = pictureImage.Height;
         }
 
-        var (finalWidth, finalHeight) = PptImageHelper.CalculateDimensions(width, height, pixelWidth, pixelHeight);
+        var (finalWidth, finalHeight) = PptImageHelper.CalculateDimensions(p.Width, p.Height, pixelWidth, pixelHeight);
 
-        slide.Shapes.AddPictureFrame(ShapeType.Rectangle, x, y, finalWidth, finalHeight, pictureImage);
+        slide.Shapes.AddPictureFrame(ShapeType.Rectangle, p.X, p.Y, finalWidth, finalHeight, pictureImage);
 
         MarkModified(context);
 
-        return Success($"Image added to slide {slideIndex}.");
+        return Success($"Image added to slide {p.SlideIndex}.");
     }
+
+    /// <summary>
+    ///     Extracts add parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted add parameters.</returns>
+    private static AddParameters ExtractAddParameters(OperationParameters parameters)
+    {
+        return new AddParameters(
+            parameters.GetRequired<int>("slideIndex"),
+            parameters.GetRequired<string>("imagePath"),
+            parameters.GetOptional("x", 100f),
+            parameters.GetOptional("y", 100f),
+            parameters.GetOptional<float?>("width"),
+            parameters.GetOptional<float?>("height")
+        );
+    }
+
+    /// <summary>
+    ///     Record for holding add image parameters.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index.</param>
+    /// <param name="ImagePath">The image file path.</param>
+    /// <param name="X">The X coordinate.</param>
+    /// <param name="Y">The Y coordinate.</param>
+    /// <param name="Width">The optional width.</param>
+    /// <param name="Height">The optional height.</param>
+    private record AddParameters(int SlideIndex, string ImagePath, float X, float Y, float? Width, float? Height);
 }

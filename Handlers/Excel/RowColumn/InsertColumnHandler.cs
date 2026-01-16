@@ -23,17 +23,26 @@ public class InsertColumnHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with insertion details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
+        var p = ExtractInsertColumnParameters(parameters);
+
+        var workbook = context.Document;
+        var worksheet = ExcelHelper.GetWorksheet(workbook, p.SheetIndex);
+
+        worksheet.Cells.InsertColumns(p.ColumnIndex, p.Count);
+
+        MarkModified(context);
+
+        return Success($"Inserted {p.Count} column(s) at column {p.ColumnIndex}.");
+    }
+
+    private static InsertColumnParameters ExtractInsertColumnParameters(OperationParameters parameters)
+    {
         var sheetIndex = parameters.GetOptional("sheetIndex", 0);
         var columnIndex = parameters.GetRequired<int>("columnIndex");
         var count = parameters.GetOptional("count", 1);
 
-        var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-
-        worksheet.Cells.InsertColumns(columnIndex, count);
-
-        MarkModified(context);
-
-        return Success($"Inserted {count} column(s) at column {columnIndex}.");
+        return new InsertColumnParameters(sheetIndex, columnIndex, count);
     }
+
+    private record InsertColumnParameters(int SheetIndex, int ColumnIndex, int Count);
 }

@@ -22,19 +22,18 @@ public class GetFormulasHandler : OperationHandlerBase<Workbook>
     /// <returns>JSON string containing formula information.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var range = parameters.GetOptional<string?>("range");
+        var getParams = ExtractGetFormulasParameters(parameters);
 
-        var worksheet = ExcelHelper.GetWorksheet(context.Document, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(context.Document, getParams.SheetIndex);
         var cells = worksheet.Cells;
 
         int startRow, endRow, startCol, endCol;
 
-        if (!string.IsNullOrEmpty(range))
+        if (!string.IsNullOrEmpty(getParams.Range))
         {
             try
             {
-                var cellRange = ExcelHelper.CreateRange(cells, range);
+                var cellRange = ExcelHelper.CreateRange(cells, getParams.Range);
                 startRow = cellRange.FirstRow;
                 endRow = cellRange.FirstRow + cellRange.RowCount - 1;
                 startCol = cellRange.FirstColumn;
@@ -42,7 +41,7 @@ public class GetFormulasHandler : OperationHandlerBase<Workbook>
             }
             catch (Exception ex)
             {
-                throw new ArgumentException($"Invalid range format: {range}", ex);
+                throw new ArgumentException($"Invalid range format: {getParams.Range}", ex);
             }
         }
         else
@@ -88,4 +87,22 @@ public class GetFormulasHandler : OperationHandlerBase<Workbook>
 
         return JsonResult(result);
     }
+
+    /// <summary>
+    ///     Extracts get formulas parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted get formulas parameters.</returns>
+    private static GetFormulasParameters ExtractGetFormulasParameters(OperationParameters parameters)
+    {
+        return new GetFormulasParameters(
+            parameters.GetOptional("sheetIndex", 0),
+            parameters.GetOptional<string?>("range")
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold get formulas parameters.
+    /// </summary>
+    private record GetFormulasParameters(int SheetIndex, string? Range);
 }

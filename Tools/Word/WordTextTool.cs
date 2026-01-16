@@ -258,7 +258,9 @@ Usage examples:
 
     /// <summary>
     ///     Builds the operation parameters from input values.
+    ///     Parameters are documented on the Execute method.
     /// </summary>
+    /// <returns>OperationParameters configured with all input values for text operations.</returns>
     private static OperationParameters BuildParameters(
         string? text, string? fontName, string? fontNameAscii, string? fontNameFarEast, double? fontSize,
         bool? bold, bool? italic, string? underline, string? color, bool? strikethrough, bool? superscript,

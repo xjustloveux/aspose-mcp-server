@@ -26,51 +26,44 @@ public class InsertRowWordTableHandler : OperationHandlerBase<Document>
     /// <exception cref="ArgumentException">Thrown when rowIndex is missing or indices are out of range.</exception>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var rowIndex = parameters.GetOptional<int?>("rowIndex");
-        if (!rowIndex.HasValue)
-            throw new ArgumentException("rowIndex is required for insert_row operation");
-
-        var tableIndex = parameters.GetOptional("tableIndex", 0);
-        var rowData = parameters.GetOptional<string?>("rowData");
-        var insertBefore = parameters.GetOptional("insertBefore", false);
-        var sectionIndex = parameters.GetOptional<int?>("sectionIndex");
+        var p = ExtractInsertRowParameters(parameters);
 
         var doc = context.Document;
-        var actualSectionIndex = sectionIndex ?? 0;
+        var actualSectionIndex = p.SectionIndex ?? 0;
         if (actualSectionIndex >= doc.Sections.Count)
             throw new ArgumentException($"Section index {actualSectionIndex} out of range");
 
         var section = doc.Sections[actualSectionIndex];
         var tables = section.Body.GetChildNodes(NodeType.Table, true).Cast<Aspose.Words.Tables.Table>().ToList();
-        if (tableIndex < 0 || tableIndex >= tables.Count)
-            throw new ArgumentException($"Table index {tableIndex} out of range");
+        if (p.TableIndex < 0 || p.TableIndex >= tables.Count)
+            throw new ArgumentException($"Table index {p.TableIndex} out of range");
 
-        var table = tables[tableIndex];
-        if (rowIndex.Value < 0 || rowIndex.Value >= table.Rows.Count)
-            throw new ArgumentException($"Row index {rowIndex.Value} out of range");
+        var table = tables[p.TableIndex];
+        if (p.RowIndex < 0 || p.RowIndex >= table.Rows.Count)
+            throw new ArgumentException($"Row index {p.RowIndex} out of range");
 
         JsonArray? dataArray = null;
-        if (!string.IsNullOrEmpty(rowData))
+        if (!string.IsNullOrEmpty(p.RowData))
             try
             {
-                dataArray = JsonNode.Parse(rowData)?.AsArray();
+                dataArray = JsonNode.Parse(p.RowData)?.AsArray();
             }
             catch
             {
                 throw new ArgumentException("Invalid rowData JSON format");
             }
 
-        var targetRow = table.Rows[rowIndex.Value];
+        var targetRow = table.Rows[p.RowIndex];
         var newRow = CreateNewRow(doc, targetRow, dataArray);
 
-        if (insertBefore)
+        if (p.InsertBefore)
             table.InsertBefore(newRow, targetRow);
         else
             table.InsertAfter(newRow, targetRow);
 
         MarkModified(context);
 
-        var insertedIndex = insertBefore ? rowIndex.Value : rowIndex.Value + 1;
+        var insertedIndex = p.InsertBefore ? p.RowIndex : p.RowIndex + 1;
         return Success($"Successfully inserted row at index {insertedIndex}.");
     }
 
@@ -143,4 +136,25 @@ public class InsertRowWordTableHandler : OperationHandlerBase<Document>
             para.AppendChild(new Run(doc, text));
         }
     }
+
+    private static InsertRowParameters ExtractInsertRowParameters(OperationParameters parameters)
+    {
+        var rowIndex = parameters.GetOptional<int?>("rowIndex");
+        if (!rowIndex.HasValue)
+            throw new ArgumentException("rowIndex is required for insert_row operation");
+
+        var tableIndex = parameters.GetOptional("tableIndex", 0);
+        var rowData = parameters.GetOptional<string?>("rowData");
+        var insertBefore = parameters.GetOptional("insertBefore", false);
+        var sectionIndex = parameters.GetOptional<int?>("sectionIndex");
+
+        return new InsertRowParameters(rowIndex.Value, tableIndex, rowData, insertBefore, sectionIndex);
+    }
+
+    private record InsertRowParameters(
+        int RowIndex,
+        int TableIndex,
+        string? RowData,
+        bool InsertBefore,
+        int? SectionIndex);
 }

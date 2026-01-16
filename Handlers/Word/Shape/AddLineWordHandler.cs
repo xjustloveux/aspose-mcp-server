@@ -25,120 +25,167 @@ public class AddLineWordHandler : OperationHandlerBase<Document>
     /// <returns>Success message with line details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var location = parameters.GetOptional("location", "body");
-        var position = parameters.GetOptional("position", "end");
-        var lineStyle = parameters.GetOptional("lineStyle", "shape");
-        var lineWidth = parameters.GetOptional("lineWidth", 1.0);
-        var lineColor = parameters.GetOptional("lineColor", "000000");
-        var width = parameters.GetOptional<double?>("width");
-
+        var lineParams = ExtractLineParameters(parameters);
         var doc = context.Document;
         var section = doc.FirstSection;
-        var calculatedWidth = width ?? section.PageSetup.PageWidth - section.PageSetup.LeftMargin -
-            section.PageSetup.RightMargin;
+        var calculatedWidth = lineParams.Width ?? CalculateDefaultWidth(section);
 
-        Node? targetNode;
-        string locationDesc;
+        var (targetNode, locationDesc) = GetTargetNode(doc, section, lineParams.Location);
+        if (targetNode == null)
+            throw new InvalidOperationException($"Could not access {lineParams.Location}");
 
-        switch (location.ToLower())
+        var linePara = CreateLineParagraph(doc, lineParams, calculatedWidth);
+        InsertParagraph(targetNode, linePara, lineParams.Position);
+
+        MarkModified(context);
+        return $"Successfully inserted line in {locationDesc} at {lineParams.Position} position.";
+    }
+
+    /// <summary>
+    ///     Extracts line parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted line parameters.</returns>
+    private static LineParameters ExtractLineParameters(OperationParameters parameters)
+    {
+        return new LineParameters(
+            parameters.GetOptional("location", "body"),
+            parameters.GetOptional("position", "end"),
+            parameters.GetOptional("lineStyle", "shape"),
+            parameters.GetOptional("lineWidth", 1.0),
+            parameters.GetOptional("lineColor", "000000"),
+            parameters.GetOptional<double?>("width")
+        );
+    }
+
+    /// <summary>
+    ///     Calculates the default line width based on page setup.
+    /// </summary>
+    /// <param name="section">The document section.</param>
+    /// <returns>The calculated width.</returns>
+    private static double CalculateDefaultWidth(Section section)
+    {
+        return section.PageSetup.PageWidth - section.PageSetup.LeftMargin - section.PageSetup.RightMargin;
+    }
+
+    /// <summary>
+    ///     Gets the target node based on location.
+    /// </summary>
+    /// <param name="doc">The Word document.</param>
+    /// <param name="section">The document section.</param>
+    /// <param name="location">The location string.</param>
+    /// <returns>A tuple containing the target node and location description.</returns>
+    private static (Node? targetNode, string locationDesc) GetTargetNode(Document doc, Section section, string location)
+    {
+        return location.ToLower() switch
         {
-            case "header":
-                var header = section.HeadersFooters[HeaderFooterType.HeaderPrimary];
-                if (header == null)
-                {
-                    header = new WordHeaderFooter(doc, HeaderFooterType.HeaderPrimary);
-                    section.HeadersFooters.Add(header);
-                }
+            "header" => (GetOrCreateHeaderFooter(doc, section, HeaderFooterType.HeaderPrimary), "header"),
+            "footer" => (GetOrCreateHeaderFooter(doc, section, HeaderFooterType.FooterPrimary), "footer"),
+            _ => (section.Body, "document body")
+        };
+    }
 
-                targetNode = header;
-                locationDesc = "header";
-                break;
-
-            case "footer":
-                var footer = section.HeadersFooters[HeaderFooterType.FooterPrimary];
-                if (footer == null)
-                {
-                    footer = new WordHeaderFooter(doc, HeaderFooterType.FooterPrimary);
-                    section.HeadersFooters.Add(footer);
-                }
-
-                targetNode = footer;
-                locationDesc = "footer";
-                break;
-
-            default:
-                targetNode = section.Body;
-                locationDesc = "document body";
-                break;
+    /// <summary>
+    ///     Gets or creates a header/footer of the specified type.
+    /// </summary>
+    /// <param name="doc">The Word document.</param>
+    /// <param name="section">The document section.</param>
+    /// <param name="type">The header/footer type.</param>
+    /// <returns>The header/footer.</returns>
+    private static WordHeaderFooter GetOrCreateHeaderFooter(Document doc, Section section, HeaderFooterType type)
+    {
+        var headerFooter = section.HeadersFooters[type];
+        if (headerFooter == null)
+        {
+            headerFooter = new WordHeaderFooter(doc, type);
+            section.HeadersFooters.Add(headerFooter);
         }
 
-        if (targetNode == null)
-            throw new InvalidOperationException($"Could not access {location}");
+        return headerFooter;
+    }
 
-        if (lineStyle == "shape")
+    /// <summary>
+    ///     Creates a paragraph containing the line.
+    /// </summary>
+    /// <param name="doc">The Word document.</param>
+    /// <param name="p">The line parameters.</param>
+    /// <param name="width">The line width.</param>
+    /// <returns>The paragraph containing the line.</returns>
+    private static WordParagraph CreateLineParagraph(Document doc, LineParameters p, double width)
+    {
+        return p.LineStyle == "shape"
+            ? CreateShapeLineParagraph(doc, p, width)
+            : CreateBorderLineParagraph(doc, p);
+    }
+
+    /// <summary>
+    ///     Creates a paragraph with a shape line.
+    /// </summary>
+    /// <param name="doc">The Word document.</param>
+    /// <param name="p">The line parameters.</param>
+    /// <param name="width">The line width.</param>
+    /// <returns>The paragraph containing the shape line.</returns>
+    private static WordParagraph CreateShapeLineParagraph(Document doc, LineParameters p, double width)
+    {
+        var linePara = new WordParagraph(doc)
         {
-            var linePara = new WordParagraph(doc)
-            {
-                ParagraphFormat =
-                {
-                    SpaceBefore = 0,
-                    SpaceAfter = 0,
-                    LineSpacing = 1,
-                    LineSpacingRule = LineSpacingRule.Exactly
-                }
-            };
+            ParagraphFormat =
+                { SpaceBefore = 0, SpaceAfter = 0, LineSpacing = 1, LineSpacingRule = LineSpacingRule.Exactly }
+        };
 
-            var shape = new Aspose.Words.Drawing.Shape(doc, ShapeType.Line)
-            {
-                Width = calculatedWidth,
-                Height = 0,
-                StrokeWeight = lineWidth,
-                StrokeColor = ColorHelper.ParseColor(lineColor),
-                WrapType = WrapType.Inline
-            };
+        var shape = new Aspose.Words.Drawing.Shape(doc, ShapeType.Line)
+        {
+            Width = width, Height = 0, StrokeWeight = p.LineWidth,
+            StrokeColor = ColorHelper.ParseColor(p.LineColor), WrapType = WrapType.Inline
+        };
 
-            linePara.AppendChild(shape);
+        linePara.AppendChild(shape);
+        return linePara;
+    }
 
-            if (position == "start")
-            {
-                if (targetNode is WordHeaderFooter headerFooter)
-                    headerFooter.PrependChild(linePara);
-                else if (targetNode is Body body)
-                    body.PrependChild(linePara);
-            }
-            else
-            {
-                if (targetNode is WordHeaderFooter headerFooter)
-                    headerFooter.AppendChild(linePara);
-                else if (targetNode is Body body)
-                    body.AppendChild(linePara);
-            }
+    /// <summary>
+    ///     Creates a paragraph with a border line.
+    /// </summary>
+    /// <param name="doc">The Word document.</param>
+    /// <param name="p">The line parameters.</param>
+    /// <returns>The paragraph containing the border line.</returns>
+    private static WordParagraph CreateBorderLineParagraph(Document doc, LineParameters p)
+    {
+        var linePara = new WordParagraph(doc);
+        linePara.ParagraphFormat.Borders.Bottom.LineStyle = LineStyle.Single;
+        linePara.ParagraphFormat.Borders.Bottom.LineWidth = p.LineWidth;
+        linePara.ParagraphFormat.Borders.Bottom.Color = ColorHelper.ParseColor(p.LineColor);
+        return linePara;
+    }
+
+    /// <summary>
+    ///     Inserts the line paragraph at the target position.
+    /// </summary>
+    /// <param name="targetNode">The target node.</param>
+    /// <param name="linePara">The line paragraph.</param>
+    /// <param name="position">The position (start or end).</param>
+    private static void InsertParagraph(Node targetNode, WordParagraph linePara, string position)
+    {
+        if (position == "start")
+        {
+            if (targetNode is WordHeaderFooter hf) hf.PrependChild(linePara);
+            else if (targetNode is Body body) body.PrependChild(linePara);
         }
         else
         {
-            var linePara = new WordParagraph(doc);
-            linePara.ParagraphFormat.Borders.Bottom.LineStyle = LineStyle.Single;
-            linePara.ParagraphFormat.Borders.Bottom.LineWidth = lineWidth;
-            linePara.ParagraphFormat.Borders.Bottom.Color = ColorHelper.ParseColor(lineColor);
-
-            if (position == "start")
-            {
-                if (targetNode is WordHeaderFooter headerFooter)
-                    headerFooter.PrependChild(linePara);
-                else if (targetNode is Body body)
-                    body.PrependChild(linePara);
-            }
-            else
-            {
-                if (targetNode is WordHeaderFooter headerFooter)
-                    headerFooter.AppendChild(linePara);
-                else if (targetNode is Body body)
-                    body.AppendChild(linePara);
-            }
+            if (targetNode is WordHeaderFooter hf) hf.AppendChild(linePara);
+            else if (targetNode is Body body) body.AppendChild(linePara);
         }
-
-        MarkModified(context);
-
-        return $"Successfully inserted line in {locationDesc} at {position} position.";
     }
+
+    /// <summary>
+    ///     Record to hold line creation parameters.
+    /// </summary>
+    private record LineParameters(
+        string Location,
+        string Position,
+        string LineStyle,
+        double LineWidth,
+        string LineColor,
+        double? Width);
 }

@@ -42,6 +42,11 @@ public class SetRunFormatWordHandler : OperationHandlerBase<Document>
         return Success($"Run format updated{colorMsg}");
     }
 
+    /// <summary>
+    ///     Extracts font parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted font parameters.</returns>
     private static FontParameters ExtractFontParameters(OperationParameters parameters)
     {
         return new FontParameters(
@@ -56,6 +61,14 @@ public class SetRunFormatWordHandler : OperationHandlerBase<Document>
         );
     }
 
+    /// <summary>
+    ///     Ensures that runs exist in the paragraph, creating one if necessary.
+    /// </summary>
+    /// <param name="doc">The Word document.</param>
+    /// <param name="para">The paragraph.</param>
+    /// <param name="runIndex">The run index being targeted.</param>
+    /// <returns>The list of runs in the paragraph.</returns>
+    /// <exception cref="ArgumentException">Thrown when paragraph has no runs and runIndex is not 0.</exception>
     private static List<Run> EnsureRunsExist(Document doc, Aspose.Words.Paragraph para, int? runIndex)
     {
         var runs = para.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
@@ -70,6 +83,13 @@ public class SetRunFormatWordHandler : OperationHandlerBase<Document>
         return para.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
     }
 
+    /// <summary>
+    ///     Gets the runs to format based on run index.
+    /// </summary>
+    /// <param name="runs">The list of all runs.</param>
+    /// <param name="runIndex">The specific run index, or null for all runs.</param>
+    /// <returns>The list of runs to format.</returns>
+    /// <exception cref="ArgumentException">Thrown when run index is out of range.</exception>
     private static List<Run> GetRunsToFormat(List<Run> runs, int? runIndex)
     {
         if (!runIndex.HasValue) return runs;
@@ -81,6 +101,12 @@ public class SetRunFormatWordHandler : OperationHandlerBase<Document>
         return [runs[runIndex.Value]];
     }
 
+    /// <summary>
+    ///     Applies font formatting to a run.
+    /// </summary>
+    /// <param name="run">The run to format.</param>
+    /// <param name="fontParams">The font parameters.</param>
+    /// <param name="isAutoColor">Whether to use auto color.</param>
     private static void ApplyFontFormatting(Run run, FontParameters fontParams, bool isAutoColor)
     {
         var underlineStr = fontParams.Underline.HasValue ? fontParams.Underline.Value ? "single" : "none" : null;
@@ -106,6 +132,11 @@ public class SetRunFormatWordHandler : OperationHandlerBase<Document>
         }
     }
 
+    /// <summary>
+    ///     Applies font settings when using auto color mode.
+    /// </summary>
+    /// <param name="run">The run to format.</param>
+    /// <param name="fontParams">The font parameters.</param>
     private static void ApplyAutoColorFontSettings(Run run, FontParameters fontParams)
     {
         if (!string.IsNullOrEmpty(fontParams.FontName)) run.Font.Name = fontParams.FontName;
@@ -118,6 +149,17 @@ public class SetRunFormatWordHandler : OperationHandlerBase<Document>
             run.Font.Underline = fontParams.Underline.Value ? Underline.Single : Underline.None;
     }
 
+    /// <summary>
+    ///     Record to hold font formatting parameters.
+    /// </summary>
+    /// <param name="FontName">The font name.</param>
+    /// <param name="FontNameAscii">The ASCII font name.</param>
+    /// <param name="FontNameFarEast">The Far East font name.</param>
+    /// <param name="FontSize">The font size.</param>
+    /// <param name="Bold">Whether to apply bold.</param>
+    /// <param name="Italic">Whether to apply italic.</param>
+    /// <param name="Underline">Whether to apply underline.</param>
+    /// <param name="Color">The font color.</param>
     private record FontParameters(
         string? FontName,
         string? FontNameAscii,

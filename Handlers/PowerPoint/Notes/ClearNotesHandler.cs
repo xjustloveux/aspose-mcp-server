@@ -21,11 +21,11 @@ public class ClearNotesHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message indicating how many slides were cleared.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndices = parameters.GetOptional<int[]?>("slideIndices");
+        var p = ExtractClearNotesParameters(parameters);
 
         var presentation = context.Document;
-        var targets = slideIndices?.Length > 0
-            ? slideIndices
+        var targets = p.SlideIndices?.Length > 0
+            ? p.SlideIndices
             : Enumerable.Range(0, presentation.Slides.Count).ToArray();
 
         ValidateSlideIndices(targets, presentation.Slides.Count);
@@ -60,4 +60,20 @@ public class ClearNotesHandler : OperationHandlerBase<Presentation>
             throw new ArgumentException(
                 $"Invalid slide indices: [{string.Join(", ", invalidIndices)}]. Valid range: 0 to {slideCount - 1}");
     }
+
+    /// <summary>
+    ///     Extracts clear notes parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted clear notes parameters.</returns>
+    private static ClearNotesParameters ExtractClearNotesParameters(OperationParameters parameters)
+    {
+        return new ClearNotesParameters(parameters.GetOptional<int[]?>("slideIndices"));
+    }
+
+    /// <summary>
+    ///     Record for holding clear notes parameters.
+    /// </summary>
+    /// <param name="SlideIndices">The array of slide indices to clear.</param>
+    private record ClearNotesParameters(int[]? SlideIndices);
 }

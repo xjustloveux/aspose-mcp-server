@@ -23,28 +23,51 @@ public class EditSheetPropertiesHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var name = parameters.GetOptional<string?>("name");
-        var isVisible = parameters.GetOptional<bool?>("isVisible");
-        var tabColor = parameters.GetOptional<string?>("tabColor");
-        var isSelected = parameters.GetOptional<bool?>("isSelected");
+        var editParams = ExtractEditSheetPropertiesParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, editParams.SheetIndex);
 
-        if (!string.IsNullOrEmpty(name)) worksheet.Name = name;
+        if (!string.IsNullOrEmpty(editParams.Name)) worksheet.Name = editParams.Name;
 
-        if (isVisible.HasValue) worksheet.IsVisible = isVisible.Value;
+        if (editParams.IsVisible.HasValue) worksheet.IsVisible = editParams.IsVisible.Value;
 
-        if (!string.IsNullOrWhiteSpace(tabColor))
+        if (!string.IsNullOrWhiteSpace(editParams.TabColor))
         {
-            var color = ColorHelper.ParseColor(tabColor);
+            var color = ColorHelper.ParseColor(editParams.TabColor);
             worksheet.TabColor = color;
         }
 
-        if (isSelected.HasValue && isSelected.Value) workbook.Worksheets.ActiveSheetIndex = sheetIndex;
+        if (editParams.IsSelected.HasValue && editParams.IsSelected.Value)
+            workbook.Worksheets.ActiveSheetIndex = editParams.SheetIndex;
 
         MarkModified(context);
-        return Success($"Sheet {sheetIndex} properties updated successfully.");
+        return Success($"Sheet {editParams.SheetIndex} properties updated successfully.");
     }
+
+    /// <summary>
+    ///     Extracts edit sheet properties parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted edit sheet properties parameters.</returns>
+    private static EditSheetPropertiesParameters ExtractEditSheetPropertiesParameters(OperationParameters parameters)
+    {
+        return new EditSheetPropertiesParameters(
+            parameters.GetOptional("sheetIndex", 0),
+            parameters.GetOptional<string?>("name"),
+            parameters.GetOptional<bool?>("isVisible"),
+            parameters.GetOptional<string?>("tabColor"),
+            parameters.GetOptional<bool?>("isSelected")
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold edit sheet properties parameters.
+    /// </summary>
+    private record EditSheetPropertiesParameters(
+        int SheetIndex,
+        string? Name,
+        bool? IsVisible,
+        string? TabColor,
+        bool? IsSelected);
 }

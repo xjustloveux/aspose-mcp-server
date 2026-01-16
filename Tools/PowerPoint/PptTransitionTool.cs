@@ -116,7 +116,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -124,21 +124,40 @@ Usage examples:
         string? transitionType,
         double? advanceAfterSeconds)
     {
+        return operation.ToLowerInvariant() switch
+        {
+            "set" => BuildSetParameters(slideIndex, transitionType, advanceAfterSeconds),
+            "get" or "delete" => BuildBaseParameters(slideIndex),
+            _ => new OperationParameters()
+        };
+    }
+
+    /// <summary>
+    ///     Builds parameters for the set transition operation.
+    /// </summary>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <param name="transitionType">The transition type (e.g., Fade, Push, Wipe).</param>
+    /// <param name="advanceAfterSeconds">Seconds before auto-advancing to next slide.</param>
+    /// <returns>OperationParameters configured for setting a transition.</returns>
+    private static OperationParameters BuildSetParameters(int slideIndex, string? transitionType,
+        double? advanceAfterSeconds)
+    {
         var parameters = new OperationParameters();
         parameters.Set("slideIndex", slideIndex);
+        if (transitionType != null) parameters.Set("transitionType", transitionType);
+        if (advanceAfterSeconds.HasValue) parameters.Set("advanceAfterSeconds", advanceAfterSeconds.Value);
+        return parameters;
+    }
 
-        switch (operation.ToLowerInvariant())
-        {
-            case "set":
-                if (transitionType != null) parameters.Set("transitionType", transitionType);
-                if (advanceAfterSeconds.HasValue) parameters.Set("advanceAfterSeconds", advanceAfterSeconds.Value);
-                break;
-
-            case "get":
-            case "delete":
-                break;
-        }
-
+    /// <summary>
+    ///     Builds base parameters containing only the slide index.
+    /// </summary>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <returns>OperationParameters with slide index set.</returns>
+    private static OperationParameters BuildBaseParameters(int slideIndex)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("slideIndex", slideIndex);
         return parameters;
     }
 }

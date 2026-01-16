@@ -23,14 +23,9 @@ public class AddIndexWordHandler : OperationHandlerBase<Document>
     /// <returns>Success message with count of entries added.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var indexEntriesJson = parameters.GetOptional<string?>("indexEntries");
-        var insertIndexAtEnd = parameters.GetOptional("insertIndexAtEnd", true);
-        var headingStyle = parameters.GetOptional("headingStyle", "Heading 1");
+        var p = ExtractAddIndexParameters(parameters);
 
-        if (string.IsNullOrEmpty(indexEntriesJson))
-            throw new ArgumentException("indexEntries is required for add_index operation");
-
-        var indexEntriesArray = JsonNode.Parse(indexEntriesJson)?.AsArray()
+        var indexEntriesArray = JsonNode.Parse(p.IndexEntriesJson)?.AsArray()
                                 ?? throw new ArgumentException("indexEntries must be a valid JSON array");
 
         var doc = context.Document;
@@ -55,12 +50,12 @@ public class AddIndexWordHandler : OperationHandlerBase<Document>
                 }
             }
 
-        if (insertIndexAtEnd)
+        if (p.InsertIndexAtEnd)
         {
             builder.MoveToDocumentEnd();
             builder.InsertBreak(BreakType.PageBreak);
 
-            var style = doc.Styles[headingStyle];
+            var style = doc.Styles[p.HeadingStyle];
             if (style == null)
                 builder.ParagraphFormat.StyleIdentifier = StyleIdentifier.Heading1;
             else
@@ -75,4 +70,22 @@ public class AddIndexWordHandler : OperationHandlerBase<Document>
 
         return Success($"Index entries added. Total entries: {indexEntriesArray.Count}");
     }
+
+    private static AddIndexParameters ExtractAddIndexParameters(OperationParameters parameters)
+    {
+        var indexEntriesJson = parameters.GetOptional<string?>("indexEntries");
+
+        if (string.IsNullOrEmpty(indexEntriesJson))
+            throw new ArgumentException("indexEntries is required for add_index operation");
+
+        return new AddIndexParameters(
+            indexEntriesJson,
+            parameters.GetOptional("insertIndexAtEnd", true),
+            parameters.GetOptional("headingStyle", "Heading 1"));
+    }
+
+    private record AddIndexParameters(
+        string IndexEntriesJson,
+        bool InsertIndexAtEnd,
+        string HeadingStyle);
 }

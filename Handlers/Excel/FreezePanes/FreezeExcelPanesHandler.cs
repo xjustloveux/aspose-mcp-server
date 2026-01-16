@@ -23,17 +23,26 @@ public class FreezeExcelPanesHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with freeze details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
+        var p = ExtractFreezeParameters(parameters);
+
+        var workbook = context.Document;
+        var worksheet = ExcelHelper.GetWorksheet(workbook, p.SheetIndex);
+
+        worksheet.FreezePanes(p.Row + 1, p.Column + 1, p.Row, p.Column);
+
+        MarkModified(context);
+
+        return Success($"Frozen panes at row {p.Row}, column {p.Column}.");
+    }
+
+    private static FreezeParameters ExtractFreezeParameters(OperationParameters parameters)
+    {
         var sheetIndex = parameters.GetOptional("sheetIndex", 0);
         var row = parameters.GetRequired<int>("row");
         var column = parameters.GetRequired<int>("column");
 
-        var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-
-        worksheet.FreezePanes(row + 1, column + 1, row, column);
-
-        MarkModified(context);
-
-        return Success($"Frozen panes at row {row}, column {column}.");
+        return new FreezeParameters(sheetIndex, row, column);
     }
+
+    private record FreezeParameters(int SheetIndex, int Row, int Column);
 }

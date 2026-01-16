@@ -23,16 +23,13 @@ public class CopySheetFormatHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sourceSheetIndex = parameters.GetOptional("sourceSheetIndex", 0);
-        var targetSheetIndex = parameters.GetOptional("targetSheetIndex", 0);
-        var copyColumnWidths = parameters.GetOptional("copyColumnWidths", true);
-        var copyRowHeights = parameters.GetOptional("copyRowHeights", true);
+        var p = ExtractCopySheetFormatParameters(parameters);
 
         var workbook = context.Document;
-        var sourceSheet = ExcelHelper.GetWorksheet(workbook, sourceSheetIndex);
-        var targetSheet = ExcelHelper.GetWorksheet(workbook, targetSheetIndex);
+        var sourceSheet = ExcelHelper.GetWorksheet(workbook, p.SourceSheetIndex);
+        var targetSheet = ExcelHelper.GetWorksheet(workbook, p.TargetSheetIndex);
 
-        if (copyColumnWidths)
+        if (p.CopyColumnWidths)
         {
             var maxCol = Math.Max(sourceSheet.Cells.MaxColumn, sourceSheet.Cells.MaxDataColumn);
             maxCol = Math.Max(maxCol, 0);
@@ -40,7 +37,7 @@ public class CopySheetFormatHandler : OperationHandlerBase<Workbook>
                 targetSheet.Cells.SetColumnWidth(i, sourceSheet.Cells.GetColumnWidth(i));
         }
 
-        if (copyRowHeights)
+        if (p.CopyRowHeights)
         {
             var maxRow = Math.Max(sourceSheet.Cells.MaxRow, sourceSheet.Cells.MaxDataRow);
             maxRow = Math.Max(maxRow, 0);
@@ -50,6 +47,34 @@ public class CopySheetFormatHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Sheet format copied from sheet {sourceSheetIndex} to sheet {targetSheetIndex}.");
+        return Success($"Sheet format copied from sheet {p.SourceSheetIndex} to sheet {p.TargetSheetIndex}.");
     }
+
+    /// <summary>
+    ///     Extracts copy sheet format parameters from the operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>A CopySheetFormatParameters record containing all extracted values.</returns>
+    private static CopySheetFormatParameters ExtractCopySheetFormatParameters(OperationParameters parameters)
+    {
+        return new CopySheetFormatParameters(
+            parameters.GetOptional("sourceSheetIndex", 0),
+            parameters.GetOptional("targetSheetIndex", 0),
+            parameters.GetOptional("copyColumnWidths", true),
+            parameters.GetOptional("copyRowHeights", true)
+        );
+    }
+
+    /// <summary>
+    ///     Record containing parameters for copy sheet format operations.
+    /// </summary>
+    /// <param name="SourceSheetIndex">The index of the source sheet.</param>
+    /// <param name="TargetSheetIndex">The index of the target sheet.</param>
+    /// <param name="CopyColumnWidths">Whether to copy column widths.</param>
+    /// <param name="CopyRowHeights">Whether to copy row heights.</param>
+    private record CopySheetFormatParameters(
+        int SourceSheetIndex,
+        int TargetSheetIndex,
+        bool CopyColumnWidths,
+        bool CopyRowHeights);
 }

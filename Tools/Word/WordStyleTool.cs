@@ -170,7 +170,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -199,48 +199,111 @@ Usage examples:
         string[]? styleNames,
         bool overwriteExisting)
     {
-        var parameters = new OperationParameters();
-
-        switch (operation.ToLower())
+        return operation.ToLower() switch
         {
-            case "get_styles":
-                parameters.Set("includeBuiltIn", includeBuiltIn);
-                break;
+            "get_styles" => BuildGetStylesParameters(includeBuiltIn),
+            "create_style" => BuildCreateStyleParameters(styleName, styleType, baseStyle, fontName, fontNameAscii,
+                fontNameFarEast, fontSize, bold, italic, underline, color, alignment, spaceBefore, spaceAfter,
+                lineSpacing),
+            "apply_style" => BuildApplyStyleParameters(styleName, paragraphIndex, paragraphIndices, sectionIndex,
+                tableIndex, applyToAllParagraphs),
+            "copy_styles" => BuildCopyStylesParameters(sourceDocument, styleNames, overwriteExisting),
+            _ => new OperationParameters()
+        };
+    }
 
-            case "create_style":
-                if (styleName != null) parameters.Set("styleName", styleName);
-                parameters.Set("styleType", styleType);
-                if (baseStyle != null) parameters.Set("baseStyle", baseStyle);
-                if (fontName != null) parameters.Set("fontName", fontName);
-                if (fontNameAscii != null) parameters.Set("fontNameAscii", fontNameAscii);
-                if (fontNameFarEast != null) parameters.Set("fontNameFarEast", fontNameFarEast);
-                if (fontSize.HasValue) parameters.Set("fontSize", fontSize.Value);
-                if (bold.HasValue) parameters.Set("bold", bold.Value);
-                if (italic.HasValue) parameters.Set("italic", italic.Value);
-                if (underline.HasValue) parameters.Set("underline", underline.Value);
-                if (color != null) parameters.Set("color", color);
-                if (alignment != null) parameters.Set("alignment", alignment);
-                if (spaceBefore.HasValue) parameters.Set("spaceBefore", spaceBefore.Value);
-                if (spaceAfter.HasValue) parameters.Set("spaceAfter", spaceAfter.Value);
-                if (lineSpacing.HasValue) parameters.Set("lineSpacing", lineSpacing.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the get_styles operation.
+    /// </summary>
+    /// <param name="includeBuiltIn">Whether to include built-in styles.</param>
+    /// <returns>OperationParameters configured for getting styles.</returns>
+    private static OperationParameters BuildGetStylesParameters(bool includeBuiltIn)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("includeBuiltIn", includeBuiltIn);
+        return parameters;
+    }
 
-            case "apply_style":
-                if (styleName != null) parameters.Set("styleName", styleName);
-                if (paragraphIndex.HasValue) parameters.Set("paragraphIndex", paragraphIndex.Value);
-                if (paragraphIndices != null) parameters.Set("paragraphIndices", paragraphIndices);
-                parameters.Set("sectionIndex", sectionIndex);
-                if (tableIndex.HasValue) parameters.Set("tableIndex", tableIndex.Value);
-                parameters.Set("applyToAllParagraphs", applyToAllParagraphs);
-                break;
+    /// <summary>
+    ///     Builds parameters for the create_style operation.
+    /// </summary>
+    /// <param name="styleName">The style name.</param>
+    /// <param name="styleType">The style type: paragraph, character, table, list.</param>
+    /// <param name="baseStyle">The base style to inherit from.</param>
+    /// <param name="fontName">The font name.</param>
+    /// <param name="fontNameAscii">The font name for ASCII characters.</param>
+    /// <param name="fontNameFarEast">The font name for Far East characters.</param>
+    /// <param name="fontSize">The font size in points.</param>
+    /// <param name="bold">Whether the text is bold.</param>
+    /// <param name="italic">Whether the text is italic.</param>
+    /// <param name="underline">Whether the text is underlined.</param>
+    /// <param name="color">The text color in hex format.</param>
+    /// <param name="alignment">The paragraph alignment: left, center, right, justify.</param>
+    /// <param name="spaceBefore">The space before paragraph in points.</param>
+    /// <param name="spaceAfter">The space after paragraph in points.</param>
+    /// <param name="lineSpacing">The line spacing multiplier.</param>
+    /// <returns>OperationParameters configured for creating a style.</returns>
+    private static OperationParameters BuildCreateStyleParameters(string? styleName, string styleType,
+        string? baseStyle,
+        string? fontName, string? fontNameAscii, string? fontNameFarEast, double? fontSize, bool? bold, bool? italic,
+        bool? underline, string? color, string? alignment, double? spaceBefore, double? spaceAfter, double? lineSpacing)
+    {
+        var parameters = new OperationParameters();
+        if (styleName != null) parameters.Set("styleName", styleName);
+        parameters.Set("styleType", styleType);
+        if (baseStyle != null) parameters.Set("baseStyle", baseStyle);
+        if (fontName != null) parameters.Set("fontName", fontName);
+        if (fontNameAscii != null) parameters.Set("fontNameAscii", fontNameAscii);
+        if (fontNameFarEast != null) parameters.Set("fontNameFarEast", fontNameFarEast);
+        if (fontSize.HasValue) parameters.Set("fontSize", fontSize.Value);
+        if (bold.HasValue) parameters.Set("bold", bold.Value);
+        if (italic.HasValue) parameters.Set("italic", italic.Value);
+        if (underline.HasValue) parameters.Set("underline", underline.Value);
+        if (color != null) parameters.Set("color", color);
+        if (alignment != null) parameters.Set("alignment", alignment);
+        if (spaceBefore.HasValue) parameters.Set("spaceBefore", spaceBefore.Value);
+        if (spaceAfter.HasValue) parameters.Set("spaceAfter", spaceAfter.Value);
+        if (lineSpacing.HasValue) parameters.Set("lineSpacing", lineSpacing.Value);
+        return parameters;
+    }
 
-            case "copy_styles":
-                if (sourceDocument != null) parameters.Set("sourceDocument", sourceDocument);
-                if (styleNames != null) parameters.Set("styleNames", styleNames);
-                parameters.Set("overwriteExisting", overwriteExisting);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the apply_style operation.
+    /// </summary>
+    /// <param name="styleName">The style name to apply.</param>
+    /// <param name="paragraphIndex">The paragraph index (0-based).</param>
+    /// <param name="paragraphIndices">The array of paragraph indices.</param>
+    /// <param name="sectionIndex">The section index (0-based).</param>
+    /// <param name="tableIndex">The table index (0-based).</param>
+    /// <param name="applyToAllParagraphs">Whether to apply to all paragraphs.</param>
+    /// <returns>OperationParameters configured for applying a style.</returns>
+    private static OperationParameters BuildApplyStyleParameters(string? styleName, int? paragraphIndex,
+        int[]? paragraphIndices, int sectionIndex, int? tableIndex, bool applyToAllParagraphs)
+    {
+        var parameters = new OperationParameters();
+        if (styleName != null) parameters.Set("styleName", styleName);
+        if (paragraphIndex.HasValue) parameters.Set("paragraphIndex", paragraphIndex.Value);
+        if (paragraphIndices != null) parameters.Set("paragraphIndices", paragraphIndices);
+        parameters.Set("sectionIndex", sectionIndex);
+        if (tableIndex.HasValue) parameters.Set("tableIndex", tableIndex.Value);
+        parameters.Set("applyToAllParagraphs", applyToAllParagraphs);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the copy_styles operation.
+    /// </summary>
+    /// <param name="sourceDocument">The source document path to copy styles from.</param>
+    /// <param name="styleNames">The array of style names to copy.</param>
+    /// <param name="overwriteExisting">Whether to overwrite existing styles.</param>
+    /// <returns>OperationParameters configured for copying styles.</returns>
+    private static OperationParameters BuildCopyStylesParameters(string? sourceDocument, string[]? styleNames,
+        bool overwriteExisting)
+    {
+        var parameters = new OperationParameters();
+        if (sourceDocument != null) parameters.Set("sourceDocument", sourceDocument);
+        if (styleNames != null) parameters.Set("styleNames", styleNames);
+        parameters.Set("overwriteExisting", overwriteExisting);
         return parameters;
     }
 }

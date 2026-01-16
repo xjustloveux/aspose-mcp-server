@@ -21,18 +21,27 @@ public class DeleteExcelNamedRangeHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with deletion details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var name = parameters.GetRequired<string>("name");
+        var p = ExtractDeleteNamedRangeParameters(parameters);
 
         var workbook = context.Document;
         var names = workbook.Worksheets.Names;
 
-        if (names[name] == null)
-            throw new ArgumentException($"Named range '{name}' does not exist.");
+        if (names[p.Name] == null)
+            throw new ArgumentException($"Named range '{p.Name}' does not exist.");
 
-        names.Remove(name);
+        names.Remove(p.Name);
 
         MarkModified(context);
 
-        return Success($"Named range '{name}' deleted.");
+        return Success($"Named range '{p.Name}' deleted.");
     }
+
+    private static DeleteNamedRangeParameters ExtractDeleteNamedRangeParameters(OperationParameters parameters)
+    {
+        return new DeleteNamedRangeParameters(
+            parameters.GetRequired<string>("name")
+        );
+    }
+
+    private record DeleteNamedRangeParameters(string Name);
 }

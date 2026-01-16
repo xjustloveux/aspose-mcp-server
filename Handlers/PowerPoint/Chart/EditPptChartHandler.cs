@@ -23,29 +23,26 @@ public class EditPptChartHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with update details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetRequired<int>("slideIndex");
-        var chartIndex = parameters.GetRequired<int>("shapeIndex");
-        var title = parameters.GetOptional<string?>("title");
-        var chartTypeStr = parameters.GetOptional<string?>("chartType");
+        var p = ExtractEditChartParameters(parameters);
 
         var presentation = context.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-        var chart = PptChartHelper.GetChartByIndex(slide, chartIndex, slideIndex);
+        var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
+        var chart = PptChartHelper.GetChartByIndex(slide, p.ChartIndex, p.SlideIndex);
 
-        if (!string.IsNullOrEmpty(title))
+        if (!string.IsNullOrEmpty(p.Title))
             try
             {
-                PptChartHelper.SetChartTitle(chart, title);
+                PptChartHelper.SetChartTitle(chart, p.Title);
             }
             catch (Exception ex)
             {
                 throw new InvalidOperationException($"Failed to set chart title: {ex.Message}", ex);
             }
 
-        if (!string.IsNullOrEmpty(chartTypeStr))
+        if (!string.IsNullOrEmpty(p.ChartType))
             try
             {
-                chart.Type = PptChartHelper.ParseChartType(chartTypeStr, chart.Type);
+                chart.Type = PptChartHelper.ParseChartType(p.ChartType, chart.Type);
             }
             catch (Exception ex)
             {
@@ -54,6 +51,29 @@ public class EditPptChartHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Chart {chartIndex} updated on slide {slideIndex}.");
+        return Success($"Chart {p.ChartIndex} updated on slide {p.SlideIndex}.");
     }
+
+    /// <summary>
+    ///     Extracts edit chart parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted edit chart parameters.</returns>
+    private static EditChartParameters ExtractEditChartParameters(OperationParameters parameters)
+    {
+        return new EditChartParameters(
+            parameters.GetRequired<int>("slideIndex"),
+            parameters.GetRequired<int>("shapeIndex"),
+            parameters.GetOptional<string?>("title"),
+            parameters.GetOptional<string?>("chartType"));
+    }
+
+    /// <summary>
+    ///     Record for holding edit chart parameters.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index.</param>
+    /// <param name="ChartIndex">The chart shape index.</param>
+    /// <param name="Title">The optional chart title.</param>
+    /// <param name="ChartType">The optional chart type.</param>
+    private record EditChartParameters(int SlideIndex, int ChartIndex, string? Title, string? ChartType);
 }

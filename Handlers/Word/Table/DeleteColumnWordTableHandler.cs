@@ -25,6 +25,37 @@ public class DeleteColumnWordTableHandler : OperationHandlerBase<Document>
     /// <exception cref="InvalidOperationException">Thrown when the table has no rows.</exception>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
+        var p = ExtractDeleteColumnParameters(parameters);
+
+        var doc = context.Document;
+        var tables = WordTableHelper.GetTables(doc, p.SectionIndex);
+
+        if (p.TableIndex < 0 || p.TableIndex >= tables.Count)
+            throw new ArgumentException($"Table index {p.TableIndex} out of range");
+
+        var table = tables[p.TableIndex];
+        if (table.Rows.Count == 0)
+            throw new InvalidOperationException($"Table {p.TableIndex} has no rows");
+
+        var firstRow = table.Rows[0];
+        if (p.ColumnIndex < 0 || p.ColumnIndex >= firstRow.Cells.Count)
+            throw new ArgumentException($"Column index {p.ColumnIndex} out of range");
+
+        var deletedCount = 0;
+        foreach (var row in table.Rows.Cast<Row>())
+            if (p.ColumnIndex < row.Cells.Count)
+            {
+                row.Cells[p.ColumnIndex].Remove();
+                deletedCount++;
+            }
+
+        MarkModified(context);
+
+        return Success($"Successfully deleted column #{p.ColumnIndex} ({deletedCount} cells removed).");
+    }
+
+    private static DeleteColumnParameters ExtractDeleteColumnParameters(OperationParameters parameters)
+    {
         var columnIndex = parameters.GetOptional<int?>("columnIndex");
         if (!columnIndex.HasValue)
             throw new ArgumentException("columnIndex is required for delete_column operation");
@@ -32,30 +63,8 @@ public class DeleteColumnWordTableHandler : OperationHandlerBase<Document>
         var tableIndex = parameters.GetOptional("tableIndex", 0);
         var sectionIndex = parameters.GetOptional<int?>("sectionIndex");
 
-        var doc = context.Document;
-        var tables = WordTableHelper.GetTables(doc, sectionIndex);
-
-        if (tableIndex < 0 || tableIndex >= tables.Count)
-            throw new ArgumentException($"Table index {tableIndex} out of range");
-
-        var table = tables[tableIndex];
-        if (table.Rows.Count == 0)
-            throw new InvalidOperationException($"Table {tableIndex} has no rows");
-
-        var firstRow = table.Rows[0];
-        if (columnIndex.Value < 0 || columnIndex.Value >= firstRow.Cells.Count)
-            throw new ArgumentException($"Column index {columnIndex.Value} out of range");
-
-        var deletedCount = 0;
-        foreach (var row in table.Rows.Cast<Row>())
-            if (columnIndex.Value < row.Cells.Count)
-            {
-                row.Cells[columnIndex.Value].Remove();
-                deletedCount++;
-            }
-
-        MarkModified(context);
-
-        return Success($"Successfully deleted column #{columnIndex.Value} ({deletedCount} cells removed).");
+        return new DeleteColumnParameters(columnIndex.Value, tableIndex, sectionIndex);
     }
+
+    private record DeleteColumnParameters(int ColumnIndex, int TableIndex, int? SectionIndex);
 }

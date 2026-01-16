@@ -129,7 +129,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -143,46 +143,107 @@ Usage examples:
         string? outputPath,
         string? outputDir)
     {
-        var parameters = new OperationParameters();
-
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "add":
-                parameters.Set("pageIndex", pageIndex);
-                if (imagePath != null) parameters.Set("imagePath", imagePath);
-                parameters.Set("x", x);
-                parameters.Set("y", y);
-                if (width.HasValue) parameters.Set("width", width.Value);
-                if (height.HasValue) parameters.Set("height", height.Value);
-                break;
+            "add" => BuildAddParameters(pageIndex, imagePath, x, y, width, height),
+            "delete" => BuildDeleteParameters(pageIndex, imageIndex),
+            "edit" => BuildEditParameters(pageIndex, imageIndex, imagePath, x, y, width, height),
+            "extract" => BuildExtractParameters(pageIndex, imageIndex, outputPath, outputDir),
+            "get" => BuildGetParameters(pageIndex),
+            _ => new OperationParameters()
+        };
+    }
 
-            case "delete":
-                parameters.Set("pageIndex", pageIndex);
-                parameters.Set("imageIndex", imageIndex);
-                break;
+    /// <summary>
+    ///     Builds parameters for the add image operation.
+    /// </summary>
+    /// <param name="pageIndex">The page index (1-based) to add the image to.</param>
+    /// <param name="imagePath">The file path of the image to add.</param>
+    /// <param name="x">The X position in PDF coordinates.</param>
+    /// <param name="y">The Y position in PDF coordinates.</param>
+    /// <param name="width">The image width.</param>
+    /// <param name="height">The image height.</param>
+    /// <returns>OperationParameters configured for adding an image.</returns>
+    private static OperationParameters BuildAddParameters(int pageIndex, string? imagePath, double x, double y,
+        double? width, double? height)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("pageIndex", pageIndex);
+        if (imagePath != null) parameters.Set("imagePath", imagePath);
+        parameters.Set("x", x);
+        parameters.Set("y", y);
+        if (width.HasValue) parameters.Set("width", width.Value);
+        if (height.HasValue) parameters.Set("height", height.Value);
+        return parameters;
+    }
 
-            case "edit":
-                parameters.Set("pageIndex", pageIndex);
-                parameters.Set("imageIndex", imageIndex);
-                if (imagePath != null) parameters.Set("imagePath", imagePath);
-                parameters.Set("x", x);
-                parameters.Set("y", y);
-                if (width.HasValue) parameters.Set("width", width.Value);
-                if (height.HasValue) parameters.Set("height", height.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the delete image operation.
+    /// </summary>
+    /// <param name="pageIndex">The page index (1-based) containing the image.</param>
+    /// <param name="imageIndex">The image index (1-based) to delete.</param>
+    /// <returns>OperationParameters configured for deleting an image.</returns>
+    private static OperationParameters BuildDeleteParameters(int pageIndex, int imageIndex)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("pageIndex", pageIndex);
+        parameters.Set("imageIndex", imageIndex);
+        return parameters;
+    }
 
-            case "extract":
-                parameters.Set("pageIndex", pageIndex);
-                if (imageIndex > 0) parameters.Set("imageIndex", imageIndex);
-                if (outputPath != null) parameters.Set("outputPath", outputPath);
-                if (outputDir != null) parameters.Set("outputDir", outputDir);
-                break;
+    /// <summary>
+    ///     Builds parameters for the edit image operation.
+    /// </summary>
+    /// <param name="pageIndex">The page index (1-based) containing the image.</param>
+    /// <param name="imageIndex">The image index (1-based) to edit.</param>
+    /// <param name="imagePath">The file path of the replacement image (optional).</param>
+    /// <param name="x">The new X position in PDF coordinates.</param>
+    /// <param name="y">The new Y position in PDF coordinates.</param>
+    /// <param name="width">The new image width.</param>
+    /// <param name="height">The new image height.</param>
+    /// <returns>OperationParameters configured for editing an image.</returns>
+    private static OperationParameters BuildEditParameters(int pageIndex, int imageIndex, string? imagePath, double x,
+        double y, double? width, double? height)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("pageIndex", pageIndex);
+        parameters.Set("imageIndex", imageIndex);
+        if (imagePath != null) parameters.Set("imagePath", imagePath);
+        parameters.Set("x", x);
+        parameters.Set("y", y);
+        if (width.HasValue) parameters.Set("width", width.Value);
+        if (height.HasValue) parameters.Set("height", height.Value);
+        return parameters;
+    }
 
-            case "get":
-                if (pageIndex > 0) parameters.Set("pageIndex", pageIndex);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the extract image operation.
+    /// </summary>
+    /// <param name="pageIndex">The page index (1-based) containing the image.</param>
+    /// <param name="imageIndex">The image index (1-based) to extract.</param>
+    /// <param name="outputPath">The output file path for the extracted image.</param>
+    /// <param name="outputDir">The output directory for extracted images.</param>
+    /// <returns>OperationParameters configured for extracting an image.</returns>
+    private static OperationParameters BuildExtractParameters(int pageIndex, int imageIndex, string? outputPath,
+        string? outputDir)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("pageIndex", pageIndex);
+        if (imageIndex > 0) parameters.Set("imageIndex", imageIndex);
+        if (outputPath != null) parameters.Set("outputPath", outputPath);
+        if (outputDir != null) parameters.Set("outputDir", outputDir);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the get images operation.
+    /// </summary>
+    /// <param name="pageIndex">The page index (1-based) to get images from.</param>
+    /// <returns>OperationParameters configured for getting images.</returns>
+    private static OperationParameters BuildGetParameters(int pageIndex)
+    {
+        var parameters = new OperationParameters();
+        if (pageIndex > 0) parameters.Set("pageIndex", pageIndex);
         return parameters;
     }
 }

@@ -23,17 +23,11 @@ public class EditPdfImageHandler : OperationHandlerBase<Document>
     /// <returns>Success message with edit details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var pageIndex = parameters.GetOptional("pageIndex", 1);
-        var imageIndex = parameters.GetOptional("imageIndex", 1);
-        var imagePath = parameters.GetOptional<string?>("imagePath");
-        var x = parameters.GetOptional<double?>("x");
-        var y = parameters.GetOptional<double?>("y");
-        var width = parameters.GetOptional<double?>("width");
-        var height = parameters.GetOptional<double?>("height");
+        var p = ExtractEditParameters(parameters);
 
         var document = context.Document;
 
-        var actualPageIndex = pageIndex < 1 ? 1 : pageIndex;
+        var actualPageIndex = p.PageIndex < 1 ? 1 : p.PageIndex;
         if (actualPageIndex > document.Pages.Count)
             throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
 
@@ -41,10 +35,11 @@ public class EditPdfImageHandler : OperationHandlerBase<Document>
         var images = page.Resources?.Images;
         if (images == null)
             throw new ArgumentException("No images found on the page");
-        if (imageIndex < 1 || imageIndex > images.Count)
+        if (p.ImageIndex < 1 || p.ImageIndex > images.Count)
             throw new ArgumentException($"imageIndex must be between 1 and {images.Count}");
 
         string? tempImagePath = null;
+        var imagePath = p.ImagePath;
         try
         {
             if (string.IsNullOrEmpty(imagePath))
@@ -52,7 +47,7 @@ public class EditPdfImageHandler : OperationHandlerBase<Document>
                 tempImagePath = Path.Combine(Path.GetTempPath(), $"temp_image_{Guid.NewGuid()}.png");
                 using var imageStream = new FileStream(tempImagePath, FileMode.Create);
 #pragma warning disable CA1416
-                images[imageIndex].Save(imageStream, ImageFormat.Png);
+                images[p.ImageIndex].Save(imageStream, ImageFormat.Png);
 #pragma warning restore CA1416
                 imagePath = tempImagePath;
             }
@@ -63,17 +58,17 @@ public class EditPdfImageHandler : OperationHandlerBase<Document>
                     throw new FileNotFoundException($"Image file not found: {imagePath}");
             }
 
-            images.Delete(imageIndex);
-            var newX = x ?? 100;
-            var newY = y ?? 600;
+            images.Delete(p.ImageIndex);
+            var newX = p.X ?? 100;
+            var newY = p.Y ?? 600;
             page.AddImage(imagePath,
-                new Rectangle(newX, newY, width.HasValue ? newX + width.Value : newX + 200,
-                    height.HasValue ? newY + height.Value : newY + 200));
+                new Rectangle(newX, newY, p.Width.HasValue ? newX + p.Width.Value : newX + 200,
+                    p.Height.HasValue ? newY + p.Height.Value : newY + 200));
 
             MarkModified(context);
 
             var action = tempImagePath != null ? "Moved" : "Replaced";
-            return Success($"{action} image {imageIndex} on page {pageIndex}.");
+            return Success($"{action} image {p.ImageIndex} on page {p.PageIndex}.");
         }
         finally
         {
@@ -81,4 +76,40 @@ public class EditPdfImageHandler : OperationHandlerBase<Document>
                 File.Delete(tempImagePath);
         }
     }
+
+    /// <summary>
+    ///     Extracts edit parameters from the operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static EditParameters ExtractEditParameters(OperationParameters parameters)
+    {
+        return new EditParameters(
+            parameters.GetOptional("pageIndex", 1),
+            parameters.GetOptional("imageIndex", 1),
+            parameters.GetOptional<string?>("imagePath"),
+            parameters.GetOptional<double?>("x"),
+            parameters.GetOptional<double?>("y"),
+            parameters.GetOptional<double?>("width"),
+            parameters.GetOptional<double?>("height"));
+    }
+
+    /// <summary>
+    ///     Parameters for editing an image.
+    /// </summary>
+    /// <param name="PageIndex">The 1-based page index.</param>
+    /// <param name="ImageIndex">The 1-based image index.</param>
+    /// <param name="ImagePath">The optional path to the replacement image.</param>
+    /// <param name="X">The optional X coordinate.</param>
+    /// <param name="Y">The optional Y coordinate.</param>
+    /// <param name="Width">The optional width.</param>
+    /// <param name="Height">The optional height.</param>
+    private record EditParameters(
+        int PageIndex,
+        int ImageIndex,
+        string? ImagePath,
+        double? X,
+        double? Y,
+        double? Width,
+        double? Height);
 }

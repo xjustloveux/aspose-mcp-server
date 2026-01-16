@@ -125,7 +125,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -142,33 +142,76 @@ Usage examples:
     {
         var parameters = new OperationParameters();
         parameters.Set("sheetIndex", sheetIndex);
-
         if (cell != null) parameters.Set("cell", cell);
 
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "write":
-                if (value != null) parameters.Set("value", value);
-                break;
+            "write" => BuildWriteParameters(parameters, value),
+            "edit" => BuildEditParameters(parameters, value, formula, clearValue),
+            "get" => BuildGetParameters(parameters, calculateFormula, includeFormula, includeFormat),
+            "clear" => BuildClearParameters(parameters, clearContent, clearFormat),
+            _ => parameters
+        };
+    }
 
-            case "edit":
-                if (value != null) parameters.Set("value", value);
-                if (formula != null) parameters.Set("formula", formula);
-                parameters.Set("clearValue", clearValue);
-                break;
+    /// <summary>
+    ///     Builds parameters for the write cell operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index and cell reference.</param>
+    /// <param name="value">The value to write to the cell.</param>
+    /// <returns>OperationParameters configured for writing cell value.</returns>
+    private static OperationParameters BuildWriteParameters(OperationParameters parameters, string? value)
+    {
+        if (value != null) parameters.Set("value", value);
+        return parameters;
+    }
 
-            case "get":
-                parameters.Set("calculateFormula", calculateFormula);
-                parameters.Set("includeFormula", includeFormula);
-                parameters.Set("includeFormat", includeFormat);
-                break;
+    /// <summary>
+    ///     Builds parameters for the edit cell operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index and cell reference.</param>
+    /// <param name="value">The value to set in the cell.</param>
+    /// <param name="formula">The formula to set in the cell.</param>
+    /// <param name="clearValue">Whether to clear the cell value.</param>
+    /// <returns>OperationParameters configured for editing cell.</returns>
+    private static OperationParameters BuildEditParameters(OperationParameters parameters, string? value,
+        string? formula, bool clearValue)
+    {
+        if (value != null) parameters.Set("value", value);
+        if (formula != null) parameters.Set("formula", formula);
+        parameters.Set("clearValue", clearValue);
+        return parameters;
+    }
 
-            case "clear":
-                parameters.Set("clearContent", clearContent);
-                parameters.Set("clearFormat", clearFormat);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the get cell operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index and cell reference.</param>
+    /// <param name="calculateFormula">Whether to calculate formulas before reading.</param>
+    /// <param name="includeFormula">Whether to include formula in the result.</param>
+    /// <param name="includeFormat">Whether to include format information in the result.</param>
+    /// <returns>OperationParameters configured for getting cell value.</returns>
+    private static OperationParameters BuildGetParameters(OperationParameters parameters, bool calculateFormula,
+        bool includeFormula, bool includeFormat)
+    {
+        parameters.Set("calculateFormula", calculateFormula);
+        parameters.Set("includeFormula", includeFormula);
+        parameters.Set("includeFormat", includeFormat);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the clear cell operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index and cell reference.</param>
+    /// <param name="clearContent">Whether to clear cell content.</param>
+    /// <param name="clearFormat">Whether to clear cell format.</param>
+    /// <returns>OperationParameters configured for clearing cell.</returns>
+    private static OperationParameters BuildClearParameters(OperationParameters parameters, bool clearContent,
+        bool clearFormat)
+    {
+        parameters.Set("clearContent", clearContent);
+        parameters.Set("clearFormat", clearFormat);
         return parameters;
     }
 }

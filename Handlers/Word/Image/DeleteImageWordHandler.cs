@@ -22,20 +22,19 @@ public class DeleteImageWordHandler : OperationHandlerBase<Document>
     /// <returns>Success message with deletion details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var imageIndex = parameters.GetOptional("imageIndex", 0);
-        var sectionIndex = parameters.GetOptional("sectionIndex", 0);
+        var p = ExtractDeleteImageParameters(parameters);
 
         var doc = context.Document;
 
-        var allImages = WordImageHelper.GetAllImages(doc, sectionIndex);
+        var allImages = WordImageHelper.GetAllImages(doc, p.SectionIndex);
 
-        if (imageIndex < 0 || imageIndex >= allImages.Count)
+        if (p.ImageIndex < 0 || p.ImageIndex >= allImages.Count)
             throw new ArgumentException(
-                $"Image index {imageIndex} is out of range (document has {allImages.Count} images)");
+                $"Image index {p.ImageIndex} is out of range (document has {allImages.Count} images)");
 
-        var shapeToDelete = allImages[imageIndex];
+        var shapeToDelete = allImages[p.ImageIndex];
 
-        var imageInfo = $"Image #{imageIndex}";
+        var imageInfo = $"Image #{p.ImageIndex}";
         if (shapeToDelete.HasImage)
             try
             {
@@ -43,7 +42,6 @@ public class DeleteImageWordHandler : OperationHandlerBase<Document>
             }
             catch (Exception ex)
             {
-                // Size information may not be available, but this is not critical
                 Console.Error.WriteLine($"[WARN] Failed to get image size information: {ex.Message}");
             }
 
@@ -51,8 +49,26 @@ public class DeleteImageWordHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        var remainingCount = WordImageHelper.GetAllImages(doc, sectionIndex).Count;
+        var remainingCount = WordImageHelper.GetAllImages(doc, p.SectionIndex).Count;
 
         return $"{imageInfo} deleted successfully\nRemaining images: {remainingCount}";
     }
+
+    /// <summary>
+    ///     Extracts delete image parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted delete image parameters.</returns>
+    private static DeleteImageParameters ExtractDeleteImageParameters(OperationParameters parameters)
+    {
+        return new DeleteImageParameters(
+            parameters.GetOptional("imageIndex", 0),
+            parameters.GetOptional("sectionIndex", 0)
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold delete image parameters.
+    /// </summary>
+    private record DeleteImageParameters(int ImageIndex, int SectionIndex);
 }

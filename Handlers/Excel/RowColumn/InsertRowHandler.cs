@@ -23,17 +23,26 @@ public class InsertRowHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with insertion details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
+        var p = ExtractInsertRowParameters(parameters);
+
+        var workbook = context.Document;
+        var worksheet = ExcelHelper.GetWorksheet(workbook, p.SheetIndex);
+
+        worksheet.Cells.InsertRows(p.RowIndex, p.Count);
+
+        MarkModified(context);
+
+        return Success($"Inserted {p.Count} row(s) at row {p.RowIndex}.");
+    }
+
+    private static InsertRowParameters ExtractInsertRowParameters(OperationParameters parameters)
+    {
         var sheetIndex = parameters.GetOptional("sheetIndex", 0);
         var rowIndex = parameters.GetRequired<int>("rowIndex");
         var count = parameters.GetOptional("count", 1);
 
-        var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-
-        worksheet.Cells.InsertRows(rowIndex, count);
-
-        MarkModified(context);
-
-        return Success($"Inserted {count} row(s) at row {rowIndex}.");
+        return new InsertRowParameters(sheetIndex, rowIndex, count);
     }
+
+    private record InsertRowParameters(int SheetIndex, int RowIndex, int Count);
 }

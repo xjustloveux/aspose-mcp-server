@@ -2,6 +2,7 @@ using Aspose.Words;
 using Aspose.Words.Drawing;
 using AsposeMcpServer.Core.Handlers;
 using WordParagraph = Aspose.Words.Paragraph;
+using WordShape = Aspose.Words.Drawing.Shape;
 
 namespace AsposeMcpServer.Handlers.Word.Image;
 
@@ -25,99 +26,164 @@ public class EditImageWordHandler : OperationHandlerBase<Document>
     /// <returns>Success message with edit details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var imageIndex = parameters.GetOptional("imageIndex", 0);
-        var sectionIndex = parameters.GetOptional("sectionIndex", 0);
-        var width = parameters.GetOptional<double?>("width");
-        var height = parameters.GetOptional<double?>("height");
-        var alignment = parameters.GetOptional<string?>("alignment");
-        var textWrapping = parameters.GetOptional<string?>("textWrapping");
-        var aspectRatioLocked = parameters.GetOptional<bool?>("aspectRatioLocked");
-        var horizontalAlignment = parameters.GetOptional<string?>("horizontalAlignment");
-        var verticalAlignment = parameters.GetOptional<string?>("verticalAlignment");
-        var alternativeText = parameters.GetOptional<string?>("alternativeText");
-        var title = parameters.GetOptional<string?>("title");
-        var linkUrl = parameters.GetOptional<string?>("linkUrl");
-
+        var p = ExtractImageParameters(parameters);
         var doc = context.Document;
 
-        var allImages = WordImageHelper.GetAllImages(doc, sectionIndex);
+        var allImages = WordImageHelper.GetAllImages(doc, p.SectionIndex);
+        ValidateImageIndex(p.ImageIndex, allImages.Count);
 
-        if (imageIndex < 0 || imageIndex >= allImages.Count)
-            throw new ArgumentException(
-                $"Image index {imageIndex} is out of range (document has {allImages.Count} images)");
+        var shape = allImages[p.ImageIndex];
 
-        var shape = allImages[imageIndex];
-
-        // Apply size properties
-        if (width.HasValue)
-            shape.Width = width.Value;
-
-        if (height.HasValue)
-            shape.Height = height.Value;
-
-        if (aspectRatioLocked.HasValue)
-            shape.AspectRatioLocked = aspectRatioLocked.Value;
-
-        var alignmentValue = alignment ?? "left";
-        if (!string.IsNullOrEmpty(alignmentValue) && shape.ParentNode is WordParagraph parentPara)
-            parentPara.ParagraphFormat.Alignment = WordImageHelper.GetAlignment(alignmentValue);
-
-        var textWrappingValue = textWrapping ?? "inline";
-        if (!string.IsNullOrEmpty(textWrappingValue))
-        {
-            shape.WrapType = WordImageHelper.GetWrapType(textWrappingValue);
-
-            if (textWrappingValue != "inline")
-            {
-                shape.RelativeHorizontalPosition = RelativeHorizontalPosition.Column;
-                shape.RelativeVerticalPosition = RelativeVerticalPosition.Paragraph;
-
-                var hAlign = horizontalAlignment ?? "left";
-                if (!string.IsNullOrEmpty(hAlign))
-                    shape.HorizontalAlignment = WordImageHelper.GetHorizontalAlignment(hAlign);
-
-                var vAlign = verticalAlignment ?? "top";
-                if (!string.IsNullOrEmpty(vAlign))
-                    shape.VerticalAlignment = WordImageHelper.GetVerticalAlignment(vAlign);
-            }
-        }
-        else if (shape.WrapType != WrapType.Inline)
-        {
-            shape.RelativeHorizontalPosition = RelativeHorizontalPosition.Column;
-            shape.RelativeVerticalPosition = RelativeVerticalPosition.Paragraph;
-
-            var hAlign = horizontalAlignment ?? "left";
-            if (!string.IsNullOrEmpty(hAlign))
-                shape.HorizontalAlignment = WordImageHelper.GetHorizontalAlignment(hAlign);
-
-            var vAlign = verticalAlignment ?? "top";
-            if (!string.IsNullOrEmpty(vAlign)) shape.VerticalAlignment = WordImageHelper.GetVerticalAlignment(vAlign);
-        }
-
-        if (!string.IsNullOrEmpty(alternativeText))
-            shape.AlternativeText = alternativeText;
-
-        if (!string.IsNullOrEmpty(title))
-            shape.Title = title;
-
-        // HRef property doesn't accept null, use empty string to clear
-        if (linkUrl != null)
-            shape.HRef = linkUrl;
+        ApplySizeProperties(shape, p);
+        ApplyAlignmentProperties(shape, p);
+        ApplyTextWrappingProperties(shape, p);
+        ApplyMetadataProperties(shape, p);
 
         MarkModified(context);
-
-        List<string> changes = [];
-        if (width.HasValue) changes.Add($"Width: {width.Value}");
-        if (height.HasValue) changes.Add($"Height: {height.Value}");
-        if (alignment != null) changes.Add($"Alignment: {alignment}");
-        if (textWrapping != null) changes.Add($"Text wrapping: {textWrapping}");
-        if (linkUrl != null)
-            changes.Add(string.IsNullOrEmpty(linkUrl) ? "Hyperlink: removed" : $"Hyperlink: {linkUrl}");
-        if (alternativeText != null) changes.Add($"Alt text: {alternativeText}");
-        if (title != null) changes.Add($"Title: {title}");
-
-        var changesDesc = changes.Count > 0 ? string.Join(", ", changes) : "properties";
-
-        return Success($"Image {imageIndex} edited ({changesDesc})");
+        return Success($"Image {p.ImageIndex} edited ({BuildChangesDescription(p)})");
     }
+
+    /// <summary>
+    ///     Extracts image edit parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted image edit parameters.</returns>
+    private static ImageEditParameters ExtractImageParameters(OperationParameters parameters)
+    {
+        return new ImageEditParameters(
+            parameters.GetOptional("imageIndex", 0),
+            parameters.GetOptional("sectionIndex", 0),
+            parameters.GetOptional<double?>("width"),
+            parameters.GetOptional<double?>("height"),
+            parameters.GetOptional<string?>("alignment"),
+            parameters.GetOptional<string?>("textWrapping"),
+            parameters.GetOptional<bool?>("aspectRatioLocked"),
+            parameters.GetOptional<string?>("horizontalAlignment"),
+            parameters.GetOptional<string?>("verticalAlignment"),
+            parameters.GetOptional<string?>("alternativeText"),
+            parameters.GetOptional<string?>("title"),
+            parameters.GetOptional<string?>("linkUrl")
+        );
+    }
+
+    /// <summary>
+    ///     Validates that the image index is within range.
+    /// </summary>
+    /// <param name="imageIndex">The image index to validate.</param>
+    /// <param name="count">The total number of images.</param>
+    /// <exception cref="ArgumentException">Thrown when image index is out of range.</exception>
+    private static void ValidateImageIndex(int imageIndex, int count)
+    {
+        if (imageIndex < 0 || imageIndex >= count)
+            throw new ArgumentException($"Image index {imageIndex} is out of range (document has {count} images)");
+    }
+
+    /// <summary>
+    ///     Applies size properties to the shape.
+    /// </summary>
+    /// <param name="shape">The shape to configure.</param>
+    /// <param name="p">The image edit parameters.</param>
+    private static void ApplySizeProperties(WordShape shape, ImageEditParameters p)
+    {
+        if (p.Width.HasValue) shape.Width = p.Width.Value;
+        if (p.Height.HasValue) shape.Height = p.Height.Value;
+        if (p.AspectRatioLocked.HasValue) shape.AspectRatioLocked = p.AspectRatioLocked.Value;
+    }
+
+    /// <summary>
+    ///     Applies alignment properties to the shape.
+    /// </summary>
+    /// <param name="shape">The shape to configure.</param>
+    /// <param name="p">The image edit parameters.</param>
+    private static void ApplyAlignmentProperties(WordShape shape, ImageEditParameters p)
+    {
+        var alignmentValue = p.Alignment ?? "left";
+        if (!string.IsNullOrEmpty(alignmentValue) && shape.ParentNode is WordParagraph parentPara)
+            parentPara.ParagraphFormat.Alignment = WordImageHelper.GetAlignment(alignmentValue);
+    }
+
+    /// <summary>
+    ///     Applies text wrapping properties to the shape.
+    /// </summary>
+    /// <param name="shape">The shape to configure.</param>
+    /// <param name="p">The image edit parameters.</param>
+    private static void ApplyTextWrappingProperties(WordShape shape, ImageEditParameters p)
+    {
+        var textWrappingValue = p.TextWrapping ?? "inline";
+        if (string.IsNullOrEmpty(textWrappingValue) && shape.WrapType == WrapType.Inline) return;
+
+        if (!string.IsNullOrEmpty(textWrappingValue))
+            shape.WrapType = WordImageHelper.GetWrapType(textWrappingValue);
+
+        if (textWrappingValue != "inline" && shape.WrapType != WrapType.Inline)
+            ApplyFloatingPositionProperties(shape, p);
+    }
+
+    /// <summary>
+    ///     Applies floating position properties to the shape.
+    /// </summary>
+    /// <param name="shape">The shape to configure.</param>
+    /// <param name="p">The image edit parameters.</param>
+    private static void ApplyFloatingPositionProperties(WordShape shape, ImageEditParameters p)
+    {
+        shape.RelativeHorizontalPosition = RelativeHorizontalPosition.Column;
+        shape.RelativeVerticalPosition = RelativeVerticalPosition.Paragraph;
+
+        var hAlign = p.HorizontalAlignment ?? "left";
+        if (!string.IsNullOrEmpty(hAlign))
+            shape.HorizontalAlignment = WordImageHelper.GetHorizontalAlignment(hAlign);
+
+        var vAlign = p.VerticalAlignment ?? "top";
+        if (!string.IsNullOrEmpty(vAlign))
+            shape.VerticalAlignment = WordImageHelper.GetVerticalAlignment(vAlign);
+    }
+
+    /// <summary>
+    ///     Applies metadata properties to the shape.
+    /// </summary>
+    /// <param name="shape">The shape to configure.</param>
+    /// <param name="p">The image edit parameters.</param>
+    private static void ApplyMetadataProperties(WordShape shape, ImageEditParameters p)
+    {
+        if (!string.IsNullOrEmpty(p.AlternativeText)) shape.AlternativeText = p.AlternativeText;
+        if (!string.IsNullOrEmpty(p.Title)) shape.Title = p.Title;
+        if (p.LinkUrl != null) shape.HRef = p.LinkUrl;
+    }
+
+    /// <summary>
+    ///     Builds a description of the changes made.
+    /// </summary>
+    /// <param name="p">The image edit parameters.</param>
+    /// <returns>A description of the changes.</returns>
+    private static string BuildChangesDescription(ImageEditParameters p)
+    {
+        List<string> changes = [];
+        if (p.Width.HasValue) changes.Add($"Width: {p.Width.Value}");
+        if (p.Height.HasValue) changes.Add($"Height: {p.Height.Value}");
+        if (p.Alignment != null) changes.Add($"Alignment: {p.Alignment}");
+        if (p.TextWrapping != null) changes.Add($"Text wrapping: {p.TextWrapping}");
+        if (p.LinkUrl != null)
+            changes.Add(string.IsNullOrEmpty(p.LinkUrl) ? "Hyperlink: removed" : $"Hyperlink: {p.LinkUrl}");
+        if (p.AlternativeText != null) changes.Add($"Alt text: {p.AlternativeText}");
+        if (p.Title != null) changes.Add($"Title: {p.Title}");
+
+        return changes.Count > 0 ? string.Join(", ", changes) : "properties";
+    }
+
+    /// <summary>
+    ///     Record to hold image edit parameters.
+    /// </summary>
+    private record ImageEditParameters(
+        int ImageIndex,
+        int SectionIndex,
+        double? Width,
+        double? Height,
+        string? Alignment,
+        string? TextWrapping,
+        bool? AspectRatioLocked,
+        string? HorizontalAlignment,
+        string? VerticalAlignment,
+        string? AlternativeText,
+        string? Title,
+        string? LinkUrl);
 }

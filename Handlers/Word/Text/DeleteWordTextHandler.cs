@@ -24,21 +24,22 @@ public class DeleteWordTextHandler : OperationHandlerBase<Document>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or indices are invalid.</exception>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var searchText = parameters.GetOptional<string?>("searchText");
-        var startParagraphIndex = parameters.GetOptional<int?>("startParagraphIndex");
-        var startRunIndex = parameters.GetOptional("startRunIndex", 0);
-        var endParagraphIndex = parameters.GetOptional<int?>("endParagraphIndex");
-        var endRunIndex = parameters.GetOptional<int?>("endRunIndex");
+        var p = ExtractDeleteParameters(parameters);
 
         var doc = context.Document;
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
 
-        if (!string.IsNullOrEmpty(searchText))
+        var startParagraphIndex = p.StartParagraphIndex;
+        var endParagraphIndex = p.EndParagraphIndex;
+        var startRunIndex = p.StartRunIndex;
+        var endRunIndex = p.EndRunIndex;
+
+        if (!string.IsNullOrEmpty(p.SearchText))
         {
-            var (foundStart, foundEnd, foundStartRun, foundEndRun) = FindTextLocation(paragraphs, searchText);
+            var (foundStart, foundEnd, foundStartRun, foundEndRun) = FindTextLocation(paragraphs, p.SearchText);
             if (!foundStart.HasValue)
                 throw new ArgumentException(
-                    $"Text '{searchText}' not found. Please use search operation to confirm text location first.");
+                    $"Text '{p.SearchText}' not found. Please use search operation to confirm text location first.");
 
             startParagraphIndex = foundStart;
             endParagraphIndex = foundEnd;
@@ -67,8 +68,18 @@ public class DeleteWordTextHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return BuildResultMessage(searchText, startParagraphIndex.Value, startRunIndex,
+        return BuildResultMessage(p.SearchText, startParagraphIndex.Value, startRunIndex,
             endParagraphIndex.Value, endRunIndex, deletedText);
+    }
+
+    private static DeleteParameters ExtractDeleteParameters(OperationParameters parameters)
+    {
+        return new DeleteParameters(
+            parameters.GetOptional<string?>("searchText"),
+            parameters.GetOptional<int?>("startParagraphIndex"),
+            parameters.GetOptional("startRunIndex", 0),
+            parameters.GetOptional<int?>("endParagraphIndex"),
+            parameters.GetOptional<int?>("endRunIndex"));
     }
 
     /// <summary>
@@ -257,4 +268,11 @@ public class DeleteWordTextHandler : OperationHandlerBase<Document>
 
         return Success(result);
     }
+
+    private record DeleteParameters(
+        string? SearchText,
+        int? StartParagraphIndex,
+        int StartRunIndex,
+        int? EndParagraphIndex,
+        int? EndRunIndex);
 }

@@ -23,18 +23,15 @@ public class ClearExcelRangeHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with clear details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var range = parameters.GetRequired<string>("range");
-        var clearContent = parameters.GetOptional("clearContent", true);
-        var clearFormat = parameters.GetOptional("clearFormat", false);
+        var p = ExtractClearExcelRangeParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, p.SheetIndex);
         var cells = worksheet.Cells;
 
-        var cellRange = ExcelHelper.CreateRange(cells, range);
+        var cellRange = ExcelHelper.CreateRange(cells, p.Range);
 
-        if (clearContent && clearFormat)
+        if (p is { ClearContent: true, ClearFormat: true })
         {
             for (var i = cellRange.FirstRow; i <= cellRange.FirstRow + cellRange.RowCount - 1; i++)
             for (var j = cellRange.FirstColumn; j <= cellRange.FirstColumn + cellRange.ColumnCount - 1; j++)
@@ -44,13 +41,13 @@ public class ClearExcelRangeHandler : OperationHandlerBase<Workbook>
                 cells[i, j].SetStyle(defaultStyle);
             }
         }
-        else if (clearContent)
+        else if (p.ClearContent)
         {
             for (var i = cellRange.FirstRow; i <= cellRange.FirstRow + cellRange.RowCount - 1; i++)
             for (var j = cellRange.FirstColumn; j <= cellRange.FirstColumn + cellRange.ColumnCount - 1; j++)
                 cells[i, j].PutValue("");
         }
-        else if (clearFormat)
+        else if (p.ClearFormat)
         {
             var defaultStyle = workbook.CreateStyle();
             cellRange.ApplyStyle(defaultStyle, new StyleFlag { All = true });
@@ -58,6 +55,30 @@ public class ClearExcelRangeHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Range {range} cleared.");
+        return Success($"Range {p.Range} cleared.");
     }
+
+    /// <summary>
+    ///     Extracts parameters for ClearExcelRange operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>Extracted parameters.</returns>
+    private static ClearExcelRangeParameters ExtractClearExcelRangeParameters(OperationParameters parameters)
+    {
+        return new ClearExcelRangeParameters(
+            parameters.GetOptional("sheetIndex", 0),
+            parameters.GetRequired<string>("range"),
+            parameters.GetOptional("clearContent", true),
+            parameters.GetOptional("clearFormat", false)
+        );
+    }
+
+    /// <summary>
+    ///     Parameters for ClearExcelRange operation.
+    /// </summary>
+    /// <param name="SheetIndex">The sheet index.</param>
+    /// <param name="Range">The cell range to clear.</param>
+    /// <param name="ClearContent">Whether to clear content.</param>
+    /// <param name="ClearFormat">Whether to clear format.</param>
+    private record ClearExcelRangeParameters(int SheetIndex, string Range, bool ClearContent, bool ClearFormat);
 }

@@ -70,42 +70,96 @@ public static class WordNoteHelper
     public static Footnote InsertNoteAtParagraph(DocumentBuilder builder, Section section,
         int paragraphIndex, FootnoteType noteType, string noteText, string? customMark)
     {
+        MoveToTargetParagraph(builder, section, paragraphIndex, noteType);
+        return CreateFootnote(builder, noteType, noteText, customMark);
+    }
+
+    /// <summary>
+    ///     Moves the builder to the target paragraph.
+    /// </summary>
+    /// <param name="builder">The document builder.</param>
+    /// <param name="section">The section containing the paragraph.</param>
+    /// <param name="paragraphIndex">The paragraph index (-1 for last).</param>
+    /// <param name="noteType">The footnote type.</param>
+    private static void MoveToTargetParagraph(DocumentBuilder builder, Section section,
+        int paragraphIndex, FootnoteType noteType)
+    {
         if (paragraphIndex == -1)
         {
-            var bodyParagraphs = section.Body.GetChildNodes(NodeType.Paragraph, false).Cast<WordParagraph>().ToList();
-            if (bodyParagraphs.Count > 0)
-                builder.MoveTo(bodyParagraphs[^1]);
-            else
-                builder.MoveToDocumentEnd();
+            MoveToLastBodyParagraph(builder, section);
+            return;
         }
+
+        var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+        ValidateParagraphIndex(paragraphIndex, paragraphs.Count);
+
+        var para = paragraphs[paragraphIndex];
+        ValidateEndnoteLocation(para, paragraphIndex, noteType);
+        builder.MoveTo(para);
+    }
+
+    /// <summary>
+    ///     Moves the builder to the last body paragraph.
+    /// </summary>
+    /// <param name="builder">The document builder.</param>
+    /// <param name="section">The section.</param>
+    private static void MoveToLastBodyParagraph(DocumentBuilder builder, Section section)
+    {
+        var bodyParagraphs = section.Body.GetChildNodes(NodeType.Paragraph, false).Cast<WordParagraph>().ToList();
+        if (bodyParagraphs.Count > 0)
+            builder.MoveTo(bodyParagraphs[^1]);
         else
+            builder.MoveToDocumentEnd();
+    }
+
+    /// <summary>
+    ///     Validates that the paragraph index is within range.
+    /// </summary>
+    /// <param name="paragraphIndex">The paragraph index to validate.</param>
+    /// <param name="paragraphCount">The total number of paragraphs.</param>
+    /// <exception cref="ArgumentException">Thrown when paragraph index is out of range.</exception>
+    private static void ValidateParagraphIndex(int paragraphIndex, int paragraphCount)
+    {
+        if (paragraphIndex < 0 || paragraphIndex >= paragraphCount)
+            throw new ArgumentException(
+                $"paragraphIndex must be between 0 and {paragraphCount - 1}, or use -1 for document end");
+    }
+
+    /// <summary>
+    ///     Validates that the paragraph is a valid location for an endnote.
+    /// </summary>
+    /// <param name="para">The paragraph to validate.</param>
+    /// <param name="paragraphIndex">The paragraph index.</param>
+    /// <param name="noteType">The footnote type.</param>
+    /// <exception cref="InvalidOperationException">Thrown when endnote is in header/footer.</exception>
+    private static void ValidateEndnoteLocation(WordParagraph para, int paragraphIndex, FootnoteType noteType)
+    {
+        if (noteType != FootnoteType.Endnote) return;
+
+        var parentNode = para.ParentNode;
+        while (parentNode != null)
         {
-            var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
-            if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
-                throw new ArgumentException(
-                    $"paragraphIndex must be between 0 and {paragraphs.Count - 1}, or use -1 for document end");
-
-            var para = paragraphs[paragraphIndex];
-
-            if (noteType == FootnoteType.Endnote)
-            {
-                var parentNode = para.ParentNode;
-                while (parentNode != null)
-                {
-                    if (parentNode is Aspose.Words.HeaderFooter)
-                        throw new InvalidOperationException(
-                            $"Endnotes are only allowed inside the main document body. The paragraph at index {paragraphIndex} is located in a header or footer.");
-                    if (parentNode is Section || parentNode is Body) break;
-                    parentNode = parentNode.ParentNode;
-                }
-            }
-
-            builder.MoveTo(para);
+            if (parentNode is Aspose.Words.HeaderFooter)
+                throw new InvalidOperationException(
+                    $"Endnotes are only allowed inside the main document body. The paragraph at index {paragraphIndex} is located in a header or footer.");
+            if (parentNode is Section || parentNode is Body) break;
+            parentNode = parentNode.ParentNode;
         }
+    }
 
+    /// <summary>
+    ///     Creates a footnote with optional custom mark.
+    /// </summary>
+    /// <param name="builder">The document builder.</param>
+    /// <param name="noteType">The footnote type.</param>
+    /// <param name="noteText">The note text.</param>
+    /// <param name="customMark">The optional custom reference mark.</param>
+    /// <returns>The created footnote.</returns>
+    private static Footnote CreateFootnote(DocumentBuilder builder, FootnoteType noteType,
+        string noteText, string? customMark)
+    {
         var insertedNote = builder.InsertFootnote(noteType, noteText);
         if (!string.IsNullOrEmpty(customMark)) insertedNote.ReferenceMark = customMark;
-
         return insertedNote;
     }
 

@@ -128,7 +128,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -143,32 +143,67 @@ Usage examples:
         float width,
         float height)
     {
-        var parameters = new OperationParameters();
-
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "add":
-                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
-                if (text != null) parameters.Set("text", text);
-                parameters.Set("x", x);
-                parameters.Set("y", y);
-                parameters.Set("width", width);
-                parameters.Set("height", height);
-                break;
+            "add" => BuildAddParameters(slideIndex, text, x, y, width, height),
+            "edit" => BuildEditParameters(slideIndex, shapeIndex, text),
+            "replace" => BuildReplaceParameters(findText, replaceText, matchCase),
+            _ => new OperationParameters()
+        };
+    }
 
-            case "edit":
-                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
-                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
-                if (text != null) parameters.Set("text", text);
-                break;
+    /// <summary>
+    ///     Builds parameters for the add text operation.
+    /// </summary>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <param name="text">The text content to add.</param>
+    /// <param name="x">X position in points.</param>
+    /// <param name="y">Y position in points.</param>
+    /// <param name="width">Text box width in points.</param>
+    /// <param name="height">Text box height in points.</param>
+    /// <returns>OperationParameters configured for adding text.</returns>
+    private static OperationParameters BuildAddParameters(int? slideIndex, string? text, float x, float y, float width,
+        float height)
+    {
+        var parameters = new OperationParameters();
+        if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
+        if (text != null) parameters.Set("text", text);
+        parameters.Set("x", x);
+        parameters.Set("y", y);
+        parameters.Set("width", width);
+        parameters.Set("height", height);
+        return parameters;
+    }
 
-            case "replace":
-                if (findText != null) parameters.Set("findText", findText);
-                if (replaceText != null) parameters.Set("replaceText", replaceText);
-                parameters.Set("matchCase", matchCase);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the edit text operation.
+    /// </summary>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <param name="shapeIndex">The shape index (0-based).</param>
+    /// <param name="text">The new text content.</param>
+    /// <returns>OperationParameters configured for editing text.</returns>
+    private static OperationParameters BuildEditParameters(int? slideIndex, int? shapeIndex, string? text)
+    {
+        var parameters = new OperationParameters();
+        if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
+        if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+        if (text != null) parameters.Set("text", text);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the replace text operation.
+    /// </summary>
+    /// <param name="findText">The text to find.</param>
+    /// <param name="replaceText">The text to replace with.</param>
+    /// <param name="matchCase">Whether to match case.</param>
+    /// <returns>OperationParameters configured for replacing text.</returns>
+    private static OperationParameters BuildReplaceParameters(string? findText, string? replaceText, bool matchCase)
+    {
+        var parameters = new OperationParameters();
+        if (findText != null) parameters.Set("findText", findText);
+        if (replaceText != null) parameters.Set("replaceText", replaceText);
+        parameters.Set("matchCase", matchCase);
         return parameters;
     }
 }

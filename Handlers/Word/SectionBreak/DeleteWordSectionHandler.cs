@@ -21,18 +21,17 @@ public class DeleteWordSectionHandler : OperationHandlerBase<Document>
     /// <returns>Success message with deletion details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var sectionIndex = parameters.GetOptional<int?>("sectionIndex");
-        var sectionIndices = parameters.GetOptional<int[]?>("sectionIndices");
+        var p = ExtractDeleteWordSectionParameters(parameters);
 
         var doc = context.Document;
         if (doc.Sections.Count <= 1)
             throw new ArgumentException("Cannot delete the last section. Document must have at least one section.");
 
         List<int> sectionsToDelete;
-        if (sectionIndices is { Length: > 0 })
-            sectionsToDelete = sectionIndices.OrderByDescending(s => s).ToList();
-        else if (sectionIndex.HasValue)
-            sectionsToDelete = [sectionIndex.Value];
+        if (p.SectionIndices is { Length: > 0 })
+            sectionsToDelete = p.SectionIndices.OrderByDescending(s => s).ToList();
+        else if (p.SectionIndex.HasValue)
+            sectionsToDelete = [p.SectionIndex.Value];
         else
             throw new ArgumentException(
                 "Either sectionIndex or sectionIndices must be provided for delete operation");
@@ -51,4 +50,15 @@ public class DeleteWordSectionHandler : OperationHandlerBase<Document>
         return Success(
             $"Deleted {deletedCount} section(s) with their content. Remaining sections: {doc.Sections.Count}.");
     }
+
+    private static DeleteWordSectionParameters ExtractDeleteWordSectionParameters(OperationParameters parameters)
+    {
+        return new DeleteWordSectionParameters(
+            parameters.GetOptional<int?>("sectionIndex"),
+            parameters.GetOptional<int[]?>("sectionIndices"));
+    }
+
+    private record DeleteWordSectionParameters(
+        int? SectionIndex,
+        int[]? SectionIndices);
 }

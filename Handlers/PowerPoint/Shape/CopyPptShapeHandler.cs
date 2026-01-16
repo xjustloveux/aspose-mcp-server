@@ -22,23 +22,30 @@ public class CopyPptShapeHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with copy details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var fromSlide = parameters.GetRequired<int>("fromSlide");
-        var toSlide = parameters.GetRequired<int>("toSlide");
-        var shapeIndex = parameters.GetRequired<int>("shapeIndex");
-
+        var p = ExtractCopyPptShapeParameters(parameters);
         var presentation = context.Document;
 
-        PowerPointHelper.ValidateCollectionIndex(fromSlide, presentation.Slides.Count, "fromSlide");
-        PowerPointHelper.ValidateCollectionIndex(toSlide, presentation.Slides.Count, "toSlide");
+        PowerPointHelper.ValidateCollectionIndex(p.FromSlide, presentation.Slides.Count, "fromSlide");
+        PowerPointHelper.ValidateCollectionIndex(p.ToSlide, presentation.Slides.Count, "toSlide");
 
-        var sourceSlide = presentation.Slides[fromSlide];
-        PowerPointHelper.ValidateCollectionIndex(shapeIndex, sourceSlide.Shapes.Count, "shapeIndex");
+        var sourceSlide = presentation.Slides[p.FromSlide];
+        PowerPointHelper.ValidateCollectionIndex(p.ShapeIndex, sourceSlide.Shapes.Count, "shapeIndex");
 
-        var targetSlide = presentation.Slides[toSlide];
-        targetSlide.Shapes.AddClone(sourceSlide.Shapes[shapeIndex]);
+        var targetSlide = presentation.Slides[p.ToSlide];
+        targetSlide.Shapes.AddClone(sourceSlide.Shapes[p.ShapeIndex]);
 
         MarkModified(context);
 
-        return Success($"Shape {shapeIndex} copied from slide {fromSlide} to slide {toSlide}.");
+        return Success($"Shape {p.ShapeIndex} copied from slide {p.FromSlide} to slide {p.ToSlide}.");
     }
+
+    private static CopyPptShapeParameters ExtractCopyPptShapeParameters(OperationParameters parameters)
+    {
+        return new CopyPptShapeParameters(
+            parameters.GetRequired<int>("fromSlide"),
+            parameters.GetRequired<int>("toSlide"),
+            parameters.GetRequired<int>("shapeIndex"));
+    }
+
+    private record CopyPptShapeParameters(int FromSlide, int ToSlide, int ShapeIndex);
 }

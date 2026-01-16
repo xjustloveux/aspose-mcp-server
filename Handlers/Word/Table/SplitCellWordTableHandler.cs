@@ -26,38 +26,27 @@ public class SplitCellWordTableHandler : OperationHandlerBase<Document>
     /// <exception cref="InvalidOperationException">Thrown when trying to split a merged cell.</exception>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var rowIndex = parameters.GetOptional<int?>("rowIndex");
-        var columnIndex = parameters.GetOptional<int?>("columnIndex");
-
-        if (!rowIndex.HasValue)
-            throw new ArgumentException("rowIndex is required for split_cell operation");
-        if (!columnIndex.HasValue)
-            throw new ArgumentException("columnIndex is required for split_cell operation");
-
-        var tableIndex = parameters.GetOptional("tableIndex", 0);
-        var splitRows = parameters.GetOptional("splitRows", 2);
-        var splitCols = parameters.GetOptional("splitCols", 2);
-        var sectionIndex = parameters.GetOptional<int?>("sectionIndex");
+        var p = ExtractSplitCellParameters(parameters);
 
         var doc = context.Document;
-        var actualSectionIndex = sectionIndex ?? 0;
+        var actualSectionIndex = p.SectionIndex ?? 0;
         if (actualSectionIndex >= doc.Sections.Count)
             throw new ArgumentException($"Section index {actualSectionIndex} out of range");
 
         var section = doc.Sections[actualSectionIndex];
         var tables = section.Body.GetChildNodes(NodeType.Table, true).Cast<Aspose.Words.Tables.Table>().ToList();
-        if (tableIndex < 0 || tableIndex >= tables.Count)
-            throw new ArgumentException($"Table index {tableIndex} out of range");
+        if (p.TableIndex < 0 || p.TableIndex >= tables.Count)
+            throw new ArgumentException($"Table index {p.TableIndex} out of range");
 
-        var table = tables[tableIndex];
-        if (rowIndex.Value < 0 || rowIndex.Value >= table.Rows.Count)
-            throw new ArgumentException($"Row index {rowIndex.Value} out of range");
+        var table = tables[p.TableIndex];
+        if (p.RowIndex < 0 || p.RowIndex >= table.Rows.Count)
+            throw new ArgumentException($"Row index {p.RowIndex} out of range");
 
-        var row = table.Rows[rowIndex.Value];
-        if (columnIndex.Value < 0 || columnIndex.Value >= row.Cells.Count)
-            throw new ArgumentException($"Column index {columnIndex.Value} out of range");
+        var row = table.Rows[p.RowIndex];
+        if (p.ColumnIndex < 0 || p.ColumnIndex >= row.Cells.Count)
+            throw new ArgumentException($"Column index {p.ColumnIndex} out of range");
 
-        var cell = row.Cells[columnIndex.Value];
+        var cell = row.Cells[p.ColumnIndex];
         var isMerged = cell.CellFormat.HorizontalMerge != CellMerge.None ||
                        cell.CellFormat.VerticalMerge != CellMerge.None;
         if (isMerged)
@@ -67,15 +56,15 @@ public class SplitCellWordTableHandler : OperationHandlerBase<Document>
         var parentRow = cell.ParentRow;
         var cellIndex = parentRow.Cells.IndexOf(cell);
 
-        SplitCellHorizontally(doc, parentRow, cell, cellIndex, cellText, splitCols);
+        SplitCellHorizontally(doc, parentRow, cell, cellIndex, cellText, p.SplitCols);
 
-        if (splitRows > 1)
-            AddSplitRows(doc, table, rowIndex.Value, splitRows);
+        if (p.SplitRows > 1)
+            AddSplitRows(doc, table, p.RowIndex, p.SplitRows);
 
         MarkModified(context);
 
         return Success(
-            $"Successfully split cell [{rowIndex.Value}, {columnIndex.Value}] into {splitRows} rows x {splitCols} columns.");
+            $"Successfully split cell [{p.RowIndex}, {p.ColumnIndex}] into {p.SplitRows} rows x {p.SplitCols} columns.");
     }
 
     /// <summary>
@@ -165,4 +154,31 @@ public class SplitCellWordTableHandler : OperationHandlerBase<Document>
             }
         }
     }
+
+    private static SplitCellParameters ExtractSplitCellParameters(OperationParameters parameters)
+    {
+        var rowIndex = parameters.GetOptional<int?>("rowIndex");
+        var columnIndex = parameters.GetOptional<int?>("columnIndex");
+
+        if (!rowIndex.HasValue)
+            throw new ArgumentException("rowIndex is required for split_cell operation");
+        if (!columnIndex.HasValue)
+            throw new ArgumentException("columnIndex is required for split_cell operation");
+
+        var tableIndex = parameters.GetOptional("tableIndex", 0);
+        var splitRows = parameters.GetOptional("splitRows", 2);
+        var splitCols = parameters.GetOptional("splitCols", 2);
+        var sectionIndex = parameters.GetOptional<int?>("sectionIndex");
+
+        return new SplitCellParameters(rowIndex.Value, columnIndex.Value, tableIndex, splitRows, splitCols,
+            sectionIndex);
+    }
+
+    private record SplitCellParameters(
+        int RowIndex,
+        int ColumnIndex,
+        int TableIndex,
+        int SplitRows,
+        int SplitCols,
+        int? SectionIndex);
 }

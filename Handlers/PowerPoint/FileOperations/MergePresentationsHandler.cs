@@ -24,18 +24,15 @@ public class MergePresentationsHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with output path and slide count.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var path = parameters.GetOptional<string?>("path");
-        var outputPath = parameters.GetOptional<string?>("outputPath");
-        var inputPaths = parameters.GetRequired<string[]>("inputPaths");
-        var keepSourceFormatting = parameters.GetOptional("keepSourceFormatting", true);
+        var p = ExtractMergeParameters(parameters);
 
-        var savePath = path ?? outputPath;
+        var savePath = p.Path ?? p.OutputPath;
         if (string.IsNullOrEmpty(savePath))
             throw new ArgumentException("path or outputPath is required for merge operation");
 
         SecurityHelper.ValidateFilePath(savePath, "outputPath", true);
 
-        var validPaths = inputPaths.Where(p => !string.IsNullOrEmpty(p)).ToList();
+        var validPaths = p.InputPaths.Where(path => !string.IsNullOrEmpty(path)).ToList();
         if (validPaths.Count == 0)
             throw new ArgumentException("No valid input paths provided");
 
@@ -48,7 +45,7 @@ public class MergePresentationsHandler : OperationHandlerBase<Presentation>
 
             using var sourcePresentation = new Presentation(inputPath);
             foreach (var slide in sourcePresentation.Slides)
-                if (keepSourceFormatting)
+                if (p.KeepSourceFormatting)
                 {
                     var sourceMaster = slide.LayoutSlide.MasterSlide;
                     var destMaster = masterPresentation.Masters.AddClone(sourceMaster);
@@ -65,4 +62,27 @@ public class MergePresentationsHandler : OperationHandlerBase<Presentation>
         return Success(
             $"Merged {validPaths.Count} presentations (Total slides: {masterPresentation.Slides.Count}). Output: {savePath}");
     }
+
+    /// <summary>
+    ///     Extracts merge parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted merge parameters.</returns>
+    private static MergeParameters ExtractMergeParameters(OperationParameters parameters)
+    {
+        return new MergeParameters(
+            parameters.GetOptional<string?>("path"),
+            parameters.GetOptional<string?>("outputPath"),
+            parameters.GetRequired<string[]>("inputPaths"),
+            parameters.GetOptional("keepSourceFormatting", true));
+    }
+
+    /// <summary>
+    ///     Record for holding merge presentations parameters.
+    /// </summary>
+    /// <param name="Path">The output file path.</param>
+    /// <param name="OutputPath">Alternative output file path.</param>
+    /// <param name="InputPaths">The array of input file paths.</param>
+    /// <param name="KeepSourceFormatting">Whether to keep source formatting.</param>
+    private record MergeParameters(string? Path, string? OutputPath, string[] InputPaths, bool KeepSourceFormatting);
 }

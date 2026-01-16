@@ -21,13 +21,12 @@ public class DeletePdfImageHandler : OperationHandlerBase<Document>
     /// <returns>Success message with delete details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var pageIndex = parameters.GetOptional("pageIndex", 1);
-        var imageIndex = parameters.GetOptional("imageIndex", 1);
+        var p = ExtractDeleteParameters(parameters);
 
         var document = context.Document;
 
-        var actualPageIndex = pageIndex < 1 ? 1 : pageIndex;
-        var actualImageIndex = imageIndex < 1 ? 1 : imageIndex;
+        var actualPageIndex = p.PageIndex < 1 ? 1 : p.PageIndex;
+        var actualImageIndex = p.ImageIndex < 1 ? 1 : p.ImageIndex;
         if (actualPageIndex > document.Pages.Count)
             throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
 
@@ -44,4 +43,23 @@ public class DeletePdfImageHandler : OperationHandlerBase<Document>
 
         return Success($"Deleted image {actualImageIndex} from page {actualPageIndex}.");
     }
+
+    /// <summary>
+    ///     Extracts delete parameters from the operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static DeleteParameters ExtractDeleteParameters(OperationParameters parameters)
+    {
+        return new DeleteParameters(
+            parameters.GetOptional("pageIndex", 1),
+            parameters.GetOptional("imageIndex", 1));
+    }
+
+    /// <summary>
+    ///     Parameters for deleting an image.
+    /// </summary>
+    /// <param name="PageIndex">The 1-based page index.</param>
+    /// <param name="ImageIndex">The 1-based image index.</param>
+    private record DeleteParameters(int PageIndex, int ImageIndex);
 }

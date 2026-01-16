@@ -21,28 +21,50 @@ public class UpdateExcelChartDataHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex, chartIndex, categoryAxisDataRange
     /// </param>
     /// <returns>Success message with update details.</returns>
+    /// <exception cref="ArgumentException">Thrown when dataRange is not provided.</exception>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var chartIndex = parameters.GetOptional("chartIndex", 0);
-        var dataRange = parameters.GetOptional<string?>("dataRange");
-        var categoryAxisDataRange = parameters.GetOptional<string?>("categoryAxisDataRange");
+        var updateParams = ExtractUpdateDataParameters(parameters);
 
-        if (string.IsNullOrEmpty(dataRange))
+        if (string.IsNullOrEmpty(updateParams.DataRange))
             throw new ArgumentException("dataRange is required for update_data operation");
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var chart = ExcelChartHelper.GetChart(worksheet, chartIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, updateParams.SheetIndex);
+        var chart = ExcelChartHelper.GetChart(worksheet, updateParams.ChartIndex);
 
-        ExcelChartHelper.AddDataSeries(chart, dataRange);
-        ExcelChartHelper.SetCategoryData(chart, categoryAxisDataRange ?? "");
+        ExcelChartHelper.AddDataSeries(chart, updateParams.DataRange);
+        ExcelChartHelper.SetCategoryData(chart, updateParams.CategoryAxisDataRange ?? "");
 
         MarkModified(context);
 
-        var result = $"Chart #{chartIndex} data updated to: {dataRange}";
-        if (!string.IsNullOrEmpty(categoryAxisDataRange))
-            result += $", X-axis: {categoryAxisDataRange}";
+        var result = $"Chart #{updateParams.ChartIndex} data updated to: {updateParams.DataRange}";
+        if (!string.IsNullOrEmpty(updateParams.CategoryAxisDataRange))
+            result += $", X-axis: {updateParams.CategoryAxisDataRange}";
         return Success(result);
     }
+
+    /// <summary>
+    ///     Extracts update data parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted update data parameters.</returns>
+    private static UpdateDataParameters ExtractUpdateDataParameters(OperationParameters parameters)
+    {
+        return new UpdateDataParameters(
+            parameters.GetOptional("sheetIndex", 0),
+            parameters.GetOptional("chartIndex", 0),
+            parameters.GetOptional<string?>("dataRange"),
+            parameters.GetOptional<string?>("categoryAxisDataRange")
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold update data parameters.
+    /// </summary>
+    private record UpdateDataParameters(
+        int SheetIndex,
+        int ChartIndex,
+        string? DataRange,
+        string? CategoryAxisDataRange);
 }

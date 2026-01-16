@@ -22,57 +22,53 @@ public class EditWordHyperlinkHandler : OperationHandlerBase<Document>
     /// <returns>Success message with edit details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var hyperlinkIndex = parameters.GetOptional("hyperlinkIndex", 0);
-        var url = parameters.GetOptional<string?>("url");
-        var subAddress = parameters.GetOptional<string?>("subAddress");
-        var displayText = parameters.GetOptional<string?>("displayText");
-        var tooltip = parameters.GetOptional<string?>("tooltip");
+        var p = ExtractEditHyperlinkParameters(parameters);
 
         var doc = context.Document;
         var hyperlinkFields = WordHyperlinkHelper.GetAllHyperlinks(doc);
 
-        if (hyperlinkIndex < 0 || hyperlinkIndex >= hyperlinkFields.Count)
+        if (p.HyperlinkIndex < 0 || p.HyperlinkIndex >= hyperlinkFields.Count)
         {
             var availableInfo = hyperlinkFields.Count > 0
                 ? $" (valid index: 0-{hyperlinkFields.Count - 1})"
                 : " (document has no hyperlinks)";
             throw new ArgumentException(
-                $"Hyperlink index {hyperlinkIndex} is out of range (document has {hyperlinkFields.Count} hyperlinks){availableInfo}. Use get operation to view all available hyperlinks");
+                $"Hyperlink index {p.HyperlinkIndex} is out of range (document has {hyperlinkFields.Count} hyperlinks){availableInfo}. Use get operation to view all available hyperlinks");
         }
 
-        var hyperlinkField = hyperlinkFields[hyperlinkIndex];
+        var hyperlinkField = hyperlinkFields[p.HyperlinkIndex];
         List<string> changes = [];
 
-        if (!string.IsNullOrEmpty(url))
+        if (!string.IsNullOrEmpty(p.Url))
         {
-            WordHyperlinkHelper.ValidateUrlFormat(url);
-            hyperlinkField.Address = url;
-            changes.Add($"URL: {url}");
+            WordHyperlinkHelper.ValidateUrlFormat(p.Url);
+            hyperlinkField.Address = p.Url;
+            changes.Add($"URL: {p.Url}");
         }
 
-        if (!string.IsNullOrEmpty(subAddress))
+        if (!string.IsNullOrEmpty(p.SubAddress))
         {
-            hyperlinkField.SubAddress = subAddress;
-            changes.Add($"SubAddress: {subAddress}");
+            hyperlinkField.SubAddress = p.SubAddress;
+            changes.Add($"SubAddress: {p.SubAddress}");
         }
 
-        if (!string.IsNullOrEmpty(displayText))
+        if (!string.IsNullOrEmpty(p.DisplayText))
         {
-            hyperlinkField.Result = displayText;
-            changes.Add($"Display text: {displayText}");
+            hyperlinkField.Result = p.DisplayText;
+            changes.Add($"Display text: {p.DisplayText}");
         }
 
-        if (!string.IsNullOrEmpty(tooltip))
+        if (!string.IsNullOrEmpty(p.Tooltip))
         {
-            hyperlinkField.ScreenTip = tooltip;
-            changes.Add($"Tooltip: {tooltip}");
+            hyperlinkField.ScreenTip = p.Tooltip;
+            changes.Add($"Tooltip: {p.Tooltip}");
         }
 
         hyperlinkField.Update();
 
         MarkModified(context);
 
-        var result = $"Hyperlink #{hyperlinkIndex} edited successfully\n";
+        var result = $"Hyperlink #{p.HyperlinkIndex} edited successfully\n";
         if (changes.Count > 0)
             result += $"Changes: {string.Join(", ", changes)}";
         else
@@ -80,4 +76,30 @@ public class EditWordHyperlinkHandler : OperationHandlerBase<Document>
 
         return result;
     }
+
+    /// <summary>
+    ///     Extracts edit hyperlink parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted edit hyperlink parameters.</returns>
+    private static EditHyperlinkParameters ExtractEditHyperlinkParameters(OperationParameters parameters)
+    {
+        return new EditHyperlinkParameters(
+            parameters.GetOptional("hyperlinkIndex", 0),
+            parameters.GetOptional<string?>("url"),
+            parameters.GetOptional<string?>("subAddress"),
+            parameters.GetOptional<string?>("displayText"),
+            parameters.GetOptional<string?>("tooltip")
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold edit hyperlink parameters.
+    /// </summary>
+    private record EditHyperlinkParameters(
+        int HyperlinkIndex,
+        string? Url,
+        string? SubAddress,
+        string? DisplayText,
+        string? Tooltip);
 }

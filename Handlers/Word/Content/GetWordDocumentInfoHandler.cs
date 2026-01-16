@@ -22,13 +22,13 @@ public class GetWordDocumentInfoHandler : OperationHandlerBase<Document>
     /// <returns>JSON string containing document metadata and properties.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var includeTabStops = parameters.GetOptional("includeTabStops", false);
+        var p = ExtractGetDocumentInfoParameters(parameters);
 
         var document = context.Document;
         var props = document.BuiltInDocumentProperties;
 
         List<object>? tabStopsList = null;
-        if (includeTabStops)
+        if (p.IncludeTabStops)
         {
             tabStopsList = [];
             var sectionIndex = 0;
@@ -73,10 +73,28 @@ public class GetWordDocumentInfoHandler : OperationHandlerBase<Document>
             modified = props.LastSavedTime.ToString("yyyy-MM-dd HH:mm:ss"),
             pages = props.Pages,
             sections = document.Sections.Count,
-            tabStopsIncluded = includeTabStops,
+            tabStopsIncluded = p.IncludeTabStops,
             tabStops = tabStopsList
         };
 
         return JsonResult(result);
     }
+
+    /// <summary>
+    ///     Extracts parameters for the get document info operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static GetDocumentInfoParameters ExtractGetDocumentInfoParameters(OperationParameters parameters)
+    {
+        var includeTabStops = parameters.GetOptional("includeTabStops", false);
+
+        return new GetDocumentInfoParameters(includeTabStops);
+    }
+
+    /// <summary>
+    ///     Parameters for the get document info operation.
+    /// </summary>
+    /// <param name="IncludeTabStops">Whether to include tab stops information.</param>
+    private record GetDocumentInfoParameters(bool IncludeTabStops);
 }

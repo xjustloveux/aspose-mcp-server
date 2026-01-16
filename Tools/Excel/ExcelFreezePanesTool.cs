@@ -106,7 +106,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -114,23 +114,39 @@ Usage examples:
         int row,
         int column)
     {
+        return operation.ToLowerInvariant() switch
+        {
+            "freeze" => BuildFreezeParameters(sheetIndex, row, column),
+            "unfreeze" or "get" => BuildBaseParameters(sheetIndex),
+            _ => new OperationParameters()
+        };
+    }
+
+    /// <summary>
+    ///     Builds parameters for the freeze panes operation.
+    /// </summary>
+    /// <param name="sheetIndex">The sheet index (0-based).</param>
+    /// <param name="row">Number of rows to freeze from top.</param>
+    /// <param name="column">Number of columns to freeze from left.</param>
+    /// <returns>OperationParameters configured for freezing panes.</returns>
+    private static OperationParameters BuildFreezeParameters(int sheetIndex, int row, int column)
+    {
         var parameters = new OperationParameters();
         parameters.Set("sheetIndex", sheetIndex);
+        parameters.Set("row", row);
+        parameters.Set("column", column);
+        return parameters;
+    }
 
-        switch (operation.ToLowerInvariant())
-        {
-            case "freeze":
-                parameters.Set("row", row);
-                parameters.Set("column", column);
-                break;
-
-            case "unfreeze":
-                break;
-
-            case "get":
-                break;
-        }
-
+    /// <summary>
+    ///     Builds base parameters containing only the sheet index.
+    /// </summary>
+    /// <param name="sheetIndex">The sheet index (0-based).</param>
+    /// <returns>OperationParameters with sheet index set.</returns>
+    private static OperationParameters BuildBaseParameters(int sheetIndex)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("sheetIndex", sheetIndex);
         return parameters;
     }
 }

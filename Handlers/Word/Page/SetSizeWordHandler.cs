@@ -24,22 +24,18 @@ public class SetSizeWordHandler : OperationHandlerBase<Document>
     /// <returns>Success message with size details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var width = parameters.GetOptional<double?>("width");
-        var height = parameters.GetOptional<double?>("height");
-        var paperSize = parameters.GetOptional<string?>("paperSize");
-        var sectionIndex = parameters.GetOptional<int?>("sectionIndex");
-        var sectionIndices = parameters.GetOptional<JsonArray?>("sectionIndices");
+        var setParams = ExtractSetSizeParameters(parameters);
 
         var doc = context.Document;
-        var sectionsToUpdate = WordPageHelper.GetTargetSections(doc, sectionIndex, sectionIndices);
+        var sectionsToUpdate = WordPageHelper.GetTargetSections(doc, setParams.SectionIndex, setParams.SectionIndices);
 
         foreach (var idx in sectionsToUpdate)
         {
             var pageSetup = doc.Sections[idx].PageSetup;
 
-            if (!string.IsNullOrEmpty(paperSize))
+            if (!string.IsNullOrEmpty(setParams.PaperSize))
             {
-                pageSetup.PaperSize = paperSize.ToUpper() switch
+                pageSetup.PaperSize = setParams.PaperSize.ToUpper() switch
                 {
                     "A4" => PaperSize.A4,
                     "LETTER" => PaperSize.Letter,
@@ -49,10 +45,10 @@ public class SetSizeWordHandler : OperationHandlerBase<Document>
                     _ => PaperSize.A4
                 };
             }
-            else if (width.HasValue && height.HasValue)
+            else if (setParams is { Width: { } width, Height: { } height })
             {
-                pageSetup.PageWidth = width.Value;
-                pageSetup.PageHeight = height.Value;
+                pageSetup.PageWidth = width;
+                pageSetup.PageHeight = height;
             }
             else
             {
@@ -64,4 +60,35 @@ public class SetSizeWordHandler : OperationHandlerBase<Document>
 
         return Success($"Page size updated for {sectionsToUpdate.Count} section(s)");
     }
+
+    /// <summary>
+    ///     Extracts set size parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted set size parameters.</returns>
+    private static SetSizeParameters ExtractSetSizeParameters(OperationParameters parameters)
+    {
+        return new SetSizeParameters(
+            parameters.GetOptional<double?>("width"),
+            parameters.GetOptional<double?>("height"),
+            parameters.GetOptional<string?>("paperSize"),
+            parameters.GetOptional<int?>("sectionIndex"),
+            parameters.GetOptional<JsonArray?>("sectionIndices")
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold set size parameters.
+    /// </summary>
+    /// <param name="Width">The page width in points.</param>
+    /// <param name="Height">The page height in points.</param>
+    /// <param name="PaperSize">The predefined paper size (A4, Letter, Legal, A3, A5).</param>
+    /// <param name="SectionIndex">The section index to apply size to.</param>
+    /// <param name="SectionIndices">The array of section indices to apply size to.</param>
+    private record SetSizeParameters(
+        double? Width,
+        double? Height,
+        string? PaperSize,
+        int? SectionIndex,
+        JsonArray? SectionIndices);
 }

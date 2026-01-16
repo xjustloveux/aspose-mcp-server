@@ -23,17 +23,37 @@ public class SetArrayFormulaHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with range details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var range = parameters.GetRequired<string>("range");
-        var formula = parameters.GetRequired<string>("formula");
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var autoCalculate = parameters.GetOptional("autoCalculate", true);
+        var setParams = ExtractSetArrayParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, setParams.SheetIndex);
 
-        var rangeObj = ExcelHelper.CreateRange(worksheet.Cells, range);
-        var cleanFormula = formula.TrimStart('{').TrimEnd('}');
+        var rangeObj = ExcelHelper.CreateRange(worksheet.Cells, setParams.Range);
+        var cleanFormula = setParams.Formula.TrimStart('{').TrimEnd('}');
 
+        ValidateRange(rangeObj);
+
+        var formulaContext = new FormulaContext(worksheet, rangeObj, cleanFormula, setParams.Range);
+        var result = TrySetArrayFormula(formulaContext);
+
+        if (result.IsSuccess)
+        {
+            if (setParams.AutoCalculate) workbook.CalculateFormula();
+            MarkModified(context);
+            return Success(result.Message);
+        }
+
+        throw new ArgumentException(
+            $"Failed to set array formula. Range: {setParams.Range}, Formula: {cleanFormula}. Errors: {result.Message}");
+    }
+
+    /// <summary>
+    ///     Validates the range dimensions and position.
+    /// </summary>
+    /// <param name="rangeObj">The range object to validate.</param>
+    /// <exception cref="ArgumentException">Thrown when the range is invalid.</exception>
+    private static void ValidateRange(Aspose.Cells.Range rangeObj)
+    {
         if (rangeObj.RowCount <= 0 || rangeObj.ColumnCount <= 0)
             throw new ArgumentException(
                 $"Invalid range dimensions: rows={rangeObj.RowCount}, columns={rangeObj.ColumnCount}");
@@ -41,69 +61,153 @@ public class SetArrayFormulaHandler : OperationHandlerBase<Workbook>
         if (rangeObj.FirstRow < 0 || rangeObj.FirstColumn < 0)
             throw new ArgumentException(
                 $"Invalid range position: startRow={rangeObj.FirstRow}, startColumn={rangeObj.FirstColumn}");
+    }
 
-        var firstCell = worksheet.Cells[rangeObj.FirstRow, rangeObj.FirstColumn];
+    /// <summary>
+    ///     Extracts set array parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted set array parameters.</returns>
+    private static SetArrayParameters ExtractSetArrayParameters(OperationParameters parameters)
+    {
+        return new SetArrayParameters(
+            parameters.GetRequired<string>("range"),
+            parameters.GetRequired<string>("formula"),
+            parameters.GetOptional("sheetIndex", 0),
+            parameters.GetOptional("autoCalculate", true)
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold set array formula parameters.
+    /// </summary>
+    private record SetArrayParameters(string Range, string Formula, int SheetIndex, bool AutoCalculate);
+
+    /// <summary>
+    ///     Context for formula operations containing all required data.
+    /// </summary>
+    /// <param name="Worksheet">The worksheet to operate on.</param>
+    /// <param name="RangeObj">The range object.</param>
+    /// <param name="CleanFormula">The cleaned formula string.</param>
+    /// <param name="Range">The range string representation.</param>
+    private record FormulaContext(
+        Worksheet Worksheet,
+        Aspose.Cells.Range RangeObj,
+        string CleanFormula,
+        string Range);
+
+    /// <summary>
+    ///     Result of a formula operation attempt.
+    /// </summary>
+    /// <param name="IsSuccess">Whether the operation succeeded.</param>
+    /// <param name="Message">The result message or error description.</param>
+    private record FormulaResult(bool IsSuccess, string Message);
 
 #pragma warning disable CS0618
-        var formulaToSet = cleanFormula.StartsWith("=") ? cleanFormula : "=" + cleanFormula;
+    /// <summary>
+    ///     Tries to set an array formula using multiple methods.
+    /// </summary>
+    /// <param name="ctx">The formula context.</param>
+    /// <returns>The result of the operation.</returns>
+    private static FormulaResult TrySetArrayFormula(FormulaContext ctx)
+    {
+        List<string> errors = [];
 
-        for (var i = 0; i < rangeObj.RowCount; i++)
-        for (var j = 0; j < rangeObj.ColumnCount; j++)
-            worksheet.Cells[rangeObj.FirstRow + i, rangeObj.FirstColumn + j].PutValue("");
+        var result = TryPrimaryMethod(ctx);
+        if (result.IsSuccess) return result;
+        errors.Add(result.Message);
 
+        result = TryAlternativeMethod(ctx);
+        if (result.IsSuccess) return result;
+        errors.Add(result.Message);
+
+        result = TryFallbackMethod(ctx);
+        if (result.IsSuccess) return result;
+        errors.Add(result.Message);
+
+        return new FormulaResult(false, string.Join(", ", errors));
+    }
+
+    /// <summary>
+    ///     Tries to set array formula using the primary method with SetArrayFormula.
+    /// </summary>
+    /// <param name="ctx">The formula context.</param>
+    /// <returns>The result of the operation.</returns>
+    private static FormulaResult TryPrimaryMethod(FormulaContext ctx)
+    {
         try
         {
-            firstCell.SetArrayFormula(formulaToSet, rangeObj.RowCount, rangeObj.ColumnCount);
-            if (autoCalculate) workbook.CalculateFormula();
-
-            MarkModified(context);
-            return Success($"Array formula set in range {range}.");
+            ClearRange(ctx.Worksheet, ctx.RangeObj);
+            var formulaToSet = ctx.CleanFormula.StartsWith("=") ? ctx.CleanFormula : "=" + ctx.CleanFormula;
+            var firstCell = ctx.Worksheet.Cells[ctx.RangeObj.FirstRow, ctx.RangeObj.FirstColumn];
+            firstCell.SetArrayFormula(formulaToSet, ctx.RangeObj.RowCount, ctx.RangeObj.ColumnCount);
+            return new FormulaResult(true, $"Array formula set in range {ctx.Range}.");
         }
         catch (Exception ex)
         {
-            try
-            {
-                for (var i = 0; i < rangeObj.RowCount; i++)
-                for (var j = 0; j < rangeObj.ColumnCount; j++)
-                    worksheet.Cells[rangeObj.FirstRow + i, rangeObj.FirstColumn + j].PutValue("");
-
-                var formulaWithoutEquals = cleanFormula.StartsWith("=") ? cleanFormula[1..] : cleanFormula;
-                firstCell.SetArrayFormula(formulaWithoutEquals, rangeObj.FirstRow,
-                    rangeObj.FirstColumn, false, false);
-
-                if (autoCalculate) workbook.CalculateFormula();
-
-                if (firstCell.IsArrayFormula)
-                {
-                    MarkModified(context);
-                    return Success($"Array formula set in range {range}.");
-                }
-
-                throw new InvalidOperationException("SetArrayFormula with 5 parameters did not work");
-            }
-            catch (Exception ex2)
-            {
-                try
-                {
-                    var formulaWithEquals = cleanFormula.StartsWith("=") ? cleanFormula : "=" + cleanFormula;
-                    for (var i = 0; i < rangeObj.RowCount; i++)
-                    for (var j = 0; j < rangeObj.ColumnCount; j++)
-                    {
-                        var cell = worksheet.Cells[rangeObj.FirstRow + i, rangeObj.FirstColumn + j];
-                        cell.Formula = formulaWithEquals;
-                    }
-
-                    MarkModified(context);
-                    return Success($"Formula set to range {range} (not a true array formula).");
-                }
-                catch (Exception ex3)
-                {
-                    throw new ArgumentException(
-                        $"Failed to set array formula. Range: {range}, Formula: {cleanFormula}. Errors: {ex.Message}, {ex2.Message}, {ex3.Message}",
-                        ex);
-                }
-            }
+            return new FormulaResult(false, ex.Message);
         }
-#pragma warning restore CS0618
     }
+
+    /// <summary>
+    ///     Tries to set array formula using an alternative method with 5 parameters.
+    /// </summary>
+    /// <param name="ctx">The formula context.</param>
+    /// <returns>The result of the operation.</returns>
+    private static FormulaResult TryAlternativeMethod(FormulaContext ctx)
+    {
+        try
+        {
+            ClearRange(ctx.Worksheet, ctx.RangeObj);
+            var formulaWithoutEquals = ctx.CleanFormula.StartsWith("=") ? ctx.CleanFormula[1..] : ctx.CleanFormula;
+            var firstCell = ctx.Worksheet.Cells[ctx.RangeObj.FirstRow, ctx.RangeObj.FirstColumn];
+            firstCell.SetArrayFormula(formulaWithoutEquals, ctx.RangeObj.FirstRow, ctx.RangeObj.FirstColumn, false,
+                false);
+
+            if (firstCell.IsArrayFormula)
+                return new FormulaResult(true, $"Array formula set in range {ctx.Range}.");
+
+            return new FormulaResult(false, "SetArrayFormula with 5 parameters did not work");
+        }
+        catch (Exception ex)
+        {
+            return new FormulaResult(false, ex.Message);
+        }
+    }
+
+    /// <summary>
+    ///     Tries to set formula using the fallback method by setting formula to each cell individually.
+    /// </summary>
+    /// <param name="ctx">The formula context.</param>
+    /// <returns>The result of the operation.</returns>
+    private static FormulaResult TryFallbackMethod(FormulaContext ctx)
+    {
+        try
+        {
+            var formulaWithEquals = ctx.CleanFormula.StartsWith("=") ? ctx.CleanFormula : "=" + ctx.CleanFormula;
+            for (var i = 0; i < ctx.RangeObj.RowCount; i++)
+            for (var j = 0; j < ctx.RangeObj.ColumnCount; j++)
+                ctx.Worksheet.Cells[ctx.RangeObj.FirstRow + i, ctx.RangeObj.FirstColumn + j].Formula =
+                    formulaWithEquals;
+
+            return new FormulaResult(true, $"Formula set to range {ctx.Range} (not a true array formula).");
+        }
+        catch (Exception ex)
+        {
+            return new FormulaResult(false, ex.Message);
+        }
+    }
+
+    /// <summary>
+    ///     Clears all cells in the specified range.
+    /// </summary>
+    /// <param name="worksheet">The worksheet containing the range.</param>
+    /// <param name="rangeObj">The range to clear.</param>
+    private static void ClearRange(Worksheet worksheet, Aspose.Cells.Range rangeObj)
+    {
+        for (var i = 0; i < rangeObj.RowCount; i++)
+        for (var j = 0; j < rangeObj.ColumnCount; j++)
+            worksheet.Cells[rangeObj.FirstRow + i, rangeObj.FirstColumn + j].PutValue("");
+    }
+#pragma warning restore CS0618
 }

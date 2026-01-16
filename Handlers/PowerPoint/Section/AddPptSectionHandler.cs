@@ -22,15 +22,22 @@ public class AddPptSectionHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with section creation details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var name = parameters.GetRequired<string>("name");
-        var slideIndex = parameters.GetRequired<int>("slideIndex");
-
+        var p = ExtractAddPptSectionParameters(parameters);
         var presentation = context.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-        presentation.Sections.AddSection(name, slide);
+        var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
+        presentation.Sections.AddSection(p.Name, slide);
 
         MarkModified(context);
 
-        return Success($"Section '{name}' added starting at slide {slideIndex}.");
+        return Success($"Section '{p.Name}' added starting at slide {p.SlideIndex}.");
     }
+
+    private static AddPptSectionParameters ExtractAddPptSectionParameters(OperationParameters parameters)
+    {
+        return new AddPptSectionParameters(
+            parameters.GetRequired<string>("name"),
+            parameters.GetRequired<int>("slideIndex"));
+    }
+
+    private record AddPptSectionParameters(string Name, int SlideIndex);
 }

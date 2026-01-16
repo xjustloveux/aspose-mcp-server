@@ -21,13 +21,14 @@ public class AddPptSlideHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with slide count.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var layoutTypeStr = parameters.GetOptional("layoutType", "Blank");
+        var p = ExtractAddPptSlideParameters(parameters);
+
         var presentation = context.Document;
 
         if (presentation.LayoutSlides.Count == 0)
             throw new InvalidOperationException("Presentation has no layout slides");
 
-        var layoutType = layoutTypeStr.ToLower() switch
+        var layoutType = p.LayoutType.ToLower() switch
         {
             "title" => SlideLayoutType.Title,
             "titleonly" => SlideLayoutType.TitleOnly,
@@ -45,4 +46,20 @@ public class AddPptSlideHandler : OperationHandlerBase<Presentation>
 
         return Success($"Slide added (total: {presentation.Slides.Count}).");
     }
+
+    /// <summary>
+    ///     Extracts parameters for add slide operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static AddPptSlideParameters ExtractAddPptSlideParameters(OperationParameters parameters)
+    {
+        return new AddPptSlideParameters(parameters.GetOptional("layoutType", "Blank"));
+    }
+
+    /// <summary>
+    ///     Parameters for add slide operation.
+    /// </summary>
+    /// <param name="LayoutType">The layout type for the new slide.</param>
+    private record AddPptSlideParameters(string LayoutType);
 }

@@ -22,17 +22,36 @@ public class SetLayoutHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with layout details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetRequired<int>("slideIndex");
-        var layoutStr = parameters.GetRequired<string>("layout");
+        var p = ExtractSetLayoutParameters(parameters);
 
         var presentation = context.Document;
-        PowerPointHelper.ValidateCollectionIndex(slideIndex, presentation.Slides.Count, "slide");
+        PowerPointHelper.ValidateCollectionIndex(p.SlideIndex, presentation.Slides.Count, "slide");
 
-        var layout = PptLayoutHelper.FindLayoutByType(presentation, layoutStr);
-        presentation.Slides[slideIndex].LayoutSlide = layout;
+        var layout = PptLayoutHelper.FindLayoutByType(presentation, p.Layout);
+        presentation.Slides[p.SlideIndex].LayoutSlide = layout;
 
         MarkModified(context);
 
-        return Success($"Layout '{layoutStr}' set for slide {slideIndex}.");
+        return Success($"Layout '{p.Layout}' set for slide {p.SlideIndex}.");
     }
+
+    /// <summary>
+    ///     Extracts set layout parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted set layout parameters.</returns>
+    private static SetLayoutParameters ExtractSetLayoutParameters(OperationParameters parameters)
+    {
+        return new SetLayoutParameters(
+            parameters.GetRequired<int>("slideIndex"),
+            parameters.GetRequired<string>("layout")
+        );
+    }
+
+    /// <summary>
+    ///     Record for holding set layout parameters.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index.</param>
+    /// <param name="Layout">The layout type string.</param>
+    private record SetLayoutParameters(int SlideIndex, string Layout);
 }

@@ -112,7 +112,7 @@ Notes:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -121,27 +121,55 @@ Notes:
         int? sectionIndex,
         int[]? sectionIndices)
     {
-        var parameters = new OperationParameters();
-
-        switch (operation.ToLower())
+        return operation.ToLower() switch
         {
-            case "insert":
-                if (sectionBreakType != null) parameters.Set("sectionBreakType", sectionBreakType);
-                if (insertAtParagraphIndex.HasValue)
-                    parameters.Set("insertAtParagraphIndex", insertAtParagraphIndex.Value);
-                if (sectionIndex.HasValue) parameters.Set("sectionIndex", sectionIndex.Value);
-                break;
+            "insert" => BuildInsertParameters(sectionBreakType, insertAtParagraphIndex, sectionIndex),
+            "delete" => BuildDeleteParameters(sectionIndex, sectionIndices),
+            "get" => BuildGetParameters(sectionIndex),
+            _ => new OperationParameters()
+        };
+    }
 
-            case "delete":
-                if (sectionIndex.HasValue) parameters.Set("sectionIndex", sectionIndex.Value);
-                if (sectionIndices != null) parameters.Set("sectionIndices", sectionIndices);
-                break;
+    /// <summary>
+    ///     Builds parameters for the insert section operation.
+    /// </summary>
+    /// <param name="sectionBreakType">The section break type (NextPage, Continuous, etc.).</param>
+    /// <param name="insertAtParagraphIndex">The paragraph index to insert section break after.</param>
+    /// <param name="sectionIndex">The section index.</param>
+    /// <returns>OperationParameters configured for inserting a section.</returns>
+    private static OperationParameters BuildInsertParameters(string? sectionBreakType, int? insertAtParagraphIndex,
+        int? sectionIndex)
+    {
+        var parameters = new OperationParameters();
+        if (sectionBreakType != null) parameters.Set("sectionBreakType", sectionBreakType);
+        if (insertAtParagraphIndex.HasValue) parameters.Set("insertAtParagraphIndex", insertAtParagraphIndex.Value);
+        if (sectionIndex.HasValue) parameters.Set("sectionIndex", sectionIndex.Value);
+        return parameters;
+    }
 
-            case "get":
-                if (sectionIndex.HasValue) parameters.Set("sectionIndex", sectionIndex.Value);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the delete section operation.
+    /// </summary>
+    /// <param name="sectionIndex">The section index to delete (0-based).</param>
+    /// <param name="sectionIndices">Array of section indices to delete.</param>
+    /// <returns>OperationParameters configured for deleting sections.</returns>
+    private static OperationParameters BuildDeleteParameters(int? sectionIndex, int[]? sectionIndices)
+    {
+        var parameters = new OperationParameters();
+        if (sectionIndex.HasValue) parameters.Set("sectionIndex", sectionIndex.Value);
+        if (sectionIndices != null) parameters.Set("sectionIndices", sectionIndices);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the get section info operation.
+    /// </summary>
+    /// <param name="sectionIndex">The section index to get info for (0-based, optional).</param>
+    /// <returns>OperationParameters configured for getting section info.</returns>
+    private static OperationParameters BuildGetParameters(int? sectionIndex)
+    {
+        var parameters = new OperationParameters();
+        if (sectionIndex.HasValue) parameters.Set("sectionIndex", sectionIndex.Value);
         return parameters;
     }
 }

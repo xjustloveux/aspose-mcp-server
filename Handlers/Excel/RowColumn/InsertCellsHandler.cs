@@ -23,15 +23,13 @@ public class InsertCellsHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with insertion details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var range = parameters.GetRequired<string>("range");
-        var shiftDirection = parameters.GetRequired<string>("shiftDirection");
+        var p = ExtractInsertCellsParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, p.SheetIndex);
 
-        var rangeObj = ExcelHelper.CreateRange(worksheet.Cells, range);
-        var shiftType = string.Equals(shiftDirection, "right", StringComparison.OrdinalIgnoreCase)
+        var rangeObj = ExcelHelper.CreateRange(worksheet.Cells, p.Range);
+        var shiftType = string.Equals(p.ShiftDirection, "right", StringComparison.OrdinalIgnoreCase)
             ? ShiftType.Right
             : ShiftType.Down;
 
@@ -45,6 +43,17 @@ public class InsertCellsHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Cells inserted in range {range}, shifted {shiftDirection}.");
+        return Success($"Cells inserted in range {p.Range}, shifted {p.ShiftDirection}.");
     }
+
+    private static InsertCellsParameters ExtractInsertCellsParameters(OperationParameters parameters)
+    {
+        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
+        var range = parameters.GetRequired<string>("range");
+        var shiftDirection = parameters.GetRequired<string>("shiftDirection");
+
+        return new InsertCellsParameters(sheetIndex, range, shiftDirection);
+    }
+
+    private record InsertCellsParameters(int SheetIndex, string Range, string ShiftDirection);
 }

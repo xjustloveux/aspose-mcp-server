@@ -27,59 +27,42 @@ public class EditCellFormatWordTableHandler : OperationHandlerBase<Document>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or indices are out of range.</exception>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var tableIndex = parameters.GetOptional("tableIndex", 0);
-        var rowIndex = parameters.GetOptional<int?>("rowIndex");
-        var columnIndex = parameters.GetOptional<int?>("columnIndex");
-        var applyToRow = parameters.GetOptional("applyToRow", false);
-        var applyToColumn = parameters.GetOptional("applyToColumn", false);
-        var applyToTable = parameters.GetOptional("applyToTable", false);
-        var backgroundColor = parameters.GetOptional<string?>("backgroundColor");
-        var alignment = parameters.GetOptional<string?>("alignment");
-        var verticalAlignmentStr = parameters.GetOptional<string?>("verticalAlignmentFormat");
-        var paddingTop = parameters.GetOptional<double?>("paddingTop");
-        var paddingBottom = parameters.GetOptional<double?>("paddingBottom");
-        var paddingLeft = parameters.GetOptional<double?>("paddingLeft");
-        var paddingRight = parameters.GetOptional<double?>("paddingRight");
-        var fontName = parameters.GetOptional<string?>("fontName");
-        var fontNameAscii = parameters.GetOptional<string?>("fontNameAscii");
-        var fontNameFarEast = parameters.GetOptional<string?>("fontNameFarEast");
-        var fontSize = parameters.GetOptional<double?>("cellFontSize");
-        var bold = parameters.GetOptional<bool?>("bold");
-        var italic = parameters.GetOptional<bool?>("italic");
-        var color = parameters.GetOptional<string?>("color");
-        var sectionIndex = parameters.GetOptional<int?>("sectionIndex");
+        var p = ExtractEditCellFormatParameters(parameters);
 
         var doc = context.Document;
-        var actualSectionIndex = sectionIndex ?? 0;
+        var actualSectionIndex = p.SectionIndex ?? 0;
         if (actualSectionIndex >= doc.Sections.Count)
             throw new ArgumentException($"Section index {actualSectionIndex} out of range");
 
         var section = doc.Sections[actualSectionIndex];
         var tables = section.Body.GetChildNodes(NodeType.Table, true).Cast<Aspose.Words.Tables.Table>().ToList();
-        if (tableIndex < 0 || tableIndex >= tables.Count)
-            throw new ArgumentException($"Table index {tableIndex} out of range");
+        if (p.TableIndex < 0 || p.TableIndex >= tables.Count)
+            throw new ArgumentException($"Table index {p.TableIndex} out of range");
 
-        var table = tables[tableIndex];
+        var table = tables[p.TableIndex];
 
-        var targetCells = GetTargetCells(table, rowIndex, columnIndex, applyToRow, applyToColumn, applyToTable);
+        var targetCells =
+            GetTargetCells(table, p.RowIndex, p.ColumnIndex, p.ApplyToRow, p.ApplyToColumn, p.ApplyToTable);
 
         if (targetCells.Count == 0)
             throw new ArgumentException("No target cells found");
 
-        var hasTextFormatting = !string.IsNullOrEmpty(fontName) || !string.IsNullOrEmpty(fontNameAscii) ||
-                                !string.IsNullOrEmpty(fontNameFarEast) || fontSize.HasValue ||
-                                bold.HasValue || italic.HasValue || !string.IsNullOrEmpty(color);
+        var hasTextFormatting = !string.IsNullOrEmpty(p.FontName) || !string.IsNullOrEmpty(p.FontNameAscii) ||
+                                !string.IsNullOrEmpty(p.FontNameFarEast) || p.FontSize.HasValue ||
+                                p.Bold.HasValue || p.Italic.HasValue || !string.IsNullOrEmpty(p.Color);
 
         foreach (var cell in targetCells)
         {
-            ApplyCellFormatting(cell, backgroundColor, alignment, verticalAlignmentStr,
-                paddingTop, paddingBottom, paddingLeft, paddingRight);
+            ApplyCellFormatting(cell, p.BackgroundColor, p.Alignment, p.VerticalAlignmentStr,
+                p.PaddingTop, p.PaddingBottom, p.PaddingLeft, p.PaddingRight);
 
             if (hasTextFormatting)
-                ApplyTextFormatting(cell, fontName, fontNameAscii, fontNameFarEast, fontSize, bold, italic, color);
+                ApplyTextFormatting(cell, p.FontName, p.FontNameAscii, p.FontNameFarEast, p.FontSize, p.Bold, p.Italic,
+                    p.Color);
         }
 
-        var targetDescription = GetTargetDescription(applyToTable, applyToRow, applyToColumn, rowIndex, columnIndex);
+        var targetDescription =
+            GetTargetDescription(p.ApplyToTable, p.ApplyToRow, p.ApplyToColumn, p.RowIndex, p.ColumnIndex);
 
         MarkModified(context);
 
@@ -239,4 +222,75 @@ public class EditCellFormatWordTableHandler : OperationHandlerBase<Document>
                     ? $"column {columnIndex}"
                     : $"cell [{rowIndex}, {columnIndex}]";
     }
+
+    private static EditCellFormatParameters ExtractEditCellFormatParameters(OperationParameters parameters)
+    {
+        var tableIndex = parameters.GetOptional("tableIndex", 0);
+        var rowIndex = parameters.GetOptional<int?>("rowIndex");
+        var columnIndex = parameters.GetOptional<int?>("columnIndex");
+        var applyToRow = parameters.GetOptional("applyToRow", false);
+        var applyToColumn = parameters.GetOptional("applyToColumn", false);
+        var applyToTable = parameters.GetOptional("applyToTable", false);
+        var backgroundColor = parameters.GetOptional<string?>("backgroundColor");
+        var alignment = parameters.GetOptional<string?>("alignment");
+        var verticalAlignmentStr = parameters.GetOptional<string?>("verticalAlignmentFormat");
+        var paddingTop = parameters.GetOptional<double?>("paddingTop");
+        var paddingBottom = parameters.GetOptional<double?>("paddingBottom");
+        var paddingLeft = parameters.GetOptional<double?>("paddingLeft");
+        var paddingRight = parameters.GetOptional<double?>("paddingRight");
+        var fontName = parameters.GetOptional<string?>("fontName");
+        var fontNameAscii = parameters.GetOptional<string?>("fontNameAscii");
+        var fontNameFarEast = parameters.GetOptional<string?>("fontNameFarEast");
+        var fontSize = parameters.GetOptional<double?>("cellFontSize");
+        var bold = parameters.GetOptional<bool?>("bold");
+        var italic = parameters.GetOptional<bool?>("italic");
+        var color = parameters.GetOptional<string?>("color");
+        var sectionIndex = parameters.GetOptional<int?>("sectionIndex");
+
+        return new EditCellFormatParameters(
+            tableIndex,
+            rowIndex,
+            columnIndex,
+            applyToRow,
+            applyToColumn,
+            applyToTable,
+            backgroundColor,
+            alignment,
+            verticalAlignmentStr,
+            paddingTop,
+            paddingBottom,
+            paddingLeft,
+            paddingRight,
+            fontName,
+            fontNameAscii,
+            fontNameFarEast,
+            fontSize,
+            bold,
+            italic,
+            color,
+            sectionIndex);
+    }
+
+    private record EditCellFormatParameters(
+        int TableIndex,
+        int? RowIndex,
+        int? ColumnIndex,
+        bool ApplyToRow,
+        bool ApplyToColumn,
+        bool ApplyToTable,
+        string? BackgroundColor,
+        string? Alignment,
+        string? VerticalAlignmentStr,
+        double? PaddingTop,
+        double? PaddingBottom,
+        double? PaddingLeft,
+        double? PaddingRight,
+        string? FontName,
+        string? FontNameAscii,
+        string? FontNameFarEast,
+        double? FontSize,
+        bool? Bold,
+        bool? Italic,
+        string? Color,
+        int? SectionIndex);
 }

@@ -23,22 +23,31 @@ public class DeleteExcelConditionalFormattingHandler : OperationHandlerBase<Work
     /// <returns>Success message with deletion details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var conditionalFormattingIndex = parameters.GetRequired<int>("conditionalFormattingIndex");
+        var deleteParams = ExtractDeleteParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, deleteParams.SheetIndex);
         var conditionalFormattings = worksheet.ConditionalFormattings;
 
-        if (conditionalFormattingIndex < 0 || conditionalFormattingIndex >= conditionalFormattings.Count)
+        if (deleteParams.ConditionalFormattingIndex < 0 ||
+            deleteParams.ConditionalFormattingIndex >= conditionalFormattings.Count)
             throw new ArgumentException(
-                $"Conditional formatting index {conditionalFormattingIndex} is out of range (worksheet has {conditionalFormattings.Count} conditional formattings)");
+                $"Conditional formatting index {deleteParams.ConditionalFormattingIndex} is out of range (worksheet has {conditionalFormattings.Count} conditional formattings)");
 
-        conditionalFormattings.RemoveAt(conditionalFormattingIndex);
+        conditionalFormattings.RemoveAt(deleteParams.ConditionalFormattingIndex);
 
         MarkModified(context);
 
         return Success(
-            $"Deleted conditional formatting #{conditionalFormattingIndex} (remaining: {conditionalFormattings.Count}).");
+            $"Deleted conditional formatting #{deleteParams.ConditionalFormattingIndex} (remaining: {conditionalFormattings.Count}).");
     }
+
+    private static DeleteParameters ExtractDeleteParameters(OperationParameters parameters)
+    {
+        return new DeleteParameters(
+            parameters.GetOptional("sheetIndex", 0),
+            parameters.GetRequired<int>("conditionalFormattingIndex"));
+    }
+
+    private record DeleteParameters(int SheetIndex, int ConditionalFormattingIndex);
 }

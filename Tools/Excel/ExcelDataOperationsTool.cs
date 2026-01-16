@@ -136,7 +136,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -154,38 +154,75 @@ Usage examples:
         var parameters = new OperationParameters();
         parameters.Set("sheetIndex", sheetIndex);
 
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "sort":
-                if (range != null) parameters.Set("range", range);
-                parameters.Set("sortColumn", sortColumn);
-                parameters.Set("ascending", ascending);
-                parameters.Set("hasHeader", hasHeader);
-                break;
+            "sort" => BuildSortParameters(parameters, range, sortColumn, ascending, hasHeader),
+            "find_replace" => BuildFindReplaceParameters(parameters, findText, replaceText, matchCase, matchEntireCell),
+            "batch_write" => BuildBatchWriteParameters(parameters, data),
+            "get_content" or "get_statistics" => BuildRangeParameters(parameters, range),
+            _ => parameters
+        };
+    }
 
-            case "find_replace":
-                if (findText != null) parameters.Set("findText", findText);
-                if (replaceText != null) parameters.Set("replaceText", replaceText);
-                parameters.Set("matchCase", matchCase);
-                parameters.Set("matchEntireCell", matchEntireCell);
-                break;
+    /// <summary>
+    ///     Builds parameters for the sort data operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="range">The cell range to sort.</param>
+    /// <param name="sortColumn">Column index to sort by (0-based).</param>
+    /// <param name="ascending">Whether to sort ascending.</param>
+    /// <param name="hasHeader">Whether the range has a header row.</param>
+    /// <returns>OperationParameters configured for sorting data.</returns>
+    private static OperationParameters BuildSortParameters(OperationParameters parameters, string? range,
+        int sortColumn, bool ascending, bool hasHeader)
+    {
+        if (range != null) parameters.Set("range", range);
+        parameters.Set("sortColumn", sortColumn);
+        parameters.Set("ascending", ascending);
+        parameters.Set("hasHeader", hasHeader);
+        return parameters;
+    }
 
-            case "batch_write":
-                if (data != null) parameters.Set("data", data);
-                break;
+    /// <summary>
+    ///     Builds parameters for the find and replace operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="findText">The text to find.</param>
+    /// <param name="replaceText">The text to replace with.</param>
+    /// <param name="matchCase">Whether to match case.</param>
+    /// <param name="matchEntireCell">Whether to match entire cell content.</param>
+    /// <returns>OperationParameters configured for find and replace.</returns>
+    private static OperationParameters BuildFindReplaceParameters(OperationParameters parameters, string? findText,
+        string? replaceText, bool matchCase, bool matchEntireCell)
+    {
+        if (findText != null) parameters.Set("findText", findText);
+        if (replaceText != null) parameters.Set("replaceText", replaceText);
+        parameters.Set("matchCase", matchCase);
+        parameters.Set("matchEntireCell", matchEntireCell);
+        return parameters;
+    }
 
-            case "get_content":
-                if (range != null) parameters.Set("range", range);
-                break;
+    /// <summary>
+    ///     Builds parameters for the batch write operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="data">The data to write as JSON.</param>
+    /// <returns>OperationParameters configured for batch writing.</returns>
+    private static OperationParameters BuildBatchWriteParameters(OperationParameters parameters, JsonNode? data)
+    {
+        if (data != null) parameters.Set("data", data);
+        return parameters;
+    }
 
-            case "get_statistics":
-                if (range != null) parameters.Set("range", range);
-                break;
-
-            case "get_used_range":
-                break;
-        }
-
+    /// <summary>
+    ///     Builds parameters containing only the cell range.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="range">The cell range.</param>
+    /// <returns>OperationParameters with range set.</returns>
+    private static OperationParameters BuildRangeParameters(OperationParameters parameters, string? range)
+    {
+        if (range != null) parameters.Set("range", range);
         return parameters;
     }
 }

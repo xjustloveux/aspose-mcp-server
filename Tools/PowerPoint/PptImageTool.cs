@@ -147,7 +147,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -167,55 +167,131 @@ Usage examples:
         string? slideIndexes,
         bool skipDuplicates)
     {
-        var parameters = new OperationParameters();
-
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "add":
-                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
-                if (imagePath != null) parameters.Set("imagePath", imagePath);
-                parameters.Set("x", x);
-                parameters.Set("y", y);
-                if (width.HasValue) parameters.Set("width", width.Value);
-                if (height.HasValue) parameters.Set("height", height.Value);
-                break;
+            "add" => BuildAddParameters(slideIndex, imagePath, x, y, width, height),
+            "edit" => BuildEditParameters(slideIndex, imageIndex, imagePath, x, y, width, height, jpegQuality, maxWidth,
+                maxHeight),
+            "delete" => BuildDeleteParameters(slideIndex, imageIndex),
+            "get" => BuildGetParameters(slideIndex),
+            "export_slides" => BuildExportSlidesParameters(outputDir, slideIndexes, format, scale),
+            "extract" => BuildExtractParameters(outputDir, format, skipDuplicates),
+            _ => new OperationParameters()
+        };
+    }
 
-            case "edit":
-                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
-                if (imageIndex.HasValue) parameters.Set("imageIndex", imageIndex.Value);
-                if (imagePath != null) parameters.Set("imagePath", imagePath);
-                parameters.Set("x", x);
-                parameters.Set("y", y);
-                if (width.HasValue) parameters.Set("width", width.Value);
-                if (height.HasValue) parameters.Set("height", height.Value);
-                if (jpegQuality.HasValue) parameters.Set("jpegQuality", jpegQuality.Value);
-                if (maxWidth.HasValue) parameters.Set("maxWidth", maxWidth.Value);
-                if (maxHeight.HasValue) parameters.Set("maxHeight", maxHeight.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the add image operation.
+    /// </summary>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <param name="imagePath">The image file path to add.</param>
+    /// <param name="x">The X position in points.</param>
+    /// <param name="y">The Y position in points.</param>
+    /// <param name="width">The width in points.</param>
+    /// <param name="height">The height in points.</param>
+    /// <returns>OperationParameters configured for adding an image.</returns>
+    private static OperationParameters BuildAddParameters(int? slideIndex, string? imagePath, float x, float y,
+        float? width, float? height)
+    {
+        var parameters = new OperationParameters();
+        if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
+        if (imagePath != null) parameters.Set("imagePath", imagePath);
+        parameters.Set("x", x);
+        parameters.Set("y", y);
+        if (width.HasValue) parameters.Set("width", width.Value);
+        if (height.HasValue) parameters.Set("height", height.Value);
+        return parameters;
+    }
 
-            case "delete":
-                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
-                if (imageIndex.HasValue) parameters.Set("imageIndex", imageIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the edit image operation.
+    /// </summary>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <param name="imageIndex">The image index on the slide (0-based).</param>
+    /// <param name="imagePath">The new image file path.</param>
+    /// <param name="x">The X position in points.</param>
+    /// <param name="y">The Y position in points.</param>
+    /// <param name="width">The width in points.</param>
+    /// <param name="height">The height in points.</param>
+    /// <param name="jpegQuality">The JPEG quality (10-100) for re-encoding.</param>
+    /// <param name="maxWidth">The maximum width in pixels for resize.</param>
+    /// <param name="maxHeight">The maximum height in pixels for resize.</param>
+    /// <returns>OperationParameters configured for editing an image.</returns>
+    private static OperationParameters BuildEditParameters(int? slideIndex, int? imageIndex, string? imagePath, float x,
+        float y, float? width, float? height, int? jpegQuality, int? maxWidth, int? maxHeight)
+    {
+        var parameters = new OperationParameters();
+        if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
+        if (imageIndex.HasValue) parameters.Set("imageIndex", imageIndex.Value);
+        if (imagePath != null) parameters.Set("imagePath", imagePath);
+        parameters.Set("x", x);
+        parameters.Set("y", y);
+        if (width.HasValue) parameters.Set("width", width.Value);
+        if (height.HasValue) parameters.Set("height", height.Value);
+        if (jpegQuality.HasValue) parameters.Set("jpegQuality", jpegQuality.Value);
+        if (maxWidth.HasValue) parameters.Set("maxWidth", maxWidth.Value);
+        if (maxHeight.HasValue) parameters.Set("maxHeight", maxHeight.Value);
+        return parameters;
+    }
 
-            case "get":
-                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the delete image operation.
+    /// </summary>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <param name="imageIndex">The image index on the slide (0-based).</param>
+    /// <returns>OperationParameters configured for deleting an image.</returns>
+    private static OperationParameters BuildDeleteParameters(int? slideIndex, int? imageIndex)
+    {
+        var parameters = new OperationParameters();
+        if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
+        if (imageIndex.HasValue) parameters.Set("imageIndex", imageIndex.Value);
+        return parameters;
+    }
 
-            case "export_slides":
-                if (outputDir != null) parameters.Set("outputDir", outputDir);
-                if (slideIndexes != null) parameters.Set("slideIndexes", slideIndexes);
-                parameters.Set("format", format);
-                parameters.Set("scale", scale);
-                break;
+    /// <summary>
+    ///     Builds parameters for the get image information operation.
+    /// </summary>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <returns>OperationParameters configured for getting image information.</returns>
+    private static OperationParameters BuildGetParameters(int? slideIndex)
+    {
+        var parameters = new OperationParameters();
+        if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
+        return parameters;
+    }
 
-            case "extract":
-                if (outputDir != null) parameters.Set("outputDir", outputDir);
-                parameters.Set("format", format);
-                parameters.Set("skipDuplicates", skipDuplicates);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the export slides as images operation.
+    /// </summary>
+    /// <param name="outputDir">The output directory path.</param>
+    /// <param name="slideIndexes">Comma-separated slide indexes to export.</param>
+    /// <param name="format">The image format (png or jpeg).</param>
+    /// <param name="scale">The scaling factor.</param>
+    /// <returns>OperationParameters configured for exporting slides as images.</returns>
+    private static OperationParameters BuildExportSlidesParameters(string? outputDir, string? slideIndexes,
+        string format, float scale)
+    {
+        var parameters = new OperationParameters();
+        if (outputDir != null) parameters.Set("outputDir", outputDir);
+        if (slideIndexes != null) parameters.Set("slideIndexes", slideIndexes);
+        parameters.Set("format", format);
+        parameters.Set("scale", scale);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the extract embedded images operation.
+    /// </summary>
+    /// <param name="outputDir">The output directory path.</param>
+    /// <param name="format">The image format (png or jpeg).</param>
+    /// <param name="skipDuplicates">Whether to skip duplicate images based on content hash.</param>
+    /// <returns>OperationParameters configured for extracting embedded images.</returns>
+    private static OperationParameters BuildExtractParameters(string? outputDir, string format, bool skipDuplicates)
+    {
+        var parameters = new OperationParameters();
+        if (outputDir != null) parameters.Set("outputDir", outputDir);
+        parameters.Set("format", format);
+        parameters.Set("skipDuplicates", skipDuplicates);
         return parameters;
     }
 }

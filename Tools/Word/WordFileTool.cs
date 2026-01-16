@@ -165,7 +165,7 @@ Template syntax (LINQ Reporting Engine, use 'ds' as data source prefix):
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -193,55 +193,134 @@ Template syntax (LINQ Reporting Engine, use 'ds' as data source prefix):
         double headerDistance,
         double footerDistance)
     {
-        var parameters = new OperationParameters();
-
-        switch (operation.ToLower())
+        return operation.ToLower() switch
         {
-            case "create":
-                if (outputPath != null) parameters.Set("outputPath", outputPath);
-                if (content != null) parameters.Set("content", content);
-                parameters.Set("skipInitialContent", skipInitialContent);
-                parameters.Set("marginTop", marginTop);
-                parameters.Set("marginBottom", marginBottom);
-                parameters.Set("marginLeft", marginLeft);
-                parameters.Set("marginRight", marginRight);
-                parameters.Set("compatibilityMode", compatibilityMode);
-                parameters.Set("paperSize", paperSize);
-                if (pageWidth.HasValue) parameters.Set("pageWidth", pageWidth.Value);
-                if (pageHeight.HasValue) parameters.Set("pageHeight", pageHeight.Value);
-                parameters.Set("headerDistance", headerDistance);
-                parameters.Set("footerDistance", footerDistance);
-                break;
+            "create" => BuildCreateParameters(outputPath, content, skipInitialContent, marginTop, marginBottom,
+                marginLeft, marginRight, compatibilityMode, paperSize, pageWidth, pageHeight, headerDistance,
+                footerDistance),
+            "create_from_template" => BuildCreateFromTemplateParameters(templatePath, sessionId, outputPath, dataJson),
+            "convert" => BuildConvertParameters(path, sessionId, outputPath, format),
+            "merge" => BuildMergeParameters(inputPaths, outputPath, importFormatMode, unlinkHeadersFooters),
+            "split" => BuildSplitParameters(path, sessionId, outputDir, splitBy),
+            _ => new OperationParameters()
+        };
+    }
 
-            case "create_from_template":
-                if (templatePath != null) parameters.Set("templatePath", templatePath);
-                if (sessionId != null) parameters.Set("sessionId", sessionId);
-                if (outputPath != null) parameters.Set("outputPath", outputPath);
-                if (dataJson != null) parameters.Set("dataJson", dataJson);
-                break;
+    /// <summary>
+    ///     Builds parameters for the create operation.
+    /// </summary>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="content">The initial content.</param>
+    /// <param name="skipInitialContent">Whether to create a blank document.</param>
+    /// <param name="marginTop">The top margin in points.</param>
+    /// <param name="marginBottom">The bottom margin in points.</param>
+    /// <param name="marginLeft">The left margin in points.</param>
+    /// <param name="marginRight">The right margin in points.</param>
+    /// <param name="compatibilityMode">The Word compatibility mode.</param>
+    /// <param name="paperSize">The predefined paper size.</param>
+    /// <param name="pageWidth">The page width in points (overrides paperSize).</param>
+    /// <param name="pageHeight">The page height in points (overrides paperSize).</param>
+    /// <param name="headerDistance">The header distance from page top in points.</param>
+    /// <param name="footerDistance">The footer distance from page bottom in points.</param>
+    /// <returns>OperationParameters configured for creating a document.</returns>
+    private static OperationParameters BuildCreateParameters(string? outputPath, string? content,
+        bool skipInitialContent,
+        double marginTop, double marginBottom, double marginLeft, double marginRight, string compatibilityMode,
+        string paperSize, double? pageWidth, double? pageHeight, double headerDistance, double footerDistance)
+    {
+        var parameters = new OperationParameters();
+        if (outputPath != null) parameters.Set("outputPath", outputPath);
+        if (content != null) parameters.Set("content", content);
+        parameters.Set("skipInitialContent", skipInitialContent);
+        parameters.Set("marginTop", marginTop);
+        parameters.Set("marginBottom", marginBottom);
+        parameters.Set("marginLeft", marginLeft);
+        parameters.Set("marginRight", marginRight);
+        parameters.Set("compatibilityMode", compatibilityMode);
+        parameters.Set("paperSize", paperSize);
+        if (pageWidth.HasValue) parameters.Set("pageWidth", pageWidth.Value);
+        if (pageHeight.HasValue) parameters.Set("pageHeight", pageHeight.Value);
+        parameters.Set("headerDistance", headerDistance);
+        parameters.Set("footerDistance", footerDistance);
+        return parameters;
+    }
 
-            case "convert":
-                if (path != null) parameters.Set("path", path);
-                if (sessionId != null) parameters.Set("sessionId", sessionId);
-                if (outputPath != null) parameters.Set("outputPath", outputPath);
-                if (format != null) parameters.Set("format", format);
-                break;
+    /// <summary>
+    ///     Builds parameters for the create_from_template operation.
+    /// </summary>
+    /// <param name="templatePath">The template file path.</param>
+    /// <param name="sessionId">The session ID for template from session.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="dataJson">The JSON data for template rendering.</param>
+    /// <returns>OperationParameters configured for creating from template.</returns>
+    private static OperationParameters BuildCreateFromTemplateParameters(string? templatePath, string? sessionId,
+        string? outputPath, string? dataJson)
+    {
+        var parameters = new OperationParameters();
+        if (templatePath != null) parameters.Set("templatePath", templatePath);
+        if (sessionId != null) parameters.Set("sessionId", sessionId);
+        if (outputPath != null) parameters.Set("outputPath", outputPath);
+        if (dataJson != null) parameters.Set("dataJson", dataJson);
+        return parameters;
+    }
 
-            case "merge":
-                if (inputPaths != null) parameters.Set("inputPaths", inputPaths);
-                if (outputPath != null) parameters.Set("outputPath", outputPath);
-                parameters.Set("importFormatMode", importFormatMode);
-                parameters.Set("unlinkHeadersFooters", unlinkHeadersFooters);
-                break;
+    /// <summary>
+    ///     Builds parameters for the convert operation.
+    /// </summary>
+    /// <param name="path">The input file path.</param>
+    /// <param name="sessionId">The session ID for document from session.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="format">The output format: pdf, html, docx, txt, rtf, odt, epub, xps.</param>
+    /// <returns>OperationParameters configured for converting a document.</returns>
+    private static OperationParameters BuildConvertParameters(string? path, string? sessionId, string? outputPath,
+        string? format)
+    {
+        var parameters = new OperationParameters();
+        if (path != null) parameters.Set("path", path);
+        if (sessionId != null) parameters.Set("sessionId", sessionId);
+        if (outputPath != null) parameters.Set("outputPath", outputPath);
+        if (format != null) parameters.Set("format", format);
+        return parameters;
+    }
 
-            case "split":
-                if (path != null) parameters.Set("path", path);
-                if (sessionId != null) parameters.Set("sessionId", sessionId);
-                if (outputDir != null) parameters.Set("outputDir", outputDir);
-                parameters.Set("splitBy", splitBy);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the merge operation.
+    /// </summary>
+    /// <param name="inputPaths">The array of input file paths to merge.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="importFormatMode">
+    ///     The format mode when merging: KeepSourceFormatting, UseDestinationStyles,
+    ///     KeepDifferentStyles.
+    /// </param>
+    /// <param name="unlinkHeadersFooters">Whether to unlink headers/footers after merge.</param>
+    /// <returns>OperationParameters configured for merging documents.</returns>
+    private static OperationParameters BuildMergeParameters(string[]? inputPaths, string? outputPath,
+        string importFormatMode, bool unlinkHeadersFooters)
+    {
+        var parameters = new OperationParameters();
+        if (inputPaths != null) parameters.Set("inputPaths", inputPaths);
+        if (outputPath != null) parameters.Set("outputPath", outputPath);
+        parameters.Set("importFormatMode", importFormatMode);
+        parameters.Set("unlinkHeadersFooters", unlinkHeadersFooters);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the split operation.
+    /// </summary>
+    /// <param name="path">The input file path.</param>
+    /// <param name="sessionId">The session ID for document from session.</param>
+    /// <param name="outputDir">The output directory for split files.</param>
+    /// <param name="splitBy">The split method: section, page.</param>
+    /// <returns>OperationParameters configured for splitting a document.</returns>
+    private static OperationParameters BuildSplitParameters(string? path, string? sessionId, string? outputDir,
+        string splitBy)
+    {
+        var parameters = new OperationParameters();
+        if (path != null) parameters.Set("path", path);
+        if (sessionId != null) parameters.Set("sessionId", sessionId);
+        if (outputDir != null) parameters.Set("outputDir", outputDir);
+        parameters.Set("splitBy", splitBy);
         return parameters;
     }
 }

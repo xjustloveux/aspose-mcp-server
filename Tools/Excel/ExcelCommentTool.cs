@@ -107,7 +107,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -119,29 +119,40 @@ Usage examples:
         var parameters = new OperationParameters();
         parameters.Set("sheetIndex", sheetIndex);
 
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "add":
-                if (cell != null) parameters.Set("cell", cell);
-                if (comment != null) parameters.Set("comment", comment);
-                if (author != null) parameters.Set("author", author);
-                break;
+            "add" or "edit" => BuildAddEditParameters(parameters, cell, comment, author),
+            "delete" or "get" => BuildCellParameters(parameters, cell),
+            _ => parameters
+        };
+    }
 
-            case "edit":
-                if (cell != null) parameters.Set("cell", cell);
-                if (comment != null) parameters.Set("comment", comment);
-                if (author != null) parameters.Set("author", author);
-                break;
+    /// <summary>
+    ///     Builds parameters for the add or edit comment operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="cell">The cell reference for the comment.</param>
+    /// <param name="comment">The comment text.</param>
+    /// <param name="author">The comment author.</param>
+    /// <returns>OperationParameters configured for adding or editing comment.</returns>
+    private static OperationParameters BuildAddEditParameters(OperationParameters parameters, string? cell,
+        string? comment, string? author)
+    {
+        if (cell != null) parameters.Set("cell", cell);
+        if (comment != null) parameters.Set("comment", comment);
+        if (author != null) parameters.Set("author", author);
+        return parameters;
+    }
 
-            case "delete":
-                if (cell != null) parameters.Set("cell", cell);
-                break;
-
-            case "get":
-                if (cell != null) parameters.Set("cell", cell);
-                break;
-        }
-
+    /// <summary>
+    ///     Builds parameters for operations that require only cell reference.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="cell">The cell reference.</param>
+    /// <returns>OperationParameters configured with cell reference.</returns>
+    private static OperationParameters BuildCellParameters(OperationParameters parameters, string? cell)
+    {
+        if (cell != null) parameters.Set("cell", cell);
         return parameters;
     }
 }

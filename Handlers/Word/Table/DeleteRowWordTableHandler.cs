@@ -23,6 +23,32 @@ public class DeleteRowWordTableHandler : OperationHandlerBase<Document>
     /// <exception cref="ArgumentException">Thrown when rowIndex is missing or indices are out of range.</exception>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
+        var p = ExtractDeleteRowParameters(parameters);
+
+        var doc = context.Document;
+        var actualSectionIndex = p.SectionIndex ?? 0;
+        if (actualSectionIndex >= doc.Sections.Count)
+            throw new ArgumentException($"Section index {actualSectionIndex} out of range");
+
+        var section = doc.Sections[actualSectionIndex];
+        var tables = section.Body.GetChildNodes(NodeType.Table, true).Cast<Aspose.Words.Tables.Table>().ToList();
+        if (p.TableIndex < 0 || p.TableIndex >= tables.Count)
+            throw new ArgumentException($"Table index {p.TableIndex} out of range");
+
+        var table = tables[p.TableIndex];
+        if (p.RowIndex < 0 || p.RowIndex >= table.Rows.Count)
+            throw new ArgumentException($"Row index {p.RowIndex} out of range");
+
+        var rowToDelete = table.Rows[p.RowIndex];
+        rowToDelete.Remove();
+
+        MarkModified(context);
+
+        return Success($"Successfully deleted row #{p.RowIndex}. Remaining rows: {table.Rows.Count}.");
+    }
+
+    private static DeleteRowParameters ExtractDeleteRowParameters(OperationParameters parameters)
+    {
         var rowIndex = parameters.GetOptional<int?>("rowIndex");
         if (!rowIndex.HasValue)
             throw new ArgumentException("rowIndex is required for delete_row operation");
@@ -30,25 +56,8 @@ public class DeleteRowWordTableHandler : OperationHandlerBase<Document>
         var tableIndex = parameters.GetOptional("tableIndex", 0);
         var sectionIndex = parameters.GetOptional<int?>("sectionIndex");
 
-        var doc = context.Document;
-        var actualSectionIndex = sectionIndex ?? 0;
-        if (actualSectionIndex >= doc.Sections.Count)
-            throw new ArgumentException($"Section index {actualSectionIndex} out of range");
-
-        var section = doc.Sections[actualSectionIndex];
-        var tables = section.Body.GetChildNodes(NodeType.Table, true).Cast<Aspose.Words.Tables.Table>().ToList();
-        if (tableIndex < 0 || tableIndex >= tables.Count)
-            throw new ArgumentException($"Table index {tableIndex} out of range");
-
-        var table = tables[tableIndex];
-        if (rowIndex.Value < 0 || rowIndex.Value >= table.Rows.Count)
-            throw new ArgumentException($"Row index {rowIndex.Value} out of range");
-
-        var rowToDelete = table.Rows[rowIndex.Value];
-        rowToDelete.Remove();
-
-        MarkModified(context);
-
-        return Success($"Successfully deleted row #{rowIndex.Value}. Remaining rows: {table.Rows.Count}.");
+        return new DeleteRowParameters(rowIndex.Value, tableIndex, sectionIndex);
     }
+
+    private record DeleteRowParameters(int RowIndex, int TableIndex, int? SectionIndex);
 }

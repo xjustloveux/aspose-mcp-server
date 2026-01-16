@@ -23,26 +23,33 @@ public class ClearPptShapeFormatHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with clear details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetOptional("slideIndex", 0);
-        var shapeIndex = parameters.GetRequired<int>("shapeIndex");
-        var clearFill = parameters.GetOptional("clearFill", true);
-        var clearLine = parameters.GetOptional("clearLine", true);
-
+        var p = ExtractClearPptShapeFormatParameters(parameters);
         var presentation = context.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+        var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
 
-        PowerPointHelper.ValidateCollectionIndex(shapeIndex, slide.Shapes.Count, "shapeIndex");
+        PowerPointHelper.ValidateCollectionIndex(p.ShapeIndex, slide.Shapes.Count, "shapeIndex");
 
-        var shape = slide.Shapes[shapeIndex];
+        var shape = slide.Shapes[p.ShapeIndex];
 
-        if (clearFill)
+        if (p.ClearFill)
             shape.FillFormat.FillType = FillType.NoFill;
 
-        if (clearLine)
+        if (p.ClearLine)
             shape.LineFormat.FillFormat.FillType = FillType.NoFill;
 
         MarkModified(context);
 
-        return Success($"Format cleared from shape {shapeIndex} on slide {slideIndex}.");
+        return Success($"Format cleared from shape {p.ShapeIndex} on slide {p.SlideIndex}.");
     }
+
+    private static ClearPptShapeFormatParameters ExtractClearPptShapeFormatParameters(OperationParameters parameters)
+    {
+        return new ClearPptShapeFormatParameters(
+            parameters.GetOptional("slideIndex", 0),
+            parameters.GetRequired<int>("shapeIndex"),
+            parameters.GetOptional("clearFill", true),
+            parameters.GetOptional("clearLine", true));
+    }
+
+    private record ClearPptShapeFormatParameters(int SlideIndex, int ShapeIndex, bool ClearFill, bool ClearLine);
 }

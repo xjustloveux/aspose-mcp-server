@@ -24,14 +24,12 @@ public class EditWordFootnoteHandler : OperationHandlerBase<Document>
     /// <returns>Success message with edit details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var newText = parameters.GetRequired<string>("text");
-        var referenceMark = parameters.GetOptional<string?>("referenceMark");
-        var noteIndex = parameters.GetOptional<int?>("noteIndex");
+        var p = ExtractEditFootnoteParameters(parameters);
 
         var doc = context.Document;
         var notes = WordNoteHelper.GetNotesFromDoc(doc, FootnoteType.Footnote);
 
-        var note = WordNoteHelper.FindNote(notes, referenceMark, noteIndex);
+        var note = WordNoteHelper.FindNote(notes, p.ReferenceMark, p.NoteIndex);
 
         if (note == null)
         {
@@ -43,14 +41,33 @@ public class EditWordFootnoteHandler : OperationHandlerBase<Document>
         }
 
         var oldText = note.ToString(SaveFormat.Text).Trim();
-        WordNoteHelper.UpdateNoteText(doc, note, newText);
+        WordNoteHelper.UpdateNoteText(doc, note, p.NewText);
 
         MarkModified(context);
 
         var result = new StringBuilder();
         result.AppendLine("Footnote edited successfully");
         result.AppendLine($"Old text: {oldText}");
-        result.AppendLine($"New text: {newText}");
+        result.AppendLine($"New text: {p.NewText}");
         return result.ToString().TrimEnd();
     }
+
+    /// <summary>
+    ///     Extracts edit footnote parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted edit footnote parameters.</returns>
+    private static EditFootnoteParameters ExtractEditFootnoteParameters(OperationParameters parameters)
+    {
+        return new EditFootnoteParameters(
+            parameters.GetRequired<string>("text"),
+            parameters.GetOptional<string?>("referenceMark"),
+            parameters.GetOptional<int?>("noteIndex")
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold edit footnote parameters.
+    /// </summary>
+    private record EditFootnoteParameters(string NewText, string? ReferenceMark, int? NoteIndex);
 }

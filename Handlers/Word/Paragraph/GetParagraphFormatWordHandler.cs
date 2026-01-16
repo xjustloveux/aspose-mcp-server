@@ -25,21 +25,20 @@ public class GetParagraphFormatWordHandler : OperationHandlerBase<Document>
     /// <returns>JSON string containing paragraph formatting information.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var paragraphIndex = parameters.GetOptional<int?>("paragraphIndex");
-        var includeRunDetails = parameters.GetOptional("includeRunDetails", true);
+        var getParams = ExtractGetParagraphFormatParameters(parameters);
 
-        if (!paragraphIndex.HasValue)
+        if (!getParams.ParagraphIndex.HasValue)
             throw new ArgumentException("paragraphIndex parameter is required for get_format operation");
 
-        var para = GetParagraph(context.Document, paragraphIndex.Value);
-        var resultDict = BuildBasicInfo(para, paragraphIndex.Value);
+        var para = GetParagraph(context.Document, getParams.ParagraphIndex.Value);
+        var resultDict = BuildBasicInfo(para, getParams.ParagraphIndex.Value);
 
         AddListFormat(resultDict, para);
         AddBordersInfo(resultDict, para.ParagraphFormat);
         AddBackgroundColor(resultDict, para.ParagraphFormat);
         AddTabStops(resultDict, para.ParagraphFormat);
         AddFontFormat(resultDict, para);
-        AddRunDetails(resultDict, para, includeRunDetails);
+        AddRunDetails(resultDict, para, getParams.IncludeRunDetails);
 
         return JsonSerializer.Serialize(resultDict, JsonDefaults.Indented);
     }
@@ -229,4 +228,24 @@ public class GetParagraphFormatWordHandler : OperationHandlerBase<Document>
 
         return runInfo;
     }
+
+    /// <summary>
+    ///     Extracts get paragraph format parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted get paragraph format parameters.</returns>
+    private static GetParagraphFormatParameters ExtractGetParagraphFormatParameters(OperationParameters parameters)
+    {
+        return new GetParagraphFormatParameters(
+            parameters.GetOptional<int?>("paragraphIndex"),
+            parameters.GetOptional("includeRunDetails", true)
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold get paragraph format parameters.
+    /// </summary>
+    /// <param name="ParagraphIndex">The paragraph index to get format for.</param>
+    /// <param name="IncludeRunDetails">Whether to include run details.</param>
+    private record GetParagraphFormatParameters(int? ParagraphIndex, bool IncludeRunDetails);
 }

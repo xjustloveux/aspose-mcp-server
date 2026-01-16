@@ -23,10 +23,9 @@ public class CreatePresentationHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with output path.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var path = parameters.GetOptional<string?>("path");
-        var outputPath = parameters.GetOptional<string?>("outputPath");
+        var p = ExtractCreateParameters(parameters);
 
-        var savePath = path ?? outputPath;
+        var savePath = p.Path ?? p.OutputPath;
         if (string.IsNullOrEmpty(savePath))
             throw new ArgumentException("path or outputPath is required for create operation");
 
@@ -37,4 +36,23 @@ public class CreatePresentationHandler : OperationHandlerBase<Presentation>
 
         return Success($"PowerPoint presentation created successfully. Output: {savePath}");
     }
+
+    /// <summary>
+    ///     Extracts create parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted create parameters.</returns>
+    private static CreateParameters ExtractCreateParameters(OperationParameters parameters)
+    {
+        return new CreateParameters(
+            parameters.GetOptional<string?>("path"),
+            parameters.GetOptional<string?>("outputPath"));
+    }
+
+    /// <summary>
+    ///     Record for holding create presentation parameters.
+    /// </summary>
+    /// <param name="Path">The output file path.</param>
+    /// <param name="OutputPath">Alternative output file path.</param>
+    private record CreateParameters(string? Path, string? OutputPath);
 }

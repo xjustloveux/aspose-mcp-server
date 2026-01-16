@@ -27,69 +27,59 @@ public class SetBorderWordTableHandler : OperationHandlerBase<Document>
     /// <exception cref="ArgumentException">Thrown when indices are out of range.</exception>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var tableIndex = parameters.GetOptional("tableIndex", 0);
-        var sectionIndex = parameters.GetOptional<int?>("sectionIndex");
-        var rowIndex = parameters.GetOptional<int?>("rowIndex");
-        var columnIndex = parameters.GetOptional<int?>("columnIndex");
-        var borderTop = parameters.GetOptional("borderTop", false);
-        var borderBottom = parameters.GetOptional("borderBottom", false);
-        var borderLeft = parameters.GetOptional("borderLeft", false);
-        var borderRight = parameters.GetOptional("borderRight", false);
-        var lineStyleStr = parameters.GetOptional("lineStyle", "single");
-        var lineWidth = parameters.GetOptional("lineWidth", 0.5);
-        var lineColor = parameters.GetOptional("lineColor", "000000");
+        var p = ExtractSetBorderParameters(parameters);
 
         var doc = context.Document;
-        var actualSectionIndex = sectionIndex ?? 0;
+        var actualSectionIndex = p.SectionIndex ?? 0;
         if (actualSectionIndex >= doc.Sections.Count)
             throw new ArgumentException($"Section index {actualSectionIndex} out of range");
 
         var section = doc.Sections[actualSectionIndex];
         var tables = section.Body.GetChildNodes(NodeType.Table, true).Cast<WordTable>().ToList();
-        if (tableIndex >= tables.Count)
-            throw new ArgumentException($"Table index {tableIndex} out of range");
+        if (p.TableIndex >= tables.Count)
+            throw new ArgumentException($"Table index {p.TableIndex} out of range");
 
-        var table = tables[tableIndex];
-        var lineStyleEnum = WordTableHelper.GetLineStyle(lineStyleStr);
-        var lineColorParsed = ColorHelper.ParseColor(lineColor);
+        var table = tables[p.TableIndex];
+        var lineStyleEnum = WordTableHelper.GetLineStyle(p.LineStyle);
+        var lineColorParsed = ColorHelper.ParseColor(p.LineColor);
 
-        var targetCells = GetTargetCells(table, rowIndex, columnIndex);
+        var targetCells = GetTargetCells(table, p.RowIndex, p.ColumnIndex);
 
         foreach (var cell in targetCells)
         {
             var borders = cell.CellFormat.Borders;
-            if (borderTop)
+            if (p.BorderTop)
             {
                 borders.Top.LineStyle = lineStyleEnum;
-                borders.Top.LineWidth = lineWidth;
+                borders.Top.LineWidth = p.LineWidth;
                 borders.Top.Color = lineColorParsed;
             }
 
-            if (borderBottom)
+            if (p.BorderBottom)
             {
                 borders.Bottom.LineStyle = lineStyleEnum;
-                borders.Bottom.LineWidth = lineWidth;
+                borders.Bottom.LineWidth = p.LineWidth;
                 borders.Bottom.Color = lineColorParsed;
             }
 
-            if (borderLeft)
+            if (p.BorderLeft)
             {
                 borders.Left.LineStyle = lineStyleEnum;
-                borders.Left.LineWidth = lineWidth;
+                borders.Left.LineWidth = p.LineWidth;
                 borders.Left.Color = lineColorParsed;
             }
 
-            if (borderRight)
+            if (p.BorderRight)
             {
                 borders.Right.LineStyle = lineStyleEnum;
-                borders.Right.LineWidth = lineWidth;
+                borders.Right.LineWidth = p.LineWidth;
                 borders.Right.Color = lineColorParsed;
             }
         }
 
         MarkModified(context);
 
-        return Success($"Successfully set table {tableIndex} borders.");
+        return Success($"Successfully set table {p.TableIndex} borders.");
     }
 
     /// <summary>
@@ -131,4 +121,45 @@ public class SetBorderWordTableHandler : OperationHandlerBase<Document>
 
         return targetCells;
     }
+
+    private static SetBorderParameters ExtractSetBorderParameters(OperationParameters parameters)
+    {
+        var tableIndex = parameters.GetOptional("tableIndex", 0);
+        var sectionIndex = parameters.GetOptional<int?>("sectionIndex");
+        var rowIndex = parameters.GetOptional<int?>("rowIndex");
+        var columnIndex = parameters.GetOptional<int?>("columnIndex");
+        var borderTop = parameters.GetOptional("borderTop", false);
+        var borderBottom = parameters.GetOptional("borderBottom", false);
+        var borderLeft = parameters.GetOptional("borderLeft", false);
+        var borderRight = parameters.GetOptional("borderRight", false);
+        var lineStyle = parameters.GetOptional("lineStyle", "single");
+        var lineWidth = parameters.GetOptional("lineWidth", 0.5);
+        var lineColor = parameters.GetOptional("lineColor", "000000");
+
+        return new SetBorderParameters(
+            tableIndex,
+            sectionIndex,
+            rowIndex,
+            columnIndex,
+            borderTop,
+            borderBottom,
+            borderLeft,
+            borderRight,
+            lineStyle,
+            lineWidth,
+            lineColor);
+    }
+
+    private record SetBorderParameters(
+        int TableIndex,
+        int? SectionIndex,
+        int? RowIndex,
+        int? ColumnIndex,
+        bool BorderTop,
+        bool BorderBottom,
+        bool BorderLeft,
+        bool BorderRight,
+        string LineStyle,
+        double LineWidth,
+        string LineColor);
 }

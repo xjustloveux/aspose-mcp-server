@@ -26,24 +26,21 @@ public class UpdatePptChartDataHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with update details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetRequired<int>("slideIndex");
-        var chartIndex = parameters.GetRequired<int>("shapeIndex");
-        var dataObject = parameters.GetOptional<JsonObject?>("data");
-        var clearExisting = parameters.GetOptional("clearExisting", false);
+        var p = ExtractUpdateChartDataParameters(parameters);
 
         var presentation = context.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-        var chart = PptChartHelper.GetChartByIndex(slide, chartIndex, slideIndex);
+        var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
+        var chart = PptChartHelper.GetChartByIndex(slide, p.ChartIndex, p.SlideIndex);
 
-        var (categories, seriesList) = ParseChartData(dataObject);
+        var (categories, seriesList) = ParseChartData(p.Data);
 
-        if (categories == null && seriesList == null && !clearExisting)
-            return Success($"No changes made to chart {chartIndex} on slide {slideIndex}.");
+        if (categories == null && seriesList == null && !p.ClearExisting)
+            return Success($"No changes made to chart {p.ChartIndex} on slide {p.SlideIndex}.");
 
         var chartData = chart.ChartData;
         var workbook = chartData.ChartDataWorkbook;
 
-        if (clearExisting || categories != null || seriesList != null)
+        if (p.ClearExisting || categories != null || seriesList != null)
         {
             chartData.Series.Clear();
             chartData.Categories.Clear();
@@ -55,9 +52,14 @@ public class UpdatePptChartDataHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Chart {chartIndex} data updated on slide {slideIndex}.");
+        return Success($"Chart {p.ChartIndex} data updated on slide {p.SlideIndex}.");
     }
 
+    /// <summary>
+    ///     Parses chart data from a JSON object.
+    /// </summary>
+    /// <param name="dataObject">The JSON object containing chart data.</param>
+    /// <returns>A tuple containing categories and series list.</returns>
     private static (string[]? categories, List<(string name, double[] values)>? seriesList) ParseChartData(
         JsonObject? dataObject)
     {
@@ -79,6 +81,11 @@ public class UpdatePptChartDataHandler : OperationHandlerBase<Presentation>
         return (categories, seriesList);
     }
 
+    /// <summary>
+    ///     Parses series data from a JSON array.
+    /// </summary>
+    /// <param name="seriesArray">The JSON array containing series data.</param>
+    /// <returns>A list of series with name and values.</returns>
     private static List<(string name, double[] values)> ParseSeriesArray(JsonArray seriesArray)
     {
         List<(string name, double[] values)> seriesList = [];
@@ -98,6 +105,11 @@ public class UpdatePptChartDataHandler : OperationHandlerBase<Presentation>
         return seriesList;
     }
 
+    /// <summary>
+    ///     Parses a JSON node to a double value.
+    /// </summary>
+    /// <param name="v">The JSON node to parse.</param>
+    /// <returns>The parsed double value, or 0.0 if parsing fails.</returns>
     private static double ParseDoubleValue(JsonNode? v)
     {
         if (v == null) return 0.0;
@@ -108,6 +120,12 @@ public class UpdatePptChartDataHandler : OperationHandlerBase<Presentation>
         return 0.0;
     }
 
+    /// <summary>
+    ///     Adds categories to the chart data.
+    /// </summary>
+    /// <param name="chartData">The chart data.</param>
+    /// <param name="workbook">The chart data workbook.</param>
+    /// <param name="categories">The categories to add.</param>
     private static void AddCategories(IChartData chartData, IChartDataWorkbook workbook, string[]? categories)
     {
         if (categories is not { Length: > 0 }) return;
@@ -119,6 +137,14 @@ public class UpdatePptChartDataHandler : OperationHandlerBase<Presentation>
         }
     }
 
+    /// <summary>
+    ///     Adds series data to the chart.
+    /// </summary>
+    /// <param name="chart">The chart.</param>
+    /// <param name="chartData">The chart data.</param>
+    /// <param name="workbook">The chart data workbook.</param>
+    /// <param name="categories">The categories.</param>
+    /// <param name="seriesList">The series list to add.</param>
     private static void AddSeriesData(IChart chart, IChartData chartData, IChartDataWorkbook workbook,
         string[]? categories, List<(string name, double[] values)>? seriesList)
     {
@@ -140,6 +166,17 @@ public class UpdatePptChartDataHandler : OperationHandlerBase<Presentation>
         }
     }
 
+    /// <summary>
+    ///     Adds data points based on chart type.
+    /// </summary>
+    /// <param name="chart">The chart.</param>
+    /// <param name="series">The chart series.</param>
+    /// <param name="workbook">The chart data workbook.</param>
+    /// <param name="values">The data values.</param>
+    /// <param name="yColumnIndex">The Y column index.</param>
+    /// <param name="yColumnStart">The Y column start index.</param>
+    /// <param name="seriesCount">The total series count.</param>
+    /// <param name="seriesIdx">The current series index.</param>
     private static void AddDataPointsForChartType(IChart chart, IChartSeries series, IChartDataWorkbook workbook,
         double[] values, int yColumnIndex, int yColumnStart, int seriesCount, int seriesIdx)
     {
@@ -153,11 +190,21 @@ public class UpdatePptChartDataHandler : OperationHandlerBase<Presentation>
             AddBarDataPoints(series, workbook, values, yColumnIndex);
     }
 
+    /// <summary>
+    ///     Determines whether the chart type is a bubble chart.
+    /// </summary>
+    /// <param name="chartType">The chart type.</param>
+    /// <returns>True if the chart is a bubble chart, false otherwise.</returns>
     private static bool IsBubbleChart(ChartType chartType)
     {
         return chartType == ChartType.Bubble || chartType == ChartType.BubbleWith3D;
     }
 
+    /// <summary>
+    ///     Determines whether the chart type is a scatter chart.
+    /// </summary>
+    /// <param name="chartType">The chart type.</param>
+    /// <returns>True if the chart is a scatter chart, false otherwise.</returns>
     private static bool IsScatterChart(ChartType chartType)
     {
         return chartType == ChartType.ScatterWithSmoothLines ||
@@ -166,11 +213,24 @@ public class UpdatePptChartDataHandler : OperationHandlerBase<Presentation>
                chartType == ChartType.ScatterWithSmoothLinesAndMarkers;
     }
 
+    /// <summary>
+    ///     Determines whether the chart type is a pie chart.
+    /// </summary>
+    /// <param name="chartType">The chart type.</param>
+    /// <returns>True if the chart is a pie chart, false otherwise.</returns>
     private static bool IsPieChart(ChartType chartType)
     {
         return chartType == ChartType.Pie || chartType == ChartType.Doughnut;
     }
 
+    /// <summary>
+    ///     Adds data points for bubble chart series.
+    /// </summary>
+    /// <param name="series">The chart series.</param>
+    /// <param name="workbook">The chart data workbook.</param>
+    /// <param name="values">The data values.</param>
+    /// <param name="yColumnIndex">The Y column index.</param>
+    /// <param name="sizeColumnIndex">The size column index.</param>
     private static void AddBubbleDataPoints(IChartSeries series, IChartDataWorkbook workbook, double[] values,
         int yColumnIndex, int sizeColumnIndex)
     {
@@ -184,6 +244,13 @@ public class UpdatePptChartDataHandler : OperationHandlerBase<Presentation>
         }
     }
 
+    /// <summary>
+    ///     Adds data points for scatter chart series.
+    /// </summary>
+    /// <param name="series">The chart series.</param>
+    /// <param name="workbook">The chart data workbook.</param>
+    /// <param name="values">The data values.</param>
+    /// <param name="yColumnIndex">The Y column index.</param>
     private static void AddScatterDataPoints(IChartSeries series, IChartDataWorkbook workbook, double[] values,
         int yColumnIndex)
     {
@@ -195,6 +262,13 @@ public class UpdatePptChartDataHandler : OperationHandlerBase<Presentation>
         }
     }
 
+    /// <summary>
+    ///     Adds data points for pie chart series.
+    /// </summary>
+    /// <param name="series">The chart series.</param>
+    /// <param name="workbook">The chart data workbook.</param>
+    /// <param name="values">The data values.</param>
+    /// <param name="yColumnIndex">The Y column index.</param>
     private static void AddPieDataPoints(IChartSeries series, IChartDataWorkbook workbook, double[] values,
         int yColumnIndex)
     {
@@ -205,6 +279,13 @@ public class UpdatePptChartDataHandler : OperationHandlerBase<Presentation>
         }
     }
 
+    /// <summary>
+    ///     Adds data points for bar chart series.
+    /// </summary>
+    /// <param name="series">The chart series.</param>
+    /// <param name="workbook">The chart data workbook.</param>
+    /// <param name="values">The data values.</param>
+    /// <param name="yColumnIndex">The Y column index.</param>
     private static void AddBarDataPoints(IChartSeries series, IChartDataWorkbook workbook, double[] values,
         int yColumnIndex)
     {
@@ -215,6 +296,13 @@ public class UpdatePptChartDataHandler : OperationHandlerBase<Presentation>
         }
     }
 
+    /// <summary>
+    ///     Sets the chart data range.
+    /// </summary>
+    /// <param name="chart">The chart.</param>
+    /// <param name="chartData">The chart data.</param>
+    /// <param name="categories">The categories.</param>
+    /// <param name="seriesList">The series list.</param>
     private static void SetChartRange(IChart chart, IChartData chartData, string[]? categories,
         List<(string name, double[] values)>? seriesList)
     {
@@ -234,4 +322,27 @@ public class UpdatePptChartDataHandler : OperationHandlerBase<Presentation>
             chartData.SetRange(range);
         }
     }
+
+    /// <summary>
+    ///     Extracts update chart data parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted update chart data parameters.</returns>
+    private static UpdateChartDataParameters ExtractUpdateChartDataParameters(OperationParameters parameters)
+    {
+        return new UpdateChartDataParameters(
+            parameters.GetRequired<int>("slideIndex"),
+            parameters.GetRequired<int>("shapeIndex"),
+            parameters.GetOptional<JsonObject?>("data"),
+            parameters.GetOptional("clearExisting", false));
+    }
+
+    /// <summary>
+    ///     Record for holding update chart data parameters.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index.</param>
+    /// <param name="ChartIndex">The chart shape index.</param>
+    /// <param name="Data">The optional chart data object.</param>
+    /// <param name="ClearExisting">Whether to clear existing data.</param>
+    private record UpdateChartDataParameters(int SlideIndex, int ChartIndex, JsonObject? Data, bool ClearExisting);
 }

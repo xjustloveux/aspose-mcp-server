@@ -25,47 +25,41 @@ public class ExtractImagesWordHandler : OperationHandlerBase<Document>
     /// <returns>Success message with extraction details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var outputDir = parameters.GetRequired<string>("outputDir");
-        var prefix = parameters.GetOptional("prefix", "image");
-        var extractImageIndex = parameters.GetOptional<int?>("extractImageIndex");
+        var p = ExtractExtractImagesParameters(parameters);
 
-        SecurityHelper.ValidateFilePath(outputDir, "outputDir", true);
+        SecurityHelper.ValidateFilePath(p.OutputDir, "outputDir", true);
 
-        Directory.CreateDirectory(outputDir);
+        Directory.CreateDirectory(p.OutputDir);
 
         var doc = context.Document;
         var shapes = doc.GetChildNodes(NodeType.Shape, true).Cast<WordShape>().Where(s => s.HasImage).ToList();
 
         if (shapes.Count == 0) return "No images found in document";
 
-        // Validate extractImageIndex if provided
-        if (extractImageIndex.HasValue &&
-            (extractImageIndex.Value < 0 || extractImageIndex.Value >= shapes.Count))
+        if (p.ExtractImageIndex.HasValue &&
+            (p.ExtractImageIndex.Value < 0 || p.ExtractImageIndex.Value >= shapes.Count))
             throw new ArgumentException(
-                $"Image index {extractImageIndex.Value} is out of range (document has {shapes.Count} images)");
+                $"Image index {p.ExtractImageIndex.Value} is out of range (document has {shapes.Count} images)");
 
         List<string> extractedFiles = [];
 
-        // Determine which images to extract
-        var startIndex = extractImageIndex ?? 0;
-        var endIndex = extractImageIndex.HasValue ? extractImageIndex.Value + 1 : shapes.Count;
+        var startIndex = p.ExtractImageIndex ?? 0;
+        var endIndex = p.ExtractImageIndex.HasValue ? p.ExtractImageIndex.Value + 1 : shapes.Count;
 
         for (var i = startIndex; i < endIndex; i++)
         {
             var shape = shapes[i];
             var imageData = shape.ImageData;
 
-            // Use FileFormatUtil for reliable image type detection
             var extension = FileFormatUtil.ImageTypeToExtension(imageData.ImageType);
             if (string.IsNullOrEmpty(extension) || extension == ".")
                 extension = ".img";
-            // Remove leading dot if present for consistent filename handling
             if (extension.StartsWith('.'))
                 extension = extension.Substring(1);
 
-            var safePrefix = SecurityHelper.SanitizeFileName(prefix);
+            var safePrefix = SecurityHelper.SanitizeFileName(p.Prefix);
             var filename = $"{safePrefix}_{i + 1:D3}.{extension}";
-            var outputFilePath = Path.Combine(outputDir, filename);
+            var outputFilePath = Path.Combine(p.OutputDir, filename);
 
             using (var stream = IOFile.Create(outputFilePath))
             {
@@ -75,12 +69,25 @@ public class ExtractImagesWordHandler : OperationHandlerBase<Document>
             extractedFiles.Add(outputFilePath);
         }
 
-        if (extractImageIndex.HasValue)
-            return $"Successfully extracted image #{extractImageIndex.Value} to: {outputDir}\n" +
+        if (p.ExtractImageIndex.HasValue)
+            return $"Successfully extracted image #{p.ExtractImageIndex.Value} to: {p.OutputDir}\n" +
                    $"File: {Path.GetFileName(extractedFiles[0])}";
 
-        return $"Successfully extracted {shapes.Count} images to: {outputDir}\n" +
+        return $"Successfully extracted {shapes.Count} images to: {p.OutputDir}\n" +
                $"File list:\n" + string.Join("\n",
                    extractedFiles.Select(f => $"  - {Path.GetFileName(f)}"));
     }
+
+    private static ExtractImagesParameters ExtractExtractImagesParameters(OperationParameters parameters)
+    {
+        return new ExtractImagesParameters(
+            parameters.GetRequired<string>("outputDir"),
+            parameters.GetOptional("prefix", "image"),
+            parameters.GetOptional<int?>("extractImageIndex"));
+    }
+
+    private record ExtractImagesParameters(
+        string OutputDir,
+        string Prefix,
+        int? ExtractImageIndex);
 }

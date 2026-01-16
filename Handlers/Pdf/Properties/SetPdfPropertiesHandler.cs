@@ -21,24 +21,19 @@ public class SetPdfPropertiesHandler : OperationHandlerBase<Document>
     /// <returns>Success message indicating properties were updated.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var title = parameters.GetOptional<string?>("title");
-        var author = parameters.GetOptional<string?>("author");
-        var subject = parameters.GetOptional<string?>("subject");
-        var keywords = parameters.GetOptional<string?>("keywords");
-        var creator = parameters.GetOptional<string?>("creator");
-        var producer = parameters.GetOptional<string?>("producer");
+        var p = ExtractSetParameters(parameters);
 
         var document = context.Document;
         var docInfo = document.Info;
 
         try
         {
-            SetPropertyWithFallback(document, "Title", title, v => docInfo.Title = v);
-            SetPropertyWithFallback(document, "Author", author, v => docInfo.Author = v);
-            SetPropertyWithFallback(document, "Subject", subject, v => docInfo.Subject = v);
-            SetPropertyWithFallback(document, "Keywords", keywords, v => docInfo.Keywords = v);
-            SetPropertyWithFallback(document, "Creator", creator, null);
-            SetPropertyWithFallback(document, "Producer", producer, null);
+            SetPropertyWithFallback(document, "Title", p.Title, v => docInfo.Title = v);
+            SetPropertyWithFallback(document, "Author", p.Author, v => docInfo.Author = v);
+            SetPropertyWithFallback(document, "Subject", p.Subject, v => docInfo.Subject = v);
+            SetPropertyWithFallback(document, "Keywords", p.Keywords, v => docInfo.Keywords = v);
+            SetPropertyWithFallback(document, "Creator", p.Creator, null);
+            SetPropertyWithFallback(document, "Producer", p.Producer, null);
         }
         catch (ArgumentException)
         {
@@ -53,6 +48,23 @@ public class SetPdfPropertiesHandler : OperationHandlerBase<Document>
         MarkModified(context);
 
         return Success("Document properties updated.");
+    }
+
+    /// <summary>
+    ///     Extracts parameters for set operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static SetParameters ExtractSetParameters(OperationParameters parameters)
+    {
+        return new SetParameters(
+            parameters.GetOptional<string?>("title"),
+            parameters.GetOptional<string?>("author"),
+            parameters.GetOptional<string?>("subject"),
+            parameters.GetOptional<string?>("keywords"),
+            parameters.GetOptional<string?>("creator"),
+            parameters.GetOptional<string?>("producer")
+        );
     }
 
     /// <summary>
@@ -86,4 +98,21 @@ public class SetPdfPropertiesHandler : OperationHandlerBase<Document>
                 Console.Error.WriteLine($"[WARN] Failed to set PDF {key} property (may be read-only)");
         }
     }
+
+    /// <summary>
+    ///     Parameters for set operation.
+    /// </summary>
+    /// <param name="Title">The document title.</param>
+    /// <param name="Author">The document author.</param>
+    /// <param name="Subject">The document subject.</param>
+    /// <param name="Keywords">The document keywords.</param>
+    /// <param name="Creator">The document creator.</param>
+    /// <param name="Producer">The document producer.</param>
+    private record SetParameters(
+        string? Title,
+        string? Author,
+        string? Subject,
+        string? Keywords,
+        string? Creator,
+        string? Producer);
 }

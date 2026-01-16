@@ -132,7 +132,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -148,41 +148,92 @@ Usage examples:
         float width,
         float height)
     {
-        var parameters = new OperationParameters();
-
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "add":
-                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
-                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
-                if (text != null) parameters.Set("text", text);
-                if (linkText != null) parameters.Set("linkText", linkText);
-                if (url != null) parameters.Set("url", url);
-                if (slideTargetIndex.HasValue) parameters.Set("slideTargetIndex", slideTargetIndex.Value);
-                parameters.Set("x", x);
-                parameters.Set("y", y);
-                parameters.Set("width", width);
-                parameters.Set("height", height);
-                break;
+            "add" => BuildAddParameters(slideIndex, shapeIndex, text, linkText, url, slideTargetIndex, x, y, width,
+                height),
+            "edit" => BuildEditParameters(slideIndex, shapeIndex, url, slideTargetIndex, removeHyperlink),
+            "delete" => BuildDeleteParameters(slideIndex, shapeIndex),
+            "get" => BuildGetParameters(slideIndex),
+            _ => new OperationParameters()
+        };
+    }
 
-            case "edit":
-                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
-                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
-                if (url != null) parameters.Set("url", url);
-                if (slideTargetIndex.HasValue) parameters.Set("slideTargetIndex", slideTargetIndex.Value);
-                if (removeHyperlink) parameters.Set("removeHyperlink", removeHyperlink);
-                break;
+    /// <summary>
+    ///     Builds parameters for the add hyperlink operation.
+    /// </summary>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <param name="shapeIndex">The shape index (0-based).</param>
+    /// <param name="text">The display text.</param>
+    /// <param name="linkText">The specific text to apply hyperlink to.</param>
+    /// <param name="url">The hyperlink URL.</param>
+    /// <param name="slideTargetIndex">The target slide index for internal link.</param>
+    /// <param name="x">The X position in points.</param>
+    /// <param name="y">The Y position in points.</param>
+    /// <param name="width">The width in points.</param>
+    /// <param name="height">The height in points.</param>
+    /// <returns>OperationParameters configured for adding a hyperlink.</returns>
+    private static OperationParameters BuildAddParameters(int? slideIndex, int? shapeIndex, string? text,
+        string? linkText, string? url, int? slideTargetIndex, float x, float y, float width, float height)
+    {
+        var parameters = new OperationParameters();
+        if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
+        if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+        if (text != null) parameters.Set("text", text);
+        if (linkText != null) parameters.Set("linkText", linkText);
+        if (url != null) parameters.Set("url", url);
+        if (slideTargetIndex.HasValue) parameters.Set("slideTargetIndex", slideTargetIndex.Value);
+        parameters.Set("x", x);
+        parameters.Set("y", y);
+        parameters.Set("width", width);
+        parameters.Set("height", height);
+        return parameters;
+    }
 
-            case "delete":
-                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
-                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the edit hyperlink operation.
+    /// </summary>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <param name="shapeIndex">The shape index (0-based).</param>
+    /// <param name="url">The new hyperlink URL.</param>
+    /// <param name="slideTargetIndex">The new target slide index for internal link.</param>
+    /// <param name="removeHyperlink">Whether to remove the hyperlink.</param>
+    /// <returns>OperationParameters configured for editing a hyperlink.</returns>
+    private static OperationParameters BuildEditParameters(int? slideIndex, int? shapeIndex, string? url,
+        int? slideTargetIndex, bool removeHyperlink)
+    {
+        var parameters = new OperationParameters();
+        if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
+        if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+        if (url != null) parameters.Set("url", url);
+        if (slideTargetIndex.HasValue) parameters.Set("slideTargetIndex", slideTargetIndex.Value);
+        if (removeHyperlink) parameters.Set("removeHyperlink", removeHyperlink);
+        return parameters;
+    }
 
-            case "get":
-                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the delete hyperlink operation.
+    /// </summary>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <param name="shapeIndex">The shape index (0-based).</param>
+    /// <returns>OperationParameters configured for deleting a hyperlink.</returns>
+    private static OperationParameters BuildDeleteParameters(int? slideIndex, int? shapeIndex)
+    {
+        var parameters = new OperationParameters();
+        if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
+        if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the get hyperlinks operation.
+    /// </summary>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <returns>OperationParameters configured for getting hyperlinks.</returns>
+    private static OperationParameters BuildGetParameters(int? slideIndex)
+    {
+        var parameters = new OperationParameters();
+        if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
         return parameters;
     }
 }

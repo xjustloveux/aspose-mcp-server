@@ -23,39 +23,56 @@ public class EditPdfAnnotationHandler : OperationHandlerBase<Document>
     /// <returns>Success message with edit details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var pageIndex = parameters.GetRequired<int>("pageIndex");
-        var annotationIndex = parameters.GetRequired<int>("annotationIndex");
-        var text = parameters.GetOptional<string?>("text");
-        var title = parameters.GetOptional<string?>("title");
-        var subject = parameters.GetOptional<string?>("subject");
+        var editParams = ExtractEditParameters(parameters);
 
         var document = context.Document;
 
-        if (pageIndex < 1 || pageIndex > document.Pages.Count)
+        if (editParams.PageIndex < 1 || editParams.PageIndex > document.Pages.Count)
             throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
 
-        var page = document.Pages[pageIndex];
+        var page = document.Pages[editParams.PageIndex];
 
-        if (annotationIndex < 1 || annotationIndex > page.Annotations.Count)
+        if (editParams.AnnotationIndex < 1 || editParams.AnnotationIndex > page.Annotations.Count)
             throw new ArgumentException(
                 $"annotationIndex must be between 1 and {page.Annotations.Count}");
 
-        var annotation = page.Annotations[annotationIndex];
+        var annotation = page.Annotations[editParams.AnnotationIndex];
 
-        if (!string.IsNullOrEmpty(text))
-            annotation.Contents = text;
+        if (!string.IsNullOrEmpty(editParams.Text))
+            annotation.Contents = editParams.Text;
 
         if (annotation is MarkupAnnotation markupAnnotation)
         {
-            if (!string.IsNullOrEmpty(title))
-                markupAnnotation.Title = title;
+            if (!string.IsNullOrEmpty(editParams.Title))
+                markupAnnotation.Title = editParams.Title;
 
-            if (!string.IsNullOrEmpty(subject))
-                markupAnnotation.Subject = subject;
+            if (!string.IsNullOrEmpty(editParams.Subject))
+                markupAnnotation.Subject = editParams.Subject;
         }
 
         MarkModified(context);
 
-        return Success($"Annotation {annotationIndex} on page {pageIndex} updated.");
+        return Success($"Annotation {editParams.AnnotationIndex} on page {editParams.PageIndex} updated.");
     }
+
+    /// <summary>
+    ///     Extracts edit parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted edit parameters.</returns>
+    private static EditParameters ExtractEditParameters(OperationParameters parameters)
+    {
+        return new EditParameters(
+            parameters.GetRequired<int>("pageIndex"),
+            parameters.GetRequired<int>("annotationIndex"),
+            parameters.GetOptional<string?>("text"),
+            parameters.GetOptional<string?>("title"),
+            parameters.GetOptional<string?>("subject")
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold edit annotation parameters.
+    /// </summary>
+    private record EditParameters(int PageIndex, int AnnotationIndex, string? Text, string? Title, string? Subject);
 }

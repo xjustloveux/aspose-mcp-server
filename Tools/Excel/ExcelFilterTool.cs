@@ -116,7 +116,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -129,26 +129,43 @@ Usage examples:
         var parameters = new OperationParameters();
         parameters.Set("sheetIndex", sheetIndex);
 
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "apply":
-                if (range != null) parameters.Set("range", range);
-                break;
+            "apply" => BuildApplyParameters(parameters, range),
+            "remove" or "get_status" => parameters,
+            "filter" => BuildFilterParameters(parameters, range, columnIndex, criteria, filterOperator),
+            _ => parameters
+        };
+    }
 
-            case "remove":
-                break;
+    /// <summary>
+    ///     Builds parameters for the apply auto filter operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="range">The cell range to apply filter.</param>
+    /// <returns>OperationParameters configured for applying auto filter.</returns>
+    private static OperationParameters BuildApplyParameters(OperationParameters parameters, string? range)
+    {
+        if (range != null) parameters.Set("range", range);
+        return parameters;
+    }
 
-            case "filter":
-                if (range != null) parameters.Set("range", range);
-                parameters.Set("columnIndex", columnIndex);
-                if (criteria != null) parameters.Set("criteria", criteria);
-                parameters.Set("filterOperator", filterOperator);
-                break;
-
-            case "get_status":
-                break;
-        }
-
+    /// <summary>
+    ///     Builds parameters for the filter by criteria operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="range">The cell range to apply filter.</param>
+    /// <param name="columnIndex">The column index to apply filter criteria.</param>
+    /// <param name="criteria">The filter criteria value.</param>
+    /// <param name="filterOperator">The filter operator.</param>
+    /// <returns>OperationParameters configured for filtering by criteria.</returns>
+    private static OperationParameters BuildFilterParameters(OperationParameters parameters, string? range,
+        int columnIndex, string? criteria, string filterOperator)
+    {
+        if (range != null) parameters.Set("range", range);
+        parameters.Set("columnIndex", columnIndex);
+        if (criteria != null) parameters.Set("criteria", criteria);
+        parameters.Set("filterOperator", filterOperator);
         return parameters;
     }
 }

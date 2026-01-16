@@ -24,8 +24,7 @@ public class GetFieldsWordHandler : OperationHandlerBase<Document>
     /// <returns>A JSON string containing the list of fields and statistics.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var includeCode = parameters.GetOptional("includeCode", true);
-        var includeResult = parameters.GetOptional("includeResult", true);
+        var p = ExtractGetFieldsParameters(parameters);
 
         var document = context.Document;
         List<object> fieldsList = [];
@@ -43,8 +42,8 @@ public class GetFieldsWordHandler : OperationHandlerBase<Document>
             {
                 index = fieldIndex++,
                 type = field.Type.ToString(),
-                code = includeCode ? field.GetFieldCode() : null,
-                result = includeResult ? field.Result ?? "" : null,
+                code = p.IncludeCode ? field.GetFieldCode() : null,
+                result = p.IncludeResult ? field.Result ?? "" : null,
                 isLocked = field.IsLocked,
                 isDirty = field.IsDirty,
                 extraInfo
@@ -66,4 +65,24 @@ public class GetFieldsWordHandler : OperationHandlerBase<Document>
 
         return JsonSerializer.Serialize(result, JsonDefaults.Indented);
     }
+
+    /// <summary>
+    ///     Extracts parameters for the get fields operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static GetFieldsParameters ExtractGetFieldsParameters(OperationParameters parameters)
+    {
+        return new GetFieldsParameters(
+            parameters.GetOptional("includeCode", true),
+            parameters.GetOptional("includeResult", true)
+        );
+    }
+
+    /// <summary>
+    ///     Parameters for the get fields operation.
+    /// </summary>
+    /// <param name="IncludeCode">Whether to include field code.</param>
+    /// <param name="IncludeResult">Whether to include field result.</param>
+    private record GetFieldsParameters(bool IncludeCode, bool IncludeResult);
 }

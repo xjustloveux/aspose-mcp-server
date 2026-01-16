@@ -117,7 +117,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -131,37 +131,71 @@ Usage examples:
         var parameters = new OperationParameters();
         parameters.Set("sheetIndex", sheetIndex);
 
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "add":
-                if (sheetName != null) parameters.Set("sheetName", sheetName);
-                if (insertAt.HasValue) parameters.Set("insertAt", insertAt.Value);
-                break;
+            "add" => BuildAddParameters(parameters, sheetName, insertAt),
+            "delete" or "get" or "hide" => parameters,
+            "rename" => BuildRenameParameters(parameters, newName),
+            "move" => BuildMoveParameters(parameters, targetIndex, insertAt),
+            "copy" => BuildCopyParameters(parameters, targetIndex, copyToPath),
+            _ => parameters
+        };
+    }
 
-            case "delete":
-                break;
+    /// <summary>
+    ///     Builds parameters for the add sheet operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="sheetName">The name for the new sheet.</param>
+    /// <param name="insertAt">The position to insert the sheet (0-based).</param>
+    /// <returns>OperationParameters configured for the add operation.</returns>
+    private static OperationParameters BuildAddParameters(OperationParameters parameters, string? sheetName,
+        int? insertAt)
+    {
+        if (sheetName != null) parameters.Set("sheetName", sheetName);
+        if (insertAt.HasValue) parameters.Set("insertAt", insertAt.Value);
+        return parameters;
+    }
 
-            case "get":
-                break;
+    /// <summary>
+    ///     Builds parameters for the rename sheet operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="newName">The new name for the sheet (max 31 characters).</param>
+    /// <returns>OperationParameters configured for the rename operation.</returns>
+    private static OperationParameters BuildRenameParameters(OperationParameters parameters, string? newName)
+    {
+        if (newName != null) parameters.Set("newName", newName);
+        return parameters;
+    }
 
-            case "rename":
-                if (newName != null) parameters.Set("newName", newName);
-                break;
+    /// <summary>
+    ///     Builds parameters for the move sheet operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="targetIndex">The target index for the move operation (0-based).</param>
+    /// <param name="insertAt">The position to insert the sheet at (0-based).</param>
+    /// <returns>OperationParameters configured for the move operation.</returns>
+    private static OperationParameters BuildMoveParameters(OperationParameters parameters, int? targetIndex,
+        int? insertAt)
+    {
+        if (targetIndex.HasValue) parameters.Set("targetIndex", targetIndex.Value);
+        if (insertAt.HasValue) parameters.Set("insertAt", insertAt.Value);
+        return parameters;
+    }
 
-            case "move":
-                if (targetIndex.HasValue) parameters.Set("targetIndex", targetIndex.Value);
-                if (insertAt.HasValue) parameters.Set("insertAt", insertAt.Value);
-                break;
-
-            case "copy":
-                if (targetIndex.HasValue) parameters.Set("targetIndex", targetIndex.Value);
-                if (copyToPath != null) parameters.Set("copyToPath", copyToPath);
-                break;
-
-            case "hide":
-                break;
-        }
-
+    /// <summary>
+    ///     Builds parameters for the copy sheet operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="targetIndex">The target index for the copy operation (0-based).</param>
+    /// <param name="copyToPath">The target file path for the copy operation.</param>
+    /// <returns>OperationParameters configured for the copy operation.</returns>
+    private static OperationParameters BuildCopyParameters(OperationParameters parameters, int? targetIndex,
+        string? copyToPath)
+    {
+        if (targetIndex.HasValue) parameters.Set("targetIndex", targetIndex.Value);
+        if (copyToPath != null) parameters.Set("copyToPath", copyToPath);
         return parameters;
     }
 }

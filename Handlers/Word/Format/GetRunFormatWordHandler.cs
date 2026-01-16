@@ -24,32 +24,30 @@ public class GetRunFormatWordHandler : OperationHandlerBase<Document>
     /// <returns>A JSON string containing the run format information.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var paragraphIndex = parameters.GetOptional("paragraphIndex", 0);
-        var runIndex = parameters.GetOptional<int?>("runIndex");
-        var includeInherited = parameters.GetOptional("includeInherited", false);
+        var p = ExtractGetRunFormatParameters(parameters);
 
         var doc = context.Document;
 
-        var para = WordFormatHelper.GetTargetParagraph(doc, paragraphIndex);
+        var para = WordFormatHelper.GetTargetParagraph(doc, p.ParagraphIndex);
         var runs = para.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
 
-        if (runIndex.HasValue)
+        if (p.RunIndex.HasValue)
         {
-            if (runIndex.Value < 0 || runIndex.Value >= runs.Count)
+            if (p.RunIndex.Value < 0 || p.RunIndex.Value >= runs.Count)
                 throw new ArgumentException(
-                    $"runIndex {runIndex.Value} is out of range (paragraph #{paragraphIndex} has {runs.Count} Runs, valid range: 0-{runs.Count - 1})");
+                    $"runIndex {p.RunIndex.Value} is out of range (paragraph #{p.ParagraphIndex} has {runs.Count} Runs, valid range: 0-{runs.Count - 1})");
 
-            var run = runs[runIndex.Value];
+            var run = runs[p.RunIndex.Value];
             var font = run.Font;
             var colorHex = $"#{font.Color.R:X2}{font.Color.G:X2}{font.Color.B:X2}";
             var colorName = WordFormatHelper.GetColorName(font.Color);
 
             object result;
-            if (includeInherited)
+            if (p.IncludeInherited)
                 result = new
                 {
-                    paragraphIndex,
-                    runIndex = runIndex.Value,
+                    paragraphIndex = p.ParagraphIndex,
+                    runIndex = p.RunIndex.Value,
                     text = run.Text,
                     formatType = "inherited",
                     fontName = font.Name,
@@ -69,8 +67,8 @@ public class GetRunFormatWordHandler : OperationHandlerBase<Document>
             else
                 result = new
                 {
-                    paragraphIndex,
-                    runIndex = runIndex.Value,
+                    paragraphIndex = p.ParagraphIndex,
+                    runIndex = p.RunIndex.Value,
                     text = run.Text,
                     formatType = "explicit",
                     fontName = font.Name,
@@ -115,11 +113,24 @@ public class GetRunFormatWordHandler : OperationHandlerBase<Document>
 
             var result = new
             {
-                paragraphIndex,
+                paragraphIndex = p.ParagraphIndex,
                 count = runs.Count,
                 runs = runsList
             };
             return JsonSerializer.Serialize(result, JsonDefaults.Indented);
         }
     }
+
+    private static GetRunFormatParameters ExtractGetRunFormatParameters(OperationParameters parameters)
+    {
+        return new GetRunFormatParameters(
+            parameters.GetOptional("paragraphIndex", 0),
+            parameters.GetOptional<int?>("runIndex"),
+            parameters.GetOptional("includeInherited", false));
+    }
+
+    private record GetRunFormatParameters(
+        int ParagraphIndex,
+        int? RunIndex,
+        bool IncludeInherited);
 }

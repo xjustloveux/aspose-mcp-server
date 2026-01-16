@@ -127,7 +127,7 @@ Note: PDF table editing has limitations. After saving, tables may be converted t
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -143,28 +143,55 @@ Note: PDF table editing has limitations. After saving, tables may be converted t
         int? cellColumn,
         string? cellValue)
     {
-        var parameters = new OperationParameters();
-
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "add":
-                parameters.Set("pageIndex", pageIndex);
-                parameters.Set("rows", rows);
-                parameters.Set("columns", columns);
-                if (data != null) parameters.Set("data", data);
-                parameters.Set("x", x);
-                parameters.Set("y", y);
-                if (columnWidths != null) parameters.Set("columnWidths", columnWidths);
-                break;
+            "add" => BuildAddParameters(pageIndex, rows, columns, data, x, y, columnWidths),
+            "edit" => BuildEditParameters(tableIndex, cellRow, cellColumn, cellValue),
+            _ => new OperationParameters()
+        };
+    }
 
-            case "edit":
-                parameters.Set("tableIndex", tableIndex);
-                if (cellRow.HasValue) parameters.Set("cellRow", cellRow.Value);
-                if (cellColumn.HasValue) parameters.Set("cellColumn", cellColumn.Value);
-                if (cellValue != null) parameters.Set("cellValue", cellValue);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the add table operation.
+    /// </summary>
+    /// <param name="pageIndex">The page index (1-based).</param>
+    /// <param name="rows">Number of rows.</param>
+    /// <param name="columns">Number of columns.</param>
+    /// <param name="data">Table data as array of arrays.</param>
+    /// <param name="x">X position (left margin) in PDF points.</param>
+    /// <param name="y">Y position (top margin) in PDF points.</param>
+    /// <param name="columnWidths">Space-separated column widths.</param>
+    /// <returns>OperationParameters configured for adding a table.</returns>
+    private static OperationParameters BuildAddParameters(int pageIndex, int rows, int columns, string[][]? data,
+        double x, double y, string? columnWidths)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("pageIndex", pageIndex);
+        parameters.Set("rows", rows);
+        parameters.Set("columns", columns);
+        if (data != null) parameters.Set("data", data);
+        parameters.Set("x", x);
+        parameters.Set("y", y);
+        if (columnWidths != null) parameters.Set("columnWidths", columnWidths);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the edit table operation.
+    /// </summary>
+    /// <param name="tableIndex">The table index (0-based).</param>
+    /// <param name="cellRow">The cell row index (0-based).</param>
+    /// <param name="cellColumn">The cell column index (0-based).</param>
+    /// <param name="cellValue">The new cell value.</param>
+    /// <returns>OperationParameters configured for editing a table.</returns>
+    private static OperationParameters BuildEditParameters(int tableIndex, int? cellRow, int? cellColumn,
+        string? cellValue)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("tableIndex", tableIndex);
+        if (cellRow.HasValue) parameters.Set("cellRow", cellRow.Value);
+        if (cellColumn.HasValue) parameters.Set("cellColumn", cellColumn.Value);
+        if (cellValue != null) parameters.Set("cellValue", cellValue);
         return parameters;
     }
 }

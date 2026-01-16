@@ -25,31 +25,25 @@ public class ReplaceImageWordHandler : OperationHandlerBase<Document>
     /// <returns>Success message with replacement details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var imageIndex = parameters.GetOptional("imageIndex", 0);
-        var newImagePath = parameters.GetOptional<string?>("newImagePath") ??
-                           parameters.GetOptional<string?>("imagePath");
-        var preserveSize = parameters.GetOptional("preserveSize", true);
-        var smartFit = parameters.GetOptional("smartFit", false);
-        var preservePosition = parameters.GetOptional("preservePosition", true);
-        var sectionIndex = parameters.GetOptional("sectionIndex", 0);
+        var p = ExtractReplaceImageParameters(parameters);
 
-        if (string.IsNullOrEmpty(newImagePath))
+        if (string.IsNullOrEmpty(p.NewImagePath))
             throw new ArgumentException("newImagePath or imagePath is required for replace operation");
 
-        SecurityHelper.ValidateFilePath(newImagePath, "newImagePath", true);
+        SecurityHelper.ValidateFilePath(p.NewImagePath, "newImagePath", true);
 
-        if (!IOFile.Exists(newImagePath))
-            throw new FileNotFoundException($"Image file not found: {newImagePath}");
+        if (!IOFile.Exists(p.NewImagePath))
+            throw new FileNotFoundException($"Image file not found: {p.NewImagePath}");
 
         var doc = context.Document;
 
-        var allImages = WordImageHelper.GetAllImages(doc, sectionIndex);
+        var allImages = WordImageHelper.GetAllImages(doc, p.SectionIndex);
 
-        if (imageIndex < 0 || imageIndex >= allImages.Count)
+        if (p.ImageIndex < 0 || p.ImageIndex >= allImages.Count)
             throw new ArgumentException(
-                $"Image index {imageIndex} is out of range (document has {allImages.Count} images)");
+                $"Image index {p.ImageIndex} is out of range (document has {allImages.Count} images)");
 
-        var shapeToReplace = allImages[imageIndex];
+        var shapeToReplace = allImages[p.ImageIndex];
 
         var originalWidth = shapeToReplace.Width;
         var originalHeight = shapeToReplace.Height;
@@ -61,7 +55,7 @@ public class ReplaceImageWordHandler : OperationHandlerBase<Document>
         double? originalLeft = null;
         double? originalTop = null;
 
-        if (preservePosition)
+        if (p.PreservePosition)
         {
             originalHorizontalAlignment = shapeToReplace.HorizontalAlignment;
             originalVerticalAlignment = shapeToReplace.VerticalAlignment;
@@ -73,13 +67,12 @@ public class ReplaceImageWordHandler : OperationHandlerBase<Document>
 
         try
         {
-            shapeToReplace.ImageData.SetImage(newImagePath);
+            shapeToReplace.ImageData.SetImage(p.NewImagePath);
 
-            if (preserveSize)
+            if (p.PreserveSize)
             {
-                if (smartFit)
+                if (p.SmartFit)
                 {
-                    // Calculate proportional height based on new image's aspect ratio
                     var newImageSize = shapeToReplace.ImageData.ImageSize;
                     if (newImageSize.WidthPixels > 0)
                     {
@@ -89,7 +82,6 @@ public class ReplaceImageWordHandler : OperationHandlerBase<Document>
                     }
                     else
                     {
-                        // Fallback to original size if aspect ratio can't be calculated
                         shapeToReplace.Width = originalWidth;
                         shapeToReplace.Height = originalHeight;
                     }
@@ -101,7 +93,7 @@ public class ReplaceImageWordHandler : OperationHandlerBase<Document>
                 }
             }
 
-            if (preservePosition)
+            if (p.PreservePosition)
             {
                 shapeToReplace.WrapType = originalWrapType;
                 if (originalHorizontalAlignment.HasValue)
@@ -125,19 +117,38 @@ public class ReplaceImageWordHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        var result = $"Image #{imageIndex} replaced successfully\n";
-        result += $"New image: {Path.GetFileName(newImagePath)}\n";
-        if (preserveSize)
+        var result = $"Image #{p.ImageIndex} replaced successfully\n";
+        result += $"New image: {Path.GetFileName(p.NewImagePath)}\n";
+        if (p.PreserveSize)
         {
-            if (smartFit)
+            if (p.SmartFit)
                 result +=
                     $"Smart fit: width preserved ({originalWidth:F1} pt), height calculated proportionally ({shapeToReplace.Height:F1} pt)\n";
             else
                 result += $"Preserved size: {originalWidth:F1} pt x {originalHeight:F1} pt\n";
         }
 
-        if (preservePosition) result += "Preserved position and wrapping";
+        if (p.PreservePosition) result += "Preserved position and wrapping";
 
         return result.TrimEnd();
     }
+
+    private static ReplaceImageParameters ExtractReplaceImageParameters(OperationParameters parameters)
+    {
+        return new ReplaceImageParameters(
+            parameters.GetOptional("imageIndex", 0),
+            parameters.GetOptional<string?>("newImagePath") ?? parameters.GetOptional<string?>("imagePath"),
+            parameters.GetOptional("preserveSize", true),
+            parameters.GetOptional("smartFit", false),
+            parameters.GetOptional("preservePosition", true),
+            parameters.GetOptional("sectionIndex", 0));
+    }
+
+    private record ReplaceImageParameters(
+        int ImageIndex,
+        string? NewImagePath,
+        bool PreserveSize,
+        bool SmartFit,
+        bool PreservePosition,
+        int SectionIndex);
 }

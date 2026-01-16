@@ -22,7 +22,7 @@ public class GetWordStatisticsHandler : OperationHandlerBase<Document>
     /// <returns>JSON string containing document statistics.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var includeFootnotes = parameters.GetOptional("includeFootnotes", true);
+        var p = ExtractGetStatisticsParameters(parameters);
 
         var document = context.Document;
         document.UpdateWordCount();
@@ -41,8 +41,8 @@ public class GetWordStatisticsHandler : OperationHandlerBase<Document>
             charactersWithSpaces = stats.CharactersWithSpaces,
             paragraphs = stats.Paragraphs,
             lines = stats.Lines,
-            footnotes = includeFootnotes ? document.GetChildNodes(NodeType.Footnote, true).Count : (int?)null,
-            footnotesIncluded = includeFootnotes,
+            footnotes = p.IncludeFootnotes ? document.GetChildNodes(NodeType.Footnote, true).Count : (int?)null,
+            footnotesIncluded = p.IncludeFootnotes,
             tables = tables.Count,
             images,
             shapes = shapes.Count,
@@ -51,4 +51,22 @@ public class GetWordStatisticsHandler : OperationHandlerBase<Document>
 
         return JsonResult(result);
     }
+
+    /// <summary>
+    ///     Extracts parameters for the get statistics operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static GetStatisticsParameters ExtractGetStatisticsParameters(OperationParameters parameters)
+    {
+        var includeFootnotes = parameters.GetOptional("includeFootnotes", true);
+
+        return new GetStatisticsParameters(includeFootnotes);
+    }
+
+    /// <summary>
+    ///     Parameters for the get statistics operation.
+    /// </summary>
+    /// <param name="IncludeFootnotes">Whether to include footnote count in the statistics.</param>
+    private record GetStatisticsParameters(bool IncludeFootnotes);
 }

@@ -23,17 +23,17 @@ public class GetPptTransitionHandler : OperationHandlerBase<Presentation>
     /// <returns>JSON result with transition information.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetOptional("slideIndex", 0);
+        var getParams = ExtractGetTransitionParameters(parameters);
 
         var presentation = context.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+        var slide = PowerPointHelper.GetSlide(presentation, getParams.SlideIndex);
 
         var transition = slide.SlideShowTransition;
         var hasTransition = transition.Type != TransitionType.None;
 
         var result = new
         {
-            slideIndex,
+            slideIndex = getParams.SlideIndex,
             type = transition.Type.ToString(),
             hasTransition,
             speed = transition.Speed.ToString(),
@@ -44,4 +44,22 @@ public class GetPptTransitionHandler : OperationHandlerBase<Presentation>
 
         return JsonResult(result);
     }
+
+    /// <summary>
+    ///     Extracts get transition parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted get transition parameters.</returns>
+    private static GetTransitionParameters ExtractGetTransitionParameters(OperationParameters parameters)
+    {
+        return new GetTransitionParameters(
+            parameters.GetOptional("slideIndex", 0)
+        );
+    }
+
+    /// <summary>
+    ///     Record for holding get transition parameters.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index.</param>
+    private record GetTransitionParameters(int SlideIndex);
 }

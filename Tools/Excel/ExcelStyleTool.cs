@@ -161,7 +161,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -188,43 +188,100 @@ Usage examples:
         bool copyColumnWidths,
         bool copyRowHeights)
     {
+        return operation.ToLowerInvariant() switch
+        {
+            "format" => BuildFormatParameters(sheetIndex, range, ranges, fontName, fontSize, bold, italic, fontColor,
+                backgroundColor, patternType, patternColor, numberFormat, borderStyle, borderColor,
+                horizontalAlignment, verticalAlignment),
+            "get_format" => BuildGetFormatParameters(sheetIndex, cell, range, fields),
+            "copy_sheet_format" => BuildCopySheetFormatParameters(sheetIndex, sourceSheetIndex, targetSheetIndex,
+                copyColumnWidths, copyRowHeights),
+            _ => new OperationParameters()
+        };
+    }
+
+    /// <summary>
+    ///     Builds parameters for the format cells operation.
+    /// </summary>
+    /// <param name="sheetIndex">The sheet index (0-based).</param>
+    /// <param name="range">The cell range to format.</param>
+    /// <param name="ranges">JSON array of cell ranges for batch formatting.</param>
+    /// <param name="fontName">The font name.</param>
+    /// <param name="fontSize">The font size.</param>
+    /// <param name="bold">Whether to apply bold.</param>
+    /// <param name="italic">Whether to apply italic.</param>
+    /// <param name="fontColor">The font color (hex format).</param>
+    /// <param name="backgroundColor">The background color (hex format).</param>
+    /// <param name="patternType">The fill pattern type.</param>
+    /// <param name="patternColor">The pattern color (hex format).</param>
+    /// <param name="numberFormat">The number format string.</param>
+    /// <param name="borderStyle">The border style.</param>
+    /// <param name="borderColor">The border color (hex format).</param>
+    /// <param name="horizontalAlignment">The horizontal alignment.</param>
+    /// <param name="verticalAlignment">The vertical alignment.</param>
+    /// <returns>OperationParameters configured for formatting cells.</returns>
+    private static OperationParameters BuildFormatParameters(int sheetIndex, string? range, string? ranges,
+        string? fontName, int? fontSize, bool? bold, bool? italic, string? fontColor, string? backgroundColor,
+        string? patternType, string? patternColor, string? numberFormat, string? borderStyle, string? borderColor,
+        string? horizontalAlignment, string? verticalAlignment)
+    {
         var parameters = new OperationParameters();
         parameters.Set("sheetIndex", sheetIndex);
+        if (range != null) parameters.Set("range", range);
+        if (ranges != null) parameters.Set("ranges", ranges);
+        if (fontName != null) parameters.Set("fontName", fontName);
+        if (fontSize.HasValue) parameters.Set("fontSize", fontSize.Value);
+        if (bold.HasValue) parameters.Set("bold", bold.Value);
+        if (italic.HasValue) parameters.Set("italic", italic.Value);
+        if (fontColor != null) parameters.Set("fontColor", fontColor);
+        if (backgroundColor != null) parameters.Set("backgroundColor", backgroundColor);
+        if (patternType != null) parameters.Set("patternType", patternType);
+        if (patternColor != null) parameters.Set("patternColor", patternColor);
+        if (numberFormat != null) parameters.Set("numberFormat", numberFormat);
+        if (borderStyle != null) parameters.Set("borderStyle", borderStyle);
+        if (borderColor != null) parameters.Set("borderColor", borderColor);
+        if (horizontalAlignment != null) parameters.Set("horizontalAlignment", horizontalAlignment);
+        if (verticalAlignment != null) parameters.Set("verticalAlignment", verticalAlignment);
+        return parameters;
+    }
 
-        switch (operation.ToLowerInvariant())
-        {
-            case "format":
-                if (range != null) parameters.Set("range", range);
-                if (ranges != null) parameters.Set("ranges", ranges);
-                if (fontName != null) parameters.Set("fontName", fontName);
-                if (fontSize.HasValue) parameters.Set("fontSize", fontSize.Value);
-                if (bold.HasValue) parameters.Set("bold", bold.Value);
-                if (italic.HasValue) parameters.Set("italic", italic.Value);
-                if (fontColor != null) parameters.Set("fontColor", fontColor);
-                if (backgroundColor != null) parameters.Set("backgroundColor", backgroundColor);
-                if (patternType != null) parameters.Set("patternType", patternType);
-                if (patternColor != null) parameters.Set("patternColor", patternColor);
-                if (numberFormat != null) parameters.Set("numberFormat", numberFormat);
-                if (borderStyle != null) parameters.Set("borderStyle", borderStyle);
-                if (borderColor != null) parameters.Set("borderColor", borderColor);
-                if (horizontalAlignment != null) parameters.Set("horizontalAlignment", horizontalAlignment);
-                if (verticalAlignment != null) parameters.Set("verticalAlignment", verticalAlignment);
-                break;
+    /// <summary>
+    ///     Builds parameters for the get format operation.
+    /// </summary>
+    /// <param name="sheetIndex">The sheet index (0-based).</param>
+    /// <param name="cell">The cell address.</param>
+    /// <param name="range">The cell range.</param>
+    /// <param name="fields">Comma-separated list of fields to retrieve.</param>
+    /// <returns>OperationParameters configured for getting cell format.</returns>
+    private static OperationParameters BuildGetFormatParameters(int sheetIndex, string? cell, string? range,
+        string? fields)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("sheetIndex", sheetIndex);
+        if (cell != null) parameters.Set("cell", cell);
+        if (range != null) parameters.Set("range", range);
+        if (fields != null) parameters.Set("fields", fields);
+        return parameters;
+    }
 
-            case "get_format":
-                if (cell != null) parameters.Set("cell", cell);
-                if (range != null) parameters.Set("range", range);
-                if (fields != null) parameters.Set("fields", fields);
-                break;
-
-            case "copy_sheet_format":
-                parameters.Set("sourceSheetIndex", sourceSheetIndex);
-                parameters.Set("targetSheetIndex", targetSheetIndex);
-                parameters.Set("copyColumnWidths", copyColumnWidths);
-                parameters.Set("copyRowHeights", copyRowHeights);
-                break;
-        }
-
+    /// <summary>
+    ///     Builds parameters for the copy sheet format operation.
+    /// </summary>
+    /// <param name="sheetIndex">The sheet index (0-based).</param>
+    /// <param name="sourceSheetIndex">The source sheet index to copy format from.</param>
+    /// <param name="targetSheetIndex">The target sheet index to copy format to.</param>
+    /// <param name="copyColumnWidths">Whether to copy column widths.</param>
+    /// <param name="copyRowHeights">Whether to copy row heights.</param>
+    /// <returns>OperationParameters configured for copying sheet format.</returns>
+    private static OperationParameters BuildCopySheetFormatParameters(int sheetIndex, int sourceSheetIndex,
+        int targetSheetIndex, bool copyColumnWidths, bool copyRowHeights)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("sheetIndex", sheetIndex);
+        parameters.Set("sourceSheetIndex", sourceSheetIndex);
+        parameters.Set("targetSheetIndex", targetSheetIndex);
+        parameters.Set("copyColumnWidths", copyColumnWidths);
+        parameters.Set("copyRowHeights", copyRowHeights);
         return parameters;
     }
 }

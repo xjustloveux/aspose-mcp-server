@@ -5,34 +5,43 @@ using Section = Aspose.Words.Section;
 
 namespace AsposeMcpServer.Handlers.Word.HeaderFooter;
 
+/// <summary>
+///     Handler for setting footer lines in Word documents.
+/// </summary>
 public class SetFooterLineHandler : OperationHandlerBase<Document>
 {
+    /// <inheritdoc />
     public override string Operation => "set_footer_line";
 
+    /// <summary>
+    ///     Sets a line separator in the document footer.
+    /// </summary>
+    /// <param name="context">The document context.</param>
+    /// <param name="parameters">
+    ///     Optional: lineStyle, lineWidth, sectionIndex, headerFooterType
+    /// </param>
+    /// <returns>Success message.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var lineStyle = parameters.GetOptional("lineStyle", "single");
-        var lineWidth = parameters.GetOptional<double?>("lineWidth");
-        var sectionIndex = parameters.GetOptional("sectionIndex", 0);
-        var headerFooterType = parameters.GetOptional("headerFooterType", "primary");
+        var p = ExtractSetFooterLineParameters(parameters);
 
         var doc = context.Document;
-        var hfType = WordHeaderFooterHelper.GetHeaderFooterType(headerFooterType, false);
-        var sections = sectionIndex == -1 ? doc.Sections.Cast<Section>() : [doc.Sections[sectionIndex]];
+        var hfType = WordHeaderFooterHelper.GetHeaderFooterType(p.HeaderFooterType, false);
+        var sections = p.SectionIndex == -1 ? doc.Sections.Cast<Section>() : [doc.Sections[p.SectionIndex]];
 
         foreach (var section in sections)
         {
             var footer = WordHeaderFooterHelper.GetOrCreateHeaderFooter(section, doc, hfType);
 
             var para = new WordParagraph(doc);
-            para.ParagraphFormat.Borders.Top.LineStyle = lineStyle.ToLower() switch
+            para.ParagraphFormat.Borders.Top.LineStyle = p.LineStyle.ToLower() switch
             {
                 "double" => LineStyle.Double,
                 "thick" => LineStyle.Thick,
                 _ => LineStyle.Single
             };
 
-            if (lineWidth.HasValue) para.ParagraphFormat.Borders.Top.LineWidth = lineWidth.Value;
+            if (p.LineWidth.HasValue) para.ParagraphFormat.Borders.Top.LineWidth = p.LineWidth.Value;
 
             footer.AppendChild(para);
         }
@@ -41,4 +50,32 @@ public class SetFooterLineHandler : OperationHandlerBase<Document>
 
         return Success("Footer line set");
     }
+
+    /// <summary>
+    ///     Extracts parameters for the set footer line operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static SetFooterLineParameters ExtractSetFooterLineParameters(OperationParameters parameters)
+    {
+        return new SetFooterLineParameters(
+            parameters.GetOptional("lineStyle", "single"),
+            parameters.GetOptional<double?>("lineWidth"),
+            parameters.GetOptional("sectionIndex", 0),
+            parameters.GetOptional("headerFooterType", "primary")
+        );
+    }
+
+    /// <summary>
+    ///     Parameters for the set footer line operation.
+    /// </summary>
+    /// <param name="LineStyle">The line style.</param>
+    /// <param name="LineWidth">The line width.</param>
+    /// <param name="SectionIndex">The section index.</param>
+    /// <param name="HeaderFooterType">The header/footer type.</param>
+    private record SetFooterLineParameters(
+        string LineStyle,
+        double? LineWidth,
+        int SectionIndex,
+        string HeaderFooterType);
 }

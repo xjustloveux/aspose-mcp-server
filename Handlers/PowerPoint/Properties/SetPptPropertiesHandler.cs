@@ -22,71 +22,62 @@ public class SetPptPropertiesHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with updated properties list.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var title = parameters.GetOptional<string?>("title");
-        var subject = parameters.GetOptional<string?>("subject");
-        var author = parameters.GetOptional<string?>("author");
-        var keywords = parameters.GetOptional<string?>("keywords");
-        var comments = parameters.GetOptional<string?>("comments");
-        var category = parameters.GetOptional<string?>("category");
-        var company = parameters.GetOptional<string?>("company");
-        var manager = parameters.GetOptional<string?>("manager");
-        var customProperties = parameters.GetOptional<Dictionary<string, object>?>("customProperties");
-
+        var p = ExtractSetPptPropertiesParameters(parameters);
         var presentation = context.Document;
         var props = presentation.DocumentProperties;
         List<string> changes = [];
 
-        if (!string.IsNullOrEmpty(title))
+        if (!string.IsNullOrEmpty(p.Title))
         {
-            props.Title = title;
+            props.Title = p.Title;
             changes.Add("Title");
         }
 
-        if (!string.IsNullOrEmpty(subject))
+        if (!string.IsNullOrEmpty(p.Subject))
         {
-            props.Subject = subject;
+            props.Subject = p.Subject;
             changes.Add("Subject");
         }
 
-        if (!string.IsNullOrEmpty(author))
+        if (!string.IsNullOrEmpty(p.Author))
         {
-            props.Author = author;
+            props.Author = p.Author;
             changes.Add("Author");
         }
 
-        if (!string.IsNullOrEmpty(keywords))
+        if (!string.IsNullOrEmpty(p.Keywords))
         {
-            props.Keywords = keywords;
+            props.Keywords = p.Keywords;
             changes.Add("Keywords");
         }
 
-        if (!string.IsNullOrEmpty(comments))
+        if (!string.IsNullOrEmpty(p.Comments))
         {
-            props.Comments = comments;
+            props.Comments = p.Comments;
             changes.Add("Comments");
         }
 
-        if (!string.IsNullOrEmpty(category))
+        if (!string.IsNullOrEmpty(p.Category))
         {
-            props.Category = category;
+            props.Category = p.Category;
             changes.Add("Category");
         }
 
-        if (!string.IsNullOrEmpty(company))
+        if (!string.IsNullOrEmpty(p.Company))
         {
-            props.Company = company;
+            props.Company = p.Company;
             changes.Add("Company");
         }
 
-        if (!string.IsNullOrEmpty(manager))
+        if (!string.IsNullOrEmpty(p.Manager))
         {
-            props.Manager = manager;
+            props.Manager = p.Manager;
             changes.Add("Manager");
         }
 
-        if (customProperties != null)
+        if (p.CustomProperties != null)
         {
-            foreach (var kvp in customProperties)
+            foreach (var kvp in p.CustomProperties)
                 props[kvp.Key] = ConvertToPropertyValue(kvp.Value);
             changes.Add("CustomProperties");
         }
@@ -126,4 +117,29 @@ public class SetPptPropertiesHandler : OperationHandlerBase<Presentation>
     {
         return DateTime.TryParse(value, out result);
     }
+
+    private static SetPptPropertiesParameters ExtractSetPptPropertiesParameters(OperationParameters parameters)
+    {
+        return new SetPptPropertiesParameters(
+            parameters.GetOptional<string?>("title"),
+            parameters.GetOptional<string?>("subject"),
+            parameters.GetOptional<string?>("author"),
+            parameters.GetOptional<string?>("keywords"),
+            parameters.GetOptional<string?>("comments"),
+            parameters.GetOptional<string?>("category"),
+            parameters.GetOptional<string?>("company"),
+            parameters.GetOptional<string?>("manager"),
+            parameters.GetOptional<Dictionary<string, object>?>("customProperties"));
+    }
+
+    private record SetPptPropertiesParameters(
+        string? Title,
+        string? Subject,
+        string? Author,
+        string? Keywords,
+        string? Comments,
+        string? Category,
+        string? Company,
+        string? Manager,
+        Dictionary<string, object>? CustomProperties);
 }

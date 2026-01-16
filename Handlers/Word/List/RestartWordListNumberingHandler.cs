@@ -23,21 +23,20 @@ public class RestartWordListNumberingHandler : OperationHandlerBase<Document>
     /// <returns>Success message with restart details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var paragraphIndex = parameters.GetRequired<int>("paragraphIndex");
-        var startAt = parameters.GetOptional("startAt", 1);
+        var p = ExtractRestartNumberingParameters(parameters);
 
         var doc = context.Document;
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
 
-        if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
+        if (p.ParagraphIndex < 0 || p.ParagraphIndex >= paragraphs.Count)
             throw new ArgumentException(
-                $"Paragraph index {paragraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
+                $"Paragraph index {p.ParagraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
 
-        var para = paragraphs[paragraphIndex];
+        var para = paragraphs[p.ParagraphIndex];
 
         if (!para.ListFormat.IsListItem)
             throw new ArgumentException(
-                $"Paragraph at index {paragraphIndex} is not a list item. Use get_format operation to find list item paragraphs.");
+                $"Paragraph at index {p.ParagraphIndex} is not a list item. Use get_format operation to find list item paragraphs.");
 
         var originalList = para.ListFormat.List;
         if (originalList == null)
@@ -46,18 +45,18 @@ public class RestartWordListNumberingHandler : OperationHandlerBase<Document>
         var newList = doc.Lists.AddCopy(originalList);
         var level = para.ListFormat.ListLevelNumber;
 
-        newList.ListLevels[level].StartAt = startAt;
+        newList.ListLevels[level].StartAt = p.StartAt;
 
         var applyCount = 0;
-        for (var i = paragraphIndex; i < paragraphs.Count; i++)
+        for (var i = p.ParagraphIndex; i < paragraphs.Count; i++)
         {
-            var p = paragraphs[i];
-            if (p.ListFormat.IsListItem && p.ListFormat.List?.ListId == originalList.ListId)
+            var currentPara = paragraphs[i];
+            if (currentPara.ListFormat.IsListItem && currentPara.ListFormat.List?.ListId == originalList.ListId)
             {
-                p.ListFormat.List = newList;
+                currentPara.ListFormat.List = newList;
                 applyCount++;
             }
-            else if (i > paragraphIndex && !p.ListFormat.IsListItem)
+            else if (i > p.ParagraphIndex && !currentPara.ListFormat.IsListItem)
             {
                 break;
             }
@@ -66,11 +65,22 @@ public class RestartWordListNumberingHandler : OperationHandlerBase<Document>
         MarkModified(context);
 
         var result = "List numbering restarted successfully\n";
-        result += $"Paragraph index: {paragraphIndex}\n";
-        result += $"Start at: {startAt}\n";
+        result += $"Paragraph index: {p.ParagraphIndex}\n";
+        result += $"Start at: {p.StartAt}\n";
         result += $"Paragraphs affected: {applyCount}\n";
         result += $"New list ID: {newList.ListId}";
 
         return Success(result);
     }
+
+    private static RestartNumberingParameters ExtractRestartNumberingParameters(OperationParameters parameters)
+    {
+        return new RestartNumberingParameters(
+            parameters.GetRequired<int>("paragraphIndex"),
+            parameters.GetOptional("startAt", 1));
+    }
+
+    private record RestartNumberingParameters(
+        int ParagraphIndex,
+        int StartAt);
 }

@@ -133,7 +133,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -148,28 +148,60 @@ Usage examples:
         var parameters = new OperationParameters();
         if (sheetIndex.HasValue) parameters.Set("sheetIndex", sheetIndex.Value);
 
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "protect":
-                if (password != null) parameters.Set("password", password);
-                parameters.Set("protectWorkbook", protectWorkbook);
-                parameters.Set("protectStructure", protectStructure);
-                parameters.Set("protectWindows", protectWindows);
-                break;
+            "protect" => BuildProtectParameters(parameters, password, protectWorkbook, protectStructure,
+                protectWindows),
+            "unprotect" => BuildUnprotectParameters(parameters, password),
+            "get" => parameters,
+            "set_cell_locked" => BuildSetCellLockedParameters(parameters, range, locked),
+            _ => parameters
+        };
+    }
 
-            case "unprotect":
-                if (password != null) parameters.Set("password", password);
-                break;
+    /// <summary>
+    ///     Builds parameters for the protect operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with optional sheet index.</param>
+    /// <param name="password">The protection password.</param>
+    /// <param name="protectWorkbook">Whether to protect workbook structure.</param>
+    /// <param name="protectStructure">Whether to protect workbook structure when protectWorkbook is true.</param>
+    /// <param name="protectWindows">Whether to protect workbook windows when protectWorkbook is true.</param>
+    /// <returns>OperationParameters configured for protecting workbook or sheet.</returns>
+    private static OperationParameters BuildProtectParameters(OperationParameters parameters, string? password,
+        bool protectWorkbook, bool protectStructure, bool protectWindows)
+    {
+        if (password != null) parameters.Set("password", password);
+        parameters.Set("protectWorkbook", protectWorkbook);
+        parameters.Set("protectStructure", protectStructure);
+        parameters.Set("protectWindows", protectWindows);
+        return parameters;
+    }
 
-            case "get":
-                break;
+    /// <summary>
+    ///     Builds parameters for the unprotect operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with optional sheet index.</param>
+    /// <param name="password">The protection password.</param>
+    /// <returns>OperationParameters configured for unprotecting workbook or sheet.</returns>
+    private static OperationParameters BuildUnprotectParameters(OperationParameters parameters, string? password)
+    {
+        if (password != null) parameters.Set("password", password);
+        return parameters;
+    }
 
-            case "set_cell_locked":
-                if (range != null) parameters.Set("range", range);
-                parameters.Set("locked", locked);
-                break;
-        }
-
+    /// <summary>
+    ///     Builds parameters for the set cell locked operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with optional sheet index.</param>
+    /// <param name="range">The cell or range to set locked status.</param>
+    /// <param name="locked">The locked status.</param>
+    /// <returns>OperationParameters configured for setting cell locked status.</returns>
+    private static OperationParameters BuildSetCellLockedParameters(OperationParameters parameters, string? range,
+        bool locked)
+    {
+        if (range != null) parameters.Set("range", range);
+        parameters.Set("locked", locked);
         return parameters;
     }
 }

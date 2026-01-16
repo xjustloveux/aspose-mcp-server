@@ -20,24 +20,21 @@ public class DeleteWordBookmarkHandler : OperationHandlerBase<Document>
     ///     Optional: keepText (default: true)
     /// </param>
     /// <returns>Success message with deletion details.</returns>
+    /// <exception cref="ArgumentException">Thrown when bookmark name is not provided or bookmark is not found.</exception>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var name = parameters.GetOptional<string?>("name");
-        var keepText = parameters.GetOptional("keepText", true);
-
-        if (string.IsNullOrEmpty(name))
-            throw new ArgumentException("Bookmark name is required for delete operation");
+        var p = ExtractDeleteParameters(parameters);
 
         var doc = context.Document;
 
-        var bookmark = doc.Range.Bookmarks[name];
+        var bookmark = doc.Range.Bookmarks[p.Name];
         if (bookmark == null)
             throw new ArgumentException(
-                $"Bookmark '{name}' not found. Use get operation to view available bookmarks");
+                $"Bookmark '{p.Name}' not found. Use get operation to view available bookmarks");
 
         var bookmarkText = bookmark.Text;
 
-        if (keepText)
+        if (p.KeepText)
         {
             bookmark.Remove();
         }
@@ -51,11 +48,35 @@ public class DeleteWordBookmarkHandler : OperationHandlerBase<Document>
 
         var remainingCount = doc.Range.Bookmarks.Count;
 
-        var result = $"Bookmark '{name}' deleted successfully\n";
+        var result = $"Bookmark '{p.Name}' deleted successfully\n";
         result += $"Bookmark text: {bookmarkText}\n";
-        result += $"Keep text: {(keepText ? "Yes" : "No")}\n";
+        result += $"Keep text: {(p.KeepText ? "Yes" : "No")}\n";
         result += $"Remaining bookmarks in document: {remainingCount}";
 
         return result;
     }
+
+    /// <summary>
+    ///     Extracts and validates parameters for the delete bookmark operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    /// <exception cref="ArgumentException">Thrown when bookmark name is not provided.</exception>
+    private static DeleteParameters ExtractDeleteParameters(OperationParameters parameters)
+    {
+        var name = parameters.GetOptional<string?>("name");
+        var keepText = parameters.GetOptional("keepText", true);
+
+        if (string.IsNullOrEmpty(name))
+            throw new ArgumentException("Bookmark name is required for delete operation");
+
+        return new DeleteParameters(name, keepText);
+    }
+
+    /// <summary>
+    ///     Parameters for the delete bookmark operation.
+    /// </summary>
+    /// <param name="Name">The bookmark name to delete.</param>
+    /// <param name="KeepText">Whether to keep the bookmark text content.</param>
+    private record DeleteParameters(string Name, bool KeepText);
 }

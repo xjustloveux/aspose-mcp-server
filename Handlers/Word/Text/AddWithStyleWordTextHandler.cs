@@ -28,43 +28,50 @@ public class AddWithStyleWordTextHandler : OperationHandlerBase<Document>
     /// <exception cref="InvalidOperationException">Thrown when style cannot be applied.</exception>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var text = parameters.GetRequired<string>("text");
-        var styleName = parameters.GetOptional<string?>("styleName");
-        var fontName = parameters.GetOptional<string?>("fontName");
-        var fontNameAscii = parameters.GetOptional<string?>("fontNameAscii");
-        var fontNameFarEast = parameters.GetOptional<string?>("fontNameFarEast");
-        var fontSize = parameters.GetOptional<double?>("fontSize");
-        var bold = parameters.GetOptional<bool?>("bold");
-        var italic = parameters.GetOptional<bool?>("italic");
-        var underline = parameters.GetOptional<bool?>("underline");
-        var color = parameters.GetOptional<string?>("color");
-        var alignment = parameters.GetOptional<string?>("alignment");
-        var indentLevel = parameters.GetOptional<int?>("indentLevel");
-        var leftIndent = parameters.GetOptional<double?>("leftIndent");
-        var firstLineIndent = parameters.GetOptional<double?>("firstLineIndent");
-        var tabStopsJson = parameters.GetOptional<string?>("tabStops");
-        var paragraphIndex = parameters.GetOptional<int?>("paragraphIndexForAdd");
+        var p = ExtractAddWithStyleParameters(parameters);
 
         var doc = context.Document;
         var builder = new DocumentBuilder(doc);
 
         JsonArray? tabStops = null;
-        if (!string.IsNullOrEmpty(tabStopsJson))
-            tabStops = JsonNode.Parse(tabStopsJson) as JsonArray;
+        if (!string.IsNullOrEmpty(p.TabStopsJson))
+            tabStops = JsonNode.Parse(p.TabStopsJson) as JsonArray;
 
-        var (targetPara, warningMessage) = SetupBuilderPosition(doc, builder, paragraphIndex);
+        var (targetPara, warningMessage) = SetupBuilderPosition(doc, builder, p.ParagraphIndex);
 
-        var para = CreateStyledParagraph(doc, text, styleName, fontName, fontNameAscii, fontNameFarEast,
-            fontSize, bold, italic, underline, color, alignment, indentLevel, leftIndent, firstLineIndent, tabStops);
+        var para = CreateStyledParagraph(doc, p.Text, p.StyleName, p.FontName, p.FontNameAscii, p.FontNameFarEast,
+            p.FontSize, p.Bold, p.Italic, p.Underline, p.Color, p.Alignment, p.IndentLevel, p.LeftIndent,
+            p.FirstLineIndent, tabStops);
 
-        InsertParagraph(builder, para, targetPara, paragraphIndex);
+        InsertParagraph(builder, para, targetPara, p.ParagraphIndex);
         FixEmptyParagraphStyles(doc, para);
 
         MarkModified(context);
 
-        return BuildResultMessage(paragraphIndex, styleName, fontName, fontNameAscii, fontNameFarEast,
-            fontSize, bold, italic, underline, color, alignment, indentLevel, leftIndent, firstLineIndent,
-            warningMessage);
+        return BuildResultMessage(p.ParagraphIndex, p.StyleName, p.FontName, p.FontNameAscii, p.FontNameFarEast,
+            p.FontSize, p.Bold, p.Italic, p.Underline, p.Color, p.Alignment, p.IndentLevel, p.LeftIndent,
+            p.FirstLineIndent, warningMessage);
+    }
+
+    private static AddWithStyleParameters ExtractAddWithStyleParameters(OperationParameters parameters)
+    {
+        return new AddWithStyleParameters(
+            parameters.GetRequired<string>("text"),
+            parameters.GetOptional<string?>("styleName"),
+            parameters.GetOptional<string?>("fontName"),
+            parameters.GetOptional<string?>("fontNameAscii"),
+            parameters.GetOptional<string?>("fontNameFarEast"),
+            parameters.GetOptional<double?>("fontSize"),
+            parameters.GetOptional<bool?>("bold"),
+            parameters.GetOptional<bool?>("italic"),
+            parameters.GetOptional<bool?>("underline"),
+            parameters.GetOptional<string?>("color"),
+            parameters.GetOptional<string?>("alignment"),
+            parameters.GetOptional<int?>("indentLevel"),
+            parameters.GetOptional<double?>("leftIndent"),
+            parameters.GetOptional<double?>("firstLineIndent"),
+            parameters.GetOptional<string?>("tabStops"),
+            parameters.GetOptional<int?>("paragraphIndexForAdd"));
     }
 
     /// <summary>
@@ -388,4 +395,22 @@ public class AddWithStyleWordTextHandler : OperationHandlerBase<Document>
 
         return Success(result);
     }
+
+    private record AddWithStyleParameters(
+        string Text,
+        string? StyleName,
+        string? FontName,
+        string? FontNameAscii,
+        string? FontNameFarEast,
+        double? FontSize,
+        bool? Bold,
+        bool? Italic,
+        bool? Underline,
+        string? Color,
+        string? Alignment,
+        int? IndentLevel,
+        double? LeftIndent,
+        double? FirstLineIndent,
+        string? TabStopsJson,
+        int? ParagraphIndex);
 }

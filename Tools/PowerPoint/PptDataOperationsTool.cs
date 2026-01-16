@@ -91,23 +91,31 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
         int? slideIndex,
         bool includeThumbnail)
     {
-        var parameters = new OperationParameters();
-
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "get_slide_details":
-                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
-                parameters.Set("includeThumbnail", includeThumbnail);
-                break;
-        }
+            "get_slide_details" => BuildGetSlideDetailsParameters(slideIndex, includeThumbnail),
+            _ => new OperationParameters()
+        };
+    }
 
+    /// <summary>
+    ///     Builds parameters for the get_slide_details operation.
+    /// </summary>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <param name="includeThumbnail">Whether to include a Base64 encoded thumbnail.</param>
+    /// <returns>OperationParameters configured for getting slide details.</returns>
+    private static OperationParameters BuildGetSlideDetailsParameters(int? slideIndex, bool includeThumbnail)
+    {
+        var parameters = new OperationParameters();
+        if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
+        parameters.Set("includeThumbnail", includeThumbnail);
         return parameters;
     }
 }

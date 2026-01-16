@@ -69,34 +69,52 @@ public static class PdfWatermarkHelper
         {
             var trimmed = part.Trim();
             if (trimmed.Contains('-'))
-            {
-                var rangeParts = trimmed.Split('-');
-                if (rangeParts.Length != 2 ||
-                    !int.TryParse(rangeParts[0].Trim(), out var start) ||
-                    !int.TryParse(rangeParts[1].Trim(), out var end))
-                    throw new ArgumentException(
-                        $"Invalid page range format: '{trimmed}'. Expected format: 'start-end' (e.g., '5-10')");
-
-                if (start < 1 || end > totalPages || start > end)
-                    throw new ArgumentException(
-                        $"Page range '{trimmed}' is out of bounds. Document has {totalPages} page(s)");
-
-                for (var i = start; i <= end; i++)
-                    result.Add(i);
-            }
+                ParseRangePart(trimmed, totalPages, result);
             else
-            {
-                if (!int.TryParse(trimmed, out var pageNum))
-                    throw new ArgumentException($"Invalid page number: '{trimmed}'");
-
-                if (pageNum < 1 || pageNum > totalPages)
-                    throw new ArgumentException(
-                        $"Page number {pageNum} is out of bounds. Document has {totalPages} page(s)");
-
-                result.Add(pageNum);
-            }
+                ParseSinglePage(trimmed, totalPages, result);
         }
 
         return result.OrderBy(x => x).ToList();
+    }
+
+    /// <summary>
+    ///     Parses a range part (e.g., "5-10") and adds page indices to the result.
+    /// </summary>
+    /// <param name="trimmed">The range string to parse.</param>
+    /// <param name="totalPages">The total number of pages in the document.</param>
+    /// <param name="result">The set to add page indices to.</param>
+    private static void ParseRangePart(string trimmed, int totalPages, HashSet<int> result)
+    {
+        var rangeParts = trimmed.Split('-');
+        if (rangeParts.Length != 2 ||
+            !int.TryParse(rangeParts[0].Trim(), out var start) ||
+            !int.TryParse(rangeParts[1].Trim(), out var end))
+            throw new ArgumentException(
+                $"Invalid page range format: '{trimmed}'. Expected format: 'start-end' (e.g., '5-10')");
+
+        if (start < 1 || end > totalPages || start > end)
+            throw new ArgumentException(
+                $"Page range '{trimmed}' is out of bounds. Document has {totalPages} page(s)");
+
+        for (var i = start; i <= end; i++)
+            result.Add(i);
+    }
+
+    /// <summary>
+    ///     Parses a single page number and adds it to the result.
+    /// </summary>
+    /// <param name="trimmed">The page number string to parse.</param>
+    /// <param name="totalPages">The total number of pages in the document.</param>
+    /// <param name="result">The set to add the page index to.</param>
+    private static void ParseSinglePage(string trimmed, int totalPages, HashSet<int> result)
+    {
+        if (!int.TryParse(trimmed, out var pageNum))
+            throw new ArgumentException($"Invalid page number: '{trimmed}'");
+
+        if (pageNum < 1 || pageNum > totalPages)
+            throw new ArgumentException(
+                $"Page number {pageNum} is out of bounds. Document has {totalPages} page(s)");
+
+        result.Add(pageNum);
     }
 }

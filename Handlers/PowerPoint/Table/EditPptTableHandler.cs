@@ -22,31 +22,54 @@ public class EditPptTableHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with edit details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetOptional("slideIndex", 0);
-        var shapeIndex = parameters.GetRequired<int>("shapeIndex");
-        var x = parameters.GetOptional<float?>("x");
-        var y = parameters.GetOptional<float?>("y");
-        var width = parameters.GetOptional<float?>("width");
-        var height = parameters.GetOptional<float?>("height");
+        var editParams = ExtractEditTableParameters(parameters);
 
         var presentation = context.Document;
-        var slide = PptTableHelper.GetSlide(presentation, slideIndex);
-        var table = PptTableHelper.GetTable(slide, shapeIndex);
+        var slide = PptTableHelper.GetSlide(presentation, editParams.SlideIndex);
+        var table = PptTableHelper.GetTable(slide, editParams.ShapeIndex);
 
-        if (x.HasValue)
-            table.X = x.Value;
+        if (editParams.X.HasValue)
+            table.X = editParams.X.Value;
 
-        if (y.HasValue)
-            table.Y = y.Value;
+        if (editParams.Y.HasValue)
+            table.Y = editParams.Y.Value;
 
-        if (width.HasValue)
-            table.Width = width.Value;
+        if (editParams.Width.HasValue)
+            table.Width = editParams.Width.Value;
 
-        if (height.HasValue)
-            table.Height = height.Value;
+        if (editParams.Height.HasValue)
+            table.Height = editParams.Height.Value;
 
         MarkModified(context);
 
-        return Success($"Table properties updated on slide {slideIndex}.");
+        return Success($"Table properties updated on slide {editParams.SlideIndex}.");
     }
+
+    /// <summary>
+    ///     Extracts edit table parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted edit table parameters.</returns>
+    private static EditTableParameters ExtractEditTableParameters(OperationParameters parameters)
+    {
+        return new EditTableParameters(
+            parameters.GetOptional("slideIndex", 0),
+            parameters.GetRequired<int>("shapeIndex"),
+            parameters.GetOptional<float?>("x"),
+            parameters.GetOptional<float?>("y"),
+            parameters.GetOptional<float?>("width"),
+            parameters.GetOptional<float?>("height")
+        );
+    }
+
+    /// <summary>
+    ///     Record for holding edit table parameters.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index.</param>
+    /// <param name="ShapeIndex">The shape index.</param>
+    /// <param name="X">The optional X position.</param>
+    /// <param name="Y">The optional Y position.</param>
+    /// <param name="Width">The optional width.</param>
+    /// <param name="Height">The optional height.</param>
+    private record EditTableParameters(int SlideIndex, int ShapeIndex, float? X, float? Y, float? Width, float? Height);
 }

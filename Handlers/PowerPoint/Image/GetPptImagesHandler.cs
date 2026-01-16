@@ -22,10 +22,10 @@ public class GetPptImagesHandler : OperationHandlerBase<Presentation>
     /// <returns>JSON string containing image information including count, positions, and sizes.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetRequired<int>("slideIndex");
+        var p = ExtractGetParameters(parameters);
 
         var presentation = context.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+        var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
         var pictures = PptImageHelper.GetPictureFrames(slide);
 
         var imageInfoList = pictures.Select((pic, index) => new
@@ -40,11 +40,27 @@ public class GetPptImagesHandler : OperationHandlerBase<Presentation>
 
         var result = new
         {
-            slideIndex,
+            slideIndex = p.SlideIndex,
             imageCount = pictures.Count,
             images = imageInfoList
         };
 
         return JsonResult(result);
     }
+
+    /// <summary>
+    ///     Extracts get parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted get parameters.</returns>
+    private static GetParameters ExtractGetParameters(OperationParameters parameters)
+    {
+        return new GetParameters(parameters.GetRequired<int>("slideIndex"));
+    }
+
+    /// <summary>
+    ///     Record for holding get images parameters.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index.</param>
+    private record GetParameters(int SlideIndex);
 }

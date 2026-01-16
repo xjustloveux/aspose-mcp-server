@@ -120,7 +120,7 @@ Note: On Linux/Docker environments, ensure the specified font (default: Arial) i
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -133,25 +133,48 @@ Note: On Linux/Docker environments, ensure the specified font (default: Arial) i
         double scale,
         bool isWashout)
     {
-        var parameters = new OperationParameters();
-
-        switch (operation.ToLower())
+        return operation.ToLower() switch
         {
-            case "add":
-                if (text != null) parameters.Set("text", text);
-                parameters.Set("fontFamily", fontFamily);
-                parameters.Set("fontSize", fontSize);
-                parameters.Set("isSemitransparent", isSemitransparent);
-                parameters.Set("layout", layout);
-                break;
+            "add" => BuildAddParameters(text, fontFamily, fontSize, isSemitransparent, layout),
+            "add_image" => BuildAddImageParameters(imagePath, scale, isWashout),
+            _ => new OperationParameters()
+        };
+    }
 
-            case "add_image":
-                if (imagePath != null) parameters.Set("imagePath", imagePath);
-                parameters.Set("scale", scale);
-                parameters.Set("isWashout", isWashout);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the add text watermark operation.
+    /// </summary>
+    /// <param name="text">The watermark text.</param>
+    /// <param name="fontFamily">The font family name.</param>
+    /// <param name="fontSize">The font size.</param>
+    /// <param name="isSemitransparent">Whether the watermark is semitransparent.</param>
+    /// <param name="layout">The watermark layout (Diagonal or Horizontal).</param>
+    /// <returns>OperationParameters configured for adding a text watermark.</returns>
+    private static OperationParameters BuildAddParameters(string? text, string fontFamily, double fontSize,
+        bool isSemitransparent, string layout)
+    {
+        var parameters = new OperationParameters();
+        if (text != null) parameters.Set("text", text);
+        parameters.Set("fontFamily", fontFamily);
+        parameters.Set("fontSize", fontSize);
+        parameters.Set("isSemitransparent", isSemitransparent);
+        parameters.Set("layout", layout);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the add image watermark operation.
+    /// </summary>
+    /// <param name="imagePath">The path to the watermark image file.</param>
+    /// <param name="scale">The image scale factor.</param>
+    /// <param name="isWashout">Whether to apply the washout effect.</param>
+    /// <returns>OperationParameters configured for adding an image watermark.</returns>
+    private static OperationParameters BuildAddImageParameters(string? imagePath, double scale, bool isWashout)
+    {
+        var parameters = new OperationParameters();
+        if (imagePath != null) parameters.Set("imagePath", imagePath);
+        parameters.Set("scale", scale);
+        parameters.Set("isWashout", isWashout);
         return parameters;
     }
 }

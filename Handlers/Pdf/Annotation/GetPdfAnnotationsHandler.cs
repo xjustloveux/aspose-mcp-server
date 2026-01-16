@@ -22,22 +22,22 @@ public class GetPdfAnnotationsHandler : OperationHandlerBase<Document>
     /// <returns>JSON result with annotation information.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var pageIndex = parameters.GetOptional("pageIndex", 1);
+        var getParams = ExtractGetParameters(parameters);
 
         var document = context.Document;
 
         var annotations = new List<object>();
 
-        if (pageIndex == 0)
+        if (getParams.PageIndex == 0)
         {
             for (var p = 1; p <= document.Pages.Count; p++) AddPageAnnotations(document.Pages[p], p, annotations);
         }
         else
         {
-            if (pageIndex < 1 || pageIndex > document.Pages.Count)
+            if (getParams.PageIndex < 1 || getParams.PageIndex > document.Pages.Count)
                 throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
 
-            AddPageAnnotations(document.Pages[pageIndex], pageIndex, annotations);
+            AddPageAnnotations(document.Pages[getParams.PageIndex], getParams.PageIndex, annotations);
         }
 
         var result = new
@@ -81,4 +81,21 @@ public class GetPdfAnnotationsHandler : OperationHandlerBase<Document>
             });
         }
     }
+
+    /// <summary>
+    ///     Extracts get parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted get parameters.</returns>
+    private static GetParameters ExtractGetParameters(OperationParameters parameters)
+    {
+        return new GetParameters(
+            parameters.GetOptional("pageIndex", 1)
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold get annotations parameters.
+    /// </summary>
+    private record GetParameters(int PageIndex);
 }

@@ -23,25 +23,23 @@ public class DeletePptAnimationHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with deletion details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetRequired<int>("slideIndex");
-        var shapeIndex = parameters.GetOptional<int?>("shapeIndex");
-        var animationIndex = parameters.GetOptional<int?>("animationIndex");
+        var p = ExtractDeleteAnimationParameters(parameters);
 
         var presentation = context.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+        var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
         var sequence = slide.Timeline.MainSequence;
 
-        if (shapeIndex.HasValue)
+        if (p.ShapeIndex.HasValue)
         {
-            PowerPointHelper.ValidateShapeIndex(shapeIndex.Value, slide);
-            var shape = slide.Shapes[shapeIndex.Value];
+            PowerPointHelper.ValidateShapeIndex(p.ShapeIndex.Value, slide);
+            var shape = slide.Shapes[p.ShapeIndex.Value];
             var animations = sequence.Where(e => e.TargetShape == shape).ToList();
 
-            if (animationIndex.HasValue)
+            if (p.AnimationIndex.HasValue)
             {
-                if (animationIndex.Value < 0 || animationIndex.Value >= animations.Count)
+                if (p.AnimationIndex.Value < 0 || p.AnimationIndex.Value >= animations.Count)
                     throw new ArgumentException($"animationIndex must be between 0 and {animations.Count - 1}");
-                sequence.Remove(animations[animationIndex.Value]);
+                sequence.Remove(animations[p.AnimationIndex.Value]);
             }
             else
             {
@@ -56,6 +54,27 @@ public class DeletePptAnimationHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Animation(s) deleted from slide {slideIndex}.");
+        return Success($"Animation(s) deleted from slide {p.SlideIndex}.");
     }
+
+    /// <summary>
+    ///     Extracts delete animation parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted delete animation parameters.</returns>
+    private static DeleteAnimationParameters ExtractDeleteAnimationParameters(OperationParameters parameters)
+    {
+        return new DeleteAnimationParameters(
+            parameters.GetRequired<int>("slideIndex"),
+            parameters.GetOptional<int?>("shapeIndex"),
+            parameters.GetOptional<int?>("animationIndex"));
+    }
+
+    /// <summary>
+    ///     Record for holding delete animation parameters.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index.</param>
+    /// <param name="ShapeIndex">The optional shape index.</param>
+    /// <param name="AnimationIndex">The optional animation index.</param>
+    private record DeleteAnimationParameters(int SlideIndex, int? ShapeIndex, int? AnimationIndex);
 }

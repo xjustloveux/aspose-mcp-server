@@ -21,13 +21,22 @@ public class FromA1NotationHandler : OperationHandlerBase<Workbook>
     /// <returns>A message containing the cell address in both A1 notation and row/column index format.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var cellAddress = parameters.GetRequired<string>("cellAddress");
+        var p = ExtractFromA1NotationParameters(parameters);
 
-        CellsHelper.CellNameToIndex(cellAddress, out var row, out var column);
+        CellsHelper.CellNameToIndex(p.CellAddress, out var row, out var column);
 
         ExcelGetCellAddressHelper.ValidateIndexBounds(row, column);
 
         var a1Notation = CellsHelper.CellIndexToName(row, column);
         return $"{a1Notation} = Row {row}, Column {column}";
     }
+
+    private static FromA1NotationParameters ExtractFromA1NotationParameters(OperationParameters parameters)
+    {
+        var cellAddress = parameters.GetRequired<string>("cellAddress");
+
+        return new FromA1NotationParameters(cellAddress);
+    }
+
+    private record FromA1NotationParameters(string CellAddress);
 }

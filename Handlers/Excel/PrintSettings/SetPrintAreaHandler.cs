@@ -23,24 +23,41 @@ public class SetPrintAreaHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with print area details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var range = parameters.GetOptional<string?>("range");
-        var clearPrintArea = parameters.GetOptional("clearPrintArea", false);
+        var setParams = ExtractSetPrintAreaParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, setParams.SheetIndex);
 
-        if (clearPrintArea)
+        if (setParams.ClearPrintArea)
             worksheet.PageSetup.PrintArea = "";
-        else if (!string.IsNullOrEmpty(range))
-            worksheet.PageSetup.PrintArea = range;
+        else if (!string.IsNullOrEmpty(setParams.Range))
+            worksheet.PageSetup.PrintArea = setParams.Range;
         else
             throw new ArgumentException("Either range or clearPrintArea must be provided");
 
         MarkModified(context);
 
-        return clearPrintArea
-            ? Success($"Print area cleared for sheet {sheetIndex}.")
-            : Success($"Print area set to {range} for sheet {sheetIndex}.");
+        return setParams.ClearPrintArea
+            ? Success($"Print area cleared for sheet {setParams.SheetIndex}.")
+            : Success($"Print area set to {setParams.Range} for sheet {setParams.SheetIndex}.");
     }
+
+    /// <summary>
+    ///     Extracts set print area parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted set print area parameters.</returns>
+    private static SetPrintAreaParameters ExtractSetPrintAreaParameters(OperationParameters parameters)
+    {
+        return new SetPrintAreaParameters(
+            parameters.GetOptional("sheetIndex", 0),
+            parameters.GetOptional<string?>("range"),
+            parameters.GetOptional("clearPrintArea", false)
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold set print area parameters.
+    /// </summary>
+    private record SetPrintAreaParameters(int SheetIndex, string? Range, bool ClearPrintArea);
 }

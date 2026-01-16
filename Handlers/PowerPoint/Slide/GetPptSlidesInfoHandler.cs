@@ -19,6 +19,8 @@ public class GetPptSlidesInfoHandler : OperationHandlerBase<Presentation>
     /// <returns>JSON string containing slides information including count, slide details, and available layouts.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
+        _ = ExtractGetPptSlidesInfoParameters(parameters);
+
         var presentation = context.Document;
 
         List<object> slidesList = [];
@@ -55,4 +57,20 @@ public class GetPptSlidesInfoHandler : OperationHandlerBase<Presentation>
 
         return JsonResult(result);
     }
+
+    /// <summary>
+    ///     Extracts parameters for get slides info operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static GetPptSlidesInfoParameters ExtractGetPptSlidesInfoParameters(OperationParameters parameters)
+    {
+        _ = parameters;
+        return new GetPptSlidesInfoParameters();
+    }
+
+    /// <summary>
+    ///     Parameters for get slides info operation.
+    /// </summary>
+    private record GetPptSlidesInfoParameters;
 }

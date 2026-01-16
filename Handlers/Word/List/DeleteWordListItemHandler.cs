@@ -22,17 +22,17 @@ public class DeleteWordListItemHandler : OperationHandlerBase<Document>
     /// <returns>Success message with deletion details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var paragraphIndex = parameters.GetRequired<int>("paragraphIndex");
+        var p = ExtractDeleteListItemParameters(parameters);
 
         var doc = context.Document;
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
 
-        if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
+        if (p.ParagraphIndex < 0 || p.ParagraphIndex >= paragraphs.Count)
             throw new ArgumentException(
-                $"Paragraph index {paragraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
+                $"Paragraph index {p.ParagraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
 
-        if (paragraphs[paragraphIndex] is not WordParagraph paraToDelete)
-            throw new InvalidOperationException($"Unable to get paragraph at index {paragraphIndex}");
+        if (paragraphs[p.ParagraphIndex] is not WordParagraph paraToDelete)
+            throw new InvalidOperationException($"Unable to get paragraph at index {p.ParagraphIndex}");
 
         var itemText = paraToDelete.GetText().Trim();
         var itemPreview = itemText.Length > 50 ? itemText.Substring(0, 50) + "..." : itemText;
@@ -42,10 +42,18 @@ public class DeleteWordListItemHandler : OperationHandlerBase<Document>
         paraToDelete.Remove();
         MarkModified(context);
 
-        var result = $"List item #{paragraphIndex} deleted successfully{listInfo}\n";
+        var result = $"List item #{p.ParagraphIndex} deleted successfully{listInfo}\n";
         if (!string.IsNullOrEmpty(itemPreview)) result += $"Content preview: {itemPreview}\n";
         result += $"Remaining paragraphs: {doc.GetChildNodes(NodeType.Paragraph, true).Count}";
 
         return Success(result);
     }
+
+    private static DeleteListItemParameters ExtractDeleteListItemParameters(OperationParameters parameters)
+    {
+        return new DeleteListItemParameters(
+            parameters.GetRequired<int>("paragraphIndex"));
+    }
+
+    private record DeleteListItemParameters(int ParagraphIndex);
 }

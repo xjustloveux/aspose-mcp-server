@@ -17,34 +17,31 @@ public class ClearExcelCellHandler : OperationHandlerBase<Workbook>
     /// </summary>
     /// <param name="context">The workbook context.</param>
     /// <param name="parameters">
-    ///     Required: cell (cell reference like "A1")
-    ///     Optional: sheetIndex (default: 0), clearContent (default: true), clearFormat (default: false)
+    ///     Required: cell
+    ///     Optional: sheetIndex, clearContent, clearFormat
     /// </param>
     /// <returns>Success message.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var cell = parameters.GetRequired<string>("cell");
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var clearContent = parameters.GetOptional("clearContent", true);
-        var clearFormat = parameters.GetOptional("clearFormat", false);
+        var clearParams = ExtractClearParameters(parameters);
 
-        ExcelCellHelper.ValidateCellAddress(cell);
+        ExcelCellHelper.ValidateCellAddress(clearParams.Cell);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var cellObj = worksheet.Cells[cell];
+        var worksheet = ExcelHelper.GetWorksheet(workbook, clearParams.SheetIndex);
+        var cellObj = worksheet.Cells[clearParams.Cell];
 
-        if (clearContent && clearFormat)
+        if (clearParams is { ClearContent: true, ClearFormat: true })
         {
             cellObj.PutValue("");
             var defaultStyle = workbook.CreateStyle();
             cellObj.SetStyle(defaultStyle);
         }
-        else if (clearContent)
+        else if (clearParams.ClearContent)
         {
             cellObj.PutValue("");
         }
-        else if (clearFormat)
+        else if (clearParams.ClearFormat)
         {
             var defaultStyle = workbook.CreateStyle();
             cellObj.SetStyle(defaultStyle);
@@ -52,6 +49,26 @@ public class ClearExcelCellHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Cell {cell} cleared in sheet {sheetIndex}.");
+        return Success($"Cell {clearParams.Cell} cleared in sheet {clearParams.SheetIndex}.");
     }
+
+    /// <summary>
+    ///     Extracts clear parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted clear parameters.</returns>
+    private static ClearParameters ExtractClearParameters(OperationParameters parameters)
+    {
+        return new ClearParameters(
+            parameters.GetRequired<string>("cell"),
+            parameters.GetOptional("sheetIndex", 0),
+            parameters.GetOptional("clearContent", true),
+            parameters.GetOptional("clearFormat", false)
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold clear cell parameters.
+    /// </summary>
+    private record ClearParameters(string Cell, int SheetIndex, bool ClearContent, bool ClearFormat);
 }

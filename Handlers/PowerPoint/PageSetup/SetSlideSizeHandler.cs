@@ -25,14 +25,11 @@ public class SetSlideSizeHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with slide size information.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var preset = parameters.GetOptional("preset", "OnScreen16x9");
-        var width = parameters.GetOptional<double?>("width");
-        var height = parameters.GetOptional<double?>("height");
-
+        var p = ExtractSetSlideSizeParameters(parameters);
         var presentation = context.Document;
         var slideSize = presentation.SlideSize;
 
-        var type = preset.ToLower() switch
+        var type = p.Preset.ToLower() switch
         {
             "onscreen16x10" => SlideSizeType.OnScreen16x10,
             "a4" => SlideSizeType.A4Paper,
@@ -43,11 +40,11 @@ public class SetSlideSizeHandler : OperationHandlerBase<Presentation>
 
         if (type == SlideSizeType.Custom)
         {
-            if (!width.HasValue || !height.HasValue)
+            if (!p.Width.HasValue || !p.Height.HasValue)
                 throw new ArgumentException("Custom size requires width and height.");
 
-            ValidateSizeRange(width.Value, height.Value);
-            slideSize.SetSize((float)width.Value, (float)height.Value, SlideSizeScaleType.DoNotScale);
+            ValidateSizeRange(p.Width.Value, p.Height.Value);
+            slideSize.SetSize((float)p.Width.Value, (float)p.Height.Value, SlideSizeScaleType.DoNotScale);
         }
         else
         {
@@ -77,4 +74,14 @@ public class SetSlideSizeHandler : OperationHandlerBase<Presentation>
         if (height < MinSizePoints || height > MaxSizePoints)
             throw new ArgumentException($"Height must be between {MinSizePoints} and {MaxSizePoints} points.");
     }
+
+    private static SetSlideSizeParameters ExtractSetSlideSizeParameters(OperationParameters parameters)
+    {
+        return new SetSlideSizeParameters(
+            parameters.GetOptional("preset", "OnScreen16x9"),
+            parameters.GetOptional<double?>("width"),
+            parameters.GetOptional<double?>("height"));
+    }
+
+    private record SetSlideSizeParameters(string Preset, double? Width, double? Height);
 }

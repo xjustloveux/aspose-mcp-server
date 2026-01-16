@@ -23,24 +23,33 @@ public class DeleteExcelPivotTableHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with delete details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var pivotTableIndex = parameters.GetRequired<int>("pivotTableIndex");
+        var p = ExtractDeletePivotTableParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, p.SheetIndex);
         var pivotTables = worksheet.PivotTables;
 
-        if (pivotTableIndex < 0 || pivotTableIndex >= pivotTables.Count)
+        if (p.PivotTableIndex < 0 || p.PivotTableIndex >= pivotTables.Count)
             throw new ArgumentException(
-                $"Pivot table index {pivotTableIndex} is out of range (worksheet has {pivotTables.Count} pivot tables)");
+                $"Pivot table index {p.PivotTableIndex} is out of range (worksheet has {pivotTables.Count} pivot tables)");
 
-        var pivotTable = pivotTables[pivotTableIndex];
-        var pivotTableName = pivotTable.Name ?? $"PivotTable {pivotTableIndex}";
+        var pivotTable = pivotTables[p.PivotTableIndex];
+        var pivotTableName = pivotTable.Name ?? $"PivotTable {p.PivotTableIndex}";
 
-        pivotTables.RemoveAt(pivotTableIndex);
+        pivotTables.RemoveAt(p.PivotTableIndex);
 
         MarkModified(context);
 
-        return Success($"Pivot table #{pivotTableIndex} ({pivotTableName}) deleted.");
+        return Success($"Pivot table #{p.PivotTableIndex} ({pivotTableName}) deleted.");
     }
+
+    private static DeletePivotTableParameters ExtractDeletePivotTableParameters(OperationParameters parameters)
+    {
+        return new DeletePivotTableParameters(
+            parameters.GetOptional("sheetIndex", 0),
+            parameters.GetRequired<int>("pivotTableIndex")
+        );
+    }
+
+    private record DeletePivotTableParameters(int SheetIndex, int PivotTableIndex);
 }

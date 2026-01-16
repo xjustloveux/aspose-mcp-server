@@ -23,34 +23,51 @@ public class AddPdfAttachmentHandler : OperationHandlerBase<Document>
     /// <returns>Success message.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var attachmentPath = parameters.GetRequired<string>("attachmentPath");
-        var attachmentName = parameters.GetRequired<string>("attachmentName");
-        var description = parameters.GetOptional<string?>("description");
+        var addParams = ExtractAddParameters(parameters);
 
-        SecurityHelper.ValidateFilePath(attachmentPath, "attachmentPath", true);
-        SecurityHelper.ValidateStringLength(attachmentName, "attachmentName", 255);
-        if (description != null)
-            SecurityHelper.ValidateStringLength(description, "description", 1000);
+        SecurityHelper.ValidateFilePath(addParams.AttachmentPath, "attachmentPath", true);
+        SecurityHelper.ValidateStringLength(addParams.AttachmentName, "attachmentName", 255);
+        if (addParams.Description != null)
+            SecurityHelper.ValidateStringLength(addParams.Description, "description", 1000);
 
-        if (!File.Exists(attachmentPath))
-            throw new FileNotFoundException($"Attachment file not found: {attachmentPath}");
+        if (!File.Exists(addParams.AttachmentPath))
+            throw new FileNotFoundException($"Attachment file not found: {addParams.AttachmentPath}");
 
         var document = context.Document;
         var existingNames = PdfAttachmentHelper.CollectAttachmentNames(document.EmbeddedFiles);
-        if (existingNames.Any(n => string.Equals(n, attachmentName, StringComparison.OrdinalIgnoreCase) ||
-                                   string.Equals(Path.GetFileName(n), attachmentName,
+        if (existingNames.Any(n => string.Equals(n, addParams.AttachmentName, StringComparison.OrdinalIgnoreCase) ||
+                                   string.Equals(Path.GetFileName(n), addParams.AttachmentName,
                                        StringComparison.OrdinalIgnoreCase)))
-            throw new ArgumentException($"Attachment with name '{attachmentName}' already exists");
+            throw new ArgumentException($"Attachment with name '{addParams.AttachmentName}' already exists");
 
-        var fileSpecification = new FileSpecification(attachmentPath, description ?? "")
+        var fileSpecification = new FileSpecification(addParams.AttachmentPath, addParams.Description ?? "")
         {
-            Name = attachmentName
+            Name = addParams.AttachmentName
         };
 
         document.EmbeddedFiles.Add(fileSpecification);
 
         MarkModified(context);
 
-        return Success($"Added attachment '{attachmentName}'.");
+        return Success($"Added attachment '{addParams.AttachmentName}'.");
     }
+
+    /// <summary>
+    ///     Extracts add parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted add parameters.</returns>
+    private static AddParameters ExtractAddParameters(OperationParameters parameters)
+    {
+        return new AddParameters(
+            parameters.GetRequired<string>("attachmentPath"),
+            parameters.GetRequired<string>("attachmentName"),
+            parameters.GetOptional<string?>("description")
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold add attachment parameters.
+    /// </summary>
+    private record AddParameters(string AttachmentPath, string AttachmentName, string? Description);
 }

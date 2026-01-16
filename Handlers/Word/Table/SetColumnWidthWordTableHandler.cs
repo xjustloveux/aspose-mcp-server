@@ -26,6 +26,42 @@ public class SetColumnWidthWordTableHandler : OperationHandlerBase<Document>
     /// <exception cref="InvalidOperationException">Thrown when the table has no rows.</exception>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
+        var p = ExtractSetColumnWidthParameters(parameters);
+
+        var doc = context.Document;
+        var actualSectionIndex = p.SectionIndex ?? 0;
+        if (actualSectionIndex >= doc.Sections.Count)
+            throw new ArgumentException($"Section index {actualSectionIndex} out of range");
+
+        var section = doc.Sections[actualSectionIndex];
+        var tables = section.Body.GetChildNodes(NodeType.Table, true).Cast<WordTable>().ToList();
+        if (p.TableIndex < 0 || p.TableIndex >= tables.Count)
+            throw new ArgumentException($"Table index {p.TableIndex} out of range");
+
+        var table = tables[p.TableIndex];
+        if (table.Rows.Count == 0)
+            throw new InvalidOperationException($"Table {p.TableIndex} has no rows");
+
+        var firstRow = table.Rows[0];
+        if (p.ColumnIndex < 0 || p.ColumnIndex >= firstRow.Cells.Count)
+            throw new ArgumentException($"Column index {p.ColumnIndex} out of range");
+
+        var cellsUpdated = 0;
+        foreach (var row in table.Rows.Cast<Row>())
+            if (p.ColumnIndex < row.Cells.Count)
+            {
+                row.Cells[p.ColumnIndex].CellFormat.PreferredWidth = PreferredWidth.FromPoints(p.ColumnWidth);
+                cellsUpdated++;
+            }
+
+        MarkModified(context);
+
+        return Success(
+            $"Successfully set column {p.ColumnIndex} width to {p.ColumnWidth} pt ({cellsUpdated} cells updated).");
+    }
+
+    private static SetColumnWidthParameters ExtractSetColumnWidthParameters(OperationParameters parameters)
+    {
         var columnIndex = parameters.GetOptional<int?>("columnIndex");
         var columnWidth = parameters.GetOptional<double?>("columnWidth");
 
@@ -39,35 +75,8 @@ public class SetColumnWidthWordTableHandler : OperationHandlerBase<Document>
         var tableIndex = parameters.GetOptional("tableIndex", 0);
         var sectionIndex = parameters.GetOptional<int?>("sectionIndex");
 
-        var doc = context.Document;
-        var actualSectionIndex = sectionIndex ?? 0;
-        if (actualSectionIndex >= doc.Sections.Count)
-            throw new ArgumentException($"Section index {actualSectionIndex} out of range");
-
-        var section = doc.Sections[actualSectionIndex];
-        var tables = section.Body.GetChildNodes(NodeType.Table, true).Cast<WordTable>().ToList();
-        if (tableIndex < 0 || tableIndex >= tables.Count)
-            throw new ArgumentException($"Table index {tableIndex} out of range");
-
-        var table = tables[tableIndex];
-        if (table.Rows.Count == 0)
-            throw new InvalidOperationException($"Table {tableIndex} has no rows");
-
-        var firstRow = table.Rows[0];
-        if (columnIndex.Value < 0 || columnIndex.Value >= firstRow.Cells.Count)
-            throw new ArgumentException($"Column index {columnIndex.Value} out of range");
-
-        var cellsUpdated = 0;
-        foreach (var row in table.Rows.Cast<Row>())
-            if (columnIndex.Value < row.Cells.Count)
-            {
-                row.Cells[columnIndex.Value].CellFormat.PreferredWidth = PreferredWidth.FromPoints(columnWidth.Value);
-                cellsUpdated++;
-            }
-
-        MarkModified(context);
-
-        return Success(
-            $"Successfully set column {columnIndex.Value} width to {columnWidth.Value} pt ({cellsUpdated} cells updated).");
+        return new SetColumnWidthParameters(columnIndex.Value, columnWidth.Value, tableIndex, sectionIndex);
     }
+
+    private record SetColumnWidthParameters(int ColumnIndex, double ColumnWidth, int TableIndex, int? SectionIndex);
 }

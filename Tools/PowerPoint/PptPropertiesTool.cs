@@ -172,6 +172,16 @@ Usage examples:
     /// <summary>
     ///     Builds OperationParameters from method parameters.
     /// </summary>
+    /// <param name="title">The presentation title.</param>
+    /// <param name="subject">The presentation subject.</param>
+    /// <param name="author">The presentation author.</param>
+    /// <param name="keywords">The presentation keywords.</param>
+    /// <param name="comments">The presentation comments.</param>
+    /// <param name="category">The presentation category.</param>
+    /// <param name="company">The company name.</param>
+    /// <param name="manager">The manager name.</param>
+    /// <param name="customProperties">Custom properties as key-value pairs.</param>
+    /// <returns>OperationParameters configured for the properties operation.</returns>
     private static OperationParameters BuildParameters(
         string? title,
         string? subject,

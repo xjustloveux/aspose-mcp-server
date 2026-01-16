@@ -131,7 +131,7 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -149,38 +149,95 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
         var parameters = new OperationParameters();
         parameters.Set("slideIndex", slideIndex);
 
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "add":
-                if (chartType != null) parameters.Set("chartType", chartType);
-                if (title != null) parameters.Set("title", title);
-                parameters.Set("x", x);
-                parameters.Set("y", y);
-                parameters.Set("width", width);
-                parameters.Set("height", height);
-                break;
+            "add" => BuildAddParameters(parameters, chartType, title, x, y, width, height),
+            "edit" => BuildEditParameters(parameters, shapeIndex, title, chartType),
+            "delete" => BuildDeleteParameters(parameters, shapeIndex),
+            "get_data" => BuildGetDataParameters(parameters, shapeIndex),
+            "update_data" => BuildUpdateDataParameters(parameters, shapeIndex, data, clearExisting),
+            _ => parameters
+        };
+    }
 
-            case "edit":
-                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
-                if (title != null) parameters.Set("title", title);
-                if (chartType != null) parameters.Set("chartType", chartType);
-                break;
+    /// <summary>
+    ///     Builds parameters for the add chart operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters with slide index.</param>
+    /// <param name="chartType">The chart type (Column, Bar, Line, Pie, etc.).</param>
+    /// <param name="title">The chart title.</param>
+    /// <param name="x">The X position in points.</param>
+    /// <param name="y">The Y position in points.</param>
+    /// <param name="width">The width in points.</param>
+    /// <param name="height">The height in points.</param>
+    /// <returns>OperationParameters configured for adding a chart.</returns>
+    private static OperationParameters BuildAddParameters(OperationParameters parameters, string? chartType,
+        string? title, float x, float y, float width, float height)
+    {
+        if (chartType != null) parameters.Set("chartType", chartType);
+        if (title != null) parameters.Set("title", title);
+        parameters.Set("x", x);
+        parameters.Set("y", y);
+        parameters.Set("width", width);
+        parameters.Set("height", height);
+        return parameters;
+    }
 
-            case "delete":
-                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the edit chart operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters with slide index.</param>
+    /// <param name="shapeIndex">The chart index (0-based).</param>
+    /// <param name="title">The new chart title.</param>
+    /// <param name="chartType">The new chart type.</param>
+    /// <returns>OperationParameters configured for editing a chart.</returns>
+    private static OperationParameters BuildEditParameters(OperationParameters parameters, int? shapeIndex,
+        string? title, string? chartType)
+    {
+        if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+        if (title != null) parameters.Set("title", title);
+        if (chartType != null) parameters.Set("chartType", chartType);
+        return parameters;
+    }
 
-            case "get_data":
-                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the delete chart operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters with slide index.</param>
+    /// <param name="shapeIndex">The chart index (0-based).</param>
+    /// <returns>OperationParameters configured for deleting a chart.</returns>
+    private static OperationParameters BuildDeleteParameters(OperationParameters parameters, int? shapeIndex)
+    {
+        if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+        return parameters;
+    }
 
-            case "update_data":
-                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
-                if (data != null) parameters.Set("data", data);
-                parameters.Set("clearExisting", clearExisting);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the get chart data operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters with slide index.</param>
+    /// <param name="shapeIndex">The chart index (0-based).</param>
+    /// <returns>OperationParameters configured for getting chart data.</returns>
+    private static OperationParameters BuildGetDataParameters(OperationParameters parameters, int? shapeIndex)
+    {
+        if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the update chart data operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters with slide index.</param>
+    /// <param name="shapeIndex">The chart index (0-based).</param>
+    /// <param name="data">The chart data object with categories and series.</param>
+    /// <param name="clearExisting">Whether to clear existing data before adding new.</param>
+    /// <returns>OperationParameters configured for updating chart data.</returns>
+    private static OperationParameters BuildUpdateDataParameters(OperationParameters parameters, int? shapeIndex,
+        JsonObject? data, bool clearExisting)
+    {
+        if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+        if (data != null) parameters.Set("data", data);
+        parameters.Set("clearExisting", clearExisting);
         return parameters;
     }
 }

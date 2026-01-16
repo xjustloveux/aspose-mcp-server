@@ -3,7 +3,7 @@
 本文件記錄 JetBrains InspectCode 報告中被排除修復的問題及其原因。
 這些問題經過評估後決定保留，未來進行代碼品質檢查時可參考本文件跳過這些項目。
 
-**最後更新日期**: 2026-01-16
+**最後更新日期**: 2026-01-17
 **分析工具**: JetBrains InspectCode 2025.3.0.4
 
 ---
@@ -206,20 +206,19 @@ public class NoParameterlessCtorHandler(string requiredValue) : OperationHandler
 | 項目 | 內容 |
 |------|------|
 | **級別** | Note |
-| **數量** | 7 |
+| **數量** | 6 |
 | **訊息** | Member can be made private |
 
 ### 受影響檔案
 
 | 檔案 | 行號 | 成員 |
 |------|------|------|
-| `Core/Transport/TransportConfig.cs` | 38 | `Host.set` |
 | `Core/Transport/TransportConfig.cs` | 28 | `Mode.set` |
 | `Core/Transport/TransportConfig.cs` | 33 | `Port.set` |
+| `Core/Transport/TransportConfig.cs` | 38 | `Host.set` |
 | `Core/Session/DocumentSession.cs` | 75 | `LastAccessedAt.set` |
 | `Core/Tracking/TrackingConfig.cs` | 47 | `WebhookAuthHeader.set` |
 | `Core/Tracking/TrackingConfig.cs` | 52 | `WebhookTimeoutSeconds.set` |
-| `Core/Session/DocumentSessionManager.cs` | 201 | `GetSession()` |
 
 ### 問題描述
 
@@ -229,7 +228,6 @@ public class NoParameterlessCtorHandler(string requiredValue) : OperationHandler
 
 - 這些是公開 API 的一部分，外部可能需要存取
 - 配置類屬性需要公開 setter 支援 JSON 反序列化
-- `GetSession()` 可能被外部測試或擴展使用
 - 降低可見性可能破壞向後相容性
 
 ---
@@ -265,7 +263,7 @@ Enum 可以改為 protected 可見性。
 | 項目 | 內容 |
 |------|------|
 | **級別** | Note |
-| **數量** | 3 |
+| **數量** | 1 |
 | **訊息** | Method has overload with cancellation support |
 | **處理方式** | 測試檔案已在 `.editorconfig` 中排除 |
 
@@ -273,9 +271,7 @@ Enum 可以改為 protected 可見性。
 
 | 檔案 | 行號 | 方法 | 備註 |
 |------|------|------|------|
-| `Core/Transport/WebSocketConnectionHandler.cs` | 270 | `FlushAsync` | 生產代碼，需評估 |
-| `Tests/Core/Security/ApiKeyAuthenticationMiddlewareTests.cs` | 315 | `ReadAsStringAsync` | 已排除 |
-| `Tests/Core/Security/ApiKeyAuthenticationMiddlewareTests.cs` | 355 | `ReadAsStringAsync` | 已排除 |
+| `Core/Transport/WebSocketConnectionHandler.cs` | 107 | `WaitAsync` | 生產代碼 |
 
 ### 問題描述
 
@@ -283,39 +279,15 @@ Enum 可以改為 protected 可見性。
 
 ### 不修復原因
 
-**測試代碼（已在 .editorconfig 排除）**：
-- 測試是同步執行的，不需要取消支援
-- 添加 CancellationToken 會增加不必要的複雜性
-
 **生產代碼（WebSocketConnectionHandler）**：
-- 這個呼叫在 WebSocket 連接處理中，改動會涉及較大範圍
-- 需要進一步評估是否有實際需求
+- `WaitAsync(TimeSpan)` 有 `WaitAsync(TimeSpan, CancellationToken)` 重載
+- 此處用於等待任務完成的超時控制，已有 `linkedCts` 處理取消
+- 添加額外的 CancellationToken 參數會使代碼更複雜
+- 目前的實現已經可以正確處理取消場景
 
 ---
 
-## 8. OutParameterValueIsAlwaysDiscarded.Local
-
-| 項目 | 內容 |
-|------|------|
-| **級別** | Warning |
-| **數量** | 0 |
-| **訊息** | Parameter output value is always discarded |
-
-### 受影響檔案
-
-~~已無受影響檔案~~（2026-01-11 重構後移除）
-
-原本的 `expectedContents` out 參數模式已在重構中移除。
-
-### 歷史記錄
-
-原本有 5 個項目：
-- ~~`Tests/Tools/Conversion/ConvertDocumentToolTests.cs`~~（已重構）
-- ~~`Tests/Tools/Conversion/ConvertToPdfToolTests.cs`~~（已重構）
-
----
-
-## 9. PropertyCanBeMadeInitOnly.Global
+## 8. PropertyCanBeMadeInitOnly.Global
 
 | 項目 | 內容 |
 |------|------|
@@ -361,7 +333,7 @@ public string Host { get; init; } = "localhost";  // 會導致反序列化失敗
 
 ---
 
-## 10. UnusedAutoPropertyAccessor.Global
+## 9. UnusedAutoPropertyAccessor.Global
 
 | 項目 | 內容 |
 |------|------|
@@ -394,7 +366,7 @@ public string Host { get; init; } = "localhost";  // 會導致反序列化失敗
 
 ---
 
-## 11. UnusedMember.Global
+## 10. UnusedMember.Global
 
 | 項目 | 內容 |
 |------|------|
@@ -427,29 +399,7 @@ public string Host { get; init; } = "localhost";  // 會導致反序列化失敗
 
 ---
 
-## 12. UnusedMember.Local
-
-| 項目 | 內容 |
-|------|------|
-| **級別** | Warning |
-| **數量** | 0 |
-| **訊息** | Member is never used |
-
-### 受影響檔案
-
-~~已無受影響檔案~~（2026-01-11 重構後已使用）
-
-### 歷史記錄
-
-原本有 4 個項目，現已被使用：
-- ~~`Tests/Tools/Conversion/ConvertDocumentToolTests.cs` - `CreateExcelWorkbook()`~~（現在有使用）
-- ~~`Tests/Tools/Conversion/ConvertDocumentToolTests.cs` - `CreatePowerPointPresentation()`~~（現在有使用）
-- ~~`Tests/Tools/Conversion/ConvertToPdfToolTests.cs` - `CreateExcelWorkbook()`~~（現在有使用）
-- ~~`Tests/Tools/Conversion/ConvertToPdfToolTests.cs` - `CreatePowerPointPresentation()`~~（現在有使用）
-
----
-
-## 13. UnusedMethodReturnValue.Global
+## 11. UnusedMethodReturnValue.Global
 
 | 項目 | 內容 |
 |------|------|
@@ -487,7 +437,7 @@ builder.WithFilteredTools(filter);
 
 ---
 
-## 14. UnusedType.Global
+## 12. UnusedType.Global
 
 | 項目 | 內容 |
 |------|------|
@@ -521,27 +471,61 @@ app.UseTracking();
 
 ---
 
-## 15. UseObjectOrCollectionInitializer
+## 13. UseObjectOrCollectionInitializer
 
 | 項目 | 內容 |
 |------|------|
 | **級別** | Note |
-| **數量** | 3 |
+| **數量** | 26 |
 | **訊息** | Use object initializer |
 
 ### 受影響檔案
 
+#### 測試檔案 - AuthConfigTests.cs (20 個)
+
+這些是測試程式碼中對 `AuthConfig` 嵌套屬性的設定：
+
+| 檔案 | 行號 |
+|------|------|
+| `Tests/Core/Security/AuthConfigTests.cs` | 629, 641, 653, 665, 677, 689, 701, 715, 730, 743, 755, 767, 779, 791, 805, 820, 830, 840, 851 |
+
+#### 測試檔案 - GetParagraphFormatWordHandlerTests.cs (5 個)
+
 | 檔案 | 行號 | 說明 |
 |------|------|------|
-| `Tests/Handlers/Word/Paragraph/GetParagraphFormatWordHandlerTests.cs` | 191 | 誤判 |
-| `Tests/Handlers/Word/Paragraph/GetParagraphFormatWordHandlerTests.cs` | 216 | 誤判 |
-| `Tests/Handlers/Word/Reference/AddTableOfContentsWordHandlerTests.cs` | 27 | 誤判 |
+| `Tests/Handlers/Word/Paragraph/GetParagraphFormatWordHandlerTests.cs` | 313, 338, 429, 456, 479 | 誤判 |
+
+#### 測試檔案 - AddTableOfContentsWordHandlerTests.cs (1 個)
+
+| 檔案 | 行號 | 說明 |
+|------|------|------|
+| `Tests/Handlers/Word/Reference/AddTableOfContentsWordHandlerTests.cs` | 26 | 誤判 |
 
 ### 問題描述
 
 建議使用物件初始化器語法。
 
 ### 不修復原因
+
+#### AuthConfigTests.cs (測試程式碼可讀性)
+
+測試程式碼中逐步設定屬性更清晰易讀，便於除錯：
+
+```csharp
+// 目前寫法 - 清晰的逐步設定
+var config = new AuthConfig();
+config.ApiKey.Enabled = true;
+config.ApiKey.Mode = ApiKeyMode.Local;
+config.ApiKey.Keys = ["key1", "key2"];
+
+// 建議的寫法 - 對測試來說較不直觀
+var config = new AuthConfig
+{
+    ApiKey = { Enabled = true, Mode = ApiKeyMode.Local, Keys = ["key1", "key2"] }
+};
+```
+
+#### GetParagraphFormatWordHandlerTests.cs & AddTableOfContentsWordHandlerTests.cs (誤判)
 
 **這是工具的誤判**。這些代碼是在修改已存在物件的屬性，不是在初始化新物件。
 
@@ -561,14 +545,9 @@ var builder = new DocumentBuilder(doc)
 
 `DocumentBuilder.Font` 是一個已存在的物件屬性，我們在修改它的子屬性，這與物件初始化器的使用場景不同。
 
-### 歷史記錄
-
-- 2026-01-11：原本 1 個項目已重構為使用 object initializer
-- 2026-01-15：新增 3 個誤判項目
-
 ---
 
-## 16. UseUtf8StringLiteral
+## 14. UseUtf8StringLiteral
 
 | 項目 | 內容 |
 |------|------|
@@ -580,7 +559,7 @@ var builder = new DocumentBuilder(doc)
 
 | 檔案 | 行號 | 說明 |
 |------|------|------|
-| `Tests/Core/ShapeDetailProviders/PictureFrameDetailProviderTests.cs` | 72 | 誤判 |
+| `Tests/Core/ShapeDetailProviders/PictureFrameDetailProviderTests.cs` | 73 | 誤判 |
 | `Tests/Core/ShapeDetailProviders/PictureFrameDetailProviderTests.cs` | 79 | 誤判 |
 
 ### 問題描述
@@ -612,19 +591,17 @@ PNG 檔案的 signature 包含 `0x89` 等非 ASCII 字元，這些是二進制�
 | AutoPropertyCanBeMadeGetOnly.Global | 2 | Note | JSON 序列化 | 文件記錄 |
 | ClassNeverInstantiated.Global | 1 | Note | 測試類別 | 文件記錄 |
 | ConvertToPrimaryConstructor | 1 | Note | 風格選擇 | .editorconfig 排除 |
-| MemberCanBePrivate.Global | 7 | Note | 公開 API | 文件記錄 |
+| MemberCanBePrivate.Global | 6 | Note | 公開 API | 文件記錄 |
 | MemberCanBeProtected.Global | 1 | Note | 測試彈性 | 文件記錄 |
-| MethodSupportsCancellation | 3 | Note | 測試不需要 | 測試已在 .editorconfig 排除 |
-| ~~OutParameterValueIsAlwaysDiscarded.Local~~ | ~~0~~ | ~~Warning~~ | ~~已重構移除~~ | - |
+| MethodSupportsCancellation | 1 | Note | 複雜度考量 | 文件記錄 |
 | PropertyCanBeMadeInitOnly.Global | 38 | Note | JSON 序列化 | 文件記錄 |
 | UnusedAutoPropertyAccessor.Global | 7 | Warning | JSON 序列化 / 外部 API | 文件記錄 |
 | UnusedMember.Global | 7 | Note | 公開 API | 文件記錄 |
-| ~~UnusedMember.Local~~ | ~~0~~ | ~~Warning~~ | ~~已重構移除~~ | - |
 | UnusedMethodReturnValue.Global | 1 | Note | 公開 API | 文件記錄 |
 | UnusedType.Global | 1 | Note | 公開 API | 文件記錄 |
-| UseObjectOrCollectionInitializer | 3 | Note | 誤判 | 文件記錄 |
+| UseObjectOrCollectionInitializer | 26 | Note | 測試可讀性/誤判 | 文件記錄 |
 | UseUtf8StringLiteral | 2 | Note | 誤判 | 文件記錄 |
-| **總計** | **80** | - | - | - |
+| **總計** | **100** | - | - | - |
 
 ---
 

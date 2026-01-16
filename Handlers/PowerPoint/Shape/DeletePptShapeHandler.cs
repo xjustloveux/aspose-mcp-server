@@ -23,18 +23,36 @@ public class DeletePptShapeHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with deletion details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetOptional("slideIndex", 0);
-        var shapeIndex = parameters.GetRequired<int>("shapeIndex");
+        var p = ExtractDeletePptShapeParameters(parameters);
 
         var presentation = context.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+        var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
 
-        PowerPointHelper.ValidateCollectionIndex(shapeIndex, slide.Shapes.Count, "shapeIndex");
+        PowerPointHelper.ValidateCollectionIndex(p.ShapeIndex, slide.Shapes.Count, "shapeIndex");
 
-        slide.Shapes.RemoveAt(shapeIndex);
+        slide.Shapes.RemoveAt(p.ShapeIndex);
 
         MarkModified(context);
 
-        return Success($"Shape {shapeIndex} deleted from slide {slideIndex}.");
+        return Success($"Shape {p.ShapeIndex} deleted from slide {p.SlideIndex}.");
     }
+
+    /// <summary>
+    ///     Extracts parameters for delete shape operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static DeletePptShapeParameters ExtractDeletePptShapeParameters(OperationParameters parameters)
+    {
+        return new DeletePptShapeParameters(
+            parameters.GetOptional("slideIndex", 0),
+            parameters.GetRequired<int>("shapeIndex"));
+    }
+
+    /// <summary>
+    ///     Parameters for delete shape operation.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index (0-based).</param>
+    /// <param name="ShapeIndex">The shape index to delete.</param>
+    private record DeletePptShapeParameters(int SlideIndex, int ShapeIndex);
 }

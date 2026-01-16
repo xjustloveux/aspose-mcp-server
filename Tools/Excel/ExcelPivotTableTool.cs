@@ -171,7 +171,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -192,49 +192,106 @@ Usage examples:
         var parameters = new OperationParameters();
         parameters.Set("sheetIndex", sheetIndex);
 
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "add":
-                if (sourceRange != null) parameters.Set("sourceRange", sourceRange);
-                if (destCell != null) parameters.Set("destCell", destCell);
-                if (name != null) parameters.Set("name", name);
-                break;
+            "add" => BuildAddParameters(parameters, sourceRange, destCell, name),
+            "edit" => BuildEditParameters(parameters, pivotTableIndex, name, style, showRowGrand, showColumnGrand,
+                autoFitColumns, refreshData),
+            "delete" or "refresh" => BuildIndexParameters(parameters, pivotTableIndex),
+            "get" => parameters,
+            "add_field" => BuildAddFieldParameters(parameters, pivotTableIndex, fieldName, fieldType, function),
+            "delete_field" => BuildDeleteFieldParameters(parameters, pivotTableIndex, fieldName, fieldType),
+            _ => parameters
+        };
+    }
 
-            case "edit":
-                if (pivotTableIndex.HasValue) parameters.Set("pivotTableIndex", pivotTableIndex.Value);
-                if (name != null) parameters.Set("name", name);
-                if (style != null) parameters.Set("style", style);
-                if (showRowGrand.HasValue) parameters.Set("showRowGrand", showRowGrand.Value);
-                if (showColumnGrand.HasValue) parameters.Set("showColumnGrand", showColumnGrand.Value);
-                parameters.Set("autoFitColumns", autoFitColumns);
-                parameters.Set("refreshData", refreshData);
-                break;
+    /// <summary>
+    ///     Builds parameters for the add pivot table operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="sourceRange">The source data range (e.g., 'A1:D10').</param>
+    /// <param name="destCell">The destination cell for the pivot table (e.g., 'F1').</param>
+    /// <param name="name">The pivot table name.</param>
+    /// <returns>OperationParameters configured for the add operation.</returns>
+    private static OperationParameters BuildAddParameters(OperationParameters parameters, string? sourceRange,
+        string? destCell, string? name)
+    {
+        if (sourceRange != null) parameters.Set("sourceRange", sourceRange);
+        if (destCell != null) parameters.Set("destCell", destCell);
+        if (name != null) parameters.Set("name", name);
+        return parameters;
+    }
 
-            case "delete":
-                if (pivotTableIndex.HasValue) parameters.Set("pivotTableIndex", pivotTableIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the edit pivot table operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="pivotTableIndex">The pivot table index (0-based).</param>
+    /// <param name="name">The new pivot table name.</param>
+    /// <param name="style">The pivot table style (e.g., 'Medium6').</param>
+    /// <param name="showRowGrand">Whether to show row grand totals.</param>
+    /// <param name="showColumnGrand">Whether to show column grand totals.</param>
+    /// <param name="autoFitColumns">Whether to auto-fit column widths after editing.</param>
+    /// <param name="refreshData">Whether to refresh pivot table data.</param>
+    /// <returns>OperationParameters configured for the edit operation.</returns>
+    private static OperationParameters BuildEditParameters(OperationParameters parameters, int? pivotTableIndex,
+        string? name, string? style, bool? showRowGrand, bool? showColumnGrand, bool autoFitColumns, bool refreshData)
+    {
+        if (pivotTableIndex.HasValue) parameters.Set("pivotTableIndex", pivotTableIndex.Value);
+        if (name != null) parameters.Set("name", name);
+        if (style != null) parameters.Set("style", style);
+        if (showRowGrand.HasValue) parameters.Set("showRowGrand", showRowGrand.Value);
+        if (showColumnGrand.HasValue) parameters.Set("showColumnGrand", showColumnGrand.Value);
+        parameters.Set("autoFitColumns", autoFitColumns);
+        parameters.Set("refreshData", refreshData);
+        return parameters;
+    }
 
-            case "get":
-                break;
+    /// <summary>
+    ///     Builds parameters for index-based operations (delete, refresh).
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="pivotTableIndex">The pivot table index (0-based).</param>
+    /// <returns>OperationParameters configured for index-based operations.</returns>
+    private static OperationParameters BuildIndexParameters(OperationParameters parameters, int? pivotTableIndex)
+    {
+        if (pivotTableIndex.HasValue) parameters.Set("pivotTableIndex", pivotTableIndex.Value);
+        return parameters;
+    }
 
-            case "add_field":
-                if (pivotTableIndex.HasValue) parameters.Set("pivotTableIndex", pivotTableIndex.Value);
-                if (fieldName != null) parameters.Set("fieldName", fieldName);
-                if (fieldType != null) parameters.Set("fieldType", fieldType);
-                parameters.Set("function", function);
-                break;
+    /// <summary>
+    ///     Builds parameters for the add field operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="pivotTableIndex">The pivot table index (0-based).</param>
+    /// <param name="fieldName">The field name from source data.</param>
+    /// <param name="fieldType">The field type: 'Row', 'Column', 'Data', 'Page'.</param>
+    /// <param name="function">The aggregation function for data field (e.g., 'Sum', 'Count', 'Average').</param>
+    /// <returns>OperationParameters configured for the add field operation.</returns>
+    private static OperationParameters BuildAddFieldParameters(OperationParameters parameters, int? pivotTableIndex,
+        string? fieldName, string? fieldType, string function)
+    {
+        if (pivotTableIndex.HasValue) parameters.Set("pivotTableIndex", pivotTableIndex.Value);
+        if (fieldName != null) parameters.Set("fieldName", fieldName);
+        if (fieldType != null) parameters.Set("fieldType", fieldType);
+        parameters.Set("function", function);
+        return parameters;
+    }
 
-            case "delete_field":
-                if (pivotTableIndex.HasValue) parameters.Set("pivotTableIndex", pivotTableIndex.Value);
-                if (fieldName != null) parameters.Set("fieldName", fieldName);
-                if (fieldType != null) parameters.Set("fieldType", fieldType);
-                break;
-
-            case "refresh":
-                if (pivotTableIndex.HasValue) parameters.Set("pivotTableIndex", pivotTableIndex.Value);
-                break;
-        }
-
+    /// <summary>
+    ///     Builds parameters for the delete field operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="pivotTableIndex">The pivot table index (0-based).</param>
+    /// <param name="fieldName">The field name to delete.</param>
+    /// <param name="fieldType">The field type: 'Row', 'Column', 'Data', 'Page'.</param>
+    /// <returns>OperationParameters configured for the delete field operation.</returns>
+    private static OperationParameters BuildDeleteFieldParameters(OperationParameters parameters, int? pivotTableIndex,
+        string? fieldName, string? fieldType)
+    {
+        if (pivotTableIndex.HasValue) parameters.Set("pivotTableIndex", pivotTableIndex.Value);
+        if (fieldName != null) parameters.Set("fieldName", fieldName);
+        if (fieldType != null) parameters.Set("fieldType", fieldType);
         return parameters;
     }
 }

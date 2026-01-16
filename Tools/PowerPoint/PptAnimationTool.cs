@@ -121,7 +121,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -137,35 +137,87 @@ Usage examples:
         var parameters = new OperationParameters();
         parameters.Set("slideIndex", slideIndex);
 
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "add":
-                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
-                if (effectType != null) parameters.Set("effectType", effectType);
-                if (effectSubtype != null) parameters.Set("effectSubtype", effectSubtype);
-                if (triggerType != null) parameters.Set("triggerType", triggerType);
-                break;
+            "add" => BuildAddParameters(parameters, shapeIndex, effectType, effectSubtype, triggerType),
+            "edit" => BuildEditParameters(parameters, shapeIndex, animationIndex, effectType, effectSubtype,
+                triggerType,
+                duration, delay),
+            "delete" => BuildDeleteParameters(parameters, shapeIndex, animationIndex),
+            "get" => BuildGetParameters(parameters, shapeIndex),
+            _ => parameters
+        };
+    }
 
-            case "edit":
-                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
-                if (animationIndex.HasValue) parameters.Set("animationIndex", animationIndex.Value);
-                if (effectType != null) parameters.Set("effectType", effectType);
-                if (effectSubtype != null) parameters.Set("effectSubtype", effectSubtype);
-                if (triggerType != null) parameters.Set("triggerType", triggerType);
-                if (duration.HasValue) parameters.Set("duration", duration.Value);
-                if (delay.HasValue) parameters.Set("delay", delay.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the add animation operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters with slide index.</param>
+    /// <param name="shapeIndex">The shape index (0-based).</param>
+    /// <param name="effectType">The animation effect type (e.g., Fade, Fly, Appear).</param>
+    /// <param name="effectSubtype">The animation effect subtype for direction or style.</param>
+    /// <param name="triggerType">The trigger type (OnClick, AfterPrevious, WithPrevious).</param>
+    /// <returns>OperationParameters configured for adding an animation.</returns>
+    private static OperationParameters BuildAddParameters(OperationParameters parameters, int? shapeIndex,
+        string? effectType, string? effectSubtype, string? triggerType)
+    {
+        if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+        if (effectType != null) parameters.Set("effectType", effectType);
+        if (effectSubtype != null) parameters.Set("effectSubtype", effectSubtype);
+        if (triggerType != null) parameters.Set("triggerType", triggerType);
+        return parameters;
+    }
 
-            case "delete":
-                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
-                if (animationIndex.HasValue) parameters.Set("animationIndex", animationIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the edit animation operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters with slide index.</param>
+    /// <param name="shapeIndex">The shape index (0-based).</param>
+    /// <param name="animationIndex">The animation index (0-based).</param>
+    /// <param name="effectType">The animation effect type.</param>
+    /// <param name="effectSubtype">The animation effect subtype.</param>
+    /// <param name="triggerType">The trigger type.</param>
+    /// <param name="duration">The animation duration in seconds.</param>
+    /// <param name="delay">The animation delay in seconds.</param>
+    /// <returns>OperationParameters configured for editing an animation.</returns>
+    private static OperationParameters BuildEditParameters(OperationParameters parameters, int? shapeIndex,
+        int? animationIndex, string? effectType, string? effectSubtype, string? triggerType, float? duration,
+        float? delay)
+    {
+        if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+        if (animationIndex.HasValue) parameters.Set("animationIndex", animationIndex.Value);
+        if (effectType != null) parameters.Set("effectType", effectType);
+        if (effectSubtype != null) parameters.Set("effectSubtype", effectSubtype);
+        if (triggerType != null) parameters.Set("triggerType", triggerType);
+        if (duration.HasValue) parameters.Set("duration", duration.Value);
+        if (delay.HasValue) parameters.Set("delay", delay.Value);
+        return parameters;
+    }
 
-            case "get":
-                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the delete animation operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters with slide index.</param>
+    /// <param name="shapeIndex">The shape index (0-based).</param>
+    /// <param name="animationIndex">The animation index (0-based).</param>
+    /// <returns>OperationParameters configured for deleting an animation.</returns>
+    private static OperationParameters BuildDeleteParameters(OperationParameters parameters, int? shapeIndex,
+        int? animationIndex)
+    {
+        if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+        if (animationIndex.HasValue) parameters.Set("animationIndex", animationIndex.Value);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the get animations operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters with slide index.</param>
+    /// <param name="shapeIndex">The shape index (0-based) to filter animations.</param>
+    /// <returns>OperationParameters configured for getting animations.</returns>
+    private static OperationParameters BuildGetParameters(OperationParameters parameters, int? shapeIndex)
+    {
+        if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
         return parameters;
     }
 }

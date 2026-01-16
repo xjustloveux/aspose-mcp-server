@@ -22,15 +22,33 @@ public class RemoveExcelFilterHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
+        var removeFilterParams = ExtractRemoveFilterParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, removeFilterParams.SheetIndex);
 
         worksheet.RemoveAutoFilter();
 
         MarkModified(context);
 
-        return Success($"Auto filter removed from sheet {sheetIndex}.");
+        return Success($"Auto filter removed from sheet {removeFilterParams.SheetIndex}.");
     }
+
+    /// <summary>
+    ///     Extracts remove filter parameters from the operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted remove filter parameters.</returns>
+    private static RemoveFilterParameters ExtractRemoveFilterParameters(OperationParameters parameters)
+    {
+        return new RemoveFilterParameters(
+            parameters.GetOptional("sheetIndex", 0)
+        );
+    }
+
+    /// <summary>
+    ///     Parameters for remove filter operation.
+    /// </summary>
+    /// <param name="SheetIndex">The worksheet index (0-based).</param>
+    private record RemoveFilterParameters(int SheetIndex);
 }

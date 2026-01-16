@@ -22,10 +22,9 @@ public class DeletePdfSignatureHandler : OperationHandlerBase<Document>
     /// <returns>Success message with deletion details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var signatureName = parameters.GetOptional<string?>("signatureName");
-        var signatureIndex = parameters.GetOptional<int?>("signatureIndex");
+        var p = ExtractDeleteParameters(parameters);
 
-        if (string.IsNullOrEmpty(signatureName) && !signatureIndex.HasValue)
+        if (string.IsNullOrEmpty(p.SignatureName) && !p.SignatureIndex.HasValue)
             throw new ArgumentException("Either 'signatureName' or 'signatureIndex' is required");
 
         var document = context.Document;
@@ -39,18 +38,18 @@ public class DeletePdfSignatureHandler : OperationHandlerBase<Document>
 
         SignatureField? fieldToDelete = null;
 
-        if (!string.IsNullOrEmpty(signatureName))
+        if (!string.IsNullOrEmpty(p.SignatureName))
         {
-            fieldToDelete = signatureFields.FirstOrDefault(f => f.PartialName == signatureName);
+            fieldToDelete = signatureFields.FirstOrDefault(f => f.PartialName == p.SignatureName);
             if (fieldToDelete == null)
-                throw new ArgumentException($"Signature field '{signatureName}' not found");
+                throw new ArgumentException($"Signature field '{p.SignatureName}' not found");
         }
-        else if (signatureIndex.HasValue)
+        else if (p.SignatureIndex.HasValue)
         {
-            if (signatureIndex.Value < 0 || signatureIndex.Value >= signatureFields.Count)
+            if (p.SignatureIndex.Value < 0 || p.SignatureIndex.Value >= signatureFields.Count)
                 throw new ArgumentException(
                     $"signatureIndex must be between 0 and {signatureFields.Count - 1}");
-            fieldToDelete = signatureFields[signatureIndex.Value];
+            fieldToDelete = signatureFields[p.SignatureIndex.Value];
         }
 
         if (fieldToDelete != null)
@@ -62,4 +61,24 @@ public class DeletePdfSignatureHandler : OperationHandlerBase<Document>
 
         throw new ArgumentException("Could not find signature to delete");
     }
+
+    /// <summary>
+    ///     Extracts parameters for delete operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static DeleteParameters ExtractDeleteParameters(OperationParameters parameters)
+    {
+        return new DeleteParameters(
+            parameters.GetOptional<string?>("signatureName"),
+            parameters.GetOptional<int?>("signatureIndex")
+        );
+    }
+
+    /// <summary>
+    ///     Parameters for delete operation.
+    /// </summary>
+    /// <param name="SignatureName">The optional signature name.</param>
+    /// <param name="SignatureIndex">The optional 0-based signature index.</param>
+    private record DeleteParameters(string? SignatureName, int? SignatureIndex);
 }

@@ -180,7 +180,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -207,64 +207,153 @@ Usage examples:
         string prefix,
         int? extractImageIndex)
     {
-        var parameters = new OperationParameters();
-
-        switch (operation.ToLower())
+        return operation.ToLower() switch
         {
-            case "add":
-                if (imagePath != null) parameters.Set("imagePath", imagePath);
-                if (width.HasValue) parameters.Set("width", width.Value);
-                if (height.HasValue) parameters.Set("height", height.Value);
-                parameters.Set("alignment", alignment);
-                parameters.Set("textWrapping", textWrapping);
-                if (caption != null) parameters.Set("caption", caption);
-                parameters.Set("captionPosition", captionPosition);
-                if (linkUrl != null) parameters.Set("linkUrl", linkUrl);
-                if (alternativeText != null) parameters.Set("alternativeText", alternativeText);
-                if (title != null) parameters.Set("title", title);
-                break;
+            "add" => BuildAddParameters(imagePath, width, height, alignment, textWrapping, caption, captionPosition,
+                linkUrl, alternativeText, title),
+            "edit" => BuildEditParameters(imageIndex, sectionIndex, width, height, alignment, textWrapping,
+                aspectRatioLocked, horizontalAlignment, verticalAlignment, alternativeText, title, linkUrl),
+            "delete" => BuildDeleteParameters(imageIndex, sectionIndex),
+            "get" => BuildGetParameters(sectionIndex),
+            "replace" => BuildReplaceParameters(imageIndex, imagePath, newImagePath, preserveSize, smartFit,
+                preservePosition, sectionIndex),
+            "extract" => BuildExtractParameters(outputDir, prefix, extractImageIndex),
+            _ => new OperationParameters()
+        };
+    }
 
-            case "edit":
-                if (imageIndex.HasValue) parameters.Set("imageIndex", imageIndex.Value);
-                parameters.Set("sectionIndex", sectionIndex);
-                if (width.HasValue) parameters.Set("width", width.Value);
-                if (height.HasValue) parameters.Set("height", height.Value);
-                if (alignment != "left") parameters.Set("alignment", alignment);
-                if (textWrapping != "inline") parameters.Set("textWrapping", textWrapping);
-                if (aspectRatioLocked.HasValue) parameters.Set("aspectRatioLocked", aspectRatioLocked.Value);
-                if (horizontalAlignment != null) parameters.Set("horizontalAlignment", horizontalAlignment);
-                if (verticalAlignment != null) parameters.Set("verticalAlignment", verticalAlignment);
-                if (alternativeText != null) parameters.Set("alternativeText", alternativeText);
-                if (title != null) parameters.Set("title", title);
-                if (linkUrl != null) parameters.Set("linkUrl", linkUrl);
-                break;
+    /// <summary>
+    ///     Builds parameters for the add operation.
+    /// </summary>
+    /// <param name="imagePath">The image file path.</param>
+    /// <param name="width">The image width in points.</param>
+    /// <param name="height">The image height in points.</param>
+    /// <param name="alignment">The horizontal alignment: left, center, right.</param>
+    /// <param name="textWrapping">The text wrapping: inline, square, tight, through, topAndBottom, none.</param>
+    /// <param name="caption">The image caption text.</param>
+    /// <param name="captionPosition">The caption position: above, below.</param>
+    /// <param name="linkUrl">The hyperlink URL for the image.</param>
+    /// <param name="alternativeText">The alternative text for accessibility.</param>
+    /// <param name="title">The image title.</param>
+    /// <returns>OperationParameters configured for adding an image.</returns>
+    private static OperationParameters BuildAddParameters(string? imagePath, double? width, double? height,
+        string alignment, string textWrapping, string? caption, string captionPosition, string? linkUrl,
+        string? alternativeText, string? title)
+    {
+        var parameters = new OperationParameters();
+        if (imagePath != null) parameters.Set("imagePath", imagePath);
+        if (width.HasValue) parameters.Set("width", width.Value);
+        if (height.HasValue) parameters.Set("height", height.Value);
+        parameters.Set("alignment", alignment);
+        parameters.Set("textWrapping", textWrapping);
+        if (caption != null) parameters.Set("caption", caption);
+        parameters.Set("captionPosition", captionPosition);
+        if (linkUrl != null) parameters.Set("linkUrl", linkUrl);
+        if (alternativeText != null) parameters.Set("alternativeText", alternativeText);
+        if (title != null) parameters.Set("title", title);
+        return parameters;
+    }
 
-            case "delete":
-                if (imageIndex.HasValue) parameters.Set("imageIndex", imageIndex.Value);
-                parameters.Set("sectionIndex", sectionIndex);
-                break;
+    /// <summary>
+    ///     Builds parameters for the edit operation.
+    /// </summary>
+    /// <param name="imageIndex">The image index (0-based).</param>
+    /// <param name="sectionIndex">The section index (0-based).</param>
+    /// <param name="width">The image width in points.</param>
+    /// <param name="height">The image height in points.</param>
+    /// <param name="alignment">The horizontal alignment: left, center, right.</param>
+    /// <param name="textWrapping">The text wrapping: inline, square, tight, through, topAndBottom, none.</param>
+    /// <param name="aspectRatioLocked">Whether to lock aspect ratio.</param>
+    /// <param name="horizontalAlignment">The horizontal alignment for floating images.</param>
+    /// <param name="verticalAlignment">The vertical alignment for floating images.</param>
+    /// <param name="alternativeText">The alternative text for accessibility.</param>
+    /// <param name="title">The image title.</param>
+    /// <param name="linkUrl">The hyperlink URL for the image.</param>
+    /// <returns>OperationParameters configured for editing an image.</returns>
+    private static OperationParameters BuildEditParameters(int? imageIndex, int sectionIndex, double? width,
+        double? height, string alignment, string textWrapping, bool? aspectRatioLocked, string? horizontalAlignment,
+        string? verticalAlignment, string? alternativeText, string? title, string? linkUrl)
+    {
+        var parameters = new OperationParameters();
+        if (imageIndex.HasValue) parameters.Set("imageIndex", imageIndex.Value);
+        parameters.Set("sectionIndex", sectionIndex);
+        if (width.HasValue) parameters.Set("width", width.Value);
+        if (height.HasValue) parameters.Set("height", height.Value);
+        if (alignment != "left") parameters.Set("alignment", alignment);
+        if (textWrapping != "inline") parameters.Set("textWrapping", textWrapping);
+        if (aspectRatioLocked.HasValue) parameters.Set("aspectRatioLocked", aspectRatioLocked.Value);
+        if (horizontalAlignment != null) parameters.Set("horizontalAlignment", horizontalAlignment);
+        if (verticalAlignment != null) parameters.Set("verticalAlignment", verticalAlignment);
+        if (alternativeText != null) parameters.Set("alternativeText", alternativeText);
+        if (title != null) parameters.Set("title", title);
+        if (linkUrl != null) parameters.Set("linkUrl", linkUrl);
+        return parameters;
+    }
 
-            case "get":
-                parameters.Set("sectionIndex", sectionIndex);
-                break;
+    /// <summary>
+    ///     Builds parameters for the delete operation.
+    /// </summary>
+    /// <param name="imageIndex">The image index (0-based).</param>
+    /// <param name="sectionIndex">The section index (0-based).</param>
+    /// <returns>OperationParameters configured for deleting an image.</returns>
+    private static OperationParameters BuildDeleteParameters(int? imageIndex, int sectionIndex)
+    {
+        var parameters = new OperationParameters();
+        if (imageIndex.HasValue) parameters.Set("imageIndex", imageIndex.Value);
+        parameters.Set("sectionIndex", sectionIndex);
+        return parameters;
+    }
 
-            case "replace":
-                if (imageIndex.HasValue) parameters.Set("imageIndex", imageIndex.Value);
-                if (newImagePath != null) parameters.Set("newImagePath", newImagePath);
-                else if (imagePath != null) parameters.Set("imagePath", imagePath);
-                parameters.Set("preserveSize", preserveSize);
-                parameters.Set("smartFit", smartFit);
-                parameters.Set("preservePosition", preservePosition);
-                parameters.Set("sectionIndex", sectionIndex);
-                break;
+    /// <summary>
+    ///     Builds parameters for the get operation.
+    /// </summary>
+    /// <param name="sectionIndex">The section index (0-based).</param>
+    /// <returns>OperationParameters configured for getting image information.</returns>
+    private static OperationParameters BuildGetParameters(int sectionIndex)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("sectionIndex", sectionIndex);
+        return parameters;
+    }
 
-            case "extract":
-                if (outputDir != null) parameters.Set("outputDir", outputDir);
-                parameters.Set("prefix", prefix);
-                if (extractImageIndex.HasValue) parameters.Set("extractImageIndex", extractImageIndex.Value);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the replace operation.
+    /// </summary>
+    /// <param name="imageIndex">The image index (0-based).</param>
+    /// <param name="imagePath">The image file path (alternative to newImagePath).</param>
+    /// <param name="newImagePath">The new image file path.</param>
+    /// <param name="preserveSize">Whether to preserve original image size.</param>
+    /// <param name="smartFit">Whether to use smart fit to avoid distortion.</param>
+    /// <param name="preservePosition">Whether to preserve original image position.</param>
+    /// <param name="sectionIndex">The section index (0-based).</param>
+    /// <returns>OperationParameters configured for replacing an image.</returns>
+    private static OperationParameters BuildReplaceParameters(int? imageIndex, string? imagePath, string? newImagePath,
+        bool preserveSize, bool smartFit, bool preservePosition, int sectionIndex)
+    {
+        var parameters = new OperationParameters();
+        if (imageIndex.HasValue) parameters.Set("imageIndex", imageIndex.Value);
+        if (newImagePath != null) parameters.Set("newImagePath", newImagePath);
+        else if (imagePath != null) parameters.Set("imagePath", imagePath);
+        parameters.Set("preserveSize", preserveSize);
+        parameters.Set("smartFit", smartFit);
+        parameters.Set("preservePosition", preservePosition);
+        parameters.Set("sectionIndex", sectionIndex);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the extract operation.
+    /// </summary>
+    /// <param name="outputDir">The output directory for extracted images.</param>
+    /// <param name="prefix">The filename prefix for extracted images.</param>
+    /// <param name="extractImageIndex">The specific image index to extract (0-based).</param>
+    /// <returns>OperationParameters configured for extracting images.</returns>
+    private static OperationParameters BuildExtractParameters(string? outputDir, string prefix, int? extractImageIndex)
+    {
+        var parameters = new OperationParameters();
+        if (outputDir != null) parameters.Set("outputDir", outputDir);
+        parameters.Set("prefix", prefix);
+        if (extractImageIndex.HasValue) parameters.Set("extractImageIndex", extractImageIndex.Value);
         return parameters;
     }
 }

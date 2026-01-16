@@ -23,31 +23,28 @@ public class FilterByValueExcelHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with filter details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var range = parameters.GetRequired<string>("range");
-        var criteria = parameters.GetRequired<string>("criteria");
-        var columnIndex = parameters.GetOptional("columnIndex", 0);
-        var filterOperatorStr = parameters.GetOptional("filterOperator", "Equal");
+        var filterParams = ExtractFilterByValueParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, filterParams.SheetIndex);
 
-        ExcelHelper.CreateRange(worksheet.Cells, range);
-        worksheet.AutoFilter.Range = range;
+        ExcelHelper.CreateRange(worksheet.Cells, filterParams.Range);
+        worksheet.AutoFilter.Range = filterParams.Range;
 
-        var filterOperator = ExcelFilterHelper.ParseFilterOperator(filterOperatorStr);
+        var filterOperator = ExcelFilterHelper.ParseFilterOperator(filterParams.FilterOperator);
 
         if (filterOperator == FilterOperatorType.Equal)
         {
-            worksheet.AutoFilter.Filter(columnIndex, criteria);
+            worksheet.AutoFilter.Filter(filterParams.ColumnIndex, filterParams.Criteria);
         }
         else
         {
-            object criteriaValue = criteria;
-            if (ExcelFilterHelper.IsNumericOperator(filterOperator) && double.TryParse(criteria, out var numericValue))
+            object criteriaValue = filterParams.Criteria;
+            if (ExcelFilterHelper.IsNumericOperator(filterOperator) &&
+                double.TryParse(filterParams.Criteria, out var numericValue))
                 criteriaValue = numericValue;
 
-            worksheet.AutoFilter.Custom(columnIndex, filterOperator, criteriaValue);
+            worksheet.AutoFilter.Custom(filterParams.ColumnIndex, filterOperator, criteriaValue);
         }
 
         worksheet.AutoFilter.Refresh();
@@ -55,6 +52,37 @@ public class FilterByValueExcelHandler : OperationHandlerBase<Workbook>
         MarkModified(context);
 
         return Success(
-            $"Filter applied to column {columnIndex} with criteria '{criteria}' (operator: {filterOperatorStr}).");
+            $"Filter applied to column {filterParams.ColumnIndex} with criteria '{filterParams.Criteria}' (operator: {filterParams.FilterOperator}).");
     }
+
+    /// <summary>
+    ///     Extracts filter by value parameters from the operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted filter by value parameters.</returns>
+    private static FilterByValueParameters ExtractFilterByValueParameters(OperationParameters parameters)
+    {
+        return new FilterByValueParameters(
+            parameters.GetOptional("sheetIndex", 0),
+            parameters.GetRequired<string>("range"),
+            parameters.GetRequired<string>("criteria"),
+            parameters.GetOptional("columnIndex", 0),
+            parameters.GetOptional("filterOperator", "Equal")
+        );
+    }
+
+    /// <summary>
+    ///     Parameters for filter by value operation.
+    /// </summary>
+    /// <param name="SheetIndex">The worksheet index (0-based).</param>
+    /// <param name="Range">The range to apply filter to.</param>
+    /// <param name="Criteria">The filter criteria value.</param>
+    /// <param name="ColumnIndex">The column index to filter (0-based).</param>
+    /// <param name="FilterOperator">The filter operator type.</param>
+    private record FilterByValueParameters(
+        int SheetIndex,
+        string Range,
+        string Criteria,
+        int ColumnIndex,
+        string FilterOperator);
 }

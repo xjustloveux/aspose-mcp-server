@@ -22,84 +22,112 @@ public static class PptHyperlinkHelper
         {
             if (slide.Shapes[shapeIndex] is not IAutoShape autoShape) continue;
 
-            if (autoShape.HyperlinkClick != null)
-            {
-                var targetSlide = autoShape.HyperlinkClick.TargetSlide;
-                var url = autoShape.HyperlinkClick.ExternalUrl
-                          ?? (targetSlide != null
-                              ? $"Slide {presentation.Slides.IndexOf(targetSlide)}"
-                              : "Internal link");
-
-                hyperlinksList.Add(new
-                {
-                    shapeIndex,
-                    level = "shape",
-                    triggerType = "click",
-                    url
-                });
-            }
-
-            if (autoShape.HyperlinkMouseOver != null)
-            {
-                var targetSlide = autoShape.HyperlinkMouseOver.TargetSlide;
-                var url = autoShape.HyperlinkMouseOver.ExternalUrl
-                          ?? (targetSlide != null
-                              ? $"Slide {presentation.Slides.IndexOf(targetSlide)}"
-                              : "Internal link");
-
-                hyperlinksList.Add(new
-                {
-                    shapeIndex,
-                    level = "shape",
-                    triggerType = "mouseover",
-                    url
-                });
-            }
-
-            if (autoShape.TextFrame == null) continue;
-
-            foreach (var paragraph in autoShape.TextFrame.Paragraphs)
-            foreach (var portion in paragraph.Portions)
-            {
-                if (portion.PortionFormat.HyperlinkClick != null)
-                {
-                    var targetSlide = portion.PortionFormat.HyperlinkClick.TargetSlide;
-                    var url = portion.PortionFormat.HyperlinkClick.ExternalUrl
-                              ?? (targetSlide != null
-                                  ? $"Slide {presentation.Slides.IndexOf(targetSlide)}"
-                                  : "Internal link");
-
-                    hyperlinksList.Add(new
-                    {
-                        shapeIndex,
-                        level = "text",
-                        triggerType = "click",
-                        text = portion.Text,
-                        url
-                    });
-                }
-
-                if (portion.PortionFormat.HyperlinkMouseOver != null)
-                {
-                    var targetSlide = portion.PortionFormat.HyperlinkMouseOver.TargetSlide;
-                    var url = portion.PortionFormat.HyperlinkMouseOver.ExternalUrl
-                              ?? (targetSlide != null
-                                  ? $"Slide {presentation.Slides.IndexOf(targetSlide)}"
-                                  : "Internal link");
-
-                    hyperlinksList.Add(new
-                    {
-                        shapeIndex,
-                        level = "text",
-                        triggerType = "mouseover",
-                        text = portion.Text,
-                        url
-                    });
-                }
-            }
+            AddShapeLevelHyperlinks(presentation, autoShape, shapeIndex, hyperlinksList);
+            AddTextLevelHyperlinks(presentation, autoShape, shapeIndex, hyperlinksList);
         }
 
         return hyperlinksList;
+    }
+
+    /// <summary>
+    ///     Adds shape-level hyperlinks to the hyperlinks list.
+    /// </summary>
+    /// <param name="presentation">The presentation object.</param>
+    /// <param name="autoShape">The AutoShape to check.</param>
+    /// <param name="shapeIndex">The shape index.</param>
+    /// <param name="hyperlinksList">The list to add hyperlinks to.</param>
+    private static void AddShapeLevelHyperlinks(IPresentation presentation, IAutoShape autoShape,
+        int shapeIndex, List<object> hyperlinksList)
+    {
+        if (autoShape.HyperlinkClick != null)
+            hyperlinksList.Add(CreateShapeHyperlinkInfo(presentation, autoShape.HyperlinkClick, shapeIndex, "click"));
+
+        if (autoShape.HyperlinkMouseOver != null)
+            hyperlinksList.Add(CreateShapeHyperlinkInfo(presentation, autoShape.HyperlinkMouseOver, shapeIndex,
+                "mouseover"));
+    }
+
+    /// <summary>
+    ///     Adds text-level hyperlinks to the hyperlinks list.
+    /// </summary>
+    /// <param name="presentation">The presentation object.</param>
+    /// <param name="autoShape">The AutoShape to check.</param>
+    /// <param name="shapeIndex">The shape index.</param>
+    /// <param name="hyperlinksList">The list to add hyperlinks to.</param>
+    private static void AddTextLevelHyperlinks(IPresentation presentation, IAutoShape autoShape,
+        int shapeIndex, List<object> hyperlinksList)
+    {
+        if (autoShape.TextFrame == null) return;
+
+        foreach (var paragraph in autoShape.TextFrame.Paragraphs)
+        foreach (var portion in paragraph.Portions)
+        {
+            if (portion.PortionFormat.HyperlinkClick != null)
+                hyperlinksList.Add(CreateTextHyperlinkInfo(presentation, portion.PortionFormat.HyperlinkClick,
+                    shapeIndex, "click", portion.Text));
+
+            if (portion.PortionFormat.HyperlinkMouseOver != null)
+                hyperlinksList.Add(CreateTextHyperlinkInfo(presentation, portion.PortionFormat.HyperlinkMouseOver,
+                    shapeIndex, "mouseover", portion.Text));
+        }
+    }
+
+    /// <summary>
+    ///     Creates a shape-level hyperlink info object.
+    /// </summary>
+    /// <param name="presentation">The presentation object.</param>
+    /// <param name="hyperlink">The hyperlink.</param>
+    /// <param name="shapeIndex">The shape index.</param>
+    /// <param name="triggerType">The trigger type (click or mouseover).</param>
+    /// <returns>An anonymous object containing hyperlink information.</returns>
+    private static object CreateShapeHyperlinkInfo(IPresentation presentation, IHyperlink hyperlink,
+        int shapeIndex, string triggerType)
+    {
+        return new
+        {
+            shapeIndex,
+            level = "shape",
+            triggerType,
+            url = GetHyperlinkUrl(presentation, hyperlink)
+        };
+    }
+
+    /// <summary>
+    ///     Creates a text-level hyperlink info object.
+    /// </summary>
+    /// <param name="presentation">The presentation object.</param>
+    /// <param name="hyperlink">The hyperlink.</param>
+    /// <param name="shapeIndex">The shape index.</param>
+    /// <param name="triggerType">The trigger type (click or mouseover).</param>
+    /// <param name="text">The text content with the hyperlink.</param>
+    /// <returns>An anonymous object containing hyperlink information.</returns>
+    private static object CreateTextHyperlinkInfo(IPresentation presentation, IHyperlink hyperlink,
+        int shapeIndex, string triggerType, string text)
+    {
+        return new
+        {
+            shapeIndex,
+            level = "text",
+            triggerType,
+            text,
+            url = GetHyperlinkUrl(presentation, hyperlink)
+        };
+    }
+
+    /// <summary>
+    ///     Gets the URL string from a hyperlink.
+    /// </summary>
+    /// <param name="presentation">The presentation object.</param>
+    /// <param name="hyperlink">The hyperlink.</param>
+    /// <returns>The URL string or a description of the internal link.</returns>
+    private static string GetHyperlinkUrl(IPresentation presentation, IHyperlink hyperlink)
+    {
+        if (!string.IsNullOrEmpty(hyperlink.ExternalUrl))
+            return hyperlink.ExternalUrl;
+
+        return hyperlink.TargetSlide != null
+            ? $"Slide {presentation.Slides.IndexOf(hyperlink.TargetSlide)}"
+            : "Internal link";
     }
 
     /// <summary>

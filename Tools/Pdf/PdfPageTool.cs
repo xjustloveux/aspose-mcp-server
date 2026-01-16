@@ -121,7 +121,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -133,35 +133,71 @@ Usage examples:
         int rotation,
         int[]? pageIndices)
     {
-        var parameters = new OperationParameters();
-
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "add":
-                parameters.Set("count", count);
-                if (insertAt.HasValue) parameters.Set("insertAt", insertAt.Value);
-                if (width.HasValue) parameters.Set("width", width.Value);
-                if (height.HasValue) parameters.Set("height", height.Value);
-                break;
+            "add" => BuildAddParameters(count, insertAt, width, height),
+            "delete" => BuildDeleteParameters(pageIndex),
+            "rotate" => BuildRotateParameters(pageIndex, rotation, pageIndices),
+            "get_details" => BuildGetDetailsParameters(pageIndex),
+            _ => new OperationParameters()
+        };
+    }
 
-            case "delete":
-                parameters.Set("pageIndex", pageIndex);
-                break;
+    /// <summary>
+    ///     Builds parameters for the add page operation.
+    /// </summary>
+    /// <param name="count">The number of pages to add.</param>
+    /// <param name="insertAt">The position to insert pages (1-based).</param>
+    /// <param name="width">The page width in points.</param>
+    /// <param name="height">The page height in points.</param>
+    /// <returns>OperationParameters configured for adding pages.</returns>
+    private static OperationParameters BuildAddParameters(int count, int? insertAt, double? width, double? height)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("count", count);
+        if (insertAt.HasValue) parameters.Set("insertAt", insertAt.Value);
+        if (width.HasValue) parameters.Set("width", width.Value);
+        if (height.HasValue) parameters.Set("height", height.Value);
+        return parameters;
+    }
 
-            case "rotate":
-                parameters.Set("pageIndex", pageIndex);
-                parameters.Set("rotation", rotation);
-                if (pageIndices != null) parameters.Set("pageIndices", pageIndices);
-                break;
+    /// <summary>
+    ///     Builds parameters for the delete page operation.
+    /// </summary>
+    /// <param name="pageIndex">The page index (1-based) to delete.</param>
+    /// <returns>OperationParameters configured for deleting a page.</returns>
+    private static OperationParameters BuildDeleteParameters(int pageIndex)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("pageIndex", pageIndex);
+        return parameters;
+    }
 
-            case "get_details":
-                parameters.Set("pageIndex", pageIndex);
-                break;
+    /// <summary>
+    ///     Builds parameters for the rotate page operation.
+    /// </summary>
+    /// <param name="pageIndex">The page index (1-based) to rotate.</param>
+    /// <param name="rotation">The rotation angle in degrees (0, 90, 180, 270).</param>
+    /// <param name="pageIndices">Array of page indices (1-based) to rotate.</param>
+    /// <returns>OperationParameters configured for rotating pages.</returns>
+    private static OperationParameters BuildRotateParameters(int pageIndex, int rotation, int[]? pageIndices)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("pageIndex", pageIndex);
+        parameters.Set("rotation", rotation);
+        if (pageIndices != null) parameters.Set("pageIndices", pageIndices);
+        return parameters;
+    }
 
-            case "get_info":
-                break;
-        }
-
+    /// <summary>
+    ///     Builds parameters for the get page details operation.
+    /// </summary>
+    /// <param name="pageIndex">The page index (1-based) to get details for.</param>
+    /// <returns>OperationParameters configured for getting page details.</returns>
+    private static OperationParameters BuildGetDetailsParameters(int pageIndex)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("pageIndex", pageIndex);
         return parameters;
     }
 }

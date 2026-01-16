@@ -22,7 +22,7 @@ public class GetWordListFormatHandler : OperationHandlerBase<Document>
     /// <returns>JSON string containing list format information.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var paragraphIndex = parameters.GetOptional<int?>("paragraphIndex");
+        var p = ExtractGetListFormatParameters(parameters);
 
         var doc = context.Document;
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
@@ -39,20 +39,20 @@ public class GetWordListFormatHandler : OperationHandlerBase<Document>
                 listCounters[listId]++;
             }
 
-        if (paragraphIndex.HasValue)
+        if (p.ParagraphIndex.HasValue)
         {
-            if (paragraphIndex.Value < 0 || paragraphIndex.Value >= paragraphs.Count)
+            if (p.ParagraphIndex.Value < 0 || p.ParagraphIndex.Value >= paragraphs.Count)
                 throw new ArgumentException(
-                    $"Paragraph index {paragraphIndex.Value} is out of range (document has {paragraphs.Count} paragraphs)");
+                    $"Paragraph index {p.ParagraphIndex.Value} is out of range (document has {paragraphs.Count} paragraphs)");
 
-            var para = paragraphs[paragraphIndex.Value];
-            var listInfo = WordListHelper.BuildListFormatInfo(para, paragraphIndex.Value, listItemIndices);
+            var para = paragraphs[p.ParagraphIndex.Value];
+            var listInfo = WordListHelper.BuildListFormatInfo(para, p.ParagraphIndex.Value, listItemIndices);
 
             return JsonResult(listInfo);
         }
 
         var listParagraphs = paragraphs
-            .Where(p => p.ListFormat is { IsListItem: true })
+            .Where(para => para.ListFormat is { IsListItem: true })
             .ToList();
 
         if (listParagraphs.Count == 0)
@@ -81,4 +81,12 @@ public class GetWordListFormatHandler : OperationHandlerBase<Document>
 
         return JsonResult(result);
     }
+
+    private static GetListFormatParameters ExtractGetListFormatParameters(OperationParameters parameters)
+    {
+        return new GetListFormatParameters(
+            parameters.GetOptional<int?>("paragraphIndex"));
+    }
+
+    private record GetListFormatParameters(int? ParagraphIndex);
 }

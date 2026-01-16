@@ -23,36 +23,56 @@ public class AddExcelImageHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with image details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var imagePath = parameters.GetRequired<string>("imagePath");
-        var cell = parameters.GetRequired<string>("cell");
-        var width = parameters.GetOptional<int?>("width");
-        var height = parameters.GetOptional<int?>("height");
-        var keepAspectRatio = parameters.GetOptional("keepAspectRatio", true);
+        var addParams = ExtractAddParameters(parameters);
 
-        SecurityHelper.ValidateFilePath(imagePath, "imagePath", true);
+        SecurityHelper.ValidateFilePath(addParams.ImagePath, "imagePath", true);
 
-        if (!File.Exists(imagePath))
-            throw new FileNotFoundException($"Image file not found: {imagePath}");
+        if (!File.Exists(addParams.ImagePath))
+            throw new FileNotFoundException($"Image file not found: {addParams.ImagePath}");
 
-        ExcelImageHelper.ValidateImageFormat(imagePath);
+        ExcelImageHelper.ValidateImageFormat(addParams.ImagePath);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var cellObj = worksheet.Cells[cell];
+        var worksheet = ExcelHelper.GetWorksheet(workbook, addParams.SheetIndex);
+        var cellObj = worksheet.Cells[addParams.Cell];
 
-        var pictureIndex = worksheet.Pictures.Add(cellObj.Row, cellObj.Column, imagePath);
+        var pictureIndex = worksheet.Pictures.Add(cellObj.Row, cellObj.Column, addParams.ImagePath);
         var picture = worksheet.Pictures[pictureIndex];
 
-        if (width.HasValue || height.HasValue)
+        if (addParams.Width.HasValue || addParams.Height.HasValue)
         {
-            picture.IsLockAspectRatio = keepAspectRatio;
-            if (width.HasValue) picture.Width = width.Value;
-            if (height.HasValue) picture.Height = height.Value;
+            picture.IsLockAspectRatio = addParams.KeepAspectRatio;
+            if (addParams.Width.HasValue) picture.Width = addParams.Width.Value;
+            if (addParams.Height.HasValue) picture.Height = addParams.Height.Value;
         }
 
         MarkModified(context);
 
-        return Success($"Image added to cell {cell} (size: {picture.Width}x{picture.Height}).");
+        return Success($"Image added to cell {addParams.Cell} (size: {picture.Width}x{picture.Height}).");
     }
+
+    private static AddParameters ExtractAddParameters(OperationParameters parameters)
+    {
+        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
+        var imagePath = parameters.GetOptional<string?>("imagePath");
+        var cell = parameters.GetOptional<string?>("cell");
+        var width = parameters.GetOptional<int?>("width");
+        var height = parameters.GetOptional<int?>("height");
+        var keepAspectRatio = parameters.GetOptional("keepAspectRatio", true);
+
+        if (string.IsNullOrEmpty(imagePath))
+            throw new ArgumentException("imagePath is required for add operation");
+        if (string.IsNullOrEmpty(cell))
+            throw new ArgumentException("cell is required for add operation");
+
+        return new AddParameters(sheetIndex, imagePath, cell, width, height, keepAspectRatio);
+    }
+
+    private record AddParameters(
+        int SheetIndex,
+        string ImagePath,
+        string Cell,
+        int? Width,
+        int? Height,
+        bool KeepAspectRatio);
 }

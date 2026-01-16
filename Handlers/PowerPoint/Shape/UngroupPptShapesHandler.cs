@@ -22,15 +22,14 @@ public class UngroupPptShapesHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with ungroup details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetRequired<int>("slideIndex");
-        var shapeIndex = parameters.GetRequired<int>("shapeIndex");
+        var p = ExtractUngroupPptShapesParameters(parameters);
 
         var presentation = context.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-        var shape = PowerPointHelper.GetShape(slide, shapeIndex);
+        var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
+        var shape = PowerPointHelper.GetShape(slide, p.ShapeIndex);
 
         if (shape is not IGroupShape groupShape)
-            throw new ArgumentException($"Shape at index {shapeIndex} is not a group");
+            throw new ArgumentException($"Shape at index {p.ShapeIndex} is not a group");
 
         var groupIndex = slide.Shapes.IndexOf(groupShape);
         var shapesInGroup = groupShape.Shapes.ToList();
@@ -46,6 +45,25 @@ public class UngroupPptShapesHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Ungrouped {shapesInGroup.Count} shapes on slide {slideIndex}.");
+        return Success($"Ungrouped {shapesInGroup.Count} shapes on slide {p.SlideIndex}.");
     }
+
+    /// <summary>
+    ///     Extracts parameters for ungroup shapes operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static UngroupPptShapesParameters ExtractUngroupPptShapesParameters(OperationParameters parameters)
+    {
+        return new UngroupPptShapesParameters(
+            parameters.GetRequired<int>("slideIndex"),
+            parameters.GetRequired<int>("shapeIndex"));
+    }
+
+    /// <summary>
+    ///     Parameters for ungroup shapes operation.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index (0-based).</param>
+    /// <param name="ShapeIndex">The group shape index to ungroup.</param>
+    private record UngroupPptShapesParameters(int SlideIndex, int ShapeIndex);
 }

@@ -25,19 +25,28 @@ public class GroupExcelRowsHandler : OperationHandlerBase<Workbook>
     {
         ExcelGroupHelper.ValidateRequiredParams(Operation, parameters, "startRow", "endRow");
 
+        var p = ExtractGroupRowsParameters(parameters);
+
+        ExcelGroupHelper.ValidateRowRange(p.StartRow, p.EndRow);
+
+        var workbook = context.Document;
+        var worksheet = ExcelHelper.GetWorksheet(workbook, p.SheetIndex);
+        worksheet.Cells.GroupRows(p.StartRow, p.EndRow, p.IsCollapsed);
+
+        MarkModified(context);
+
+        return Success($"Rows {p.StartRow}-{p.EndRow} grouped in sheet {p.SheetIndex}.");
+    }
+
+    private static GroupRowsParameters ExtractGroupRowsParameters(OperationParameters parameters)
+    {
         var sheetIndex = parameters.GetOptional("sheetIndex", 0);
         var startRow = parameters.GetRequired<int>("startRow");
         var endRow = parameters.GetRequired<int>("endRow");
         var isCollapsed = parameters.GetOptional("isCollapsed", false);
 
-        ExcelGroupHelper.ValidateRowRange(startRow, endRow);
-
-        var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        worksheet.Cells.GroupRows(startRow, endRow, isCollapsed);
-
-        MarkModified(context);
-
-        return Success($"Rows {startRow}-{endRow} grouped in sheet {sheetIndex}.");
+        return new GroupRowsParameters(sheetIndex, startRow, endRow, isCollapsed);
     }
+
+    private record GroupRowsParameters(int SheetIndex, int StartRow, int EndRow, bool IsCollapsed);
 }

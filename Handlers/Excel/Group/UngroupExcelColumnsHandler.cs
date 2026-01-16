@@ -25,18 +25,27 @@ public class UngroupExcelColumnsHandler : OperationHandlerBase<Workbook>
     {
         ExcelGroupHelper.ValidateRequiredParams(Operation, parameters, "startColumn", "endColumn");
 
+        var p = ExtractUngroupColumnsParameters(parameters);
+
+        ExcelGroupHelper.ValidateColumnRange(p.StartColumn, p.EndColumn);
+
+        var workbook = context.Document;
+        var worksheet = ExcelHelper.GetWorksheet(workbook, p.SheetIndex);
+        worksheet.Cells.UngroupColumns(p.StartColumn, p.EndColumn);
+
+        MarkModified(context);
+
+        return Success($"Columns {p.StartColumn}-{p.EndColumn} ungrouped in sheet {p.SheetIndex}.");
+    }
+
+    private static UngroupColumnsParameters ExtractUngroupColumnsParameters(OperationParameters parameters)
+    {
         var sheetIndex = parameters.GetOptional("sheetIndex", 0);
         var startColumn = parameters.GetRequired<int>("startColumn");
         var endColumn = parameters.GetRequired<int>("endColumn");
 
-        ExcelGroupHelper.ValidateColumnRange(startColumn, endColumn);
-
-        var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        worksheet.Cells.UngroupColumns(startColumn, endColumn);
-
-        MarkModified(context);
-
-        return Success($"Columns {startColumn}-{endColumn} ungrouped in sheet {sheetIndex}.");
+        return new UngroupColumnsParameters(sheetIndex, startColumn, endColumn);
     }
+
+    private record UngroupColumnsParameters(int SheetIndex, int StartColumn, int EndColumn);
 }

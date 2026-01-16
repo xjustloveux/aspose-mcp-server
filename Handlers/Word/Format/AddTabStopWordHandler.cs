@@ -22,15 +22,12 @@ public class AddTabStopWordHandler : OperationHandlerBase<Document>
     /// <returns>Success message.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var paragraphIndex = parameters.GetOptional("paragraphIndex", 0);
-        var tabPosition = parameters.GetOptional("tabPosition", 0.0);
-        var tabAlignmentStr = parameters.GetOptional("tabAlignment", "left");
-        var tabLeaderStr = parameters.GetOptional("tabLeader", "none");
+        var p = ExtractAddTabStopParameters(parameters);
 
         var doc = context.Document;
-        var para = WordFormatHelper.GetTargetParagraph(doc, paragraphIndex);
+        var para = WordFormatHelper.GetTargetParagraph(doc, p.ParagraphIndex);
 
-        var tabAlignment = tabAlignmentStr.ToLower() switch
+        var tabAlignment = p.TabAlignment.ToLower() switch
         {
             "center" => TabAlignment.Center,
             "right" => TabAlignment.Right,
@@ -39,7 +36,7 @@ public class AddTabStopWordHandler : OperationHandlerBase<Document>
             _ => TabAlignment.Left
         };
 
-        var tabLeader = tabLeaderStr.ToLower() switch
+        var tabLeader = p.TabLeader.ToLower() switch
         {
             "dots" => TabLeader.Dots,
             "dashes" => TabLeader.Dashes,
@@ -49,9 +46,24 @@ public class AddTabStopWordHandler : OperationHandlerBase<Document>
             _ => TabLeader.None
         };
 
-        para.ParagraphFormat.TabStops.Add(new TabStop(tabPosition, tabAlignment, tabLeader));
+        para.ParagraphFormat.TabStops.Add(new TabStop(p.TabPosition, tabAlignment, tabLeader));
 
         MarkModified(context);
-        return Success($"Tab stop added at {tabPosition}pt ({tabAlignmentStr}, {tabLeaderStr})");
+        return Success($"Tab stop added at {p.TabPosition}pt ({p.TabAlignment}, {p.TabLeader})");
     }
+
+    private static AddTabStopParameters ExtractAddTabStopParameters(OperationParameters parameters)
+    {
+        return new AddTabStopParameters(
+            parameters.GetOptional("paragraphIndex", 0),
+            parameters.GetOptional("tabPosition", 0.0),
+            parameters.GetOptional("tabAlignment", "left"),
+            parameters.GetOptional("tabLeader", "none"));
+    }
+
+    private record AddTabStopParameters(
+        int ParagraphIndex,
+        double TabPosition,
+        string TabAlignment,
+        string TabLeader);
 }

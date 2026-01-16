@@ -167,7 +167,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -189,59 +189,158 @@ Usage examples:
     {
         var parameters = new OperationParameters();
 
-        switch (operation.ToLower())
+        return operation.ToLower() switch
         {
-            case "set_margins":
-                if (top.HasValue) parameters.Set("top", top.Value);
-                if (bottom.HasValue) parameters.Set("bottom", bottom.Value);
-                if (left.HasValue) parameters.Set("left", left.Value);
-                if (right.HasValue) parameters.Set("right", right.Value);
-                if (sectionIndex.HasValue) parameters.Set("sectionIndex", sectionIndex.Value);
-                if (sectionIndices != null) parameters.Set("sectionIndices", sectionIndices);
-                break;
+            "set_margins" => BuildSetMarginsParameters(parameters, top, bottom, left, right, sectionIndex,
+                sectionIndices),
+            "set_orientation" => BuildSetOrientationParameters(parameters, orientation, sectionIndex, sectionIndices),
+            "set_size" => BuildSetSizeParameters(parameters, width, height, paperSize, sectionIndex, sectionIndices),
+            "set_page_number" => BuildSetPageNumberParameters(parameters, pageNumberFormat, startingPageNumber,
+                sectionIndex),
+            "set_page_setup" => BuildSetPageSetupParameters(parameters, top, bottom, left, right, orientation,
+                sectionIndex),
+            "delete_page" => BuildDeletePageParameters(parameters, pageIndex),
+            "insert_blank_page" => BuildInsertBlankPageParameters(parameters, insertAtPageIndex),
+            "add_page_break" => BuildAddPageBreakParameters(parameters, paragraphIndex),
+            _ => parameters
+        };
+    }
 
-            case "set_orientation":
-                if (orientation != null) parameters.Set("orientation", orientation);
-                if (sectionIndex.HasValue) parameters.Set("sectionIndex", sectionIndex.Value);
-                if (sectionIndices != null) parameters.Set("sectionIndices", sectionIndices);
-                break;
+    /// <summary>
+    ///     Builds parameters for the set margins operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="top">The top margin in points (72 pts = 1 inch).</param>
+    /// <param name="bottom">The bottom margin in points.</param>
+    /// <param name="left">The left margin in points.</param>
+    /// <param name="right">The right margin in points.</param>
+    /// <param name="sectionIndex">The section index (0-based).</param>
+    /// <param name="sectionIndices">The array of section indices.</param>
+    /// <returns>OperationParameters configured for the set margins operation.</returns>
+    private static OperationParameters BuildSetMarginsParameters(OperationParameters parameters, double? top,
+        double? bottom, double? left, double? right, int? sectionIndex, JsonArray? sectionIndices)
+    {
+        if (top.HasValue) parameters.Set("top", top.Value);
+        if (bottom.HasValue) parameters.Set("bottom", bottom.Value);
+        if (left.HasValue) parameters.Set("left", left.Value);
+        if (right.HasValue) parameters.Set("right", right.Value);
+        if (sectionIndex.HasValue) parameters.Set("sectionIndex", sectionIndex.Value);
+        if (sectionIndices != null) parameters.Set("sectionIndices", sectionIndices);
+        return parameters;
+    }
 
-            case "set_size":
-                if (width.HasValue) parameters.Set("width", width.Value);
-                if (height.HasValue) parameters.Set("height", height.Value);
-                if (paperSize != null) parameters.Set("paperSize", paperSize);
-                if (sectionIndex.HasValue) parameters.Set("sectionIndex", sectionIndex.Value);
-                if (sectionIndices != null) parameters.Set("sectionIndices", sectionIndices);
-                break;
+    /// <summary>
+    ///     Builds parameters for the set orientation operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="orientation">The page orientation: 'Portrait' or 'Landscape'.</param>
+    /// <param name="sectionIndex">The section index (0-based).</param>
+    /// <param name="sectionIndices">The array of section indices.</param>
+    /// <returns>OperationParameters configured for the set orientation operation.</returns>
+    private static OperationParameters BuildSetOrientationParameters(OperationParameters parameters,
+        string? orientation, int? sectionIndex, JsonArray? sectionIndices)
+    {
+        if (orientation != null) parameters.Set("orientation", orientation);
+        if (sectionIndex.HasValue) parameters.Set("sectionIndex", sectionIndex.Value);
+        if (sectionIndices != null) parameters.Set("sectionIndices", sectionIndices);
+        return parameters;
+    }
 
-            case "set_page_number":
-                if (pageNumberFormat != null) parameters.Set("pageNumberFormat", pageNumberFormat);
-                if (startingPageNumber.HasValue) parameters.Set("startingPageNumber", startingPageNumber.Value);
-                if (sectionIndex.HasValue) parameters.Set("sectionIndex", sectionIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the set page size operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="width">The page width in points.</param>
+    /// <param name="height">The page height in points.</param>
+    /// <param name="paperSize">The predefined paper size: 'A4', 'Letter', 'Legal', 'A3', 'A5'.</param>
+    /// <param name="sectionIndex">The section index (0-based).</param>
+    /// <param name="sectionIndices">The array of section indices.</param>
+    /// <returns>OperationParameters configured for the set size operation.</returns>
+    private static OperationParameters BuildSetSizeParameters(OperationParameters parameters, double? width,
+        double? height, string? paperSize, int? sectionIndex, JsonArray? sectionIndices)
+    {
+        if (width.HasValue) parameters.Set("width", width.Value);
+        if (height.HasValue) parameters.Set("height", height.Value);
+        if (paperSize != null) parameters.Set("paperSize", paperSize);
+        if (sectionIndex.HasValue) parameters.Set("sectionIndex", sectionIndex.Value);
+        if (sectionIndices != null) parameters.Set("sectionIndices", sectionIndices);
+        return parameters;
+    }
 
-            case "set_page_setup":
-                if (top.HasValue) parameters.Set("top", top.Value);
-                if (bottom.HasValue) parameters.Set("bottom", bottom.Value);
-                if (left.HasValue) parameters.Set("left", left.Value);
-                if (right.HasValue) parameters.Set("right", right.Value);
-                if (orientation != null) parameters.Set("orientation", orientation);
-                if (sectionIndex.HasValue) parameters.Set("sectionIndex", sectionIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the set page number operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="pageNumberFormat">The page number format: 'arabic', 'roman', 'letter'.</param>
+    /// <param name="startingPageNumber">The starting page number.</param>
+    /// <param name="sectionIndex">The section index (0-based).</param>
+    /// <returns>OperationParameters configured for the set page number operation.</returns>
+    private static OperationParameters BuildSetPageNumberParameters(OperationParameters parameters,
+        string? pageNumberFormat, int? startingPageNumber, int? sectionIndex)
+    {
+        if (pageNumberFormat != null) parameters.Set("pageNumberFormat", pageNumberFormat);
+        if (startingPageNumber.HasValue) parameters.Set("startingPageNumber", startingPageNumber.Value);
+        if (sectionIndex.HasValue) parameters.Set("sectionIndex", sectionIndex.Value);
+        return parameters;
+    }
 
-            case "delete_page":
-                if (pageIndex.HasValue) parameters.Set("pageIndex", pageIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the set page setup operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="top">The top margin in points.</param>
+    /// <param name="bottom">The bottom margin in points.</param>
+    /// <param name="left">The left margin in points.</param>
+    /// <param name="right">The right margin in points.</param>
+    /// <param name="orientation">The page orientation: 'Portrait' or 'Landscape'.</param>
+    /// <param name="sectionIndex">The section index (0-based).</param>
+    /// <returns>OperationParameters configured for the set page setup operation.</returns>
+    private static OperationParameters BuildSetPageSetupParameters(OperationParameters parameters, double? top,
+        double? bottom, double? left, double? right, string? orientation, int? sectionIndex)
+    {
+        if (top.HasValue) parameters.Set("top", top.Value);
+        if (bottom.HasValue) parameters.Set("bottom", bottom.Value);
+        if (left.HasValue) parameters.Set("left", left.Value);
+        if (right.HasValue) parameters.Set("right", right.Value);
+        if (orientation != null) parameters.Set("orientation", orientation);
+        if (sectionIndex.HasValue) parameters.Set("sectionIndex", sectionIndex.Value);
+        return parameters;
+    }
 
-            case "insert_blank_page":
-                if (insertAtPageIndex.HasValue) parameters.Set("insertAtPageIndex", insertAtPageIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the delete page operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="pageIndex">The page index to delete (0-based).</param>
+    /// <returns>OperationParameters configured for the delete page operation.</returns>
+    private static OperationParameters BuildDeletePageParameters(OperationParameters parameters, int? pageIndex)
+    {
+        if (pageIndex.HasValue) parameters.Set("pageIndex", pageIndex.Value);
+        return parameters;
+    }
 
-            case "add_page_break":
-                if (paragraphIndex.HasValue) parameters.Set("paragraphIndex", paragraphIndex.Value);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the insert blank page operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="insertAtPageIndex">The page index to insert blank page at (0-based).</param>
+    /// <returns>OperationParameters configured for the insert blank page operation.</returns>
+    private static OperationParameters BuildInsertBlankPageParameters(OperationParameters parameters,
+        int? insertAtPageIndex)
+    {
+        if (insertAtPageIndex.HasValue) parameters.Set("insertAtPageIndex", insertAtPageIndex.Value);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the add page break operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="paragraphIndex">The paragraph index to insert page break after (0-based).</param>
+    /// <returns>OperationParameters configured for the add page break operation.</returns>
+    private static OperationParameters BuildAddPageBreakParameters(OperationParameters parameters, int? paragraphIndex)
+    {
+        if (paragraphIndex.HasValue) parameters.Set("paragraphIndex", paragraphIndex.Value);
         return parameters;
     }
 }

@@ -22,20 +22,39 @@ public class DeletePptImageHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with deletion details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetRequired<int>("slideIndex");
-        var imageIndex = parameters.GetRequired<int>("imageIndex");
+        var p = ExtractDeleteParameters(parameters);
 
         var presentation = context.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+        var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
         var pictures = PptImageHelper.GetPictureFrames(slide);
 
-        PptImageHelper.ValidateImageIndex(imageIndex, slideIndex, pictures.Count);
+        PptImageHelper.ValidateImageIndex(p.ImageIndex, p.SlideIndex, pictures.Count);
 
-        var pictureFrame = pictures[imageIndex];
+        var pictureFrame = pictures[p.ImageIndex];
         slide.Shapes.Remove(pictureFrame);
 
         MarkModified(context);
 
-        return Success($"Image {imageIndex} deleted from slide {slideIndex}.");
+        return Success($"Image {p.ImageIndex} deleted from slide {p.SlideIndex}.");
     }
+
+    /// <summary>
+    ///     Extracts delete parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted delete parameters.</returns>
+    private static DeleteParameters ExtractDeleteParameters(OperationParameters parameters)
+    {
+        return new DeleteParameters(
+            parameters.GetRequired<int>("slideIndex"),
+            parameters.GetRequired<int>("imageIndex")
+        );
+    }
+
+    /// <summary>
+    ///     Record for holding delete image parameters.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index.</param>
+    /// <param name="ImageIndex">The image index.</param>
+    private record DeleteParameters(int SlideIndex, int ImageIndex);
 }

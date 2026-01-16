@@ -23,22 +23,20 @@ public class CopyWordStylesHandler : OperationHandlerBase<Document>
     /// <returns>Success message with copy details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var sourceDocument = parameters.GetRequired<string>("sourceDocument");
-        var styleNames = parameters.GetOptional<string[]?>("styleNames");
-        var overwriteExisting = parameters.GetOptional("overwriteExisting", false);
+        var p = ExtractCopyWordStylesParameters(parameters);
 
-        if (string.IsNullOrEmpty(sourceDocument))
+        if (string.IsNullOrEmpty(p.SourceDocument))
             throw new ArgumentException("sourceDocument is required for copy_styles operation");
 
-        SecurityHelper.ValidateFilePath(sourceDocument, "sourceDocument", true);
+        SecurityHelper.ValidateFilePath(p.SourceDocument, "sourceDocument", true);
 
-        if (!System.IO.File.Exists(sourceDocument))
-            throw new FileNotFoundException($"Source document not found: {sourceDocument}");
+        if (!System.IO.File.Exists(p.SourceDocument))
+            throw new FileNotFoundException($"Source document not found: {p.SourceDocument}");
 
         var targetDoc = context.Document;
-        var sourceDoc = new Document(sourceDocument);
+        var sourceDoc = new Document(p.SourceDocument);
 
-        var styleNamesList = styleNames?.ToList() ?? [];
+        var styleNamesList = p.StyleNames?.ToList() ?? [];
         var copyAll = styleNamesList.Count == 0;
         var copiedCount = 0;
         var skippedCount = 0;
@@ -50,7 +48,7 @@ public class CopyWordStylesHandler : OperationHandlerBase<Document>
 
             var existingStyle = targetDoc.Styles[sourceStyle.Name];
 
-            if (existingStyle != null && !overwriteExisting)
+            if (existingStyle != null && !p.OverwriteExisting)
             {
                 skippedCount++;
                 continue;
@@ -58,7 +56,7 @@ public class CopyWordStylesHandler : OperationHandlerBase<Document>
 
             try
             {
-                if (existingStyle != null && overwriteExisting)
+                if (existingStyle != null && p.OverwriteExisting)
                 {
                     WordStyleHelper.CopyStyleProperties(sourceStyle, existingStyle);
                 }
@@ -80,6 +78,19 @@ public class CopyWordStylesHandler : OperationHandlerBase<Document>
         MarkModified(context);
 
         return Success(
-            $"Copied {copiedCount} style(s) from {Path.GetFileName(sourceDocument)}. Skipped: {skippedCount}.");
+            $"Copied {copiedCount} style(s) from {Path.GetFileName(p.SourceDocument)}. Skipped: {skippedCount}.");
     }
+
+    private static CopyWordStylesParameters ExtractCopyWordStylesParameters(OperationParameters parameters)
+    {
+        return new CopyWordStylesParameters(
+            parameters.GetRequired<string>("sourceDocument"),
+            parameters.GetOptional<string[]?>("styleNames"),
+            parameters.GetOptional("overwriteExisting", false));
+    }
+
+    private record CopyWordStylesParameters(
+        string SourceDocument,
+        string[]? StyleNames,
+        bool OverwriteExisting);
 }

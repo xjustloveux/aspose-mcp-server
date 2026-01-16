@@ -24,36 +24,66 @@ public class AddPdfTextHandler : OperationHandlerBase<Document>
     /// <returns>Success message with text addition details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var text = parameters.GetRequired<string>("text");
+        var p = ExtractAddParameters(parameters);
 
-        if (string.IsNullOrEmpty(text))
+        if (string.IsNullOrEmpty(p.Text))
             throw new ArgumentException("text is required");
-
-        var pageIndex = parameters.GetOptional("pageIndex", 1);
-        var x = parameters.GetOptional("x", 100.0);
-        var y = parameters.GetOptional("y", 700.0);
-        var fontName = parameters.GetOptional("fontName", "Arial");
-        var fontSize = parameters.GetOptional("fontSize", 12.0);
-        var color = parameters.GetOptional("color", "Black");
 
         var document = context.Document;
 
-        if (pageIndex < 1 || pageIndex > document.Pages.Count)
+        if (p.PageIndex < 1 || p.PageIndex > document.Pages.Count)
             throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
 
-        var page = document.Pages[pageIndex];
+        var page = document.Pages[p.PageIndex];
 
-        var textFragment = new TextFragment(text) { Position = new Position(x, y) };
+        var textFragment = new TextFragment(p.Text) { Position = new Position(p.X, p.Y) };
 
         var textState = textFragment.TextState;
-        FontHelper.Pdf.ApplyFontSettings(textState, fontName, fontSize);
-        textState.ForegroundColor = Color.FromRgb(ColorHelper.ParseColor(color));
+        FontHelper.Pdf.ApplyFontSettings(textState, p.FontName, p.FontSize);
+        textState.ForegroundColor = Color.FromRgb(ColorHelper.ParseColor(p.Color));
 
         var textBuilder = new TextBuilder(page);
         textBuilder.AppendText(textFragment);
 
         MarkModified(context);
 
-        return Success($"Text added to page {pageIndex}.");
+        return Success($"Text added to page {p.PageIndex}.");
     }
+
+    /// <summary>
+    ///     Extracts parameters for add operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static AddParameters ExtractAddParameters(OperationParameters parameters)
+    {
+        return new AddParameters(
+            parameters.GetRequired<string>("text"),
+            parameters.GetOptional("pageIndex", 1),
+            parameters.GetOptional("x", 100.0),
+            parameters.GetOptional("y", 700.0),
+            parameters.GetOptional("fontName", "Arial"),
+            parameters.GetOptional("fontSize", 12.0),
+            parameters.GetOptional("color", "Black")
+        );
+    }
+
+    /// <summary>
+    ///     Parameters for add operation.
+    /// </summary>
+    /// <param name="Text">The text to add.</param>
+    /// <param name="PageIndex">The 1-based page index.</param>
+    /// <param name="X">The X coordinate.</param>
+    /// <param name="Y">The Y coordinate.</param>
+    /// <param name="FontName">The font name.</param>
+    /// <param name="FontSize">The font size.</param>
+    /// <param name="Color">The text color.</param>
+    private record AddParameters(
+        string Text,
+        int PageIndex,
+        double X,
+        double Y,
+        string FontName,
+        double FontSize,
+        string Color);
 }

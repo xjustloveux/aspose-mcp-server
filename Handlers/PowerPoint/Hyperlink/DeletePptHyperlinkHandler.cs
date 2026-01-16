@@ -22,12 +22,11 @@ public class DeletePptHyperlinkHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with deletion details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetRequired<int>("slideIndex");
-        var shapeIndex = parameters.GetRequired<int>("shapeIndex");
+        var p = ExtractDeleteParameters(parameters);
 
         var presentation = context.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-        var shape = PowerPointHelper.GetShape(slide, shapeIndex);
+        var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
+        var shape = PowerPointHelper.GetShape(slide, p.ShapeIndex);
         shape.HyperlinkClick = null;
 
         if (shape is IAutoShape { TextFrame: not null } autoShape)
@@ -37,6 +36,26 @@ public class DeletePptHyperlinkHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Hyperlink deleted from slide {slideIndex}, shape {shapeIndex}.");
+        return Success($"Hyperlink deleted from slide {p.SlideIndex}, shape {p.ShapeIndex}.");
     }
+
+    /// <summary>
+    ///     Extracts delete parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted delete parameters.</returns>
+    private static DeleteParameters ExtractDeleteParameters(OperationParameters parameters)
+    {
+        return new DeleteParameters(
+            parameters.GetRequired<int>("slideIndex"),
+            parameters.GetRequired<int>("shapeIndex")
+        );
+    }
+
+    /// <summary>
+    ///     Record for holding delete hyperlink parameters.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index.</param>
+    /// <param name="ShapeIndex">The shape index.</param>
+    private record DeleteParameters(int SlideIndex, int ShapeIndex);
 }

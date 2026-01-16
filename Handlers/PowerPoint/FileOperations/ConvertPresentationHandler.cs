@@ -27,32 +27,27 @@ public class ConvertPresentationHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with output path.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var inputPath = parameters.GetOptional<string?>("inputPath");
-        var path = parameters.GetOptional<string?>("path");
-        var sessionId = parameters.GetOptional<string?>("sessionId");
-        var outputPath = parameters.GetRequired<string>("outputPath");
-        var format = parameters.GetRequired<string>("format");
-        var slideIndex = parameters.GetOptional("slideIndex", 0);
+        var p = ExtractConvertParameters(parameters);
 
-        var sourcePath = inputPath ?? path;
-        if (string.IsNullOrEmpty(sourcePath) && string.IsNullOrEmpty(sessionId))
+        var sourcePath = p.InputPath ?? p.Path;
+        if (string.IsNullOrEmpty(sourcePath) && string.IsNullOrEmpty(p.SessionId))
             throw new ArgumentException("Either inputPath, path, or sessionId is required for convert operation");
 
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+        SecurityHelper.ValidateFilePath(p.OutputPath, "outputPath", true);
 
-        format = format.ToLower();
+        var format = p.Format.ToLower();
 
         Presentation presentation;
         string sourceDescription;
 
-        if (!string.IsNullOrEmpty(sessionId))
+        if (!string.IsNullOrEmpty(p.SessionId))
         {
             if (context.SessionManager == null)
                 throw new InvalidOperationException("Session management is not enabled");
 
             var identity = context.IdentityAccessor?.GetCurrentIdentity() ?? SessionIdentity.GetAnonymous();
-            presentation = context.SessionManager.GetDocument<Presentation>(sessionId, identity);
-            sourceDescription = $"session {sessionId}";
+            presentation = context.SessionManager.GetDocument<Presentation>(p.SessionId, identity);
+            sourceDescription = $"session {p.SessionId}";
         }
         else
         {
@@ -63,7 +58,7 @@ public class ConvertPresentationHandler : OperationHandlerBase<Presentation>
 
         if (format is "jpg" or "jpeg" or "png")
         {
-            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+            var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
 
             var slideSize = presentation.SlideSize.Size;
             var targetSize = new Size((int)slideSize.Width, (int)slideSize.Height);
@@ -71,12 +66,12 @@ public class ConvertPresentationHandler : OperationHandlerBase<Presentation>
 #pragma warning disable CA1416
             using var bitmap = slide.GetThumbnail(targetSize);
             var imageFormat = format == "png" ? ImageFormat.Png : ImageFormat.Jpeg;
-            bitmap.Save(outputPath, imageFormat);
+            bitmap.Save(p.OutputPath, imageFormat);
 #pragma warning restore CA1416
 
             var formatName = format == "png" ? "PNG" : "JPEG";
             return Success(
-                $"Slide {slideIndex} from {sourceDescription} converted to {formatName}. Output: {outputPath}");
+                $"Slide {p.SlideIndex} from {sourceDescription} converted to {formatName}. Output: {p.OutputPath}");
         }
 
         var saveFormat = format switch
@@ -91,9 +86,42 @@ public class ConvertPresentationHandler : OperationHandlerBase<Presentation>
             _ => throw new ArgumentException($"Unsupported format: {format}")
         };
 
-        presentation.Save(outputPath, saveFormat);
+        presentation.Save(p.OutputPath, saveFormat);
 
         return Success(
-            $"Presentation from {sourceDescription} converted to {format.ToUpper()} format. Output: {outputPath}");
+            $"Presentation from {sourceDescription} converted to {format.ToUpper()} format. Output: {p.OutputPath}");
     }
+
+    /// <summary>
+    ///     Extracts convert parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted convert parameters.</returns>
+    private static ConvertParameters ExtractConvertParameters(OperationParameters parameters)
+    {
+        return new ConvertParameters(
+            parameters.GetOptional<string?>("inputPath"),
+            parameters.GetOptional<string?>("path"),
+            parameters.GetOptional<string?>("sessionId"),
+            parameters.GetRequired<string>("outputPath"),
+            parameters.GetRequired<string>("format"),
+            parameters.GetOptional("slideIndex", 0));
+    }
+
+    /// <summary>
+    ///     Record for holding convert presentation parameters.
+    /// </summary>
+    /// <param name="InputPath">The input file path.</param>
+    /// <param name="Path">Alternative input file path.</param>
+    /// <param name="SessionId">The session ID.</param>
+    /// <param name="OutputPath">The output file path.</param>
+    /// <param name="Format">The target format.</param>
+    /// <param name="SlideIndex">The slide index for image export.</param>
+    private record ConvertParameters(
+        string? InputPath,
+        string? Path,
+        string? SessionId,
+        string OutputPath,
+        string Format,
+        int SlideIndex);
 }

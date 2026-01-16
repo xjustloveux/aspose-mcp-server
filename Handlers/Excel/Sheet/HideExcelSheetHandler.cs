@@ -22,10 +22,10 @@ public class HideExcelSheetHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message indicating whether the sheet was hidden or shown.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetRequired<int>("sheetIndex");
+        var p = ExtractHideExcelSheetParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, p.SheetIndex);
         var sheetName = worksheet.Name;
 
         if (worksheet.IsVisible)
@@ -39,4 +39,13 @@ public class HideExcelSheetHandler : OperationHandlerBase<Workbook>
         MarkModified(context);
         return Success($"Worksheet '{sheetName}' shown.");
     }
+
+    private static HideExcelSheetParameters ExtractHideExcelSheetParameters(OperationParameters parameters)
+    {
+        var sheetIndex = parameters.GetRequired<int>("sheetIndex");
+
+        return new HideExcelSheetParameters(sheetIndex);
+    }
+
+    private record HideExcelSheetParameters(int SheetIndex);
 }

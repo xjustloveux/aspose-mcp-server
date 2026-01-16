@@ -23,26 +23,17 @@ public class SetParagraphBorderWordHandler : OperationHandlerBase<Document>
     /// <returns>Success message.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var paragraphIndex = parameters.GetOptional("paragraphIndex", 0);
-        var borderPosition = parameters.GetOptional<string?>("borderPosition");
-        var borderTop = parameters.GetOptional("borderTop", false);
-        var borderBottom = parameters.GetOptional("borderBottom", false);
-        var borderLeft = parameters.GetOptional("borderLeft", false);
-        var borderRight = parameters.GetOptional("borderRight", false);
-        var lineStyle = parameters.GetOptional("lineStyle", "single");
-        var lineWidth = parameters.GetOptional("lineWidth", 0.5);
-        var lineColor = parameters.GetOptional("lineColor", "000000");
+        var p = ExtractSetParagraphBorderParameters(parameters);
 
         var doc = context.Document;
-        var para = WordFormatHelper.GetTargetParagraph(doc, paragraphIndex);
+        var para = WordFormatHelper.GetTargetParagraph(doc, p.ParagraphIndex);
         var borders = para.ParagraphFormat.Borders;
 
         bool actualBorderTop, actualBorderBottom, actualBorderLeft, actualBorderRight;
 
-        if (!string.IsNullOrEmpty(borderPosition))
+        if (!string.IsNullOrEmpty(p.BorderPosition))
         {
-            // borderPosition overrides individual flags
-            switch (borderPosition.ToLower())
+            switch (p.BorderPosition.ToLower())
             {
                 case "all":
                 case "box":
@@ -61,23 +52,22 @@ public class SetParagraphBorderWordHandler : OperationHandlerBase<Document>
                     break;
                 default:
                     throw new ArgumentException(
-                        $"Invalid borderPosition: {borderPosition}. Valid values: all, box, top-bottom, left-right, none");
+                        $"Invalid borderPosition: {p.BorderPosition}. Valid values: all, box, top-bottom, left-right, none");
             }
         }
         else
         {
-            // Use individual flags
-            actualBorderTop = borderTop;
-            actualBorderBottom = borderBottom;
-            actualBorderLeft = borderLeft;
-            actualBorderRight = borderRight;
+            actualBorderTop = p.BorderTop;
+            actualBorderBottom = p.BorderBottom;
+            actualBorderLeft = p.BorderLeft;
+            actualBorderRight = p.BorderRight;
         }
 
         if (actualBorderTop)
         {
-            borders.Top.LineStyle = WordFormatHelper.GetLineStyle(lineStyle);
-            borders.Top.LineWidth = lineWidth;
-            borders.Top.Color = ColorHelper.ParseColor(lineColor);
+            borders.Top.LineStyle = WordFormatHelper.GetLineStyle(p.LineStyle);
+            borders.Top.LineWidth = p.LineWidth;
+            borders.Top.Color = ColorHelper.ParseColor(p.LineColor);
         }
         else
         {
@@ -86,9 +76,9 @@ public class SetParagraphBorderWordHandler : OperationHandlerBase<Document>
 
         if (actualBorderBottom)
         {
-            borders.Bottom.LineStyle = WordFormatHelper.GetLineStyle(lineStyle);
-            borders.Bottom.LineWidth = lineWidth;
-            borders.Bottom.Color = ColorHelper.ParseColor(lineColor);
+            borders.Bottom.LineStyle = WordFormatHelper.GetLineStyle(p.LineStyle);
+            borders.Bottom.LineWidth = p.LineWidth;
+            borders.Bottom.Color = ColorHelper.ParseColor(p.LineColor);
         }
         else
         {
@@ -97,9 +87,9 @@ public class SetParagraphBorderWordHandler : OperationHandlerBase<Document>
 
         if (actualBorderLeft)
         {
-            borders.Left.LineStyle = WordFormatHelper.GetLineStyle(lineStyle);
-            borders.Left.LineWidth = lineWidth;
-            borders.Left.Color = ColorHelper.ParseColor(lineColor);
+            borders.Left.LineStyle = WordFormatHelper.GetLineStyle(p.LineStyle);
+            borders.Left.LineWidth = p.LineWidth;
+            borders.Left.Color = ColorHelper.ParseColor(p.LineColor);
         }
         else
         {
@@ -108,9 +98,9 @@ public class SetParagraphBorderWordHandler : OperationHandlerBase<Document>
 
         if (actualBorderRight)
         {
-            borders.Right.LineStyle = WordFormatHelper.GetLineStyle(lineStyle);
-            borders.Right.LineWidth = lineWidth;
-            borders.Right.Color = ColorHelper.ParseColor(lineColor);
+            borders.Right.LineStyle = WordFormatHelper.GetLineStyle(p.LineStyle);
+            borders.Right.LineWidth = p.LineWidth;
+            borders.Right.Color = ColorHelper.ParseColor(p.LineColor);
         }
         else
         {
@@ -127,6 +117,31 @@ public class SetParagraphBorderWordHandler : OperationHandlerBase<Document>
 
         var bordersDesc = enabledBorders.Count > 0 ? string.Join(", ", enabledBorders) : "None";
 
-        return Success($"Paragraph {paragraphIndex} borders set: {bordersDesc}");
+        return Success($"Paragraph {p.ParagraphIndex} borders set: {bordersDesc}");
     }
+
+    private static SetParagraphBorderParameters ExtractSetParagraphBorderParameters(OperationParameters parameters)
+    {
+        return new SetParagraphBorderParameters(
+            parameters.GetOptional("paragraphIndex", 0),
+            parameters.GetOptional<string?>("borderPosition"),
+            parameters.GetOptional("borderTop", false),
+            parameters.GetOptional("borderBottom", false),
+            parameters.GetOptional("borderLeft", false),
+            parameters.GetOptional("borderRight", false),
+            parameters.GetOptional("lineStyle", "single"),
+            parameters.GetOptional("lineWidth", 0.5),
+            parameters.GetOptional("lineColor", "000000"));
+    }
+
+    private record SetParagraphBorderParameters(
+        int ParagraphIndex,
+        string? BorderPosition,
+        bool BorderTop,
+        bool BorderBottom,
+        bool BorderLeft,
+        bool BorderRight,
+        string LineStyle,
+        double LineWidth,
+        string LineColor);
 }

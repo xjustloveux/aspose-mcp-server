@@ -22,31 +22,23 @@ public class SetWordPropertiesHandler : OperationHandlerBase<Document>
     /// <returns>Success message indicating properties were updated.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var title = parameters.GetOptional<string?>("title");
-        var subject = parameters.GetOptional<string?>("subject");
-        var author = parameters.GetOptional<string?>("author");
-        var keywords = parameters.GetOptional<string?>("keywords");
-        var comments = parameters.GetOptional<string?>("comments");
-        var category = parameters.GetOptional<string?>("category");
-        var company = parameters.GetOptional<string?>("company");
-        var manager = parameters.GetOptional<string?>("manager");
-        var customPropertiesJson = parameters.GetOptional<string?>("customProperties");
+        var setParams = ExtractSetPropertiesParameters(parameters);
 
         var doc = context.Document;
         var props = doc.BuiltInDocumentProperties;
 
-        if (!string.IsNullOrEmpty(title)) props.Title = title;
-        if (!string.IsNullOrEmpty(subject)) props.Subject = subject;
-        if (!string.IsNullOrEmpty(author)) props.Author = author;
-        if (!string.IsNullOrEmpty(keywords)) props.Keywords = keywords;
-        if (!string.IsNullOrEmpty(comments)) props.Comments = comments;
-        if (!string.IsNullOrEmpty(category)) props.Category = category;
-        if (!string.IsNullOrEmpty(company)) props.Company = company;
-        if (!string.IsNullOrEmpty(manager)) props.Manager = manager;
+        if (!string.IsNullOrEmpty(setParams.Title)) props.Title = setParams.Title;
+        if (!string.IsNullOrEmpty(setParams.Subject)) props.Subject = setParams.Subject;
+        if (!string.IsNullOrEmpty(setParams.Author)) props.Author = setParams.Author;
+        if (!string.IsNullOrEmpty(setParams.Keywords)) props.Keywords = setParams.Keywords;
+        if (!string.IsNullOrEmpty(setParams.Comments)) props.Comments = setParams.Comments;
+        if (!string.IsNullOrEmpty(setParams.Category)) props.Category = setParams.Category;
+        if (!string.IsNullOrEmpty(setParams.Company)) props.Company = setParams.Company;
+        if (!string.IsNullOrEmpty(setParams.Manager)) props.Manager = setParams.Manager;
 
-        if (!string.IsNullOrEmpty(customPropertiesJson))
+        if (!string.IsNullOrEmpty(setParams.CustomPropertiesJson))
         {
-            var customProps = JsonNode.Parse(customPropertiesJson)?.AsObject();
+            var customProps = JsonNode.Parse(setParams.CustomPropertiesJson)?.AsObject();
             if (customProps != null)
                 foreach (var kvp in customProps)
                 {
@@ -68,6 +60,9 @@ public class SetWordPropertiesHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Adds a custom property with the appropriate type based on JSON value.
     /// </summary>
+    /// <param name="doc">The Word document.</param>
+    /// <param name="key">The property key.</param>
+    /// <param name="jsonValue">The JSON value.</param>
     private static void AddCustomPropertyWithType(Document doc, string key, JsonNode? jsonValue)
     {
         if (jsonValue == null)
@@ -111,4 +106,47 @@ public class SetWordPropertiesHandler : OperationHandlerBase<Document>
 
         doc.CustomDocumentProperties.Add(key, jsonValue.ToString());
     }
+
+    /// <summary>
+    ///     Extracts set properties parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted set properties parameters.</returns>
+    private static SetPropertiesParameters ExtractSetPropertiesParameters(OperationParameters parameters)
+    {
+        return new SetPropertiesParameters(
+            parameters.GetOptional<string?>("title"),
+            parameters.GetOptional<string?>("subject"),
+            parameters.GetOptional<string?>("author"),
+            parameters.GetOptional<string?>("keywords"),
+            parameters.GetOptional<string?>("comments"),
+            parameters.GetOptional<string?>("category"),
+            parameters.GetOptional<string?>("company"),
+            parameters.GetOptional<string?>("manager"),
+            parameters.GetOptional<string?>("customProperties")
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold set properties parameters.
+    /// </summary>
+    /// <param name="Title">The document title.</param>
+    /// <param name="Subject">The document subject.</param>
+    /// <param name="Author">The document author.</param>
+    /// <param name="Keywords">The document keywords.</param>
+    /// <param name="Comments">The document comments.</param>
+    /// <param name="Category">The document category.</param>
+    /// <param name="Company">The document company.</param>
+    /// <param name="Manager">The document manager.</param>
+    /// <param name="CustomPropertiesJson">The custom properties as JSON string.</param>
+    private record SetPropertiesParameters(
+        string? Title,
+        string? Subject,
+        string? Author,
+        string? Keywords,
+        string? Comments,
+        string? Category,
+        string? Company,
+        string? Manager,
+        string? CustomPropertiesJson);
 }

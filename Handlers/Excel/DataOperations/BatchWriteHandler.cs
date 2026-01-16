@@ -23,19 +23,19 @@ public class BatchWriteHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with write count.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var data = parameters.GetOptional<JsonNode?>("data");
+        var batchWriteParams = ExtractBatchWriteParameters(parameters);
 
         try
         {
             var workbook = context.Document;
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, batchWriteParams.SheetIndex);
 
-            var writeCount = WriteData(worksheet, data);
+            var writeCount = WriteData(worksheet, batchWriteParams.Data);
 
             MarkModified(context);
 
-            return Success($"Batch write completed ({writeCount} cells written to sheet {sheetIndex}).");
+            return Success(
+                $"Batch write completed ({writeCount} cells written to sheet {batchWriteParams.SheetIndex}).");
         }
         catch (CellsException ex)
         {
@@ -43,6 +43,25 @@ public class BatchWriteHandler : OperationHandlerBase<Workbook>
         }
     }
 
+    /// <summary>
+    ///     Extracts batch write parameters from the operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted batch write parameters.</returns>
+    private static BatchWriteParameters ExtractBatchWriteParameters(OperationParameters parameters)
+    {
+        return new BatchWriteParameters(
+            parameters.GetOptional("sheetIndex", 0),
+            parameters.GetOptional<JsonNode?>("data")
+        );
+    }
+
+    /// <summary>
+    ///     Writes data to a worksheet from a JSON node.
+    /// </summary>
+    /// <param name="worksheet">The worksheet to write to.</param>
+    /// <param name="data">The JSON node containing the data to write.</param>
+    /// <returns>The number of cells written.</returns>
     private static int WriteData(Worksheet worksheet, JsonNode? data)
     {
         if (data == null) return 0;
@@ -55,6 +74,12 @@ public class BatchWriteHandler : OperationHandlerBase<Workbook>
         };
     }
 
+    /// <summary>
+    ///     Writes data from a JSON array to a worksheet.
+    /// </summary>
+    /// <param name="worksheet">The worksheet to write to.</param>
+    /// <param name="dataArray">The JSON array containing cell-value pairs.</param>
+    /// <returns>The number of cells written.</returns>
     private static int WriteFromArray(Worksheet worksheet, JsonArray dataArray)
     {
         var writeCount = 0;
@@ -65,6 +90,12 @@ public class BatchWriteHandler : OperationHandlerBase<Workbook>
         return writeCount;
     }
 
+    /// <summary>
+    ///     Writes a single array item to the worksheet.
+    /// </summary>
+    /// <param name="worksheet">The worksheet to write to.</param>
+    /// <param name="item">The JSON node containing cell and value properties.</param>
+    /// <returns>True if the item was written successfully; otherwise, false.</returns>
     private static bool WriteArrayItem(Worksheet worksheet, JsonNode? item)
     {
         var itemObj = item?.AsObject();
@@ -79,6 +110,12 @@ public class BatchWriteHandler : OperationHandlerBase<Workbook>
         return true;
     }
 
+    /// <summary>
+    ///     Writes data from a JSON object to a worksheet.
+    /// </summary>
+    /// <param name="worksheet">The worksheet to write to.</param>
+    /// <param name="dataObject">The JSON object with cell addresses as keys and values as values.</param>
+    /// <returns>The number of cells written.</returns>
     private static int WriteFromObject(Worksheet worksheet, JsonObject dataObject)
     {
         var writeCount = 0;
@@ -95,4 +132,11 @@ public class BatchWriteHandler : OperationHandlerBase<Workbook>
 
         return writeCount;
     }
+
+    /// <summary>
+    ///     Parameters for batch write operation.
+    /// </summary>
+    /// <param name="SheetIndex">The worksheet index (0-based).</param>
+    /// <param name="Data">The JSON data containing cell-value pairs to write.</param>
+    private record BatchWriteParameters(int SheetIndex, JsonNode? Data);
 }

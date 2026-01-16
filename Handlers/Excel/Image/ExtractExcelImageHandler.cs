@@ -24,28 +24,26 @@ public class ExtractExcelImageHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with extraction details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var imageIndex = parameters.GetRequired<int>("imageIndex");
-        var exportPath = parameters.GetRequired<string>("exportPath");
+        var extractParams = ExtractExtractParameters(parameters);
 
-        SecurityHelper.ValidateFilePath(exportPath, "exportPath", true);
+        SecurityHelper.ValidateFilePath(extractParams.ExportPath, "exportPath", true);
 
-        var extension = Path.GetExtension(exportPath);
+        var extension = Path.GetExtension(extractParams.ExportPath);
         if (string.IsNullOrEmpty(extension) ||
             !ExcelImageHelper.ExtensionToImageType.TryGetValue(extension, out var imageType))
             throw new ArgumentException(
                 $"Unsupported export format: '{extension}'. Supported formats: {string.Join(", ", ExcelImageHelper.ExtensionToImageType.Keys)}");
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, extractParams.SheetIndex);
         var pictures = worksheet.Pictures;
 
-        ExcelImageHelper.ValidateImageIndex(imageIndex, pictures.Count);
+        ExcelImageHelper.ValidateImageIndex(extractParams.ImageIndex, pictures.Count);
 
-        var picture = pictures[imageIndex];
+        var picture = pictures[extractParams.ImageIndex];
         var upperLeftCell = CellsHelper.CellIndexToName(picture.UpperLeftRow, picture.UpperLeftColumn);
 
-        var exportDir = Path.GetDirectoryName(exportPath);
+        var exportDir = Path.GetDirectoryName(extractParams.ExportPath);
         if (!string.IsNullOrEmpty(exportDir) && !Directory.Exists(exportDir))
             Directory.CreateDirectory(exportDir);
 
@@ -53,10 +51,26 @@ public class ExtractExcelImageHandler : OperationHandlerBase<Workbook>
         {
             ImageType = imageType
         };
-        picture.ToImage(exportPath, options);
+        picture.ToImage(extractParams.ExportPath, options);
 
-        var fileInfo = new FileInfo(exportPath);
+        var fileInfo = new FileInfo(extractParams.ExportPath);
         return Success(
-            $"Image #{imageIndex} (at {upperLeftCell}) extracted to: {exportPath} ({fileInfo.Length} bytes, {picture.Width}x{picture.Height})");
+            $"Image #{extractParams.ImageIndex} (at {upperLeftCell}) extracted to: {extractParams.ExportPath} ({fileInfo.Length} bytes, {picture.Width}x{picture.Height})");
     }
+
+    private static ExtractParameters ExtractExtractParameters(OperationParameters parameters)
+    {
+        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
+        var imageIndex = parameters.GetOptional<int?>("imageIndex");
+        var exportPath = parameters.GetOptional<string?>("exportPath");
+
+        if (!imageIndex.HasValue)
+            throw new ArgumentException("imageIndex is required for extract operation");
+        if (string.IsNullOrEmpty(exportPath))
+            throw new ArgumentException("exportPath is required for extract operation");
+
+        return new ExtractParameters(sheetIndex, imageIndex.Value, exportPath);
+    }
+
+    private record ExtractParameters(int SheetIndex, int ImageIndex, string ExportPath);
 }

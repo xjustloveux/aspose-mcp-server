@@ -106,7 +106,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -114,21 +114,40 @@ Usage examples:
         string? attachmentName,
         string? description)
     {
-        var parameters = new OperationParameters();
-
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "add":
-                if (attachmentPath != null) parameters.Set("attachmentPath", attachmentPath);
-                if (attachmentName != null) parameters.Set("attachmentName", attachmentName);
-                if (description != null) parameters.Set("description", description);
-                break;
+            "add" => BuildAddParameters(attachmentPath, attachmentName, description),
+            "delete" => BuildDeleteParameters(attachmentName),
+            _ => new OperationParameters()
+        };
+    }
 
-            case "delete":
-                if (attachmentName != null) parameters.Set("attachmentName", attachmentName);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the add attachment operation.
+    /// </summary>
+    /// <param name="attachmentPath">Path to the file to attach.</param>
+    /// <param name="attachmentName">Name of the attachment in PDF.</param>
+    /// <param name="description">Optional description for the attachment.</param>
+    /// <returns>OperationParameters configured for adding an attachment.</returns>
+    private static OperationParameters BuildAddParameters(string? attachmentPath, string? attachmentName,
+        string? description)
+    {
+        var parameters = new OperationParameters();
+        if (attachmentPath != null) parameters.Set("attachmentPath", attachmentPath);
+        if (attachmentName != null) parameters.Set("attachmentName", attachmentName);
+        if (description != null) parameters.Set("description", description);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the delete attachment operation.
+    /// </summary>
+    /// <param name="attachmentName">Name of the attachment to delete.</param>
+    /// <returns>OperationParameters configured for deleting an attachment.</returns>
+    private static OperationParameters BuildDeleteParameters(string? attachmentName)
+    {
+        var parameters = new OperationParameters();
+        if (attachmentName != null) parameters.Set("attachmentName", attachmentName);
         return parameters;
     }
 }

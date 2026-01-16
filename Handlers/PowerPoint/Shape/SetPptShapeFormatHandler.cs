@@ -24,44 +24,72 @@ public class SetPptShapeFormatHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with format details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetOptional("slideIndex", 0);
-        var shapeIndex = parameters.GetRequired<int>("shapeIndex");
-        var fillColor = parameters.GetOptional<string?>("fillColor");
-        var lineColor = parameters.GetOptional<string?>("lineColor");
-        var lineWidth = parameters.GetOptional<float?>("lineWidth");
-        var transparency = parameters.GetOptional<float?>("transparency");
+        var p = ExtractSetPptShapeFormatParameters(parameters);
 
         var presentation = context.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+        var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
 
-        PowerPointHelper.ValidateCollectionIndex(shapeIndex, slide.Shapes.Count, "shapeIndex");
+        PowerPointHelper.ValidateCollectionIndex(p.ShapeIndex, slide.Shapes.Count, "shapeIndex");
 
-        var shape = slide.Shapes[shapeIndex];
+        var shape = slide.Shapes[p.ShapeIndex];
 
-        if (!string.IsNullOrEmpty(fillColor))
+        if (!string.IsNullOrEmpty(p.FillColor))
         {
             shape.FillFormat.FillType = FillType.Solid;
-            shape.FillFormat.SolidFillColor.Color = ColorHelper.ParseColor(fillColor);
+            shape.FillFormat.SolidFillColor.Color = ColorHelper.ParseColor(p.FillColor);
         }
 
-        if (!string.IsNullOrEmpty(lineColor))
+        if (!string.IsNullOrEmpty(p.LineColor))
         {
             shape.LineFormat.FillFormat.FillType = FillType.Solid;
-            shape.LineFormat.FillFormat.SolidFillColor.Color = ColorHelper.ParseColor(lineColor);
+            shape.LineFormat.FillFormat.SolidFillColor.Color = ColorHelper.ParseColor(p.LineColor);
         }
 
-        if (lineWidth.HasValue)
-            shape.LineFormat.Width = lineWidth.Value;
+        if (p.LineWidth.HasValue)
+            shape.LineFormat.Width = p.LineWidth.Value;
 
-        if (transparency.HasValue && shape.FillFormat.FillType == FillType.Solid)
+        if (p.Transparency.HasValue && shape.FillFormat.FillType == FillType.Solid)
         {
             var color = shape.FillFormat.SolidFillColor.Color;
-            var alpha = (int)((1 - transparency.Value) * 255);
+            var alpha = (int)((1 - p.Transparency.Value) * 255);
             shape.FillFormat.SolidFillColor.Color = Color.FromArgb(alpha, color);
         }
 
         MarkModified(context);
 
-        return Success($"Format applied to shape {shapeIndex} on slide {slideIndex}.");
+        return Success($"Format applied to shape {p.ShapeIndex} on slide {p.SlideIndex}.");
     }
+
+    /// <summary>
+    ///     Extracts parameters for set shape format operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static SetPptShapeFormatParameters ExtractSetPptShapeFormatParameters(OperationParameters parameters)
+    {
+        return new SetPptShapeFormatParameters(
+            parameters.GetOptional("slideIndex", 0),
+            parameters.GetRequired<int>("shapeIndex"),
+            parameters.GetOptional<string?>("fillColor"),
+            parameters.GetOptional<string?>("lineColor"),
+            parameters.GetOptional<float?>("lineWidth"),
+            parameters.GetOptional<float?>("transparency"));
+    }
+
+    /// <summary>
+    ///     Parameters for set shape format operation.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index (0-based).</param>
+    /// <param name="ShapeIndex">The shape index.</param>
+    /// <param name="FillColor">The fill color.</param>
+    /// <param name="LineColor">The line color.</param>
+    /// <param name="LineWidth">The line width.</param>
+    /// <param name="Transparency">The transparency value (0-1).</param>
+    private record SetPptShapeFormatParameters(
+        int SlideIndex,
+        int ShapeIndex,
+        string? FillColor,
+        string? LineColor,
+        float? LineWidth,
+        float? Transparency);
 }

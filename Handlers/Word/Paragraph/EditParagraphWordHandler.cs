@@ -26,57 +26,49 @@ public class EditParagraphWordHandler : OperationHandlerBase<Document>
     /// <returns>Success message.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var paragraphIndex = parameters.GetOptional<int?>("paragraphIndex");
-        var sectionIndex = parameters.GetOptional<int?>("sectionIndex");
-        var text = parameters.GetOptional<string?>("text");
-        var styleName = parameters.GetOptional<string?>("styleName");
-        var alignment = parameters.GetOptional<string?>("alignment");
-        var fontName = parameters.GetOptional<string?>("fontName");
-        var fontNameAscii = parameters.GetOptional<string?>("fontNameAscii");
-        var fontNameFarEast = parameters.GetOptional<string?>("fontNameFarEast");
-        var fontSize = parameters.GetOptional<double?>("fontSize");
-        var bold = parameters.GetOptional<bool?>("bold");
-        var italic = parameters.GetOptional<bool?>("italic");
-        var underline = parameters.GetOptional<bool?>("underline");
-        var color = parameters.GetOptional<string?>("color");
-        var indentLeft = parameters.GetOptional<double?>("indentLeft");
-        var indentRight = parameters.GetOptional<double?>("indentRight");
-        var firstLineIndent = parameters.GetOptional<double?>("firstLineIndent");
-        var spaceBefore = parameters.GetOptional<double?>("spaceBefore");
-        var spaceAfter = parameters.GetOptional<double?>("spaceAfter");
-        var lineSpacing = parameters.GetOptional<double?>("lineSpacing");
-        var lineSpacingRule = parameters.GetOptional<string?>("lineSpacingRule");
-        var tabStops = parameters.GetOptional<JsonArray?>("tabStops");
+        var editParams = ExtractEditParagraphParameters(parameters);
 
-        if (!paragraphIndex.HasValue)
+        if (!editParams.ParagraphIndex.HasValue)
             throw new ArgumentException("paragraphIndex parameter is required for edit operation");
 
         var doc = context.Document;
-        var (para, resolvedIndex) = GetTargetParagraph(doc, paragraphIndex.Value, sectionIndex ?? 0);
+        var (para, resolvedIndex) =
+            GetTargetParagraph(doc, editParams.ParagraphIndex.Value, editParams.SectionIndex ?? 0);
 
         var builder = new DocumentBuilder(doc);
         builder.MoveTo(para.FirstChild ?? para);
 
-        var underlineStr = underline.HasValue ? underline.Value ? "single" : "none" : null;
-        var fontSettings = new FontParams(fontName, fontNameAscii, fontNameFarEast, fontSize, bold, italic,
-            underlineStr, color);
+        var underlineStr = editParams.Underline.HasValue ? editParams.Underline.Value ? "single" : "none" : null;
+        var fontSettings = new FontParams(editParams.FontName, editParams.FontNameAscii, editParams.FontNameFarEast,
+            editParams.FontSize, editParams.Bold, editParams.Italic,
+            underlineStr, editParams.Color);
 
-        FontHelper.Word.ApplyFontSettings(builder, fontName, fontNameAscii, fontNameFarEast, fontSize, bold, italic,
-            underlineStr, color);
+        FontHelper.Word.ApplyFontSettings(builder, editParams.FontName, editParams.FontNameAscii,
+            editParams.FontNameFarEast, editParams.FontSize, editParams.Bold, editParams.Italic,
+            underlineStr, editParams.Color);
 
-        ApplyParagraphFormatting(para, alignment, indentLeft, indentRight, firstLineIndent, spaceBefore, spaceAfter);
-        ApplyLineSpacing(para.ParagraphFormat, lineSpacing, lineSpacingRule);
-        ApplyStyle(doc, para, styleName);
-        ApplyTabStops(para.ParagraphFormat, tabStops);
-        ApplyTextContent(doc, para, text, fontSettings);
+        ApplyParagraphFormatting(para, editParams.Alignment, editParams.IndentLeft, editParams.IndentRight,
+            editParams.FirstLineIndent, editParams.SpaceBefore, editParams.SpaceAfter);
+        ApplyLineSpacing(para.ParagraphFormat, editParams.LineSpacing, editParams.LineSpacingRule);
+        ApplyStyle(doc, para, editParams.StyleName);
+        ApplyTabStops(para.ParagraphFormat, editParams.TabStops);
+        ApplyTextContent(doc, para, editParams.Text, fontSettings);
 
         MarkModified(context);
 
         var resultMsg = $"Paragraph {resolvedIndex} format edited successfully";
-        if (!string.IsNullOrEmpty(text)) resultMsg += ", text content updated";
+        if (!string.IsNullOrEmpty(editParams.Text)) resultMsg += ", text content updated";
         return resultMsg;
     }
 
+    /// <summary>
+    ///     Gets the target paragraph by index.
+    /// </summary>
+    /// <param name="doc">The Word document.</param>
+    /// <param name="paragraphIndex">The paragraph index (-1 for last).</param>
+    /// <param name="sectionIndex">The section index.</param>
+    /// <returns>A tuple containing the paragraph and resolved index.</returns>
+    /// <exception cref="ArgumentException">Thrown when indices are out of range.</exception>
     private static (Aspose.Words.Paragraph para, int resolvedIndex) GetTargetParagraph(Document doc, int paragraphIndex,
         int sectionIndex)
     {
@@ -108,6 +100,16 @@ public class EditParagraphWordHandler : OperationHandlerBase<Document>
         return (paragraphs[paraIdx], paraIdx);
     }
 
+    /// <summary>
+    ///     Applies paragraph formatting options.
+    /// </summary>
+    /// <param name="para">The paragraph to format.</param>
+    /// <param name="alignment">The text alignment.</param>
+    /// <param name="indentLeft">The left indent.</param>
+    /// <param name="indentRight">The right indent.</param>
+    /// <param name="firstLineIndent">The first line indent.</param>
+    /// <param name="spaceBefore">The space before.</param>
+    /// <param name="spaceAfter">The space after.</param>
     private static void ApplyParagraphFormatting(Aspose.Words.Paragraph para, string? alignment, double? indentLeft,
         double? indentRight, double? firstLineIndent, double? spaceBefore, double? spaceAfter)
     {
@@ -123,14 +125,31 @@ public class EditParagraphWordHandler : OperationHandlerBase<Document>
         if (spaceAfter.HasValue) paraFormat.SpaceAfter = spaceAfter.Value;
     }
 
+    /// <summary>
+    ///     Applies line spacing settings.
+    /// </summary>
+    /// <param name="paraFormat">The paragraph format.</param>
+    /// <param name="lineSpacing">The line spacing value.</param>
+    /// <param name="lineSpacingRule">The line spacing rule.</param>
     private static void ApplyLineSpacing(ParagraphFormat paraFormat, double? lineSpacing, string? lineSpacingRule)
     {
         if (!lineSpacing.HasValue && string.IsNullOrEmpty(lineSpacingRule)) return;
 
-        var rule = WordParagraphHelper.GetLineSpacingRule(lineSpacingRule ?? "single");
+        var effectiveRule = lineSpacingRule ?? "single";
+        var rule = WordParagraphHelper.GetLineSpacingRule(effectiveRule);
         paraFormat.LineSpacingRule = rule;
 
-        paraFormat.LineSpacing = lineSpacing ?? (lineSpacingRule ?? "single").ToLower() switch
+        paraFormat.LineSpacing = lineSpacing ?? GetDefaultLineSpacing(effectiveRule);
+    }
+
+    /// <summary>
+    ///     Gets the default line spacing value for a rule.
+    /// </summary>
+    /// <param name="rule">The line spacing rule.</param>
+    /// <returns>The default line spacing value.</returns>
+    private static double GetDefaultLineSpacing(string rule)
+    {
+        return rule.ToLower() switch
         {
             "single" => 1.0,
             "oneandhalf" => 1.5,
@@ -139,6 +158,13 @@ public class EditParagraphWordHandler : OperationHandlerBase<Document>
         };
     }
 
+    /// <summary>
+    ///     Applies a style to the paragraph.
+    /// </summary>
+    /// <param name="doc">The Word document.</param>
+    /// <param name="para">The paragraph.</param>
+    /// <param name="styleName">The style name.</param>
+    /// <exception cref="ArgumentException">Thrown when style is not found.</exception>
     private static void ApplyStyle(Document doc, Aspose.Words.Paragraph para, string? styleName)
     {
         if (string.IsNullOrEmpty(styleName)) return;
@@ -154,6 +180,11 @@ public class EditParagraphWordHandler : OperationHandlerBase<Document>
         para.ParagraphFormat.StyleName = styleName;
     }
 
+    /// <summary>
+    ///     Applies tab stops to the paragraph format.
+    /// </summary>
+    /// <param name="paraFormat">The paragraph format.</param>
+    /// <param name="tabStops">The tab stops array.</param>
     private static void ApplyTabStops(ParagraphFormat paraFormat, JsonArray? tabStops)
     {
         if (tabStops is not { Count: > 0 }) return;
@@ -173,6 +204,13 @@ public class EditParagraphWordHandler : OperationHandlerBase<Document>
         }
     }
 
+    /// <summary>
+    ///     Applies text content to the paragraph.
+    /// </summary>
+    /// <param name="doc">The Word document.</param>
+    /// <param name="para">The paragraph.</param>
+    /// <param name="text">The text content.</param>
+    /// <param name="fontParams">The font parameters.</param>
     private static void ApplyTextContent(Document doc, Aspose.Words.Paragraph para, string? text, FontParams fontParams)
     {
         if (!string.IsNullOrEmpty(text))
@@ -207,6 +245,96 @@ public class EditParagraphWordHandler : OperationHandlerBase<Document>
         }
     }
 
+    /// <summary>
+    ///     Extracts edit paragraph parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted edit paragraph parameters.</returns>
+    private static EditParagraphParameters ExtractEditParagraphParameters(OperationParameters parameters)
+    {
+        return new EditParagraphParameters(
+            parameters.GetOptional<int?>("paragraphIndex"),
+            parameters.GetOptional<int?>("sectionIndex"),
+            parameters.GetOptional<string?>("text"),
+            parameters.GetOptional<string?>("styleName"),
+            parameters.GetOptional<string?>("alignment"),
+            parameters.GetOptional<string?>("fontName"),
+            parameters.GetOptional<string?>("fontNameAscii"),
+            parameters.GetOptional<string?>("fontNameFarEast"),
+            parameters.GetOptional<double?>("fontSize"),
+            parameters.GetOptional<bool?>("bold"),
+            parameters.GetOptional<bool?>("italic"),
+            parameters.GetOptional<bool?>("underline"),
+            parameters.GetOptional<string?>("color"),
+            parameters.GetOptional<double?>("indentLeft"),
+            parameters.GetOptional<double?>("indentRight"),
+            parameters.GetOptional<double?>("firstLineIndent"),
+            parameters.GetOptional<double?>("spaceBefore"),
+            parameters.GetOptional<double?>("spaceAfter"),
+            parameters.GetOptional<double?>("lineSpacing"),
+            parameters.GetOptional<string?>("lineSpacingRule"),
+            parameters.GetOptional<JsonArray?>("tabStops")
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold edit paragraph parameters.
+    /// </summary>
+    /// <param name="ParagraphIndex">The paragraph index to edit (-1 for last).</param>
+    /// <param name="SectionIndex">The section index.</param>
+    /// <param name="Text">The text content.</param>
+    /// <param name="StyleName">The style name.</param>
+    /// <param name="Alignment">The text alignment.</param>
+    /// <param name="FontName">The font name.</param>
+    /// <param name="FontNameAscii">The ASCII font name.</param>
+    /// <param name="FontNameFarEast">The Far East font name.</param>
+    /// <param name="FontSize">The font size.</param>
+    /// <param name="Bold">Whether text is bold.</param>
+    /// <param name="Italic">Whether text is italic.</param>
+    /// <param name="Underline">Whether text is underlined.</param>
+    /// <param name="Color">The text color.</param>
+    /// <param name="IndentLeft">The left indent.</param>
+    /// <param name="IndentRight">The right indent.</param>
+    /// <param name="FirstLineIndent">The first line indent.</param>
+    /// <param name="SpaceBefore">The space before.</param>
+    /// <param name="SpaceAfter">The space after.</param>
+    /// <param name="LineSpacing">The line spacing value.</param>
+    /// <param name="LineSpacingRule">The line spacing rule.</param>
+    /// <param name="TabStops">The tab stops array.</param>
+    private record EditParagraphParameters(
+        int? ParagraphIndex,
+        int? SectionIndex,
+        string? Text,
+        string? StyleName,
+        string? Alignment,
+        string? FontName,
+        string? FontNameAscii,
+        string? FontNameFarEast,
+        double? FontSize,
+        bool? Bold,
+        bool? Italic,
+        bool? Underline,
+        string? Color,
+        double? IndentLeft,
+        double? IndentRight,
+        double? FirstLineIndent,
+        double? SpaceBefore,
+        double? SpaceAfter,
+        double? LineSpacing,
+        string? LineSpacingRule,
+        JsonArray? TabStops);
+
+    /// <summary>
+    ///     Record to hold font parameters.
+    /// </summary>
+    /// <param name="FontName">The font name.</param>
+    /// <param name="FontNameAscii">The ASCII font name.</param>
+    /// <param name="FontNameFarEast">The Far East font name.</param>
+    /// <param name="FontSize">The font size.</param>
+    /// <param name="Bold">Whether text is bold.</param>
+    /// <param name="Italic">Whether text is italic.</param>
+    /// <param name="UnderlineStr">The underline style string.</param>
+    /// <param name="Color">The text color.</param>
     private record FontParams(
         string? FontName,
         string? FontNameAscii,
@@ -217,6 +345,10 @@ public class EditParagraphWordHandler : OperationHandlerBase<Document>
         string? UnderlineStr,
         string? Color)
     {
+        /// <summary>
+        ///     Checks if any font settings are specified.
+        /// </summary>
+        /// <returns>True if any settings are specified.</returns>
         public bool HasAnySettings()
         {
             return FontName != null || FontNameAscii != null || FontNameFarEast != null ||

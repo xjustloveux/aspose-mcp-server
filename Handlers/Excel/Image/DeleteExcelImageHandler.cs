@@ -23,22 +23,34 @@ public class DeleteExcelImageHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with deletion details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var imageIndex = parameters.GetRequired<int>("imageIndex");
+        var deleteParams = ExtractDeleteParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, deleteParams.SheetIndex);
         var pictures = worksheet.Pictures;
 
-        ExcelImageHelper.ValidateImageIndex(imageIndex, pictures.Count);
+        ExcelImageHelper.ValidateImageIndex(deleteParams.ImageIndex, pictures.Count);
 
-        pictures.RemoveAt(imageIndex);
+        pictures.RemoveAt(deleteParams.ImageIndex);
 
         MarkModified(context);
 
         var warning = pictures.Count > 0
             ? " Note: remaining image indices have been re-ordered."
             : "";
-        return Success($"Image #{imageIndex} deleted. {pictures.Count} images remaining.{warning}");
+        return Success($"Image #{deleteParams.ImageIndex} deleted. {pictures.Count} images remaining.{warning}");
     }
+
+    private static DeleteParameters ExtractDeleteParameters(OperationParameters parameters)
+    {
+        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
+        var imageIndex = parameters.GetOptional<int?>("imageIndex");
+
+        if (!imageIndex.HasValue)
+            throw new ArgumentException("imageIndex is required for delete operation");
+
+        return new DeleteParameters(sheetIndex, imageIndex.Value);
+    }
+
+    private record DeleteParameters(int SheetIndex, int ImageIndex);
 }

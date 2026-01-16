@@ -23,17 +23,26 @@ public class DeleteRowHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with deletion details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
+        var p = ExtractDeleteRowParameters(parameters);
+
+        var workbook = context.Document;
+        var worksheet = ExcelHelper.GetWorksheet(workbook, p.SheetIndex);
+
+        worksheet.Cells.DeleteRows(p.RowIndex, p.Count);
+
+        MarkModified(context);
+
+        return Success($"Deleted {p.Count} row(s) starting from row {p.RowIndex}.");
+    }
+
+    private static DeleteRowParameters ExtractDeleteRowParameters(OperationParameters parameters)
+    {
         var sheetIndex = parameters.GetOptional("sheetIndex", 0);
         var rowIndex = parameters.GetRequired<int>("rowIndex");
         var count = parameters.GetOptional("count", 1);
 
-        var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-
-        worksheet.Cells.DeleteRows(rowIndex, count);
-
-        MarkModified(context);
-
-        return Success($"Deleted {count} row(s) starting from row {rowIndex}.");
+        return new DeleteRowParameters(sheetIndex, rowIndex, count);
     }
+
+    private record DeleteRowParameters(int SheetIndex, int RowIndex, int Count);
 }

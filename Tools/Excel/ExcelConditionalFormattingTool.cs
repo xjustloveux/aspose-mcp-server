@@ -124,7 +124,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -140,33 +140,71 @@ Usage examples:
         var parameters = new OperationParameters();
         parameters.Set("sheetIndex", sheetIndex);
 
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "add":
-                if (range != null) parameters.Set("range", range);
-                if (condition != null) parameters.Set("condition", condition);
-                if (value != null) parameters.Set("value", value);
-                if (formula2 != null) parameters.Set("formula2", formula2);
-                parameters.Set("backgroundColor", backgroundColor);
-                break;
+            "add" => BuildAddParameters(parameters, range, condition, value, formula2, backgroundColor),
+            "edit" => BuildEditParameters(parameters, conditionalFormattingIndex, conditionIndex, condition, value,
+                formula2, backgroundColor),
+            "delete" => BuildDeleteParameters(parameters, conditionalFormattingIndex),
+            _ => parameters
+        };
+    }
 
-            case "edit":
-                parameters.Set("conditionalFormattingIndex", conditionalFormattingIndex);
-                if (conditionIndex.HasValue) parameters.Set("conditionIndex", conditionIndex.Value);
-                if (condition != null) parameters.Set("condition", condition);
-                if (value != null) parameters.Set("value", value);
-                if (formula2 != null) parameters.Set("formula2", formula2);
-                parameters.Set("backgroundColor", backgroundColor);
-                break;
+    /// <summary>
+    ///     Builds parameters for the add conditional formatting operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="range">The cell range to apply formatting.</param>
+    /// <param name="condition">The condition type.</param>
+    /// <param name="value">The condition value or first formula.</param>
+    /// <param name="formula2">The second value for between condition.</param>
+    /// <param name="backgroundColor">The background color for matching cells.</param>
+    /// <returns>OperationParameters configured for adding conditional formatting.</returns>
+    private static OperationParameters BuildAddParameters(OperationParameters parameters, string? range,
+        string? condition, string? value, string? formula2, string backgroundColor)
+    {
+        if (range != null) parameters.Set("range", range);
+        if (condition != null) parameters.Set("condition", condition);
+        if (value != null) parameters.Set("value", value);
+        if (formula2 != null) parameters.Set("formula2", formula2);
+        parameters.Set("backgroundColor", backgroundColor);
+        return parameters;
+    }
 
-            case "delete":
-                parameters.Set("conditionalFormattingIndex", conditionalFormattingIndex);
-                break;
+    /// <summary>
+    ///     Builds parameters for the edit conditional formatting operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="conditionalFormattingIndex">The index of conditional formatting to edit.</param>
+    /// <param name="conditionIndex">The condition index within the formatting rule.</param>
+    /// <param name="condition">The condition type.</param>
+    /// <param name="value">The condition value or first formula.</param>
+    /// <param name="formula2">The second value for between condition.</param>
+    /// <param name="backgroundColor">The background color for matching cells.</param>
+    /// <returns>OperationParameters configured for editing conditional formatting.</returns>
+    private static OperationParameters BuildEditParameters(OperationParameters parameters,
+        int conditionalFormattingIndex, int? conditionIndex, string? condition, string? value, string? formula2,
+        string backgroundColor)
+    {
+        parameters.Set("conditionalFormattingIndex", conditionalFormattingIndex);
+        if (conditionIndex.HasValue) parameters.Set("conditionIndex", conditionIndex.Value);
+        if (condition != null) parameters.Set("condition", condition);
+        if (value != null) parameters.Set("value", value);
+        if (formula2 != null) parameters.Set("formula2", formula2);
+        parameters.Set("backgroundColor", backgroundColor);
+        return parameters;
+    }
 
-            case "get":
-                break;
-        }
-
+    /// <summary>
+    ///     Builds parameters for the delete conditional formatting operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="conditionalFormattingIndex">The index of conditional formatting to delete.</param>
+    /// <returns>OperationParameters configured for deleting conditional formatting.</returns>
+    private static OperationParameters BuildDeleteParameters(OperationParameters parameters,
+        int conditionalFormattingIndex)
+    {
+        parameters.Set("conditionalFormattingIndex", conditionalFormattingIndex);
         return parameters;
     }
 }

@@ -23,17 +23,14 @@ public class MergeWorkbooksHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with merge details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var path = parameters.GetOptional<string?>("path");
-        var outputPath = parameters.GetOptional<string?>("outputPath");
-        var inputPaths = parameters.GetOptional<string[]?>("inputPaths");
-        var mergeSheets = parameters.GetOptional("mergeSheets", false);
+        var p = ExtractMergeParameters(parameters);
 
-        var targetPath = path ?? outputPath ?? throw new ArgumentException("path or outputPath is required");
+        var targetPath = p.Path ?? p.OutputPath ?? throw new ArgumentException("path or outputPath is required");
 
-        if (inputPaths == null || inputPaths.Length == 0)
+        if (p.InputPaths == null || p.InputPaths.Length == 0)
             throw new ArgumentException("At least one input path is required");
 
-        var validPaths = inputPaths.Where(p => !string.IsNullOrEmpty(p)).ToList();
+        var validPaths = p.InputPaths.Where(path => !string.IsNullOrEmpty(path)).ToList();
         if (validPaths.Count == 0)
             throw new ArgumentException("No valid input paths provided");
 
@@ -48,7 +45,7 @@ public class MergeWorkbooksHandler : OperationHandlerBase<Workbook>
         {
             using var sourceWorkbook = new Workbook(validPaths[i]);
 
-            if (mergeSheets)
+            if (p.MergeSheets)
                 MergeSheetsWithSameName(targetWorkbook, sourceWorkbook);
             else
                 targetWorkbook.Combine(sourceWorkbook);
@@ -99,4 +96,31 @@ public class MergeWorkbooksHandler : OperationHandlerBase<Workbook>
             }
         }
     }
+
+    /// <summary>
+    ///     Extracts merge parameters from the operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted merge parameters.</returns>
+    private static MergeParameters ExtractMergeParameters(OperationParameters parameters)
+    {
+        return new MergeParameters(
+            parameters.GetOptional<string?>("path"),
+            parameters.GetOptional<string?>("outputPath"),
+            parameters.GetOptional<string[]?>("inputPaths"),
+            parameters.GetOptional("mergeSheets", false));
+    }
+
+    /// <summary>
+    ///     Parameters for the merge workbooks operation.
+    /// </summary>
+    /// <param name="Path">The output file path.</param>
+    /// <param name="OutputPath">Alternative output file path parameter.</param>
+    /// <param name="InputPaths">The array of input file paths to merge.</param>
+    /// <param name="MergeSheets">Whether to merge sheets with the same name.</param>
+    private record MergeParameters(
+        string? Path,
+        string? OutputPath,
+        string[]? InputPaths,
+        bool MergeSheets);
 }

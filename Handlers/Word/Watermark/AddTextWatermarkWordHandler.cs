@@ -21,33 +21,47 @@ public class AddTextWatermarkWordHandler : OperationHandlerBase<Document>
     ///     Diagonal)
     /// </param>
     /// <returns>Success message with watermark details.</returns>
+    /// <exception cref="ArgumentException">Thrown when text is missing.</exception>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var text = parameters.GetOptional<string?>("text");
-        var fontFamily = parameters.GetOptional("fontFamily", "Arial");
-        var fontSize = parameters.GetOptional("fontSize", 72.0);
-        var isSemitransparent = parameters.GetOptional("isSemitransparent", true);
-        var layout = parameters.GetOptional("layout", "Diagonal");
+        var p = ExtractAddTextWatermarkParameters(parameters);
 
-        if (string.IsNullOrEmpty(text))
+        if (string.IsNullOrEmpty(p.Text))
             throw new ArgumentException("Text is required for add operation");
 
         var doc = context.Document;
 
         var watermarkOptions = new TextWatermarkOptions
         {
-            FontFamily = fontFamily,
-            FontSize = (float)fontSize,
-            IsSemitrasparent = isSemitransparent,
-            Layout = string.Equals(layout, "horizontal", StringComparison.OrdinalIgnoreCase)
+            FontFamily = p.FontFamily,
+            FontSize = (float)p.FontSize,
+            IsSemitrasparent = p.IsSemitransparent,
+            Layout = string.Equals(p.Layout, "horizontal", StringComparison.OrdinalIgnoreCase)
                 ? WatermarkLayout.Horizontal
                 : WatermarkLayout.Diagonal
         };
 
-        doc.Watermark.SetText(text, watermarkOptions);
+        doc.Watermark.SetText(p.Text, watermarkOptions);
 
         MarkModified(context);
 
         return Success("Text watermark added to document");
     }
+
+    private static AddTextWatermarkParameters ExtractAddTextWatermarkParameters(OperationParameters parameters)
+    {
+        return new AddTextWatermarkParameters(
+            parameters.GetOptional<string?>("text"),
+            parameters.GetOptional("fontFamily", "Arial"),
+            parameters.GetOptional("fontSize", 72.0),
+            parameters.GetOptional("isSemitransparent", true),
+            parameters.GetOptional("layout", "Diagonal"));
+    }
+
+    private record AddTextWatermarkParameters(
+        string? Text,
+        string FontFamily,
+        double FontSize,
+        bool IsSemitransparent,
+        string Layout);
 }

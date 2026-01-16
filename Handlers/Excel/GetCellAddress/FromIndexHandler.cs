@@ -21,12 +21,21 @@ public class FromIndexHandler : OperationHandlerBase<Workbook>
     /// <returns>A message containing the cell address in both A1 notation and row/column index format.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
+        var p = ExtractFromIndexParameters(parameters);
+
+        ExcelGetCellAddressHelper.ValidateIndexBounds(p.Row, p.Column);
+
+        var a1Notation = CellsHelper.CellIndexToName(p.Row, p.Column);
+        return $"{a1Notation} = Row {p.Row}, Column {p.Column}";
+    }
+
+    private static FromIndexParameters ExtractFromIndexParameters(OperationParameters parameters)
+    {
         var row = parameters.GetRequired<int>("row");
         var column = parameters.GetRequired<int>("column");
 
-        ExcelGetCellAddressHelper.ValidateIndexBounds(row, column);
-
-        var a1Notation = CellsHelper.CellIndexToName(row, column);
-        return $"{a1Notation} = Row {row}, Column {column}";
+        return new FromIndexParameters(row, column);
     }
+
+    private record FromIndexParameters(int Row, int Column);
 }

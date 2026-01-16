@@ -16,29 +16,44 @@ public class DeletePptTableRowHandler : OperationHandlerBase<Presentation>
     /// </summary>
     /// <param name="context">The document context.</param>
     /// <param name="parameters">
-    ///     Required: shapeIndex, rowIndex
-    ///     Optional: slideIndex
+    ///     Required: shapeIndex, rowIndex.
+    ///     Optional: slideIndex.
     /// </param>
     /// <returns>Success message with deletion details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetOptional("slideIndex", 0);
-        var shapeIndex = parameters.GetOptional<int?>("shapeIndex");
-        var rowIndex = parameters.GetOptional<int?>("rowIndex");
-
-        if (!shapeIndex.HasValue)
-            throw new ArgumentException("shapeIndex is required for delete_row operation");
-        if (!rowIndex.HasValue)
-            throw new ArgumentException("rowIndex is required for delete_row operation");
+        var deleteParams = ExtractDeleteRowParameters(parameters);
 
         var presentation = context.Document;
-        var slide = PptTableHelper.GetSlide(presentation, slideIndex);
-        var table = PptTableHelper.GetTable(slide, shapeIndex.Value);
+        var slide = PptTableHelper.GetSlide(presentation, deleteParams.SlideIndex);
+        var table = PptTableHelper.GetTable(slide, deleteParams.ShapeIndex);
 
-        table.Rows.RemoveAt(rowIndex.Value, false);
+        table.Rows.RemoveAt(deleteParams.RowIndex, false);
 
         MarkModified(context);
 
-        return Success($"Row {rowIndex.Value} deleted.");
+        return Success($"Row {deleteParams.RowIndex} deleted.");
     }
+
+    /// <summary>
+    ///     Extracts delete row parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted delete row parameters.</returns>
+    private static DeleteRowParameters ExtractDeleteRowParameters(OperationParameters parameters)
+    {
+        return new DeleteRowParameters(
+            parameters.GetOptional("slideIndex", 0),
+            parameters.GetRequired<int>("shapeIndex"),
+            parameters.GetRequired<int>("rowIndex")
+        );
+    }
+
+    /// <summary>
+    ///     Record for holding delete row parameters.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index.</param>
+    /// <param name="ShapeIndex">The shape index.</param>
+    /// <param name="RowIndex">The row index to delete.</param>
+    private record DeleteRowParameters(int SlideIndex, int ShapeIndex, int RowIndex);
 }

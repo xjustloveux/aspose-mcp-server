@@ -126,40 +126,11 @@ public class OperationParameters
     {
         try
         {
-            if (underlyingType == typeof(string))
-                return (T)(object)element.GetString()!;
-
-            if (underlyingType == typeof(int))
-                return (T)(object)element.GetInt32();
-
-            if (underlyingType == typeof(long))
-                return (T)(object)element.GetInt64();
-
-            if (underlyingType == typeof(double))
-                return (T)(object)element.GetDouble();
-
-            if (underlyingType == typeof(float))
-                return (T)(object)(float)element.GetDouble();
-
-            if (underlyingType == typeof(bool))
-                return (T)(object)element.GetBoolean();
-
-            if (underlyingType == typeof(decimal))
-                return (T)(object)element.GetDecimal();
+            if (TryConvertJsonPrimitive<T>(element, underlyingType, out var result))
+                return result;
 
             if (underlyingType.IsEnum)
-            {
-                if (element.ValueKind == JsonValueKind.String)
-                {
-                    var stringValue = element.GetString();
-                    if (stringValue != null && Enum.TryParse(underlyingType, stringValue, true, out var enumValue))
-                        return (T)enumValue;
-                }
-                else if (element.ValueKind == JsonValueKind.Number && element.TryGetInt32(out var intValue))
-                {
-                    return (T)Enum.ToObject(underlyingType, intValue);
-                }
-            }
+                return ConvertJsonToEnum<T>(element, underlyingType);
 
             return element.Deserialize<T>()!;
         }
@@ -168,6 +139,86 @@ public class OperationParameters
             throw new ArgumentException(
                 $"Cannot convert JSON parameter '{parameterName}' to type {typeof(T).Name}", ex);
         }
+    }
+
+    /// <summary>
+    ///     Tries to convert a JSON element to a primitive type.
+    /// </summary>
+    /// <typeparam name="T">The target type.</typeparam>
+    /// <param name="element">The JSON element to convert.</param>
+    /// <param name="underlyingType">The underlying type to convert to.</param>
+    /// <param name="result">The converted result if successful.</param>
+    /// <returns>True if conversion was successful; otherwise, false.</returns>
+    private static bool TryConvertJsonPrimitive<T>(JsonElement element, Type underlyingType, out T result)
+    {
+        result = default!;
+        if (underlyingType == typeof(string))
+        {
+            result = (T)(object)element.GetString()!;
+            return true;
+        }
+
+        if (underlyingType == typeof(int))
+        {
+            result = (T)(object)element.GetInt32();
+            return true;
+        }
+
+        if (underlyingType == typeof(long))
+        {
+            result = (T)(object)element.GetInt64();
+            return true;
+        }
+
+        if (underlyingType == typeof(double))
+        {
+            result = (T)(object)element.GetDouble();
+            return true;
+        }
+
+        if (underlyingType == typeof(float))
+        {
+            result = (T)(object)(float)element.GetDouble();
+            return true;
+        }
+
+        if (underlyingType == typeof(bool))
+        {
+            result = (T)(object)element.GetBoolean();
+            return true;
+        }
+
+        if (underlyingType == typeof(decimal))
+        {
+            result = (T)(object)element.GetDecimal();
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    ///     Converts a JSON element to an enum type.
+    /// </summary>
+    /// <typeparam name="T">The target enum type.</typeparam>
+    /// <param name="element">The JSON element to convert.</param>
+    /// <param name="underlyingType">The underlying enum type.</param>
+    /// <returns>The converted enum value.</returns>
+    /// <exception cref="ArgumentException">Thrown when conversion fails.</exception>
+    private static T ConvertJsonToEnum<T>(JsonElement element, Type underlyingType)
+    {
+        if (element.ValueKind == JsonValueKind.String)
+        {
+            var stringValue = element.GetString();
+            if (stringValue != null && Enum.TryParse(underlyingType, stringValue, true, out var enumValue))
+                return (T)enumValue;
+        }
+        else if (element.ValueKind == JsonValueKind.Number && element.TryGetInt32(out var intValue))
+        {
+            return (T)Enum.ToObject(underlyingType, intValue);
+        }
+
+        throw new ArgumentException($"Cannot convert JSON value to enum {underlyingType.Name}");
     }
 
     /// <summary>

@@ -199,7 +199,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -227,74 +227,173 @@ Usage examples:
     {
         var parameters = new OperationParameters();
 
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "get":
-            case "get_details":
-                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
-                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
-                break;
+            "get" or "get_details" or "delete" or "ungroup"
+                => BuildSlideShapeParameters(parameters, slideIndex, shapeIndex),
+            "edit" => BuildEditParameters(parameters, slideIndex, shapeIndex, x, y, width, height, rotation, text),
+            "set_format" => BuildSetFormatParameters(parameters, slideIndex, shapeIndex, fillColor, lineColor,
+                lineWidth),
+            "clear_format" => BuildClearFormatParameters(parameters, slideIndex, shapeIndex, clearFill, clearLine),
+            "group" or "align" => BuildGroupAlignParameters(parameters, slideIndex, shapeIndices, align, alignToSlide),
+            "copy" => BuildCopyParameters(parameters, fromSlide, toSlide, shapeIndex),
+            "reorder" => BuildReorderParameters(parameters, slideIndex, shapeIndex, toIndex),
+            "flip" => BuildFlipParameters(parameters, slideIndex, shapeIndex, flipHorizontal, flipVertical),
+            _ => parameters
+        };
+    }
 
-            case "delete":
-            case "ungroup":
-                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
-                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for basic slide/shape operations (get, get_details, delete, ungroup).
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <param name="shapeIndex">The shape index (0-based).</param>
+    /// <returns>OperationParameters configured for basic slide/shape operations.</returns>
+    private static OperationParameters BuildSlideShapeParameters(OperationParameters parameters, int? slideIndex,
+        int? shapeIndex)
+    {
+        if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
+        if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+        return parameters;
+    }
 
-            case "edit":
-                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
-                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
-                if (x.HasValue) parameters.Set("x", x.Value);
-                if (y.HasValue) parameters.Set("y", y.Value);
-                if (width.HasValue) parameters.Set("width", width.Value);
-                if (height.HasValue) parameters.Set("height", height.Value);
-                if (rotation.HasValue) parameters.Set("rotation", rotation.Value);
-                if (text != null) parameters.Set("text", text);
-                break;
+    /// <summary>
+    ///     Builds parameters for the edit shape operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <param name="shapeIndex">The shape index (0-based).</param>
+    /// <param name="x">The X position in points.</param>
+    /// <param name="y">The Y position in points.</param>
+    /// <param name="width">The width in points.</param>
+    /// <param name="height">The height in points.</param>
+    /// <param name="rotation">The rotation in degrees.</param>
+    /// <param name="text">The text content for AutoShape.</param>
+    /// <returns>OperationParameters configured for the edit operation.</returns>
+    private static OperationParameters BuildEditParameters(OperationParameters parameters, int? slideIndex,
+        int? shapeIndex, float? x, float? y, float? width, float? height, float? rotation, string? text)
+    {
+        if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
+        if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+        if (x.HasValue) parameters.Set("x", x.Value);
+        if (y.HasValue) parameters.Set("y", y.Value);
+        if (width.HasValue) parameters.Set("width", width.Value);
+        if (height.HasValue) parameters.Set("height", height.Value);
+        if (rotation.HasValue) parameters.Set("rotation", rotation.Value);
+        if (text != null) parameters.Set("text", text);
+        return parameters;
+    }
 
-            case "set_format":
-                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
-                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
-                if (fillColor != null) parameters.Set("fillColor", fillColor);
-                if (lineColor != null) parameters.Set("lineColor", lineColor);
-                if (lineWidth.HasValue) parameters.Set("lineWidth", lineWidth.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the set format operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <param name="shapeIndex">The shape index (0-based).</param>
+    /// <param name="fillColor">The fill color in hex format (e.g., '#FF0000').</param>
+    /// <param name="lineColor">The line color in hex format.</param>
+    /// <param name="lineWidth">The line width in points.</param>
+    /// <returns>OperationParameters configured for the set format operation.</returns>
+    private static OperationParameters BuildSetFormatParameters(OperationParameters parameters, int? slideIndex,
+        int? shapeIndex, string? fillColor, string? lineColor, float? lineWidth)
+    {
+        if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
+        if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+        if (fillColor != null) parameters.Set("fillColor", fillColor);
+        if (lineColor != null) parameters.Set("lineColor", lineColor);
+        if (lineWidth.HasValue) parameters.Set("lineWidth", lineWidth.Value);
+        return parameters;
+    }
 
-            case "clear_format":
-                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
-                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
-                parameters.Set("clearFill", clearFill);
-                parameters.Set("clearLine", clearLine);
-                break;
+    /// <summary>
+    ///     Builds parameters for the clear format operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <param name="shapeIndex">The shape index (0-based).</param>
+    /// <param name="clearFill">Whether to clear the fill.</param>
+    /// <param name="clearLine">Whether to clear the line.</param>
+    /// <returns>OperationParameters configured for the clear format operation.</returns>
+    private static OperationParameters BuildClearFormatParameters(OperationParameters parameters, int? slideIndex,
+        int? shapeIndex, bool clearFill, bool clearLine)
+    {
+        if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
+        if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+        parameters.Set("clearFill", clearFill);
+        parameters.Set("clearLine", clearLine);
+        return parameters;
+    }
 
-            case "group":
-            case "align":
-                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
-                if (shapeIndices != null) parameters.Set("shapeIndices", shapeIndices);
-                if (align != null) parameters.Set("align", align);
-                parameters.Set("alignToSlide", alignToSlide);
-                break;
+    /// <summary>
+    ///     Builds parameters for the group and align operations.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <param name="shapeIndices">The array of shape indices to group or align.</param>
+    /// <param name="align">The alignment type: left, center, right, top, middle, bottom.</param>
+    /// <param name="alignToSlide">Whether to align to slide bounds.</param>
+    /// <returns>OperationParameters configured for group/align operations.</returns>
+    private static OperationParameters BuildGroupAlignParameters(OperationParameters parameters, int? slideIndex,
+        int[]? shapeIndices, string? align, bool alignToSlide)
+    {
+        if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
+        if (shapeIndices != null) parameters.Set("shapeIndices", shapeIndices);
+        if (align != null) parameters.Set("align", align);
+        parameters.Set("alignToSlide", alignToSlide);
+        return parameters;
+    }
 
-            case "copy":
-                if (fromSlide.HasValue) parameters.Set("fromSlide", fromSlide.Value);
-                if (toSlide.HasValue) parameters.Set("toSlide", toSlide.Value);
-                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the copy shape operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="fromSlide">The source slide index (0-based).</param>
+    /// <param name="toSlide">The target slide index (0-based).</param>
+    /// <param name="shapeIndex">The shape index to copy (0-based).</param>
+    /// <returns>OperationParameters configured for the copy operation.</returns>
+    private static OperationParameters BuildCopyParameters(OperationParameters parameters, int? fromSlide,
+        int? toSlide, int? shapeIndex)
+    {
+        if (fromSlide.HasValue) parameters.Set("fromSlide", fromSlide.Value);
+        if (toSlide.HasValue) parameters.Set("toSlide", toSlide.Value);
+        if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+        return parameters;
+    }
 
-            case "reorder":
-                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
-                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
-                if (toIndex.HasValue) parameters.Set("toIndex", toIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the reorder shape operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <param name="shapeIndex">The shape index (0-based).</param>
+    /// <param name="toIndex">The target Z-order index.</param>
+    /// <returns>OperationParameters configured for the reorder operation.</returns>
+    private static OperationParameters BuildReorderParameters(OperationParameters parameters, int? slideIndex,
+        int? shapeIndex, int? toIndex)
+    {
+        if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
+        if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+        if (toIndex.HasValue) parameters.Set("toIndex", toIndex.Value);
+        return parameters;
+    }
 
-            case "flip":
-                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
-                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
-                if (flipHorizontal.HasValue) parameters.Set("flipHorizontal", flipHorizontal.Value);
-                if (flipVertical.HasValue) parameters.Set("flipVertical", flipVertical.Value);
-                break;
-        }
-
+    /// <summary>
+    ///     Builds parameters for the flip shape operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <param name="shapeIndex">The shape index (0-based).</param>
+    /// <param name="flipHorizontal">Whether to flip horizontally.</param>
+    /// <param name="flipVertical">Whether to flip vertically.</param>
+    /// <returns>OperationParameters configured for the flip operation.</returns>
+    private static OperationParameters BuildFlipParameters(OperationParameters parameters, int? slideIndex,
+        int? shapeIndex, bool? flipHorizontal, bool? flipVertical)
+    {
+        if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
+        if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+        if (flipHorizontal.HasValue) parameters.Set("flipHorizontal", flipHorizontal.Value);
+        if (flipVertical.HasValue) parameters.Set("flipVertical", flipVertical.Value);
         return parameters;
     }
 }

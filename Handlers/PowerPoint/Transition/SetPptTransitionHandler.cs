@@ -34,21 +34,19 @@ public class SetPptTransitionHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with transition details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetOptional("slideIndex", 0);
-        var type = parameters.GetRequired<string>("transitionType");
-        var advanceAfterSeconds = parameters.GetOptional<double?>("advanceAfterSeconds");
+        var setParams = ExtractSetTransitionParameters(parameters);
 
-        if (string.IsNullOrWhiteSpace(type))
+        if (string.IsNullOrWhiteSpace(setParams.TransitionType))
             throw new ArgumentException("transitionType is required");
 
-        if (!ValidTransitionTypes.Contains(type))
+        if (!ValidTransitionTypes.Contains(setParams.TransitionType))
             throw new ArgumentException(
-                $"Invalid transition type: '{type}'. Valid types: {string.Join(", ", ValidTransitionTypes)}");
+                $"Invalid transition type: '{setParams.TransitionType}'. Valid types: {string.Join(", ", ValidTransitionTypes)}");
 
         var presentation = context.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+        var slide = PowerPointHelper.GetSlide(presentation, setParams.SlideIndex);
 
-        var transitionType = type.ToLower() switch
+        var transitionType = setParams.TransitionType.ToLower() switch
         {
             "none" => TransitionType.None,
             "blinds" => TransitionType.Blinds,
@@ -76,15 +74,37 @@ public class SetPptTransitionHandler : OperationHandlerBase<Presentation>
 
         slide.SlideShowTransition.Type = transitionType;
 
-        if (advanceAfterSeconds.HasValue)
+        if (setParams.AdvanceAfterSeconds.HasValue)
         {
-            var milliseconds = (uint)(advanceAfterSeconds.Value * 1000);
+            var milliseconds = (uint)(setParams.AdvanceAfterSeconds.Value * 1000);
             slide.SlideShowTransition.AdvanceAfterTime = milliseconds;
             slide.SlideShowTransition.AdvanceAfter = milliseconds > 0;
         }
 
         MarkModified(context);
 
-        return Success($"Transition '{type}' set for slide {slideIndex}.");
+        return Success($"Transition '{setParams.TransitionType}' set for slide {setParams.SlideIndex}.");
     }
+
+    /// <summary>
+    ///     Extracts set transition parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted set transition parameters.</returns>
+    private static SetTransitionParameters ExtractSetTransitionParameters(OperationParameters parameters)
+    {
+        return new SetTransitionParameters(
+            parameters.GetOptional("slideIndex", 0),
+            parameters.GetRequired<string>("transitionType"),
+            parameters.GetOptional<double?>("advanceAfterSeconds")
+        );
+    }
+
+    /// <summary>
+    ///     Record for holding set transition parameters.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index.</param>
+    /// <param name="TransitionType">The transition type.</param>
+    /// <param name="AdvanceAfterSeconds">The optional advance after seconds.</param>
+    private record SetTransitionParameters(int SlideIndex, string TransitionType, double? AdvanceAfterSeconds);
 }

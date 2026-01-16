@@ -20,19 +20,17 @@ public class GotoWordBookmarkHandler : OperationHandlerBase<Document>
     ///     Required: name
     /// </param>
     /// <returns>A message containing the bookmark's location information.</returns>
+    /// <exception cref="ArgumentException">Thrown when bookmark name is not provided or bookmark is not found.</exception>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var name = parameters.GetOptional<string?>("name");
-
-        if (string.IsNullOrEmpty(name))
-            throw new ArgumentException("Bookmark name is required for goto operation");
+        var p = ExtractGotoParameters(parameters);
 
         var doc = context.Document;
 
-        var bookmark = doc.Range.Bookmarks[name];
+        var bookmark = doc.Range.Bookmarks[p.Name];
         if (bookmark == null)
             throw new ArgumentException(
-                $"Bookmark '{name}' not found. Use get operation to view available bookmarks");
+                $"Bookmark '{p.Name}' not found. Use get operation to view available bookmarks");
 
         var bookmarkText = bookmark.Text;
         var bookmarkRange = bookmark.BookmarkStart?.ParentNode as WordParagraph;
@@ -47,7 +45,7 @@ public class GotoWordBookmarkHandler : OperationHandlerBase<Document>
             }
 
         var result = "Bookmark location information\n";
-        result += $"Bookmark name: {name}\n";
+        result += $"Bookmark name: {p.Name}\n";
         result += $"Bookmark text: {bookmarkText}\n";
         if (paragraphIndex >= 0) result += $"Paragraph index: {paragraphIndex}\n";
         result += $"Bookmark range length: {bookmarkText.Length} characters";
@@ -61,4 +59,26 @@ public class GotoWordBookmarkHandler : OperationHandlerBase<Document>
 
         return result;
     }
+
+    /// <summary>
+    ///     Extracts and validates parameters for the goto bookmark operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    /// <exception cref="ArgumentException">Thrown when bookmark name is not provided.</exception>
+    private static GotoParameters ExtractGotoParameters(OperationParameters parameters)
+    {
+        var name = parameters.GetOptional<string?>("name");
+
+        if (string.IsNullOrEmpty(name))
+            throw new ArgumentException("Bookmark name is required for goto operation");
+
+        return new GotoParameters(name);
+    }
+
+    /// <summary>
+    ///     Parameters for the goto bookmark operation.
+    /// </summary>
+    /// <param name="Name">The bookmark name to navigate to.</param>
+    private record GotoParameters(string Name);
 }

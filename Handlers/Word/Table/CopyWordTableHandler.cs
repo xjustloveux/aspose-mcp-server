@@ -25,14 +25,11 @@ public class CopyWordTableHandler : OperationHandlerBase<Document>
     /// <exception cref="ArgumentException">Thrown when indices are out of range or target paragraph cannot be found.</exception>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var tableIndex = parameters.GetOptional("tableIndex", 0);
-        var targetParagraphIndex = parameters.GetOptional("targetParagraphIndex", -1);
-        var sourceSectionIndex = parameters.GetOptional<int?>("sourceSectionIndex");
-        var targetSectionIndex = parameters.GetOptional<int?>("targetSectionIndex");
+        var p = ExtractCopyWordTableParameters(parameters);
 
         var doc = context.Document;
-        var sourceSectionIdx = sourceSectionIndex ?? 0;
-        var targetSectionIdx = targetSectionIndex ?? 0;
+        var sourceSectionIdx = p.SourceSectionIndex ?? 0;
+        var targetSectionIdx = p.TargetSectionIndex ?? 0;
 
         if (sourceSectionIdx < 0 || sourceSectionIdx >= doc.Sections.Count)
             throw new ArgumentException($"sourceSectionIndex must be between 0 and {doc.Sections.Count - 1}");
@@ -41,16 +38,16 @@ public class CopyWordTableHandler : OperationHandlerBase<Document>
 
         var sourceSection = doc.Sections[sourceSectionIdx];
         var sourceTables = sourceSection.Body.GetChildNodes(NodeType.Table, true).Cast<WordTable>().ToList();
-        if (tableIndex < 0 || tableIndex >= sourceTables.Count)
+        if (p.TableIndex < 0 || p.TableIndex >= sourceTables.Count)
             throw new ArgumentException($"sourceTableIndex must be between 0 and {sourceTables.Count - 1}");
 
-        var sourceTable = sourceTables[tableIndex];
+        var sourceTable = sourceTables[p.TableIndex];
         var targetSection = doc.Sections[targetSectionIdx];
         var targetParagraphs =
             targetSection.Body.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
 
         WordParagraph? targetPara;
-        if (targetParagraphIndex == -1)
+        if (p.TargetParagraphIndex == -1)
         {
             if (targetParagraphs.Count > 0)
                 targetPara = targetParagraphs[^1];
@@ -58,14 +55,14 @@ public class CopyWordTableHandler : OperationHandlerBase<Document>
                 throw new ArgumentException(
                     "Cannot copy table: target section has no paragraphs. Use a valid paragraph index.");
         }
-        else if (targetParagraphIndex < 0 || targetParagraphIndex >= targetParagraphs.Count)
+        else if (p.TargetParagraphIndex < 0 || p.TargetParagraphIndex >= targetParagraphs.Count)
         {
             throw new ArgumentException(
                 $"targetParagraphIndex must be between 0 and {targetParagraphs.Count - 1}, or use -1 for document end");
         }
         else
         {
-            targetPara = targetParagraphs[targetParagraphIndex];
+            targetPara = targetParagraphs[p.TargetParagraphIndex];
         }
 
         if (targetPara == null)
@@ -75,14 +72,14 @@ public class CopyWordTableHandler : OperationHandlerBase<Document>
 
         if (insertionPoint == null)
             throw new ArgumentException(
-                $"Unable to find valid insertion point (targetParagraphIndex: {targetParagraphIndex})");
+                $"Unable to find valid insertion point (targetParagraphIndex: {p.TargetParagraphIndex})");
 
         var clonedTable = (WordTable)sourceTable.Clone(true);
         targetSection.Body.InsertAfter(clonedTable, insertionPoint);
 
         MarkModified(context);
 
-        return Success($"Successfully copied table {tableIndex} to paragraph {targetParagraphIndex}.");
+        return Success($"Successfully copied table {p.TableIndex} to paragraph {p.TargetParagraphIndex}.");
     }
 
     /// <summary>
@@ -104,4 +101,20 @@ public class CopyWordTableHandler : OperationHandlerBase<Document>
 
         return directPara ?? targetSection.Body.LastChild;
     }
+
+    private static CopyWordTableParameters ExtractCopyWordTableParameters(OperationParameters parameters)
+    {
+        var tableIndex = parameters.GetOptional("tableIndex", 0);
+        var targetParagraphIndex = parameters.GetOptional("targetParagraphIndex", -1);
+        var sourceSectionIndex = parameters.GetOptional<int?>("sourceSectionIndex");
+        var targetSectionIndex = parameters.GetOptional<int?>("targetSectionIndex");
+
+        return new CopyWordTableParameters(tableIndex, targetParagraphIndex, sourceSectionIndex, targetSectionIndex);
+    }
+
+    private record CopyWordTableParameters(
+        int TableIndex,
+        int TargetParagraphIndex,
+        int? SourceSectionIndex,
+        int? TargetSectionIndex);
 }

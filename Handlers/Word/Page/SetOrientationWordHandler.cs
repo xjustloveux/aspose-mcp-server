@@ -23,24 +23,44 @@ public class SetOrientationWordHandler : OperationHandlerBase<Document>
     /// <returns>Success message with orientation details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var orientation = parameters.GetOptional<string?>("orientation");
-        var sectionIndex = parameters.GetOptional<int?>("sectionIndex");
-        var sectionIndices = parameters.GetOptional<JsonArray?>("sectionIndices");
+        var setParams = ExtractSetOrientationParameters(parameters);
 
-        if (string.IsNullOrEmpty(orientation))
+        if (string.IsNullOrEmpty(setParams.Orientation))
             throw new ArgumentException("orientation parameter is required for set_orientation operation");
 
         var doc = context.Document;
-        var orientationEnum = string.Equals(orientation, "landscape", StringComparison.OrdinalIgnoreCase)
+        var orientationEnum = string.Equals(setParams.Orientation, "landscape", StringComparison.OrdinalIgnoreCase)
             ? Orientation.Landscape
             : Orientation.Portrait;
-        var sectionsToUpdate = WordPageHelper.GetTargetSections(doc, sectionIndex, sectionIndices);
+        var sectionsToUpdate = WordPageHelper.GetTargetSections(doc, setParams.SectionIndex, setParams.SectionIndices);
 
         foreach (var idx in sectionsToUpdate)
             doc.Sections[idx].PageSetup.Orientation = orientationEnum;
 
         MarkModified(context);
 
-        return Success($"Page orientation set to {orientation} for {sectionsToUpdate.Count} section(s)");
+        return Success($"Page orientation set to {setParams.Orientation} for {sectionsToUpdate.Count} section(s)");
     }
+
+    /// <summary>
+    ///     Extracts set orientation parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted set orientation parameters.</returns>
+    private static SetOrientationParameters ExtractSetOrientationParameters(OperationParameters parameters)
+    {
+        return new SetOrientationParameters(
+            parameters.GetOptional<string?>("orientation"),
+            parameters.GetOptional<int?>("sectionIndex"),
+            parameters.GetOptional<JsonArray?>("sectionIndices")
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold set orientation parameters.
+    /// </summary>
+    /// <param name="Orientation">The page orientation (Portrait or Landscape).</param>
+    /// <param name="SectionIndex">The section index to apply orientation to.</param>
+    /// <param name="SectionIndices">The array of section indices to apply orientation to.</param>
+    private record SetOrientationParameters(string? Orientation, int? SectionIndex, JsonArray? SectionIndices);
 }

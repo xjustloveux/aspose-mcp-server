@@ -23,19 +23,18 @@ public class GroupPptShapesHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with group details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetOptional("slideIndex", 0);
-        var shapeIndices = parameters.GetRequired<int[]>("shapeIndices");
+        var p = ExtractGroupPptShapesParameters(parameters);
 
-        if (shapeIndices.Length < 2)
+        if (p.ShapeIndices.Length < 2)
             throw new ArgumentException("At least 2 shapes are required for grouping");
 
         var presentation = context.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+        var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
 
-        foreach (var idx in shapeIndices)
+        foreach (var idx in p.ShapeIndices)
             PowerPointHelper.ValidateCollectionIndex(idx, slide.Shapes.Count, "shapeIndex");
 
-        var sortedIndices = shapeIndices.OrderBy(i => i).ToArray();
+        var sortedIndices = p.ShapeIndices.OrderBy(i => i).ToArray();
         var shapes = sortedIndices.Select(idx => slide.Shapes[idx]).ToList();
 
         var minX = shapes.Min(s => s.X);
@@ -63,6 +62,25 @@ public class GroupPptShapesHandler : OperationHandlerBase<Presentation>
         MarkModified(context);
 
         var newIndex = slide.Shapes.IndexOf(groupShape);
-        return Success($"Grouped {shapeIndices.Length} shapes into group (shapeIndex: {newIndex}).");
+        return Success($"Grouped {p.ShapeIndices.Length} shapes into group (shapeIndex: {newIndex}).");
     }
+
+    /// <summary>
+    ///     Extracts parameters for group shapes operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static GroupPptShapesParameters ExtractGroupPptShapesParameters(OperationParameters parameters)
+    {
+        return new GroupPptShapesParameters(
+            parameters.GetOptional("slideIndex", 0),
+            parameters.GetRequired<int[]>("shapeIndices"));
+    }
+
+    /// <summary>
+    ///     Parameters for group shapes operation.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index (0-based).</param>
+    /// <param name="ShapeIndices">The shape indices to group.</param>
+    private record GroupPptShapesParameters(int SlideIndex, int[] ShapeIndices);
 }

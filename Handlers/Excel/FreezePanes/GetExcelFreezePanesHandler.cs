@@ -22,10 +22,10 @@ public class GetExcelFreezePanesHandler : OperationHandlerBase<Workbook>
     /// <returns>JSON result with freeze panes status information.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
+        var p = ExtractGetFreezePanesParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, p.SheetIndex);
 
         var isFrozen = worksheet.PaneState == PaneStateType.Frozen;
         int? frozenRow = null;
@@ -53,4 +53,13 @@ public class GetExcelFreezePanesHandler : OperationHandlerBase<Workbook>
             status = isFrozen ? "Panes are frozen" : "Panes are not frozen"
         });
     }
+
+    private static GetFreezePanesParameters ExtractGetFreezePanesParameters(OperationParameters parameters)
+    {
+        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
+
+        return new GetFreezePanesParameters(sheetIndex);
+    }
+
+    private record GetFreezePanesParameters(int SheetIndex);
 }

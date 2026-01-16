@@ -22,10 +22,10 @@ public class GetPptShapesHandler : OperationHandlerBase<Presentation>
     /// <returns>JSON result with shape information.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetOptional("slideIndex", 0);
+        var p = ExtractGetPptShapesParameters(parameters);
 
         var presentation = context.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+        var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
 
         var shapes = new List<object>();
         for (var i = 0; i < slide.Shapes.Count; i++)
@@ -46,11 +46,27 @@ public class GetPptShapesHandler : OperationHandlerBase<Presentation>
 
         var result = new
         {
-            slideIndex,
+            slideIndex = p.SlideIndex,
             count = shapes.Count,
             shapes
         };
 
         return JsonResult(result);
     }
+
+    /// <summary>
+    ///     Extracts parameters for get shapes operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static GetPptShapesParameters ExtractGetPptShapesParameters(OperationParameters parameters)
+    {
+        return new GetPptShapesParameters(parameters.GetOptional("slideIndex", 0));
+    }
+
+    /// <summary>
+    ///     Parameters for get shapes operation.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index (0-based).</param>
+    private record GetPptShapesParameters(int SlideIndex);
 }

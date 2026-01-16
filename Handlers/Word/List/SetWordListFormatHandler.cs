@@ -24,26 +24,22 @@ public class SetWordListFormatHandler : OperationHandlerBase<Document>
     /// <returns>Success message with format changes.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var paragraphIndex = parameters.GetRequired<int>("paragraphIndex");
-        var numberStyle = parameters.GetOptional<string?>("numberStyle");
-        var indentLevel = parameters.GetOptional<int?>("indentLevel");
-        var leftIndent = parameters.GetOptional<double?>("leftIndent");
-        var firstLineIndent = parameters.GetOptional<double?>("firstLineIndent");
+        var p = ExtractSetListFormatParameters(parameters);
 
         var doc = context.Document;
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
 
-        if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
+        if (p.ParagraphIndex < 0 || p.ParagraphIndex >= paragraphs.Count)
             throw new ArgumentException(
-                $"Paragraph index {paragraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
+                $"Paragraph index {p.ParagraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
 
-        var para = paragraphs[paragraphIndex] as WordParagraph;
+        var para = paragraphs[p.ParagraphIndex] as WordParagraph;
         if (para == null)
-            throw new InvalidOperationException($"Unable to find paragraph at index {paragraphIndex}");
+            throw new InvalidOperationException($"Unable to find paragraph at index {p.ParagraphIndex}");
 
         List<string> changes = [];
 
-        if (!string.IsNullOrEmpty(numberStyle) && para.ListFormat.IsListItem)
+        if (!string.IsNullOrEmpty(p.NumberStyle) && para.ListFormat.IsListItem)
         {
             var list = para.ListFormat.List;
             if (list != null)
@@ -51,7 +47,7 @@ public class SetWordListFormatHandler : OperationHandlerBase<Document>
                 var level = para.ListFormat.ListLevelNumber;
                 var listLevel = list.ListLevels[level];
 
-                var style = numberStyle.ToLower() switch
+                var style = p.NumberStyle.ToLower() switch
                 {
                     "arabic" => NumberStyle.Arabic,
                     "roman" => NumberStyle.UppercaseRoman,
@@ -62,32 +58,32 @@ public class SetWordListFormatHandler : OperationHandlerBase<Document>
                 };
 
                 listLevel.NumberStyle = style;
-                changes.Add($"Number style: {numberStyle} (affects all items at level {level} in this list)");
+                changes.Add($"Number style: {p.NumberStyle} (affects all items at level {level} in this list)");
             }
         }
 
-        if (indentLevel.HasValue)
+        if (p.IndentLevel.HasValue)
         {
-            para.ParagraphFormat.LeftIndent = InchToPoint(0.5 * indentLevel.Value);
-            changes.Add($"Indent level: {indentLevel.Value} ({InchToPoint(0.5 * indentLevel.Value):F1} points)");
+            para.ParagraphFormat.LeftIndent = InchToPoint(0.5 * p.IndentLevel.Value);
+            changes.Add($"Indent level: {p.IndentLevel.Value} ({InchToPoint(0.5 * p.IndentLevel.Value):F1} points)");
         }
 
-        if (leftIndent.HasValue)
+        if (p.LeftIndent.HasValue)
         {
-            para.ParagraphFormat.LeftIndent = leftIndent.Value;
-            changes.Add($"Left indent: {leftIndent.Value} points");
+            para.ParagraphFormat.LeftIndent = p.LeftIndent.Value;
+            changes.Add($"Left indent: {p.LeftIndent.Value} points");
         }
 
-        if (firstLineIndent.HasValue)
+        if (p.FirstLineIndent.HasValue)
         {
-            para.ParagraphFormat.FirstLineIndent = firstLineIndent.Value;
-            changes.Add($"First line indent: {firstLineIndent.Value} points");
+            para.ParagraphFormat.FirstLineIndent = p.FirstLineIndent.Value;
+            changes.Add($"First line indent: {p.FirstLineIndent.Value} points");
         }
 
         MarkModified(context);
 
         var result = "List format set successfully\n";
-        result += $"Paragraph index: {paragraphIndex}\n";
+        result += $"Paragraph index: {p.ParagraphIndex}\n";
         if (changes.Count > 0)
             result += $"Changes: {string.Join(", ", changes)}";
         else
@@ -95,4 +91,21 @@ public class SetWordListFormatHandler : OperationHandlerBase<Document>
 
         return Success(result);
     }
+
+    private static SetListFormatParameters ExtractSetListFormatParameters(OperationParameters parameters)
+    {
+        return new SetListFormatParameters(
+            parameters.GetRequired<int>("paragraphIndex"),
+            parameters.GetOptional<string?>("numberStyle"),
+            parameters.GetOptional<int?>("indentLevel"),
+            parameters.GetOptional<double?>("leftIndent"),
+            parameters.GetOptional<double?>("firstLineIndent"));
+    }
+
+    private record SetListFormatParameters(
+        int ParagraphIndex,
+        string? NumberStyle,
+        int? IndentLevel,
+        double? LeftIndent,
+        double? FirstLineIndent);
 }

@@ -113,27 +113,44 @@ Notes:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
         string? password,
         string protectionType)
     {
-        var parameters = new OperationParameters();
-
-        switch (operation.ToLower())
+        return operation.ToLower() switch
         {
-            case "protect":
-                if (password != null) parameters.Set("password", password);
-                parameters.Set("protectionType", protectionType);
-                break;
+            "protect" => BuildProtectParameters(password, protectionType),
+            "unprotect" => BuildUnprotectParameters(password),
+            _ => new OperationParameters()
+        };
+    }
 
-            case "unprotect":
-                if (password != null) parameters.Set("password", password);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the protect document operation.
+    /// </summary>
+    /// <param name="password">The protection password.</param>
+    /// <param name="protectionType">The protection type (ReadOnly, AllowOnlyComments, etc.).</param>
+    /// <returns>OperationParameters configured for protecting a document.</returns>
+    private static OperationParameters BuildProtectParameters(string? password, string protectionType)
+    {
+        var parameters = new OperationParameters();
+        if (password != null) parameters.Set("password", password);
+        parameters.Set("protectionType", protectionType);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the unprotect document operation.
+    /// </summary>
+    /// <param name="password">The password to unprotect (optional).</param>
+    /// <returns>OperationParameters configured for unprotecting a document.</returns>
+    private static OperationParameters BuildUnprotectParameters(string? password)
+    {
+        var parameters = new OperationParameters();
+        if (password != null) parameters.Set("password", password);
         return parameters;
     }
 }

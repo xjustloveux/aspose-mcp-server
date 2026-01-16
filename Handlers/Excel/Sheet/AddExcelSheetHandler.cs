@@ -22,10 +22,9 @@ public class AddExcelSheetHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with operation details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetName = parameters.GetRequired<string>("sheetName");
-        var insertAt = parameters.GetOptional<int?>("insertAt");
+        var p = ExtractAddExcelSheetParameters(parameters);
 
-        sheetName = sheetName.Trim();
+        var sheetName = p.SheetName.Trim();
         ExcelSheetHelper.ValidateSheetName(sheetName, "sheetName");
 
         var workbook = context.Document;
@@ -36,20 +35,20 @@ public class AddExcelSheetHandler : OperationHandlerBase<Workbook>
             throw new ArgumentException($"Worksheet name '{sheetName}' already exists in the workbook");
 
         Worksheet newSheet;
-        if (insertAt.HasValue)
+        if (p.InsertAt.HasValue)
         {
-            if (insertAt.Value < 0 || insertAt.Value > workbook.Worksheets.Count)
+            if (p.InsertAt.Value < 0 || p.InsertAt.Value > workbook.Worksheets.Count)
                 throw new ArgumentException($"insertAt must be between 0 and {workbook.Worksheets.Count}");
 
-            if (insertAt.Value == workbook.Worksheets.Count)
+            if (p.InsertAt.Value == workbook.Worksheets.Count)
             {
                 var addedIndex = workbook.Worksheets.Add();
                 newSheet = workbook.Worksheets[addedIndex];
             }
             else
             {
-                workbook.Worksheets.Insert(insertAt.Value, SheetType.Worksheet);
-                newSheet = workbook.Worksheets[insertAt.Value];
+                workbook.Worksheets.Insert(p.InsertAt.Value, SheetType.Worksheet);
+                newSheet = workbook.Worksheets[p.InsertAt.Value];
             }
         }
         else
@@ -64,4 +63,14 @@ public class AddExcelSheetHandler : OperationHandlerBase<Workbook>
 
         return Success($"Worksheet '{sheetName}' added.");
     }
+
+    private static AddExcelSheetParameters ExtractAddExcelSheetParameters(OperationParameters parameters)
+    {
+        var sheetName = parameters.GetRequired<string>("sheetName");
+        var insertAt = parameters.GetOptional<int?>("insertAt");
+
+        return new AddExcelSheetParameters(sheetName, insertAt);
+    }
+
+    private record AddExcelSheetParameters(string SheetName, int? InsertAt);
 }

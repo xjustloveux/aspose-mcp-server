@@ -22,47 +22,71 @@ public class SetExcelChartPropertiesHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with property update details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var chartIndex = parameters.GetOptional("chartIndex", 0);
-        var title = parameters.GetOptional<string?>("title");
-        var removeTitle = parameters.GetOptional("removeTitle", false);
-        var legendVisible = parameters.GetOptional<bool?>("legendVisible");
-        var legendPosition = parameters.GetOptional<string?>("legendPosition");
+        var setParams = ExtractSetPropertiesParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var chart = ExcelChartHelper.GetChart(worksheet, chartIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, setParams.SheetIndex);
+        var chart = ExcelChartHelper.GetChart(worksheet, setParams.ChartIndex);
 
         List<string> changes = [];
 
-        if (removeTitle)
+        if (setParams.RemoveTitle)
         {
             chart.Title.Text = "";
             changes.Add("Title removed");
         }
-        else if (!string.IsNullOrEmpty(title))
+        else if (!string.IsNullOrEmpty(setParams.Title))
         {
-            chart.Title.Text = title;
-            changes.Add($"Title: {title}");
+            chart.Title.Text = setParams.Title;
+            changes.Add($"Title: {setParams.Title}");
         }
 
-        if (legendVisible.HasValue)
+        if (setParams.LegendVisible.HasValue)
         {
-            chart.ShowLegend = legendVisible.Value;
-            changes.Add($"Legend: {(legendVisible.Value ? "show" : "hide")}");
+            chart.ShowLegend = setParams.LegendVisible.Value;
+            changes.Add($"Legend: {(setParams.LegendVisible.Value ? "show" : "hide")}");
         }
 
-        if (!string.IsNullOrEmpty(legendPosition) && chart.Legend != null)
+        if (!string.IsNullOrEmpty(setParams.LegendPosition) && chart.Legend != null)
         {
-            chart.Legend.Position = ExcelChartHelper.ParseLegendPosition(legendPosition, chart.Legend.Position);
-            changes.Add($"Legend position: {legendPosition}");
+            chart.Legend.Position =
+                ExcelChartHelper.ParseLegendPosition(setParams.LegendPosition, chart.Legend.Position);
+            changes.Add($"Legend position: {setParams.LegendPosition}");
         }
 
         if (changes.Count > 0)
             MarkModified(context);
 
         return changes.Count > 0
-            ? Success($"Chart #{chartIndex} properties updated: {string.Join(", ", changes)}")
-            : Success($"Chart #{chartIndex} no changes");
+            ? Success($"Chart #{setParams.ChartIndex} properties updated: {string.Join(", ", changes)}")
+            : Success($"Chart #{setParams.ChartIndex} no changes");
     }
+
+    /// <summary>
+    ///     Extracts set properties parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted set properties parameters.</returns>
+    private static SetPropertiesParameters ExtractSetPropertiesParameters(OperationParameters parameters)
+    {
+        return new SetPropertiesParameters(
+            parameters.GetOptional("sheetIndex", 0),
+            parameters.GetOptional("chartIndex", 0),
+            parameters.GetOptional<string?>("title"),
+            parameters.GetOptional("removeTitle", false),
+            parameters.GetOptional<bool?>("legendVisible"),
+            parameters.GetOptional<string?>("legendPosition")
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold set properties parameters.
+    /// </summary>
+    private record SetPropertiesParameters(
+        int SheetIndex,
+        int ChartIndex,
+        string? Title,
+        bool RemoveTitle,
+        bool? LegendVisible,
+        string? LegendPosition);
 }

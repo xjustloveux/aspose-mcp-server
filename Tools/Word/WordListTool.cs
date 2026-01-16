@@ -161,7 +161,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -186,58 +186,144 @@ Usage examples:
     {
         var parameters = new OperationParameters();
 
-        switch (operation.ToLower())
+        return operation.ToLower() switch
         {
-            case "add_list":
-                if (items != null) parameters.Set("items", items);
-                parameters.Set("listType", listType);
-                parameters.Set("bulletChar", bulletChar);
-                parameters.Set("numberFormat", numberFormat);
-                parameters.Set("continuePrevious", continuePrevious);
-                break;
+            "add_list" => BuildAddListParameters(parameters, items, listType, bulletChar, numberFormat,
+                continuePrevious),
+            "add_item" => BuildAddItemParameters(parameters, text, styleName, listLevel, applyStyleIndent),
+            "delete_item" or "get_format" => BuildParagraphIndexParameters(parameters, paragraphIndex),
+            "edit_item" => BuildEditItemParameters(parameters, paragraphIndex, text, level),
+            "set_format" => BuildSetFormatParameters(parameters, paragraphIndex, numberStyle, indentLevel, leftIndent,
+                firstLineIndent),
+            "restart_numbering" => BuildRestartNumberingParameters(parameters, paragraphIndex, startAt),
+            "convert_to_list" => BuildConvertToListParameters(parameters, startParagraphIndex, endParagraphIndex,
+                listType, numberFormat),
+            _ => parameters
+        };
+    }
 
-            case "add_item":
-                if (text != null) parameters.Set("text", text);
-                if (styleName != null) parameters.Set("styleName", styleName);
-                parameters.Set("listLevel", listLevel);
-                parameters.Set("applyStyleIndent", applyStyleIndent);
-                break;
+    /// <summary>
+    ///     Builds parameters for the add list operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="items">The list items (string array or object array with text/level).</param>
+    /// <param name="listType">The list type: 'bullet', 'number', 'custom'.</param>
+    /// <param name="bulletChar">The custom bullet character.</param>
+    /// <param name="numberFormat">The number format: 'arabic', 'roman', 'letter'.</param>
+    /// <param name="continuePrevious">Whether to continue numbering from last list.</param>
+    /// <returns>OperationParameters configured for the add list operation.</returns>
+    private static OperationParameters BuildAddListParameters(OperationParameters parameters, JsonArray? items,
+        string listType, string bulletChar, string numberFormat, bool continuePrevious)
+    {
+        if (items != null) parameters.Set("items", items);
+        parameters.Set("listType", listType);
+        parameters.Set("bulletChar", bulletChar);
+        parameters.Set("numberFormat", numberFormat);
+        parameters.Set("continuePrevious", continuePrevious);
+        return parameters;
+    }
 
-            case "delete_item":
-                if (paragraphIndex.HasValue) parameters.Set("paragraphIndex", paragraphIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the add list item operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="text">The list item text content.</param>
+    /// <param name="styleName">The style name for the list item.</param>
+    /// <param name="listLevel">The list level (0-8).</param>
+    /// <param name="applyStyleIndent">Whether to use style-defined indent.</param>
+    /// <returns>OperationParameters configured for the add item operation.</returns>
+    private static OperationParameters BuildAddItemParameters(OperationParameters parameters, string? text,
+        string? styleName, int listLevel, bool applyStyleIndent)
+    {
+        if (text != null) parameters.Set("text", text);
+        if (styleName != null) parameters.Set("styleName", styleName);
+        parameters.Set("listLevel", listLevel);
+        parameters.Set("applyStyleIndent", applyStyleIndent);
+        return parameters;
+    }
 
-            case "edit_item":
-                if (paragraphIndex.HasValue) parameters.Set("paragraphIndex", paragraphIndex.Value);
-                if (text != null) parameters.Set("text", text);
-                if (level.HasValue) parameters.Set("level", level.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for paragraph index-based operations (delete_item, get_format).
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="paragraphIndex">The paragraph index (0-based).</param>
+    /// <returns>OperationParameters configured for paragraph index-based operations.</returns>
+    private static OperationParameters BuildParagraphIndexParameters(OperationParameters parameters,
+        int? paragraphIndex)
+    {
+        if (paragraphIndex.HasValue) parameters.Set("paragraphIndex", paragraphIndex.Value);
+        return parameters;
+    }
 
-            case "set_format":
-                if (paragraphIndex.HasValue) parameters.Set("paragraphIndex", paragraphIndex.Value);
-                if (numberStyle != null) parameters.Set("numberStyle", numberStyle);
-                if (indentLevel.HasValue) parameters.Set("indentLevel", indentLevel.Value);
-                if (leftIndent.HasValue) parameters.Set("leftIndent", leftIndent.Value);
-                if (firstLineIndent.HasValue) parameters.Set("firstLineIndent", firstLineIndent.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the edit list item operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="paragraphIndex">The paragraph index (0-based).</param>
+    /// <param name="text">The updated text content.</param>
+    /// <param name="level">The list level (0-8).</param>
+    /// <returns>OperationParameters configured for the edit item operation.</returns>
+    private static OperationParameters BuildEditItemParameters(OperationParameters parameters, int? paragraphIndex,
+        string? text, int? level)
+    {
+        if (paragraphIndex.HasValue) parameters.Set("paragraphIndex", paragraphIndex.Value);
+        if (text != null) parameters.Set("text", text);
+        if (level.HasValue) parameters.Set("level", level.Value);
+        return parameters;
+    }
 
-            case "get_format":
-                if (paragraphIndex.HasValue) parameters.Set("paragraphIndex", paragraphIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the set list format operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="paragraphIndex">The paragraph index (0-based).</param>
+    /// <param name="numberStyle">The number style: 'arabic', 'roman', 'letter', 'bullet', 'none'.</param>
+    /// <param name="indentLevel">The indentation level (0-8, each level = 36 points).</param>
+    /// <param name="leftIndent">The left indent in points.</param>
+    /// <param name="firstLineIndent">The first line indent in points.</param>
+    /// <returns>OperationParameters configured for the set format operation.</returns>
+    private static OperationParameters BuildSetFormatParameters(OperationParameters parameters, int? paragraphIndex,
+        string? numberStyle, int? indentLevel, double? leftIndent, double? firstLineIndent)
+    {
+        if (paragraphIndex.HasValue) parameters.Set("paragraphIndex", paragraphIndex.Value);
+        if (numberStyle != null) parameters.Set("numberStyle", numberStyle);
+        if (indentLevel.HasValue) parameters.Set("indentLevel", indentLevel.Value);
+        if (leftIndent.HasValue) parameters.Set("leftIndent", leftIndent.Value);
+        if (firstLineIndent.HasValue) parameters.Set("firstLineIndent", firstLineIndent.Value);
+        return parameters;
+    }
 
-            case "restart_numbering":
-                if (paragraphIndex.HasValue) parameters.Set("paragraphIndex", paragraphIndex.Value);
-                parameters.Set("startAt", startAt);
-                break;
+    /// <summary>
+    ///     Builds parameters for the restart numbering operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="paragraphIndex">The paragraph index (0-based).</param>
+    /// <param name="startAt">The number to restart at.</param>
+    /// <returns>OperationParameters configured for the restart numbering operation.</returns>
+    private static OperationParameters BuildRestartNumberingParameters(OperationParameters parameters,
+        int? paragraphIndex, int startAt)
+    {
+        if (paragraphIndex.HasValue) parameters.Set("paragraphIndex", paragraphIndex.Value);
+        parameters.Set("startAt", startAt);
+        return parameters;
+    }
 
-            case "convert_to_list":
-                if (startParagraphIndex.HasValue) parameters.Set("startParagraphIndex", startParagraphIndex.Value);
-                if (endParagraphIndex.HasValue) parameters.Set("endParagraphIndex", endParagraphIndex.Value);
-                parameters.Set("listType", listType);
-                parameters.Set("numberFormat", numberFormat);
-                break;
-        }
-
+    /// <summary>
+    ///     Builds parameters for the convert to list operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="startParagraphIndex">The starting paragraph index.</param>
+    /// <param name="endParagraphIndex">The ending paragraph index.</param>
+    /// <param name="listType">The list type: 'bullet', 'number', 'custom'.</param>
+    /// <param name="numberFormat">The number format: 'arabic', 'roman', 'letter'.</param>
+    /// <returns>OperationParameters configured for the convert to list operation.</returns>
+    private static OperationParameters BuildConvertToListParameters(OperationParameters parameters,
+        int? startParagraphIndex, int? endParagraphIndex, string listType, string numberFormat)
+    {
+        if (startParagraphIndex.HasValue) parameters.Set("startParagraphIndex", startParagraphIndex.Value);
+        if (endParagraphIndex.HasValue) parameters.Set("endParagraphIndex", endParagraphIndex.Value);
+        parameters.Set("listType", listType);
+        parameters.Set("numberFormat", numberFormat);
         return parameters;
     }
 }

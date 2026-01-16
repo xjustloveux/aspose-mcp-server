@@ -22,14 +22,13 @@ public class GetWordContentDetailedHandler : OperationHandlerBase<Document>
     /// <returns>Detailed document content as plain text.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var includeHeaders = parameters.GetOptional("includeHeaders", false);
-        var includeFooters = parameters.GetOptional("includeFooters", false);
+        var p = ExtractGetContentDetailedParameters(parameters);
 
         var document = context.Document;
         var sb = new StringBuilder();
         sb.AppendLine("=== Detailed Document Content ===");
 
-        if (includeHeaders)
+        if (p.IncludeHeaders)
         {
             sb.AppendLine("\n--- Headers ---");
             foreach (var section in document.Sections.Cast<Section>())
@@ -55,7 +54,7 @@ public class GetWordContentDetailedHandler : OperationHandlerBase<Document>
                 sb.AppendLine(bodyText);
         }
 
-        if (includeFooters)
+        if (p.IncludeFooters)
         {
             sb.AppendLine("\n--- Footers ---");
             foreach (var section in document.Sections.Cast<Section>())
@@ -75,4 +74,24 @@ public class GetWordContentDetailedHandler : OperationHandlerBase<Document>
 
         return sb.ToString();
     }
+
+    /// <summary>
+    ///     Extracts parameters for the get content detailed operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static GetContentDetailedParameters ExtractGetContentDetailedParameters(OperationParameters parameters)
+    {
+        var includeHeaders = parameters.GetOptional("includeHeaders", false);
+        var includeFooters = parameters.GetOptional("includeFooters", false);
+
+        return new GetContentDetailedParameters(includeHeaders, includeFooters);
+    }
+
+    /// <summary>
+    ///     Parameters for the get content detailed operation.
+    /// </summary>
+    /// <param name="IncludeHeaders">Whether to include headers in the output.</param>
+    /// <param name="IncludeFooters">Whether to include footers in the output.</param>
+    private record GetContentDetailedParameters(bool IncludeHeaders, bool IncludeFooters);
 }

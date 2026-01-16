@@ -124,7 +124,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -136,31 +136,70 @@ Usage examples:
         string? dateText,
         bool showPageNumber)
     {
-        var parameters = new OperationParameters();
-
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "set":
-                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
-                if (notes != null) parameters.Set("notes", notes);
-                break;
+            "set" => BuildSetParameters(slideIndex, notes),
+            "get" => BuildGetParameters(slideIndex),
+            "clear" => BuildClearParameters(slideIndices),
+            "set_header_footer" => BuildSetHeaderFooterParameters(headerText, footerText, dateText, showPageNumber),
+            _ => new OperationParameters()
+        };
+    }
 
-            case "get":
-                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the set notes operation.
+    /// </summary>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <param name="notes">The notes text content.</param>
+    /// <returns>OperationParameters configured for setting notes.</returns>
+    private static OperationParameters BuildSetParameters(int? slideIndex, string? notes)
+    {
+        var parameters = new OperationParameters();
+        if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
+        if (notes != null) parameters.Set("notes", notes);
+        return parameters;
+    }
 
-            case "clear":
-                if (slideIndices != null) parameters.Set("slideIndices", slideIndices);
-                break;
+    /// <summary>
+    ///     Builds parameters for the get notes operation.
+    /// </summary>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <returns>OperationParameters configured for getting notes.</returns>
+    private static OperationParameters BuildGetParameters(int? slideIndex)
+    {
+        var parameters = new OperationParameters();
+        if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
+        return parameters;
+    }
 
-            case "set_header_footer":
-                if (headerText != null) parameters.Set("headerText", headerText);
-                if (footerText != null) parameters.Set("footerText", footerText);
-                if (dateText != null) parameters.Set("dateText", dateText);
-                parameters.Set("showPageNumber", showPageNumber);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the clear notes operation.
+    /// </summary>
+    /// <param name="slideIndices">The slide indices array to clear notes from.</param>
+    /// <returns>OperationParameters configured for clearing notes.</returns>
+    private static OperationParameters BuildClearParameters(int[]? slideIndices)
+    {
+        var parameters = new OperationParameters();
+        if (slideIndices != null) parameters.Set("slideIndices", slideIndices);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the set header/footer on notes pages operation.
+    /// </summary>
+    /// <param name="headerText">The header text for notes pages.</param>
+    /// <param name="footerText">The footer text for notes pages.</param>
+    /// <param name="dateText">The date/time text for notes pages.</param>
+    /// <param name="showPageNumber">Whether to show page number on notes pages.</param>
+    /// <returns>OperationParameters configured for setting header/footer on notes pages.</returns>
+    private static OperationParameters BuildSetHeaderFooterParameters(string? headerText, string? footerText,
+        string? dateText, bool showPageNumber)
+    {
+        var parameters = new OperationParameters();
+        if (headerText != null) parameters.Set("headerText", headerText);
+        if (footerText != null) parameters.Set("footerText", footerText);
+        if (dateText != null) parameters.Set("dateText", dateText);
+        parameters.Set("showPageNumber", showPageNumber);
         return parameters;
     }
 }

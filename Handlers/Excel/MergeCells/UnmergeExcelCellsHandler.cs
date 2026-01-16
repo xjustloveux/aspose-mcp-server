@@ -23,19 +23,28 @@ public class UnmergeExcelCellsHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with unmerge details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var range = parameters.GetRequired<string>("range");
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
+        var p = ExtractUnmergeCellsParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, p.SheetIndex);
         var cells = worksheet.Cells;
 
-        var cellRange = ExcelHelper.CreateRange(cells, range);
+        var cellRange = ExcelHelper.CreateRange(cells, p.Range);
 
         cellRange.UnMerge();
 
         MarkModified(context);
 
-        return Success($"Range {range} unmerged.");
+        return Success($"Range {p.Range} unmerged.");
     }
+
+    private static UnmergeCellsParameters ExtractUnmergeCellsParameters(OperationParameters parameters)
+    {
+        return new UnmergeCellsParameters(
+            parameters.GetRequired<string>("range"),
+            parameters.GetOptional("sheetIndex", 0)
+        );
+    }
+
+    private record UnmergeCellsParameters(string Range, int SheetIndex);
 }

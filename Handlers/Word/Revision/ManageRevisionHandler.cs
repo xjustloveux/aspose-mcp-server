@@ -27,8 +27,7 @@ public class ManageRevisionHandler : OperationHandlerBase<Document>
     /// </exception>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var revisionIndex = parameters.GetRequired<int>("revisionIndex");
-        var action = parameters.GetOptional("action", "accept");
+        var p = ExtractManageRevisionParameters(parameters);
 
         var doc = context.Document;
         var revisionsCount = doc.Revisions.Count;
@@ -36,16 +35,16 @@ public class ManageRevisionHandler : OperationHandlerBase<Document>
         if (revisionsCount == 0)
             return Success("Document has no revisions");
 
-        if (revisionIndex < 0 || revisionIndex >= revisionsCount)
+        if (p.RevisionIndex < 0 || p.RevisionIndex >= revisionsCount)
             throw new ArgumentException(
-                $"revisionIndex must be between 0 and {revisionsCount - 1}, got: {revisionIndex}");
+                $"revisionIndex must be between 0 and {revisionsCount - 1}, got: {p.RevisionIndex}");
 
-        var revision = doc.Revisions[revisionIndex];
+        var revision = doc.Revisions[p.RevisionIndex];
         var revisionType = revision.RevisionType;
         var revisionText = TruncateText(revision.ParentNode?.ToString(SaveFormat.Text)?.Trim() ?? "(none)",
             MaxRevisionTextLength);
 
-        switch (action.ToLowerInvariant())
+        switch (p.Action.ToLowerInvariant())
         {
             case "accept":
                 revision.Accept();
@@ -54,15 +53,22 @@ public class ManageRevisionHandler : OperationHandlerBase<Document>
                 revision.Reject();
                 break;
             default:
-                throw new ArgumentException($"action must be 'accept' or 'reject', got: {action}");
+                throw new ArgumentException($"action must be 'accept' or 'reject', got: {p.Action}");
         }
 
         MarkModified(context);
 
-        var result = $"Revision [{revisionIndex}] {action}ed\n";
+        var result = $"Revision [{p.RevisionIndex}] {p.Action}ed\n";
         result += $"Type: {revisionType}\n";
         result += $"Text: {revisionText}";
         return Success(result);
+    }
+
+    private static ManageRevisionParameters ExtractManageRevisionParameters(OperationParameters parameters)
+    {
+        return new ManageRevisionParameters(
+            parameters.GetRequired<int>("revisionIndex"),
+            parameters.GetOptional("action", "accept"));
     }
 
     /// <summary>
@@ -77,4 +83,6 @@ public class ManageRevisionHandler : OperationHandlerBase<Document>
             return text;
         return text[..maxLength] + "...";
     }
+
+    private record ManageRevisionParameters(int RevisionIndex, string Action);
 }

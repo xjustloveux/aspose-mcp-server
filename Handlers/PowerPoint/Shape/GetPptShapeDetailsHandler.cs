@@ -23,19 +23,18 @@ public class GetPptShapeDetailsHandler : OperationHandlerBase<Presentation>
     /// <returns>JSON result with detailed shape information.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetOptional("slideIndex", 0);
-        var shapeIndex = parameters.GetRequired<int>("shapeIndex");
+        var p = ExtractGetPptShapeDetailsParameters(parameters);
 
         var presentation = context.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+        var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
 
-        PowerPointHelper.ValidateCollectionIndex(shapeIndex, slide.Shapes.Count, "shapeIndex");
+        PowerPointHelper.ValidateCollectionIndex(p.ShapeIndex, slide.Shapes.Count, "shapeIndex");
 
-        var shape = slide.Shapes[shapeIndex];
+        var shape = slide.Shapes[p.ShapeIndex];
 
         var result = new Dictionary<string, object?>
         {
-            ["index"] = shapeIndex,
+            ["index"] = p.ShapeIndex,
             ["name"] = shape.Name,
             ["type"] = shape.GetType().Name,
             ["x"] = shape.X,
@@ -63,4 +62,23 @@ public class GetPptShapeDetailsHandler : OperationHandlerBase<Presentation>
 
         return JsonResult(result);
     }
+
+    /// <summary>
+    ///     Extracts parameters for get shape details operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static GetPptShapeDetailsParameters ExtractGetPptShapeDetailsParameters(OperationParameters parameters)
+    {
+        return new GetPptShapeDetailsParameters(
+            parameters.GetOptional("slideIndex", 0),
+            parameters.GetRequired<int>("shapeIndex"));
+    }
+
+    /// <summary>
+    ///     Parameters for get shape details operation.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index (0-based).</param>
+    /// <param name="ShapeIndex">The shape index.</param>
+    private record GetPptShapeDetailsParameters(int SlideIndex, int ShapeIndex);
 }

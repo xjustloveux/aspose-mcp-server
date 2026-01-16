@@ -192,7 +192,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -222,81 +222,176 @@ Usage examples:
         bool removeExisting)
     {
         var parameters = new OperationParameters();
-
-        // Common parameters for all operations
         parameters.Set("sectionIndex", sectionIndex);
         parameters.Set("headerFooterType", headerFooterType);
 
-        switch (operation.ToLower())
+        return operation.ToLower() switch
         {
-            case "set_header_text":
-                if (headerLeft != null) parameters.Set("headerLeft", headerLeft);
-                if (headerCenter != null) parameters.Set("headerCenter", headerCenter);
-                if (headerRight != null) parameters.Set("headerRight", headerRight);
-                if (fontName != null) parameters.Set("fontName", fontName);
-                if (fontNameAscii != null) parameters.Set("fontNameAscii", fontNameAscii);
-                if (fontNameFarEast != null) parameters.Set("fontNameFarEast", fontNameFarEast);
-                if (fontSize.HasValue) parameters.Set("fontSize", fontSize.Value);
-                parameters.Set("autoTabStops", autoTabStops);
-                parameters.Set("clearExisting", clearExisting);
-                parameters.Set("clearTextOnly", clearTextOnly);
-                break;
+            "set_header_text" => BuildHeaderTextParameters(parameters, headerLeft, headerCenter, headerRight, fontName,
+                fontNameAscii, fontNameFarEast, fontSize, autoTabStops, clearExisting, clearTextOnly),
+            "set_footer_text" => BuildFooterTextParameters(parameters, footerLeft, footerCenter, footerRight, fontName,
+                fontNameAscii, fontNameFarEast, fontSize, autoTabStops, clearExisting, clearTextOnly),
+            "set_header_image" or "set_footer_image" => BuildImageParameters(parameters, imagePath, alignment,
+                imageWidth, imageHeight, isFloating, removeExisting),
+            "set_header_line" or "set_footer_line" => BuildLineParameters(parameters, lineStyle, lineWidth),
+            "set_header_tabs" or "set_footer_tabs" => BuildTabsParameters(parameters, tabStops),
+            "set_header_footer" => BuildHeaderFooterParameters(parameters, headerLeft, headerCenter, headerRight,
+                footerLeft, footerCenter, footerRight, fontName, fontNameAscii, fontNameFarEast, fontSize, autoTabStops,
+                clearExisting, clearTextOnly),
+            _ => parameters
+        };
+    }
 
-            case "set_footer_text":
-                if (footerLeft != null) parameters.Set("footerLeft", footerLeft);
-                if (footerCenter != null) parameters.Set("footerCenter", footerCenter);
-                if (footerRight != null) parameters.Set("footerRight", footerRight);
-                if (fontName != null) parameters.Set("fontName", fontName);
-                if (fontNameAscii != null) parameters.Set("fontNameAscii", fontNameAscii);
-                if (fontNameFarEast != null) parameters.Set("fontNameFarEast", fontNameFarEast);
-                if (fontSize.HasValue) parameters.Set("fontSize", fontSize.Value);
-                parameters.Set("autoTabStops", autoTabStops);
-                parameters.Set("clearExisting", clearExisting);
-                parameters.Set("clearTextOnly", clearTextOnly);
-                break;
+    /// <summary>
+    ///     Builds parameters for the set header text operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="headerLeft">The header left section text.</param>
+    /// <param name="headerCenter">The header center section text.</param>
+    /// <param name="headerRight">The header right section text.</param>
+    /// <param name="fontName">The font name.</param>
+    /// <param name="fontNameAscii">The font name for ASCII characters.</param>
+    /// <param name="fontNameFarEast">The font name for Far East characters.</param>
+    /// <param name="fontSize">The font size in points.</param>
+    /// <param name="autoTabStops">Whether to automatically add tab stops.</param>
+    /// <param name="clearExisting">Whether to clear existing content before setting.</param>
+    /// <param name="clearTextOnly">Whether to only clear text content, preserving images.</param>
+    /// <returns>OperationParameters configured for the set header text operation.</returns>
+    private static OperationParameters BuildHeaderTextParameters(OperationParameters parameters, string? headerLeft,
+        string? headerCenter, string? headerRight, string? fontName, string? fontNameAscii, string? fontNameFarEast,
+        double? fontSize, bool autoTabStops, bool clearExisting, bool clearTextOnly)
+    {
+        if (headerLeft != null) parameters.Set("headerLeft", headerLeft);
+        if (headerCenter != null) parameters.Set("headerCenter", headerCenter);
+        if (headerRight != null) parameters.Set("headerRight", headerRight);
+        if (fontName != null) parameters.Set("fontName", fontName);
+        if (fontNameAscii != null) parameters.Set("fontNameAscii", fontNameAscii);
+        if (fontNameFarEast != null) parameters.Set("fontNameFarEast", fontNameFarEast);
+        if (fontSize.HasValue) parameters.Set("fontSize", fontSize.Value);
+        parameters.Set("autoTabStops", autoTabStops);
+        parameters.Set("clearExisting", clearExisting);
+        parameters.Set("clearTextOnly", clearTextOnly);
+        return parameters;
+    }
 
-            case "set_header_image":
-            case "set_footer_image":
-                if (imagePath != null) parameters.Set("imagePath", imagePath);
-                parameters.Set("alignment", alignment);
-                if (imageWidth.HasValue) parameters.Set("imageWidth", imageWidth.Value);
-                if (imageHeight.HasValue) parameters.Set("imageHeight", imageHeight.Value);
-                parameters.Set("isFloating", isFloating);
-                parameters.Set("removeExisting", removeExisting);
-                break;
+    /// <summary>
+    ///     Builds parameters for the set footer text operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="footerLeft">The footer left section text.</param>
+    /// <param name="footerCenter">The footer center section text.</param>
+    /// <param name="footerRight">The footer right section text.</param>
+    /// <param name="fontName">The font name.</param>
+    /// <param name="fontNameAscii">The font name for ASCII characters.</param>
+    /// <param name="fontNameFarEast">The font name for Far East characters.</param>
+    /// <param name="fontSize">The font size in points.</param>
+    /// <param name="autoTabStops">Whether to automatically add tab stops.</param>
+    /// <param name="clearExisting">Whether to clear existing content before setting.</param>
+    /// <param name="clearTextOnly">Whether to only clear text content, preserving images.</param>
+    /// <returns>OperationParameters configured for the set footer text operation.</returns>
+    private static OperationParameters BuildFooterTextParameters(OperationParameters parameters, string? footerLeft,
+        string? footerCenter, string? footerRight, string? fontName, string? fontNameAscii, string? fontNameFarEast,
+        double? fontSize, bool autoTabStops, bool clearExisting, bool clearTextOnly)
+    {
+        if (footerLeft != null) parameters.Set("footerLeft", footerLeft);
+        if (footerCenter != null) parameters.Set("footerCenter", footerCenter);
+        if (footerRight != null) parameters.Set("footerRight", footerRight);
+        if (fontName != null) parameters.Set("fontName", fontName);
+        if (fontNameAscii != null) parameters.Set("fontNameAscii", fontNameAscii);
+        if (fontNameFarEast != null) parameters.Set("fontNameFarEast", fontNameFarEast);
+        if (fontSize.HasValue) parameters.Set("fontSize", fontSize.Value);
+        parameters.Set("autoTabStops", autoTabStops);
+        parameters.Set("clearExisting", clearExisting);
+        parameters.Set("clearTextOnly", clearTextOnly);
+        return parameters;
+    }
 
-            case "set_header_line":
-            case "set_footer_line":
-                parameters.Set("lineStyle", lineStyle);
-                if (lineWidth.HasValue) parameters.Set("lineWidth", lineWidth.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the set header/footer image operations.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="imagePath">The path to the image file.</param>
+    /// <param name="alignment">The image alignment: 'left', 'center', 'right'.</param>
+    /// <param name="imageWidth">The image width in points.</param>
+    /// <param name="imageHeight">The image height in points.</param>
+    /// <param name="isFloating">Whether to make the image floating instead of inline.</param>
+    /// <param name="removeExisting">Whether to remove existing images before adding.</param>
+    /// <returns>OperationParameters configured for the image operations.</returns>
+    private static OperationParameters BuildImageParameters(OperationParameters parameters, string? imagePath,
+        string alignment, double? imageWidth, double? imageHeight, bool isFloating, bool removeExisting)
+    {
+        if (imagePath != null) parameters.Set("imagePath", imagePath);
+        parameters.Set("alignment", alignment);
+        if (imageWidth.HasValue) parameters.Set("imageWidth", imageWidth.Value);
+        if (imageHeight.HasValue) parameters.Set("imageHeight", imageHeight.Value);
+        parameters.Set("isFloating", isFloating);
+        parameters.Set("removeExisting", removeExisting);
+        return parameters;
+    }
 
-            case "set_header_tabs":
-            case "set_footer_tabs":
-                if (tabStops != null) parameters.Set("tabStops", tabStops);
-                break;
+    /// <summary>
+    ///     Builds parameters for the set header/footer line operations.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="lineStyle">The line style: 'single', 'double', 'thick'.</param>
+    /// <param name="lineWidth">The line width in points.</param>
+    /// <returns>OperationParameters configured for the line operations.</returns>
+    private static OperationParameters BuildLineParameters(OperationParameters parameters, string lineStyle,
+        double? lineWidth)
+    {
+        parameters.Set("lineStyle", lineStyle);
+        if (lineWidth.HasValue) parameters.Set("lineWidth", lineWidth.Value);
+        return parameters;
+    }
 
-            case "set_header_footer":
-                if (headerLeft != null) parameters.Set("headerLeft", headerLeft);
-                if (headerCenter != null) parameters.Set("headerCenter", headerCenter);
-                if (headerRight != null) parameters.Set("headerRight", headerRight);
-                if (footerLeft != null) parameters.Set("footerLeft", footerLeft);
-                if (footerCenter != null) parameters.Set("footerCenter", footerCenter);
-                if (footerRight != null) parameters.Set("footerRight", footerRight);
-                if (fontName != null) parameters.Set("fontName", fontName);
-                if (fontNameAscii != null) parameters.Set("fontNameAscii", fontNameAscii);
-                if (fontNameFarEast != null) parameters.Set("fontNameFarEast", fontNameFarEast);
-                if (fontSize.HasValue) parameters.Set("fontSize", fontSize.Value);
-                parameters.Set("autoTabStops", autoTabStops);
-                parameters.Set("clearExisting", clearExisting);
-                parameters.Set("clearTextOnly", clearTextOnly);
-                break;
+    /// <summary>
+    ///     Builds parameters for the set header/footer tab stops operations.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="tabStops">The tab stops array.</param>
+    /// <returns>OperationParameters configured for the tab stops operations.</returns>
+    private static OperationParameters BuildTabsParameters(OperationParameters parameters, JsonArray? tabStops)
+    {
+        if (tabStops != null) parameters.Set("tabStops", tabStops);
+        return parameters;
+    }
 
-            case "get":
-                // Only sectionIndex needed, already set above
-                break;
-        }
-
+    /// <summary>
+    ///     Builds parameters for the set header and footer together operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="headerLeft">The header left section text.</param>
+    /// <param name="headerCenter">The header center section text.</param>
+    /// <param name="headerRight">The header right section text.</param>
+    /// <param name="footerLeft">The footer left section text.</param>
+    /// <param name="footerCenter">The footer center section text.</param>
+    /// <param name="footerRight">The footer right section text.</param>
+    /// <param name="fontName">The font name.</param>
+    /// <param name="fontNameAscii">The font name for ASCII characters.</param>
+    /// <param name="fontNameFarEast">The font name for Far East characters.</param>
+    /// <param name="fontSize">The font size in points.</param>
+    /// <param name="autoTabStops">Whether to automatically add tab stops.</param>
+    /// <param name="clearExisting">Whether to clear existing content before setting.</param>
+    /// <param name="clearTextOnly">Whether to only clear text content, preserving images.</param>
+    /// <returns>OperationParameters configured for the set header footer operation.</returns>
+    private static OperationParameters BuildHeaderFooterParameters(OperationParameters parameters, string? headerLeft,
+        string? headerCenter, string? headerRight, string? footerLeft, string? footerCenter, string? footerRight,
+        string? fontName, string? fontNameAscii, string? fontNameFarEast, double? fontSize, bool autoTabStops,
+        bool clearExisting, bool clearTextOnly)
+    {
+        if (headerLeft != null) parameters.Set("headerLeft", headerLeft);
+        if (headerCenter != null) parameters.Set("headerCenter", headerCenter);
+        if (headerRight != null) parameters.Set("headerRight", headerRight);
+        if (footerLeft != null) parameters.Set("footerLeft", footerLeft);
+        if (footerCenter != null) parameters.Set("footerCenter", footerCenter);
+        if (footerRight != null) parameters.Set("footerRight", footerRight);
+        if (fontName != null) parameters.Set("fontName", fontName);
+        if (fontNameAscii != null) parameters.Set("fontNameAscii", fontNameAscii);
+        if (fontNameFarEast != null) parameters.Set("fontNameFarEast", fontNameFarEast);
+        if (fontSize.HasValue) parameters.Set("fontSize", fontSize.Value);
+        parameters.Set("autoTabStops", autoTabStops);
+        parameters.Set("clearExisting", clearExisting);
+        parameters.Set("clearTextOnly", clearTextOnly);
         return parameters;
     }
 }

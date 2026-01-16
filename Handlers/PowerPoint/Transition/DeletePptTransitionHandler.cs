@@ -23,10 +23,10 @@ public class DeletePptTransitionHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with deletion details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetOptional("slideIndex", 0);
+        var deleteParams = ExtractDeleteTransitionParameters(parameters);
 
         var presentation = context.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+        var slide = PowerPointHelper.GetSlide(presentation, deleteParams.SlideIndex);
 
         slide.SlideShowTransition.Type = TransitionType.None;
         slide.SlideShowTransition.AdvanceOnClick = true;
@@ -35,6 +35,24 @@ public class DeletePptTransitionHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Transition removed from slide {slideIndex}.");
+        return Success($"Transition removed from slide {deleteParams.SlideIndex}.");
     }
+
+    /// <summary>
+    ///     Extracts delete transition parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted delete transition parameters.</returns>
+    private static DeleteTransitionParameters ExtractDeleteTransitionParameters(OperationParameters parameters)
+    {
+        return new DeleteTransitionParameters(
+            parameters.GetOptional("slideIndex", 0)
+        );
+    }
+
+    /// <summary>
+    ///     Record for holding delete transition parameters.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index.</param>
+    private record DeleteTransitionParameters(int SlideIndex);
 }

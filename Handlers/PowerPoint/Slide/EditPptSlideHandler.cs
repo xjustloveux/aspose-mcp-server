@@ -23,21 +23,40 @@ public class EditPptSlideHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with edit details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetRequired<int>("slideIndex");
-        var layoutIndex = parameters.GetOptional<int?>("layoutIndex");
-        var presentation = context.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+        var p = ExtractEditPptSlideParameters(parameters);
 
-        if (layoutIndex.HasValue)
+        var presentation = context.Document;
+        var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
+
+        if (p.LayoutIndex.HasValue)
         {
-            if (layoutIndex.Value < 0 || layoutIndex.Value >= presentation.LayoutSlides.Count)
+            if (p.LayoutIndex.Value < 0 || p.LayoutIndex.Value >= presentation.LayoutSlides.Count)
                 throw new ArgumentException(
                     $"layoutIndex must be between 0 and {presentation.LayoutSlides.Count - 1}");
-            slide.LayoutSlide = presentation.LayoutSlides[layoutIndex.Value];
+            slide.LayoutSlide = presentation.LayoutSlides[p.LayoutIndex.Value];
         }
 
         MarkModified(context);
 
-        return Success($"Slide {slideIndex} updated.");
+        return Success($"Slide {p.SlideIndex} updated.");
     }
+
+    /// <summary>
+    ///     Extracts parameters for edit slide operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static EditPptSlideParameters ExtractEditPptSlideParameters(OperationParameters parameters)
+    {
+        return new EditPptSlideParameters(
+            parameters.GetRequired<int>("slideIndex"),
+            parameters.GetOptional<int?>("layoutIndex"));
+    }
+
+    /// <summary>
+    ///     Parameters for edit slide operation.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index (0-based).</param>
+    /// <param name="LayoutIndex">The layout index to apply.</param>
+    private record EditPptSlideParameters(int SlideIndex, int? LayoutIndex);
 }

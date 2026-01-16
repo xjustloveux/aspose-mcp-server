@@ -129,7 +129,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -142,32 +142,68 @@ Usage examples:
         string? displayText,
         bool keepText)
     {
-        var parameters = new OperationParameters();
-
-        switch (operation.ToLower())
+        return operation.ToLower() switch
         {
-            case "add":
-                if (text != null) parameters.Set("text", text);
-                if (url != null) parameters.Set("url", url);
-                if (subAddress != null) parameters.Set("subAddress", subAddress);
-                if (paragraphIndex.HasValue) parameters.Set("paragraphIndex", paragraphIndex.Value);
-                if (tooltip != null) parameters.Set("tooltip", tooltip);
-                break;
+            "add" => BuildAddParameters(text, url, subAddress, paragraphIndex, tooltip),
+            "edit" => BuildEditParameters(hyperlinkIndex, url, subAddress, displayText, tooltip),
+            "delete" => BuildDeleteParameters(hyperlinkIndex, keepText),
+            _ => new OperationParameters()
+        };
+    }
 
-            case "edit":
-                parameters.Set("hyperlinkIndex", hyperlinkIndex ?? 0);
-                if (url != null) parameters.Set("url", url);
-                if (subAddress != null) parameters.Set("subAddress", subAddress);
-                if (displayText != null) parameters.Set("displayText", displayText);
-                if (tooltip != null) parameters.Set("tooltip", tooltip);
-                break;
+    /// <summary>
+    ///     Builds parameters for the add hyperlink operation.
+    /// </summary>
+    /// <param name="text">The display text for the hyperlink.</param>
+    /// <param name="url">The URL or target address.</param>
+    /// <param name="subAddress">Internal bookmark name for document navigation.</param>
+    /// <param name="paragraphIndex">The paragraph index to insert after (0-based).</param>
+    /// <param name="tooltip">The tooltip text.</param>
+    /// <returns>OperationParameters configured for adding a hyperlink.</returns>
+    private static OperationParameters BuildAddParameters(string? text, string? url, string? subAddress,
+        int? paragraphIndex, string? tooltip)
+    {
+        var parameters = new OperationParameters();
+        if (text != null) parameters.Set("text", text);
+        if (url != null) parameters.Set("url", url);
+        if (subAddress != null) parameters.Set("subAddress", subAddress);
+        if (paragraphIndex.HasValue) parameters.Set("paragraphIndex", paragraphIndex.Value);
+        if (tooltip != null) parameters.Set("tooltip", tooltip);
+        return parameters;
+    }
 
-            case "delete":
-                parameters.Set("hyperlinkIndex", hyperlinkIndex ?? 0);
-                parameters.Set("keepText", keepText);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the edit hyperlink operation.
+    /// </summary>
+    /// <param name="hyperlinkIndex">The hyperlink index (0-based).</param>
+    /// <param name="url">The new URL or target address.</param>
+    /// <param name="subAddress">New internal bookmark name.</param>
+    /// <param name="displayText">New display text.</param>
+    /// <param name="tooltip">New tooltip text.</param>
+    /// <returns>OperationParameters configured for editing a hyperlink.</returns>
+    private static OperationParameters BuildEditParameters(int? hyperlinkIndex, string? url, string? subAddress,
+        string? displayText, string? tooltip)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("hyperlinkIndex", hyperlinkIndex ?? 0);
+        if (url != null) parameters.Set("url", url);
+        if (subAddress != null) parameters.Set("subAddress", subAddress);
+        if (displayText != null) parameters.Set("displayText", displayText);
+        if (tooltip != null) parameters.Set("tooltip", tooltip);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the delete hyperlink operation.
+    /// </summary>
+    /// <param name="hyperlinkIndex">The hyperlink index (0-based).</param>
+    /// <param name="keepText">Whether to keep the display text when deleting.</param>
+    /// <returns>OperationParameters configured for deleting a hyperlink.</returns>
+    private static OperationParameters BuildDeleteParameters(int? hyperlinkIndex, bool keepText)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("hyperlinkIndex", hyperlinkIndex ?? 0);
+        parameters.Set("keepText", keepText);
         return parameters;
     }
 }

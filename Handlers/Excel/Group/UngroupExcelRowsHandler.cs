@@ -25,18 +25,27 @@ public class UngroupExcelRowsHandler : OperationHandlerBase<Workbook>
     {
         ExcelGroupHelper.ValidateRequiredParams(Operation, parameters, "startRow", "endRow");
 
+        var p = ExtractUngroupRowsParameters(parameters);
+
+        ExcelGroupHelper.ValidateRowRange(p.StartRow, p.EndRow);
+
+        var workbook = context.Document;
+        var worksheet = ExcelHelper.GetWorksheet(workbook, p.SheetIndex);
+        worksheet.Cells.UngroupRows(p.StartRow, p.EndRow);
+
+        MarkModified(context);
+
+        return Success($"Rows {p.StartRow}-{p.EndRow} ungrouped in sheet {p.SheetIndex}.");
+    }
+
+    private static UngroupRowsParameters ExtractUngroupRowsParameters(OperationParameters parameters)
+    {
         var sheetIndex = parameters.GetOptional("sheetIndex", 0);
         var startRow = parameters.GetRequired<int>("startRow");
         var endRow = parameters.GetRequired<int>("endRow");
 
-        ExcelGroupHelper.ValidateRowRange(startRow, endRow);
-
-        var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        worksheet.Cells.UngroupRows(startRow, endRow);
-
-        MarkModified(context);
-
-        return Success($"Rows {startRow}-{endRow} ungrouped in sheet {sheetIndex}.");
+        return new UngroupRowsParameters(sheetIndex, startRow, endRow);
     }
+
+    private record UngroupRowsParameters(int SheetIndex, int StartRow, int EndRow);
 }

@@ -24,26 +24,32 @@ public class InsertAtPositionWordTextHandler : OperationHandlerBase<Document>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or indices are out of range.</exception>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var paragraphIndex = parameters.GetRequired<int>("insertParagraphIndex");
-        var charIndex = parameters.GetRequired<int>("charIndex");
-        var text = parameters.GetRequired<string>("text");
-        var sectionIndex = parameters.GetOptional("sectionIndex", 0);
-        var insertBefore = parameters.GetOptional("insertBefore", false);
+        var p = ExtractInsertAtPositionParameters(parameters);
 
         var doc = context.Document;
 
-        ValidateSectionIndex(doc, sectionIndex);
-        var section = doc.Sections[sectionIndex];
+        ValidateSectionIndex(doc, p.SectionIndex);
+        var section = doc.Sections[p.SectionIndex];
         var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
 
-        ValidateParagraphIndex(paragraphs, paragraphIndex);
-        var para = paragraphs[paragraphIndex];
+        ValidateParagraphIndex(paragraphs, p.ParagraphIndex);
+        var para = paragraphs[p.ParagraphIndex];
 
-        InsertText(doc, para, paragraphIndex, charIndex, text, insertBefore);
+        InsertText(doc, para, p.ParagraphIndex, p.CharIndex, p.Text, p.InsertBefore);
 
         MarkModified(context);
 
         return Success("Text inserted at position.");
+    }
+
+    private static InsertAtPositionParameters ExtractInsertAtPositionParameters(OperationParameters parameters)
+    {
+        return new InsertAtPositionParameters(
+            parameters.GetRequired<int>("insertParagraphIndex"),
+            parameters.GetRequired<int>("charIndex"),
+            parameters.GetRequired<string>("text"),
+            parameters.GetOptional("sectionIndex", 0),
+            parameters.GetOptional("insertBefore", false));
     }
 
     /// <summary>
@@ -148,4 +154,11 @@ public class InsertAtPositionWordTextHandler : OperationHandlerBase<Document>
     {
         run.Text = run.Text.Insert(charIndex, text);
     }
+
+    private record InsertAtPositionParameters(
+        int ParagraphIndex,
+        int CharIndex,
+        string Text,
+        int SectionIndex,
+        bool InsertBefore);
 }

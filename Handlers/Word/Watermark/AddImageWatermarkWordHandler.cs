@@ -22,38 +22,51 @@ public class AddImageWatermarkWordHandler : OperationHandlerBase<Document>
     ///     Optional: scale (default: 1.0), isWashout (default: true)
     /// </param>
     /// <returns>Success message with watermark details.</returns>
+    /// <exception cref="ArgumentException">Thrown when imagePath is missing or image cannot be decoded.</exception>
+    /// <exception cref="FileNotFoundException">Thrown when the image file is not found.</exception>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var imagePath = parameters.GetOptional<string?>("imagePath");
-        var scale = parameters.GetOptional("scale", 1.0);
-        var isWashout = parameters.GetOptional("isWashout", true);
+        var p = ExtractAddImageWatermarkParameters(parameters);
 
-        if (string.IsNullOrEmpty(imagePath))
+        if (string.IsNullOrEmpty(p.ImagePath))
             throw new ArgumentException("imagePath is required for add_image operation");
 
-        SecurityHelper.ValidateFilePath(imagePath, "imagePath", true);
+        SecurityHelper.ValidateFilePath(p.ImagePath, "imagePath", true);
 
-        if (!System.IO.File.Exists(imagePath))
-            throw new FileNotFoundException($"Image file not found: {imagePath}");
+        if (!System.IO.File.Exists(p.ImagePath))
+            throw new FileNotFoundException($"Image file not found: {p.ImagePath}");
 
         var doc = context.Document;
 
         var watermarkOptions = new ImageWatermarkOptions
         {
-            Scale = scale,
-            IsWashout = isWashout
+            Scale = p.Scale,
+            IsWashout = p.IsWashout
         };
 
-        using var bitmap = SKBitmap.Decode(imagePath);
+        using var bitmap = SKBitmap.Decode(p.ImagePath);
         if (bitmap == null)
             throw new ArgumentException(
-                $"Failed to decode image: {imagePath}. Ensure the file is a valid image format.");
+                $"Failed to decode image: {p.ImagePath}. Ensure the file is a valid image format.");
 
         doc.Watermark.SetImage(bitmap, watermarkOptions);
 
         MarkModified(context);
 
         return Success(
-            $"Image watermark added to document. Image: {Path.GetFileName(imagePath)}, Scale: {scale}, Washout: {isWashout}");
+            $"Image watermark added to document. Image: {Path.GetFileName(p.ImagePath)}, Scale: {p.Scale}, Washout: {p.IsWashout}");
     }
+
+    private static AddImageWatermarkParameters ExtractAddImageWatermarkParameters(OperationParameters parameters)
+    {
+        return new AddImageWatermarkParameters(
+            parameters.GetOptional<string?>("imagePath"),
+            parameters.GetOptional("scale", 1.0),
+            parameters.GetOptional("isWashout", true));
+    }
+
+    private record AddImageWatermarkParameters(
+        string? ImagePath,
+        double Scale,
+        bool IsWashout);
 }

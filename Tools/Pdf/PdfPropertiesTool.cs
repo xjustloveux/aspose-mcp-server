@@ -109,6 +109,14 @@ Usage examples:
     /// <summary>
     ///     Builds OperationParameters from method parameters.
     /// </summary>
+    /// <param name="operation">The operation to perform.</param>
+    /// <param name="title">The document title.</param>
+    /// <param name="author">The document author.</param>
+    /// <param name="subject">The document subject.</param>
+    /// <param name="keywords">The document keywords.</param>
+    /// <param name="creator">The document creator.</param>
+    /// <param name="producer">The document producer.</param>
+    /// <returns>OperationParameters configured for the properties operation.</returns>
     private static OperationParameters BuildParameters(
         string operation,
         string? title,

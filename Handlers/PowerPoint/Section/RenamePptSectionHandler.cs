@@ -22,16 +22,23 @@ public class RenamePptSectionHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with rename details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var sectionIndex = parameters.GetRequired<int>("sectionIndex");
-        var newName = parameters.GetRequired<string>("newName");
-
+        var p = ExtractRenamePptSectionParameters(parameters);
         var presentation = context.Document;
-        PowerPointHelper.ValidateCollectionIndex(sectionIndex, presentation.Sections.Count, "section");
+        PowerPointHelper.ValidateCollectionIndex(p.SectionIndex, presentation.Sections.Count, "section");
 
-        presentation.Sections[sectionIndex].Name = newName;
+        presentation.Sections[p.SectionIndex].Name = p.NewName;
 
         MarkModified(context);
 
-        return Success($"Section {sectionIndex} renamed to '{newName}'.");
+        return Success($"Section {p.SectionIndex} renamed to '{p.NewName}'.");
     }
+
+    private static RenamePptSectionParameters ExtractRenamePptSectionParameters(OperationParameters parameters)
+    {
+        return new RenamePptSectionParameters(
+            parameters.GetRequired<int>("sectionIndex"),
+            parameters.GetRequired<string>("newName"));
+    }
+
+    private record RenamePptSectionParameters(int SectionIndex, string NewName);
 }

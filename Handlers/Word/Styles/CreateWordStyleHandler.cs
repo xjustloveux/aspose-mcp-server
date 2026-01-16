@@ -24,45 +24,32 @@ public class CreateWordStyleHandler : OperationHandlerBase<Document>
     /// <returns>Success message with style creation details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var styleName = parameters.GetRequired<string>("styleName");
-        var styleTypeStr = parameters.GetOptional("styleType", "paragraph");
-        var baseStyle = parameters.GetOptional<string?>("baseStyle");
-        var fontName = parameters.GetOptional<string?>("fontName");
-        var fontNameAscii = parameters.GetOptional<string?>("fontNameAscii");
-        var fontNameFarEast = parameters.GetOptional<string?>("fontNameFarEast");
-        var fontSize = parameters.GetOptional<double?>("fontSize");
-        var bold = parameters.GetOptional<bool?>("bold");
-        var italic = parameters.GetOptional<bool?>("italic");
-        var underline = parameters.GetOptional<bool?>("underline");
-        var color = parameters.GetOptional<string?>("color");
-        var alignment = parameters.GetOptional<string?>("alignment");
-        var spaceBefore = parameters.GetOptional<double?>("spaceBefore");
-        var spaceAfter = parameters.GetOptional<double?>("spaceAfter");
-        var lineSpacing = parameters.GetOptional<double?>("lineSpacing");
+        var p = ExtractCreateWordStyleParameters(parameters);
 
-        if (string.IsNullOrEmpty(styleName))
+        if (string.IsNullOrEmpty(p.StyleName))
             throw new ArgumentException("styleName is required for create_style operation");
 
         var doc = context.Document;
 
-        if (doc.Styles[styleName] != null)
-            throw new InvalidOperationException($"Style '{styleName}' already exists");
+        if (doc.Styles[p.StyleName] != null)
+            throw new InvalidOperationException($"Style '{p.StyleName}' already exists");
 
-        var styleType = ParseStyleType(styleTypeStr);
-        var style = doc.Styles.Add(styleType, styleName);
+        var styleType = ParseStyleType(p.StyleType);
+        var style = doc.Styles.Add(styleType, p.StyleName);
 
-        SetBaseStyle(doc, style, baseStyle);
+        SetBaseStyle(doc, style, p.BaseStyle);
 
         if (styleType != StyleType.List)
-            ApplyFontSettings(style, fontName, fontNameAscii, fontNameFarEast, fontSize, bold, italic, underline,
-                color);
+            ApplyFontSettings(style, p.FontName, p.FontNameAscii, p.FontNameFarEast, p.FontSize, p.Bold, p.Italic,
+                p.Underline,
+                p.Color);
 
         if (styleType == StyleType.Paragraph || styleType == StyleType.List)
-            ApplyParagraphSettings(style, alignment, spaceBefore, spaceAfter, lineSpacing);
+            ApplyParagraphSettings(style, p.Alignment, p.SpaceBefore, p.SpaceAfter, p.LineSpacing);
 
         MarkModified(context);
 
-        return Success($"Style '{styleName}' created successfully");
+        return Success($"Style '{p.StyleName}' created successfully");
     }
 
     private static StyleType ParseStyleType(string styleTypeStr)
@@ -154,4 +141,41 @@ public class CreateWordStyleHandler : OperationHandlerBase<Document>
             style.ParagraphFormat.LineSpacing = lineSpacing.Value * 12;
         }
     }
+
+    private static CreateWordStyleParameters ExtractCreateWordStyleParameters(OperationParameters parameters)
+    {
+        return new CreateWordStyleParameters(
+            parameters.GetRequired<string>("styleName"),
+            parameters.GetOptional("styleType", "paragraph"),
+            parameters.GetOptional<string?>("baseStyle"),
+            parameters.GetOptional<string?>("fontName"),
+            parameters.GetOptional<string?>("fontNameAscii"),
+            parameters.GetOptional<string?>("fontNameFarEast"),
+            parameters.GetOptional<double?>("fontSize"),
+            parameters.GetOptional<bool?>("bold"),
+            parameters.GetOptional<bool?>("italic"),
+            parameters.GetOptional<bool?>("underline"),
+            parameters.GetOptional<string?>("color"),
+            parameters.GetOptional<string?>("alignment"),
+            parameters.GetOptional<double?>("spaceBefore"),
+            parameters.GetOptional<double?>("spaceAfter"),
+            parameters.GetOptional<double?>("lineSpacing"));
+    }
+
+    private record CreateWordStyleParameters(
+        string StyleName,
+        string StyleType,
+        string? BaseStyle,
+        string? FontName,
+        string? FontNameAscii,
+        string? FontNameFarEast,
+        double? FontSize,
+        bool? Bold,
+        bool? Italic,
+        bool? Underline,
+        string? Color,
+        string? Alignment,
+        double? SpaceBefore,
+        double? SpaceAfter,
+        double? LineSpacing);
 }

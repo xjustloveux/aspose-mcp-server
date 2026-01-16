@@ -22,21 +22,18 @@ public class InsertPptTableRowHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with insertion details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetOptional("slideIndex", 0);
-        var shapeIndex = parameters.GetRequired<int>("shapeIndex");
-        var rowIndex = parameters.GetOptional<int?>("rowIndex");
-        var copyFromRow = parameters.GetOptional<int?>("copyFromRow");
+        var insertParams = ExtractInsertRowParameters(parameters);
 
         var presentation = context.Document;
-        var slide = PptTableHelper.GetSlide(presentation, slideIndex);
-        var table = PptTableHelper.GetTable(slide, shapeIndex);
+        var slide = PptTableHelper.GetSlide(presentation, insertParams.SlideIndex);
+        var table = PptTableHelper.GetTable(slide, insertParams.ShapeIndex);
 
-        var insertIndex = rowIndex ?? table.Rows.Count;
+        var insertIndex = insertParams.RowIndex ?? table.Rows.Count;
         if (insertIndex < 0 || insertIndex > table.Rows.Count)
             throw new ArgumentException(
                 $"rowIndex must be between 0 and {table.Rows.Count}, got: {insertIndex}");
 
-        var sourceRowIndex = copyFromRow ?? (table.Rows.Count > 0 ? 0 : -1);
+        var sourceRowIndex = insertParams.CopyFromRow ?? (table.Rows.Count > 0 ? 0 : -1);
         if (sourceRowIndex >= 0 && sourceRowIndex < table.Rows.Count)
             table.Rows.InsertClone(insertIndex, table.Rows[sourceRowIndex], false);
         else
@@ -46,4 +43,28 @@ public class InsertPptTableRowHandler : OperationHandlerBase<Presentation>
 
         return Success($"Row inserted at index {insertIndex}.");
     }
+
+    /// <summary>
+    ///     Extracts insert row parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted insert row parameters.</returns>
+    private static InsertRowParameters ExtractInsertRowParameters(OperationParameters parameters)
+    {
+        return new InsertRowParameters(
+            parameters.GetOptional("slideIndex", 0),
+            parameters.GetRequired<int>("shapeIndex"),
+            parameters.GetOptional<int?>("rowIndex"),
+            parameters.GetOptional<int?>("copyFromRow")
+        );
+    }
+
+    /// <summary>
+    ///     Record for holding insert row parameters.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index.</param>
+    /// <param name="ShapeIndex">The shape index.</param>
+    /// <param name="RowIndex">The optional row index to insert at.</param>
+    /// <param name="CopyFromRow">The optional row to copy from.</param>
+    private record InsertRowParameters(int SlideIndex, int ShapeIndex, int? RowIndex, int? CopyFromRow);
 }

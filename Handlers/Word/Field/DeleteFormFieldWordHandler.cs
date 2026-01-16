@@ -22,17 +22,16 @@ public class DeleteFormFieldWordHandler : OperationHandlerBase<Document>
     /// <returns>Success message with deletion count.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var fieldName = parameters.GetOptional<string?>("fieldName");
-        var fieldNames = parameters.GetOptional<string[]?>("fieldNames");
+        var p = ExtractDeleteFormFieldParameters(parameters);
 
         var document = context.Document;
         var formFields = document.Range.FormFields;
 
         List<string> fieldsToDelete;
-        if (fieldNames is { Length: > 0 })
-            fieldsToDelete = fieldNames.Where(f => !string.IsNullOrEmpty(f)).ToList();
-        else if (!string.IsNullOrEmpty(fieldName))
-            fieldsToDelete = [fieldName];
+        if (p.FieldNames is { Length: > 0 })
+            fieldsToDelete = p.FieldNames.Where(f => !string.IsNullOrEmpty(f)).ToList();
+        else if (!string.IsNullOrEmpty(p.FieldName))
+            fieldsToDelete = [p.FieldName];
         else
             fieldsToDelete = formFields.Select(f => f.Name).ToList();
 
@@ -50,4 +49,24 @@ public class DeleteFormFieldWordHandler : OperationHandlerBase<Document>
         MarkModified(context);
         return Success($"Deleted {deletedCount} form field(s)");
     }
+
+    /// <summary>
+    ///     Extracts parameters for the delete form field operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static DeleteFormFieldParameters ExtractDeleteFormFieldParameters(OperationParameters parameters)
+    {
+        var fieldName = parameters.GetOptional<string?>("fieldName");
+        var fieldNames = parameters.GetOptional<string[]?>("fieldNames");
+
+        return new DeleteFormFieldParameters(fieldName, fieldNames);
+    }
+
+    /// <summary>
+    ///     Parameters for the delete form field operation.
+    /// </summary>
+    /// <param name="FieldName">The name of a single field to delete.</param>
+    /// <param name="FieldNames">An array of field names to delete.</param>
+    private record DeleteFormFieldParameters(string? FieldName, string[]? FieldNames);
 }

@@ -170,7 +170,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -195,57 +195,146 @@ Usage examples:
         var parameters = new OperationParameters();
         parameters.Set("sheetIndex", sheetIndex);
 
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "write":
-                if (startCell != null) parameters.Set("startCell", startCell);
-                if (data != null) parameters.Set("data", data);
-                break;
+            "write" => BuildWriteParameters(parameters, startCell, data),
+            "edit" => BuildEditParameters(parameters, range, data, clearRange),
+            "get" => BuildGetParameters(parameters, range, includeFormulas, calculateFormulas, includeFormat),
+            "clear" => BuildClearParameters(parameters, range, clearContent, clearFormat),
+            "copy" => BuildCopyParameters(parameters, sourceSheetIndex, destSheetIndex, sourceRange, destCell,
+                copyOptions),
+            "move" => BuildMoveParameters(parameters, sourceSheetIndex, destSheetIndex, sourceRange, destCell),
+            "copy_format" => BuildCopyFormatParameters(parameters, range, sourceRange, destRange, destCell, copyValue),
+            _ => parameters
+        };
+    }
 
-            case "edit":
-                if (range != null) parameters.Set("range", range);
-                if (data != null) parameters.Set("data", data);
-                parameters.Set("clearRange", clearRange);
-                break;
+    /// <summary>
+    ///     Builds parameters for the write range operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="startCell">The starting cell address (e.g., 'A1').</param>
+    /// <param name="data">The data to write as JSON array.</param>
+    /// <returns>OperationParameters configured for the write operation.</returns>
+    private static OperationParameters BuildWriteParameters(OperationParameters parameters, string? startCell,
+        string? data)
+    {
+        if (startCell != null) parameters.Set("startCell", startCell);
+        if (data != null) parameters.Set("data", data);
+        return parameters;
+    }
 
-            case "get":
-                if (range != null) parameters.Set("range", range);
-                parameters.Set("includeFormulas", includeFormulas);
-                parameters.Set("calculateFormulas", calculateFormulas);
-                parameters.Set("includeFormat", includeFormat);
-                break;
+    /// <summary>
+    ///     Builds parameters for the edit range operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="range">The cell range (e.g., 'A1:C5').</param>
+    /// <param name="data">The data to write as JSON array.</param>
+    /// <param name="clearRange">Whether to clear range before writing.</param>
+    /// <returns>OperationParameters configured for the edit operation.</returns>
+    private static OperationParameters BuildEditParameters(OperationParameters parameters, string? range, string? data,
+        bool clearRange)
+    {
+        if (range != null) parameters.Set("range", range);
+        if (data != null) parameters.Set("data", data);
+        parameters.Set("clearRange", clearRange);
+        return parameters;
+    }
 
-            case "clear":
-                if (range != null) parameters.Set("range", range);
-                parameters.Set("clearContent", clearContent);
-                parameters.Set("clearFormat", clearFormat);
-                break;
+    /// <summary>
+    ///     Builds parameters for the get range operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="range">The cell range (e.g., 'A1:C5').</param>
+    /// <param name="includeFormulas">Whether to include formulas instead of values.</param>
+    /// <param name="calculateFormulas">Whether to recalculate formulas before getting values.</param>
+    /// <param name="includeFormat">Whether to include format information.</param>
+    /// <returns>OperationParameters configured for the get operation.</returns>
+    private static OperationParameters BuildGetParameters(OperationParameters parameters, string? range,
+        bool includeFormulas, bool calculateFormulas, bool includeFormat)
+    {
+        if (range != null) parameters.Set("range", range);
+        parameters.Set("includeFormulas", includeFormulas);
+        parameters.Set("calculateFormulas", calculateFormulas);
+        parameters.Set("includeFormat", includeFormat);
+        return parameters;
+    }
 
-            case "copy":
-                if (sourceSheetIndex != null) parameters.Set("sourceSheetIndex", sourceSheetIndex);
-                if (destSheetIndex != null) parameters.Set("destSheetIndex", destSheetIndex);
-                if (sourceRange != null) parameters.Set("sourceRange", sourceRange);
-                if (destCell != null) parameters.Set("destCell", destCell);
-                parameters.Set("copyOptions", copyOptions);
-                break;
+    /// <summary>
+    ///     Builds parameters for the clear range operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="range">The cell range (e.g., 'A1:C5').</param>
+    /// <param name="clearContent">Whether to clear cell content.</param>
+    /// <param name="clearFormat">Whether to clear cell format.</param>
+    /// <returns>OperationParameters configured for the clear operation.</returns>
+    private static OperationParameters BuildClearParameters(OperationParameters parameters, string? range,
+        bool clearContent, bool clearFormat)
+    {
+        if (range != null) parameters.Set("range", range);
+        parameters.Set("clearContent", clearContent);
+        parameters.Set("clearFormat", clearFormat);
+        return parameters;
+    }
 
-            case "move":
-                if (sourceSheetIndex != null) parameters.Set("sourceSheetIndex", sourceSheetIndex);
-                if (destSheetIndex != null) parameters.Set("destSheetIndex", destSheetIndex);
-                if (sourceRange != null) parameters.Set("sourceRange", sourceRange);
-                if (destCell != null) parameters.Set("destCell", destCell);
-                break;
+    /// <summary>
+    ///     Builds parameters for the copy range operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="sourceSheetIndex">The source sheet index (0-based).</param>
+    /// <param name="destSheetIndex">The destination sheet index (0-based).</param>
+    /// <param name="sourceRange">The source range (e.g., 'A1:C5').</param>
+    /// <param name="destCell">The destination cell (top-left cell, e.g., 'E1').</param>
+    /// <param name="copyOptions">The copy options: 'All', 'Values', 'Formats', 'Formulas'.</param>
+    /// <returns>OperationParameters configured for the copy operation.</returns>
+    private static OperationParameters BuildCopyParameters(OperationParameters parameters, int? sourceSheetIndex,
+        int? destSheetIndex, string? sourceRange, string? destCell, string copyOptions)
+    {
+        if (sourceSheetIndex != null) parameters.Set("sourceSheetIndex", sourceSheetIndex);
+        if (destSheetIndex != null) parameters.Set("destSheetIndex", destSheetIndex);
+        if (sourceRange != null) parameters.Set("sourceRange", sourceRange);
+        if (destCell != null) parameters.Set("destCell", destCell);
+        parameters.Set("copyOptions", copyOptions);
+        return parameters;
+    }
 
-            case "copy_format":
-                // Handle range/sourceRange and destRange/destCell aliasing
-                var effectiveRange = range ?? sourceRange;
-                var effectiveDestTarget = destRange ?? destCell;
-                if (effectiveRange != null) parameters.Set("range", effectiveRange);
-                if (effectiveDestTarget != null) parameters.Set("destTarget", effectiveDestTarget);
-                parameters.Set("copyValue", copyValue);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the move range operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="sourceSheetIndex">The source sheet index (0-based).</param>
+    /// <param name="destSheetIndex">The destination sheet index (0-based).</param>
+    /// <param name="sourceRange">The source range (e.g., 'A1:C5').</param>
+    /// <param name="destCell">The destination cell (top-left cell, e.g., 'E1').</param>
+    /// <returns>OperationParameters configured for the move operation.</returns>
+    private static OperationParameters BuildMoveParameters(OperationParameters parameters, int? sourceSheetIndex,
+        int? destSheetIndex, string? sourceRange, string? destCell)
+    {
+        if (sourceSheetIndex != null) parameters.Set("sourceSheetIndex", sourceSheetIndex);
+        if (destSheetIndex != null) parameters.Set("destSheetIndex", destSheetIndex);
+        if (sourceRange != null) parameters.Set("sourceRange", sourceRange);
+        if (destCell != null) parameters.Set("destCell", destCell);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the copy format operation.
+    /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
+    /// <param name="range">The source range (alternative to sourceRange).</param>
+    /// <param name="sourceRange">The source range (e.g., 'A1:C5').</param>
+    /// <param name="destRange">The destination range (e.g., 'E1:G5').</param>
+    /// <param name="destCell">The destination cell (alternative to destRange).</param>
+    /// <param name="copyValue">Whether to copy cell values as well.</param>
+    /// <returns>OperationParameters configured for the copy format operation.</returns>
+    private static OperationParameters BuildCopyFormatParameters(OperationParameters parameters, string? range,
+        string? sourceRange, string? destRange, string? destCell, bool copyValue)
+    {
+        var effectiveRange = range ?? sourceRange;
+        var effectiveDestTarget = destRange ?? destCell;
+        if (effectiveRange != null) parameters.Set("range", effectiveRange);
+        if (effectiveDestTarget != null) parameters.Set("destTarget", effectiveDestTarget);
+        parameters.Set("copyValue", copyValue);
         return parameters;
     }
 }

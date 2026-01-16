@@ -23,27 +23,21 @@ public class AddVideoHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with video details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetOptional("slideIndex", 0);
-        var videoPath = parameters.GetRequired<string>("videoPath");
-        var x = parameters.GetOptional("x", 100f);
-        var y = parameters.GetOptional("y", 100f);
-        var width = parameters.GetOptional("width", 400f);
-        var height = parameters.GetOptional("height", 300f);
-        var playMode = parameters.GetOptional("playMode", "auto");
+        var p = ExtractAddVideoParameters(parameters);
 
-        SecurityHelper.ValidateFilePath(videoPath, "videoPath", true);
+        SecurityHelper.ValidateFilePath(p.VideoPath, "videoPath", true);
 
-        if (!File.Exists(videoPath))
-            throw new FileNotFoundException($"Video file not found: {videoPath}", videoPath);
+        if (!File.Exists(p.VideoPath))
+            throw new FileNotFoundException($"Video file not found: {p.VideoPath}", p.VideoPath);
 
         var presentation = context.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+        var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
 
-        using var videoStream = new FileStream(videoPath, FileMode.Open, FileAccess.Read);
+        using var videoStream = new FileStream(p.VideoPath, FileMode.Open, FileAccess.Read);
         var video = presentation.Videos.AddVideo(videoStream, LoadingStreamBehavior.ReadStreamAndRelease);
-        var videoFrame = slide.Shapes.AddVideoFrame(x, y, width, height, video);
+        var videoFrame = slide.Shapes.AddVideoFrame(p.X, p.Y, p.Width, p.Height, video);
 
-        videoFrame.PlayMode = playMode.ToLower() switch
+        videoFrame.PlayMode = p.PlayMode.ToLower() switch
         {
             "onclick" => VideoPlayModePreset.OnClick,
             "auto" => VideoPlayModePreset.Auto,
@@ -54,6 +48,42 @@ public class AddVideoHandler : OperationHandlerBase<Presentation>
         MarkModified(context);
 
         return Success(
-            $"Video embedded into slide {slideIndex} at position ({videoFrame.X:F0}, {videoFrame.Y:F0}) with dimensions {videoFrame.Width:F0}x{videoFrame.Height:F0}.");
+            $"Video embedded into slide {p.SlideIndex} at position ({videoFrame.X:F0}, {videoFrame.Y:F0}) with dimensions {videoFrame.Width:F0}x{videoFrame.Height:F0}.");
     }
+
+    /// <summary>
+    ///     Extracts add video parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted add video parameters.</returns>
+    private static AddVideoParameters ExtractAddVideoParameters(OperationParameters parameters)
+    {
+        return new AddVideoParameters(
+            parameters.GetOptional("slideIndex", 0),
+            parameters.GetRequired<string>("videoPath"),
+            parameters.GetOptional("x", 100f),
+            parameters.GetOptional("y", 100f),
+            parameters.GetOptional("width", 400f),
+            parameters.GetOptional("height", 300f),
+            parameters.GetOptional("playMode", "auto"));
+    }
+
+    /// <summary>
+    ///     Record for holding add video parameters.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index.</param>
+    /// <param name="VideoPath">The video file path.</param>
+    /// <param name="X">The X position.</param>
+    /// <param name="Y">The Y position.</param>
+    /// <param name="Width">The width.</param>
+    /// <param name="Height">The height.</param>
+    /// <param name="PlayMode">The play mode.</param>
+    private record AddVideoParameters(
+        int SlideIndex,
+        string VideoPath,
+        float X,
+        float Y,
+        float Width,
+        float Height,
+        string PlayMode);
 }

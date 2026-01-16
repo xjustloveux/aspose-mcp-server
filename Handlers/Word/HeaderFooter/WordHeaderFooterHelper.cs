@@ -10,6 +10,17 @@ namespace AsposeMcpServer.Handlers.Word.HeaderFooter;
 /// </summary>
 public static class WordHeaderFooterHelper
 {
+    private static readonly Dictionary<string, FieldType> FieldCodeMap = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["PAGE"] = FieldType.FieldPage,
+        ["NUMPAGES"] = FieldType.FieldNumPages,
+        ["DATE"] = FieldType.FieldDate,
+        ["TIME"] = FieldType.FieldTime,
+        ["FILENAME"] = FieldType.FieldFileName,
+        ["AUTHOR"] = FieldType.FieldAuthor,
+        ["TITLE"] = FieldType.FieldTitle
+    };
+
     /// <summary>
     ///     Gets the HeaderFooterType based on the type string.
     /// </summary>
@@ -123,32 +134,9 @@ public static class WordHeaderFooterHelper
     {
         var code = fieldCode.Trim('{', '}', ' ').ToUpper();
 
-        switch (code)
-        {
-            case "PAGE":
-                builder.InsertField(FieldType.FieldPage, true);
-                break;
-            case "NUMPAGES":
-                builder.InsertField(FieldType.FieldNumPages, true);
-                break;
-            case "DATE":
-                builder.InsertField(FieldType.FieldDate, true);
-                break;
-            case "TIME":
-                builder.InsertField(FieldType.FieldTime, true);
-                break;
-            case "FILENAME":
-                builder.InsertField(FieldType.FieldFileName, true);
-                break;
-            case "AUTHOR":
-                builder.InsertField(FieldType.FieldAuthor, true);
-                break;
-            case "TITLE":
-                builder.InsertField(FieldType.FieldTitle, true);
-                break;
-            default:
-                builder.InsertField($" {code} ", null);
-                break;
-        }
+        if (FieldCodeMap.TryGetValue(code, out var fieldType))
+            builder.InsertField(fieldType, true);
+        else
+            builder.InsertField($" {code} ", null);
     }
 }

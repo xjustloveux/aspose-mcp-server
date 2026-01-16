@@ -130,7 +130,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -148,44 +148,101 @@ Usage examples:
         var parameters = new OperationParameters();
         parameters.Set("sheetIndex", sheetIndex);
 
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "add":
-                if (range != null) parameters.Set("range", range);
-                if (validationType != null) parameters.Set("validationType", validationType);
-                if (formula1 != null) parameters.Set("formula1", formula1);
-                if (formula2 != null) parameters.Set("formula2", formula2);
-                if (operatorType != null) parameters.Set("operatorType", operatorType);
-                parameters.Set("inCellDropDown", inCellDropDown);
-                if (errorMessage != null) parameters.Set("errorMessage", errorMessage);
-                if (inputMessage != null) parameters.Set("inputMessage", inputMessage);
-                break;
+            "add" => BuildAddParameters(parameters, range, validationType, operatorType, formula1, formula2,
+                inCellDropDown, errorMessage, inputMessage),
+            "edit" => BuildEditParameters(parameters, validationIndex, validationType, operatorType, formula1, formula2,
+                inCellDropDown, errorMessage, inputMessage),
+            "delete" => BuildDeleteParameters(parameters, validationIndex),
+            "get" => parameters,
+            "set_messages" => BuildSetMessagesParameters(parameters, validationIndex, errorMessage, inputMessage),
+            _ => parameters
+        };
+    }
 
-            case "edit":
-                parameters.Set("validationIndex", validationIndex);
-                if (validationType != null) parameters.Set("validationType", validationType);
-                if (formula1 != null) parameters.Set("formula1", formula1);
-                if (formula2 != null) parameters.Set("formula2", formula2);
-                if (operatorType != null) parameters.Set("operatorType", operatorType);
-                parameters.Set("inCellDropDown", inCellDropDown);
-                if (errorMessage != null) parameters.Set("errorMessage", errorMessage);
-                if (inputMessage != null) parameters.Set("inputMessage", inputMessage);
-                break;
+    /// <summary>
+    ///     Builds parameters for the add validation operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="range">The cell range to apply validation.</param>
+    /// <param name="validationType">The validation type.</param>
+    /// <param name="operatorType">The operator type for validation.</param>
+    /// <param name="formula1">The first formula or value.</param>
+    /// <param name="formula2">The second formula or value for between operator.</param>
+    /// <param name="inCellDropDown">Whether to show dropdown in cell.</param>
+    /// <param name="errorMessage">The error message to display.</param>
+    /// <param name="inputMessage">The input message to display.</param>
+    /// <returns>OperationParameters configured for adding validation.</returns>
+    private static OperationParameters BuildAddParameters(OperationParameters parameters, string? range,
+        string? validationType, string? operatorType, string? formula1, string? formula2, bool inCellDropDown,
+        string? errorMessage, string? inputMessage)
+    {
+        if (range != null) parameters.Set("range", range);
+        if (validationType != null) parameters.Set("validationType", validationType);
+        if (formula1 != null) parameters.Set("formula1", formula1);
+        if (formula2 != null) parameters.Set("formula2", formula2);
+        if (operatorType != null) parameters.Set("operatorType", operatorType);
+        parameters.Set("inCellDropDown", inCellDropDown);
+        if (errorMessage != null) parameters.Set("errorMessage", errorMessage);
+        if (inputMessage != null) parameters.Set("inputMessage", inputMessage);
+        return parameters;
+    }
 
-            case "delete":
-                parameters.Set("validationIndex", validationIndex);
-                break;
+    /// <summary>
+    ///     Builds parameters for the edit validation operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="validationIndex">The index of validation to edit.</param>
+    /// <param name="validationType">The validation type.</param>
+    /// <param name="operatorType">The operator type for validation.</param>
+    /// <param name="formula1">The first formula or value.</param>
+    /// <param name="formula2">The second formula or value for between operator.</param>
+    /// <param name="inCellDropDown">Whether to show dropdown in cell.</param>
+    /// <param name="errorMessage">The error message to display.</param>
+    /// <param name="inputMessage">The input message to display.</param>
+    /// <returns>OperationParameters configured for editing validation.</returns>
+    private static OperationParameters BuildEditParameters(OperationParameters parameters, int validationIndex,
+        string? validationType, string? operatorType, string? formula1, string? formula2, bool inCellDropDown,
+        string? errorMessage, string? inputMessage)
+    {
+        parameters.Set("validationIndex", validationIndex);
+        if (validationType != null) parameters.Set("validationType", validationType);
+        if (formula1 != null) parameters.Set("formula1", formula1);
+        if (formula2 != null) parameters.Set("formula2", formula2);
+        if (operatorType != null) parameters.Set("operatorType", operatorType);
+        parameters.Set("inCellDropDown", inCellDropDown);
+        if (errorMessage != null) parameters.Set("errorMessage", errorMessage);
+        if (inputMessage != null) parameters.Set("inputMessage", inputMessage);
+        return parameters;
+    }
 
-            case "get":
-                break;
+    /// <summary>
+    ///     Builds parameters for the delete validation operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="validationIndex">The index of validation to delete.</param>
+    /// <returns>OperationParameters configured for deleting validation.</returns>
+    private static OperationParameters BuildDeleteParameters(OperationParameters parameters, int validationIndex)
+    {
+        parameters.Set("validationIndex", validationIndex);
+        return parameters;
+    }
 
-            case "set_messages":
-                parameters.Set("validationIndex", validationIndex);
-                if (errorMessage != null) parameters.Set("errorMessage", errorMessage);
-                if (inputMessage != null) parameters.Set("inputMessage", inputMessage);
-                break;
-        }
-
+    /// <summary>
+    ///     Builds parameters for the set messages operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="validationIndex">The index of validation to set messages for.</param>
+    /// <param name="errorMessage">The error message to display.</param>
+    /// <param name="inputMessage">The input message to display.</param>
+    /// <returns>OperationParameters configured for setting validation messages.</returns>
+    private static OperationParameters BuildSetMessagesParameters(OperationParameters parameters, int validationIndex,
+        string? errorMessage, string? inputMessage)
+    {
+        parameters.Set("validationIndex", validationIndex);
+        if (errorMessage != null) parameters.Set("errorMessage", errorMessage);
+        if (inputMessage != null) parameters.Set("inputMessage", inputMessage);
         return parameters;
     }
 }

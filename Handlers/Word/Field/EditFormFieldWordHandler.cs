@@ -23,6 +23,35 @@ public class EditFormFieldWordHandler : OperationHandlerBase<Document>
     /// <returns>Success message.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
+        var p = ExtractEditFormFieldParameters(parameters);
+
+        var document = context.Document;
+        var field = document.Range.FormFields[p.FieldName];
+
+        if (field == null)
+            throw new ArgumentException($"Form field '{p.FieldName}' not found");
+
+        if (field.Type == FieldType.FieldFormTextInput && p.Value != null)
+            field.Result = p.Value;
+        else if (field.Type == FieldType.FieldFormCheckBox && p.CheckedValue.HasValue)
+            field.Checked = p.CheckedValue.Value;
+        else if (field.Type == FieldType.FieldFormDropDown &&
+                 p is { SelectedIndex: >= 0 and var selectedIndex } &&
+                 selectedIndex < field.DropDownItems.Count)
+            field.DropDownSelectedIndex = selectedIndex;
+
+        MarkModified(context);
+        return Success($"Form field '{p.FieldName}' updated");
+    }
+
+    /// <summary>
+    ///     Extracts and validates parameters for the edit form field operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    /// <exception cref="ArgumentException">Thrown when fieldName is not provided.</exception>
+    private static EditFormFieldParameters ExtractEditFormFieldParameters(OperationParameters parameters)
+    {
         var fieldName = parameters.GetOptional<string?>("fieldName");
         var value = parameters.GetOptional<string?>("value");
         var checkedValue = parameters.GetOptional<bool?>("checkedValue");
@@ -31,21 +60,15 @@ public class EditFormFieldWordHandler : OperationHandlerBase<Document>
         if (string.IsNullOrEmpty(fieldName))
             throw new ArgumentException("fieldName is required for edit_form_field operation");
 
-        var document = context.Document;
-        var field = document.Range.FormFields[fieldName];
-
-        if (field == null)
-            throw new ArgumentException($"Form field '{fieldName}' not found");
-
-        if (field.Type == FieldType.FieldFormTextInput && value != null)
-            field.Result = value;
-        else if (field.Type == FieldType.FieldFormCheckBox && checkedValue.HasValue)
-            field.Checked = checkedValue.Value;
-        else if (field.Type == FieldType.FieldFormDropDown && selectedIndex.HasValue &&
-                 selectedIndex.Value >= 0 && selectedIndex.Value < field.DropDownItems.Count)
-            field.DropDownSelectedIndex = selectedIndex.Value;
-
-        MarkModified(context);
-        return Success($"Form field '{fieldName}' updated");
+        return new EditFormFieldParameters(fieldName, value, checkedValue, selectedIndex);
     }
+
+    /// <summary>
+    ///     Parameters for the edit form field operation.
+    /// </summary>
+    /// <param name="FieldName">The name of the form field to edit.</param>
+    /// <param name="Value">The new value for text input fields.</param>
+    /// <param name="CheckedValue">The new checked state for checkbox fields.</param>
+    /// <param name="SelectedIndex">The new selected index for dropdown fields.</param>
+    private record EditFormFieldParameters(string FieldName, string? Value, bool? CheckedValue, int? SelectedIndex);
 }

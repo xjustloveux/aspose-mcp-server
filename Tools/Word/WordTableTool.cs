@@ -304,7 +304,9 @@ Notes:
 
     /// <summary>
     ///     Builds the operation parameters from input values.
+    ///     Parameters are documented on the Execute method.
     /// </summary>
+    /// <returns>OperationParameters configured with all input values for table operations.</returns>
     private static OperationParameters BuildParameters(
         int tableIndex, int? sectionIndex, int? rows, int? columns, int paragraphIndex, string? tableData,
         double? tableWidth, bool autoFit, bool hasHeader, string? headerBackgroundColor, string? cellBackgroundColor,

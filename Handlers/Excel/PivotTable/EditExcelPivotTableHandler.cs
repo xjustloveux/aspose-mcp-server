@@ -23,58 +23,51 @@ public class EditExcelPivotTableHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with edit details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var pivotTableIndex = parameters.GetRequired<int>("pivotTableIndex");
-        var name = parameters.GetOptional<string?>("name");
-        var style = parameters.GetOptional<string?>("style");
-        var showRowGrand = parameters.GetOptional<bool?>("showRowGrand");
-        var showColumnGrand = parameters.GetOptional<bool?>("showColumnGrand");
-        var autoFitColumns = parameters.GetOptional("autoFitColumns", false);
-        var refreshData = parameters.GetOptional("refreshData", false);
+        var p = ExtractEditPivotTableParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, p.SheetIndex);
         var pivotTables = worksheet.PivotTables;
 
-        if (pivotTableIndex < 0 || pivotTableIndex >= pivotTables.Count)
+        if (p.PivotTableIndex < 0 || p.PivotTableIndex >= pivotTables.Count)
             throw new ArgumentException(
-                $"Pivot table index {pivotTableIndex} is out of range (worksheet has {pivotTables.Count} pivot tables)");
+                $"Pivot table index {p.PivotTableIndex} is out of range (worksheet has {pivotTables.Count} pivot tables)");
 
-        var pivotTable = pivotTables[pivotTableIndex];
+        var pivotTable = pivotTables[p.PivotTableIndex];
         List<string> changes = [];
 
-        if (!string.IsNullOrEmpty(name))
+        if (!string.IsNullOrEmpty(p.Name))
         {
-            pivotTable.Name = name;
-            changes.Add($"name={name}");
+            pivotTable.Name = p.Name;
+            changes.Add($"name={p.Name}");
         }
 
-        if (!string.IsNullOrEmpty(style))
+        if (!string.IsNullOrEmpty(p.Style))
         {
-            var styleType = ExcelPivotTableHelper.ParsePivotTableStyle(style);
+            var styleType = ExcelPivotTableHelper.ParsePivotTableStyle(p.Style);
             pivotTable.PivotTableStyleType = styleType;
-            changes.Add($"style={style}");
+            changes.Add($"style={p.Style}");
         }
 
-        if (showRowGrand.HasValue)
+        if (p.ShowRowGrand.HasValue)
         {
-            pivotTable.RowGrand = showRowGrand.Value;
-            changes.Add($"showRowGrand={showRowGrand.Value}");
+            pivotTable.RowGrand = p.ShowRowGrand.Value;
+            changes.Add($"showRowGrand={p.ShowRowGrand.Value}");
         }
 
-        if (showColumnGrand.HasValue)
+        if (p.ShowColumnGrand.HasValue)
         {
-            pivotTable.ColumnGrand = showColumnGrand.Value;
-            changes.Add($"showColumnGrand={showColumnGrand.Value}");
+            pivotTable.ColumnGrand = p.ShowColumnGrand.Value;
+            changes.Add($"showColumnGrand={p.ShowColumnGrand.Value}");
         }
 
-        if (refreshData)
+        if (p.RefreshData)
         {
             pivotTable.CalculateData();
             changes.Add("refreshed");
         }
 
-        if (autoFitColumns)
+        if (p.AutoFitColumns)
         {
             worksheet.AutoFitColumns();
             changes.Add("autoFitColumns");
@@ -83,6 +76,30 @@ public class EditExcelPivotTableHandler : OperationHandlerBase<Workbook>
         MarkModified(context);
 
         var changesStr = changes.Count > 0 ? string.Join(", ", changes) : "no changes";
-        return Success($"Pivot table #{pivotTableIndex} edited ({changesStr}).");
+        return Success($"Pivot table #{p.PivotTableIndex} edited ({changesStr}).");
     }
+
+    private static EditPivotTableParameters ExtractEditPivotTableParameters(OperationParameters parameters)
+    {
+        return new EditPivotTableParameters(
+            parameters.GetOptional("sheetIndex", 0),
+            parameters.GetRequired<int>("pivotTableIndex"),
+            parameters.GetOptional<string?>("name"),
+            parameters.GetOptional<string?>("style"),
+            parameters.GetOptional<bool?>("showRowGrand"),
+            parameters.GetOptional<bool?>("showColumnGrand"),
+            parameters.GetOptional("autoFitColumns", false),
+            parameters.GetOptional("refreshData", false)
+        );
+    }
+
+    private record EditPivotTableParameters(
+        int SheetIndex,
+        int PivotTableIndex,
+        string? Name,
+        string? Style,
+        bool? ShowRowGrand,
+        bool? ShowColumnGrand,
+        bool AutoFitColumns,
+        bool RefreshData);
 }

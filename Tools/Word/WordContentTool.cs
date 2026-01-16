@@ -105,7 +105,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -116,29 +116,65 @@ Usage examples:
         int? maxChars,
         int offset)
     {
-        var parameters = new OperationParameters();
-
-        switch (operation.ToLower())
+        return operation.ToLower() switch
         {
-            case "get_content":
-                if (maxChars.HasValue) parameters.Set("maxChars", maxChars.Value);
-                parameters.Set("offset", offset);
-                break;
+            "get_content" => BuildGetContentParameters(maxChars, offset),
+            "get_content_detailed" => BuildGetContentDetailedParameters(includeHeaders, includeFooters),
+            "get_statistics" => BuildGetStatisticsParameters(includeFootnotes),
+            "get_document_info" => BuildGetDocumentInfoParameters(includeTabStops),
+            _ => new OperationParameters()
+        };
+    }
 
-            case "get_content_detailed":
-                parameters.Set("includeHeaders", includeHeaders);
-                parameters.Set("includeFooters", includeFooters);
-                break;
+    /// <summary>
+    ///     Builds parameters for the get_content operation.
+    /// </summary>
+    /// <param name="maxChars">The maximum characters to return.</param>
+    /// <param name="offset">The character offset to start reading from.</param>
+    /// <returns>OperationParameters configured for getting content.</returns>
+    private static OperationParameters BuildGetContentParameters(int? maxChars, int offset)
+    {
+        var parameters = new OperationParameters();
+        if (maxChars.HasValue) parameters.Set("maxChars", maxChars.Value);
+        parameters.Set("offset", offset);
+        return parameters;
+    }
 
-            case "get_statistics":
-                parameters.Set("includeFootnotes", includeFootnotes);
-                break;
+    /// <summary>
+    ///     Builds parameters for the get_content_detailed operation.
+    /// </summary>
+    /// <param name="includeHeaders">Whether to include headers in content.</param>
+    /// <param name="includeFooters">Whether to include footers in content.</param>
+    /// <returns>OperationParameters configured for getting detailed content.</returns>
+    private static OperationParameters BuildGetContentDetailedParameters(bool includeHeaders, bool includeFooters)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("includeHeaders", includeHeaders);
+        parameters.Set("includeFooters", includeFooters);
+        return parameters;
+    }
 
-            case "get_document_info":
-                parameters.Set("includeTabStops", includeTabStops);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the get_statistics operation.
+    /// </summary>
+    /// <param name="includeFootnotes">Whether to include footnotes in statistics.</param>
+    /// <returns>OperationParameters configured for getting statistics.</returns>
+    private static OperationParameters BuildGetStatisticsParameters(bool includeFootnotes)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("includeFootnotes", includeFootnotes);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the get_document_info operation.
+    /// </summary>
+    /// <param name="includeTabStops">Whether to include tab stops in document info.</param>
+    /// <returns>OperationParameters configured for getting document info.</returns>
+    private static OperationParameters BuildGetDocumentInfoParameters(bool includeTabStops)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("includeTabStops", includeTabStops);
         return parameters;
     }
 }

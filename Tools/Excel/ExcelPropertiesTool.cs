@@ -153,7 +153,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -176,38 +176,77 @@ Usage examples:
         var parameters = new OperationParameters();
         parameters.Set("sheetIndex", sheetIndex);
 
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "get_workbook_properties":
-                break;
+            "get_workbook_properties" or "get_sheet_properties" => parameters,
+            "set_workbook_properties" => BuildSetWorkbookPropertiesParameters(parameters, title, subject, author,
+                keywords, comments, category, company, manager, customProperties),
+            "edit_sheet_properties" => BuildEditSheetPropertiesParameters(parameters, name, isVisible, tabColor,
+                isSelected),
+            "get_sheet_info" => BuildGetSheetInfoParameters(parameters, targetSheetIndex),
+            _ => parameters
+        };
+    }
 
-            case "set_workbook_properties":
-                if (title != null) parameters.Set("title", title);
-                if (subject != null) parameters.Set("subject", subject);
-                if (author != null) parameters.Set("author", author);
-                if (keywords != null) parameters.Set("keywords", keywords);
-                if (comments != null) parameters.Set("comments", comments);
-                if (category != null) parameters.Set("category", category);
-                if (company != null) parameters.Set("company", company);
-                if (manager != null) parameters.Set("manager", manager);
-                if (customProperties != null) parameters.Set("customProperties", customProperties);
-                break;
+    /// <summary>
+    ///     Builds parameters for the set workbook properties operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="title">The workbook title.</param>
+    /// <param name="subject">The workbook subject.</param>
+    /// <param name="author">The workbook author.</param>
+    /// <param name="keywords">The workbook keywords.</param>
+    /// <param name="comments">The workbook comments.</param>
+    /// <param name="category">The workbook category.</param>
+    /// <param name="company">The workbook company.</param>
+    /// <param name="manager">The workbook manager.</param>
+    /// <param name="customProperties">Custom properties as JSON string.</param>
+    /// <returns>OperationParameters configured for setting workbook properties.</returns>
+    private static OperationParameters BuildSetWorkbookPropertiesParameters(OperationParameters parameters,
+        string? title, string? subject, string? author, string? keywords, string? comments, string? category,
+        string? company, string? manager, string? customProperties)
+    {
+        if (title != null) parameters.Set("title", title);
+        if (subject != null) parameters.Set("subject", subject);
+        if (author != null) parameters.Set("author", author);
+        if (keywords != null) parameters.Set("keywords", keywords);
+        if (comments != null) parameters.Set("comments", comments);
+        if (category != null) parameters.Set("category", category);
+        if (company != null) parameters.Set("company", company);
+        if (manager != null) parameters.Set("manager", manager);
+        if (customProperties != null) parameters.Set("customProperties", customProperties);
+        return parameters;
+    }
 
-            case "get_sheet_properties":
-                break;
+    /// <summary>
+    ///     Builds parameters for the edit sheet properties operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="name">The new sheet name.</param>
+    /// <param name="isVisible">The sheet visibility status.</param>
+    /// <param name="tabColor">The sheet tab color in hex format.</param>
+    /// <param name="isSelected">Whether the sheet is selected.</param>
+    /// <returns>OperationParameters configured for editing sheet properties.</returns>
+    private static OperationParameters BuildEditSheetPropertiesParameters(OperationParameters parameters, string? name,
+        bool? isVisible, string? tabColor, bool? isSelected)
+    {
+        if (name != null) parameters.Set("name", name);
+        if (isVisible.HasValue) parameters.Set("isVisible", isVisible.Value);
+        if (tabColor != null) parameters.Set("tabColor", tabColor);
+        if (isSelected.HasValue) parameters.Set("isSelected", isSelected.Value);
+        return parameters;
+    }
 
-            case "edit_sheet_properties":
-                if (name != null) parameters.Set("name", name);
-                if (isVisible.HasValue) parameters.Set("isVisible", isVisible.Value);
-                if (tabColor != null) parameters.Set("tabColor", tabColor);
-                if (isSelected.HasValue) parameters.Set("isSelected", isSelected.Value);
-                break;
-
-            case "get_sheet_info":
-                if (targetSheetIndex.HasValue) parameters.Set("targetSheetIndex", targetSheetIndex.Value);
-                break;
-        }
-
+    /// <summary>
+    ///     Builds parameters for the get sheet info operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="targetSheetIndex">The target sheet index to get info for.</param>
+    /// <returns>OperationParameters configured for getting sheet info.</returns>
+    private static OperationParameters BuildGetSheetInfoParameters(OperationParameters parameters,
+        int? targetSheetIndex)
+    {
+        if (targetSheetIndex.HasValue) parameters.Set("targetSheetIndex", targetSheetIndex.Value);
         return parameters;
     }
 }

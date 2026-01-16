@@ -23,24 +23,19 @@ public class MoveExcelRangeHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with move details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var sourceSheetIndex = parameters.GetOptional<int?>("sourceSheetIndex");
-        var destSheetIndex = parameters.GetOptional<int?>("destSheetIndex");
-        var sourceRange = parameters.GetRequired<string>("sourceRange");
-        var destCell = parameters.GetRequired<string>("destCell");
+        var p = ExtractMoveExcelRangeParameters(parameters);
 
         var workbook = context.Document;
-        var srcSheetIdx = sourceSheetIndex ?? sheetIndex;
+        var srcSheetIdx = p.SourceSheetIndex ?? p.SheetIndex;
         var sourceSheet = ExcelHelper.GetWorksheet(workbook, srcSheetIdx);
-        var destSheetIdx = destSheetIndex ?? srcSheetIdx;
+        var destSheetIdx = p.DestSheetIndex ?? srcSheetIdx;
         var destSheet = ExcelHelper.GetWorksheet(workbook, destSheetIdx);
 
-        var sourceRangeObj = ExcelHelper.CreateRange(sourceSheet.Cells, sourceRange, "source range");
-        var destRangeObj = ExcelHelper.CreateRange(destSheet.Cells, destCell, "destination cell");
+        var sourceRangeObj = ExcelHelper.CreateRange(sourceSheet.Cells, p.SourceRange, "source range");
+        var destRangeObj = ExcelHelper.CreateRange(destSheet.Cells, p.DestCell, "destination cell");
 
         destRangeObj.Copy(sourceRangeObj, new PasteOptions { PasteType = PasteType.All });
 
-        // Clear source range
         for (var i = sourceRangeObj.FirstRow; i <= sourceRangeObj.FirstRow + sourceRangeObj.RowCount - 1; i++)
         for (var j = sourceRangeObj.FirstColumn;
              j <= sourceRangeObj.FirstColumn + sourceRangeObj.ColumnCount - 1;
@@ -49,6 +44,37 @@ public class MoveExcelRangeHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Range {sourceRange} moved to {destCell}.");
+        return Success($"Range {p.SourceRange} moved to {p.DestCell}.");
     }
+
+    /// <summary>
+    ///     Extracts parameters for MoveExcelRange operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>Extracted parameters.</returns>
+    private static MoveExcelRangeParameters ExtractMoveExcelRangeParameters(OperationParameters parameters)
+    {
+        return new MoveExcelRangeParameters(
+            parameters.GetOptional("sheetIndex", 0),
+            parameters.GetOptional<int?>("sourceSheetIndex"),
+            parameters.GetOptional<int?>("destSheetIndex"),
+            parameters.GetRequired<string>("sourceRange"),
+            parameters.GetRequired<string>("destCell")
+        );
+    }
+
+    /// <summary>
+    ///     Parameters for MoveExcelRange operation.
+    /// </summary>
+    /// <param name="SheetIndex">The default sheet index.</param>
+    /// <param name="SourceSheetIndex">The source sheet index (optional).</param>
+    /// <param name="DestSheetIndex">The destination sheet index (optional).</param>
+    /// <param name="SourceRange">The source range to move.</param>
+    /// <param name="DestCell">The destination cell.</param>
+    private record MoveExcelRangeParameters(
+        int SheetIndex,
+        int? SourceSheetIndex,
+        int? DestSheetIndex,
+        string SourceRange,
+        string DestCell);
 }

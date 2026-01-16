@@ -24,43 +24,65 @@ public class AddWordFootnoteHandler : OperationHandlerBase<Document>
     /// <returns>Success message with footnote details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var text = parameters.GetRequired<string>("text");
-        var paragraphIndex = parameters.GetOptional<int?>("paragraphIndex");
-        var sectionIndex = parameters.GetOptional("sectionIndex", 0);
-        var referenceText = parameters.GetOptional<string?>("referenceText");
-        var customMark = parameters.GetOptional<string?>("customMark");
+        var p = ExtractAddFootnoteParameters(parameters);
 
         var doc = context.Document;
 
-        if (sectionIndex < 0 || sectionIndex >= doc.Sections.Count)
+        if (p.SectionIndex < 0 || p.SectionIndex >= doc.Sections.Count)
             throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
 
         var builder = new DocumentBuilder(doc);
         Footnote insertedNote;
 
-        if (!string.IsNullOrEmpty(referenceText))
+        if (!string.IsNullOrEmpty(p.ReferenceText))
         {
-            insertedNote = WordNoteHelper.InsertNoteAtReferenceText(doc, builder, referenceText,
-                FootnoteType.Footnote, text, customMark);
+            insertedNote = WordNoteHelper.InsertNoteAtReferenceText(doc, builder, p.ReferenceText,
+                FootnoteType.Footnote, p.Text, p.CustomMark);
         }
-        else if (paragraphIndex.HasValue)
+        else if (p.ParagraphIndex.HasValue)
         {
-            var section = doc.Sections[sectionIndex];
-            insertedNote = WordNoteHelper.InsertNoteAtParagraph(builder, section, paragraphIndex.Value,
-                FootnoteType.Footnote, text, customMark);
+            var section = doc.Sections[p.SectionIndex];
+            insertedNote = WordNoteHelper.InsertNoteAtParagraph(builder, section, p.ParagraphIndex.Value,
+                FootnoteType.Footnote, p.Text, p.CustomMark);
         }
         else
         {
-            insertedNote = WordNoteHelper.InsertNoteAtDocumentEnd(builder, FootnoteType.Footnote, text, customMark);
+            insertedNote = WordNoteHelper.InsertNoteAtDocumentEnd(builder, FootnoteType.Footnote, p.Text, p.CustomMark);
         }
 
         MarkModified(context);
 
         var result = new StringBuilder();
         result.AppendLine("Footnote added successfully");
-        result.AppendLine($"Text: {text}");
+        result.AppendLine($"Text: {p.Text}");
         if (!string.IsNullOrEmpty(insertedNote.ReferenceMark))
             result.AppendLine($"Reference mark: {insertedNote.ReferenceMark}");
         return result.ToString().TrimEnd();
     }
+
+    /// <summary>
+    ///     Extracts add footnote parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted add footnote parameters.</returns>
+    private static AddFootnoteParameters ExtractAddFootnoteParameters(OperationParameters parameters)
+    {
+        return new AddFootnoteParameters(
+            parameters.GetRequired<string>("text"),
+            parameters.GetOptional<int?>("paragraphIndex"),
+            parameters.GetOptional("sectionIndex", 0),
+            parameters.GetOptional<string?>("referenceText"),
+            parameters.GetOptional<string?>("customMark")
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold add footnote parameters.
+    /// </summary>
+    private record AddFootnoteParameters(
+        string Text,
+        int? ParagraphIndex,
+        int SectionIndex,
+        string? ReferenceText,
+        string? CustomMark);
 }

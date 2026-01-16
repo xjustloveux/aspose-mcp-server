@@ -124,7 +124,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -142,43 +142,98 @@ Usage examples:
         int? endSlideIndex,
         string outputFileNamePattern)
     {
-        var parameters = new OperationParameters();
-
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "create":
-                if (path != null) parameters.Set("path", path);
-                if (outputPath != null) parameters.Set("outputPath", outputPath);
-                break;
+            "create" => BuildCreateParameters(path, outputPath),
+            "convert" => BuildConvertParameters(inputPath, path, sessionId, outputPath, format, slideIndex),
+            "merge" => BuildMergeParameters(path, outputPath, inputPaths, keepSourceFormatting),
+            "split" => BuildSplitParameters(inputPath, path, sessionId, outputDirectory, slidesPerFile, startSlideIndex,
+                endSlideIndex, outputFileNamePattern),
+            _ => new OperationParameters()
+        };
+    }
 
-            case "convert":
-                if (inputPath != null) parameters.Set("inputPath", inputPath);
-                if (path != null) parameters.Set("path", path);
-                if (sessionId != null) parameters.Set("sessionId", sessionId);
-                if (outputPath != null) parameters.Set("outputPath", outputPath);
-                if (format != null) parameters.Set("format", format);
-                parameters.Set("slideIndex", slideIndex);
-                break;
+    /// <summary>
+    ///     Builds parameters for the create presentation operation.
+    /// </summary>
+    /// <param name="path">The file path for the new presentation.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <returns>OperationParameters configured for creating a presentation.</returns>
+    private static OperationParameters BuildCreateParameters(string? path, string? outputPath)
+    {
+        var parameters = new OperationParameters();
+        if (path != null) parameters.Set("path", path);
+        if (outputPath != null) parameters.Set("outputPath", outputPath);
+        return parameters;
+    }
 
-            case "merge":
-                if (path != null) parameters.Set("path", path);
-                if (outputPath != null) parameters.Set("outputPath", outputPath);
-                if (inputPaths != null) parameters.Set("inputPaths", inputPaths);
-                parameters.Set("keepSourceFormatting", keepSourceFormatting);
-                break;
+    /// <summary>
+    ///     Builds parameters for the convert presentation operation.
+    /// </summary>
+    /// <param name="inputPath">The input file path.</param>
+    /// <param name="path">The file path.</param>
+    /// <param name="sessionId">The session ID for reading from session.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="format">The output format (pdf, html, pptx, jpg, png, etc.).</param>
+    /// <param name="slideIndex">The slide index for image format conversion.</param>
+    /// <returns>OperationParameters configured for converting a presentation.</returns>
+    private static OperationParameters BuildConvertParameters(string? inputPath, string? path, string? sessionId,
+        string? outputPath, string? format, int slideIndex)
+    {
+        var parameters = new OperationParameters();
+        if (inputPath != null) parameters.Set("inputPath", inputPath);
+        if (path != null) parameters.Set("path", path);
+        if (sessionId != null) parameters.Set("sessionId", sessionId);
+        if (outputPath != null) parameters.Set("outputPath", outputPath);
+        if (format != null) parameters.Set("format", format);
+        parameters.Set("slideIndex", slideIndex);
+        return parameters;
+    }
 
-            case "split":
-                if (inputPath != null) parameters.Set("inputPath", inputPath);
-                if (path != null) parameters.Set("path", path);
-                if (sessionId != null) parameters.Set("sessionId", sessionId);
-                if (outputDirectory != null) parameters.Set("outputDirectory", outputDirectory);
-                parameters.Set("slidesPerFile", slidesPerFile);
-                if (startSlideIndex.HasValue) parameters.Set("startSlideIndex", startSlideIndex.Value);
-                if (endSlideIndex.HasValue) parameters.Set("endSlideIndex", endSlideIndex.Value);
-                parameters.Set("outputFileNamePattern", outputFileNamePattern);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the merge presentations operation.
+    /// </summary>
+    /// <param name="path">The base presentation file path.</param>
+    /// <param name="outputPath">The output file path for merged presentation.</param>
+    /// <param name="inputPaths">The array of input presentation file paths to merge.</param>
+    /// <param name="keepSourceFormatting">Whether to keep source formatting when merging.</param>
+    /// <returns>OperationParameters configured for merging presentations.</returns>
+    private static OperationParameters BuildMergeParameters(string? path, string? outputPath, string[]? inputPaths,
+        bool keepSourceFormatting)
+    {
+        var parameters = new OperationParameters();
+        if (path != null) parameters.Set("path", path);
+        if (outputPath != null) parameters.Set("outputPath", outputPath);
+        if (inputPaths != null) parameters.Set("inputPaths", inputPaths);
+        parameters.Set("keepSourceFormatting", keepSourceFormatting);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the split presentation operation.
+    /// </summary>
+    /// <param name="inputPath">The input file path.</param>
+    /// <param name="path">The file path.</param>
+    /// <param name="sessionId">The session ID for reading from session.</param>
+    /// <param name="outputDirectory">The output directory path.</param>
+    /// <param name="slidesPerFile">The number of slides per output file.</param>
+    /// <param name="startSlideIndex">The start slide index (0-based).</param>
+    /// <param name="endSlideIndex">The end slide index (0-based).</param>
+    /// <param name="outputFileNamePattern">The output file name pattern with {index} placeholder.</param>
+    /// <returns>OperationParameters configured for splitting a presentation.</returns>
+    private static OperationParameters BuildSplitParameters(string? inputPath, string? path, string? sessionId,
+        string? outputDirectory, int slidesPerFile, int? startSlideIndex, int? endSlideIndex,
+        string outputFileNamePattern)
+    {
+        var parameters = new OperationParameters();
+        if (inputPath != null) parameters.Set("inputPath", inputPath);
+        if (path != null) parameters.Set("path", path);
+        if (sessionId != null) parameters.Set("sessionId", sessionId);
+        if (outputDirectory != null) parameters.Set("outputDirectory", outputDirectory);
+        parameters.Set("slidesPerFile", slidesPerFile);
+        if (startSlideIndex.HasValue) parameters.Set("startSlideIndex", startSlideIndex.Value);
+        if (endSlideIndex.HasValue) parameters.Set("endSlideIndex", endSlideIndex.Value);
+        parameters.Set("outputFileNamePattern", outputFileNamePattern);
         return parameters;
     }
 }

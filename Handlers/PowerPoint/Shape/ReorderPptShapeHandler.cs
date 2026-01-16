@@ -22,21 +22,40 @@ public class ReorderPptShapeHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with reorder details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetRequired<int>("slideIndex");
-        var shapeIndex = parameters.GetRequired<int>("shapeIndex");
-        var toIndex = parameters.GetRequired<int>("toIndex");
+        var p = ExtractReorderPptShapeParameters(parameters);
 
         var presentation = context.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+        var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
 
-        PowerPointHelper.ValidateCollectionIndex(shapeIndex, slide.Shapes.Count, "shapeIndex");
-        PowerPointHelper.ValidateCollectionIndex(toIndex, slide.Shapes.Count, "toIndex");
+        PowerPointHelper.ValidateCollectionIndex(p.ShapeIndex, slide.Shapes.Count, "shapeIndex");
+        PowerPointHelper.ValidateCollectionIndex(p.ToIndex, slide.Shapes.Count, "toIndex");
 
-        var shape = slide.Shapes[shapeIndex];
-        slide.Shapes.Reorder(toIndex, shape);
+        var shape = slide.Shapes[p.ShapeIndex];
+        slide.Shapes.Reorder(p.ToIndex, shape);
 
         MarkModified(context);
 
-        return Success($"Shape Z-order changed: {shapeIndex} -> {toIndex}.");
+        return Success($"Shape Z-order changed: {p.ShapeIndex} -> {p.ToIndex}.");
     }
+
+    /// <summary>
+    ///     Extracts parameters for reorder shape operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static ReorderPptShapeParameters ExtractReorderPptShapeParameters(OperationParameters parameters)
+    {
+        return new ReorderPptShapeParameters(
+            parameters.GetRequired<int>("slideIndex"),
+            parameters.GetRequired<int>("shapeIndex"),
+            parameters.GetRequired<int>("toIndex"));
+    }
+
+    /// <summary>
+    ///     Parameters for reorder shape operation.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index (0-based).</param>
+    /// <param name="ShapeIndex">The shape index to reorder.</param>
+    /// <param name="ToIndex">The target Z-order index.</param>
+    private record ReorderPptShapeParameters(int SlideIndex, int ShapeIndex, int ToIndex);
 }

@@ -22,17 +22,17 @@ public class GetExcelConditionalFormattingsHandler : OperationHandlerBase<Workbo
     /// <returns>JSON result with conditional formatting information.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
+        var getParams = ExtractGetParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, getParams.SheetIndex);
         var conditionalFormattings = worksheet.ConditionalFormattings;
 
         if (conditionalFormattings.Count == 0)
             return JsonResult(new
             {
                 count = 0,
-                sheetIndex,
+                sheetIndex = getParams.SheetIndex,
                 worksheetName = worksheet.Name,
                 items = Array.Empty<object>(),
                 message = "No conditional formattings found"
@@ -78,9 +78,16 @@ public class GetExcelConditionalFormattingsHandler : OperationHandlerBase<Workbo
         return JsonResult(new
         {
             count = conditionalFormattings.Count,
-            sheetIndex,
+            sheetIndex = getParams.SheetIndex,
             worksheetName = worksheet.Name,
             items = formattingList
         });
     }
+
+    private static GetParameters ExtractGetParameters(OperationParameters parameters)
+    {
+        return new GetParameters(parameters.GetOptional("sheetIndex", 0));
+    }
+
+    private record GetParameters(int SheetIndex);
 }

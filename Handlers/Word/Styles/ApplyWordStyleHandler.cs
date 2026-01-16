@@ -24,68 +24,63 @@ public class ApplyWordStyleHandler : OperationHandlerBase<Document>
     /// <returns>Success message with application details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var styleName = parameters.GetRequired<string>("styleName");
-        var paragraphIndex = parameters.GetOptional<int?>("paragraphIndex");
-        var paragraphIndices = parameters.GetOptional<int[]?>("paragraphIndices");
-        var sectionIndex = parameters.GetOptional("sectionIndex", 0);
-        var tableIndex = parameters.GetOptional<int?>("tableIndex");
-        var applyToAllParagraphs = parameters.GetOptional("applyToAllParagraphs", false);
+        var p = ExtractApplyWordStyleParameters(parameters);
 
-        if (string.IsNullOrEmpty(styleName))
+        if (string.IsNullOrEmpty(p.StyleName))
             throw new ArgumentException("styleName is required for apply_style operation");
 
         var doc = context.Document;
-        var style = doc.Styles[styleName];
+        var style = doc.Styles[p.StyleName];
         if (style == null)
-            throw new ArgumentException($"Style '{styleName}' not found");
+            throw new ArgumentException($"Style '{p.StyleName}' not found");
 
         var appliedCount = 0;
 
-        if (tableIndex.HasValue)
+        if (p.TableIndex.HasValue)
         {
             var tables = doc.GetChildNodes(NodeType.Table, true).Cast<WordTable>().ToList();
-            if (tableIndex.Value < 0 || tableIndex.Value >= tables.Count)
+            if (p.TableIndex.Value < 0 || p.TableIndex.Value >= tables.Count)
                 throw new ArgumentException($"tableIndex must be between 0 and {tables.Count - 1}");
-            tables[tableIndex.Value].Style = style;
+            tables[p.TableIndex.Value].Style = style;
             appliedCount = 1;
         }
-        else if (applyToAllParagraphs)
+        else if (p.ApplyToAllParagraphs)
         {
             var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
             foreach (var para in paragraphs)
             {
-                WordStyleHelper.ApplyStyleToParagraph(para, style, styleName);
+                WordStyleHelper.ApplyStyleToParagraph(para, style, p.StyleName);
                 appliedCount++;
             }
         }
-        else if (paragraphIndices is { Length: > 0 })
+        else if (p.ParagraphIndices is { Length: > 0 })
         {
-            if (sectionIndex < 0 || sectionIndex >= doc.Sections.Count)
+            if (p.SectionIndex < 0 || p.SectionIndex >= doc.Sections.Count)
                 throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
 
-            var section = doc.Sections[sectionIndex];
+            var section = doc.Sections[p.SectionIndex];
             var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
 
-            foreach (var idx in paragraphIndices)
+            foreach (var idx in p.ParagraphIndices)
                 if (idx >= 0 && idx < paragraphs.Count)
                 {
-                    WordStyleHelper.ApplyStyleToParagraph(paragraphs[idx], style, styleName);
+                    WordStyleHelper.ApplyStyleToParagraph(paragraphs[idx], style, p.StyleName);
                     appliedCount++;
                 }
         }
-        else if (paragraphIndex.HasValue)
+        else if (p.ParagraphIndex.HasValue)
         {
-            if (sectionIndex < 0 || sectionIndex >= doc.Sections.Count)
+            if (p.SectionIndex < 0 || p.SectionIndex >= doc.Sections.Count)
                 throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
 
-            var section = doc.Sections[sectionIndex];
+            var section = doc.Sections[p.SectionIndex];
             var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
 
-            if (paragraphIndex.Value < 0 || paragraphIndex.Value >= paragraphs.Count)
+            if (p.ParagraphIndex.Value < 0 || p.ParagraphIndex.Value >= paragraphs.Count)
                 throw new ArgumentException(
-                    $"paragraphIndex must be between 0 and {paragraphs.Count - 1} (section {sectionIndex} has {paragraphs.Count} paragraphs, total document paragraphs: {doc.GetChildNodes(NodeType.Paragraph, true).Count})");
+                    $"paragraphIndex must be between 0 and {paragraphs.Count - 1} (section {p.SectionIndex} has {paragraphs.Count} paragraphs, total document paragraphs: {doc.GetChildNodes(NodeType.Paragraph, true).Count})");
 
-            WordStyleHelper.ApplyStyleToParagraph(paragraphs[paragraphIndex.Value], style, styleName);
+            WordStyleHelper.ApplyStyleToParagraph(paragraphs[p.ParagraphIndex.Value], style, p.StyleName);
             appliedCount = 1;
         }
         else
@@ -96,6 +91,25 @@ public class ApplyWordStyleHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Applied style '{styleName}' to {appliedCount} element(s)");
+        return Success($"Applied style '{p.StyleName}' to {appliedCount} element(s)");
     }
+
+    private static ApplyWordStyleParameters ExtractApplyWordStyleParameters(OperationParameters parameters)
+    {
+        return new ApplyWordStyleParameters(
+            parameters.GetRequired<string>("styleName"),
+            parameters.GetOptional<int?>("paragraphIndex"),
+            parameters.GetOptional<int[]?>("paragraphIndices"),
+            parameters.GetOptional("sectionIndex", 0),
+            parameters.GetOptional<int?>("tableIndex"),
+            parameters.GetOptional("applyToAllParagraphs", false));
+    }
+
+    private record ApplyWordStyleParameters(
+        string StyleName,
+        int? ParagraphIndex,
+        int[]? ParagraphIndices,
+        int SectionIndex,
+        int? TableIndex,
+        bool ApplyToAllParagraphs);
 }

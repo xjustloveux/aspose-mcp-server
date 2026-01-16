@@ -21,20 +21,27 @@ public class SetSlideNumberingHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with numbering information.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var showSlideNumber = parameters.GetOptional("showSlideNumber", true);
-        var firstNumber = parameters.GetOptional("firstNumber", 1);
-
+        var p = ExtractSetSlideNumberingParameters(parameters);
         var presentation = context.Document;
 
-        presentation.FirstSlideNumber = firstNumber;
-        presentation.HeaderFooterManager.SetAllSlideNumbersVisibility(showSlideNumber);
+        presentation.FirstSlideNumber = p.FirstNumber;
+        presentation.HeaderFooterManager.SetAllSlideNumbersVisibility(p.ShowSlideNumber);
 
         foreach (var slide in presentation.Slides)
-            slide.HeaderFooterManager.SetSlideNumberVisibility(showSlideNumber);
+            slide.HeaderFooterManager.SetSlideNumberVisibility(p.ShowSlideNumber);
 
         MarkModified(context);
 
-        var visibilityText = showSlideNumber ? "shown" : "hidden";
-        return Success($"Slide numbers {visibilityText}, starting from {firstNumber}.");
+        var visibilityText = p.ShowSlideNumber ? "shown" : "hidden";
+        return Success($"Slide numbers {visibilityText}, starting from {p.FirstNumber}.");
     }
+
+    private static SetSlideNumberingParameters ExtractSetSlideNumberingParameters(OperationParameters parameters)
+    {
+        return new SetSlideNumberingParameters(
+            parameters.GetOptional("showSlideNumber", true),
+            parameters.GetOptional("firstNumber", 1));
+    }
+
+    private record SetSlideNumberingParameters(bool ShowSlideNumber, int FirstNumber);
 }

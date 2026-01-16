@@ -24,15 +24,13 @@ public class WriteExcelRangeHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with write details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var startCell = parameters.GetRequired<string>("startCell");
-        var dataJson = parameters.GetRequired<string>("data");
+        var p = ExtractWriteExcelRangeParameters(parameters);
 
-        var dataArray = ExcelRangeHelper.ParseDataArray(dataJson);
+        var dataArray = ExcelRangeHelper.ParseDataArray(p.Data);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var startCellObj = worksheet.Cells[startCell];
+        var worksheet = ExcelHelper.GetWorksheet(workbook, p.SheetIndex);
+        var startCellObj = worksheet.Cells[p.StartCell];
         var startRow = startCellObj.Row;
         var startCol = startCellObj.Column;
 
@@ -45,6 +43,28 @@ public class WriteExcelRangeHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Data written to range starting at {startCell}.");
+        return Success($"Data written to range starting at {p.StartCell}.");
     }
+
+    /// <summary>
+    ///     Extracts parameters for WriteExcelRange operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>Extracted parameters.</returns>
+    private static WriteExcelRangeParameters ExtractWriteExcelRangeParameters(OperationParameters parameters)
+    {
+        return new WriteExcelRangeParameters(
+            parameters.GetOptional("sheetIndex", 0),
+            parameters.GetRequired<string>("startCell"),
+            parameters.GetRequired<string>("data")
+        );
+    }
+
+    /// <summary>
+    ///     Parameters for WriteExcelRange operation.
+    /// </summary>
+    /// <param name="SheetIndex">The sheet index.</param>
+    /// <param name="StartCell">The starting cell for writing data.</param>
+    /// <param name="Data">The data to write as JSON string.</param>
+    private record WriteExcelRangeParameters(int SheetIndex, string StartCell, string Data);
 }

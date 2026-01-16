@@ -26,31 +26,28 @@ public class GetStructureWordTableHandler : OperationHandlerBase<Document>
     /// <exception cref="ArgumentException">Thrown when tableIndex or sectionIndex is out of range.</exception>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var tableIndex = parameters.GetOptional("tableIndex", 0);
-        var sectionIndex = parameters.GetOptional<int?>("sectionIndex");
-        var includeContent = parameters.GetOptional("includeContent", false);
-        var includeCellFormatting = parameters.GetOptional("includeCellFormatting", true);
+        var p = ExtractGetStructureParameters(parameters);
 
         var doc = context.Document;
-        var actualSectionIndex = sectionIndex ?? 0;
+        var actualSectionIndex = p.SectionIndex ?? 0;
         if (actualSectionIndex >= doc.Sections.Count)
             throw new ArgumentException($"Section index {actualSectionIndex} out of range");
 
         var section = doc.Sections[actualSectionIndex];
         var tables = section.Body.GetChildNodes(NodeType.Table, true).Cast<WordTable>().ToList();
-        if (tableIndex < 0 || tableIndex >= tables.Count)
-            throw new ArgumentException($"Table index {tableIndex} out of range");
+        if (p.TableIndex < 0 || p.TableIndex >= tables.Count)
+            throw new ArgumentException($"Table index {p.TableIndex} out of range");
 
-        var table = tables[tableIndex];
+        var table = tables[p.TableIndex];
         var result = new StringBuilder();
 
-        AppendBasicInfo(result, tableIndex, table);
+        AppendBasicInfo(result, p.TableIndex, table);
         AppendTableFormat(result, table);
 
-        if (includeContent)
+        if (p.IncludeContent)
             AppendContentPreview(result, table);
 
-        if (includeCellFormatting && table.Rows.Count > 0 && table.Rows[0].Cells.Count > 0)
+        if (p.IncludeCellFormatting && table.Rows.Count > 0 && table.Rows[0].Cells.Count > 0)
             AppendCellFormatting(result, table);
 
         return result.ToString();
@@ -134,4 +131,20 @@ public class GetStructureWordTableHandler : OperationHandlerBase<Document>
         result.AppendLine($"Vertical Alignment: {cell.CellFormat.VerticalAlignment}");
         result.AppendLine();
     }
+
+    private static GetStructureParameters ExtractGetStructureParameters(OperationParameters parameters)
+    {
+        var tableIndex = parameters.GetOptional("tableIndex", 0);
+        var sectionIndex = parameters.GetOptional<int?>("sectionIndex");
+        var includeContent = parameters.GetOptional("includeContent", false);
+        var includeCellFormatting = parameters.GetOptional("includeCellFormatting", true);
+
+        return new GetStructureParameters(tableIndex, sectionIndex, includeContent, includeCellFormatting);
+    }
+
+    private record GetStructureParameters(
+        int TableIndex,
+        int? SectionIndex,
+        bool IncludeContent,
+        bool IncludeCellFormatting);
 }

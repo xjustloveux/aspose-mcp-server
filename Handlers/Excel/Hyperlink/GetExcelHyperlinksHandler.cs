@@ -22,10 +22,10 @@ public class GetExcelHyperlinksHandler : OperationHandlerBase<Workbook>
     /// <returns>JSON result with hyperlink information.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
+        var getParams = ExtractGetParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, getParams.SheetIndex);
         var hyperlinks = worksheet.Hyperlinks;
 
         if (hyperlinks.Count == 0)
@@ -65,4 +65,13 @@ public class GetExcelHyperlinksHandler : OperationHandlerBase<Workbook>
             items = hyperlinkList
         });
     }
+
+    private static GetParameters ExtractGetParameters(OperationParameters parameters)
+    {
+        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
+
+        return new GetParameters(sheetIndex);
+    }
+
+    private record GetParameters(int SheetIndex);
 }

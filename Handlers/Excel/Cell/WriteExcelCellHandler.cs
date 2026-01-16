@@ -17,29 +17,48 @@ public class WriteExcelCellHandler : OperationHandlerBase<Workbook>
     /// </summary>
     /// <param name="context">The workbook context.</param>
     /// <param name="parameters">
-    ///     Required: cell (cell reference like "A1"), value
-    ///     Optional: sheetIndex (default: 0)
+    ///     Required: cell, value
+    ///     Optional: sheetIndex
     /// </param>
     /// <returns>Success message.</returns>
+    /// <exception cref="ArgumentException">Thrown when value is empty.</exception>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var cell = parameters.GetRequired<string>("cell");
-        var value = parameters.GetRequired<string>("value");
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
+        var writeParams = ExtractWriteParameters(parameters);
 
-        if (string.IsNullOrEmpty(value))
+        if (string.IsNullOrEmpty(writeParams.Value))
             throw new ArgumentException("value is required for write operation");
 
-        ExcelCellHelper.ValidateCellAddress(cell);
+        ExcelCellHelper.ValidateCellAddress(writeParams.Cell);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var cellObj = worksheet.Cells[cell];
+        var worksheet = ExcelHelper.GetWorksheet(workbook, writeParams.SheetIndex);
+        var cellObj = worksheet.Cells[writeParams.Cell];
 
-        ExcelHelper.SetCellValue(cellObj, value);
+        ExcelHelper.SetCellValue(cellObj, writeParams.Value);
 
         MarkModified(context);
 
-        return Success($"Cell {cell} written with value '{value}' in sheet {sheetIndex}.");
+        return Success(
+            $"Cell {writeParams.Cell} written with value '{writeParams.Value}' in sheet {writeParams.SheetIndex}.");
     }
+
+    /// <summary>
+    ///     Extracts write parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted write parameters.</returns>
+    private static WriteParameters ExtractWriteParameters(OperationParameters parameters)
+    {
+        return new WriteParameters(
+            parameters.GetRequired<string>("cell"),
+            parameters.GetRequired<string>("value"),
+            parameters.GetOptional("sheetIndex", 0)
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold write cell parameters.
+    /// </summary>
+    private record WriteParameters(string Cell, string Value, int SheetIndex);
 }

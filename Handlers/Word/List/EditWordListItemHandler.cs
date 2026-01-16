@@ -25,36 +25,47 @@ public class EditWordListItemHandler : OperationHandlerBase<Document>
     /// <returns>Success message with edit details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var paragraphIndex = parameters.GetRequired<int>("paragraphIndex");
-        var text = parameters.GetRequired<string>("text");
-        var level = parameters.GetOptional<int?>("level");
+        var p = ExtractEditListItemParameters(parameters);
 
-        if (string.IsNullOrEmpty(text))
+        if (string.IsNullOrEmpty(p.Text))
             throw new ArgumentException("text parameter is required for edit_item operation");
 
         var doc = context.Document;
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
 
-        if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
+        if (p.ParagraphIndex < 0 || p.ParagraphIndex >= paragraphs.Count)
             throw new ArgumentException(
-                $"Paragraph index {paragraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
+                $"Paragraph index {p.ParagraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
 
-        if (paragraphs[paragraphIndex] is not WordParagraph para)
-            throw new InvalidOperationException($"Unable to get paragraph at index {paragraphIndex}");
+        if (paragraphs[p.ParagraphIndex] is not WordParagraph para)
+            throw new InvalidOperationException($"Unable to get paragraph at index {p.ParagraphIndex}");
 
         para.Runs.Clear();
-        var run = new WordRun(doc, text);
+        var run = new WordRun(doc, p.Text);
         para.AppendChild(run);
 
-        if (level is >= 0 and <= 8) para.ParagraphFormat.LeftIndent = InchToPoint(0.5 * level.Value);
+        if (p.Level is >= 0 and <= 8) para.ParagraphFormat.LeftIndent = InchToPoint(0.5 * p.Level.Value);
 
         MarkModified(context);
 
         var result = "List item edited successfully\n";
-        result += $"Paragraph index: {paragraphIndex}\n";
-        result += $"New text: {text}";
-        if (level.HasValue) result += $"\nLevel: {level.Value}";
+        result += $"Paragraph index: {p.ParagraphIndex}\n";
+        result += $"New text: {p.Text}";
+        if (p.Level.HasValue) result += $"\nLevel: {p.Level.Value}";
 
         return Success(result);
     }
+
+    private static EditListItemParameters ExtractEditListItemParameters(OperationParameters parameters)
+    {
+        return new EditListItemParameters(
+            parameters.GetRequired<int>("paragraphIndex"),
+            parameters.GetRequired<string>("text"),
+            parameters.GetOptional<int?>("level"));
+    }
+
+    private record EditListItemParameters(
+        int ParagraphIndex,
+        string Text,
+        int? Level);
 }

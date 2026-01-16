@@ -22,15 +22,15 @@ public class GetExcelProtectionHandler : OperationHandlerBase<Workbook>
     /// <returns>JSON string containing protection status information.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional<int?>("sheetIndex");
+        var p = ExtractGetExcelProtectionParameters(parameters);
 
         var workbook = context.Document;
         List<object> worksheets = [];
 
-        if (sheetIndex.HasValue)
+        if (p.SheetIndex.HasValue)
         {
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex.Value);
-            worksheets.Add(CreateSheetProtectionInfo(worksheet, sheetIndex.Value));
+            var worksheet = ExcelHelper.GetWorksheet(workbook, p.SheetIndex.Value);
+            worksheets.Add(CreateSheetProtectionInfo(worksheet, p.SheetIndex.Value));
         }
         else
         {
@@ -79,4 +79,22 @@ public class GetExcelProtectionHandler : OperationHandlerBase<Workbook>
             allowEditingScenario = protection.AllowEditingScenario
         };
     }
+
+    /// <summary>
+    ///     Extracts parameters for GetExcelProtection operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>Extracted parameters.</returns>
+    private static GetExcelProtectionParameters ExtractGetExcelProtectionParameters(OperationParameters parameters)
+    {
+        return new GetExcelProtectionParameters(
+            parameters.GetOptional<int?>("sheetIndex")
+        );
+    }
+
+    /// <summary>
+    ///     Parameters for GetExcelProtection operation.
+    /// </summary>
+    /// <param name="SheetIndex">The sheet index (optional).</param>
+    private record GetExcelProtectionParameters(int? SheetIndex);
 }

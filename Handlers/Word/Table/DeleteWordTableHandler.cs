@@ -22,19 +22,28 @@ public class DeleteWordTableHandler : OperationHandlerBase<Document>
     /// <exception cref="ArgumentException">Thrown when tableIndex or sectionIndex is out of range.</exception>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var tableIndex = parameters.GetOptional("tableIndex", 0);
-        var sectionIndex = parameters.GetOptional<int?>("sectionIndex");
+        var p = ExtractDeleteWordTableParameters(parameters);
 
         var doc = context.Document;
-        var tables = WordTableHelper.GetTables(doc, sectionIndex);
+        var tables = WordTableHelper.GetTables(doc, p.SectionIndex);
 
-        if (tableIndex < 0 || tableIndex >= tables.Count)
-            throw new ArgumentException($"Table index {tableIndex} out of range");
+        if (p.TableIndex < 0 || p.TableIndex >= tables.Count)
+            throw new ArgumentException($"Table index {p.TableIndex} out of range");
 
-        tables[tableIndex].Remove();
+        tables[p.TableIndex].Remove();
 
         MarkModified(context);
 
-        return Success($"Successfully deleted table #{tableIndex}. Remaining tables: {tables.Count - 1}.");
+        return Success($"Successfully deleted table #{p.TableIndex}. Remaining tables: {tables.Count - 1}.");
     }
+
+    private static DeleteWordTableParameters ExtractDeleteWordTableParameters(OperationParameters parameters)
+    {
+        var tableIndex = parameters.GetOptional("tableIndex", 0);
+        var sectionIndex = parameters.GetOptional<int?>("sectionIndex");
+
+        return new DeleteWordTableParameters(tableIndex, sectionIndex);
+    }
+
+    private record DeleteWordTableParameters(int TableIndex, int? SectionIndex);
 }

@@ -21,53 +21,81 @@ public class AddExcelChartHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex, chartType, categoryAxisDataRange, title, topRow, leftColumn, width, height
     /// </param>
     /// <returns>Success message with chart creation details.</returns>
+    /// <exception cref="ArgumentException">Thrown when dataRange is not provided.</exception>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var chartTypeStr = parameters.GetOptional<string?>("chartType");
-        var dataRange = parameters.GetOptional<string?>("dataRange");
-        var categoryAxisDataRange = parameters.GetOptional<string?>("categoryAxisDataRange");
-        var title = parameters.GetOptional<string?>("title");
-        var topRow = parameters.GetOptional<int?>("topRow");
-        var leftColumn = parameters.GetOptional("leftColumn", 0);
-        var width = parameters.GetOptional("width", 10);
-        var height = parameters.GetOptional("height", 15);
+        var addParams = ExtractAddParameters(parameters);
 
-        if (string.IsNullOrEmpty(dataRange))
+        if (string.IsNullOrEmpty(addParams.DataRange))
             throw new ArgumentException("dataRange is required for add operation");
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var chartType = ExcelChartHelper.ParseChartType(chartTypeStr);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, addParams.SheetIndex);
+        var chartType = ExcelChartHelper.ParseChartType(addParams.ChartType);
 
         int chartTopRow;
-        if (topRow.HasValue)
+        if (addParams.TopRow.HasValue)
         {
-            chartTopRow = topRow.Value;
+            chartTopRow = addParams.TopRow.Value;
         }
         else
         {
-            var dataRangeObj = ExcelHelper.CreateRange(worksheet.Cells, dataRange.Split(',')[0].Trim());
+            var dataRangeObj = ExcelHelper.CreateRange(worksheet.Cells, addParams.DataRange.Split(',')[0].Trim());
             chartTopRow = dataRangeObj.FirstRow + dataRangeObj.RowCount + 2;
         }
 
         var chartIndex =
-            worksheet.Charts.Add(chartType, chartTopRow, leftColumn, chartTopRow + height, leftColumn + width);
+            worksheet.Charts.Add(chartType, chartTopRow, addParams.LeftColumn, chartTopRow + addParams.Height,
+                addParams.LeftColumn + addParams.Width);
         var chart = worksheet.Charts[chartIndex];
 
-        ExcelChartHelper.AddDataSeries(chart, dataRange);
-        ExcelChartHelper.SetCategoryData(chart, categoryAxisDataRange ?? "");
+        ExcelChartHelper.AddDataSeries(chart, addParams.DataRange);
+        ExcelChartHelper.SetCategoryData(chart, addParams.CategoryAxisDataRange ?? "");
 
-        if (!string.IsNullOrEmpty(title))
-            chart.Title.Text = title;
+        if (!string.IsNullOrEmpty(addParams.Title))
+            chart.Title.Text = addParams.Title;
 
         workbook.CalculateFormula();
 
         MarkModified(context);
 
-        var result = $"Chart added with data range: {dataRange}";
-        if (!string.IsNullOrEmpty(categoryAxisDataRange))
-            result += $", X-axis: {categoryAxisDataRange}";
+        var result = $"Chart added with data range: {addParams.DataRange}";
+        if (!string.IsNullOrEmpty(addParams.CategoryAxisDataRange))
+            result += $", X-axis: {addParams.CategoryAxisDataRange}";
         return Success(result);
     }
+
+    /// <summary>
+    ///     Extracts add parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted add parameters.</returns>
+    private static AddParameters ExtractAddParameters(OperationParameters parameters)
+    {
+        return new AddParameters(
+            parameters.GetOptional("sheetIndex", 0),
+            parameters.GetOptional<string?>("chartType"),
+            parameters.GetOptional<string?>("dataRange"),
+            parameters.GetOptional<string?>("categoryAxisDataRange"),
+            parameters.GetOptional<string?>("title"),
+            parameters.GetOptional<int?>("topRow"),
+            parameters.GetOptional("leftColumn", 0),
+            parameters.GetOptional("width", 10),
+            parameters.GetOptional("height", 15)
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold add chart parameters.
+    /// </summary>
+    private record AddParameters(
+        int SheetIndex,
+        string? ChartType,
+        string? DataRange,
+        string? CategoryAxisDataRange,
+        string? Title,
+        int? TopRow,
+        int LeftColumn,
+        int Width,
+        int Height);
 }

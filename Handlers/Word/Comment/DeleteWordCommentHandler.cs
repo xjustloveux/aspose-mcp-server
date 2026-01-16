@@ -19,23 +19,22 @@ public class DeleteWordCommentHandler : OperationHandlerBase<Document>
     ///     Required: commentIndex
     /// </param>
     /// <returns>Success message with deletion details.</returns>
+    /// <exception cref="ArgumentException">Thrown when commentIndex is not provided or is out of range.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when comment cannot be found at the specified index.</exception>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var commentIndex = parameters.GetOptional<int?>("commentIndex");
-
-        if (!commentIndex.HasValue)
-            throw new ArgumentException("commentIndex is required for delete operation");
+        var p = ExtractDeleteParameters(parameters);
 
         var doc = context.Document;
         var comments = doc.GetChildNodes(NodeType.Comment, true);
 
-        if (commentIndex.Value < 0 || commentIndex.Value >= comments.Count)
+        if (p.CommentIndex < 0 || p.CommentIndex >= comments.Count)
             throw new ArgumentException(
-                $"Comment index {commentIndex.Value} is out of range (document has {comments.Count} comments)");
+                $"Comment index {p.CommentIndex} is out of range (document has {comments.Count} comments)");
 
-        var commentToDelete = comments[commentIndex.Value] as Aspose.Words.Comment;
+        var commentToDelete = comments[p.CommentIndex] as Aspose.Words.Comment;
         if (commentToDelete == null)
-            throw new InvalidOperationException($"Unable to find comment at index {commentIndex.Value}");
+            throw new InvalidOperationException($"Unable to find comment at index {p.CommentIndex}");
 
         var author = commentToDelete.Author;
 
@@ -57,6 +56,28 @@ public class DeleteWordCommentHandler : OperationHandlerBase<Document>
         var remainingCount = doc.GetChildNodes(NodeType.Comment, true).Count;
 
         return
-            $"Comment #{commentIndex.Value} deleted successfully\nAuthor: {author}\nRemaining comments: {remainingCount}";
+            $"Comment #{p.CommentIndex} deleted successfully\nAuthor: {author}\nRemaining comments: {remainingCount}";
     }
+
+    /// <summary>
+    ///     Extracts and validates parameters for the delete comment operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    /// <exception cref="ArgumentException">Thrown when commentIndex is not provided.</exception>
+    private static DeleteParameters ExtractDeleteParameters(OperationParameters parameters)
+    {
+        var commentIndex = parameters.GetOptional<int?>("commentIndex");
+
+        if (!commentIndex.HasValue)
+            throw new ArgumentException("commentIndex is required for delete operation");
+
+        return new DeleteParameters(commentIndex.Value);
+    }
+
+    /// <summary>
+    ///     Parameters for the delete comment operation.
+    /// </summary>
+    /// <param name="CommentIndex">The index of the comment to delete.</param>
+    private record DeleteParameters(int CommentIndex);
 }

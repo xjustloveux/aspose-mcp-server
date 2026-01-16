@@ -21,47 +21,60 @@ public class MergeWordDocumentsHandler : OperationHandlerBase<Document>
     ///     Optional: importFormatMode (default: KeepSourceFormatting), unlinkHeadersFooters (default: false)
     /// </param>
     /// <returns>Success message with merge details.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing.</exception>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var inputPaths = parameters.GetOptional<string[]?>("inputPaths");
-        var outputPath = parameters.GetOptional<string?>("outputPath");
-        var importFormatModeStr = parameters.GetOptional("importFormatMode", "KeepSourceFormatting");
-        var unlinkHeadersFooters = parameters.GetOptional("unlinkHeadersFooters", false);
+        var p = ExtractMergeParameters(parameters);
 
-        if (inputPaths == null || inputPaths.Length == 0)
+        if (p.InputPaths == null || p.InputPaths.Length == 0)
             throw new ArgumentException("inputPaths is required for merge operation");
-        if (string.IsNullOrEmpty(outputPath))
+        if (string.IsNullOrEmpty(p.OutputPath))
             throw new ArgumentException("outputPath is required for merge operation");
 
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+        SecurityHelper.ValidateFilePath(p.OutputPath, "outputPath", true);
 
-        var outputDir = Path.GetDirectoryName(outputPath);
+        var outputDir = Path.GetDirectoryName(p.OutputPath);
         if (!string.IsNullOrEmpty(outputDir))
             Directory.CreateDirectory(outputDir);
 
-        foreach (var inputPath in inputPaths)
+        foreach (var inputPath in p.InputPaths)
             SecurityHelper.ValidateFilePath(inputPath, "inputPaths", true);
 
-        var importFormatMode = importFormatModeStr switch
+        var importFormatMode = p.ImportFormatModeStr switch
         {
             "UseDestinationStyles" => ImportFormatMode.UseDestinationStyles,
             "KeepDifferentStyles" => ImportFormatMode.KeepDifferentStyles,
             _ => ImportFormatMode.KeepSourceFormatting
         };
 
-        var mergedDoc = new Document(inputPaths[0]);
+        var mergedDoc = new Document(p.InputPaths[0]);
 
-        for (var i = 1; i < inputPaths.Length; i++)
+        for (var i = 1; i < p.InputPaths.Length; i++)
         {
-            var doc = new Document(inputPaths[i]);
+            var doc = new Document(p.InputPaths[i]);
             mergedDoc.AppendDocument(doc, importFormatMode);
         }
 
-        if (unlinkHeadersFooters)
+        if (p.UnlinkHeadersFooters)
             foreach (var section in mergedDoc.Sections.Cast<Section>())
                 section.HeadersFooters.LinkToPrevious(false);
 
-        mergedDoc.Save(outputPath);
-        return $"Merged {inputPaths.Length} documents into: {outputPath} (format mode: {importFormatModeStr})";
+        mergedDoc.Save(p.OutputPath);
+        return $"Merged {p.InputPaths.Length} documents into: {p.OutputPath} (format mode: {p.ImportFormatModeStr})";
     }
+
+    private static MergeParameters ExtractMergeParameters(OperationParameters parameters)
+    {
+        return new MergeParameters(
+            parameters.GetOptional<string[]?>("inputPaths"),
+            parameters.GetOptional<string?>("outputPath"),
+            parameters.GetOptional("importFormatMode", "KeepSourceFormatting"),
+            parameters.GetOptional("unlinkHeadersFooters", false));
+    }
+
+    private record MergeParameters(
+        string[]? InputPaths,
+        string? OutputPath,
+        string ImportFormatModeStr,
+        bool UnlinkHeadersFooters);
 }

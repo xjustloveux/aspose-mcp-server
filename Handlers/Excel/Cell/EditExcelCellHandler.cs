@@ -17,35 +17,53 @@ public class EditExcelCellHandler : OperationHandlerBase<Workbook>
     /// </summary>
     /// <param name="context">The workbook context.</param>
     /// <param name="parameters">
-    ///     Required: cell (cell reference like "A1")
-    ///     Optional: sheetIndex (default: 0), value, formula, clearValue (default: false)
+    ///     Required: cell
+    ///     Optional: sheetIndex, value, formula, clearValue
     /// </param>
     /// <returns>Success message.</returns>
+    /// <exception cref="ArgumentException">Thrown when no edit operation is specified.</exception>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var cell = parameters.GetRequired<string>("cell");
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var value = parameters.GetOptional<string?>("value");
-        var formula = parameters.GetOptional<string?>("formula");
-        var clearValue = parameters.GetOptional("clearValue", false);
+        var editParams = ExtractEditParameters(parameters);
 
-        ExcelCellHelper.ValidateCellAddress(cell);
+        ExcelCellHelper.ValidateCellAddress(editParams.Cell);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var cellObj = worksheet.Cells[cell];
+        var worksheet = ExcelHelper.GetWorksheet(workbook, editParams.SheetIndex);
+        var cellObj = worksheet.Cells[editParams.Cell];
 
-        if (clearValue)
+        if (editParams.ClearValue)
             cellObj.PutValue("");
-        else if (!string.IsNullOrEmpty(formula))
-            cellObj.Formula = formula;
-        else if (!string.IsNullOrEmpty(value))
-            ExcelHelper.SetCellValue(cellObj, value);
+        else if (!string.IsNullOrEmpty(editParams.Formula))
+            cellObj.Formula = editParams.Formula;
+        else if (!string.IsNullOrEmpty(editParams.Value))
+            ExcelHelper.SetCellValue(cellObj, editParams.Value);
         else
             throw new ArgumentException("Either value, formula, or clearValue must be provided");
 
         MarkModified(context);
 
-        return Success($"Cell {cell} edited in sheet {sheetIndex}.");
+        return Success($"Cell {editParams.Cell} edited in sheet {editParams.SheetIndex}.");
     }
+
+    /// <summary>
+    ///     Extracts edit parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted edit parameters.</returns>
+    private static EditParameters ExtractEditParameters(OperationParameters parameters)
+    {
+        return new EditParameters(
+            parameters.GetRequired<string>("cell"),
+            parameters.GetOptional("sheetIndex", 0),
+            parameters.GetOptional<string?>("value"),
+            parameters.GetOptional<string?>("formula"),
+            parameters.GetOptional("clearValue", false)
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold edit cell parameters.
+    /// </summary>
+    private record EditParameters(string Cell, int SheetIndex, string? Value, string? Formula, bool ClearValue);
 }

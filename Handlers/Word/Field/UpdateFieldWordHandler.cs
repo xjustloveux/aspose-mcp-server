@@ -22,21 +22,20 @@ public class UpdateFieldWordHandler : OperationHandlerBase<Document>
     /// <returns>Success message with update details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var fieldIndex = parameters.GetOptional<int?>("fieldIndex");
-        var updateAll = parameters.GetOptional<bool?>("updateAll");
+        var p = ExtractUpdateFieldParameters(parameters);
 
         var document = context.Document;
         var fields = document.Range.Fields.ToList();
 
-        if (fieldIndex.HasValue && updateAll != true)
+        if (p.FieldIndex.HasValue && p.UpdateAll != true)
         {
-            if (fieldIndex.Value < 0 || fieldIndex.Value >= fields.Count)
+            if (p.FieldIndex.Value < 0 || p.FieldIndex.Value >= fields.Count)
                 throw new ArgumentException(
-                    $"Field index {fieldIndex.Value} is out of range (document has {fields.Count} fields)");
+                    $"Field index {p.FieldIndex.Value} is out of range (document has {fields.Count} fields)");
 
-            var field = fields[fieldIndex.Value];
+            var field = fields[p.FieldIndex.Value];
             if (field.IsLocked)
-                return $"Warning: Field #{fieldIndex.Value} is locked and cannot be updated.";
+                return $"Warning: Field #{p.FieldIndex.Value} is locked and cannot be updated.";
 
             var oldResult = field.Result ?? "";
             field.Update();
@@ -44,7 +43,7 @@ public class UpdateFieldWordHandler : OperationHandlerBase<Document>
 
             MarkModified(context);
 
-            return $"Field #{fieldIndex.Value} updated\nOld result: {oldResult}\nNew result: {newResult}";
+            return $"Field #{p.FieldIndex.Value} updated\nOld result: {oldResult}\nNew result: {newResult}";
         }
 
         var lockedCount = fields.Count(f => f.IsLocked);
@@ -56,4 +55,24 @@ public class UpdateFieldWordHandler : OperationHandlerBase<Document>
             result += $"\nSkipped {lockedCount} locked field(s)";
         return result;
     }
+
+    /// <summary>
+    ///     Extracts parameters for the update field operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static UpdateFieldParameters ExtractUpdateFieldParameters(OperationParameters parameters)
+    {
+        var fieldIndex = parameters.GetOptional<int?>("fieldIndex");
+        var updateAll = parameters.GetOptional<bool?>("updateAll");
+
+        return new UpdateFieldParameters(fieldIndex, updateAll);
+    }
+
+    /// <summary>
+    ///     Parameters for the update field operation.
+    /// </summary>
+    /// <param name="FieldIndex">The index of the field to update, or null to update all.</param>
+    /// <param name="UpdateAll">Whether to update all fields.</param>
+    private record UpdateFieldParameters(int? FieldIndex, bool? UpdateAll);
 }

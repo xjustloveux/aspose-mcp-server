@@ -22,14 +22,31 @@ public class CreatePdfFileHandler : OperationHandlerBase<Document>
     /// <returns>Success message with output path.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var outputPath = parameters.GetRequired<string>("outputPath");
+        var createParams = ExtractCreateParameters(parameters);
 
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+        SecurityHelper.ValidateFilePath(createParams.OutputPath, "outputPath", true);
 
         using var document = new Document();
         document.Pages.Add();
-        document.Save(outputPath);
+        document.Save(createParams.OutputPath);
 
-        return Success($"PDF document created. Output: {outputPath}");
+        return Success($"PDF document created. Output: {createParams.OutputPath}");
     }
+
+    /// <summary>
+    ///     Extracts create parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted create parameters.</returns>
+    private static CreateParameters ExtractCreateParameters(OperationParameters parameters)
+    {
+        return new CreateParameters(
+            parameters.GetRequired<string>("outputPath")
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold create parameters.
+    /// </summary>
+    private record CreateParameters(string OutputPath);
 }

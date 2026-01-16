@@ -159,7 +159,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -184,51 +184,122 @@ Usage examples:
         var parameters = new OperationParameters();
         parameters.Set("sheetIndex", sheetIndex);
 
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "set_print_area":
-                if (range != null) parameters.Set("range", range);
-                parameters.Set("clearPrintArea", clearPrintArea);
-                break;
+            "set_print_area" => BuildSetPrintAreaParameters(parameters, range, clearPrintArea),
+            "set_print_titles" => BuildSetPrintTitlesParameters(parameters, rows, columns, clearTitles),
+            "set_page_setup" => BuildSetPageSetupParameters(parameters, orientation, paperSize, leftMargin, rightMargin,
+                topMargin, bottomMargin, header, footer, fitToPage, fitToPagesWide, fitToPagesTall),
+            "set_all" => BuildSetAllParameters(parameters, range, rows, columns, orientation, paperSize, leftMargin,
+                rightMargin, topMargin, bottomMargin, header, footer, fitToPage, fitToPagesWide, fitToPagesTall),
+            _ => parameters
+        };
+    }
 
-            case "set_print_titles":
-                if (rows != null) parameters.Set("rows", rows);
-                if (columns != null) parameters.Set("columns", columns);
-                parameters.Set("clearTitles", clearTitles);
-                break;
+    /// <summary>
+    ///     Builds parameters for the set print area operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="range">The print area range.</param>
+    /// <param name="clearPrintArea">Whether to clear the print area.</param>
+    /// <returns>OperationParameters configured for setting print area.</returns>
+    private static OperationParameters BuildSetPrintAreaParameters(OperationParameters parameters, string? range,
+        bool clearPrintArea)
+    {
+        if (range != null) parameters.Set("range", range);
+        parameters.Set("clearPrintArea", clearPrintArea);
+        return parameters;
+    }
 
-            case "set_page_setup":
-                if (orientation != null) parameters.Set("orientation", orientation);
-                if (paperSize != null) parameters.Set("paperSize", paperSize);
-                if (leftMargin.HasValue) parameters.Set("leftMargin", leftMargin.Value);
-                if (rightMargin.HasValue) parameters.Set("rightMargin", rightMargin.Value);
-                if (topMargin.HasValue) parameters.Set("topMargin", topMargin.Value);
-                if (bottomMargin.HasValue) parameters.Set("bottomMargin", bottomMargin.Value);
-                if (header != null) parameters.Set("header", header);
-                if (footer != null) parameters.Set("footer", footer);
-                if (fitToPage.HasValue) parameters.Set("fitToPage", fitToPage.Value);
-                if (fitToPagesWide.HasValue) parameters.Set("fitToPagesWide", fitToPagesWide.Value);
-                if (fitToPagesTall.HasValue) parameters.Set("fitToPagesTall", fitToPagesTall.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the set print titles operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="rows">The rows to repeat on each printed page.</param>
+    /// <param name="columns">The columns to repeat on each printed page.</param>
+    /// <param name="clearTitles">Whether to clear the print titles.</param>
+    /// <returns>OperationParameters configured for setting print titles.</returns>
+    private static OperationParameters BuildSetPrintTitlesParameters(OperationParameters parameters, string? rows,
+        string? columns, bool clearTitles)
+    {
+        if (rows != null) parameters.Set("rows", rows);
+        if (columns != null) parameters.Set("columns", columns);
+        parameters.Set("clearTitles", clearTitles);
+        return parameters;
+    }
 
-            case "set_all":
-                if (range != null) parameters.Set("range", range);
-                if (rows != null) parameters.Set("rows", rows);
-                if (columns != null) parameters.Set("columns", columns);
-                if (orientation != null) parameters.Set("orientation", orientation);
-                if (paperSize != null) parameters.Set("paperSize", paperSize);
-                if (leftMargin.HasValue) parameters.Set("leftMargin", leftMargin.Value);
-                if (rightMargin.HasValue) parameters.Set("rightMargin", rightMargin.Value);
-                if (topMargin.HasValue) parameters.Set("topMargin", topMargin.Value);
-                if (bottomMargin.HasValue) parameters.Set("bottomMargin", bottomMargin.Value);
-                if (header != null) parameters.Set("header", header);
-                if (footer != null) parameters.Set("footer", footer);
-                if (fitToPage.HasValue) parameters.Set("fitToPage", fitToPage.Value);
-                if (fitToPagesWide.HasValue) parameters.Set("fitToPagesWide", fitToPagesWide.Value);
-                if (fitToPagesTall.HasValue) parameters.Set("fitToPagesTall", fitToPagesTall.Value);
-                break;
-        }
+    /// <summary>
+    ///     Builds parameters for the set page setup operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="orientation">The page orientation.</param>
+    /// <param name="paperSize">The paper size.</param>
+    /// <param name="leftMargin">The left margin in inches.</param>
+    /// <param name="rightMargin">The right margin in inches.</param>
+    /// <param name="topMargin">The top margin in inches.</param>
+    /// <param name="bottomMargin">The bottom margin in inches.</param>
+    /// <param name="header">The header text.</param>
+    /// <param name="footer">The footer text.</param>
+    /// <param name="fitToPage">Whether to enable fit to page mode.</param>
+    /// <param name="fitToPagesWide">The number of pages wide to fit content.</param>
+    /// <param name="fitToPagesTall">The number of pages tall to fit content.</param>
+    /// <returns>OperationParameters configured for setting page setup.</returns>
+    private static OperationParameters BuildSetPageSetupParameters(OperationParameters parameters, string? orientation,
+        string? paperSize, double? leftMargin, double? rightMargin, double? topMargin, double? bottomMargin,
+        string? header, string? footer, bool? fitToPage, int? fitToPagesWide, int? fitToPagesTall)
+    {
+        if (orientation != null) parameters.Set("orientation", orientation);
+        if (paperSize != null) parameters.Set("paperSize", paperSize);
+        if (leftMargin.HasValue) parameters.Set("leftMargin", leftMargin.Value);
+        if (rightMargin.HasValue) parameters.Set("rightMargin", rightMargin.Value);
+        if (topMargin.HasValue) parameters.Set("topMargin", topMargin.Value);
+        if (bottomMargin.HasValue) parameters.Set("bottomMargin", bottomMargin.Value);
+        if (header != null) parameters.Set("header", header);
+        if (footer != null) parameters.Set("footer", footer);
+        if (fitToPage.HasValue) parameters.Set("fitToPage", fitToPage.Value);
+        if (fitToPagesWide.HasValue) parameters.Set("fitToPagesWide", fitToPagesWide.Value);
+        if (fitToPagesTall.HasValue) parameters.Set("fitToPagesTall", fitToPagesTall.Value);
+        return parameters;
+    }
 
+    /// <summary>
+    ///     Builds parameters for the set all print settings operation.
+    /// </summary>
+    /// <param name="parameters">Base parameters with sheet index.</param>
+    /// <param name="range">The print area range.</param>
+    /// <param name="rows">The rows to repeat on each printed page.</param>
+    /// <param name="columns">The columns to repeat on each printed page.</param>
+    /// <param name="orientation">The page orientation.</param>
+    /// <param name="paperSize">The paper size.</param>
+    /// <param name="leftMargin">The left margin in inches.</param>
+    /// <param name="rightMargin">The right margin in inches.</param>
+    /// <param name="topMargin">The top margin in inches.</param>
+    /// <param name="bottomMargin">The bottom margin in inches.</param>
+    /// <param name="header">The header text.</param>
+    /// <param name="footer">The footer text.</param>
+    /// <param name="fitToPage">Whether to enable fit to page mode.</param>
+    /// <param name="fitToPagesWide">The number of pages wide to fit content.</param>
+    /// <param name="fitToPagesTall">The number of pages tall to fit content.</param>
+    /// <returns>OperationParameters configured for setting all print settings.</returns>
+    private static OperationParameters BuildSetAllParameters(OperationParameters parameters, string? range,
+        string? rows, string? columns, string? orientation, string? paperSize, double? leftMargin, double? rightMargin,
+        double? topMargin, double? bottomMargin, string? header, string? footer, bool? fitToPage, int? fitToPagesWide,
+        int? fitToPagesTall)
+    {
+        if (range != null) parameters.Set("range", range);
+        if (rows != null) parameters.Set("rows", rows);
+        if (columns != null) parameters.Set("columns", columns);
+        if (orientation != null) parameters.Set("orientation", orientation);
+        if (paperSize != null) parameters.Set("paperSize", paperSize);
+        if (leftMargin.HasValue) parameters.Set("leftMargin", leftMargin.Value);
+        if (rightMargin.HasValue) parameters.Set("rightMargin", rightMargin.Value);
+        if (topMargin.HasValue) parameters.Set("topMargin", topMargin.Value);
+        if (bottomMargin.HasValue) parameters.Set("bottomMargin", bottomMargin.Value);
+        if (header != null) parameters.Set("header", header);
+        if (footer != null) parameters.Set("footer", footer);
+        if (fitToPage.HasValue) parameters.Set("fitToPage", fitToPage.Value);
+        if (fitToPagesWide.HasValue) parameters.Set("fitToPagesWide", fitToPagesWide.Value);
+        if (fitToPagesTall.HasValue) parameters.Set("fitToPagesTall", fitToPagesTall.Value);
         return parameters;
     }
 }

@@ -23,20 +23,17 @@ public class EditExcelRangeHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with edit details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var range = parameters.GetRequired<string>("range");
-        var dataJson = parameters.GetRequired<string>("data");
-        var clearRange = parameters.GetOptional("clearRange", false);
+        var p = ExtractEditExcelRangeParameters(parameters);
 
-        var dataArray = ExcelRangeHelper.ParseDataArray(dataJson);
+        var dataArray = ExcelRangeHelper.ParseDataArray(p.Data);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, p.SheetIndex);
         var cells = worksheet.Cells;
 
-        var cellRange = ExcelHelper.CreateRange(cells, range);
+        var cellRange = ExcelHelper.CreateRange(cells, p.Range);
 
-        if (clearRange)
+        if (p.ClearRange)
             for (var i = cellRange.FirstRow; i <= cellRange.FirstRow + cellRange.RowCount - 1; i++)
             for (var j = cellRange.FirstColumn; j <= cellRange.FirstColumn + cellRange.ColumnCount - 1; j++)
                 cells[i, j].PutValue("");
@@ -57,6 +54,30 @@ public class EditExcelRangeHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Range {range} edited.");
+        return Success($"Range {p.Range} edited.");
     }
+
+    /// <summary>
+    ///     Extracts parameters for EditExcelRange operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>Extracted parameters.</returns>
+    private static EditExcelRangeParameters ExtractEditExcelRangeParameters(OperationParameters parameters)
+    {
+        return new EditExcelRangeParameters(
+            parameters.GetOptional("sheetIndex", 0),
+            parameters.GetRequired<string>("range"),
+            parameters.GetRequired<string>("data"),
+            parameters.GetOptional("clearRange", false)
+        );
+    }
+
+    /// <summary>
+    ///     Parameters for EditExcelRange operation.
+    /// </summary>
+    /// <param name="SheetIndex">The sheet index.</param>
+    /// <param name="Range">The cell range to edit.</param>
+    /// <param name="Data">The data to write as JSON string.</param>
+    /// <param name="ClearRange">Whether to clear the range before writing.</param>
+    private record EditExcelRangeParameters(int SheetIndex, string Range, string Data, bool ClearRange);
 }

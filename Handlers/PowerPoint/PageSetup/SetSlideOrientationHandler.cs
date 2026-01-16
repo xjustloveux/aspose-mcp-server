@@ -21,9 +21,8 @@ public class SetSlideOrientationHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with orientation information.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var orientation = parameters.GetRequired<string>("orientation");
-
-        var isPortrait = orientation.Equals("Portrait", StringComparison.OrdinalIgnoreCase);
+        var p = ExtractSetSlideOrientationParameters(parameters);
+        var isPortrait = p.Orientation.Equals("Portrait", StringComparison.OrdinalIgnoreCase);
         var presentation = context.Document;
         var currentSize = presentation.SlideSize.Size;
         var currentWidth = currentSize.Width;
@@ -37,6 +36,14 @@ public class SetSlideOrientationHandler : OperationHandlerBase<Presentation>
         MarkModified(context);
 
         var finalSize = presentation.SlideSize.Size;
-        return Success($"Slide orientation set to {orientation} ({finalSize.Width}x{finalSize.Height}).");
+        return Success($"Slide orientation set to {p.Orientation} ({finalSize.Width}x{finalSize.Height}).");
     }
+
+    private static SetSlideOrientationParameters ExtractSetSlideOrientationParameters(OperationParameters parameters)
+    {
+        return new SetSlideOrientationParameters(
+            parameters.GetRequired<string>("orientation"));
+    }
+
+    private record SetSlideOrientationParameters(string Orientation);
 }

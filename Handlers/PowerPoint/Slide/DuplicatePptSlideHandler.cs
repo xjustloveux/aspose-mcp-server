@@ -22,28 +22,47 @@ public class DuplicatePptSlideHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with duplicate details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetRequired<int>("slideIndex");
-        var insertAt = parameters.GetOptional<int?>("insertAt");
+        var p = ExtractDuplicatePptSlideParameters(parameters);
+
         var presentation = context.Document;
         var count = presentation.Slides.Count;
 
-        if (slideIndex < 0 || slideIndex >= count)
+        if (p.SlideIndex < 0 || p.SlideIndex >= count)
             throw new ArgumentException($"slideIndex must be between 0 and {count - 1}");
 
-        if (insertAt.HasValue)
+        if (p.InsertAt.HasValue)
         {
-            if (insertAt.Value < 0 || insertAt.Value > count)
+            if (p.InsertAt.Value < 0 || p.InsertAt.Value > count)
                 throw new ArgumentException($"insertAt must be between 0 and {count}");
 
-            presentation.Slides.InsertClone(insertAt.Value, presentation.Slides[slideIndex]);
+            presentation.Slides.InsertClone(p.InsertAt.Value, presentation.Slides[p.SlideIndex]);
         }
         else
         {
-            presentation.Slides.AddClone(presentation.Slides[slideIndex]);
+            presentation.Slides.AddClone(presentation.Slides[p.SlideIndex]);
         }
 
         MarkModified(context);
 
-        return Success($"Slide {slideIndex} duplicated (total: {presentation.Slides.Count}).");
+        return Success($"Slide {p.SlideIndex} duplicated (total: {presentation.Slides.Count}).");
     }
+
+    /// <summary>
+    ///     Extracts parameters for duplicate slide operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static DuplicatePptSlideParameters ExtractDuplicatePptSlideParameters(OperationParameters parameters)
+    {
+        return new DuplicatePptSlideParameters(
+            parameters.GetRequired<int>("slideIndex"),
+            parameters.GetOptional<int?>("insertAt"));
+    }
+
+    /// <summary>
+    ///     Parameters for duplicate slide operation.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index (0-based).</param>
+    /// <param name="InsertAt">The target index to insert the duplicate.</param>
+    private record DuplicatePptSlideParameters(int SlideIndex, int? InsertAt);
 }

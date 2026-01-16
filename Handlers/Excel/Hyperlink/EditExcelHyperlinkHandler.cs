@@ -23,33 +23,26 @@ public class EditExcelHyperlinkHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with edit details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var cell = parameters.GetOptional<string?>("cell");
-        var url = parameters.GetOptional<string?>("url");
-        var displayText = parameters.GetOptional<string?>("displayText");
-        var hyperlinkIndex = parameters.GetOptional<int?>("hyperlinkIndex");
-
-        if (!hyperlinkIndex.HasValue && string.IsNullOrEmpty(cell))
-            throw new ArgumentException("Either 'hyperlinkIndex' or 'cell' is required for edit operation.");
+        var editParams = ExtractEditParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, editParams.SheetIndex);
         var hyperlinks = worksheet.Hyperlinks;
 
-        var index = ExcelHyperlinkHelper.ResolveHyperlinkIndex(hyperlinks, hyperlinkIndex, cell);
+        var index = ExcelHyperlinkHelper.ResolveHyperlinkIndex(hyperlinks, editParams.HyperlinkIndex, editParams.Cell);
         var hyperlink = hyperlinks[index];
         List<string> changes = [];
 
-        if (!string.IsNullOrEmpty(url))
+        if (!string.IsNullOrEmpty(editParams.Url))
         {
-            hyperlink.Address = url;
-            changes.Add($"url={url}");
+            hyperlink.Address = editParams.Url;
+            changes.Add($"url={editParams.Url}");
         }
 
-        if (!string.IsNullOrEmpty(displayText))
+        if (!string.IsNullOrEmpty(editParams.DisplayText))
         {
-            hyperlink.TextToDisplay = displayText;
-            changes.Add($"displayText={displayText}");
+            hyperlink.TextToDisplay = editParams.DisplayText;
+            changes.Add($"displayText={editParams.DisplayText}");
         }
 
         var cellRef = CellsHelper.CellIndexToName(hyperlink.Area.StartRow, hyperlink.Area.StartColumn);
@@ -62,4 +55,20 @@ public class EditExcelHyperlinkHandler : OperationHandlerBase<Workbook>
 
         return Success($"Hyperlink at {cellRef} unchanged.");
     }
+
+    private static EditParameters ExtractEditParameters(OperationParameters parameters)
+    {
+        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
+        var cell = parameters.GetOptional<string?>("cell");
+        var url = parameters.GetOptional<string?>("url");
+        var displayText = parameters.GetOptional<string?>("displayText");
+        var hyperlinkIndex = parameters.GetOptional<int?>("hyperlinkIndex");
+
+        if (!hyperlinkIndex.HasValue && string.IsNullOrEmpty(cell))
+            throw new ArgumentException("Either 'hyperlinkIndex' or 'cell' is required for edit operation.");
+
+        return new EditParameters(sheetIndex, cell, url, displayText, hyperlinkIndex);
+    }
+
+    private record EditParameters(int SheetIndex, string? Cell, string? Url, string? DisplayText, int? HyperlinkIndex);
 }

@@ -21,15 +21,15 @@ public class DeleteParagraphWordHandler : OperationHandlerBase<Document>
     /// <returns>Success message with deletion details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var paragraphIndex = parameters.GetOptional<int?>("paragraphIndex");
+        var deleteParams = ExtractDeleteParagraphParameters(parameters);
 
-        if (!paragraphIndex.HasValue)
+        if (!deleteParams.ParagraphIndex.HasValue)
             throw new ArgumentException("paragraphIndex parameter is required for delete operation");
 
         var doc = context.Document;
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
 
-        var idx = paragraphIndex.Value;
+        var idx = deleteParams.ParagraphIndex.Value;
         if (idx == -1)
         {
             if (paragraphs.Count == 0)
@@ -58,4 +58,22 @@ public class DeleteParagraphWordHandler : OperationHandlerBase<Document>
 
         return result;
     }
+
+    /// <summary>
+    ///     Extracts delete paragraph parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted delete paragraph parameters.</returns>
+    private static DeleteParagraphParameters ExtractDeleteParagraphParameters(OperationParameters parameters)
+    {
+        return new DeleteParagraphParameters(
+            parameters.GetOptional<int?>("paragraphIndex")
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold delete paragraph parameters.
+    /// </summary>
+    /// <param name="ParagraphIndex">The paragraph index to delete (-1 for last).</param>
+    private record DeleteParagraphParameters(int? ParagraphIndex);
 }

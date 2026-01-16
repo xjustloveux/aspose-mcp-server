@@ -22,10 +22,10 @@ public class GetExcelDataValidationsHandler : OperationHandlerBase<Workbook>
     /// <returns>JSON result with data validation information.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
+        var getParams = ExtractGetParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, getParams.SheetIndex);
         var validations = worksheet.Validations;
 
         List<object> validationList = [];
@@ -54,4 +54,11 @@ public class GetExcelDataValidationsHandler : OperationHandlerBase<Workbook>
             items = validationList
         });
     }
+
+    private static GetParameters ExtractGetParameters(OperationParameters parameters)
+    {
+        return new GetParameters(parameters.GetOptional("sheetIndex", 0));
+    }
+
+    private record GetParameters(int SheetIndex);
 }

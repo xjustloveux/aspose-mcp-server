@@ -23,19 +23,28 @@ public class DeleteExcelDataValidationHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with deletion details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var validationIndex = parameters.GetRequired<int>("validationIndex");
+        var deleteParams = ExtractDeleteParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, deleteParams.SheetIndex);
         var validations = worksheet.Validations;
 
-        ExcelDataValidationHelper.ValidateCollectionIndex(validationIndex, validations.Count, "data validation");
+        ExcelDataValidationHelper.ValidateCollectionIndex(deleteParams.ValidationIndex, validations.Count,
+            "data validation");
 
-        validations.RemoveAt(validationIndex);
+        validations.RemoveAt(deleteParams.ValidationIndex);
 
         MarkModified(context);
 
-        return Success($"Deleted data validation #{validationIndex} (remaining: {validations.Count}).");
+        return Success($"Deleted data validation #{deleteParams.ValidationIndex} (remaining: {validations.Count}).");
     }
+
+    private static DeleteParameters ExtractDeleteParameters(OperationParameters parameters)
+    {
+        return new DeleteParameters(
+            parameters.GetOptional("sheetIndex", 0),
+            parameters.GetRequired<int>("validationIndex"));
+    }
+
+    private record DeleteParameters(int SheetIndex, int ValidationIndex);
 }

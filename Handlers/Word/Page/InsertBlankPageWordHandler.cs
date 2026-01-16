@@ -23,15 +23,15 @@ public class InsertBlankPageWordHandler : OperationHandlerBase<Document>
     /// <returns>Success message with insertion details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var insertAtPageIndex = parameters.GetOptional<int?>("insertAtPageIndex");
+        var insertParams = ExtractInsertBlankPageParameters(parameters);
 
         var doc = context.Document;
         var builder = new DocumentBuilder(doc);
 
-        if (insertAtPageIndex is > 0)
+        if (insertParams.InsertAtPageIndex is > 0)
         {
             var pageCount = doc.PageCount;
-            if (insertAtPageIndex.Value > pageCount)
+            if (insertParams.InsertAtPageIndex.Value > pageCount)
                 throw new ArgumentException(
                     $"insertAtPageIndex must be between 0 and {pageCount} (document has {pageCount} pages)");
 
@@ -42,7 +42,7 @@ public class InsertBlankPageWordHandler : OperationHandlerBase<Document>
             foreach (var para in paragraphs)
             {
                 var paraPage = layoutCollector.GetStartPageIndex(para);
-                if (paraPage == insertAtPageIndex.Value + 1)
+                if (paraPage == insertParams.InsertAtPageIndex.Value + 1)
                 {
                     targetParagraph = para;
                     break;
@@ -68,6 +68,24 @@ public class InsertBlankPageWordHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Blank page inserted at page {insertAtPageIndex ?? doc.PageCount}");
+        return Success($"Blank page inserted at page {insertParams.InsertAtPageIndex ?? doc.PageCount}");
     }
+
+    /// <summary>
+    ///     Extracts insert blank page parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted insert blank page parameters.</returns>
+    private static InsertBlankPageParameters ExtractInsertBlankPageParameters(OperationParameters parameters)
+    {
+        return new InsertBlankPageParameters(
+            parameters.GetOptional<int?>("insertAtPageIndex")
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold insert blank page parameters.
+    /// </summary>
+    /// <param name="InsertAtPageIndex">The 0-based page index to insert at.</param>
+    private record InsertBlankPageParameters(int? InsertAtPageIndex);
 }

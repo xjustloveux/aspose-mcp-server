@@ -23,20 +23,27 @@ public class DeletePptSectionHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with deletion details.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var sectionIndex = parameters.GetRequired<int>("sectionIndex");
-        var keepSlides = parameters.GetOptional("keepSlides", true);
-
+        var p = ExtractDeletePptSectionParameters(parameters);
         var presentation = context.Document;
-        PowerPointHelper.ValidateCollectionIndex(sectionIndex, presentation.Sections.Count, "section");
+        PowerPointHelper.ValidateCollectionIndex(p.SectionIndex, presentation.Sections.Count, "section");
 
-        var section = presentation.Sections[sectionIndex];
-        if (keepSlides)
+        var section = presentation.Sections[p.SectionIndex];
+        if (p.KeepSlides)
             presentation.Sections.RemoveSection(section);
         else
             presentation.Sections.RemoveSectionWithSlides(section);
 
         MarkModified(context);
 
-        return Success($"Section {sectionIndex} removed (keep slides: {keepSlides}).");
+        return Success($"Section {p.SectionIndex} removed (keep slides: {p.KeepSlides}).");
     }
+
+    private static DeletePptSectionParameters ExtractDeletePptSectionParameters(OperationParameters parameters)
+    {
+        return new DeletePptSectionParameters(
+            parameters.GetRequired<int>("sectionIndex"),
+            parameters.GetOptional("keepSlides", true));
+    }
+
+    private record DeletePptSectionParameters(int SectionIndex, bool KeepSlides);
 }

@@ -25,25 +25,22 @@ public class GetTabStopsWordHandler : OperationHandlerBase<Document>
     /// <returns>A JSON string containing the tab stops information.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var location = parameters.GetOptional("location", "body");
-        var paragraphIndex = parameters.GetOptional("paragraphIndex", 0);
-        var sectionIndex = parameters.GetOptional("sectionIndex", 0);
-        var allParagraphs = parameters.GetOptional("allParagraphs", false);
-        var includeStyle = parameters.GetOptional("includeStyle", true);
+        var p = ExtractGetTabStopsParameters(parameters);
 
         var doc = context.Document;
 
-        if (sectionIndex >= doc.Sections.Count)
+        if (p.SectionIndex >= doc.Sections.Count)
             throw new ArgumentException(
-                $"Section index {sectionIndex} out of range (total sections: {doc.Sections.Count})");
+                $"Section index {p.SectionIndex} out of range (total sections: {doc.Sections.Count})");
 
-        var section = doc.Sections[sectionIndex];
-        var (targetParagraphs, locationDesc) = GetTargetParagraphs(section, location, paragraphIndex, allParagraphs);
+        var section = doc.Sections[p.SectionIndex];
+        var (targetParagraphs, locationDesc) =
+            GetTargetParagraphs(section, p.Location, p.ParagraphIndex, p.AllParagraphs);
 
         if (targetParagraphs.Count == 0)
             throw new InvalidOperationException("No target paragraphs found");
 
-        var allTabStops = CollectTabStops(targetParagraphs, allParagraphs, includeStyle);
+        var allTabStops = CollectTabStops(targetParagraphs, p.AllParagraphs, p.IncludeStyle);
 
         var tabStopsList = allTabStops
             .OrderBy(x => x.Value.position)
@@ -59,12 +56,12 @@ public class GetTabStopsWordHandler : OperationHandlerBase<Document>
 
         var result = new
         {
-            location,
+            location = p.Location,
             locationDescription = locationDesc,
-            sectionIndex,
-            paragraphIndex = location == "body" && !allParagraphs ? paragraphIndex : (int?)null,
-            allParagraphs,
-            includeStyle,
+            sectionIndex = p.SectionIndex,
+            paragraphIndex = p is { Location: "body", AllParagraphs: false } ? p.ParagraphIndex : (int?)null,
+            allParagraphs = p.AllParagraphs,
+            includeStyle = p.IncludeStyle,
             paragraphCount = targetParagraphs.Count,
             count = allTabStops.Count,
             tabStops = tabStopsList
@@ -73,6 +70,14 @@ public class GetTabStopsWordHandler : OperationHandlerBase<Document>
         return JsonSerializer.Serialize(result, JsonDefaults.Indented);
     }
 
+    /// <summary>
+    ///     Gets the target paragraphs based on location and settings.
+    /// </summary>
+    /// <param name="section">The document section.</param>
+    /// <param name="location">The location type (body, header, footer).</param>
+    /// <param name="paragraphIndex">The paragraph index for body location.</param>
+    /// <param name="allParagraphs">Whether to get all paragraphs.</param>
+    /// <returns>A tuple containing the list of paragraphs and location description.</returns>
     private static (List<WordParagraph> paragraphs, string locationDesc) GetTargetParagraphs(
         Section section, string location, int paragraphIndex, bool allParagraphs)
     {
@@ -84,6 +89,13 @@ public class GetTabStopsWordHandler : OperationHandlerBase<Document>
         };
     }
 
+    /// <summary>
+    ///     Gets paragraphs from the header.
+    /// </summary>
+    /// <param name="section">The document section.</param>
+    /// <param name="allParagraphs">Whether to get all paragraphs.</param>
+    /// <returns>A tuple containing the list of paragraphs and location description.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when header is not found.</exception>
     private static (List<WordParagraph>, string) GetHeaderParagraphs(Section section, bool allParagraphs)
     {
         var header = section.HeadersFooters[HeaderFooterType.HeaderPrimary];
@@ -95,6 +107,13 @@ public class GetTabStopsWordHandler : OperationHandlerBase<Document>
         return (paragraphs, "Header");
     }
 
+    /// <summary>
+    ///     Gets paragraphs from the footer.
+    /// </summary>
+    /// <param name="section">The document section.</param>
+    /// <param name="allParagraphs">Whether to get all paragraphs.</param>
+    /// <returns>A tuple containing the list of paragraphs and location description.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when footer is not found.</exception>
     private static (List<WordParagraph>, string) GetFooterParagraphs(Section section, bool allParagraphs)
     {
         var footer = section.HeadersFooters[HeaderFooterType.FooterPrimary];
@@ -106,6 +125,14 @@ public class GetTabStopsWordHandler : OperationHandlerBase<Document>
         return (paragraphs, "Footer");
     }
 
+    /// <summary>
+    ///     Gets paragraphs from the body.
+    /// </summary>
+    /// <param name="section">The document section.</param>
+    /// <param name="paragraphIndex">The paragraph index.</param>
+    /// <param name="allParagraphs">Whether to get all paragraphs.</param>
+    /// <returns>A tuple containing the list of paragraphs and location description.</returns>
+    /// <exception cref="ArgumentException">Thrown when paragraph index is out of range.</exception>
     private static (List<WordParagraph>, string) GetBodyParagraphs(Section section, int paragraphIndex,
         bool allParagraphs)
     {
@@ -121,6 +148,13 @@ public class GetTabStopsWordHandler : OperationHandlerBase<Document>
         return ([paragraphs[paragraphIndex]], $"Body Paragraph {paragraphIndex}");
     }
 
+    /// <summary>
+    ///     Collects all tab stops from the target paragraphs.
+    /// </summary>
+    /// <param name="targetParagraphs">The list of paragraphs to collect from.</param>
+    /// <param name="allParagraphs">Whether all paragraphs are included.</param>
+    /// <param name="includeStyle">Whether to include style tab stops.</param>
+    /// <returns>A dictionary of tab stops keyed by position and alignment.</returns>
     private static Dictionary<string, (double position, TabAlignment alignment, TabLeader leader, string source)>
         CollectTabStops(List<WordParagraph> targetParagraphs, bool allParagraphs, bool includeStyle)
     {
@@ -141,6 +175,12 @@ public class GetTabStopsWordHandler : OperationHandlerBase<Document>
         return allTabStops;
     }
 
+    /// <summary>
+    ///     Collects tab stops defined directly on the paragraph.
+    /// </summary>
+    /// <param name="para">The paragraph to collect from.</param>
+    /// <param name="paraSource">The paragraph source description.</param>
+    /// <param name="allTabStops">The dictionary to add tab stops to.</param>
     private static void CollectParagraphTabStops(WordParagraph para, string paraSource,
         Dictionary<string, (double, TabAlignment, TabLeader, string)> allTabStops)
     {
@@ -155,6 +195,12 @@ public class GetTabStopsWordHandler : OperationHandlerBase<Document>
         }
     }
 
+    /// <summary>
+    ///     Collects tab stops defined in the paragraph's style chain.
+    /// </summary>
+    /// <param name="para">The paragraph to collect from.</param>
+    /// <param name="paraSource">The paragraph source description.</param>
+    /// <param name="allTabStops">The dictionary to add tab stops to.</param>
     private static void CollectStyleTabStops(WordParagraph para, string paraSource,
         Dictionary<string, (double, TabAlignment, TabLeader, string)> allTabStops)
     {
@@ -181,6 +227,11 @@ public class GetTabStopsWordHandler : OperationHandlerBase<Document>
         }
     }
 
+    /// <summary>
+    ///     Builds the style inheritance chain for a paragraph.
+    /// </summary>
+    /// <param name="para">The paragraph to build the chain for.</param>
+    /// <returns>A list of styles in the inheritance chain.</returns>
     private static List<Style> BuildStyleChain(WordParagraph para)
     {
         List<Style> styleChain = [];
@@ -195,6 +246,13 @@ public class GetTabStopsWordHandler : OperationHandlerBase<Document>
         return styleChain;
     }
 
+    /// <summary>
+    ///     Gets the base style of the current style if it exists.
+    /// </summary>
+    /// <param name="doc">The document.</param>
+    /// <param name="currentStyle">The current style.</param>
+    /// <param name="styleChain">The existing style chain to check for cycles.</param>
+    /// <returns>The base style or null if none exists.</returns>
     private static Style? GetBaseStyle(DocumentBase doc, Style currentStyle, List<Style> styleChain)
     {
         if (string.IsNullOrEmpty(currentStyle.BaseStyleName))
@@ -213,4 +271,35 @@ public class GetTabStopsWordHandler : OperationHandlerBase<Document>
 
         return null;
     }
+
+    /// <summary>
+    ///     Extracts parameters for the get tab stops operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static GetTabStopsParameters ExtractGetTabStopsParameters(OperationParameters parameters)
+    {
+        return new GetTabStopsParameters(
+            parameters.GetOptional("location", "body"),
+            parameters.GetOptional("paragraphIndex", 0),
+            parameters.GetOptional("sectionIndex", 0),
+            parameters.GetOptional("allParagraphs", false),
+            parameters.GetOptional("includeStyle", true)
+        );
+    }
+
+    /// <summary>
+    ///     Parameters for the get tab stops operation.
+    /// </summary>
+    /// <param name="Location">The location type (body, header, footer).</param>
+    /// <param name="ParagraphIndex">The paragraph index for body location.</param>
+    /// <param name="SectionIndex">The section index.</param>
+    /// <param name="AllParagraphs">Whether to get all paragraphs.</param>
+    /// <param name="IncludeStyle">Whether to include style tab stops.</param>
+    private record GetTabStopsParameters(
+        string Location,
+        int ParagraphIndex,
+        int SectionIndex,
+        bool AllParagraphs,
+        bool IncludeStyle);
 }

@@ -1,5 +1,3 @@
-using System.Text.RegularExpressions;
-
 namespace AsposeMcpServer.Core.Helpers;
 
 /// <summary>
@@ -45,8 +43,7 @@ public static class SecurityHelper
         sanitized = sanitized.Replace("\\", "_");
         sanitized = sanitized.Replace("/", "_");
         sanitized = sanitized.Replace(":", "_");
-        sanitized = Regex.Replace(sanitized, @"^\s+|\s+$", "");
-
+        sanitized = sanitized.Trim();
         sanitized = sanitized.Trim('.', ' ');
 
         if (string.IsNullOrWhiteSpace(sanitized)) sanitized = "file";

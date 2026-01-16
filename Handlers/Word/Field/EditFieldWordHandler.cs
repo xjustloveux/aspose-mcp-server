@@ -22,27 +22,20 @@ public class EditFieldWordHandler : OperationHandlerBase<Document>
     /// <returns>Success message with edit details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var fieldIndex = parameters.GetOptional<int?>("fieldIndex");
-        var fieldCode = parameters.GetOptional<string?>("fieldCode");
-        var lockField = parameters.GetOptional<bool?>("lockField");
-        var unlockField = parameters.GetOptional<bool?>("unlockField");
-        var updateFieldAfter = parameters.GetOptional("updateField", true);
-
-        if (!fieldIndex.HasValue)
-            throw new ArgumentException("fieldIndex is required for edit_field operation");
+        var p = ExtractEditFieldParameters(parameters);
 
         var document = context.Document;
         var fields = document.Range.Fields.ToList();
 
-        if (fieldIndex.Value < 0 || fieldIndex.Value >= fields.Count)
+        if (p.FieldIndex < 0 || p.FieldIndex >= fields.Count)
             throw new ArgumentException(
-                $"Field index {fieldIndex.Value} is out of range (document has {fields.Count} fields)");
+                $"Field index {p.FieldIndex} is out of range (document has {fields.Count} fields)");
 
-        var field = fields[fieldIndex.Value];
+        var field = fields[p.FieldIndex];
         var oldFieldCode = field.GetFieldCode();
         List<string> changes = [];
 
-        if (!string.IsNullOrEmpty(fieldCode))
+        if (!string.IsNullOrEmpty(p.FieldCode))
         {
             var fieldStart = field.Start;
             var fieldEnd = field.End;
@@ -62,23 +55,23 @@ public class EditFieldWordHandler : OperationHandlerBase<Document>
                 }
 
                 builder.MoveTo(fieldStart);
-                builder.Write(fieldCode);
-                changes.Add($"Field code updated: {oldFieldCode} -> {fieldCode}");
+                builder.Write(p.FieldCode);
+                changes.Add($"Field code updated: {oldFieldCode} -> {p.FieldCode}");
             }
         }
 
-        if (lockField == true)
+        if (p.LockField == true)
         {
             field.IsLocked = true;
             changes.Add("Field locked");
         }
-        else if (unlockField == true)
+        else if (p.UnlockField == true)
         {
             field.IsLocked = false;
             changes.Add("Field unlocked");
         }
 
-        if (updateFieldAfter)
+        if (p.UpdateFieldAfter)
         {
             field.Update();
             document.UpdateFields();
@@ -86,10 +79,45 @@ public class EditFieldWordHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        var result = $"Field #{fieldIndex.Value} edited successfully\n";
+        var result = $"Field #{p.FieldIndex} edited successfully\n";
         result += $"Original field code: {oldFieldCode}\n";
         if (changes.Count > 0)
             result += $"Changes: {string.Join(", ", changes)}";
         return result;
     }
+
+    /// <summary>
+    ///     Extracts and validates parameters for the edit field operation.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    /// <exception cref="ArgumentException">Thrown when fieldIndex is not provided.</exception>
+    private static EditFieldParameters ExtractEditFieldParameters(OperationParameters parameters)
+    {
+        var fieldIndex = parameters.GetOptional<int?>("fieldIndex");
+        var fieldCode = parameters.GetOptional<string?>("fieldCode");
+        var lockField = parameters.GetOptional<bool?>("lockField");
+        var unlockField = parameters.GetOptional<bool?>("unlockField");
+        var updateFieldAfter = parameters.GetOptional("updateField", true);
+
+        if (!fieldIndex.HasValue)
+            throw new ArgumentException("fieldIndex is required for edit_field operation");
+
+        return new EditFieldParameters(fieldIndex.Value, fieldCode, lockField, unlockField, updateFieldAfter);
+    }
+
+    /// <summary>
+    ///     Parameters for the edit field operation.
+    /// </summary>
+    /// <param name="FieldIndex">The index of the field to edit.</param>
+    /// <param name="FieldCode">The new field code.</param>
+    /// <param name="LockField">Whether to lock the field.</param>
+    /// <param name="UnlockField">Whether to unlock the field.</param>
+    /// <param name="UpdateFieldAfter">Whether to update the field after editing.</param>
+    private record EditFieldParameters(
+        int FieldIndex,
+        string? FieldCode,
+        bool? LockField,
+        bool? UnlockField,
+        bool UpdateFieldAfter);
 }

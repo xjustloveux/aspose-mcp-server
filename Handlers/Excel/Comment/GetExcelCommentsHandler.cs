@@ -22,32 +22,31 @@ public class GetExcelCommentsHandler : OperationHandlerBase<Workbook>
     /// <returns>JSON string containing the comment information.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var cell = parameters.GetOptional<string?>("cell");
+        var getParams = ExtractGetParameters(parameters);
 
-        if (!string.IsNullOrEmpty(cell))
-            ExcelCommentHelper.ValidateCellAddress(cell);
+        if (!string.IsNullOrEmpty(getParams.Cell))
+            ExcelCommentHelper.ValidateCellAddress(getParams.Cell);
 
         try
         {
             var workbook = context.Document;
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, getParams.SheetIndex);
 
-            if (!string.IsNullOrEmpty(cell))
+            if (!string.IsNullOrEmpty(getParams.Cell))
             {
-                var comment = worksheet.Comments[cell];
+                var comment = worksheet.Comments[getParams.Cell];
                 if (comment != null)
                 {
                     var result = new
                     {
                         count = 1,
-                        sheetIndex,
-                        cell,
+                        sheetIndex = getParams.SheetIndex,
+                        cell = getParams.Cell,
                         items = new[]
                         {
                             new
                             {
-                                cell,
+                                cell = getParams.Cell,
                                 author = comment.Author,
                                 note = comment.Note
                             }
@@ -60,10 +59,10 @@ public class GetExcelCommentsHandler : OperationHandlerBase<Workbook>
                     var result = new
                     {
                         count = 0,
-                        sheetIndex,
-                        cell,
+                        sheetIndex = getParams.SheetIndex,
+                        cell = getParams.Cell,
                         items = Array.Empty<object>(),
-                        message = $"No comment found on cell {cell}"
+                        message = $"No comment found on cell {getParams.Cell}"
                     };
                     return JsonResult(result);
                 }
@@ -74,7 +73,7 @@ public class GetExcelCommentsHandler : OperationHandlerBase<Workbook>
                 var emptyResult = new
                 {
                     count = 0,
-                    sheetIndex,
+                    sheetIndex = getParams.SheetIndex,
                     items = Array.Empty<object>(),
                     message = "No comments found"
                 };
@@ -96,7 +95,7 @@ public class GetExcelCommentsHandler : OperationHandlerBase<Workbook>
             var allResult = new
             {
                 count = worksheet.Comments.Count,
-                sheetIndex,
+                sheetIndex = getParams.SheetIndex,
                 items = commentList
             };
             return JsonResult(allResult);
@@ -106,4 +105,14 @@ public class GetExcelCommentsHandler : OperationHandlerBase<Workbook>
             throw new ArgumentException($"Excel operation failed: {ex.Message}");
         }
     }
+
+    private static GetParameters ExtractGetParameters(OperationParameters parameters)
+    {
+        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
+        var cell = parameters.GetOptional<string?>("cell");
+
+        return new GetParameters(sheetIndex, cell);
+    }
+
+    private record GetParameters(int SheetIndex, string? Cell);
 }

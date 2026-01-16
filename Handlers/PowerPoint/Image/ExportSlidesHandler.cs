@@ -30,12 +30,39 @@ public class ExportSlidesHandler : OperationHandlerBase<Presentation>
 
         SecurityHelper.ValidateFilePath(path, "path", true);
 
-        var outputDir = parameters.GetOptional<string?>("outputDir");
-        var slideIndexesStr = parameters.GetOptional<string?>("slideIndexes");
+        var p = ExtractExportParameters(parameters, path);
+
+        Directory.CreateDirectory(p.OutputDir);
+
+        var presentation = context.Document;
+        var slideIndexList = PptImageHelper.ParseSlideIndexes(p.SlideIndexes, presentation.Slides.Count);
+
+        var exportedCount = 0;
+        foreach (var i in slideIndexList)
+        {
+            using var bmp = presentation.Slides[i].GetThumbnail(p.Scale, p.Scale);
+            var fileName = Path.Combine(p.OutputDir, $"slide_{i + 1}.{p.Extension}");
+#pragma warning disable CA1416
+            bmp.Save(fileName, p.Format);
+#pragma warning restore CA1416
+            exportedCount++;
+        }
+
+        return Success($"Exported {exportedCount} slides. Output: {Path.GetFullPath(p.OutputDir)}");
+    }
+
+    /// <summary>
+    ///     Extracts export parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <param name="path">The source file path.</param>
+    /// <returns>The extracted export parameters.</returns>
+    private static ExportParameters ExtractExportParameters(OperationParameters parameters, string path)
+    {
+        var outputDir = parameters.GetOptional<string?>("outputDir") ?? Path.GetDirectoryName(path) ?? ".";
+        var slideIndexes = parameters.GetOptional<string?>("slideIndexes");
         var formatStr = parameters.GetOptional("format", "png");
         var scale = parameters.GetOptional("scale", 1.0f);
-
-        var actualOutputDir = outputDir ?? Path.GetDirectoryName(path) ?? ".";
 
 #pragma warning disable CA1416
         var format = formatStr.ToLower() switch
@@ -46,22 +73,21 @@ public class ExportSlidesHandler : OperationHandlerBase<Presentation>
         var extension = format.Equals(ImageFormat.Png) ? "png" : "jpg";
 #pragma warning restore CA1416
 
-        Directory.CreateDirectory(actualOutputDir);
-
-        var presentation = context.Document;
-        var slideIndexList = PptImageHelper.ParseSlideIndexes(slideIndexesStr, presentation.Slides.Count);
-
-        var exportedCount = 0;
-        foreach (var i in slideIndexList)
-        {
-            using var bmp = presentation.Slides[i].GetThumbnail(scale, scale);
-            var fileName = Path.Combine(actualOutputDir, $"slide_{i + 1}.{extension}");
-#pragma warning disable CA1416
-            bmp.Save(fileName, format);
-#pragma warning restore CA1416
-            exportedCount++;
-        }
-
-        return Success($"Exported {exportedCount} slides. Output: {Path.GetFullPath(actualOutputDir)}");
+        return new ExportParameters(outputDir, slideIndexes, format, extension, scale);
     }
+
+    /// <summary>
+    ///     Record for holding export slides parameters.
+    /// </summary>
+    /// <param name="OutputDir">The output directory.</param>
+    /// <param name="SlideIndexes">The optional slide indexes string.</param>
+    /// <param name="Format">The image format.</param>
+    /// <param name="Extension">The file extension.</param>
+    /// <param name="Scale">The scale factor.</param>
+    private record ExportParameters(
+        string OutputDir,
+        string? SlideIndexes,
+        ImageFormat Format,
+        string Extension,
+        float Scale);
 }

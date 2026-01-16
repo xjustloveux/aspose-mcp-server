@@ -22,10 +22,10 @@ public class GetExcelChartsHandler : OperationHandlerBase<Workbook>
     /// <returns>JSON string containing chart information.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
+        var getParams = ExtractGetParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, getParams.SheetIndex);
         var charts = worksheet.Charts;
 
         if (charts.Count == 0)
@@ -89,4 +89,19 @@ public class GetExcelChartsHandler : OperationHandlerBase<Workbook>
 
         return JsonResult(result);
     }
+
+    /// <summary>
+    ///     Extracts get parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted get parameters.</returns>
+    private static GetParameters ExtractGetParameters(OperationParameters parameters)
+    {
+        return new GetParameters(parameters.GetOptional("sheetIndex", 0));
+    }
+
+    /// <summary>
+    ///     Record to hold get charts parameters.
+    /// </summary>
+    private record GetParameters(int SheetIndex);
 }

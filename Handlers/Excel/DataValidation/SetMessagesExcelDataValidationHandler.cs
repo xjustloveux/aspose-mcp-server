@@ -23,37 +23,50 @@ public class SetMessagesExcelDataValidationHandler : OperationHandlerBase<Workbo
     /// <returns>Success message with changes details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var validationIndex = parameters.GetRequired<int>("validationIndex");
-        var errorMessage = parameters.GetOptional<string?>("errorMessage");
-        var inputMessage = parameters.GetOptional<string?>("inputMessage");
+        var setParams = ExtractSetMessagesParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, setParams.SheetIndex);
         var validations = worksheet.Validations;
 
-        ExcelDataValidationHelper.ValidateCollectionIndex(validationIndex, validations.Count, "data validation");
+        ExcelDataValidationHelper.ValidateCollectionIndex(setParams.ValidationIndex, validations.Count,
+            "data validation");
 
-        var validation = validations[validationIndex];
+        var validation = validations[setParams.ValidationIndex];
         List<string> changes = [];
 
-        if (errorMessage != null)
+        if (setParams.ErrorMessage != null)
         {
-            validation.ErrorMessage = errorMessage;
-            validation.ShowError = !string.IsNullOrEmpty(errorMessage);
-            changes.Add($"ErrorMessage={errorMessage}");
+            validation.ErrorMessage = setParams.ErrorMessage;
+            validation.ShowError = !string.IsNullOrEmpty(setParams.ErrorMessage);
+            changes.Add($"ErrorMessage={setParams.ErrorMessage}");
         }
 
-        if (inputMessage != null)
+        if (setParams.InputMessage != null)
         {
-            validation.InputMessage = inputMessage;
-            validation.ShowInput = !string.IsNullOrEmpty(inputMessage);
-            changes.Add($"InputMessage={inputMessage}");
+            validation.InputMessage = setParams.InputMessage;
+            validation.ShowInput = !string.IsNullOrEmpty(setParams.InputMessage);
+            changes.Add($"InputMessage={setParams.InputMessage}");
         }
 
         MarkModified(context);
 
         var changesStr = changes.Count > 0 ? string.Join(", ", changes) : "No changes";
-        return Success($"Updated data validation #{validationIndex} messages ({changesStr}).");
+        return Success($"Updated data validation #{setParams.ValidationIndex} messages ({changesStr}).");
     }
+
+    private static SetMessagesParameters ExtractSetMessagesParameters(OperationParameters parameters)
+    {
+        return new SetMessagesParameters(
+            parameters.GetOptional("sheetIndex", 0),
+            parameters.GetRequired<int>("validationIndex"),
+            parameters.GetOptional<string?>("errorMessage"),
+            parameters.GetOptional<string?>("inputMessage"));
+    }
+
+    private record SetMessagesParameters(
+        int SheetIndex,
+        int ValidationIndex,
+        string? ErrorMessage,
+        string? InputMessage);
 }

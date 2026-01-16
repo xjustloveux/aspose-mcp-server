@@ -23,29 +23,28 @@ public class GetPdfContentHandler : OperationHandlerBase<Document>
     /// <returns>JSON string containing the extracted text content.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var pageIndex = parameters.GetOptional<int?>("pageIndex");
-        var maxPages = parameters.GetOptional("maxPages", 100);
+        var p = ExtractGetContentParameters(parameters);
 
         var document = context.Document;
 
-        if (pageIndex.HasValue)
+        if (p.PageIndex.HasValue)
         {
-            if (pageIndex.Value < 1 || pageIndex.Value > document.Pages.Count)
+            if (p.PageIndex.Value < 1 || p.PageIndex.Value > document.Pages.Count)
                 throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
 
             var textAbsorber = new TextAbsorber();
-            document.Pages[pageIndex.Value].Accept(textAbsorber);
+            document.Pages[p.PageIndex.Value].Accept(textAbsorber);
 
             return JsonResult(new
             {
-                pageIndex = pageIndex.Value,
+                pageIndex = p.PageIndex.Value,
                 totalPages = document.Pages.Count,
                 content = textAbsorber.Text
             });
         }
 
-        var pagesToExtract = Math.Min(maxPages, document.Pages.Count);
-        var truncated = document.Pages.Count > maxPages;
+        var pagesToExtract = Math.Min(p.MaxPages, document.Pages.Count);
+        var truncated = document.Pages.Count > p.MaxPages;
         var contentBuilder = new StringBuilder();
 
         for (var i = 1; i <= pagesToExtract; i++)
@@ -63,4 +62,23 @@ public class GetPdfContentHandler : OperationHandlerBase<Document>
             content = contentBuilder.ToString()
         });
     }
+
+    /// <summary>
+    ///     Extracts get content parameters from the operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted parameters.</returns>
+    private static GetContentParameters ExtractGetContentParameters(OperationParameters parameters)
+    {
+        return new GetContentParameters(
+            parameters.GetOptional<int?>("pageIndex"),
+            parameters.GetOptional("maxPages", 100));
+    }
+
+    /// <summary>
+    ///     Parameters for getting content.
+    /// </summary>
+    /// <param name="PageIndex">The optional 1-based page index.</param>
+    /// <param name="MaxPages">The maximum number of pages to extract.</param>
+    private record GetContentParameters(int? PageIndex, int MaxPages);
 }

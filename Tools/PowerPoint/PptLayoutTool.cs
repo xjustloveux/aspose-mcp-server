@@ -128,7 +128,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -139,38 +139,84 @@ Usage examples:
         string? slideIndices,
         string? themePath)
     {
-        var parameters = new OperationParameters();
-
-        switch (operation.ToLowerInvariant())
+        return operation.ToLowerInvariant() switch
         {
-            case "set":
-                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
-                if (layout != null) parameters.Set("layout", layout);
-                break;
+            "set" => BuildSetParameters(slideIndex, layout),
+            "get_layouts" => BuildGetLayoutsParameters(masterIndex),
+            "get_masters" => new OperationParameters(),
+            "apply_master" => BuildApplyMasterParameters(masterIndex, layoutIndex, slideIndices),
+            "apply_layout_range" => BuildApplyLayoutRangeParameters(slideIndices, layout),
+            "apply_theme" => BuildApplyThemeParameters(themePath),
+            _ => new OperationParameters()
+        };
+    }
 
-            case "get_layouts":
-                if (masterIndex.HasValue) parameters.Set("masterIndex", masterIndex.Value);
-                break;
+    /// <summary>
+    ///     Builds parameters for the set layout operation.
+    /// </summary>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <param name="layout">The layout type to apply.</param>
+    /// <returns>OperationParameters configured for setting slide layout.</returns>
+    private static OperationParameters BuildSetParameters(int? slideIndex, string? layout)
+    {
+        var parameters = new OperationParameters();
+        if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
+        if (layout != null) parameters.Set("layout", layout);
+        return parameters;
+    }
 
-            case "get_masters":
-                break;
+    /// <summary>
+    ///     Builds parameters for the get layouts operation.
+    /// </summary>
+    /// <param name="masterIndex">The master slide index (0-based).</param>
+    /// <returns>OperationParameters configured for getting available layouts.</returns>
+    private static OperationParameters BuildGetLayoutsParameters(int? masterIndex)
+    {
+        var parameters = new OperationParameters();
+        if (masterIndex.HasValue) parameters.Set("masterIndex", masterIndex.Value);
+        return parameters;
+    }
 
-            case "apply_master":
-                if (masterIndex.HasValue) parameters.Set("masterIndex", masterIndex.Value);
-                if (layoutIndex.HasValue) parameters.Set("layoutIndex", layoutIndex.Value);
-                if (slideIndices != null) parameters.Set("slideIndices", slideIndices);
-                break;
+    /// <summary>
+    ///     Builds parameters for the apply master layout operation.
+    /// </summary>
+    /// <param name="masterIndex">The master slide index (0-based).</param>
+    /// <param name="layoutIndex">The layout index under the master (0-based).</param>
+    /// <param name="slideIndices">The slide indices array as JSON.</param>
+    /// <returns>OperationParameters configured for applying master layout.</returns>
+    private static OperationParameters BuildApplyMasterParameters(int? masterIndex, int? layoutIndex,
+        string? slideIndices)
+    {
+        var parameters = new OperationParameters();
+        if (masterIndex.HasValue) parameters.Set("masterIndex", masterIndex.Value);
+        if (layoutIndex.HasValue) parameters.Set("layoutIndex", layoutIndex.Value);
+        if (slideIndices != null) parameters.Set("slideIndices", slideIndices);
+        return parameters;
+    }
 
-            case "apply_layout_range":
-                if (slideIndices != null) parameters.Set("slideIndices", slideIndices);
-                if (layout != null) parameters.Set("layout", layout);
-                break;
+    /// <summary>
+    ///     Builds parameters for the apply layout to range operation.
+    /// </summary>
+    /// <param name="slideIndices">The slide indices array as JSON.</param>
+    /// <param name="layout">The layout type to apply.</param>
+    /// <returns>OperationParameters configured for applying layout to multiple slides.</returns>
+    private static OperationParameters BuildApplyLayoutRangeParameters(string? slideIndices, string? layout)
+    {
+        var parameters = new OperationParameters();
+        if (slideIndices != null) parameters.Set("slideIndices", slideIndices);
+        if (layout != null) parameters.Set("layout", layout);
+        return parameters;
+    }
 
-            case "apply_theme":
-                if (themePath != null) parameters.Set("themePath", themePath);
-                break;
-        }
-
+    /// <summary>
+    ///     Builds parameters for the apply theme operation.
+    /// </summary>
+    /// <param name="themePath">The theme template file path (.potx or .pptx).</param>
+    /// <returns>OperationParameters configured for applying a theme.</returns>
+    private static OperationParameters BuildApplyThemeParameters(string? themePath)
+    {
+        var parameters = new OperationParameters();
+        if (themePath != null) parameters.Set("themePath", themePath);
         return parameters;
     }
 }

@@ -11,7 +11,8 @@ public static class ExcelConditionalFormattingHelper
     /// <summary>
     ///     Regex pattern for validating Excel range format (e.g., A1:B10).
     /// </summary>
-    private static readonly Regex RangeRegex = new(@"^[A-Za-z]{1,3}\d+:[A-Za-z]{1,3}\d+$", RegexOptions.Compiled);
+    private static readonly Regex RangeRegex = new(@"^[A-Za-z]{1,3}\d+:[A-Za-z]{1,3}\d+$", RegexOptions.Compiled,
+        TimeSpan.FromSeconds(1));
 
     /// <summary>
     ///     Valid condition types for conditional formatting.

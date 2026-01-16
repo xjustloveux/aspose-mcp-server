@@ -25,25 +25,16 @@ public class AddWordTextHandler : OperationHandlerBase<Document>
     /// <exception cref="ArgumentException">Thrown when text parameter is missing.</exception>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var text = parameters.GetRequired<string>("text");
-        var fontName = parameters.GetOptional<string?>("fontName");
-        var fontSize = parameters.GetOptional<double?>("fontSize");
-        var bold = parameters.GetOptional<bool?>("bold");
-        var italic = parameters.GetOptional<bool?>("italic");
-        var underline = parameters.GetOptional<string?>("underline");
-        var color = parameters.GetOptional<string?>("color");
-        var strikethrough = parameters.GetOptional<bool?>("strikethrough");
-        var superscript = parameters.GetOptional<bool?>("superscript");
-        var subscript = parameters.GetOptional<bool?>("subscript");
+        var p = ExtractAddWordTextParameters(parameters);
 
         var doc = context.Document;
         doc.EnsureMinimum();
         var lastSection = doc.LastSection;
         var body = lastSection.Body;
 
-        var lines = text.Contains('\n') || text.Contains('\r')
-            ? text.Split(["\r\n", "\n", "\r"], StringSplitOptions.None)
-            : [text];
+        var lines = p.Text.Contains('\n') || p.Text.Contains('\r')
+            ? p.Text.Split(["\r\n", "\n", "\r"], StringSplitOptions.None)
+            : [p.Text];
 
         var builder = new DocumentBuilder(doc);
         MoveToBodyEnd(builder, body);
@@ -66,18 +57,33 @@ public class AddWordTextHandler : OperationHandlerBase<Document>
             }
 
             ClearFormatting(builder);
-            ApplyFontFormatting(builder, fontName, fontSize, bold, italic, underline, color,
-                strikethrough, superscript, subscript);
+            ApplyFontFormatting(builder, p.FontName, p.FontSize, p.Bold, p.Italic, p.Underline, p.Color,
+                p.Strikethrough, p.Superscript, p.Subscript);
 
             builder.Write(line);
 
-            ApplyRunFormatting(builder.CurrentParagraph, line, bold, italic, underline,
-                strikethrough, superscript, subscript);
+            ApplyRunFormatting(builder.CurrentParagraph, line, p.Bold, p.Italic, p.Underline,
+                p.Strikethrough, p.Superscript, p.Subscript);
         }
 
         MarkModified(context);
 
-        return BuildResultMessage(bold, italic, underline, strikethrough, superscript, subscript);
+        return BuildResultMessage(p.Bold, p.Italic, p.Underline, p.Strikethrough, p.Superscript, p.Subscript);
+    }
+
+    private static AddWordTextParameters ExtractAddWordTextParameters(OperationParameters parameters)
+    {
+        return new AddWordTextParameters(
+            parameters.GetRequired<string>("text"),
+            parameters.GetOptional<string?>("fontName"),
+            parameters.GetOptional<double?>("fontSize"),
+            parameters.GetOptional<bool?>("bold"),
+            parameters.GetOptional<bool?>("italic"),
+            parameters.GetOptional<string?>("underline"),
+            parameters.GetOptional<string?>("color"),
+            parameters.GetOptional<bool?>("strikethrough"),
+            parameters.GetOptional<bool?>("superscript"),
+            parameters.GetOptional<bool?>("subscript"));
     }
 
     /// <summary>
@@ -87,37 +93,42 @@ public class AddWordTextHandler : OperationHandlerBase<Document>
     /// <param name="body">The document body.</param>
     private static void MoveToBodyEnd(DocumentBuilder builder, Body body)
     {
-        var bodyParagraphs = body.GetChildNodes(NodeType.Paragraph, false);
-        if (bodyParagraphs.Count > 0)
-        {
-            if (bodyParagraphs[^1] is WordParagraph lastBodyPara)
-                builder.MoveTo(lastBodyPara);
-            else
-                builder.MoveToDocumentEnd();
-        }
-        else
-        {
-            builder.MoveToDocumentEnd();
-        }
+        MoveToLastParagraph(builder, body);
+        EscapeFromShapeIfNeeded(builder, body);
+    }
 
+    /// <summary>
+    ///     Moves to the last paragraph in the body.
+    /// </summary>
+    /// <param name="builder">The document builder.</param>
+    /// <param name="body">The document body.</param>
+    private static void MoveToLastParagraph(DocumentBuilder builder, Body body)
+    {
+        var bodyParagraphs = body.GetChildNodes(NodeType.Paragraph, false);
+        if (bodyParagraphs.Count > 0 && bodyParagraphs[^1] is WordParagraph lastBodyPara)
+            builder.MoveTo(lastBodyPara);
+        else
+            builder.MoveToDocumentEnd();
+    }
+
+    /// <summary>
+    ///     Escapes from a shape/textbox if the builder is inside one.
+    /// </summary>
+    /// <param name="builder">The document builder.</param>
+    /// <param name="body">The document body.</param>
+    private static void EscapeFromShapeIfNeeded(DocumentBuilder builder, Body body)
+    {
         var currentNode = builder.CurrentNode;
-        if (currentNode != null)
-        {
-            var shapeAncestor = currentNode.GetAncestor(NodeType.Shape);
-            if (shapeAncestor != null)
-            {
-                bodyParagraphs = body.GetChildNodes(NodeType.Paragraph, false);
-                if (bodyParagraphs.Count > 0)
-                {
-                    if (bodyParagraphs[^1] is WordParagraph lastBodyPara)
-                        builder.MoveTo(lastBodyPara);
-                }
-                else
-                {
-                    builder.MoveTo(body);
-                }
-            }
-        }
+        if (currentNode == null) return;
+
+        var shapeAncestor = currentNode.GetAncestor(NodeType.Shape);
+        if (shapeAncestor == null) return;
+
+        var bodyParagraphs = body.GetChildNodes(NodeType.Paragraph, false);
+        if (bodyParagraphs.Count > 0 && bodyParagraphs[^1] is WordParagraph lastBodyPara)
+            builder.MoveTo(lastBodyPara);
+        else
+            builder.MoveTo(body);
     }
 
     /// <summary>
@@ -209,4 +220,16 @@ public class AddWordTextHandler : OperationHandlerBase<Document>
 
         return Success(result);
     }
+
+    private record AddWordTextParameters(
+        string Text,
+        string? FontName,
+        double? FontSize,
+        bool? Bold,
+        bool? Italic,
+        string? Underline,
+        string? Color,
+        bool? Strikethrough,
+        bool? Superscript,
+        bool? Subscript);
 }

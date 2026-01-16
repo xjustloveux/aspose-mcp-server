@@ -24,10 +24,10 @@ public class GetWordTablesHandler : OperationHandlerBase<Document>
     /// <exception cref="ArgumentException">Thrown when sectionIndex is out of range.</exception>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var sectionIndex = parameters.GetOptional<int?>("sectionIndex");
+        var p = ExtractGetWordTablesParameters(parameters);
 
         var doc = context.Document;
-        var tables = WordTableHelper.GetTables(doc, sectionIndex);
+        var tables = WordTableHelper.GetTables(doc, p.SectionIndex);
 
         List<object> tableList = [];
         for (var i = 0; i < tables.Count; i++)
@@ -49,10 +49,19 @@ public class GetWordTablesHandler : OperationHandlerBase<Document>
         var result = new
         {
             count = tables.Count,
-            sectionIndex,
+            sectionIndex = p.SectionIndex,
             tables = tableList
         };
 
         return JsonSerializer.Serialize(result, JsonDefaults.Indented);
     }
+
+    private static GetWordTablesParameters ExtractGetWordTablesParameters(OperationParameters parameters)
+    {
+        var sectionIndex = parameters.GetOptional<int?>("sectionIndex");
+
+        return new GetWordTablesParameters(sectionIndex);
+    }
+
+    private record GetWordTablesParameters(int? SectionIndex);
 }

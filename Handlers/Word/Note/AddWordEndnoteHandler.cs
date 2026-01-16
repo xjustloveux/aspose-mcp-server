@@ -24,43 +24,65 @@ public class AddWordEndnoteHandler : OperationHandlerBase<Document>
     /// <returns>Success message with endnote details.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var text = parameters.GetRequired<string>("text");
-        var paragraphIndex = parameters.GetOptional<int?>("paragraphIndex");
-        var sectionIndex = parameters.GetOptional("sectionIndex", 0);
-        var referenceText = parameters.GetOptional<string?>("referenceText");
-        var customMark = parameters.GetOptional<string?>("customMark");
+        var p = ExtractAddEndnoteParameters(parameters);
 
         var doc = context.Document;
 
-        if (sectionIndex < 0 || sectionIndex >= doc.Sections.Count)
+        if (p.SectionIndex < 0 || p.SectionIndex >= doc.Sections.Count)
             throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
 
         var builder = new DocumentBuilder(doc);
         Footnote insertedNote;
 
-        if (!string.IsNullOrEmpty(referenceText))
+        if (!string.IsNullOrEmpty(p.ReferenceText))
         {
-            insertedNote = WordNoteHelper.InsertNoteAtReferenceText(doc, builder, referenceText,
-                FootnoteType.Endnote, text, customMark);
+            insertedNote = WordNoteHelper.InsertNoteAtReferenceText(doc, builder, p.ReferenceText,
+                FootnoteType.Endnote, p.Text, p.CustomMark);
         }
-        else if (paragraphIndex.HasValue)
+        else if (p.ParagraphIndex.HasValue)
         {
-            var section = doc.Sections[sectionIndex];
-            insertedNote = WordNoteHelper.InsertNoteAtParagraph(builder, section, paragraphIndex.Value,
-                FootnoteType.Endnote, text, customMark);
+            var section = doc.Sections[p.SectionIndex];
+            insertedNote = WordNoteHelper.InsertNoteAtParagraph(builder, section, p.ParagraphIndex.Value,
+                FootnoteType.Endnote, p.Text, p.CustomMark);
         }
         else
         {
-            insertedNote = WordNoteHelper.InsertNoteAtDocumentEnd(builder, FootnoteType.Endnote, text, customMark);
+            insertedNote = WordNoteHelper.InsertNoteAtDocumentEnd(builder, FootnoteType.Endnote, p.Text, p.CustomMark);
         }
 
         MarkModified(context);
 
         var result = new StringBuilder();
         result.AppendLine("Endnote added successfully");
-        result.AppendLine($"Text: {text}");
+        result.AppendLine($"Text: {p.Text}");
         if (!string.IsNullOrEmpty(insertedNote.ReferenceMark))
             result.AppendLine($"Reference mark: {insertedNote.ReferenceMark}");
         return result.ToString().TrimEnd();
     }
+
+    /// <summary>
+    ///     Extracts add endnote parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted add endnote parameters.</returns>
+    private static AddEndnoteParameters ExtractAddEndnoteParameters(OperationParameters parameters)
+    {
+        return new AddEndnoteParameters(
+            parameters.GetRequired<string>("text"),
+            parameters.GetOptional<int?>("paragraphIndex"),
+            parameters.GetOptional("sectionIndex", 0),
+            parameters.GetOptional<string?>("referenceText"),
+            parameters.GetOptional<string?>("customMark")
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold add endnote parameters.
+    /// </summary>
+    private record AddEndnoteParameters(
+        string Text,
+        int? ParagraphIndex,
+        int SectionIndex,
+        string? ReferenceText,
+        string? CustomMark);
 }

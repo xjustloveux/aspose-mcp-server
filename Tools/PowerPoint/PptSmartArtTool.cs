@@ -136,7 +136,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds OperationParameters from method parameters.
+    ///     Builds OperationParameters from method parameters using strategy pattern.
     /// </summary>
     private static OperationParameters BuildParameters(
         string operation,
@@ -152,28 +152,57 @@ Usage examples:
         string? text,
         int? position)
     {
+        return operation.ToLowerInvariant() switch
+        {
+            "add" => BuildAddParameters(slideIndex, layout, x, y, width, height),
+            "manage_nodes" => BuildManageNodesParameters(slideIndex, shapeIndex, action, targetPath, text, position),
+            _ => new OperationParameters()
+        };
+    }
+
+    /// <summary>
+    ///     Builds parameters for the add SmartArt operation.
+    /// </summary>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <param name="layout">The SmartArt layout type.</param>
+    /// <param name="x">X position for the SmartArt.</param>
+    /// <param name="y">Y position for the SmartArt.</param>
+    /// <param name="width">Width of the SmartArt.</param>
+    /// <param name="height">Height of the SmartArt.</param>
+    /// <returns>OperationParameters configured for adding SmartArt.</returns>
+    private static OperationParameters BuildAddParameters(int slideIndex, string? layout, float x, float y, float width,
+        float height)
+    {
         var parameters = new OperationParameters();
         parameters.Set("slideIndex", slideIndex);
+        if (layout != null) parameters.Set("layout", layout);
+        parameters.Set("x", x);
+        parameters.Set("y", y);
+        parameters.Set("width", width);
+        parameters.Set("height", height);
+        return parameters;
+    }
 
-        switch (operation.ToLowerInvariant())
-        {
-            case "add":
-                if (layout != null) parameters.Set("layout", layout);
-                parameters.Set("x", x);
-                parameters.Set("y", y);
-                parameters.Set("width", width);
-                parameters.Set("height", height);
-                break;
-
-            case "manage_nodes":
-                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
-                if (action != null) parameters.Set("action", action);
-                if (targetPath != null) parameters.Set("targetPath", targetPath);
-                if (text != null) parameters.Set("text", text);
-                if (position.HasValue) parameters.Set("position", position.Value);
-                break;
-        }
-
+    /// <summary>
+    ///     Builds parameters for the manage_nodes operation.
+    /// </summary>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <param name="shapeIndex">The shape index (0-based).</param>
+    /// <param name="action">The node action (add, edit, delete).</param>
+    /// <param name="targetPath">JSON array of indices to target node.</param>
+    /// <param name="text">The node text content.</param>
+    /// <param name="position">Insert position for new node.</param>
+    /// <returns>OperationParameters configured for managing SmartArt nodes.</returns>
+    private static OperationParameters BuildManageNodesParameters(int slideIndex, int? shapeIndex, string? action,
+        string? targetPath, string? text, int? position)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("slideIndex", slideIndex);
+        if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+        if (action != null) parameters.Set("action", action);
+        if (targetPath != null) parameters.Set("targetPath", targetPath);
+        if (text != null) parameters.Set("text", text);
+        if (position.HasValue) parameters.Set("position", position.Value);
         return parameters;
     }
 }

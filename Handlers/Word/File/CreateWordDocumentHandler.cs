@@ -24,34 +24,23 @@ public class CreateWordDocumentHandler : OperationHandlerBase<Document>
     ///     compatibilityMode, paperSize, pageWidth, pageHeight, headerDistance, footerDistance
     /// </param>
     /// <returns>Success message with output path.</returns>
+    /// <exception cref="ArgumentException">Thrown when outputPath is missing.</exception>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        var outputPath = parameters.GetOptional<string?>("outputPath");
-        var content = parameters.GetOptional<string?>("content");
-        var skipInitialContent = parameters.GetOptional("skipInitialContent", false);
-        var marginTop = parameters.GetOptional("marginTop", 70.87);
-        var marginBottom = parameters.GetOptional("marginBottom", 70.87);
-        var marginLeft = parameters.GetOptional("marginLeft", 70.87);
-        var marginRight = parameters.GetOptional("marginRight", 70.87);
-        var compatibilityMode = parameters.GetOptional("compatibilityMode", "Word2019");
-        var paperSize = parameters.GetOptional("paperSize", "A4");
-        var pageWidth = parameters.GetOptional<double?>("pageWidth");
-        var pageHeight = parameters.GetOptional<double?>("pageHeight");
-        var headerDistance = parameters.GetOptional("headerDistance", 35.4);
-        var footerDistance = parameters.GetOptional("footerDistance", 35.4);
+        var p = ExtractCreateParameters(parameters);
 
-        if (string.IsNullOrEmpty(outputPath))
+        if (string.IsNullOrEmpty(p.OutputPath))
             throw new ArgumentException("outputPath is required for create operation");
 
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+        SecurityHelper.ValidateFilePath(p.OutputPath, "outputPath", true);
 
-        var outputDir = Path.GetDirectoryName(outputPath);
+        var outputDir = Path.GetDirectoryName(p.OutputPath);
         if (!string.IsNullOrEmpty(outputDir))
             Directory.CreateDirectory(outputDir);
 
         var doc = new Document();
 
-        var wordVersion = compatibilityMode switch
+        var wordVersion = p.CompatibilityMode switch
         {
             "Word2019" => MsWordVersion.Word2019,
             "Word2016" => MsWordVersion.Word2016,
@@ -67,9 +56,9 @@ public class CreateWordDocumentHandler : OperationHandlerBase<Document>
         {
             var pageSetup = section.PageSetup;
 
-            if (!string.IsNullOrEmpty(paperSize) && pageWidth == null && pageHeight == null)
+            if (!string.IsNullOrEmpty(p.PaperSize) && p.PageWidth == null && p.PageHeight == null)
             {
-                pageSetup.PaperSize = paperSize.ToUpper() switch
+                pageSetup.PaperSize = p.PaperSize.ToUpper() switch
                 {
                     "A4" => PaperSize.A4,
                     "LETTER" => PaperSize.Letter,
@@ -78,28 +67,28 @@ public class CreateWordDocumentHandler : OperationHandlerBase<Document>
                     _ => PaperSize.A4
                 };
             }
-            else if (pageWidth != null || pageHeight != null)
+            else if (p.PageWidth != null || p.PageHeight != null)
             {
                 pageSetup.PaperSize = PaperSize.Custom;
-                pageSetup.PageWidth = pageWidth ?? 595.3;
-                pageSetup.PageHeight = pageHeight ?? 841.9;
+                pageSetup.PageWidth = p.PageWidth ?? 595.3;
+                pageSetup.PageHeight = p.PageHeight ?? 841.9;
             }
             else
             {
                 pageSetup.PaperSize = PaperSize.A4;
             }
 
-            pageSetup.TopMargin = marginTop;
-            pageSetup.BottomMargin = marginBottom;
-            pageSetup.LeftMargin = marginLeft;
-            pageSetup.RightMargin = marginRight;
-            pageSetup.HeaderDistance = headerDistance;
-            pageSetup.FooterDistance = footerDistance;
+            pageSetup.TopMargin = p.MarginTop;
+            pageSetup.BottomMargin = p.MarginBottom;
+            pageSetup.LeftMargin = p.MarginLeft;
+            pageSetup.RightMargin = p.MarginRight;
+            pageSetup.HeaderDistance = p.HeaderDistance;
+            pageSetup.FooterDistance = p.FooterDistance;
         }
 
         var builder = new DocumentBuilder(doc);
 
-        if (skipInitialContent)
+        if (p.SkipInitialContent)
         {
             if (doc.FirstSection is { Body: not null })
             {
@@ -116,12 +105,45 @@ public class CreateWordDocumentHandler : OperationHandlerBase<Document>
                 doc.FirstSection.Body.AppendChild(firstPara);
             }
         }
-        else if (!string.IsNullOrEmpty(content))
+        else if (!string.IsNullOrEmpty(p.Content))
         {
-            builder.Write(content);
+            builder.Write(p.Content);
         }
 
-        doc.Save(outputPath);
-        return $"Word document created successfully at: {outputPath}";
+        doc.Save(p.OutputPath);
+        return $"Word document created successfully at: {p.OutputPath}";
     }
+
+    private static CreateParameters ExtractCreateParameters(OperationParameters parameters)
+    {
+        return new CreateParameters(
+            parameters.GetOptional<string?>("outputPath"),
+            parameters.GetOptional<string?>("content"),
+            parameters.GetOptional("skipInitialContent", false),
+            parameters.GetOptional("marginTop", 70.87),
+            parameters.GetOptional("marginBottom", 70.87),
+            parameters.GetOptional("marginLeft", 70.87),
+            parameters.GetOptional("marginRight", 70.87),
+            parameters.GetOptional("compatibilityMode", "Word2019"),
+            parameters.GetOptional("paperSize", "A4"),
+            parameters.GetOptional<double?>("pageWidth"),
+            parameters.GetOptional<double?>("pageHeight"),
+            parameters.GetOptional("headerDistance", 35.4),
+            parameters.GetOptional("footerDistance", 35.4));
+    }
+
+    private record CreateParameters(
+        string? OutputPath,
+        string? Content,
+        bool SkipInitialContent,
+        double MarginTop,
+        double MarginBottom,
+        double MarginLeft,
+        double MarginRight,
+        string CompatibilityMode,
+        string PaperSize,
+        double? PageWidth,
+        double? PageHeight,
+        double HeaderDistance,
+        double FooterDistance);
 }

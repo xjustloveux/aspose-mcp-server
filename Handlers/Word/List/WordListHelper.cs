@@ -17,48 +17,77 @@ public static class WordListHelper
     /// <exception cref="ArgumentException">Thrown when items array is empty or contains invalid items.</exception>
     public static List<(string text, int level)> ParseItems(JsonArray itemsArray)
     {
-        List<(string text, int level)> items = [];
-
         if (itemsArray.Count == 0)
             throw new ArgumentException("items array cannot be empty");
+
+        List<(string text, int level)> items = [];
 
         foreach (var item in itemsArray)
         {
             if (item == null) continue;
 
-            if (item is JsonValue jsonValue)
-            {
-                try
-                {
-                    var text = jsonValue.GetValue<string>();
-                    if (!string.IsNullOrEmpty(text)) items.Add((text, 0));
-                }
-                catch (Exception ex)
-                {
-                    throw new ArgumentException($"Unable to parse list item as string: {ex.Message}");
-                }
-            }
-            else if (item is JsonObject jsonObj)
-            {
-                var text = jsonObj["text"]?.GetValue<string>();
-                if (string.IsNullOrEmpty(text))
-                    throw new ArgumentException("List item object must contain 'text' property");
-
-                var level = jsonObj["level"]?.GetValue<int>() ?? 0;
-                if (level < 0 || level > 8) level = Math.Max(0, Math.Min(8, level));
-
-                items.Add((text, level));
-            }
-            else
-            {
-                throw new ArgumentException($"Invalid list item format: {item.GetType().Name}");
-            }
+            var parsed = ParseSingleItem(item);
+            if (parsed.HasValue)
+                items.Add(parsed.Value);
         }
 
         if (items.Count == 0)
             throw new ArgumentException("No valid list items after parsing");
 
         return items;
+    }
+
+    /// <summary>
+    ///     Parses a single list item from a JSON node.
+    /// </summary>
+    /// <param name="item">The JSON node to parse.</param>
+    /// <returns>A tuple containing text and level, or null if invalid.</returns>
+    /// <exception cref="ArgumentException">Thrown when item format is invalid.</exception>
+    private static (string text, int level)? ParseSingleItem(JsonNode item)
+    {
+        return item switch
+        {
+            JsonValue jsonValue => ParseJsonValueItem(jsonValue),
+            JsonObject jsonObj => ParseJsonObjectItem(jsonObj),
+            _ => throw new ArgumentException($"Invalid list item format: {item.GetType().Name}")
+        };
+    }
+
+    /// <summary>
+    ///     Parses a list item from a JSON value (string).
+    /// </summary>
+    /// <param name="jsonValue">The JSON value to parse.</param>
+    /// <returns>A tuple containing text and level 0, or null if empty.</returns>
+    /// <exception cref="ArgumentException">Thrown when value cannot be parsed.</exception>
+    private static (string text, int level)? ParseJsonValueItem(JsonValue jsonValue)
+    {
+        try
+        {
+            var text = jsonValue.GetValue<string>();
+            return string.IsNullOrEmpty(text) ? null : (text, 0);
+        }
+        catch (Exception ex)
+        {
+            throw new ArgumentException($"Unable to parse list item as string: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    ///     Parses a list item from a JSON object with text and level properties.
+    /// </summary>
+    /// <param name="jsonObj">The JSON object to parse.</param>
+    /// <returns>A tuple containing text and level.</returns>
+    /// <exception cref="ArgumentException">Thrown when text property is missing.</exception>
+    private static (string text, int level) ParseJsonObjectItem(JsonObject jsonObj)
+    {
+        var text = jsonObj["text"]?.GetValue<string>();
+        if (string.IsNullOrEmpty(text))
+            throw new ArgumentException("List item object must contain 'text' property");
+
+        var level = jsonObj["level"]?.GetValue<int>() ?? 0;
+        level = Math.Max(0, Math.Min(8, level));
+
+        return (text, level);
     }
 
     /// <summary>

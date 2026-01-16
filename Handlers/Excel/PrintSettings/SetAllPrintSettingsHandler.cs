@@ -24,53 +24,88 @@ public class SetAllPrintSettingsHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message with all settings details.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        var sheetIndex = parameters.GetOptional("sheetIndex", 0);
-        var printArea = parameters.GetOptional<string?>("range");
-        var printTitleRows = parameters.GetOptional<string?>("rows");
-        var printTitleColumns = parameters.GetOptional<string?>("columns");
-        var orientation = parameters.GetOptional<string?>("orientation");
-        var paperSize = parameters.GetOptional<string?>("paperSize");
-        var leftMargin = parameters.GetOptional<double?>("leftMargin");
-        var rightMargin = parameters.GetOptional<double?>("rightMargin");
-        var topMargin = parameters.GetOptional<double?>("topMargin");
-        var bottomMargin = parameters.GetOptional<double?>("bottomMargin");
-        var header = parameters.GetOptional<string?>("header");
-        var footer = parameters.GetOptional<string?>("footer");
-        var fitToPage = parameters.GetOptional<bool?>("fitToPage");
-        var fitToPagesWide = parameters.GetOptional<int?>("fitToPagesWide");
-        var fitToPagesTall = parameters.GetOptional<int?>("fitToPagesTall");
+        var setParams = ExtractSetAllPrintSettingsParameters(parameters);
 
         var workbook = context.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var worksheet = ExcelHelper.GetWorksheet(workbook, setParams.SheetIndex);
         var pageSetup = worksheet.PageSetup;
 
         List<string> changes = [];
 
-        if (!string.IsNullOrEmpty(printArea))
+        if (!string.IsNullOrEmpty(setParams.PrintArea))
         {
-            pageSetup.PrintArea = printArea;
-            changes.Add($"printArea={printArea}");
+            pageSetup.PrintArea = setParams.PrintArea;
+            changes.Add($"printArea={setParams.PrintArea}");
         }
 
-        if (!string.IsNullOrEmpty(printTitleRows))
+        if (!string.IsNullOrEmpty(setParams.PrintTitleRows))
         {
-            pageSetup.PrintTitleRows = printTitleRows;
-            changes.Add($"printTitleRows={printTitleRows}");
+            pageSetup.PrintTitleRows = setParams.PrintTitleRows;
+            changes.Add($"printTitleRows={setParams.PrintTitleRows}");
         }
 
-        if (!string.IsNullOrEmpty(printTitleColumns))
+        if (!string.IsNullOrEmpty(setParams.PrintTitleColumns))
         {
-            pageSetup.PrintTitleColumns = printTitleColumns;
-            changes.Add($"printTitleColumns={printTitleColumns}");
+            pageSetup.PrintTitleColumns = setParams.PrintTitleColumns;
+            changes.Add($"printTitleColumns={setParams.PrintTitleColumns}");
         }
 
-        var pageSetupChanges = ExcelPrintSettingsHelper.ApplyPageSetup(pageSetup, orientation, paperSize, leftMargin,
-            rightMargin, topMargin, bottomMargin, header, footer, fitToPage, fitToPagesWide, fitToPagesTall);
+        var pageSetupChanges = ExcelPrintSettingsHelper.ApplyPageSetup(pageSetup, setParams.Orientation,
+            setParams.PaperSize,
+            setParams.LeftMargin, setParams.RightMargin, setParams.TopMargin, setParams.BottomMargin,
+            setParams.Header, setParams.Footer, setParams.FitToPage, setParams.FitToPagesWide,
+            setParams.FitToPagesTall);
         changes.AddRange(pageSetupChanges);
 
         MarkModified(context);
 
         var changesStr = changes.Count > 0 ? string.Join(", ", changes) : "no changes";
-        return Success($"Print settings updated for sheet {sheetIndex} ({changesStr}).");
+        return Success($"Print settings updated for sheet {setParams.SheetIndex} ({changesStr}).");
     }
+
+    /// <summary>
+    ///     Extracts set all print settings parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted set all print settings parameters.</returns>
+    private static SetAllPrintSettingsParameters ExtractSetAllPrintSettingsParameters(OperationParameters parameters)
+    {
+        return new SetAllPrintSettingsParameters(
+            parameters.GetOptional("sheetIndex", 0),
+            parameters.GetOptional<string?>("range"),
+            parameters.GetOptional<string?>("rows"),
+            parameters.GetOptional<string?>("columns"),
+            parameters.GetOptional<string?>("orientation"),
+            parameters.GetOptional<string?>("paperSize"),
+            parameters.GetOptional<double?>("leftMargin"),
+            parameters.GetOptional<double?>("rightMargin"),
+            parameters.GetOptional<double?>("topMargin"),
+            parameters.GetOptional<double?>("bottomMargin"),
+            parameters.GetOptional<string?>("header"),
+            parameters.GetOptional<string?>("footer"),
+            parameters.GetOptional<bool?>("fitToPage"),
+            parameters.GetOptional<int?>("fitToPagesWide"),
+            parameters.GetOptional<int?>("fitToPagesTall")
+        );
+    }
+
+    /// <summary>
+    ///     Record to hold set all print settings parameters.
+    /// </summary>
+    private record SetAllPrintSettingsParameters(
+        int SheetIndex,
+        string? PrintArea,
+        string? PrintTitleRows,
+        string? PrintTitleColumns,
+        string? Orientation,
+        string? PaperSize,
+        double? LeftMargin,
+        double? RightMargin,
+        double? TopMargin,
+        double? BottomMargin,
+        string? Header,
+        string? Footer,
+        bool? FitToPage,
+        int? FitToPagesWide,
+        int? FitToPagesTall);
 }

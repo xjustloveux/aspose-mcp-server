@@ -38,46 +38,58 @@ public static class ExcelPivotTableHelper
     /// <returns>The field index or -1 if not found.</returns>
     public static int FindFieldIndex(Worksheet sourceSheet, Aspose.Cells.Range sourceRangeObj, string fieldName)
     {
-        var fieldIndex = -1;
-        var headerRowIndex = sourceRangeObj.FirstRow;
+        var fieldIndex = FindFieldInHeaderRow(sourceSheet, sourceRangeObj, fieldName);
+        return fieldIndex >= 0 ? fieldIndex : FindFieldInAllCells(sourceSheet, sourceRangeObj, fieldName);
+    }
 
-        // Check header row first
+    /// <summary>
+    ///     Finds field index by searching the header row only.
+    /// </summary>
+    /// <param name="sourceSheet">The source worksheet.</param>
+    /// <param name="sourceRangeObj">The source range object.</param>
+    /// <param name="fieldName">The field name to find.</param>
+    /// <returns>The field index or -1 if not found.</returns>
+    private static int FindFieldInHeaderRow(Worksheet sourceSheet, Aspose.Cells.Range sourceRangeObj, string fieldName)
+    {
+        var headerRowIndex = sourceRangeObj.FirstRow;
+        var trimmedFieldName = fieldName.Trim();
+
         for (var col = sourceRangeObj.FirstColumn;
              col < sourceRangeObj.FirstColumn + sourceRangeObj.ColumnCount;
              col++)
         {
-            var headerCell = sourceSheet.Cells[headerRowIndex, col];
-            var cellValue = headerCell.Value?.ToString()?.Trim();
-            if (cellValue == fieldName || cellValue == fieldName.Trim())
-            {
-                fieldIndex = col - sourceRangeObj.FirstColumn;
-                break;
-            }
+            var cellValue = sourceSheet.Cells[headerRowIndex, col].Value?.ToString()?.Trim();
+            if (cellValue == fieldName || cellValue == trimmedFieldName)
+                return col - sourceRangeObj.FirstColumn;
         }
 
-        // Search all cells if not found in header
-        if (fieldIndex < 0)
-            for (var row = sourceRangeObj.FirstRow;
-                 row < sourceRangeObj.FirstRow + sourceRangeObj.RowCount;
-                 row++)
-            {
-                for (var col = sourceRangeObj.FirstColumn;
-                     col < sourceRangeObj.FirstColumn + sourceRangeObj.ColumnCount;
-                     col++)
-                {
-                    var cell = sourceSheet.Cells[row, col];
-                    var cellValue = cell.Value?.ToString()?.Trim();
-                    if (cellValue == fieldName || cellValue == fieldName.Trim())
-                    {
-                        fieldIndex = col - sourceRangeObj.FirstColumn;
-                        break;
-                    }
-                }
+        return -1;
+    }
 
-                if (fieldIndex >= 0) break;
-            }
+    /// <summary>
+    ///     Finds field index by searching all cells in the source range.
+    /// </summary>
+    /// <param name="sourceSheet">The source worksheet.</param>
+    /// <param name="sourceRangeObj">The source range object.</param>
+    /// <param name="fieldName">The field name to find.</param>
+    /// <returns>The field index or -1 if not found.</returns>
+    private static int FindFieldInAllCells(Worksheet sourceSheet, Aspose.Cells.Range sourceRangeObj, string fieldName)
+    {
+        var trimmedFieldName = fieldName.Trim();
 
-        return fieldIndex;
+        for (var row = sourceRangeObj.FirstRow;
+             row < sourceRangeObj.FirstRow + sourceRangeObj.RowCount;
+             row++)
+        for (var col = sourceRangeObj.FirstColumn;
+             col < sourceRangeObj.FirstColumn + sourceRangeObj.ColumnCount;
+             col++)
+        {
+            var cellValue = sourceSheet.Cells[row, col].Value?.ToString()?.Trim();
+            if (cellValue == fieldName || cellValue == trimmedFieldName)
+                return col - sourceRangeObj.FirstColumn;
+        }
+
+        return -1;
     }
 
     /// <summary>

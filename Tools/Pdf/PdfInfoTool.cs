@@ -92,6 +92,9 @@ Usage examples:
     /// <summary>
     ///     Builds OperationParameters from method parameters.
     /// </summary>
+    /// <param name="pageIndex">The page index (1-based).</param>
+    /// <param name="maxPages">The maximum pages to extract.</param>
+    /// <returns>OperationParameters configured for the info operation.</returns>
     private static OperationParameters BuildParameters(int? pageIndex, int maxPages)
     {
         var parameters = new OperationParameters();

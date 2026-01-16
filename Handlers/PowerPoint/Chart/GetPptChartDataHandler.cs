@@ -22,12 +22,11 @@ public class GetPptChartDataHandler : OperationHandlerBase<Presentation>
     /// <returns>JSON string containing the chart data.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetRequired<int>("slideIndex");
-        var chartIndex = parameters.GetRequired<int>("shapeIndex");
+        var p = ExtractGetChartDataParameters(parameters);
 
         var presentation = context.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-        var chart = PptChartHelper.GetChartByIndex(slide, chartIndex, slideIndex);
+        var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
+        var chart = PptChartHelper.GetChartByIndex(slide, p.ChartIndex, p.SlideIndex);
         var chartData = chart.ChartData;
 
         List<object> categoriesList = [];
@@ -67,8 +66,8 @@ public class GetPptChartDataHandler : OperationHandlerBase<Presentation>
 
         var result = new
         {
-            slideIndex,
-            chartIndex,
+            slideIndex = p.SlideIndex,
+            chartIndex = p.ChartIndex,
             chartType = chart.Type.ToString(),
             hasTitle = chart.HasTitle,
             title = chart is { HasTitle: true, ChartTitle: not null }
@@ -88,4 +87,23 @@ public class GetPptChartDataHandler : OperationHandlerBase<Presentation>
 
         return JsonResult(result);
     }
+
+    /// <summary>
+    ///     Extracts get chart data parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted get chart data parameters.</returns>
+    private static GetChartDataParameters ExtractGetChartDataParameters(OperationParameters parameters)
+    {
+        return new GetChartDataParameters(
+            parameters.GetRequired<int>("slideIndex"),
+            parameters.GetRequired<int>("shapeIndex"));
+    }
+
+    /// <summary>
+    ///     Record for holding get chart data parameters.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index.</param>
+    /// <param name="ChartIndex">The chart shape index.</param>
+    private record GetChartDataParameters(int SlideIndex, int ChartIndex);
 }

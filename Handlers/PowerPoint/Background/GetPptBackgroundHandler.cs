@@ -22,10 +22,10 @@ public class GetPptBackgroundHandler : OperationHandlerBase<Presentation>
     /// <returns>JSON string containing background information.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        var slideIndex = parameters.GetOptional("slideIndex", 0);
+        var p = ExtractGetBackgroundParameters(parameters);
 
         var presentation = context.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+        var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
         var background = slide.Background;
         var fillFormat = background?.FillFormat;
 
@@ -51,7 +51,7 @@ public class GetPptBackgroundHandler : OperationHandlerBase<Presentation>
 
         var result = new
         {
-            slideIndex,
+            slideIndex = p.SlideIndex,
             hasBackground = background != null,
             fillType = fillFormat?.FillType.ToString(),
             color = colorHex,
@@ -61,4 +61,20 @@ public class GetPptBackgroundHandler : OperationHandlerBase<Presentation>
 
         return JsonResult(result);
     }
+
+    /// <summary>
+    ///     Extracts get background parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted get background parameters.</returns>
+    private static GetBackgroundParameters ExtractGetBackgroundParameters(OperationParameters parameters)
+    {
+        return new GetBackgroundParameters(parameters.GetOptional("slideIndex", 0));
+    }
+
+    /// <summary>
+    ///     Record for holding get background parameters.
+    /// </summary>
+    /// <param name="SlideIndex">The slide index.</param>
+    private record GetBackgroundParameters(int SlideIndex);
 }
