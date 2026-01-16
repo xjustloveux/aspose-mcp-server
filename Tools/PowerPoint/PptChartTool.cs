@@ -121,7 +121,7 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
 
         var result = handler.Execute(operationContext, parameters);
 
-        if (operation.ToLowerInvariant() == "get_data")
+        if (string.Equals(operation, "get_data", StringComparison.OrdinalIgnoreCase))
             return result;
 
         if (operationContext.IsModified)

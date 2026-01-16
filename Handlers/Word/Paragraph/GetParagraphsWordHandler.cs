@@ -34,99 +34,10 @@ public class GetParagraphsWordHandler : OperationHandlerBase<Document>
 
         var doc = context.Document;
 
-        List<Aspose.Words.Paragraph> paragraphs;
-        if (sectionIndex.HasValue)
-        {
-            if (sectionIndex.Value < 0 || sectionIndex.Value >= doc.Sections.Count)
-                throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
-            paragraphs = doc.Sections[sectionIndex.Value].Body
-                .GetChildNodes(NodeType.Paragraph, includeCommentParagraphs).Cast<Aspose.Words.Paragraph>().ToList();
-        }
-        else
-        {
-            if (includeCommentParagraphs)
-            {
-                paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().ToList();
-            }
-            else
-            {
-                paragraphs = [];
-                foreach (var section in doc.Sections.Cast<Section>())
-                {
-                    var bodyParagraphs = section.Body.GetChildNodes(NodeType.Paragraph, false)
-                        .Cast<Aspose.Words.Paragraph>()
-                        .ToList();
-                    paragraphs.AddRange(bodyParagraphs);
-                }
-            }
-        }
+        var paragraphs = GetBaseParagraphs(doc, sectionIndex, includeCommentParagraphs);
+        paragraphs = ApplyFilters(paragraphs, includeEmpty, styleFilter, includeTextboxParagraphs);
 
-        if (!includeEmpty) paragraphs = paragraphs.Where(p => !string.IsNullOrWhiteSpace(p.GetText())).ToList();
-        if (!string.IsNullOrEmpty(styleFilter))
-            paragraphs = paragraphs.Where(p => p.ParagraphFormat.Style?.Name == styleFilter).ToList();
-
-        if (!includeTextboxParagraphs)
-            paragraphs = paragraphs.Where(p =>
-            {
-                var shapeAncestor = p.GetAncestor(NodeType.Shape);
-                if (shapeAncestor is WordShape { ShapeType: ShapeType.TextBox }) return false;
-                var currentNode = p.ParentNode;
-                while (currentNode != null)
-                {
-                    if (currentNode.NodeType == NodeType.Shape)
-                        if (currentNode is WordShape { ShapeType: ShapeType.TextBox })
-                            return false;
-                    currentNode = currentNode.ParentNode;
-                }
-
-                return true;
-            }).ToList();
-
-        List<object> paragraphList = [];
-        for (var i = 0; i < paragraphs.Count; i++)
-        {
-            var para = paragraphs[i];
-            var text = para.GetText().Trim();
-            var location = "Body";
-            string? commentInfo = null;
-
-            if (para.ParentNode != null)
-            {
-                var commentAncestor = para.GetAncestor(NodeType.Comment);
-                if (commentAncestor != null)
-                {
-                    location = "Comment";
-                    if (commentAncestor is WordComment comment)
-                        commentInfo = $"ID: {comment.Id}, Author: {comment.Author}";
-                }
-                else
-                {
-                    var shapeAncestor = para.GetAncestor(NodeType.Shape);
-                    if (shapeAncestor != null)
-                    {
-                        location = shapeAncestor is WordShape { ShapeType: ShapeType.TextBox } ? "TextBox" : "Shape";
-                    }
-                    else
-                    {
-                        var bodyAncestor = para.GetAncestor(NodeType.Body);
-                        if (bodyAncestor == null || para.ParentNode.NodeType != NodeType.Body)
-                            location = para.ParentNode.NodeType.ToString();
-                    }
-                }
-            }
-
-            var paraInfo = new Dictionary<string, object?>
-            {
-                ["index"] = i,
-                ["location"] = location,
-                ["style"] = para.ParagraphFormat.Style?.Name,
-                ["text"] = text.Length > 100 ? text[..100] + "..." : text,
-                ["textLength"] = text.Length
-            };
-
-            if (commentInfo != null) paraInfo["commentInfo"] = commentInfo;
-            paragraphList.Add(paraInfo);
-        }
+        var paragraphList = BuildParagraphList(paragraphs);
 
         var result = new
         {
@@ -137,5 +48,119 @@ public class GetParagraphsWordHandler : OperationHandlerBase<Document>
         };
 
         return JsonSerializer.Serialize(result, JsonDefaults.Indented);
+    }
+
+    private static List<Aspose.Words.Paragraph> GetBaseParagraphs(Document doc, int? sectionIndex,
+        bool includeCommentParagraphs)
+    {
+        if (sectionIndex.HasValue)
+        {
+            if (sectionIndex.Value < 0 || sectionIndex.Value >= doc.Sections.Count)
+                throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
+            return doc.Sections[sectionIndex.Value].Body
+                .GetChildNodes(NodeType.Paragraph, includeCommentParagraphs).Cast<Aspose.Words.Paragraph>().ToList();
+        }
+
+        if (includeCommentParagraphs)
+            return doc.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().ToList();
+
+        List<Aspose.Words.Paragraph> paragraphs = [];
+        foreach (var section in doc.Sections.Cast<Section>())
+        {
+            var bodyParagraphs = section.Body.GetChildNodes(NodeType.Paragraph, false)
+                .Cast<Aspose.Words.Paragraph>()
+                .ToList();
+            paragraphs.AddRange(bodyParagraphs);
+        }
+
+        return paragraphs;
+    }
+
+    private static List<Aspose.Words.Paragraph> ApplyFilters(List<Aspose.Words.Paragraph> paragraphs,
+        bool includeEmpty, string? styleFilter, bool includeTextboxParagraphs)
+    {
+        if (!includeEmpty)
+            paragraphs = paragraphs.Where(p => !string.IsNullOrWhiteSpace(p.GetText())).ToList();
+
+        if (!string.IsNullOrEmpty(styleFilter))
+            paragraphs = paragraphs.Where(p => p.ParagraphFormat.Style?.Name == styleFilter).ToList();
+
+        if (!includeTextboxParagraphs)
+            paragraphs = paragraphs.Where(p => !IsInTextBox(p)).ToList();
+
+        return paragraphs;
+    }
+
+    private static bool IsInTextBox(Aspose.Words.Paragraph p)
+    {
+        var shapeAncestor = p.GetAncestor(NodeType.Shape);
+        if (shapeAncestor is WordShape { ShapeType: ShapeType.TextBox })
+            return true;
+
+        var currentNode = p.ParentNode;
+        while (currentNode != null)
+        {
+            if (currentNode is WordShape { ShapeType: ShapeType.TextBox })
+                return true;
+            currentNode = currentNode.ParentNode;
+        }
+
+        return false;
+    }
+
+    private static List<object> BuildParagraphList(List<Aspose.Words.Paragraph> paragraphs)
+    {
+        List<object> paragraphList = [];
+
+        for (var i = 0; i < paragraphs.Count; i++)
+        {
+            var para = paragraphs[i];
+            var text = para.GetText().Trim();
+            var (location, commentInfo) = DetermineLocation(para);
+
+            var paraInfo = new Dictionary<string, object?>
+            {
+                ["index"] = i,
+                ["location"] = location,
+                ["style"] = para.ParagraphFormat.Style?.Name,
+                ["text"] = text.Length > 100 ? text[..100] + "..." : text,
+                ["textLength"] = text.Length
+            };
+
+            if (commentInfo != null)
+                paraInfo["commentInfo"] = commentInfo;
+
+            paragraphList.Add(paraInfo);
+        }
+
+        return paragraphList;
+    }
+
+    private static (string location, string? commentInfo) DetermineLocation(Aspose.Words.Paragraph para)
+    {
+        if (para.ParentNode == null)
+            return ("Body", null);
+
+        var commentAncestor = para.GetAncestor(NodeType.Comment);
+        if (commentAncestor != null)
+        {
+            var commentInfo = commentAncestor is WordComment comment
+                ? $"ID: {comment.Id}, Author: {comment.Author}"
+                : null;
+            return ("Comment", commentInfo);
+        }
+
+        var shapeAncestor = para.GetAncestor(NodeType.Shape);
+        if (shapeAncestor != null)
+        {
+            var location = shapeAncestor is WordShape { ShapeType: ShapeType.TextBox } ? "TextBox" : "Shape";
+            return (location, null);
+        }
+
+        var bodyAncestor = para.GetAncestor(NodeType.Body);
+        if (bodyAncestor == null || para.ParentNode.NodeType != NodeType.Body)
+            return (para.ParentNode.NodeType.ToString(), null);
+
+        return ("Body", null);
     }
 }

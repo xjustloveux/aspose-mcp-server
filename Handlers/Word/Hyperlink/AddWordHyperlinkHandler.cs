@@ -33,109 +33,119 @@ public class AddWordHyperlinkHandler : OperationHandlerBase<Document>
         if (string.IsNullOrEmpty(url) && string.IsNullOrEmpty(subAddress))
             throw new ArgumentException("Either 'url' or 'subAddress' must be provided for add operation");
 
-        if (!string.IsNullOrEmpty(url))
-            WordHyperlinkHelper.ValidateUrlFormat(url);
+        ValidateUrlIfPresent(url);
 
         var doc = context.Document;
         var builder = new DocumentBuilder(doc);
 
-        if (paragraphIndex.HasValue)
+        PositionBuilder(doc, builder, paragraphIndex);
+        InsertHyperlink(builder, text, url, subAddress);
+        ApplyHyperlinkSettings(doc, url, subAddress, tooltip);
+
+        MarkModified(context);
+
+        return BuildResultMessage(text, url, subAddress, tooltip, paragraphIndex);
+    }
+
+    private static void ValidateUrlIfPresent(string? url)
+    {
+        if (!string.IsNullOrEmpty(url))
+            WordHyperlinkHelper.ValidateUrlFormat(url);
+    }
+
+    private static void PositionBuilder(Document doc, DocumentBuilder builder, int? paragraphIndex)
+    {
+        if (!paragraphIndex.HasValue)
         {
-            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
-            if (paragraphIndex.Value == -1)
-            {
-                if (paragraphs.Count > 0)
-                {
-                    if (paragraphs[0] is WordParagraph firstPara)
-                    {
-                        var newPara = new WordParagraph(doc);
-                        doc.FirstSection.Body.InsertBefore(newPara, firstPara);
-                        builder.MoveTo(newPara);
-                    }
-                    else
-                    {
-                        builder.MoveToDocumentStart();
-                    }
-                }
-                else
-                {
-                    builder.MoveToDocumentStart();
-                }
-            }
-            else if (paragraphIndex.Value >= 0 && paragraphIndex.Value < paragraphs.Count)
-            {
-                if (paragraphs[paragraphIndex.Value] is WordParagraph targetPara)
-                {
-                    var newPara = new WordParagraph(doc);
-                    var parentNode = targetPara.ParentNode;
-                    if (parentNode != null)
-                    {
-                        parentNode.InsertAfter(newPara, targetPara);
-                        builder.MoveTo(newPara);
-                    }
-                    else
-                    {
-                        throw new InvalidOperationException(
-                            $"Unable to find parent node of paragraph at index {paragraphIndex.Value}");
-                    }
-                }
-                else
-                {
-                    throw new InvalidOperationException(
-                        $"Unable to find paragraph at index {paragraphIndex.Value}");
-                }
-            }
-            else
-            {
-                throw new ArgumentException(
-                    $"Paragraph index {paragraphIndex.Value} is out of range (document has {paragraphs.Count} paragraphs)");
-            }
+            builder.MoveToDocumentEnd();
+            return;
+        }
+
+        if (paragraphIndex.Value == -1)
+            PositionAtDocumentStart(doc, builder);
+        else
+            PositionAfterParagraph(doc, builder, paragraphIndex.Value);
+    }
+
+    private static void PositionAtDocumentStart(Document doc, DocumentBuilder builder)
+    {
+        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
+        if (paragraphs.Count > 0 && paragraphs[0] is WordParagraph firstPara)
+        {
+            var newPara = new WordParagraph(doc);
+            doc.FirstSection.Body.InsertBefore(newPara, firstPara);
+            builder.MoveTo(newPara);
         }
         else
         {
-            builder.MoveToDocumentEnd();
+            builder.MoveToDocumentStart();
         }
+    }
 
+    private static void PositionAfterParagraph(Document doc, DocumentBuilder builder, int paragraphIndex)
+    {
+        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
+
+        if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
+            throw new ArgumentException(
+                $"Paragraph index {paragraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
+
+        if (paragraphs[paragraphIndex] is not WordParagraph targetPara)
+            throw new InvalidOperationException($"Unable to find paragraph at index {paragraphIndex}");
+
+        var parentNode = targetPara.ParentNode;
+        if (parentNode == null)
+            throw new InvalidOperationException($"Unable to find parent node of paragraph at index {paragraphIndex}");
+
+        var newPara = new WordParagraph(doc);
+        parentNode.InsertAfter(newPara, targetPara);
+        builder.MoveTo(newPara);
+    }
+
+    private static void InsertHyperlink(DocumentBuilder builder, string? text, string? url, string? subAddress)
+    {
         if (!string.IsNullOrEmpty(subAddress))
             builder.InsertHyperlink(text ?? "", subAddress, true);
         else
             builder.InsertHyperlink(text ?? "", url!, false);
+    }
 
+    private static void ApplyHyperlinkSettings(Document doc, string? url, string? subAddress, string? tooltip)
+    {
         var fields = doc.Range.Fields;
-        if (fields.Count > 0)
+        if (fields.Count == 0) return;
+
+        if (fields[^1] is not FieldHyperlink hyperlinkField) return;
+
+        if (!string.IsNullOrEmpty(tooltip))
+            hyperlinkField.ScreenTip = tooltip;
+
+        if (!string.IsNullOrEmpty(url) && !string.IsNullOrEmpty(subAddress))
         {
-            var lastField = fields[^1];
-            if (lastField is FieldHyperlink hyperlinkField)
-            {
-                if (!string.IsNullOrEmpty(tooltip))
-                    hyperlinkField.ScreenTip = tooltip;
-                if (!string.IsNullOrEmpty(url) && !string.IsNullOrEmpty(subAddress))
-                {
-                    hyperlinkField.Address = url;
-                    hyperlinkField.SubAddress = subAddress;
-                }
-            }
+            hyperlinkField.Address = url;
+            hyperlinkField.SubAddress = subAddress;
         }
+    }
 
-        MarkModified(context);
-
+    private static string BuildResultMessage(string? text, string? url, string? subAddress, string? tooltip,
+        int? paragraphIndex)
+    {
         var result = "Hyperlink added successfully\n";
         result += $"Display text: {text}\n";
         if (!string.IsNullOrEmpty(url)) result += $"URL: {url}\n";
         if (!string.IsNullOrEmpty(subAddress)) result += $"SubAddress (bookmark): {subAddress}\n";
         if (!string.IsNullOrEmpty(tooltip)) result += $"Tooltip: {tooltip}\n";
-        if (paragraphIndex.HasValue)
-        {
-            if (paragraphIndex.Value == -1)
-                result += "Insert position: beginning of document";
-            else
-                result += $"Insert position: after paragraph #{paragraphIndex.Value}";
-        }
-        else
-        {
-            result += "Insert position: end of document";
-        }
-
+        result += GetInsertPositionMessage(paragraphIndex);
         return result;
+    }
+
+    private static string GetInsertPositionMessage(int? paragraphIndex)
+    {
+        if (!paragraphIndex.HasValue)
+            return "Insert position: end of document";
+
+        return paragraphIndex.Value == -1
+            ? "Insert position: beginning of document"
+            : $"Insert position: after paragraph #{paragraphIndex.Value}";
     }
 }

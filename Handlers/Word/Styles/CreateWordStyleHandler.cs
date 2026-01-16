@@ -48,91 +48,110 @@ public class CreateWordStyleHandler : OperationHandlerBase<Document>
         if (doc.Styles[styleName] != null)
             throw new InvalidOperationException($"Style '{styleName}' already exists");
 
-        var styleType = styleTypeStr.ToLower() switch
+        var styleType = ParseStyleType(styleTypeStr);
+        var style = doc.Styles.Add(styleType, styleName);
+
+        SetBaseStyle(doc, style, baseStyle);
+
+        if (styleType != StyleType.List)
+            ApplyFontSettings(style, fontName, fontNameAscii, fontNameFarEast, fontSize, bold, italic, underline,
+                color);
+
+        if (styleType == StyleType.Paragraph || styleType == StyleType.List)
+            ApplyParagraphSettings(style, alignment, spaceBefore, spaceAfter, lineSpacing);
+
+        MarkModified(context);
+
+        return Success($"Style '{styleName}' created successfully");
+    }
+
+    private static StyleType ParseStyleType(string styleTypeStr)
+    {
+        return styleTypeStr.ToLower() switch
         {
             "character" => StyleType.Character,
             "table" => StyleType.Table,
             "list" => StyleType.List,
             _ => StyleType.Paragraph
         };
+    }
 
-        var style = doc.Styles.Add(styleType, styleName);
+    private static void SetBaseStyle(Document doc, Style style, string? baseStyle)
+    {
+        if (string.IsNullOrEmpty(baseStyle)) return;
 
-        if (!string.IsNullOrEmpty(baseStyle))
+        var baseStyleObj = doc.Styles[baseStyle];
+        if (baseStyleObj != null)
+            style.BaseStyleName = baseStyle;
+        else
+            Console.Error.WriteLine($"[WARN] Base style '{baseStyle}' not found, style will not inherit from it");
+    }
+
+    private static void ApplyFontSettings(Style style, string? fontName, string? fontNameAscii, string? fontNameFarEast,
+        double? fontSize, bool? bold, bool? italic, bool? underline, string? color)
+    {
+        if (!string.IsNullOrEmpty(fontNameAscii))
+            style.Font.NameAscii = fontNameAscii;
+
+        if (!string.IsNullOrEmpty(fontNameFarEast))
+            style.Font.NameFarEast = fontNameFarEast;
+
+        ApplyFontName(style, fontName, fontNameAscii, fontNameFarEast);
+
+        if (fontSize.HasValue)
+            style.Font.Size = fontSize.Value;
+
+        if (bold.HasValue)
+            style.Font.Bold = bold.Value;
+
+        if (italic.HasValue)
+            style.Font.Italic = italic.Value;
+
+        if (underline.HasValue)
+            style.Font.Underline = underline.Value ? Underline.Single : Underline.None;
+
+        if (!string.IsNullOrEmpty(color))
+            style.Font.Color = ColorHelper.ParseColor(color, true);
+    }
+
+    private static void ApplyFontName(Style style, string? fontName, string? fontNameAscii, string? fontNameFarEast)
+    {
+        if (string.IsNullOrEmpty(fontName)) return;
+
+        if (string.IsNullOrEmpty(fontNameAscii) && string.IsNullOrEmpty(fontNameFarEast))
         {
-            var baseStyleObj = doc.Styles[baseStyle];
-            if (baseStyleObj != null)
-                style.BaseStyleName = baseStyle;
-            else
-                Console.Error.WriteLine(
-                    $"[WARN] Base style '{baseStyle}' not found, style will not inherit from it");
+            style.Font.Name = fontName;
+            return;
         }
 
-        if (styleType != StyleType.List)
-        {
-            if (!string.IsNullOrEmpty(fontNameAscii))
-                style.Font.NameAscii = fontNameAscii;
+        if (string.IsNullOrEmpty(fontNameAscii))
+            style.Font.NameAscii = fontName;
+        if (string.IsNullOrEmpty(fontNameFarEast))
+            style.Font.NameFarEast = fontName;
+    }
 
-            if (!string.IsNullOrEmpty(fontNameFarEast))
-                style.Font.NameFarEast = fontNameFarEast;
-
-            if (!string.IsNullOrEmpty(fontName))
+    private static void ApplyParagraphSettings(Style style, string? alignment, double? spaceBefore, double? spaceAfter,
+        double? lineSpacing)
+    {
+        if (!string.IsNullOrEmpty(alignment))
+            style.ParagraphFormat.Alignment = alignment.ToLower() switch
             {
-                if (string.IsNullOrEmpty(fontNameAscii) && string.IsNullOrEmpty(fontNameFarEast))
-                {
-                    style.Font.Name = fontName;
-                }
-                else
-                {
-                    if (string.IsNullOrEmpty(fontNameAscii))
-                        style.Font.NameAscii = fontName;
-                    if (string.IsNullOrEmpty(fontNameFarEast))
-                        style.Font.NameFarEast = fontName;
-                }
-            }
+                "center" => ParagraphAlignment.Center,
+                "right" => ParagraphAlignment.Right,
+                "justify" => ParagraphAlignment.Justify,
+                _ => ParagraphAlignment.Left
+            };
 
-            if (fontSize.HasValue)
-                style.Font.Size = fontSize.Value;
+        if (spaceBefore.HasValue)
+            style.ParagraphFormat.SpaceBefore = spaceBefore.Value;
 
-            if (bold.HasValue)
-                style.Font.Bold = bold.Value;
+        if (spaceAfter.HasValue)
+            style.ParagraphFormat.SpaceAfter = spaceAfter.Value;
 
-            if (italic.HasValue)
-                style.Font.Italic = italic.Value;
-
-            if (underline.HasValue)
-                style.Font.Underline = underline.Value ? Underline.Single : Underline.None;
-
-            if (!string.IsNullOrEmpty(color))
-                style.Font.Color = ColorHelper.ParseColor(color, true);
-        }
-
-        if (styleType == StyleType.Paragraph || styleType == StyleType.List)
+        if (lineSpacing.HasValue)
         {
-            if (!string.IsNullOrEmpty(alignment))
-                style.ParagraphFormat.Alignment = alignment.ToLower() switch
-                {
-                    "center" => ParagraphAlignment.Center,
-                    "right" => ParagraphAlignment.Right,
-                    "justify" => ParagraphAlignment.Justify,
-                    _ => ParagraphAlignment.Left
-                };
-
-            if (spaceBefore.HasValue)
-                style.ParagraphFormat.SpaceBefore = spaceBefore.Value;
-
-            if (spaceAfter.HasValue)
-                style.ParagraphFormat.SpaceAfter = spaceAfter.Value;
-
-            if (lineSpacing.HasValue)
-            {
-                style.ParagraphFormat.LineSpacingRule = LineSpacingRule.Multiple;
-                style.ParagraphFormat.LineSpacing = lineSpacing.Value * 12;
-            }
+            style.ParagraphFormat.LineSpacingRule = LineSpacingRule.Multiple;
+            style.ParagraphFormat.LineSpacing = lineSpacing.Value * 12;
         }
-
-        MarkModified(context);
-
-        return Success($"Style '{styleName}' created successfully");
     }
 }

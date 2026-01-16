@@ -159,4 +159,99 @@ public class ConvertPresentationHandlerTests : PptHandlerTestBase
     }
 
     #endregion
+
+    #region Additional Format Tests
+
+    [Theory]
+    [InlineData("pptx")]
+    [InlineData("odp")]
+    [InlineData("xps")]
+    [InlineData("tiff")]
+    public void Execute_WithVariousFormats_Converts(string format)
+    {
+        var outputPath = Path.Combine(TestDir, $"output.{format}");
+        var pres = CreateEmptyPresentation();
+        var context = CreateContext(pres);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "inputPath", _inputPath },
+            { "outputPath", outputPath },
+            { "format", format }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("converted", result.ToLower());
+        Assert.True(File.Exists(outputPath));
+    }
+
+    [SkippableFact]
+    public void Execute_WithJpegFormat_ConvertsSlide()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation mode limits image conversion");
+
+        var outputPath = Path.Combine(TestDir, "slide.jpg");
+        var pres = CreateEmptyPresentation();
+        var context = CreateContext(pres);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "inputPath", _inputPath },
+            { "outputPath", outputPath },
+            { "format", "jpeg" },
+            { "slideIndex", 0 }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("Slide 0", result);
+        Assert.Contains("JPEG", result);
+        Assert.True(File.Exists(outputPath));
+    }
+
+    [SkippableFact]
+    public void Execute_WithPngFormat_ConvertsSlide()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation mode limits image conversion");
+
+        var outputPath = Path.Combine(TestDir, "slide.png");
+        var pres = CreateEmptyPresentation();
+        var context = CreateContext(pres);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "inputPath", _inputPath },
+            { "outputPath", outputPath },
+            { "format", "png" },
+            { "slideIndex", 0 }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("Slide 0", result);
+        Assert.Contains("PNG", result);
+        Assert.True(File.Exists(outputPath));
+    }
+
+    [SkippableFact]
+    public void Execute_WithJpgFormat_ConvertsSlide()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation mode limits image conversion");
+
+        var outputPath = Path.Combine(TestDir, "slide_jpg.jpg");
+        var pres = CreateEmptyPresentation();
+        var context = CreateContext(pres);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "inputPath", _inputPath },
+            { "outputPath", outputPath },
+            { "format", "jpg" },
+            { "slideIndex", 0 }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("JPEG", result);
+        Assert.True(File.Exists(outputPath));
+    }
+
+    #endregion
 }

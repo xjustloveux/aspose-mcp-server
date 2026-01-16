@@ -58,5 +58,41 @@ public class GetMastersHandlerTests : PptHandlerTestBase
         Assert.Contains("layoutCount", result);
     }
 
+    [Fact]
+    public void Execute_IncludesMasterName()
+    {
+        var pres = CreateEmptyPresentation();
+        var context = CreateContext(pres);
+        var parameters = CreateEmptyParameters();
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("name", result);
+    }
+
+    [Fact]
+    public void Execute_IncludesLayoutsList()
+    {
+        var pres = CreateEmptyPresentation();
+        var context = CreateContext(pres);
+        var parameters = CreateEmptyParameters();
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("layouts", result);
+    }
+
+    [Fact]
+    public void Execute_IncludesMasterIndex()
+    {
+        var pres = CreateEmptyPresentation();
+        var context = CreateContext(pres);
+        var parameters = CreateEmptyParameters();
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("index", result);
+    }
+
     #endregion
 }

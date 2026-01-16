@@ -119,9 +119,9 @@ public class EditCellFormatWordTableHandler : OperationHandlerBase<Document>
         {
             if (!columnIndex.HasValue)
                 throw new ArgumentException("columnIndex is required when applyToColumn is true");
-            foreach (var row in table.Rows.Cast<Row>())
-                if (columnIndex.Value < row.Cells.Count)
-                    targetCells.Add(row.Cells[columnIndex.Value]);
+            targetCells.AddRange(table.Rows.Cast<Row>()
+                .Where(row => columnIndex.Value < row.Cells.Count)
+                .Select(row => row.Cells[columnIndex.Value]));
         }
         else
         {

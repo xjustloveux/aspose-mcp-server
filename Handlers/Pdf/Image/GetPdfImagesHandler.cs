@@ -22,123 +22,108 @@ public class GetPdfImagesHandler : OperationHandlerBase<Document>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var pageIndex = parameters.GetOptional<int?>("pageIndex");
-
         var document = context.Document;
-        List<object> imageList = [];
 
         if (pageIndex is > 0)
+            return GetImagesFromSinglePage(document, pageIndex.Value);
+
+        return GetImagesFromAllPages(document);
+    }
+
+    private string GetImagesFromSinglePage(Document document, int pageIndex)
+    {
+        if (pageIndex < 1 || pageIndex > document.Pages.Count)
+            throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
+
+        var page = document.Pages[pageIndex];
+        var images = page.Resources?.Images;
+
+        if (images == null || images.Count == 0)
+            return JsonResult(new
+            {
+                count = 0,
+                pageIndex,
+                items = Array.Empty<object>(),
+                message = $"No images found on page {pageIndex}"
+            });
+
+        var imageList = CollectImagesFromPage(images, pageIndex);
+        return JsonResult(new
         {
-            if (pageIndex.Value < 1 || pageIndex.Value > document.Pages.Count)
-                throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
-            var page = document.Pages[pageIndex.Value];
+            count = imageList.Count,
+            pageIndex,
+            items = imageList
+        });
+    }
+
+    private string GetImagesFromAllPages(Document document)
+    {
+        List<object> imageList = [];
+
+        for (var pageNum = 1; pageNum <= document.Pages.Count; pageNum++)
+        {
+            var page = document.Pages[pageNum];
             var images = page.Resources?.Images;
-
-            if (images == null || images.Count == 0)
-            {
-                var emptyResult = new
-                {
-                    count = 0,
-                    pageIndex = pageIndex.Value,
-                    items = Array.Empty<object>(),
-                    message = $"No images found on page {pageIndex.Value}"
-                };
-                return JsonResult(emptyResult);
-            }
-
-            for (var i = 1; i <= images.Count; i++)
-                try
-                {
-                    var image = images[i];
-                    var imageInfo = new Dictionary<string, object?>
-                    {
-                        ["index"] = i,
-                        ["pageIndex"] = pageIndex.Value
-                    };
-                    try
-                    {
-                        if (image.Width > 0 && image.Height > 0)
-                        {
-                            imageInfo["width"] = image.Width;
-                            imageInfo["height"] = image.Height;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        imageInfo["width"] = null;
-                        imageInfo["height"] = null;
-                        Console.Error.WriteLine($"[WARN] Failed to read image size: {ex.Message}");
-                    }
-
-                    imageList.Add(imageInfo);
-                }
-                catch (Exception ex)
-                {
-                    imageList.Add(new { index = i, pageIndex = pageIndex.Value, error = ex.Message });
-                }
-
-            var result = new
-            {
-                count = imageList.Count,
-                pageIndex = pageIndex.Value,
-                items = imageList
-            };
-            return JsonResult(result);
+            if (images is { Count: > 0 })
+                imageList.AddRange(CollectImagesFromPage(images, pageNum));
         }
-        else
+
+        if (imageList.Count == 0)
+            return JsonResult(new
+            {
+                count = 0,
+                items = Array.Empty<object>(),
+                message = "No images found in document"
+            });
+
+        return JsonResult(new
         {
-            for (var pageNum = 1; pageNum <= document.Pages.Count; pageNum++)
-            {
-                var page = document.Pages[pageNum];
-                var images = page.Resources?.Images;
-                if (images is { Count: > 0 })
-                    for (var i = 1; i <= images.Count; i++)
-                        try
-                        {
-                            var image = images[i];
-                            var imageInfo = new Dictionary<string, object?>
-                            {
-                                ["index"] = i,
-                                ["pageIndex"] = pageNum
-                            };
-                            try
-                            {
-                                if (image.Width > 0 && image.Height > 0)
-                                {
-                                    imageInfo["width"] = image.Width;
-                                    imageInfo["height"] = image.Height;
-                                }
-                            }
-                            catch
-                            {
-                                imageInfo["width"] = null;
-                                imageInfo["height"] = null;
-                            }
+            count = imageList.Count,
+            items = imageList
+        });
+    }
 
-                            imageList.Add(imageInfo);
-                        }
-                        catch (Exception ex)
-                        {
-                            imageList.Add(new { index = i, pageIndex = pageNum, error = ex.Message });
-                        }
+    private static List<object> CollectImagesFromPage(XImageCollection images, int pageNum)
+    {
+        List<object> imageList = [];
+
+        for (var i = 1; i <= images.Count; i++)
+            try
+            {
+                var image = images[i];
+                var imageInfo = CreateImageInfo(image, i, pageNum);
+                imageList.Add(imageInfo);
+            }
+            catch (Exception ex)
+            {
+                imageList.Add(new { index = i, pageIndex = pageNum, error = ex.Message });
             }
 
-            if (imageList.Count == 0)
-            {
-                var emptyResult = new
-                {
-                    count = 0,
-                    items = Array.Empty<object>(),
-                    message = "No images found in document"
-                };
-                return JsonResult(emptyResult);
-            }
+        return imageList;
+    }
 
-            var result = new
+    private static Dictionary<string, object?> CreateImageInfo(XImage image, int index, int pageNum)
+    {
+        var imageInfo = new Dictionary<string, object?>
+        {
+            ["index"] = index,
+            ["pageIndex"] = pageNum
+        };
+
+        try
+        {
+            if (image.Width > 0 && image.Height > 0)
             {
-                count = imageList.Count,
-                items = imageList
-            };
-            return JsonResult(result);
+                imageInfo["width"] = image.Width;
+                imageInfo["height"] = image.Height;
+            }
         }
+        catch
+        {
+            imageInfo["width"] = null;
+            imageInfo["height"] = null;
+        }
+
+        return imageInfo;
     }
 }

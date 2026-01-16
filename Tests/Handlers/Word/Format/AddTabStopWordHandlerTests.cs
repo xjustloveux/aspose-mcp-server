@@ -17,6 +17,57 @@ public class AddTabStopWordHandlerTests : WordHandlerTestBase
 
     #endregion
 
+    #region Various Alignment Types
+
+    [Theory]
+    [InlineData("right")]
+    [InlineData("decimal")]
+    [InlineData("bar")]
+    public void Execute_WithVariousAlignments_AddsTabStop(string alignment)
+    {
+        var doc = CreateDocumentWithText("Sample text.");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "paragraphIndex", 0 },
+            { "tabPosition", 100.0 },
+            { "tabAlignment", alignment }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains(alignment, result.ToLower());
+        AssertModified(context);
+    }
+
+    #endregion
+
+    #region Various Leader Types
+
+    [Theory]
+    [InlineData("dashes")]
+    [InlineData("line")]
+    [InlineData("heavy")]
+    [InlineData("middledot")]
+    public void Execute_WithVariousLeaders_AddsTabStop(string leader)
+    {
+        var doc = CreateDocumentWithText("Sample text.");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "paragraphIndex", 0 },
+            { "tabPosition", 100.0 },
+            { "tabLeader", leader }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains(leader, result.ToLower());
+        AssertModified(context);
+    }
+
+    #endregion
+
     #region Basic Add Operations
 
     [Fact]
@@ -69,6 +120,42 @@ public class AddTabStopWordHandlerTests : WordHandlerTestBase
         var result = _handler.Execute(context, parameters);
 
         Assert.Contains("dots", result.ToLower());
+    }
+
+    #endregion
+
+    #region Default Values
+
+    [Fact]
+    public void Execute_WithDefaultAlignment_UsesLeft()
+    {
+        var doc = CreateDocumentWithText("Sample text.");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "paragraphIndex", 0 },
+            { "tabPosition", 72.0 }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("left", result.ToLower());
+    }
+
+    [Fact]
+    public void Execute_WithDefaultLeader_UsesNone()
+    {
+        var doc = CreateDocumentWithText("Sample text.");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "paragraphIndex", 0 },
+            { "tabPosition", 72.0 }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("none", result.ToLower());
     }
 
     #endregion

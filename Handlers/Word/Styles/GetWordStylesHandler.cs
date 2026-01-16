@@ -39,11 +39,12 @@ public class GetWordStylesHandler : OperationHandlerBase<Document>
         }
         else
         {
-            var usedStyleNames = new HashSet<string>();
             var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>();
-            foreach (var para in paragraphs)
-                if (para.ParagraphFormat.Style != null && !string.IsNullOrEmpty(para.ParagraphFormat.Style.Name))
-                    usedStyleNames.Add(para.ParagraphFormat.Style.Name);
+            var usedStyleNames = paragraphs
+                .Where(para =>
+                    para.ParagraphFormat.Style != null && !string.IsNullOrEmpty(para.ParagraphFormat.Style.Name))
+                .Select(para => para.ParagraphFormat.Style.Name)
+                .ToHashSet();
 
             paraStyles = doc.Styles
                 .Where(s => s.Type == StyleType.Paragraph && (!s.BuiltIn || usedStyleNames.Contains(s.Name)))

@@ -112,9 +112,8 @@ public class AuthCache<TResult> where TResult : class
         var removed = 0;
 
         foreach (var kvp in _cache)
-            if (kvp.Value.Expiry <= now)
-                if (_cache.TryRemove(kvp.Key, out _))
-                    removed++;
+            if (kvp.Value.Expiry <= now && _cache.TryRemove(kvp.Key, out _))
+                removed++;
 
         return removed;
     }

@@ -120,14 +120,13 @@ public class SetBorderWordTableHandler : OperationHandlerBase<Document>
         }
         else if (columnIndex.HasValue)
         {
-            foreach (var row in table.Rows.Cast<Row>())
-                if (columnIndex.Value < row.Cells.Count)
-                    targetCells.Add(row.Cells[columnIndex.Value]);
+            targetCells.AddRange(table.Rows.Cast<Row>()
+                .Where(row => columnIndex.Value < row.Cells.Count)
+                .Select(row => row.Cells[columnIndex.Value]));
         }
         else
         {
-            foreach (var row in table.Rows.Cast<Row>())
-                targetCells.AddRange(row.Cells.Cast<Cell>());
+            targetCells.AddRange(table.Rows.Cast<Row>().SelectMany(row => row.Cells.Cast<Cell>()));
         }
 
         return targetCells;

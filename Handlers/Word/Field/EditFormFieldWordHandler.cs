@@ -41,9 +41,9 @@ public class EditFormFieldWordHandler : OperationHandlerBase<Document>
             field.Result = value;
         else if (field.Type == FieldType.FieldFormCheckBox && checkedValue.HasValue)
             field.Checked = checkedValue.Value;
-        else if (field.Type == FieldType.FieldFormDropDown && selectedIndex.HasValue)
-            if (selectedIndex.Value >= 0 && selectedIndex.Value < field.DropDownItems.Count)
-                field.DropDownSelectedIndex = selectedIndex.Value;
+        else if (field.Type == FieldType.FieldFormDropDown && selectedIndex.HasValue &&
+                 selectedIndex.Value >= 0 && selectedIndex.Value < field.DropDownItems.Count)
+            field.DropDownSelectedIndex = selectedIndex.Value;
 
         MarkModified(context);
         return Success($"Form field '{fieldName}' updated");

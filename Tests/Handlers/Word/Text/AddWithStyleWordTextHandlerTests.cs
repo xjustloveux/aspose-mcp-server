@@ -289,4 +289,185 @@ public class AddWithStyleWordTextHandlerTests : WordHandlerTestBase
     }
 
     #endregion
+
+    #region Underline and Color
+
+    [Fact]
+    public void Execute_WithUnderline_AppliesUnderline()
+    {
+        var doc = CreateEmptyDocument();
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "text", "Underlined text" },
+            { "underline", true }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("Underline", result);
+        var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+        var run = runs.FirstOrDefault(r => r.Text.Contains("Underlined text"));
+        Assert.NotNull(run);
+        Assert.NotEqual(Underline.None, run.Font.Underline);
+        AssertModified(context);
+    }
+
+    [Fact]
+    public void Execute_WithColor_AppliesColor()
+    {
+        var doc = CreateEmptyDocument();
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "text", "Colored text" },
+            { "color", "#FF0000" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("Color", result);
+        AssertModified(context);
+    }
+
+    #endregion
+
+    #region Left and First Line Indent
+
+    [Theory]
+    [InlineData(36.0)]
+    [InlineData(72.0)]
+    public void Execute_WithLeftIndent_AppliesIndent(double leftIndent)
+    {
+        var doc = CreateEmptyDocument();
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "text", "Left indented text" },
+            { "leftIndent", leftIndent }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("Left indent", result);
+        AssertModified(context);
+    }
+
+    [Theory]
+    [InlineData(18.0)]
+    [InlineData(36.0)]
+    public void Execute_WithFirstLineIndent_AppliesIndent(double firstLineIndent)
+    {
+        var doc = CreateEmptyDocument();
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "text", "First line indented" },
+            { "firstLineIndent", firstLineIndent }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("First line indent", result);
+        AssertModified(context);
+    }
+
+    #endregion
+
+    #region Font Name Variants
+
+    [Fact]
+    public void Execute_WithFontNameAscii_AppliesAsciiFont()
+    {
+        var doc = CreateEmptyDocument();
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "text", "ASCII font text" },
+            { "fontNameAscii", "Courier New" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("Font (ASCII)", result);
+        AssertModified(context);
+    }
+
+    [Fact]
+    public void Execute_WithFontNameFarEast_AppliesFarEastFont()
+    {
+        var doc = CreateEmptyDocument();
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "text", "Far East font text" },
+            { "fontNameFarEast", "MS Gothic" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("Font (Far East)", result);
+        AssertModified(context);
+    }
+
+    #endregion
+
+    #region Tab Stops
+
+    [Fact]
+    public void Execute_WithTabStops_AppliesTabStops()
+    {
+        var doc = CreateEmptyDocument();
+        var context = CreateContext(doc);
+        var tabStopsJson = "[{\"position\": 72, \"alignment\": \"Left\", \"leader\": \"None\"}]";
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "text", "Text with tabs" },
+            { "tabStops", tabStopsJson }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("added", result, StringComparison.OrdinalIgnoreCase);
+        AssertModified(context);
+    }
+
+    [Fact]
+    public void Execute_WithMultipleTabStops_AppliesAll()
+    {
+        var doc = CreateEmptyDocument();
+        var context = CreateContext(doc);
+        var tabStopsJson =
+            "[{\"position\": 72, \"alignment\": \"Left\"}, {\"position\": 144, \"alignment\": \"Center\"}, {\"position\": 216, \"alignment\": \"Right\"}]";
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "text", "Multi-tab text" },
+            { "tabStops", tabStopsJson }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("added", result, StringComparison.OrdinalIgnoreCase);
+        AssertModified(context);
+    }
+
+    [Fact]
+    public void Execute_WithTabStopLeaders_AppliesLeaders()
+    {
+        var doc = CreateEmptyDocument();
+        var context = CreateContext(doc);
+        var tabStopsJson = "[{\"position\": 144, \"alignment\": \"Right\", \"leader\": \"Dots\"}]";
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "text", "Dotted leader" },
+            { "tabStops", tabStopsJson }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("added", result, StringComparison.OrdinalIgnoreCase);
+        AssertModified(context);
+    }
+
+    #endregion
 }

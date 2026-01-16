@@ -15,18 +15,17 @@ public static class WordCommentHelper
     public static List<Aspose.Words.Comment> GetTopLevelComments(Document doc)
     {
         var allComments = doc.GetChildNodes(NodeType.Comment, true).Cast<Aspose.Words.Comment>().ToList();
-        var replyCommentIds = new HashSet<int>();
-
-        foreach (var comment in allComments)
-            if (comment.Replies is { Count: > 0 })
-                foreach (var reply in comment.Replies.Cast<Aspose.Words.Comment>())
-                    replyCommentIds.Add(reply.Id);
+        var replyCommentIds = allComments
+            .Where(comment => comment.Replies is { Count: > 0 })
+            .SelectMany(comment => comment.Replies.Cast<Aspose.Words.Comment>())
+            .Select(reply => reply.Id)
+            .ToHashSet();
 
         List<Aspose.Words.Comment> topLevelComments = [];
         foreach (var comment in allComments)
-            if (comment.Ancestor == null && !replyCommentIds.Contains(comment.Id))
-                if (topLevelComments.All(c => c.Id != comment.Id))
-                    topLevelComments.Add(comment);
+            if (comment.Ancestor == null && !replyCommentIds.Contains(comment.Id) &&
+                topLevelComments.All(c => c.Id != comment.Id))
+                topLevelComments.Add(comment);
 
         return topLevelComments.OrderBy(c => c.DateTime).ToList();
     }

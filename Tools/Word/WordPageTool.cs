@@ -142,7 +142,8 @@ Usage examples:
         var result = handler.Execute(operationContext, parameters);
 
         // Handle delete_page operation which creates a new document
-        if (operation.ToLower() == "delete_page" && operationContext.ResultDocument != null)
+        if (string.Equals(operation, "delete_page", StringComparison.OrdinalIgnoreCase) &&
+            operationContext.ResultDocument != null)
         {
             if (!ctx.IsSession)
             {

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Aspose.Slides;
 using AsposeMcpServer.Core.ShapeDetailProviders;
 using AsposeMcpServer.Tests.Helpers;
@@ -60,5 +61,56 @@ public class GroupShapeDetailProviderTests : TestBase
         var details = _provider.GetDetails(shape, presentation);
 
         Assert.Null(details);
+    }
+
+    [Fact]
+    public void GetDetails_WithGroupContainingShapes_ShouldReturnChildDetails()
+    {
+        using var presentation = new Presentation();
+        var slide = presentation.Slides[0];
+
+        var group = slide.Shapes.AddGroupShape();
+        group.X = 10;
+        group.Y = 10;
+        group.Width = 220;
+        group.Height = 100;
+
+        var rect1 = slide.Shapes.AddAutoShape(ShapeType.Rectangle, 10, 10, 100, 100);
+        var rect2 = slide.Shapes.AddAutoShape(ShapeType.Ellipse, 120, 10, 100, 100);
+
+        group.Shapes.AddClone(rect1);
+        group.Shapes.AddClone(rect2);
+
+        slide.Shapes.Remove(rect1);
+        slide.Shapes.Remove(rect2);
+
+        var details = _provider.GetDetails(group, presentation);
+        Assert.NotNull(details);
+
+        var json = JsonSerializer.Serialize(details);
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+
+        Assert.Equal(2, root.GetProperty("childCount").GetInt32());
+        Assert.True(root.TryGetProperty("children", out var children));
+        Assert.Equal(2, children.GetArrayLength());
+    }
+
+    [Fact]
+    public void GetDetails_WithEmptyGroup_ShouldReturnNullChildren()
+    {
+        using var presentation = new Presentation();
+        var slide = presentation.Slides[0];
+        var group = slide.Shapes.AddGroupShape();
+
+        var details = _provider.GetDetails(group, presentation);
+        Assert.NotNull(details);
+
+        var json = JsonSerializer.Serialize(details);
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+
+        Assert.Equal(0, root.GetProperty("childCount").GetInt32());
+        Assert.Equal(JsonValueKind.Null, root.GetProperty("children").ValueKind);
     }
 }

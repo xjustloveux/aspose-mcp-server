@@ -83,13 +83,7 @@ public static class LicenseManager
                     // Ignore directory access errors
                 }
 
-            string? licensePath = null;
-            foreach (var path in licenseFileNames)
-                if (File.Exists(path))
-                {
-                    licensePath = path;
-                    break;
-                }
+            var licensePath = licenseFileNames.FirstOrDefault(File.Exists);
 
             List<string> loadedLicenses = [];
 

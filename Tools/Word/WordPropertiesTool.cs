@@ -143,7 +143,7 @@ Notes:
     {
         var parameters = new OperationParameters();
 
-        if (operation.ToLower() == "set")
+        if (string.Equals(operation, "set", StringComparison.OrdinalIgnoreCase))
         {
             if (title != null) parameters.Set("title", title);
             if (subject != null) parameters.Set("subject", subject);

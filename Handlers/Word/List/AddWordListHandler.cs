@@ -40,71 +40,96 @@ public class AddWordListHandler : OperationHandlerBase<Document>
         var builder = new DocumentBuilder(doc);
         builder.MoveToDocumentEnd();
 
-        WordList? list = null;
-        var isContinuing = false;
+        var (list, isContinuing) = GetOrCreateList(doc, continuePrevious, listType, bulletChar, numberFormat);
 
+        WriteListItems(builder, list, parsedItems);
+
+        builder.ListFormat.RemoveNumbers();
+        MarkModified(context);
+
+        return Success(BuildResultMessage(isContinuing, listType, bulletChar, numberFormat, list, parsedItems.Count));
+    }
+
+    private static (WordList list, bool isContinuing) GetOrCreateList(Document doc, bool continuePrevious,
+        string listType, string bulletChar, string numberFormat)
+    {
         if (continuePrevious && doc.Lists.Count > 0)
         {
-            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
-            for (var i = paragraphs.Count - 1; i >= 0; i--)
-                if (paragraphs[i].ListFormat is { IsListItem: true, List: not null })
-                {
-                    list = paragraphs[i].ListFormat.List;
-                    isContinuing = true;
-                    break;
-                }
+            var existingList = FindExistingList(doc);
+            if (existingList != null)
+                return (existingList, true);
         }
 
-        if (list == null)
+        var newList = CreateNewList(doc, listType, bulletChar, numberFormat);
+        return (newList, false);
+    }
+
+    private static WordList? FindExistingList(Document doc)
+    {
+        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+        for (var i = paragraphs.Count - 1; i >= 0; i--)
+            if (paragraphs[i].ListFormat is { IsListItem: true, List: not null })
+                return paragraphs[i].ListFormat.List;
+
+        return null;
+    }
+
+    private static WordList CreateNewList(Document doc, string listType, string bulletChar, string numberFormat)
+    {
+        var list = doc.Lists.Add(listType == "number" ? ListTemplate.NumberDefault : ListTemplate.BulletDefault);
+
+        if (listType == "custom" && !string.IsNullOrEmpty(bulletChar))
         {
-            list = doc.Lists.Add(listType == "number"
-                ? ListTemplate.NumberDefault
-                : ListTemplate.BulletDefault);
-
-            if (listType == "custom" && !string.IsNullOrEmpty(bulletChar))
-            {
-                list.ListLevels[0].NumberFormat = bulletChar;
-                list.ListLevels[0].NumberStyle = NumberStyle.Bullet;
-            }
-            else if (listType == "number")
-            {
-                var numStyle = numberFormat.ToLower() switch
-                {
-                    "roman" => NumberStyle.UppercaseRoman,
-                    "letter" => NumberStyle.UppercaseLetter,
-                    _ => NumberStyle.Arabic
-                };
-
-                foreach (var level in list.ListLevels) level.NumberStyle = numStyle;
-            }
+            list.ListLevels[0].NumberFormat = bulletChar;
+            list.ListLevels[0].NumberStyle = NumberStyle.Bullet;
+        }
+        else if (listType == "number")
+        {
+            var numStyle = ParseNumberStyle(numberFormat);
+            foreach (var level in list.ListLevels) level.NumberStyle = numStyle;
         }
 
+        return list;
+    }
+
+    private static NumberStyle ParseNumberStyle(string numberFormat)
+    {
+        return numberFormat.ToLower() switch
+        {
+            "roman" => NumberStyle.UppercaseRoman,
+            "letter" => NumberStyle.UppercaseLetter,
+            _ => NumberStyle.Arabic
+        };
+    }
+
+    private static void WriteListItems(DocumentBuilder builder, WordList list,
+        List<(string text, int level)> parsedItems)
+    {
         foreach (var item in parsedItems)
         {
             builder.ListFormat.List = list;
             builder.ListFormat.ListLevelNumber = Math.Min(item.level, 8);
             builder.Writeln(item.text);
         }
+    }
 
-        builder.ListFormat.RemoveNumbers();
-        MarkModified(context);
+    private static string BuildResultMessage(bool isContinuing, string listType, string bulletChar,
+        string numberFormat, WordList list, int itemCount)
+    {
+        var result = isContinuing ? "List items added (continuing previous list)\n" : "List added successfully\n";
 
-        var result = isContinuing
-            ? "List items added (continuing previous list)\n"
-            : "List added successfully\n";
-        if (!isContinuing)
+        if (isContinuing)
+        {
+            result += $"Continued from list ID: {list.ListId}\n";
+        }
+        else
         {
             result += $"Type: {listType}\n";
             if (listType == "custom") result += $"Bullet character: {bulletChar}\n";
             if (listType == "number") result += $"Number format: {numberFormat}\n";
         }
-        else
-        {
-            result += $"Continued from list ID: {list.ListId}\n";
-        }
 
-        result += $"Item count: {parsedItems.Count}";
-
-        return Success(result);
+        result += $"Item count: {itemCount}";
+        return result;
     }
 }

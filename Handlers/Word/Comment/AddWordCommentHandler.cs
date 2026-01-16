@@ -34,6 +34,23 @@ public class AddWordCommentHandler : OperationHandlerBase<Document>
             throw new ArgumentException("text is required for add operation");
 
         var doc = context.Document;
+        var paragraphs = GetAllParagraphs(doc);
+        var targetPara = GetTargetParagraph(doc, paragraphs, paragraphIndex);
+        var (startRun, endRun) = GetCommentRunRange(doc, targetPara, startRunIndex, endRunIndex);
+
+        var para = GetContainingParagraph(startRun);
+        var comment = CreateComment(doc, text, author, authorInitial);
+
+        InsertCommentNodes(doc, comment, startRun, endRun, para);
+
+        doc.EnsureMinimum();
+        MarkModified(context);
+
+        return $"Comment added successfully\nAuthor: {author}\nContent: {text}";
+    }
+
+    private static List<WordParagraph> GetAllParagraphs(Document doc)
+    {
         List<WordParagraph> paragraphs = [];
         foreach (var section in doc.Sections.Cast<Section>())
         {
@@ -41,97 +58,124 @@ public class AddWordCommentHandler : OperationHandlerBase<Document>
             paragraphs.AddRange(bodyParagraphs);
         }
 
-        WordParagraph? targetPara;
-        Run? startRun;
-        Run? endRun;
+        return paragraphs;
+    }
 
-        if (paragraphIndex.HasValue)
+    private static WordParagraph GetTargetParagraph(Document doc, List<WordParagraph> paragraphs, int? paragraphIndex)
+    {
+        if (!paragraphIndex.HasValue)
+            return CreateNewParagraph(doc);
+
+        if (paragraphIndex.Value == -1)
         {
-            if (paragraphIndex.Value == -1)
-            {
-                if (paragraphs.Count > 0)
-                    targetPara = paragraphs[^1];
-                else
-                    throw new InvalidOperationException("Document has no paragraphs to add comment to");
-            }
-            else if (paragraphIndex.Value < 0 || paragraphIndex.Value >= paragraphs.Count)
-            {
-                throw new ArgumentException(
-                    $"Paragraph index {paragraphIndex.Value} is out of range (document has {paragraphs.Count} paragraphs)");
-            }
-            else
-            {
-                targetPara = paragraphs[paragraphIndex.Value];
-            }
-        }
-        else
-        {
-            var builder = new DocumentBuilder(doc);
-            builder.MoveToDocumentEnd();
-
-            var newPara = new WordParagraph(doc);
-            var newRun = new Run(doc, " ");
-            newPara.AppendChild(newRun);
-            doc.LastSection.Body.AppendChild(newPara);
-
-            targetPara = newPara;
+            if (paragraphs.Count == 0)
+                throw new InvalidOperationException("Document has no paragraphs to add comment to");
+            return paragraphs[^1];
         }
 
-        if (targetPara == null)
-            throw new InvalidOperationException("Unable to determine target paragraph");
+        if (paragraphIndex.Value < 0 || paragraphIndex.Value >= paragraphs.Count)
+            throw new ArgumentException(
+                $"Paragraph index {paragraphIndex.Value} is out of range (document has {paragraphs.Count} paragraphs)");
 
+        return paragraphs[paragraphIndex.Value];
+    }
+
+    private static WordParagraph CreateNewParagraph(Document doc)
+    {
+        var newPara = new WordParagraph(doc);
+        var newRun = new Run(doc, " ");
+        newPara.AppendChild(newRun);
+        doc.LastSection.Body.AppendChild(newPara);
+        return newPara;
+    }
+
+    private static (Run startRun, Run endRun) GetCommentRunRange(Document doc, WordParagraph targetPara,
+        int? startRunIndex, int? endRunIndex)
+    {
         var runs = targetPara.GetChildNodes(NodeType.Run, false);
+
         if (runs == null || runs.Count == 0)
         {
             var placeholderRun = new Run(doc, " ");
             targetPara.AppendChild(placeholderRun);
-            startRun = placeholderRun;
-            endRun = placeholderRun;
-        }
-        else if (startRunIndex.HasValue && endRunIndex.HasValue)
-        {
-            if (startRunIndex.Value < 0 || startRunIndex.Value >= runs.Count ||
-                endRunIndex.Value < 0 || endRunIndex.Value >= runs.Count ||
-                startRunIndex.Value > endRunIndex.Value)
-                throw new ArgumentException($"Run index is out of range (paragraph has {runs.Count} Runs)");
-            startRun = runs[startRunIndex.Value] as Run;
-            endRun = runs[endRunIndex.Value] as Run;
-        }
-        else if (startRunIndex.HasValue)
-        {
-            if (startRunIndex.Value < 0 || startRunIndex.Value >= runs.Count)
-                throw new ArgumentException($"Run index is out of range (paragraph has {runs.Count} Runs)");
-            startRun = runs[startRunIndex.Value] as Run;
-            endRun = startRun;
-        }
-        else
-        {
-            startRun = runs[0] as Run;
-            endRun = runs[^1] as Run;
+            return (placeholderRun, placeholderRun);
         }
 
-        if (startRun == null || endRun == null)
-            throw new InvalidOperationException("Unable to determine comment range");
+        if (startRunIndex.HasValue && endRunIndex.HasValue)
+            return GetRunRangeWithBothIndices(runs, startRunIndex.Value, endRunIndex.Value);
 
-        var para = startRun.ParentNode as WordParagraph ?? startRun.GetAncestor(NodeType.Paragraph) as WordParagraph;
+        if (startRunIndex.HasValue)
+            return GetRunRangeWithStartIndex(runs, startRunIndex.Value);
+
+        var start = runs[0] as Run ?? throw new InvalidOperationException("Unable to determine comment range");
+        var end = runs[^1] as Run ?? throw new InvalidOperationException("Unable to determine comment range");
+        return (start, end);
+    }
+
+    private static (Run startRun, Run endRun) GetRunRangeWithBothIndices(NodeCollection runs, int startIndex,
+        int endIndex)
+    {
+        if (startIndex < 0 || startIndex >= runs.Count ||
+            endIndex < 0 || endIndex >= runs.Count ||
+            startIndex > endIndex)
+            throw new ArgumentException($"Run index is out of range (paragraph has {runs.Count} Runs)");
+
+        var startRun = runs[startIndex] as Run ??
+                       throw new InvalidOperationException("Unable to determine comment range");
+        var endRun = runs[endIndex] as Run ?? throw new InvalidOperationException("Unable to determine comment range");
+        return (startRun, endRun);
+    }
+
+    private static (Run startRun, Run endRun) GetRunRangeWithStartIndex(NodeCollection runs, int startIndex)
+    {
+        if (startIndex < 0 || startIndex >= runs.Count)
+            throw new ArgumentException($"Run index is out of range (paragraph has {runs.Count} Runs)");
+
+        var startRun = runs[startIndex] as Run ??
+                       throw new InvalidOperationException("Unable to determine comment range");
+        return (startRun, startRun);
+    }
+
+    private static WordParagraph GetContainingParagraph(Run run)
+    {
+        var para = run.ParentNode as WordParagraph ?? run.GetAncestor(NodeType.Paragraph) as WordParagraph;
         if (para == null)
             throw new InvalidOperationException("Unable to find paragraph node containing Run");
+        return para;
+    }
 
+    private static Aspose.Words.Comment CreateComment(Document doc, string text, string author, string? authorInitial)
+    {
         var initial = authorInitial ?? (author.Length >= 2 ? author[..2].ToUpper() : author.ToUpper());
         var comment = new Aspose.Words.Comment(doc, author, initial, DateTime.UtcNow);
         comment.Paragraphs.Add(new WordParagraph(doc));
         comment.FirstParagraph.AppendChild(new Run(doc, text));
+        return comment;
+    }
 
+    private static void InsertCommentNodes(Document doc, Aspose.Words.Comment comment, Run startRun, Run endRun,
+        WordParagraph para)
+    {
         var rangeStart = new CommentRangeStart(doc, comment.Id);
         var rangeEnd = new CommentRangeEnd(doc, comment.Id);
 
+        InsertRangeStart(rangeStart, startRun, para);
+        var endPara = InsertRangeEnd(rangeEnd, endRun);
+        InsertComment(comment, endPara);
+    }
+
+    private static void InsertRangeStart(CommentRangeStart rangeStart, Run startRun, WordParagraph para)
+    {
         var startPara = para;
-        if (startRun.ParentNode != startPara)
-            if (startRun.ParentNode is WordParagraph parentPara)
-                startPara = parentPara;
+        if (startRun.ParentNode != startPara && startRun.ParentNode is WordParagraph parentPara)
+            startPara = parentPara;
 
-        startPara.InsertBefore(rangeStart, startRun.ParentNode == startPara ? startRun : startPara.FirstChild);
+        var insertBefore = startRun.ParentNode == startPara ? startRun : startPara.FirstChild;
+        startPara.InsertBefore(rangeStart, insertBefore);
+    }
 
+    private static WordParagraph InsertRangeEnd(CommentRangeEnd rangeEnd, Run endRun)
+    {
         var endPara = endRun.ParentNode as WordParagraph ?? endRun.GetAncestor(NodeType.Paragraph) as WordParagraph;
         if (endPara == null)
             throw new InvalidOperationException("Unable to find paragraph containing endRun");
@@ -149,43 +193,45 @@ public class AddWordCommentHandler : OperationHandlerBase<Document>
             endPara.AppendChild(rangeEnd);
         }
 
+        return endPara;
+    }
+
+    private static void InsertComment(Aspose.Words.Comment comment, WordParagraph endPara)
+    {
         var rangeEndNode = endPara.GetChildNodes(NodeType.CommentRangeEnd, false)
             .Cast<CommentRangeEnd>()
             .FirstOrDefault(re => re.Id == comment.Id);
 
         if (rangeEndNode != null)
-        {
-            if (comment.ParentNode == null)
-            {
-                endPara.InsertAfter(comment, rangeEndNode);
-            }
-            else if (comment.ParentNode != endPara)
-            {
-                comment.Remove();
-                endPara.InsertAfter(comment, rangeEndNode);
-            }
-        }
+            InsertCommentAfterRangeEnd(comment, endPara, rangeEndNode);
         else
+            InsertCommentAtEnd(comment, endPara);
+    }
+
+    private static void InsertCommentAfterRangeEnd(Aspose.Words.Comment comment, WordParagraph endPara,
+        CommentRangeEnd rangeEndNode)
+    {
+        if (comment.ParentNode == null)
         {
-            if (comment.ParentNode == null)
-            {
-                endPara.AppendChild(comment);
-            }
-            else if (comment.ParentNode != endPara)
-            {
-                comment.Remove();
-                endPara.AppendChild(comment);
-            }
+            endPara.InsertAfter(comment, rangeEndNode);
         }
+        else if (comment.ParentNode != endPara)
+        {
+            comment.Remove();
+            endPara.InsertAfter(comment, rangeEndNode);
+        }
+    }
 
-        doc.EnsureMinimum();
-
-        MarkModified(context);
-
-        var result = "Comment added successfully\n";
-        result += $"Author: {author}\n";
-        result += $"Content: {text}";
-
-        return result;
+    private static void InsertCommentAtEnd(Aspose.Words.Comment comment, WordParagraph endPara)
+    {
+        if (comment.ParentNode == null)
+        {
+            endPara.AppendChild(comment);
+        }
+        else if (comment.ParentNode != endPara)
+        {
+            comment.Remove();
+            endPara.AppendChild(comment);
+        }
     }
 }

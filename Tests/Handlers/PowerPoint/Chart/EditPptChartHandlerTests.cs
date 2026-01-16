@@ -95,5 +95,76 @@ public class EditPptChartHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
+    [Fact]
+    public void Execute_WithInvalidShapeIndex_ThrowsArgumentException()
+    {
+        var pres = CreatePresentationWithChart();
+        var context = CreateContext(pres);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "slideIndex", 0 },
+            { "shapeIndex", 99 }
+        });
+
+        Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+    }
+
+    #endregion
+
+    #region Chart Type Operations
+
+    [Fact]
+    public void Execute_WithChartType_ChangesChartType()
+    {
+        var pres = CreatePresentationWithChart();
+        var context = CreateContext(pres);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "slideIndex", 0 },
+            { "shapeIndex", 0 },
+            { "chartType", "Pie" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("updated", result.ToLower());
+        AssertModified(context);
+    }
+
+    [Fact]
+    public void Execute_WithTitleAndChartType_UpdatesBoth()
+    {
+        var pres = CreatePresentationWithChart();
+        var context = CreateContext(pres);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "slideIndex", 0 },
+            { "shapeIndex", 0 },
+            { "title", "New Title" },
+            { "chartType", "Line" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("updated", result.ToLower());
+        AssertModified(context);
+    }
+
+    [Fact]
+    public void Execute_WithNoUpdates_StillReturnsSuccess()
+    {
+        var pres = CreatePresentationWithChart();
+        var context = CreateContext(pres);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "slideIndex", 0 },
+            { "shapeIndex", 0 }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("updated", result.ToLower());
+    }
+
     #endregion
 }

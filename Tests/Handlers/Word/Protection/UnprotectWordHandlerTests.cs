@@ -93,4 +93,85 @@ public class UnprotectWordHandlerTests : WordHandlerTestBase
     }
 
     #endregion
+
+    #region Various Protection Types
+
+    [Theory]
+    [InlineData(ProtectionType.AllowOnlyComments)]
+    [InlineData(ProtectionType.AllowOnlyFormFields)]
+    [InlineData(ProtectionType.AllowOnlyRevisions)]
+    [InlineData(ProtectionType.ReadOnly)]
+    public void Execute_WithVariousProtectionTypes_UnprotectsSuccessfully(ProtectionType protectionType)
+    {
+        var doc = CreateProtectedDocument("test123", protectionType);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "password", "test123" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("removed", result.ToLower());
+        Assert.Equal(ProtectionType.NoProtection, doc.ProtectionType);
+    }
+
+    [Fact]
+    public void Execute_WithFormFieldsProtection_ReturnsPreviousType()
+    {
+        var doc = CreateProtectedDocument("pass", ProtectionType.AllowOnlyFormFields);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "password", "pass" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("AllowOnlyFormFields", result);
+    }
+
+    [Fact]
+    public void Execute_WithRevisionsProtection_ReturnsPreviousType()
+    {
+        var doc = CreateProtectedDocument("pass", ProtectionType.AllowOnlyRevisions);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "password", "pass" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("AllowOnlyRevisions", result);
+    }
+
+    #endregion
+
+    #region Password Edge Cases
+
+    [Fact]
+    public void Execute_WithNullPassword_ThrowsOnProtectedDocument()
+    {
+        var doc = CreateProtectedDocument("test123");
+        var context = CreateContext(doc);
+        var parameters = CreateEmptyParameters();
+
+        Assert.Throws<InvalidOperationException>(() => _handler.Execute(context, parameters));
+    }
+
+    [Fact]
+    public void Execute_WithEmptyPassword_ThrowsOnProtectedDocument()
+    {
+        var doc = CreateProtectedDocument("test123");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "password", "" }
+        });
+
+        Assert.Throws<InvalidOperationException>(() => _handler.Execute(context, parameters));
+    }
+
+    #endregion
 }

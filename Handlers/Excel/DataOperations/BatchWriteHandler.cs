@@ -30,39 +30,8 @@ public class BatchWriteHandler : OperationHandlerBase<Workbook>
         {
             var workbook = context.Document;
             var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-            var writeCount = 0;
 
-            if (data != null)
-            {
-                if (data is JsonArray dataArray)
-                    foreach (var item in dataArray)
-                    {
-                        var itemObj = item?.AsObject();
-                        if (itemObj != null)
-                        {
-                            var cell = itemObj["cell"]?.GetValue<string>();
-                            var value = itemObj["value"]?.GetValue<string>() ?? "";
-                            if (!string.IsNullOrEmpty(cell))
-                            {
-                                var cellObj = worksheet.Cells[cell];
-                                ExcelHelper.SetCellValue(cellObj, value);
-                                writeCount++;
-                            }
-                        }
-                    }
-                else if (data is JsonObject dataObject)
-                    foreach (var kvp in dataObject)
-                    {
-                        var cell = kvp.Key;
-                        var value = kvp.Value?.GetValue<string>() ?? "";
-                        if (!string.IsNullOrEmpty(cell))
-                        {
-                            var cellObj = worksheet.Cells[cell];
-                            ExcelHelper.SetCellValue(cellObj, value);
-                            writeCount++;
-                        }
-                    }
-            }
+            var writeCount = WriteData(worksheet, data);
 
             MarkModified(context);
 
@@ -72,5 +41,58 @@ public class BatchWriteHandler : OperationHandlerBase<Workbook>
         {
             throw new ArgumentException($"Excel operation failed: {ex.Message}");
         }
+    }
+
+    private static int WriteData(Worksheet worksheet, JsonNode? data)
+    {
+        if (data == null) return 0;
+
+        return data switch
+        {
+            JsonArray dataArray => WriteFromArray(worksheet, dataArray),
+            JsonObject dataObject => WriteFromObject(worksheet, dataObject),
+            _ => 0
+        };
+    }
+
+    private static int WriteFromArray(Worksheet worksheet, JsonArray dataArray)
+    {
+        var writeCount = 0;
+        foreach (var item in dataArray)
+            if (WriteArrayItem(worksheet, item))
+                writeCount++;
+
+        return writeCount;
+    }
+
+    private static bool WriteArrayItem(Worksheet worksheet, JsonNode? item)
+    {
+        var itemObj = item?.AsObject();
+        if (itemObj == null) return false;
+
+        var cell = itemObj["cell"]?.GetValue<string>();
+        if (string.IsNullOrEmpty(cell)) return false;
+
+        var value = itemObj["value"]?.GetValue<string>() ?? "";
+        var cellObj = worksheet.Cells[cell];
+        ExcelHelper.SetCellValue(cellObj, value);
+        return true;
+    }
+
+    private static int WriteFromObject(Worksheet worksheet, JsonObject dataObject)
+    {
+        var writeCount = 0;
+        foreach (var kvp in dataObject)
+        {
+            var cell = kvp.Key;
+            if (string.IsNullOrEmpty(cell)) continue;
+
+            var value = kvp.Value?.GetValue<string>() ?? "";
+            var cellObj = worksheet.Cells[cell];
+            ExcelHelper.SetCellValue(cellObj, value);
+            writeCount++;
+        }
+
+        return writeCount;
     }
 }

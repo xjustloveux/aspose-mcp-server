@@ -39,10 +39,10 @@ public class ExtractImagesWordHandler : OperationHandlerBase<Document>
         if (shapes.Count == 0) return "No images found in document";
 
         // Validate extractImageIndex if provided
-        if (extractImageIndex.HasValue)
-            if (extractImageIndex.Value < 0 || extractImageIndex.Value >= shapes.Count)
-                throw new ArgumentException(
-                    $"Image index {extractImageIndex.Value} is out of range (document has {shapes.Count} images)");
+        if (extractImageIndex.HasValue &&
+            (extractImageIndex.Value < 0 || extractImageIndex.Value >= shapes.Count))
+            throw new ArgumentException(
+                $"Image index {extractImageIndex.Value} is out of range (document has {shapes.Count} images)");
 
         List<string> extractedFiles = [];
 

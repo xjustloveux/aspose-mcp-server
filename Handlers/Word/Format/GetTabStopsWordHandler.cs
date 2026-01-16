@@ -38,133 +38,13 @@ public class GetTabStopsWordHandler : OperationHandlerBase<Document>
                 $"Section index {sectionIndex} out of range (total sections: {doc.Sections.Count})");
 
         var section = doc.Sections[sectionIndex];
-
-        List<WordParagraph> targetParagraphs;
-        string locationDesc;
-
-        switch (location.ToLower())
-        {
-            case "header":
-                var header = section.HeadersFooters[HeaderFooterType.HeaderPrimary];
-                if (header != null)
-                {
-                    var headerParas = header.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
-                    targetParagraphs = allParagraphs ? headerParas :
-                        headerParas.Count > 0 ? [headerParas[0]] : [];
-                    locationDesc = "Header";
-                }
-                else
-                {
-                    throw new InvalidOperationException("Header not found");
-                }
-
-                break;
-
-            case "footer":
-                var footer = section.HeadersFooters[HeaderFooterType.FooterPrimary];
-                if (footer != null)
-                {
-                    var footerParas = footer.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
-                    targetParagraphs = allParagraphs ? footerParas :
-                        footerParas.Count > 0 ? [footerParas[0]] : [];
-                    locationDesc = "Footer";
-                }
-                else
-                {
-                    throw new InvalidOperationException("Footer not found");
-                }
-
-                break;
-
-            default:
-                var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
-                if (allParagraphs)
-                {
-                    targetParagraphs = paragraphs;
-                }
-                else
-                {
-                    if (paragraphIndex >= paragraphs.Count)
-                        throw new ArgumentException(
-                            $"Paragraph index {paragraphIndex} out of range (total paragraphs: {paragraphs.Count})");
-                    targetParagraphs = [paragraphs[paragraphIndex]];
-                }
-
-                locationDesc = allParagraphs ? "Body" : $"Body Paragraph {paragraphIndex}";
-                break;
-        }
+        var (targetParagraphs, locationDesc) = GetTargetParagraphs(section, location, paragraphIndex, allParagraphs);
 
         if (targetParagraphs.Count == 0)
             throw new InvalidOperationException("No target paragraphs found");
 
-        var allTabStops =
-            new Dictionary<string, (double position, TabAlignment alignment, TabLeader leader, string source)>();
+        var allTabStops = CollectTabStops(targetParagraphs, allParagraphs, includeStyle);
 
-        for (var paraIdx = 0; paraIdx < targetParagraphs.Count; paraIdx++)
-        {
-            var para = targetParagraphs[paraIdx];
-            var paraSource = allParagraphs ? $"Paragraph {paraIdx}" : "Paragraph";
-
-            var paraTabStops = para.ParagraphFormat.TabStops;
-            for (var i = 0; i < paraTabStops.Count; i++)
-            {
-                var tab = paraTabStops[i];
-                var position = Math.Round(tab.Position, 2);
-                var key = $"{position}_{tab.Alignment}";
-                if (!allTabStops.ContainsKey(key))
-                    allTabStops[key] = (position, tab.Alignment, tab.Leader, $"{paraSource} (Custom)");
-            }
-
-            if (includeStyle && para.ParagraphFormat.Style != null)
-            {
-                var currentStyle = para.ParagraphFormat.Style;
-                List<Style> styleChain = [];
-
-                while (currentStyle != null)
-                {
-                    styleChain.Add(currentStyle);
-                    if (!string.IsNullOrEmpty(currentStyle.BaseStyleName))
-                        try
-                        {
-                            var baseStyle = para.Document.Styles[currentStyle.BaseStyleName];
-                            if (baseStyle != null && !styleChain.Contains(baseStyle))
-                                currentStyle = baseStyle;
-                            else
-                                currentStyle = null;
-                        }
-                        catch (Exception ex)
-                        {
-                            currentStyle = null;
-                            Console.Error.WriteLine($"[WARN] Error accessing paragraph style: {ex.Message}");
-                        }
-                    else
-                        currentStyle = null;
-                }
-
-                foreach (var chainStyle in styleChain)
-                    if (chainStyle.ParagraphFormat != null)
-                    {
-                        var styleTabStops = chainStyle.ParagraphFormat.TabStops;
-                        for (var i = 0; i < styleTabStops.Count; i++)
-                        {
-                            var tab = styleTabStops[i];
-                            var position = Math.Round(tab.Position, 2);
-                            var key = $"{position}_{tab.Alignment}";
-
-                            if (!allTabStops.ContainsKey(key))
-                            {
-                                var styleName = chainStyle == para.ParagraphFormat.Style
-                                    ? chainStyle.Name
-                                    : $"{para.ParagraphFormat.Style.Name} (Base: {chainStyle.Name})";
-                                allTabStops[key] = (position, tab.Alignment, tab.Leader,
-                                    $"{paraSource} (Style: {styleName})");
-                            }
-                        }
-                    }
-            }
-        }
-
-        // Build JSON response
         var tabStopsList = allTabStops
             .OrderBy(x => x.Value.position)
             .Select(kvp => new
@@ -191,5 +71,146 @@ public class GetTabStopsWordHandler : OperationHandlerBase<Document>
         };
 
         return JsonSerializer.Serialize(result, JsonDefaults.Indented);
+    }
+
+    private static (List<WordParagraph> paragraphs, string locationDesc) GetTargetParagraphs(
+        Section section, string location, int paragraphIndex, bool allParagraphs)
+    {
+        return location.ToLower() switch
+        {
+            "header" => GetHeaderParagraphs(section, allParagraphs),
+            "footer" => GetFooterParagraphs(section, allParagraphs),
+            _ => GetBodyParagraphs(section, paragraphIndex, allParagraphs)
+        };
+    }
+
+    private static (List<WordParagraph>, string) GetHeaderParagraphs(Section section, bool allParagraphs)
+    {
+        var header = section.HeadersFooters[HeaderFooterType.HeaderPrimary];
+        if (header == null)
+            throw new InvalidOperationException("Header not found");
+
+        var headerParas = header.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+        var paragraphs = allParagraphs ? headerParas : headerParas.Count > 0 ? [headerParas[0]] : [];
+        return (paragraphs, "Header");
+    }
+
+    private static (List<WordParagraph>, string) GetFooterParagraphs(Section section, bool allParagraphs)
+    {
+        var footer = section.HeadersFooters[HeaderFooterType.FooterPrimary];
+        if (footer == null)
+            throw new InvalidOperationException("Footer not found");
+
+        var footerParas = footer.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+        var paragraphs = allParagraphs ? footerParas : footerParas.Count > 0 ? [footerParas[0]] : [];
+        return (paragraphs, "Footer");
+    }
+
+    private static (List<WordParagraph>, string) GetBodyParagraphs(Section section, int paragraphIndex,
+        bool allParagraphs)
+    {
+        var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+
+        if (allParagraphs)
+            return (paragraphs, "Body");
+
+        if (paragraphIndex >= paragraphs.Count)
+            throw new ArgumentException(
+                $"Paragraph index {paragraphIndex} out of range (total paragraphs: {paragraphs.Count})");
+
+        return ([paragraphs[paragraphIndex]], $"Body Paragraph {paragraphIndex}");
+    }
+
+    private static Dictionary<string, (double position, TabAlignment alignment, TabLeader leader, string source)>
+        CollectTabStops(List<WordParagraph> targetParagraphs, bool allParagraphs, bool includeStyle)
+    {
+        var allTabStops =
+            new Dictionary<string, (double position, TabAlignment alignment, TabLeader leader, string source)>();
+
+        for (var paraIdx = 0; paraIdx < targetParagraphs.Count; paraIdx++)
+        {
+            var para = targetParagraphs[paraIdx];
+            var paraSource = allParagraphs ? $"Paragraph {paraIdx}" : "Paragraph";
+
+            CollectParagraphTabStops(para, paraSource, allTabStops);
+
+            if (includeStyle && para.ParagraphFormat.Style != null)
+                CollectStyleTabStops(para, paraSource, allTabStops);
+        }
+
+        return allTabStops;
+    }
+
+    private static void CollectParagraphTabStops(WordParagraph para, string paraSource,
+        Dictionary<string, (double, TabAlignment, TabLeader, string)> allTabStops)
+    {
+        var paraTabStops = para.ParagraphFormat.TabStops;
+        for (var i = 0; i < paraTabStops.Count; i++)
+        {
+            var tab = paraTabStops[i];
+            var position = Math.Round(tab.Position, 2);
+            var key = $"{position}_{tab.Alignment}";
+            if (!allTabStops.ContainsKey(key))
+                allTabStops[key] = (position, tab.Alignment, tab.Leader, $"{paraSource} (Custom)");
+        }
+    }
+
+    private static void CollectStyleTabStops(WordParagraph para, string paraSource,
+        Dictionary<string, (double, TabAlignment, TabLeader, string)> allTabStops)
+    {
+        var styleChain = BuildStyleChain(para);
+
+        foreach (var chainStyle in styleChain)
+        {
+            if (chainStyle.ParagraphFormat == null) continue;
+
+            var styleTabStops = chainStyle.ParagraphFormat.TabStops;
+            for (var i = 0; i < styleTabStops.Count; i++)
+            {
+                var tab = styleTabStops[i];
+                var position = Math.Round(tab.Position, 2);
+                var key = $"{position}_{tab.Alignment}";
+
+                if (allTabStops.ContainsKey(key)) continue;
+
+                var styleName = chainStyle == para.ParagraphFormat.Style
+                    ? chainStyle.Name
+                    : $"{para.ParagraphFormat.Style.Name} (Base: {chainStyle.Name})";
+                allTabStops[key] = (position, tab.Alignment, tab.Leader, $"{paraSource} (Style: {styleName})");
+            }
+        }
+    }
+
+    private static List<Style> BuildStyleChain(WordParagraph para)
+    {
+        List<Style> styleChain = [];
+        var currentStyle = para.ParagraphFormat.Style;
+
+        while (currentStyle != null)
+        {
+            styleChain.Add(currentStyle);
+            currentStyle = GetBaseStyle(para.Document, currentStyle, styleChain);
+        }
+
+        return styleChain;
+    }
+
+    private static Style? GetBaseStyle(DocumentBase doc, Style currentStyle, List<Style> styleChain)
+    {
+        if (string.IsNullOrEmpty(currentStyle.BaseStyleName))
+            return null;
+
+        try
+        {
+            var baseStyle = doc.Styles[currentStyle.BaseStyleName];
+            if (baseStyle != null && !styleChain.Contains(baseStyle))
+                return baseStyle;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[WARN] Error accessing paragraph style: {ex.Message}");
+        }
+
+        return null;
     }
 }

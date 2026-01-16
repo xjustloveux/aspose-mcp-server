@@ -165,4 +165,63 @@ public class CopyExcelSheetHandlerTests : ExcelHandlerTestBase
     }
 
     #endregion
+
+    #region Copy To External File
+
+    [Fact]
+    public void Execute_WithCopyToPath_CreatesExternalFile()
+    {
+        var workbook = CreateEmptyWorkbook();
+        workbook.Worksheets[0].Cells["A1"].Value = "Test Data";
+        var outputPath = CreateTestFilePath("copied.xlsx");
+        var context = CreateContext(workbook);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "sheetIndex", 0 },
+            { "copyToPath", outputPath }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("external file", result);
+        Assert.True(File.Exists(outputPath));
+    }
+
+    [Fact]
+    public void Execute_WithCopyToPath_PreservesSheetName()
+    {
+        var workbook = CreateEmptyWorkbook();
+        workbook.Worksheets[0].Name = "CustomSheet";
+        var outputPath = CreateTestFilePath("named_copy.xlsx");
+        var context = CreateContext(workbook);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "sheetIndex", 0 },
+            { "copyToPath", outputPath }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("CustomSheet", result);
+    }
+
+    [Fact]
+    public void Execute_WithCopyToPath_DoesNotModifyOriginal()
+    {
+        var workbook = CreateEmptyWorkbook();
+        var initialCount = workbook.Worksheets.Count;
+        var outputPath = CreateTestFilePath("external.xlsx");
+        var context = CreateContext(workbook);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "sheetIndex", 0 },
+            { "copyToPath", outputPath }
+        });
+
+        _handler.Execute(context, parameters);
+
+        Assert.Equal(initialCount, workbook.Worksheets.Count);
+    }
+
+    #endregion
 }

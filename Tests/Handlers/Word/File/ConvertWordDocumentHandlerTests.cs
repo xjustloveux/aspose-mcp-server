@@ -167,5 +167,140 @@ public class ConvertWordDocumentHandlerTests : WordHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
+    [Fact]
+    public void Execute_WithUnknownExtension_ThrowsArgumentException()
+    {
+        var doc = CreateEmptyDocument();
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "path", _inputPath },
+            { "outputPath", Path.Combine(TestDir, "output.abc") }
+        });
+
+        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+        Assert.Contains("Cannot infer format", ex.Message);
+    }
+
+    #endregion
+
+    #region Additional Format Tests
+
+    [Theory]
+    [InlineData("docx")]
+    [InlineData("doc")]
+    [InlineData("odt")]
+    public void Execute_WithDocumentFormats_Converts(string format)
+    {
+        var outputPath = Path.Combine(TestDir, $"output.{format}");
+        var doc = CreateEmptyDocument();
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "path", _inputPath },
+            { "outputPath", outputPath },
+            { "format", format }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("converted", result.ToLower());
+        Assert.True(System.IO.File.Exists(outputPath));
+    }
+
+    [Fact]
+    public void Execute_WithEpubFormat_Converts()
+    {
+        var outputPath = Path.Combine(TestDir, "output.epub");
+        var doc = CreateEmptyDocument();
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "path", _inputPath },
+            { "outputPath", outputPath },
+            { "format", "epub" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("converted", result.ToLower());
+        Assert.True(System.IO.File.Exists(outputPath));
+    }
+
+    [Fact]
+    public void Execute_WithXpsFormat_Converts()
+    {
+        var outputPath = Path.Combine(TestDir, "output.xps");
+        var doc = CreateEmptyDocument();
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "path", _inputPath },
+            { "outputPath", outputPath },
+            { "format", "xps" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("converted", result.ToLower());
+        Assert.True(System.IO.File.Exists(outputPath));
+    }
+
+    [Fact]
+    public void Execute_InfersPdfFromExtension()
+    {
+        var outputPath = Path.Combine(TestDir, "inferred.pdf");
+        var doc = CreateEmptyDocument();
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "path", _inputPath },
+            { "outputPath", outputPath }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("converted", result.ToLower());
+        Assert.Contains("pdf", result.ToLower());
+    }
+
+    [Fact]
+    public void Execute_InfersHtmFromExtension()
+    {
+        var outputPath = Path.Combine(TestDir, "inferred.htm");
+        var doc = CreateEmptyDocument();
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "path", _inputPath },
+            { "outputPath", outputPath }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("converted", result.ToLower());
+        Assert.Contains("html", result.ToLower());
+    }
+
+    [Fact]
+    public void Execute_CreatesOutputDirectory()
+    {
+        var subDir = Path.Combine(TestDir, "subdir", "nested");
+        var outputPath = Path.Combine(subDir, "output.pdf");
+        var doc = CreateEmptyDocument();
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "path", _inputPath },
+            { "outputPath", outputPath },
+            { "format", "pdf" }
+        });
+
+        _ = _handler.Execute(context, parameters);
+
+        Assert.True(Directory.Exists(subDir));
+        Assert.True(System.IO.File.Exists(outputPath));
+    }
+
     #endregion
 }

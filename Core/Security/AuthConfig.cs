@@ -263,6 +263,15 @@ public class AuthConfig
     /// </summary>
     private void LoadFromEnvironment()
     {
+        LoadApiKeyFromEnvironment();
+        LoadJwtFromEnvironment();
+    }
+
+    /// <summary>
+    ///     Loads API Key configuration from environment variables
+    /// </summary>
+    private void LoadApiKeyFromEnvironment()
+    {
         if (bool.TryParse(Environment.GetEnvironmentVariable("ASPOSE_AUTH_APIKEY_ENABLED"), out var apiKeyEnabled))
             ApiKey.Enabled = apiKeyEnabled;
 
@@ -272,21 +281,7 @@ public class AuthConfig
 
         var apiKeys = Environment.GetEnvironmentVariable("ASPOSE_AUTH_APIKEY_KEYS");
         if (!string.IsNullOrEmpty(apiKeys))
-        {
-            ApiKey.Keys = new Dictionary<string, string>();
-            foreach (var pair in apiKeys.Split(',', StringSplitOptions.RemoveEmptyEntries))
-            {
-                // Split only on first ':' to allow ':' in API keys (e.g., base64 encoded keys)
-                var separatorIndex = pair.IndexOf(':');
-                if (separatorIndex > 0)
-                {
-                    var key = pair[..separatorIndex].Trim();
-                    var groupId = pair[(separatorIndex + 1)..].Trim();
-                    if (!string.IsNullOrEmpty(key) && !string.IsNullOrEmpty(groupId))
-                        ApiKey.Keys[key] = groupId;
-                }
-            }
-        }
+            ParseApiKeys(apiKeys);
 
         var apiKeyHeader = Environment.GetEnvironmentVariable("ASPOSE_AUTH_APIKEY_HEADER");
         if (!string.IsNullOrEmpty(apiKeyHeader))
@@ -321,7 +316,13 @@ public class AuthConfig
         if (int.TryParse(Environment.GetEnvironmentVariable("ASPOSE_AUTH_APIKEY_CACHE_MAX_SIZE"),
                 out var apiKeyCacheMaxSize))
             ApiKey.CacheMaxSize = apiKeyCacheMaxSize;
+    }
 
+    /// <summary>
+    ///     Loads JWT configuration from environment variables
+    /// </summary>
+    private void LoadJwtFromEnvironment()
+    {
         if (bool.TryParse(Environment.GetEnvironmentVariable("ASPOSE_AUTH_JWT_ENABLED"), out var jwtEnabled))
             Jwt.Enabled = jwtEnabled;
 
@@ -378,146 +379,282 @@ public class AuthConfig
     private void LoadFromCommandLine(string[] args)
     {
         foreach (var arg in args)
-            if (arg.Equals("--auth-apikey-enabled", StringComparison.OrdinalIgnoreCase))
-                ApiKey.Enabled = true;
-            else if (arg.Equals("--auth-apikey-disabled", StringComparison.OrdinalIgnoreCase))
-                ApiKey.Enabled = false;
-            else if (arg.StartsWith("--auth-apikey-mode:", StringComparison.OrdinalIgnoreCase) &&
-                     Enum.TryParse<ApiKeyMode>(arg["--auth-apikey-mode:".Length..], true, out var apiMode1))
-                ApiKey.Mode = apiMode1;
-            else if (arg.StartsWith("--auth-apikey-mode=", StringComparison.OrdinalIgnoreCase) &&
-                     Enum.TryParse<ApiKeyMode>(arg["--auth-apikey-mode=".Length..], true, out var apiMode2))
-                ApiKey.Mode = apiMode2;
-            else if (arg.StartsWith("--auth-apikey-keys:", StringComparison.OrdinalIgnoreCase))
-                ParseApiKeys(arg["--auth-apikey-keys:".Length..]);
-            else if (arg.StartsWith("--auth-apikey-keys=", StringComparison.OrdinalIgnoreCase))
-                ParseApiKeys(arg["--auth-apikey-keys=".Length..]);
-            else if (arg.StartsWith("--auth-apikey-header:", StringComparison.OrdinalIgnoreCase))
-                ApiKey.HeaderName = arg["--auth-apikey-header:".Length..];
-            else if (arg.StartsWith("--auth-apikey-header=", StringComparison.OrdinalIgnoreCase))
-                ApiKey.HeaderName = arg["--auth-apikey-header=".Length..];
-            else if (arg.StartsWith("--auth-apikey-group-header:", StringComparison.OrdinalIgnoreCase))
-                ApiKey.GroupIdentifierHeader = arg["--auth-apikey-group-header:".Length..];
-            else if (arg.StartsWith("--auth-apikey-group-header=", StringComparison.OrdinalIgnoreCase))
-                ApiKey.GroupIdentifierHeader = arg["--auth-apikey-group-header=".Length..];
-            else if (arg.StartsWith("--auth-apikey-introspection-auth:", StringComparison.OrdinalIgnoreCase))
-                ApiKey.IntrospectionAuthHeader = arg["--auth-apikey-introspection-auth:".Length..];
-            else if (arg.StartsWith("--auth-apikey-introspection-auth=", StringComparison.OrdinalIgnoreCase))
-                ApiKey.IntrospectionAuthHeader = arg["--auth-apikey-introspection-auth=".Length..];
-            else if (arg.StartsWith("--auth-apikey-introspection-url:", StringComparison.OrdinalIgnoreCase))
-                ApiKey.IntrospectionEndpoint = arg["--auth-apikey-introspection-url:".Length..];
-            else if (arg.StartsWith("--auth-apikey-introspection-url=", StringComparison.OrdinalIgnoreCase))
-                ApiKey.IntrospectionEndpoint = arg["--auth-apikey-introspection-url=".Length..];
-            else if (arg.StartsWith("--auth-apikey-custom-url:", StringComparison.OrdinalIgnoreCase))
-                ApiKey.CustomEndpoint = arg["--auth-apikey-custom-url:".Length..];
-            else if (arg.StartsWith("--auth-apikey-custom-url=", StringComparison.OrdinalIgnoreCase))
-                ApiKey.CustomEndpoint = arg["--auth-apikey-custom-url=".Length..];
-            else if (arg.StartsWith("--auth-apikey-introspection-field:", StringComparison.OrdinalIgnoreCase))
-                ApiKey.IntrospectionKeyField = arg["--auth-apikey-introspection-field:".Length..];
-            else if (arg.StartsWith("--auth-apikey-introspection-field=", StringComparison.OrdinalIgnoreCase))
-                ApiKey.IntrospectionKeyField = arg["--auth-apikey-introspection-field=".Length..];
-            else if (arg.StartsWith("--auth-apikey-timeout:", StringComparison.OrdinalIgnoreCase) &&
-                     int.TryParse(arg["--auth-apikey-timeout:".Length..], out var apiKeyTimeout1))
-                ApiKey.ExternalTimeoutSeconds = apiKeyTimeout1;
-            else if (arg.StartsWith("--auth-apikey-timeout=", StringComparison.OrdinalIgnoreCase) &&
-                     int.TryParse(arg["--auth-apikey-timeout=".Length..], out var apiKeyTimeout2))
-                ApiKey.ExternalTimeoutSeconds = apiKeyTimeout2;
-            else if (arg.Equals("--auth-apikey-cache-enabled", StringComparison.OrdinalIgnoreCase))
-                ApiKey.CacheEnabled = true;
-            else if (arg.Equals("--auth-apikey-cache-disabled", StringComparison.OrdinalIgnoreCase))
-                ApiKey.CacheEnabled = false;
-            else if (arg.StartsWith("--auth-apikey-cache-ttl:", StringComparison.OrdinalIgnoreCase) &&
-                     int.TryParse(arg["--auth-apikey-cache-ttl:".Length..], out var apiKeyCacheTtl1))
-                ApiKey.CacheTtlSeconds = apiKeyCacheTtl1;
-            else if (arg.StartsWith("--auth-apikey-cache-ttl=", StringComparison.OrdinalIgnoreCase) &&
-                     int.TryParse(arg["--auth-apikey-cache-ttl=".Length..], out var apiKeyCacheTtl2))
-                ApiKey.CacheTtlSeconds = apiKeyCacheTtl2;
-            else if (arg.StartsWith("--auth-apikey-cache-max-size:", StringComparison.OrdinalIgnoreCase) &&
-                     int.TryParse(arg["--auth-apikey-cache-max-size:".Length..], out var apiKeyCacheSize1))
-                ApiKey.CacheMaxSize = apiKeyCacheSize1;
-            else if (arg.StartsWith("--auth-apikey-cache-max-size=", StringComparison.OrdinalIgnoreCase) &&
-                     int.TryParse(arg["--auth-apikey-cache-max-size=".Length..], out var apiKeyCacheSize2))
-                ApiKey.CacheMaxSize = apiKeyCacheSize2;
-            else if (arg.Equals("--auth-jwt-enabled", StringComparison.OrdinalIgnoreCase))
-                Jwt.Enabled = true;
-            else if (arg.Equals("--auth-jwt-disabled", StringComparison.OrdinalIgnoreCase))
-                Jwt.Enabled = false;
-            else if (arg.StartsWith("--auth-jwt-mode:", StringComparison.OrdinalIgnoreCase) &&
-                     Enum.TryParse<JwtMode>(arg["--auth-jwt-mode:".Length..], true, out var jwtMode1))
-                Jwt.Mode = jwtMode1;
-            else if (arg.StartsWith("--auth-jwt-mode=", StringComparison.OrdinalIgnoreCase) &&
-                     Enum.TryParse<JwtMode>(arg["--auth-jwt-mode=".Length..], true, out var jwtMode2))
-                Jwt.Mode = jwtMode2;
-            else if (arg.StartsWith("--auth-jwt-secret:", StringComparison.OrdinalIgnoreCase))
-                Jwt.Secret = arg["--auth-jwt-secret:".Length..];
-            else if (arg.StartsWith("--auth-jwt-secret=", StringComparison.OrdinalIgnoreCase))
-                Jwt.Secret = arg["--auth-jwt-secret=".Length..];
-            else if (arg.StartsWith("--auth-jwt-issuer:", StringComparison.OrdinalIgnoreCase))
-                Jwt.Issuer = arg["--auth-jwt-issuer:".Length..];
-            else if (arg.StartsWith("--auth-jwt-issuer=", StringComparison.OrdinalIgnoreCase))
-                Jwt.Issuer = arg["--auth-jwt-issuer=".Length..];
-            else if (arg.StartsWith("--auth-jwt-audience:", StringComparison.OrdinalIgnoreCase))
-                Jwt.Audience = arg["--auth-jwt-audience:".Length..];
-            else if (arg.StartsWith("--auth-jwt-audience=", StringComparison.OrdinalIgnoreCase))
-                Jwt.Audience = arg["--auth-jwt-audience=".Length..];
-            else if (arg.StartsWith("--auth-jwt-group-claim:", StringComparison.OrdinalIgnoreCase))
-                Jwt.GroupIdentifierClaim = arg["--auth-jwt-group-claim:".Length..];
-            else if (arg.StartsWith("--auth-jwt-group-claim=", StringComparison.OrdinalIgnoreCase))
-                Jwt.GroupIdentifierClaim = arg["--auth-jwt-group-claim=".Length..];
-            else if (arg.StartsWith("--auth-jwt-user-claim:", StringComparison.OrdinalIgnoreCase))
-                Jwt.UserIdClaim = arg["--auth-jwt-user-claim:".Length..];
-            else if (arg.StartsWith("--auth-jwt-user-claim=", StringComparison.OrdinalIgnoreCase))
-                Jwt.UserIdClaim = arg["--auth-jwt-user-claim=".Length..];
-            else if (arg.StartsWith("--auth-jwt-group-header:", StringComparison.OrdinalIgnoreCase))
-                Jwt.GroupIdentifierHeader = arg["--auth-jwt-group-header:".Length..];
-            else if (arg.StartsWith("--auth-jwt-group-header=", StringComparison.OrdinalIgnoreCase))
-                Jwt.GroupIdentifierHeader = arg["--auth-jwt-group-header=".Length..];
-            else if (arg.StartsWith("--auth-jwt-user-header:", StringComparison.OrdinalIgnoreCase))
-                Jwt.UserIdHeader = arg["--auth-jwt-user-header:".Length..];
-            else if (arg.StartsWith("--auth-jwt-user-header=", StringComparison.OrdinalIgnoreCase))
-                Jwt.UserIdHeader = arg["--auth-jwt-user-header=".Length..];
-            else if (arg.StartsWith("--auth-jwt-public-key-path:", StringComparison.OrdinalIgnoreCase))
-                Jwt.PublicKeyPath = arg["--auth-jwt-public-key-path:".Length..];
-            else if (arg.StartsWith("--auth-jwt-public-key-path=", StringComparison.OrdinalIgnoreCase))
-                Jwt.PublicKeyPath = arg["--auth-jwt-public-key-path=".Length..];
-            else if (arg.StartsWith("--auth-jwt-introspection-url:", StringComparison.OrdinalIgnoreCase))
-                Jwt.IntrospectionEndpoint = arg["--auth-jwt-introspection-url:".Length..];
-            else if (arg.StartsWith("--auth-jwt-introspection-url=", StringComparison.OrdinalIgnoreCase))
-                Jwt.IntrospectionEndpoint = arg["--auth-jwt-introspection-url=".Length..];
-            else if (arg.StartsWith("--auth-jwt-client-id:", StringComparison.OrdinalIgnoreCase))
-                Jwt.ClientId = arg["--auth-jwt-client-id:".Length..];
-            else if (arg.StartsWith("--auth-jwt-client-id=", StringComparison.OrdinalIgnoreCase))
-                Jwt.ClientId = arg["--auth-jwt-client-id=".Length..];
-            else if (arg.StartsWith("--auth-jwt-client-secret:", StringComparison.OrdinalIgnoreCase))
-                Jwt.ClientSecret = arg["--auth-jwt-client-secret:".Length..];
-            else if (arg.StartsWith("--auth-jwt-client-secret=", StringComparison.OrdinalIgnoreCase))
-                Jwt.ClientSecret = arg["--auth-jwt-client-secret=".Length..];
-            else if (arg.StartsWith("--auth-jwt-custom-url:", StringComparison.OrdinalIgnoreCase))
-                Jwt.CustomEndpoint = arg["--auth-jwt-custom-url:".Length..];
-            else if (arg.StartsWith("--auth-jwt-custom-url=", StringComparison.OrdinalIgnoreCase))
-                Jwt.CustomEndpoint = arg["--auth-jwt-custom-url=".Length..];
-            else if (arg.StartsWith("--auth-jwt-timeout:", StringComparison.OrdinalIgnoreCase) &&
-                     int.TryParse(arg["--auth-jwt-timeout:".Length..], out var jwtTimeout1))
-                Jwt.ExternalTimeoutSeconds = jwtTimeout1;
-            else if (arg.StartsWith("--auth-jwt-timeout=", StringComparison.OrdinalIgnoreCase) &&
-                     int.TryParse(arg["--auth-jwt-timeout=".Length..], out var jwtTimeout2))
-                Jwt.ExternalTimeoutSeconds = jwtTimeout2;
-            else if (arg.Equals("--auth-jwt-cache-enabled", StringComparison.OrdinalIgnoreCase))
-                Jwt.CacheEnabled = true;
-            else if (arg.Equals("--auth-jwt-cache-disabled", StringComparison.OrdinalIgnoreCase))
-                Jwt.CacheEnabled = false;
-            else if (arg.StartsWith("--auth-jwt-cache-ttl:", StringComparison.OrdinalIgnoreCase) &&
-                     int.TryParse(arg["--auth-jwt-cache-ttl:".Length..], out var jwtCacheTtl1))
-                Jwt.CacheTtlSeconds = jwtCacheTtl1;
-            else if (arg.StartsWith("--auth-jwt-cache-ttl=", StringComparison.OrdinalIgnoreCase) &&
-                     int.TryParse(arg["--auth-jwt-cache-ttl=".Length..], out var jwtCacheTtl2))
-                Jwt.CacheTtlSeconds = jwtCacheTtl2;
-            else if (arg.StartsWith("--auth-jwt-cache-max-size:", StringComparison.OrdinalIgnoreCase) &&
-                     int.TryParse(arg["--auth-jwt-cache-max-size:".Length..], out var jwtCacheSize1))
-                Jwt.CacheMaxSize = jwtCacheSize1;
-            else if (arg.StartsWith("--auth-jwt-cache-max-size=", StringComparison.OrdinalIgnoreCase) &&
-                     int.TryParse(arg["--auth-jwt-cache-max-size=".Length..], out var jwtCacheSize2))
-                Jwt.CacheMaxSize = jwtCacheSize2;
+            if (!ProcessApiKeyArg(arg))
+                _ = ProcessJwtArg(arg);
+    }
+
+    /// <summary>
+    ///     Processes API Key related command line argument
+    /// </summary>
+    /// <returns>True if the argument was processed, false otherwise</returns>
+    private bool ProcessApiKeyArg(string arg)
+    {
+        if (arg.Equals("--auth-apikey-enabled", StringComparison.OrdinalIgnoreCase))
+        {
+            ApiKey.Enabled = true;
+            return true;
+        }
+
+        if (arg.Equals("--auth-apikey-disabled", StringComparison.OrdinalIgnoreCase))
+        {
+            ApiKey.Enabled = false;
+            return true;
+        }
+
+        if (arg.Equals("--auth-apikey-cache-enabled", StringComparison.OrdinalIgnoreCase))
+        {
+            ApiKey.CacheEnabled = true;
+            return true;
+        }
+
+        if (arg.Equals("--auth-apikey-cache-disabled", StringComparison.OrdinalIgnoreCase))
+        {
+            ApiKey.CacheEnabled = false;
+            return true;
+        }
+
+        var value = TryGetArgValue(arg, "--auth-apikey-mode");
+        if (value != null && Enum.TryParse<ApiKeyMode>(value, true, out var apiMode))
+        {
+            ApiKey.Mode = apiMode;
+            return true;
+        }
+
+        value = TryGetArgValue(arg, "--auth-apikey-keys");
+        if (value != null)
+        {
+            ParseApiKeys(value);
+            return true;
+        }
+
+        value = TryGetArgValue(arg, "--auth-apikey-header");
+        if (value != null)
+        {
+            ApiKey.HeaderName = value;
+            return true;
+        }
+
+        value = TryGetArgValue(arg, "--auth-apikey-group-header");
+        if (value != null)
+        {
+            ApiKey.GroupIdentifierHeader = value;
+            return true;
+        }
+
+        value = TryGetArgValue(arg, "--auth-apikey-introspection-auth");
+        if (value != null)
+        {
+            ApiKey.IntrospectionAuthHeader = value;
+            return true;
+        }
+
+        value = TryGetArgValue(arg, "--auth-apikey-introspection-url");
+        if (value != null)
+        {
+            ApiKey.IntrospectionEndpoint = value;
+            return true;
+        }
+
+        value = TryGetArgValue(arg, "--auth-apikey-custom-url");
+        if (value != null)
+        {
+            ApiKey.CustomEndpoint = value;
+            return true;
+        }
+
+        value = TryGetArgValue(arg, "--auth-apikey-introspection-field");
+        if (value != null)
+        {
+            ApiKey.IntrospectionKeyField = value;
+            return true;
+        }
+
+        value = TryGetArgValue(arg, "--auth-apikey-timeout");
+        if (value != null && int.TryParse(value, out var timeout))
+        {
+            ApiKey.ExternalTimeoutSeconds = timeout;
+            return true;
+        }
+
+        value = TryGetArgValue(arg, "--auth-apikey-cache-ttl");
+        if (value != null && int.TryParse(value, out var ttl))
+        {
+            ApiKey.CacheTtlSeconds = ttl;
+            return true;
+        }
+
+        value = TryGetArgValue(arg, "--auth-apikey-cache-max-size");
+        if (value != null && int.TryParse(value, out var maxSize))
+        {
+            ApiKey.CacheMaxSize = maxSize;
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    ///     Processes JWT related command line argument
+    /// </summary>
+    /// <returns>True if the argument was processed, false otherwise</returns>
+    private bool ProcessJwtArg(string arg)
+    {
+        if (arg.Equals("--auth-jwt-enabled", StringComparison.OrdinalIgnoreCase))
+        {
+            Jwt.Enabled = true;
+            return true;
+        }
+
+        if (arg.Equals("--auth-jwt-disabled", StringComparison.OrdinalIgnoreCase))
+        {
+            Jwt.Enabled = false;
+            return true;
+        }
+
+        if (arg.Equals("--auth-jwt-cache-enabled", StringComparison.OrdinalIgnoreCase))
+        {
+            Jwt.CacheEnabled = true;
+            return true;
+        }
+
+        if (arg.Equals("--auth-jwt-cache-disabled", StringComparison.OrdinalIgnoreCase))
+        {
+            Jwt.CacheEnabled = false;
+            return true;
+        }
+
+        var value = TryGetArgValue(arg, "--auth-jwt-mode");
+        if (value != null && Enum.TryParse<JwtMode>(value, true, out var jwtMode))
+        {
+            Jwt.Mode = jwtMode;
+            return true;
+        }
+
+        value = TryGetArgValue(arg, "--auth-jwt-secret");
+        if (value != null)
+        {
+            Jwt.Secret = value;
+            return true;
+        }
+
+        value = TryGetArgValue(arg, "--auth-jwt-issuer");
+        if (value != null)
+        {
+            Jwt.Issuer = value;
+            return true;
+        }
+
+        value = TryGetArgValue(arg, "--auth-jwt-audience");
+        if (value != null)
+        {
+            Jwt.Audience = value;
+            return true;
+        }
+
+        value = TryGetArgValue(arg, "--auth-jwt-group-claim");
+        if (value != null)
+        {
+            Jwt.GroupIdentifierClaim = value;
+            return true;
+        }
+
+        value = TryGetArgValue(arg, "--auth-jwt-user-claim");
+        if (value != null)
+        {
+            Jwt.UserIdClaim = value;
+            return true;
+        }
+
+        value = TryGetArgValue(arg, "--auth-jwt-group-header");
+        if (value != null)
+        {
+            Jwt.GroupIdentifierHeader = value;
+            return true;
+        }
+
+        value = TryGetArgValue(arg, "--auth-jwt-user-header");
+        if (value != null)
+        {
+            Jwt.UserIdHeader = value;
+            return true;
+        }
+
+        value = TryGetArgValue(arg, "--auth-jwt-public-key-path");
+        if (value != null)
+        {
+            Jwt.PublicKeyPath = value;
+            return true;
+        }
+
+        value = TryGetArgValue(arg, "--auth-jwt-introspection-url");
+        if (value != null)
+        {
+            Jwt.IntrospectionEndpoint = value;
+            return true;
+        }
+
+        value = TryGetArgValue(arg, "--auth-jwt-client-id");
+        if (value != null)
+        {
+            Jwt.ClientId = value;
+            return true;
+        }
+
+        value = TryGetArgValue(arg, "--auth-jwt-client-secret");
+        if (value != null)
+        {
+            Jwt.ClientSecret = value;
+            return true;
+        }
+
+        value = TryGetArgValue(arg, "--auth-jwt-custom-url");
+        if (value != null)
+        {
+            Jwt.CustomEndpoint = value;
+            return true;
+        }
+
+        value = TryGetArgValue(arg, "--auth-jwt-timeout");
+        if (value != null && int.TryParse(value, out var timeout))
+        {
+            Jwt.ExternalTimeoutSeconds = timeout;
+            return true;
+        }
+
+        value = TryGetArgValue(arg, "--auth-jwt-cache-ttl");
+        if (value != null && int.TryParse(value, out var ttl))
+        {
+            Jwt.CacheTtlSeconds = ttl;
+            return true;
+        }
+
+        value = TryGetArgValue(arg, "--auth-jwt-cache-max-size");
+        if (value != null && int.TryParse(value, out var maxSize))
+        {
+            Jwt.CacheMaxSize = maxSize;
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    ///     Tries to extract value from command line argument with either ':' or '=' separator
+    /// </summary>
+    /// <param name="arg">The command line argument</param>
+    /// <param name="prefix">The argument prefix (e.g., "--auth-jwt-secret")</param>
+    /// <returns>The value if found, null otherwise</returns>
+    private static string? TryGetArgValue(string arg, string prefix)
+    {
+        var colonPrefix = prefix + ":";
+        if (arg.StartsWith(colonPrefix, StringComparison.OrdinalIgnoreCase))
+            return arg[colonPrefix.Length..];
+
+        var equalsPrefix = prefix + "=";
+        if (arg.StartsWith(equalsPrefix, StringComparison.OrdinalIgnoreCase))
+            return arg[equalsPrefix.Length..];
+
+        return null;
     }
 
     /// <summary>

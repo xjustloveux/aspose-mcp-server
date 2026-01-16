@@ -107,16 +107,16 @@ public static class ColorHelper
         if (colorString.Contains(','))
         {
             var parts = colorString.Split(',');
-            if (parts.Length == 3)
-                if (int.TryParse(parts[0].Trim(), out var r) &&
-                    int.TryParse(parts[1].Trim(), out var g) &&
-                    int.TryParse(parts[2].Trim(), out var b))
-                {
-                    r = Math.Max(0, Math.Min(255, r));
-                    g = Math.Max(0, Math.Min(255, g));
-                    b = Math.Max(0, Math.Min(255, b));
-                    return Color.FromArgb(r, g, b);
-                }
+            if (parts.Length == 3 &&
+                int.TryParse(parts[0].Trim(), out var r) &&
+                int.TryParse(parts[1].Trim(), out var g) &&
+                int.TryParse(parts[2].Trim(), out var b))
+            {
+                r = Math.Max(0, Math.Min(255, r));
+                g = Math.Max(0, Math.Min(255, g));
+                b = Math.Max(0, Math.Min(255, b));
+                return Color.FromArgb(r, g, b);
+            }
         }
 
         try

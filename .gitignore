@@ -119,3 +119,4 @@ Tests/TestResults/
 
 # Coverage reports
 coverage-reports/
+sonar-reports/

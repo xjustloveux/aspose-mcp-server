@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Aspose.Slides;
 using AsposeMcpServer.Core.ShapeDetailProviders;
 using AsposeMcpServer.Tests.Helpers;
@@ -73,5 +74,82 @@ public class AutoShapeDetailProviderTests : TestBase
         var details = _provider.GetDetails(shape, presentation);
 
         Assert.NotNull(details);
+    }
+
+    [Fact]
+    public void GetDetails_WithExternalHyperlink_ShouldIncludeHyperlink()
+    {
+        using var presentation = new Presentation();
+        var slide = presentation.Slides[0];
+        var shape = slide.Shapes.AddAutoShape(ShapeType.Rectangle, 10, 10, 100, 100);
+        shape.HyperlinkClick = new Hyperlink("https://example.com");
+
+        var details = _provider.GetDetails(shape, presentation);
+        Assert.NotNull(details);
+
+        var json = JsonSerializer.Serialize(details);
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+
+        Assert.Equal("https://example.com", root.GetProperty("hyperlink").GetString());
+    }
+
+    [Fact]
+    public void GetDetails_WithInternalSlideHyperlink_ShouldIncludeSlideReference()
+    {
+        using var presentation = new Presentation();
+        var slide1 = presentation.Slides[0];
+        var slide2 = presentation.Slides.AddEmptySlide(presentation.LayoutSlides[0]);
+
+        var shape = slide1.Shapes.AddAutoShape(ShapeType.Rectangle, 10, 10, 100, 100);
+        shape.HyperlinkClick = new Hyperlink(slide2);
+
+        var details = _provider.GetDetails(shape, presentation);
+        Assert.NotNull(details);
+
+        var json = JsonSerializer.Serialize(details);
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+
+        var hyperlink = root.GetProperty("hyperlink").GetString();
+        Assert.Contains("Slide", hyperlink);
+    }
+
+    [Fact]
+    public void GetDetails_WithAdjustments_ShouldIncludeAdjustmentValues()
+    {
+        using var presentation = new Presentation();
+        var slide = presentation.Slides[0];
+        var shape = slide.Shapes.AddAutoShape(ShapeType.RoundCornerRectangle, 10, 10, 100, 100);
+
+        var details = _provider.GetDetails(shape, presentation);
+        Assert.NotNull(details);
+
+        var json = JsonSerializer.Serialize(details);
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+
+        if (root.TryGetProperty("adjustments", out var adjustments) &&
+            adjustments.ValueKind != JsonValueKind.Null)
+            Assert.True(adjustments.GetArrayLength() > 0);
+    }
+
+    [Fact]
+    public void GetDetails_WithTextFrame_ShouldIncludeTextInfo()
+    {
+        using var presentation = new Presentation();
+        var slide = presentation.Slides[0];
+        var shape = slide.Shapes.AddAutoShape(ShapeType.Rectangle, 10, 10, 100, 100);
+        shape.TextFrame.Text = "Test Text";
+
+        var details = _provider.GetDetails(shape, presentation);
+        Assert.NotNull(details);
+
+        var json = JsonSerializer.Serialize(details);
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+
+        Assert.True(root.GetProperty("hasTextFrame").GetBoolean());
+        Assert.True(root.GetProperty("paragraphCount").GetInt32() >= 1);
     }
 }

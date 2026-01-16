@@ -54,6 +54,26 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
 
     #endregion
 
+    #region Clear Animations
+
+    [Fact]
+    public void Execute_WithoutAnimationIndexAndWithoutEffect_ClearsAnimations()
+    {
+        var pres = CreatePresentationWithAnimation();
+        var context = CreateContext(pres);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "slideIndex", 0 },
+            { "shapeIndex", 0 }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("updated", result);
+    }
+
+    #endregion
+
     #region Basic Edit Operations
 
     [Fact]
@@ -362,6 +382,88 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
 
         var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
         Assert.Contains("animationIndex", ex.Message);
+    }
+
+    #endregion
+
+    #region Effect Type Changes
+
+    [Fact]
+    public void Execute_WithEffectType_ChangesEffect()
+    {
+        var pres = CreatePresentationWithAnimation();
+        var context = CreateContext(pres);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "slideIndex", 0 },
+            { "shapeIndex", 0 },
+            { "animationIndex", 0 },
+            { "effectType", "Fly" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("updated", result);
+        AssertModified(context);
+    }
+
+    [Fact]
+    public void Execute_WithEffectSubtype_ChangesSubtype()
+    {
+        var pres = CreatePresentationWithAnimation();
+        var context = CreateContext(pres);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "slideIndex", 0 },
+            { "shapeIndex", 0 },
+            { "animationIndex", 0 },
+            { "effectType", "Fly" },
+            { "effectSubtype", "FromLeft" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("updated", result);
+    }
+
+    [Fact]
+    public void Execute_WithTriggerType_ChangesTrigger()
+    {
+        var pres = CreatePresentationWithAnimation();
+        var context = CreateContext(pres);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "slideIndex", 0 },
+            { "shapeIndex", 0 },
+            { "animationIndex", 0 },
+            { "triggerType", "WithPrevious" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("updated", result);
+    }
+
+    [Fact]
+    public void Execute_WithAllEffectParameters_ChangesAll()
+    {
+        var pres = CreatePresentationWithAnimation();
+        var context = CreateContext(pres);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "slideIndex", 0 },
+            { "shapeIndex", 0 },
+            { "animationIndex", 0 },
+            { "effectType", "Zoom" },
+            { "effectSubtype", "In" },
+            { "triggerType", "AfterPrevious" },
+            { "duration", 1.5f },
+            { "delay", 0.5f }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("updated", result);
     }
 
     #endregion

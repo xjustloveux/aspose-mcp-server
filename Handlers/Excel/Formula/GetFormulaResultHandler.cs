@@ -35,12 +35,12 @@ public class GetFormulaResultHandler : OperationHandlerBase<Workbook>
 
         var calculatedValue = cellObj.Value;
 
-        if (!string.IsNullOrEmpty(cellObj.Formula))
-            if (calculatedValue == null || (calculatedValue is string str && string.IsNullOrEmpty(str)))
-            {
-                calculatedValue = cellObj.DisplayStringValue;
-                if (string.IsNullOrEmpty(calculatedValue?.ToString())) calculatedValue = cellObj.Formula;
-            }
+        if (!string.IsNullOrEmpty(cellObj.Formula) &&
+            (calculatedValue == null || (calculatedValue is string str && string.IsNullOrEmpty(str))))
+        {
+            calculatedValue = cellObj.DisplayStringValue;
+            if (string.IsNullOrEmpty(calculatedValue?.ToString())) calculatedValue = cellObj.Formula;
+        }
 
         var result = new
         {

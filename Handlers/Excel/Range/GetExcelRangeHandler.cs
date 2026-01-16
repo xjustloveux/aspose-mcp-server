@@ -53,8 +53,8 @@ public class GetExcelRangeHandler : OperationHandlerBase<Workbook>
             if (!string.IsNullOrEmpty(cell.Formula))
             {
                 displayValue = cell.Value;
-                if (displayValue is CellValueType.IsError)
-                    displayValue = cell.DisplayStringValue;
+                if (displayValue is CellValueType.IsError) displayValue = cell.DisplayStringValue;
+
                 if (displayValue == null || (displayValue is string str && string.IsNullOrEmpty(str)))
                 {
                     displayValue = cell.DisplayStringValue;

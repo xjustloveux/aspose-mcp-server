@@ -127,7 +127,7 @@ Usage examples:
 
         var result = handler.Execute(operationContext, parameters);
 
-        if (operation.ToLowerInvariant() == "get_info")
+        if (string.Equals(operation, "get_info", StringComparison.OrdinalIgnoreCase))
             return result;
 
         if (operationContext.IsModified)

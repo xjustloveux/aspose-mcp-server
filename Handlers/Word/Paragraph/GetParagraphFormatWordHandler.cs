@@ -31,23 +31,41 @@ public class GetParagraphFormatWordHandler : OperationHandlerBase<Document>
         if (!paragraphIndex.HasValue)
             throw new ArgumentException("paragraphIndex parameter is required for get_format operation");
 
-        var doc = context.Document;
+        var para = GetParagraph(context.Document, paragraphIndex.Value);
+        var resultDict = BuildBasicInfo(para, paragraphIndex.Value);
+
+        AddListFormat(resultDict, para);
+        AddBordersInfo(resultDict, para.ParagraphFormat);
+        AddBackgroundColor(resultDict, para.ParagraphFormat);
+        AddTabStops(resultDict, para.ParagraphFormat);
+        AddFontFormat(resultDict, para);
+        AddRunDetails(resultDict, para, includeRunDetails);
+
+        return JsonSerializer.Serialize(resultDict, JsonDefaults.Indented);
+    }
+
+    private static Aspose.Words.Paragraph GetParagraph(Document doc, int paragraphIndex)
+    {
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
 
-        if (paragraphIndex.Value < 0 || paragraphIndex.Value >= paragraphs.Count)
+        if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
             throw new ArgumentException(
-                $"Paragraph index {paragraphIndex.Value} is out of range. The document has {paragraphs.Count} paragraphs (valid indices: 0-{paragraphs.Count - 1}).");
+                $"Paragraph index {paragraphIndex} is out of range. The document has {paragraphs.Count} paragraphs (valid indices: 0-{paragraphs.Count - 1}).");
 
-        var para = paragraphs[paragraphIndex.Value] as Aspose.Words.Paragraph;
-        if (para == null)
-            throw new InvalidOperationException($"Unable to find paragraph at index {paragraphIndex.Value}");
+        if (paragraphs[paragraphIndex] is not Aspose.Words.Paragraph para)
+            throw new InvalidOperationException($"Unable to find paragraph at index {paragraphIndex}");
 
+        return para;
+    }
+
+    private static Dictionary<string, object?> BuildBasicInfo(Aspose.Words.Paragraph para, int paragraphIndex)
+    {
         var format = para.ParagraphFormat;
         var text = para.GetText().Trim();
 
-        var resultDict = new Dictionary<string, object?>
+        return new Dictionary<string, object?>
         {
-            ["paragraphIndex"] = paragraphIndex.Value,
+            ["paragraphIndex"] = paragraphIndex,
             ["text"] = text,
             ["textLength"] = text.Length,
             ["runCount"] = para.Runs.Count,
@@ -64,128 +82,151 @@ public class GetParagraphFormatWordHandler : OperationHandlerBase<Document>
                 lineSpacingRule = format.LineSpacingRule.ToString()
             }
         };
+    }
 
-        if (para.ListFormat is { IsListItem: true })
-            resultDict["listFormat"] = new
-            {
-                isListItem = true,
-                listLevel = para.ListFormat.ListLevelNumber,
-                listId = para.ListFormat.List?.ListId
-            };
+    private static void AddListFormat(Dictionary<string, object?> resultDict, Aspose.Words.Paragraph para)
+    {
+        if (para.ListFormat is not { IsListItem: true }) return;
 
+        resultDict["listFormat"] = new
+        {
+            isListItem = true,
+            listLevel = para.ListFormat.ListLevelNumber,
+            listId = para.ListFormat.List?.ListId
+        };
+    }
+
+    private static void AddBordersInfo(Dictionary<string, object?> resultDict, ParagraphFormat format)
+    {
         var borders = new Dictionary<string, object>();
-        if (format.Borders.Top.LineStyle != LineStyle.None)
-            borders["top"] = new
-            {
-                lineStyle = format.Borders.Top.LineStyle.ToString(), lineWidth = format.Borders.Top.LineWidth,
-                color = format.Borders.Top.Color.Name
-            };
-        if (format.Borders.Bottom.LineStyle != LineStyle.None)
-            borders["bottom"] = new
-            {
-                lineStyle = format.Borders.Bottom.LineStyle.ToString(), lineWidth = format.Borders.Bottom.LineWidth,
-                color = format.Borders.Bottom.Color.Name
-            };
-        if (format.Borders.Left.LineStyle != LineStyle.None)
-            borders["left"] = new
-            {
-                lineStyle = format.Borders.Left.LineStyle.ToString(), lineWidth = format.Borders.Left.LineWidth,
-                color = format.Borders.Left.Color.Name
-            };
-        if (format.Borders.Right.LineStyle != LineStyle.None)
-            borders["right"] = new
-            {
-                lineStyle = format.Borders.Right.LineStyle.ToString(), lineWidth = format.Borders.Right.LineWidth,
-                color = format.Borders.Right.Color.Name
-            };
+
+        AddBorderIfPresent(borders, "top", format.Borders.Top);
+        AddBorderIfPresent(borders, "bottom", format.Borders.Bottom);
+        AddBorderIfPresent(borders, "left", format.Borders.Left);
+        AddBorderIfPresent(borders, "right", format.Borders.Right);
+
         if (borders.Count > 0)
             resultDict["borders"] = borders;
+    }
 
-        if (format.Shading.BackgroundPatternColor.ToArgb() != Color.Empty.ToArgb())
+    private static void AddBorderIfPresent(Dictionary<string, object> borders, string name, Border border)
+    {
+        if (border.LineStyle == LineStyle.None) return;
+
+        borders[name] = new
         {
-            var bgColor = format.Shading.BackgroundPatternColor;
-            resultDict["backgroundColor"] = $"#{bgColor.R:X2}{bgColor.G:X2}{bgColor.B:X2}";
+            lineStyle = border.LineStyle.ToString(),
+            lineWidth = border.LineWidth,
+            color = border.Color.Name
+        };
+    }
+
+    private static void AddBackgroundColor(Dictionary<string, object?> resultDict, ParagraphFormat format)
+    {
+        if (format.Shading.BackgroundPatternColor.ToArgb() == Color.Empty.ToArgb()) return;
+
+        var bgColor = format.Shading.BackgroundPatternColor;
+        resultDict["backgroundColor"] = $"#{bgColor.R:X2}{bgColor.G:X2}{bgColor.B:X2}";
+    }
+
+    private static void AddTabStops(Dictionary<string, object?> resultDict, ParagraphFormat format)
+    {
+        if (format.TabStops.Count == 0) return;
+
+        List<object> tabStopsList = [];
+        for (var i = 0; i < format.TabStops.Count; i++)
+        {
+            var tab = format.TabStops[i];
+            tabStopsList.Add(new
+            {
+                position = Math.Round(tab.Position, 2),
+                alignment = tab.Alignment.ToString(),
+                leader = tab.Leader.ToString()
+            });
         }
 
-        if (format.TabStops.Count > 0)
+        resultDict["tabStops"] = tabStopsList;
+    }
+
+    private static void AddFontFormat(Dictionary<string, object?> resultDict, Aspose.Words.Paragraph para)
+    {
+        if (para.Runs.Count == 0) return;
+
+        var firstRun = para.Runs[0];
+        var fontInfo = BuildFontInfo(firstRun);
+        resultDict["fontFormat"] = fontInfo;
+    }
+
+    private static Dictionary<string, object?> BuildFontInfo(Run run)
+    {
+        var fontInfo = new Dictionary<string, object?> { ["fontSize"] = run.Font.Size };
+
+        AddFontNames(fontInfo, run);
+        AddFontStyles(fontInfo, run);
+        AddFontColors(fontInfo, run);
+
+        return fontInfo;
+    }
+
+    private static void AddFontNames(Dictionary<string, object?> fontInfo, Run run)
+    {
+        if (run.Font.NameAscii != run.Font.NameFarEast)
         {
-            List<object> tabStopsList = [];
-            for (var i = 0; i < format.TabStops.Count; i++)
-            {
-                var tab = format.TabStops[i];
-                tabStopsList.Add(new
-                {
-                    position = Math.Round(tab.Position, 2), alignment = tab.Alignment.ToString(),
-                    leader = tab.Leader.ToString()
-                });
-            }
-
-            resultDict["tabStops"] = tabStopsList;
+            fontInfo["fontAscii"] = run.Font.NameAscii;
+            fontInfo["fontFarEast"] = run.Font.NameFarEast;
         }
-
-        if (para.Runs.Count > 0)
+        else
         {
-            var firstRun = para.Runs[0];
-            var fontInfo = new Dictionary<string, object?> { ["fontSize"] = firstRun.Font.Size };
-
-            if (firstRun.Font.NameAscii != firstRun.Font.NameFarEast)
-            {
-                fontInfo["fontAscii"] = firstRun.Font.NameAscii;
-                fontInfo["fontFarEast"] = firstRun.Font.NameFarEast;
-            }
-            else
-            {
-                fontInfo["font"] = firstRun.Font.Name;
-            }
-
-            if (firstRun.Font.Bold) fontInfo["bold"] = true;
-            if (firstRun.Font.Italic) fontInfo["italic"] = true;
-            if (firstRun.Font.Underline != Underline.None) fontInfo["underline"] = firstRun.Font.Underline.ToString();
-            if (firstRun.Font.StrikeThrough) fontInfo["strikethrough"] = true;
-            if (firstRun.Font.Superscript) fontInfo["superscript"] = true;
-            if (firstRun.Font.Subscript) fontInfo["subscript"] = true;
-            if (firstRun.Font.Color.ToArgb() != Color.Empty.ToArgb())
-                fontInfo["color"] = $"#{firstRun.Font.Color.R:X2}{firstRun.Font.Color.G:X2}{firstRun.Font.Color.B:X2}";
-            if (firstRun.Font.HighlightColor != Color.Empty)
-                fontInfo["highlightColor"] = firstRun.Font.HighlightColor.Name;
-
-            resultDict["fontFormat"] = fontInfo;
+            fontInfo["font"] = run.Font.Name;
         }
+    }
 
-        if (includeRunDetails && para.Runs.Count > 1)
+    private static void AddFontStyles(Dictionary<string, object?> fontInfo, Run run)
+    {
+        if (run.Font.Bold) fontInfo["bold"] = true;
+        if (run.Font.Italic) fontInfo["italic"] = true;
+        if (run.Font.Underline != Underline.None) fontInfo["underline"] = run.Font.Underline.ToString();
+        if (run.Font.StrikeThrough) fontInfo["strikethrough"] = true;
+        if (run.Font.Superscript) fontInfo["superscript"] = true;
+        if (run.Font.Subscript) fontInfo["subscript"] = true;
+    }
+
+    private static void AddFontColors(Dictionary<string, object?> fontInfo, Run run)
+    {
+        if (run.Font.Color.ToArgb() != Color.Empty.ToArgb())
+            fontInfo["color"] = $"#{run.Font.Color.R:X2}{run.Font.Color.G:X2}{run.Font.Color.B:X2}";
+        if (run.Font.HighlightColor != Color.Empty)
+            fontInfo["highlightColor"] = run.Font.HighlightColor.Name;
+    }
+
+    private static void AddRunDetails(Dictionary<string, object?> resultDict, Aspose.Words.Paragraph para,
+        bool includeRunDetails)
+    {
+        if (!includeRunDetails || para.Runs.Count <= 1) return;
+
+        List<object> runs = [];
+        var displayCount = Math.Min(para.Runs.Count, 10);
+
+        for (var i = 0; i < displayCount; i++) runs.Add(BuildRunInfo(para.Runs[i], i));
+
+        resultDict["runs"] = new { total = para.Runs.Count, displayed = displayCount, details = runs };
+    }
+
+    private static Dictionary<string, object?> BuildRunInfo(Run run, int index)
+    {
+        var runInfo = new Dictionary<string, object?>
         {
-            List<object> runs = [];
-            for (var i = 0; i < Math.Min(para.Runs.Count, 10); i++)
-            {
-                var run = para.Runs[i];
-                var runInfo = new Dictionary<string, object?>
-                {
-                    ["index"] = i,
-                    ["text"] = run.Text.Replace("\r", "\\r").Replace("\n", "\\n"),
-                    ["fontSize"] = run.Font.Size
-                };
+            ["index"] = index,
+            ["text"] = run.Text.Replace("\r", "\\r").Replace("\n", "\\n"),
+            ["fontSize"] = run.Font.Size
+        };
 
-                if (run.Font.NameAscii != run.Font.NameFarEast)
-                {
-                    runInfo["fontAscii"] = run.Font.NameAscii;
-                    runInfo["fontFarEast"] = run.Font.NameFarEast;
-                }
-                else
-                {
-                    runInfo["font"] = run.Font.Name;
-                }
+        AddFontNames(runInfo, run);
 
-                if (run.Font.Bold) runInfo["bold"] = true;
-                if (run.Font.Italic) runInfo["italic"] = true;
-                if (run.Font.Underline != Underline.None) runInfo["underline"] = run.Font.Underline.ToString();
+        if (run.Font.Bold) runInfo["bold"] = true;
+        if (run.Font.Italic) runInfo["italic"] = true;
+        if (run.Font.Underline != Underline.None) runInfo["underline"] = run.Font.Underline.ToString();
 
-                runs.Add(runInfo);
-            }
-
-            resultDict["runs"] = new
-                { total = para.Runs.Count, displayed = Math.Min(para.Runs.Count, 10), details = runs };
-        }
-
-        return JsonSerializer.Serialize(resultDict, JsonDefaults.Indented);
+        return runInfo;
     }
 }

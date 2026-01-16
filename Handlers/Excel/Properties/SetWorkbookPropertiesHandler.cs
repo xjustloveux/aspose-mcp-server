@@ -77,9 +77,7 @@ public class SetWorkbookPropertiesHandler : OperationHandlerBase<Workbook>
     /// <returns>The found property or null if not found.</returns>
     private static DocumentProperty? FindCustomProperty(CustomDocumentPropertyCollection customProperties, string name)
     {
-        foreach (var prop in customProperties)
-            if (string.Equals(prop.Name, name, StringComparison.OrdinalIgnoreCase))
-                return prop;
-        return null;
+        return customProperties
+            .FirstOrDefault(prop => string.Equals(prop.Name, name, StringComparison.OrdinalIgnoreCase));
     }
 }

@@ -88,6 +88,102 @@ public class EditPdfImageHandlerTests : PdfHandlerTestBase
         Assert.Contains("imageIndex must be between", ex.Message);
     }
 
+    [Fact]
+    public void Execute_WithNegativePageIndex_UsesPageOne()
+    {
+        var doc = CreateDocumentWithImage();
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "pageIndex", -1 },
+            { "imageIndex", 1 }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("Moved", result);
+        AssertModified(context);
+    }
+
+    #endregion
+
+    #region Move Image Operations
+
+    [SkippableFact]
+    public void Execute_WithoutImagePath_MovesExistingImage()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Pdf, "Evaluation mode limits image operations");
+
+        var doc = CreateDocumentWithImage();
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "pageIndex", 1 },
+            { "imageIndex", 1 },
+            { "x", 200.0 },
+            { "y", 400.0 }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("Moved", result);
+        AssertModified(context);
+    }
+
+    [SkippableFact]
+    public void Execute_WithCustomSize_SetsImageSize()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Pdf, "Evaluation mode limits image operations");
+
+        var doc = CreateDocumentWithImage();
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "pageIndex", 1 },
+            { "imageIndex", 1 },
+            { "width", 150.0 },
+            { "height", 100.0 }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("Moved", result);
+        AssertModified(context);
+    }
+
+    #endregion
+
+    #region Replace Image Operations
+
+    [SkippableFact]
+    public void Execute_WithImagePath_ReplacesImage()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Pdf, "Evaluation mode limits image operations");
+
+        var doc = CreateDocumentWithImage();
+        var imagePath = CreateTestImageFile();
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "pageIndex", 1 },
+            { "imageIndex", 1 },
+            { "imagePath", imagePath }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("Replaced", result);
+        AssertModified(context);
+    }
+
+    private string CreateTestImageFile()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"test_image_{Guid.NewGuid()}.bmp");
+        using var ms = CreateSimpleImageStream();
+        File.WriteAllBytes(path, ms.ToArray());
+        return path;
+    }
+
     #endregion
 
     #region Helper Methods

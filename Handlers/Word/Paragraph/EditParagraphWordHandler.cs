@@ -52,23 +52,46 @@ public class EditParagraphWordHandler : OperationHandlerBase<Document>
             throw new ArgumentException("paragraphIndex parameter is required for edit operation");
 
         var doc = context.Document;
-        var secIdx = sectionIndex ?? 0;
+        var (para, resolvedIndex) = GetTargetParagraph(doc, paragraphIndex.Value, sectionIndex ?? 0);
 
-        // Handle paragraphIndex=-1 (document end)
-        if (paragraphIndex.Value == -1)
+        var builder = new DocumentBuilder(doc);
+        builder.MoveTo(para.FirstChild ?? para);
+
+        var underlineStr = underline.HasValue ? underline.Value ? "single" : "none" : null;
+        var fontSettings = new FontParams(fontName, fontNameAscii, fontNameFarEast, fontSize, bold, italic,
+            underlineStr, color);
+
+        FontHelper.Word.ApplyFontSettings(builder, fontName, fontNameAscii, fontNameFarEast, fontSize, bold, italic,
+            underlineStr, color);
+
+        ApplyParagraphFormatting(para, alignment, indentLeft, indentRight, firstLineIndent, spaceBefore, spaceAfter);
+        ApplyLineSpacing(para.ParagraphFormat, lineSpacing, lineSpacingRule);
+        ApplyStyle(doc, para, styleName);
+        ApplyTabStops(para.ParagraphFormat, tabStops);
+        ApplyTextContent(doc, para, text, fontSettings);
+
+        MarkModified(context);
+
+        var resultMsg = $"Paragraph {resolvedIndex} format edited successfully";
+        if (!string.IsNullOrEmpty(text)) resultMsg += ", text content updated";
+        return resultMsg;
+    }
+
+    private static (Aspose.Words.Paragraph para, int resolvedIndex) GetTargetParagraph(Document doc, int paragraphIndex,
+        int sectionIndex)
+    {
+        var secIdx = sectionIndex;
+        var paraIdx = paragraphIndex;
+
+        if (paraIdx == -1)
         {
             var lastSection = doc.LastSection;
             var bodyParagraphs = lastSection.Body.GetChildNodes(NodeType.Paragraph, false);
-            if (bodyParagraphs.Count > 0)
-            {
-                paragraphIndex = bodyParagraphs.Count - 1;
-                secIdx = doc.Sections.Count - 1;
-            }
-            else
-            {
+            if (bodyParagraphs.Count == 0)
                 throw new ArgumentException(
                     "Cannot edit paragraph: document has no paragraphs. Use insert operation to add paragraphs first.");
-            }
+            paraIdx = bodyParagraphs.Count - 1;
+            secIdx = doc.Sections.Count - 1;
         }
 
         if (secIdx < 0 || secIdx >= doc.Sections.Count)
@@ -78,19 +101,16 @@ public class EditParagraphWordHandler : OperationHandlerBase<Document>
         var section = doc.Sections[secIdx];
         var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().ToList();
 
-        if (paragraphIndex.Value < 0 || paragraphIndex.Value >= paragraphs.Count)
+        if (paraIdx < 0 || paraIdx >= paragraphs.Count)
             throw new ArgumentException(
-                $"Paragraph index {paragraphIndex.Value} out of range (total paragraphs: {paragraphs.Count}, valid range: 0-{paragraphs.Count - 1})");
+                $"Paragraph index {paraIdx} out of range (total paragraphs: {paragraphs.Count}, valid range: 0-{paragraphs.Count - 1})");
 
-        var para = paragraphs[paragraphIndex.Value];
-        var builder = new DocumentBuilder(doc);
-        builder.MoveTo(para.FirstChild ?? para);
+        return (paragraphs[paraIdx], paraIdx);
+    }
 
-        var underlineStr = underline.HasValue ? underline.Value ? "single" : "none" : null;
-
-        FontHelper.Word.ApplyFontSettings(builder, fontName, fontNameAscii, fontNameFarEast, fontSize, bold, italic,
-            underlineStr, color);
-
+    private static void ApplyParagraphFormatting(Aspose.Words.Paragraph para, string? alignment, double? indentLeft,
+        double? indentRight, double? firstLineIndent, double? spaceBefore, double? spaceAfter)
+    {
         var paraFormat = para.ParagraphFormat;
 
         if (!string.IsNullOrEmpty(alignment))
@@ -101,96 +121,106 @@ public class EditParagraphWordHandler : OperationHandlerBase<Document>
         if (firstLineIndent.HasValue) paraFormat.FirstLineIndent = firstLineIndent.Value;
         if (spaceBefore.HasValue) paraFormat.SpaceBefore = spaceBefore.Value;
         if (spaceAfter.HasValue) paraFormat.SpaceAfter = spaceAfter.Value;
+    }
 
-        if (lineSpacing.HasValue || !string.IsNullOrEmpty(lineSpacingRule))
+    private static void ApplyLineSpacing(ParagraphFormat paraFormat, double? lineSpacing, string? lineSpacingRule)
+    {
+        if (!lineSpacing.HasValue && string.IsNullOrEmpty(lineSpacingRule)) return;
+
+        var rule = WordParagraphHelper.GetLineSpacingRule(lineSpacingRule ?? "single");
+        paraFormat.LineSpacingRule = rule;
+
+        paraFormat.LineSpacing = lineSpacing ?? (lineSpacingRule ?? "single").ToLower() switch
         {
-            var rule = WordParagraphHelper.GetLineSpacingRule(lineSpacingRule ?? "single");
-            paraFormat.LineSpacingRule = rule;
+            "single" => 1.0,
+            "oneandhalf" => 1.5,
+            "double" => 2.0,
+            _ => 1.0
+        };
+    }
 
-            if (lineSpacing.HasValue)
-                paraFormat.LineSpacing = lineSpacing.Value;
-            else
-                paraFormat.LineSpacing = (lineSpacingRule ?? "single").ToLower() switch
-                {
-                    "single" => 1.0,
-                    "oneandhalf" => 1.5,
-                    "double" => 2.0,
-                    _ => 1.0
-                };
-        }
+    private static void ApplyStyle(Document doc, Aspose.Words.Paragraph para, string? styleName)
+    {
+        if (string.IsNullOrEmpty(styleName)) return;
 
-        if (!string.IsNullOrEmpty(styleName))
+        var style = doc.Styles[styleName];
+        if (style == null)
+            throw new ArgumentException(
+                $"Style '{styleName}' not found. Use word_get_styles tool to view available styles");
+
+        var isEmpty = string.IsNullOrWhiteSpace(para.GetText());
+        if (isEmpty) para.ParagraphFormat.ClearFormatting();
+        para.ParagraphFormat.Style = style;
+        para.ParagraphFormat.StyleName = styleName;
+    }
+
+    private static void ApplyTabStops(ParagraphFormat paraFormat, JsonArray? tabStops)
+    {
+        if (tabStops is not { Count: > 0 }) return;
+
+        paraFormat.TabStops.Clear();
+        foreach (var ts in tabStops)
         {
-            var style = doc.Styles[styleName];
-            if (style != null)
-            {
-                var isEmpty = string.IsNullOrWhiteSpace(para.GetText());
-                if (isEmpty) paraFormat.ClearFormatting();
-                paraFormat.Style = style;
-                paraFormat.StyleName = styleName;
-            }
-            else
-            {
-                throw new ArgumentException(
-                    $"Style '{styleName}' not found. Use word_get_styles tool to view available styles");
-            }
-        }
+            var tsObj = ts?.AsObject();
+            if (tsObj == null) continue;
 
-        if (tabStops is { Count: > 0 })
-        {
-            paraFormat.TabStops.Clear();
-            foreach (var ts in tabStops)
-            {
-                var tsObj = ts?.AsObject();
-                if (tsObj != null)
-                {
-                    var position = tsObj["position"]?.GetValue<double>() ?? 0;
-                    var tabAlignment = tsObj["alignment"]?.GetValue<string>() ?? "left";
-                    var leader = tsObj["leader"]?.GetValue<string>() ?? "none";
-                    paraFormat.TabStops.Add(new TabStop(position,
-                        WordParagraphHelper.GetTabAlignment(tabAlignment),
-                        WordParagraphHelper.GetTabLeader(leader)));
-                }
-            }
+            var position = tsObj["position"]?.GetValue<double>() ?? 0;
+            var tabAlignment = tsObj["alignment"]?.GetValue<string>() ?? "left";
+            var leader = tsObj["leader"]?.GetValue<string>() ?? "none";
+            paraFormat.TabStops.Add(new TabStop(position,
+                WordParagraphHelper.GetTabAlignment(tabAlignment),
+                WordParagraphHelper.GetTabLeader(leader)));
         }
+    }
 
+    private static void ApplyTextContent(Document doc, Aspose.Words.Paragraph para, string? text, FontParams fontParams)
+    {
         if (!string.IsNullOrEmpty(text))
         {
             para.RemoveAllChildren();
             var newRun = new Run(doc, text);
-            FontHelper.Word.ApplyFontSettings(newRun, fontName, fontNameAscii, fontNameFarEast, fontSize, bold, italic,
-                underlineStr, color);
+            FontHelper.Word.ApplyFontSettings(newRun, fontParams.FontName, fontParams.FontNameAscii,
+                fontParams.FontNameFarEast, fontParams.FontSize, fontParams.Bold, fontParams.Italic,
+                fontParams.UnderlineStr, fontParams.Color);
             para.AppendChild(newRun);
+            return;
+        }
+
+        var runs = para.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+        if (runs.Count == 0)
+        {
+            if (fontParams.HasAnySettings())
+            {
+                var sentinelRun = new Run(doc, "\u200B");
+                FontHelper.Word.ApplyFontSettings(sentinelRun, fontParams.FontName, fontParams.FontNameAscii,
+                    fontParams.FontNameFarEast, fontParams.FontSize, fontParams.Bold, fontParams.Italic,
+                    fontParams.UnderlineStr, fontParams.Color);
+                para.AppendChild(sentinelRun);
+            }
         }
         else
         {
-            var runs = para.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
-            if (runs.Count == 0)
-            {
-                var hasFontSettings = fontName != null || fontNameAscii != null || fontNameFarEast != null ||
-                                      fontSize.HasValue || bold.HasValue || italic.HasValue || underlineStr != null ||
-                                      color != null;
-
-                if (hasFontSettings)
-                {
-                    var sentinelRun = new Run(doc, "\u200B");
-                    FontHelper.Word.ApplyFontSettings(sentinelRun, fontName, fontNameAscii, fontNameFarEast, fontSize,
-                        bold, italic, underlineStr, color);
-                    para.AppendChild(sentinelRun);
-                }
-            }
-            else
-            {
-                foreach (var run in runs)
-                    FontHelper.Word.ApplyFontSettings(run, fontName, fontNameAscii, fontNameFarEast, fontSize, bold,
-                        italic, underlineStr, color);
-            }
+            foreach (var run in runs)
+                FontHelper.Word.ApplyFontSettings(run, fontParams.FontName, fontParams.FontNameAscii,
+                    fontParams.FontNameFarEast, fontParams.FontSize, fontParams.Bold, fontParams.Italic,
+                    fontParams.UnderlineStr, fontParams.Color);
         }
+    }
 
-        MarkModified(context);
-
-        var resultMsg = $"Paragraph {paragraphIndex.Value} format edited successfully";
-        if (!string.IsNullOrEmpty(text)) resultMsg += ", text content updated";
-        return resultMsg;
+    private record FontParams(
+        string? FontName,
+        string? FontNameAscii,
+        string? FontNameFarEast,
+        double? FontSize,
+        bool? Bold,
+        bool? Italic,
+        string? UnderlineStr,
+        string? Color)
+    {
+        public bool HasAnySettings()
+        {
+            return FontName != null || FontNameAscii != null || FontNameFarEast != null ||
+                   FontSize.HasValue || Bold.HasValue || Italic.HasValue || UnderlineStr != null || Color != null;
+        }
     }
 }

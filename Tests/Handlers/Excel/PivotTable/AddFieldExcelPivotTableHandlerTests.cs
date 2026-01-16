@@ -39,6 +39,57 @@ public class AddFieldExcelPivotTableHandlerTests : ExcelHandlerTestBase
 
     #endregion
 
+    #region Function Tests
+
+    [Theory]
+    [InlineData("Sum")]
+    [InlineData("Count")]
+    [InlineData("Average")]
+    [InlineData("Max")]
+    [InlineData("Min")]
+    public void Execute_WithDataFieldAndFunction_AppliesFunction(string function)
+    {
+        var workbook = CreateWorkbookWithPivotTable();
+        var context = CreateContext(workbook);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "pivotTableIndex", 0 },
+            { "fieldName", "Value" },
+            { "fieldType", "data" },
+            { "function", function }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("data", result.ToLower());
+        AssertModified(context);
+    }
+
+    #endregion
+
+    #region Sheet Index Tests
+
+    [Fact]
+    public void Execute_WithSheetIndex_UsesCorrectSheet()
+    {
+        var workbook = CreateWorkbookWithPivotTable();
+        var context = CreateContext(workbook);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "sheetIndex", 0 },
+            { "pivotTableIndex", 0 },
+            { "fieldName", "Category" },
+            { "fieldType", "row" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("added", result.ToLower());
+        AssertModified(context);
+    }
+
+    #endregion
+
     #region Basic Add Field Operations
 
     [Fact]
@@ -123,6 +174,76 @@ public class AddFieldExcelPivotTableHandlerTests : ExcelHandlerTestBase
         });
 
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+    }
+
+    [Fact]
+    public void Execute_WithInvalidPivotTableIndex_ThrowsArgumentException()
+    {
+        var workbook = CreateWorkbookWithPivotTable();
+        var context = CreateContext(workbook);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "pivotTableIndex", 99 },
+            { "fieldName", "Category" },
+            { "fieldType", "row" }
+        });
+
+        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void Execute_WithoutFieldType_ThrowsArgumentException()
+    {
+        var workbook = CreateWorkbookWithPivotTable();
+        var context = CreateContext(workbook);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "pivotTableIndex", 0 },
+            { "fieldName", "Category" }
+        });
+
+        Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+    }
+
+    #endregion
+
+    #region Field Type Tests
+
+    [Fact]
+    public void Execute_WithColumnFieldType_AddsColumnField()
+    {
+        var workbook = CreateWorkbookWithPivotTable();
+        var context = CreateContext(workbook);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "pivotTableIndex", 0 },
+            { "fieldName", "Category" },
+            { "fieldType", "column" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("column", result.ToLower());
+        AssertModified(context);
+    }
+
+    [Fact]
+    public void Execute_WithPageFieldType_AddsPageField()
+    {
+        var workbook = CreateWorkbookWithPivotTable();
+        var context = CreateContext(workbook);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "pivotTableIndex", 0 },
+            { "fieldName", "Category" },
+            { "fieldType", "page" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("page", result.ToLower());
+        AssertModified(context);
     }
 
     #endregion

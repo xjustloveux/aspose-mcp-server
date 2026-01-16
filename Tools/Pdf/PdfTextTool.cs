@@ -120,7 +120,7 @@ Usage examples:
 
         var result = handler.Execute(operationContext, parameters);
 
-        if (operation.ToLowerInvariant() == "extract")
+        if (string.Equals(operation, "extract", StringComparison.OrdinalIgnoreCase))
             return result;
 
         if (operationContext.IsModified)

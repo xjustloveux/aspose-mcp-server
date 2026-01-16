@@ -249,6 +249,7 @@ public static class PowerPointHelper
                 foreach (var cell in row)
                     if (!string.IsNullOrWhiteSpace(cell.TextFrame?.Text))
                         textContent.Add(cell.TextFrame.Text);
+
                 break;
             case ISmartArt smartArt:
                 foreach (var node in smartArt.AllNodes)
@@ -280,6 +281,7 @@ public static class PowerPointHelper
                 foreach (var cell in row)
                     if (!string.IsNullOrWhiteSpace(cell.TextFrame?.Text))
                         count += cell.TextFrame.Text.Length;
+
                 break;
             case ISmartArt smartArt:
                 foreach (var node in smartArt.AllNodes)

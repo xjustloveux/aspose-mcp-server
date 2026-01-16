@@ -97,14 +97,7 @@ public class CopyWordTableHandler : OperationHandlerBase<Document>
             return targetPara;
 
         var bodyParagraphs = targetSection.Body.GetChildNodes(NodeType.Paragraph, false);
-        WordParagraph? directPara = null;
-
-        foreach (var para in bodyParagraphs.Cast<WordParagraph>())
-            if (para == targetPara)
-            {
-                directPara = para;
-                break;
-            }
+        var directPara = bodyParagraphs.Cast<WordParagraph>().FirstOrDefault(para => para == targetPara);
 
         if (directPara == null && bodyParagraphs.Count > 0)
             directPara = bodyParagraphs[^1] as WordParagraph;

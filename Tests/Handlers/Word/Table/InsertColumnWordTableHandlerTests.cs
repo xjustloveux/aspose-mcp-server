@@ -40,6 +40,45 @@ public class InsertColumnWordTableHandlerTests : WordHandlerTestBase
 
     #endregion
 
+    #region No Tables Scenario
+
+    [Fact]
+    public void Execute_WithNoTables_ThrowsArgumentException()
+    {
+        var doc = new Document();
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "columnIndex", 0 }
+        });
+
+        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+        Assert.Contains("Table index", ex.Message);
+    }
+
+    #endregion
+
+    #region Insert At End
+
+    [Fact]
+    public void Execute_InsertAfterLastColumn_AppendsColumn()
+    {
+        var doc = CreateDocumentWithTable(3, 3);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "columnIndex", 2 },
+            { "insertBefore", false }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("index 3", result);
+        Assert.Equal(4, GetFirstTable(doc).Rows[0].Cells.Count);
+    }
+
+    #endregion
+
     #region Insert Before/After
 
     [Fact]
@@ -147,6 +186,96 @@ public class InsertColumnWordTableHandlerTests : WordHandlerTestBase
 
         builder.EndTable();
         return doc;
+    }
+
+    #endregion
+
+    #region Column Data Tests
+
+    [Fact]
+    public void Execute_WithColumnData_PopulatesCells()
+    {
+        var doc = CreateDocumentWithTable(3, 3);
+        var context = CreateContext(doc);
+        var columnDataJson = "[\"Header\", \"Row1\", \"Row2\"]";
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "columnIndex", 0 },
+            { "columnData", columnDataJson }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("inserted", result.ToLower());
+        AssertModified(context);
+    }
+
+    [Fact]
+    public void Execute_WithInvalidColumnDataJson_ThrowsArgumentException()
+    {
+        var doc = CreateDocumentWithTable(3, 3);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "columnIndex", 0 },
+            { "columnData", "invalid json" }
+        });
+
+        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+        Assert.Contains("Invalid columnData JSON", ex.Message);
+    }
+
+    [Fact]
+    public void Execute_WithColumnDataWithLineBreaks_HandlesLineBreaks()
+    {
+        var doc = CreateDocumentWithTable(2, 2);
+        var context = CreateContext(doc);
+        var columnDataJson = "[\"Line1\\nLine2\", \"Single\"]";
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "columnIndex", 0 },
+            { "columnData", columnDataJson }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("inserted", result.ToLower());
+        AssertModified(context);
+    }
+
+    #endregion
+
+    #region Section Index Tests
+
+    [Fact]
+    public void Execute_WithValidSectionIndex_InsertsInSection()
+    {
+        var doc = CreateDocumentWithTable(3, 3);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "columnIndex", 0 },
+            { "sectionIndex", 0 }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("inserted", result.ToLower());
+    }
+
+    [Fact]
+    public void Execute_WithInvalidSectionIndex_ThrowsArgumentException()
+    {
+        var doc = CreateDocumentWithTable(3, 3);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "columnIndex", 0 },
+            { "sectionIndex", 99 }
+        });
+
+        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+        Assert.Contains("Section index", ex.Message);
     }
 
     #endregion

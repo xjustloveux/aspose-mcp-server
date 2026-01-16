@@ -36,12 +36,12 @@ public static class McpServerBuilderExtensions
             foreach (var method in methods)
             {
                 var toolAttr = method.GetCustomAttribute<McpServerToolAttribute>();
-                if (toolAttr != null && !string.IsNullOrEmpty(toolAttr.Name))
-                    if (filterService.IsToolEnabled(toolAttr.Name))
-                    {
-                        RegisterToolType(builder, toolType);
-                        break;
-                    }
+                if (toolAttr != null && !string.IsNullOrEmpty(toolAttr.Name) &&
+                    filterService.IsToolEnabled(toolAttr.Name))
+                {
+                    RegisterToolType(builder, toolType);
+                    break;
+                }
             }
         }
 

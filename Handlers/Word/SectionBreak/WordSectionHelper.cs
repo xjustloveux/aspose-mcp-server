@@ -66,10 +66,9 @@ public static class WordSectionHelper
                     headerCount++;
             }
             else if (hf.HeaderFooterType is HeaderFooterType.FooterPrimary or HeaderFooterType.FooterFirst
-                     or HeaderFooterType.FooterEven)
+                         or HeaderFooterType.FooterEven && !string.IsNullOrWhiteSpace(hf.GetText()))
             {
-                if (!string.IsNullOrWhiteSpace(hf.GetText()))
-                    footerCount++;
+                footerCount++;
             }
 
         return new

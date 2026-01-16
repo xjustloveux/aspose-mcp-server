@@ -59,9 +59,8 @@ public class EditImageWordHandler : OperationHandlerBase<Document>
             shape.AspectRatioLocked = aspectRatioLocked.Value;
 
         var alignmentValue = alignment ?? "left";
-        if (!string.IsNullOrEmpty(alignmentValue))
-            if (shape.ParentNode is WordParagraph parentPara)
-                parentPara.ParagraphFormat.Alignment = WordImageHelper.GetAlignment(alignmentValue);
+        if (!string.IsNullOrEmpty(alignmentValue) && shape.ParentNode is WordParagraph parentPara)
+            parentPara.ParagraphFormat.Alignment = WordImageHelper.GetAlignment(alignmentValue);
 
         var textWrappingValue = textWrapping ?? "inline";
         if (!string.IsNullOrEmpty(textWrappingValue))

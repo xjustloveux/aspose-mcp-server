@@ -17,9 +17,9 @@ public static class ExcelGroupHelper
     public static void ValidateRequiredParams(string operation, OperationParameters parameters,
         params string[] requiredParams)
     {
-        foreach (var param in requiredParams)
-            if (!parameters.Has(param))
-                throw new ArgumentException($"Operation '{operation}' requires parameter '{param}'.");
+        var missingParam = requiredParams.FirstOrDefault(param => !parameters.Has(param));
+        if (missingParam != null)
+            throw new ArgumentException($"Operation '{operation}' requires parameter '{missingParam}'.");
     }
 
     /// <summary>

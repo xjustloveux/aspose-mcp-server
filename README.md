@@ -794,7 +794,7 @@ pwsh deploy/publish.ps1 -All -Clean
 
 **測試統計：**
 - **測試類**: 100+ 個測試類（含 Session、Security、Helpers 測試）
-- **測試用例**: 6,700+ 個測試用例
+- **測試用例**: 7,000+ 個測試用例
 - **測試框架**: xUnit 2.9.2
 
 **運行測試：**

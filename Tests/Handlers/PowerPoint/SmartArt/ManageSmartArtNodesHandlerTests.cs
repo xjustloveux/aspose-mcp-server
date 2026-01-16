@@ -160,5 +160,173 @@ public class ManageSmartArtNodesHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
+    [Fact]
+    public void Execute_WithoutTargetPath_ThrowsArgumentException()
+    {
+        var pres = CreatePresentationWithSmartArt();
+        var context = CreateContext(pres);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "slideIndex", 0 },
+            { "shapeIndex", 0 },
+            { "action", "add" },
+            { "text", "Test" }
+        });
+
+        Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+    }
+
+    [Fact]
+    public void Execute_WithInvalidRootIndex_ThrowsArgumentException()
+    {
+        var pres = CreatePresentationWithSmartArt();
+        var context = CreateContext(pres);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "slideIndex", 0 },
+            { "shapeIndex", 0 },
+            { "action", "edit" },
+            { "targetPath", "[99]" },
+            { "text", "Test" }
+        });
+
+        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void Execute_AddWithoutText_ThrowsArgumentException()
+    {
+        var pres = CreatePresentationWithSmartArt();
+        var context = CreateContext(pres);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "slideIndex", 0 },
+            { "shapeIndex", 0 },
+            { "action", "add" },
+            { "targetPath", "[0]" }
+        });
+
+        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+        Assert.Contains("text", ex.Message);
+    }
+
+    [Fact]
+    public void Execute_EditWithoutText_ThrowsArgumentException()
+    {
+        var pres = CreatePresentationWithSmartArt();
+        var context = CreateContext(pres);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "slideIndex", 0 },
+            { "shapeIndex", 0 },
+            { "action", "edit" },
+            { "targetPath", "[0]" }
+        });
+
+        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+        Assert.Contains("text", ex.Message);
+    }
+
+    #endregion
+
+    #region Position Parameter Tests
+
+    [Fact]
+    public void Execute_AddWithPosition_AddsAtPosition()
+    {
+        var pres = CreatePresentationWithSmartArt();
+        var context = CreateContext(pres);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "slideIndex", 0 },
+            { "shapeIndex", 0 },
+            { "action", "add" },
+            { "targetPath", "[0]" },
+            { "text", "Positioned Node" },
+            { "position", 0 }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("position 0", result.ToLower());
+        AssertModified(context);
+    }
+
+    [Fact]
+    public void Execute_AddWithInvalidPosition_ThrowsArgumentException()
+    {
+        var pres = CreatePresentationWithSmartArt();
+        var context = CreateContext(pres);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "slideIndex", 0 },
+            { "shapeIndex", 0 },
+            { "action", "add" },
+            { "targetPath", "[0]" },
+            { "text", "Test" },
+            { "position", -1 }
+        });
+
+        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+        Assert.Contains("Position", ex.Message);
+    }
+
+    #endregion
+
+    #region Invalid Index Tests
+
+    [Fact]
+    public void Execute_WithInvalidSlideIndex_ThrowsArgumentException()
+    {
+        var pres = CreatePresentationWithSmartArt();
+        var context = CreateContext(pres);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "slideIndex", 99 },
+            { "shapeIndex", 0 },
+            { "action", "add" },
+            { "targetPath", "[0]" },
+            { "text", "Test" }
+        });
+
+        Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+    }
+
+    [Fact]
+    public void Execute_WithInvalidShapeIndex_ThrowsArgumentException()
+    {
+        var pres = CreatePresentationWithSmartArt();
+        var context = CreateContext(pres);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "slideIndex", 0 },
+            { "shapeIndex", 99 },
+            { "action", "add" },
+            { "targetPath", "[0]" },
+            { "text", "Test" }
+        });
+
+        Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+    }
+
+    [Fact]
+    public void Execute_WithEmptyTargetPath_ThrowsArgumentException()
+    {
+        var pres = CreatePresentationWithSmartArt();
+        var context = CreateContext(pres);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "slideIndex", 0 },
+            { "shapeIndex", 0 },
+            { "action", "add" },
+            { "targetPath", "[]" },
+            { "text", "Test" }
+        });
+
+        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+        Assert.Contains("at least one index", ex.Message);
+    }
+
     #endregion
 }
