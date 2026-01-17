@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -240,7 +240,7 @@ Usage examples:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107
+    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
         string operation,
         string location,
         string position,
@@ -350,7 +350,8 @@ Usage examples:
     /// <param name="bold">Whether the text is bold.</param>
     /// <param name="textAlignment">The text alignment: 'left', 'center', 'right'.</param>
     /// <returns>OperationParameters configured for the add textbox operation.</returns>
-    private static OperationParameters BuildAddTextboxParameters(OperationParameters parameters, string? text,
+    private static OperationParameters BuildAddTextboxParameters( // NOSONAR S107 - MCP protocol parameter building
+        OperationParameters parameters, string? text,
         double textboxWidth, double textboxHeight, double positionX, double positionY, string? backgroundColor,
         string? borderColor, double borderWidth, string? fontName, string? fontNameAscii, string? fontNameFarEast,
         double? fontSize, bool? bold, string textAlignment)
@@ -400,9 +401,11 @@ Usage examples:
     /// <param name="color">The text color in hex format.</param>
     /// <param name="clearFormatting">Whether to clear existing formatting.</param>
     /// <returns>OperationParameters configured for the edit textbox content operation.</returns>
-    private static OperationParameters BuildEditTextboxContentParameters(OperationParameters parameters,
-        int? textboxIndex, string? text, bool appendText, string? fontName, string? fontNameAscii,
-        string? fontNameFarEast, double? fontSize, bool? bold, bool? italic, string? color, bool clearFormatting)
+    private static OperationParameters
+        BuildEditTextboxContentParameters( // NOSONAR S107 - MCP protocol parameter building
+            OperationParameters parameters,
+            int? textboxIndex, string? text, bool appendText, string? fontName, string? fontNameAscii,
+            string? fontNameFarEast, double? fontSize, bool? bold, bool? italic, string? color, bool clearFormatting)
     {
         if (textboxIndex.HasValue) parameters.Set("textboxIndex", textboxIndex.Value);
         if (text != null) parameters.Set("text", text);
@@ -451,7 +454,8 @@ Usage examples:
     /// <param name="paragraphIndex">The paragraph index to insert after.</param>
     /// <param name="alignment">The chart alignment: 'left', 'center', 'right'.</param>
     /// <returns>OperationParameters configured for the add chart operation.</returns>
-    private static OperationParameters BuildAddChartParameters(OperationParameters parameters, string chartType,
+    private static OperationParameters BuildAddChartParameters( // NOSONAR S107 - MCP protocol parameter building
+        OperationParameters parameters, string chartType,
         string[][]? data, string? chartTitle, double chartWidth, double chartHeight, int? paragraphIndex,
         string alignment)
     {

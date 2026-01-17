@@ -16,7 +16,7 @@ public abstract class TestBase : IDisposable
     /// <summary>
     ///     Aspose library types for evaluation mode checking
     /// </summary>
-    public enum AsposeLibraryType
+    protected enum AsposeLibraryType
     {
         Slides,
         Words,

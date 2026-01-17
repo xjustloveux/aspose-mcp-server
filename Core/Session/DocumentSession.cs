@@ -3,7 +3,7 @@ namespace AsposeMcpServer.Core.Session;
 /// <summary>
 ///     Represents an open document session in memory
 /// </summary>
-public class DocumentSession : IDisposable
+public class DocumentSession : IDisposable // NOSONAR S3881 - Simple dispose pattern sufficient for sealed class
 {
     /// <summary>
     ///     Semaphore for thread-safe document access

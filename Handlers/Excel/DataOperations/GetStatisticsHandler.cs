@@ -77,8 +77,8 @@ public class GetStatisticsHandler : OperationHandlerBase<Workbook>
     /// <param name="worksheet">The worksheet to get statistics for.</param>
     /// <param name="index">The worksheet index.</param>
     /// <param name="range">The cell range to calculate statistics for, or null for basic sheet info.</param>
-    /// <returns>An object containing the worksheet statistics.</returns>
-    private static object GetSheetStatistics(Worksheet worksheet, int index, string? range)
+    /// <returns>A dictionary containing the worksheet statistics.</returns>
+    private static Dictionary<string, object> GetSheetStatistics(Worksheet worksheet, int index, string? range)
     {
         var baseStats = BuildBaseStats(worksheet, index);
 

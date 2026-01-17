@@ -70,7 +70,7 @@ Usage examples:
         if (string.IsNullOrEmpty(outputPath))
             throw new ArgumentException("outputPath is required");
 
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+        SecurityHelper.ValidateFilePath(outputPath, nameof(outputPath), true);
 
         if (string.IsNullOrEmpty(inputPath) && string.IsNullOrEmpty(sessionId))
             throw new ArgumentException("Either inputPath or sessionId must be provided");
@@ -80,7 +80,7 @@ Usage examples:
         if (!string.IsNullOrEmpty(sessionId))
             return ConvertFromSession(sessionId, outputPath, outputExtension);
 
-        SecurityHelper.ValidateFilePath(inputPath!, "inputPath", true);
+        SecurityHelper.ValidateFilePath(inputPath!, nameof(inputPath), true);
         return ConvertFromFile(inputPath!, outputPath, outputExtension);
     }
 
@@ -216,7 +216,9 @@ Usage examples:
     /// <param name="extension">The target file extension.</param>
     /// <returns>The corresponding <see cref="SaveFormat" /> value.</returns>
     /// <exception cref="ArgumentException">Thrown when the extension is not supported for Word output.</exception>
-    private static SaveFormat GetWordSaveFormat(string extension)
+    private static SaveFormat
+        GetWordSaveFormat(
+            string extension) // NOSONAR S1192 - File extension strings are intentionally repeated in each format converter
     {
         return extension switch
         {

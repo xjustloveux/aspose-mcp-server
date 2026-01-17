@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Helpers;
@@ -268,7 +268,7 @@ Notes:
     {
         var effectiveOutputPath = outputPath ?? path;
         if (!string.IsNullOrEmpty(effectiveOutputPath))
-            SecurityHelper.ValidateFilePath(effectiveOutputPath, "outputPath", true);
+            SecurityHelper.ValidateFilePath(effectiveOutputPath, nameof(outputPath), true);
 
         var parameters = BuildParameters(tableIndex, sectionIndex, rows, columns, paragraphIndex, tableData,
             tableWidth, autoFit, hasHeader, headerBackgroundColor, cellBackgroundColor, alternatingRowColor,
@@ -307,7 +307,7 @@ Notes:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values for table operations.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107
+    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
         int tableIndex, int? sectionIndex, int? rows, int? columns, int paragraphIndex, string? tableData,
         double? tableWidth, bool autoFit, bool hasHeader, string? headerBackgroundColor, string? cellBackgroundColor,
         string? alternatingRowColor, string? rowColors, string? cellColors, string? mergeCells, string? fontName,

@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -109,8 +109,9 @@ Usage examples:
         if (operationContext.IsModified)
             ctx.Save(effectiveOutputPath);
 
-        return ctx.IsSession ? result :
-            operationContext.IsModified ? $"{result}\n{ctx.GetOutputMessage(effectiveOutputPath)}" : result;
+        if (ctx.IsSession || !operationContext.IsModified)
+            return result;
+        return $"{result}\n{ctx.GetOutputMessage(effectiveOutputPath)}";
     }
 
     /// <summary>
@@ -118,7 +119,7 @@ Usage examples:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107
+    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
         string operation,
         string? text,
         string? author,

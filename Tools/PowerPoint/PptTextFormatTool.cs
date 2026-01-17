@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Slides;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -118,7 +118,7 @@ Usage examples:
     /// <param name="italic">Whether to apply italic formatting.</param>
     /// <param name="color">The text color (hex or named color).</param>
     /// <returns>OperationParameters configured for text formatting.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107
+    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
         string? slideIndices,
         string? fontName,
         double? fontSize,

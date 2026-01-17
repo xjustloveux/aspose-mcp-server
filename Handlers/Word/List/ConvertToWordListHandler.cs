@@ -22,7 +22,9 @@ public class ConvertToWordListHandler : OperationHandlerBase<Document>
     ///     Optional: listType, numberFormat
     /// </param>
     /// <returns>Success message with conversion details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override string
+        Execute(OperationContext<Document> context,
+            OperationParameters parameters) // NOSONAR S3776 - Linear validation and conversion
     {
         var p = ExtractConvertToListParameters(parameters);
 

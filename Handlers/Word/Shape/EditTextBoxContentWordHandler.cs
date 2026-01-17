@@ -25,7 +25,9 @@ public class EditTextBoxContentWordHandler : OperationHandlerBase<Document>
     /// <returns>Success message.</returns>
     /// <exception cref="ArgumentException">Thrown when textboxIndex is missing or out of range.</exception>
     /// <exception cref="Exception">Thrown when textbox paragraph cannot be retrieved.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override string
+        Execute(OperationContext<Document> context,
+            OperationParameters parameters) // NOSONAR S3776 - Sequential text and format processing
     {
         var p = ExtractEditTextBoxContentParameters(parameters);
 
@@ -48,7 +50,8 @@ public class EditTextBoxContentWordHandler : OperationHandlerBase<Document>
         }
         else
         {
-            para = paragraphs[0] as WordParagraph ?? throw new Exception("Cannot get textbox paragraph");
+            para = paragraphs[0] as WordParagraph ??
+                   throw new InvalidOperationException("Cannot get textbox paragraph");
         }
 
         var runsCollection = para.GetChildNodes(NodeType.Run, false);

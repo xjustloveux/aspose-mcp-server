@@ -36,40 +36,9 @@ public class EditFieldWordHandler : OperationHandlerBase<Document>
         List<string> changes = [];
 
         if (!string.IsNullOrEmpty(p.FieldCode))
-        {
-            var fieldStart = field.Start;
-            var fieldEnd = field.End;
+            UpdateFieldCode(document, field, p.FieldCode, oldFieldCode, changes);
 
-            if (fieldStart != null && fieldEnd != null)
-            {
-                var builder = new DocumentBuilder(document);
-                builder.MoveTo(fieldStart);
-
-                var currentNode = fieldStart.NextSibling;
-                while (currentNode != null && currentNode != fieldEnd)
-                {
-                    var nextNode = currentNode.NextSibling;
-                    if (currentNode.NodeType != NodeType.FieldSeparator && currentNode.NodeType != NodeType.FieldEnd)
-                        currentNode.Remove();
-                    currentNode = nextNode;
-                }
-
-                builder.MoveTo(fieldStart);
-                builder.Write(p.FieldCode);
-                changes.Add($"Field code updated: {oldFieldCode} -> {p.FieldCode}");
-            }
-        }
-
-        if (p.LockField == true)
-        {
-            field.IsLocked = true;
-            changes.Add("Field locked");
-        }
-        else if (p.UnlockField == true)
-        {
-            field.IsLocked = false;
-            changes.Add("Field unlocked");
-        }
+        ApplyLockState(field, p.LockField, p.UnlockField, changes);
 
         if (p.UpdateFieldAfter)
         {
@@ -84,6 +53,61 @@ public class EditFieldWordHandler : OperationHandlerBase<Document>
         if (changes.Count > 0)
             result += $"Changes: {string.Join(", ", changes)}";
         return result;
+    }
+
+    /// <summary>
+    ///     Updates the field code by removing existing content and inserting new code.
+    /// </summary>
+    /// <param name="document">The document.</param>
+    /// <param name="field">The field to update.</param>
+    /// <param name="newFieldCode">The new field code.</param>
+    /// <param name="oldFieldCode">The old field code for change tracking.</param>
+    /// <param name="changes">The list of changes to record.</param>
+    private static void UpdateFieldCode(Document document, Aspose.Words.Fields.Field field, string newFieldCode,
+        string oldFieldCode, List<string> changes)
+    {
+        var fieldStart = field.Start;
+        var fieldEnd = field.End;
+
+        if (fieldStart == null || fieldEnd == null) return;
+
+        var builder = new DocumentBuilder(document);
+        builder.MoveTo(fieldStart);
+
+        var currentNode = fieldStart.NextSibling;
+        while (currentNode != null && currentNode != fieldEnd)
+        {
+            var nextNode = currentNode.NextSibling;
+            if (currentNode.NodeType != NodeType.FieldSeparator && currentNode.NodeType != NodeType.FieldEnd)
+                currentNode.Remove();
+            currentNode = nextNode;
+        }
+
+        builder.MoveTo(fieldStart);
+        builder.Write(newFieldCode);
+        changes.Add($"Field code updated: {oldFieldCode} -> {newFieldCode}");
+    }
+
+    /// <summary>
+    ///     Applies lock or unlock state to the field.
+    /// </summary>
+    /// <param name="field">The field to modify.</param>
+    /// <param name="lockField">Whether to lock the field.</param>
+    /// <param name="unlockField">Whether to unlock the field.</param>
+    /// <param name="changes">The list of changes to record.</param>
+    private static void ApplyLockState(Aspose.Words.Fields.Field field, bool? lockField, bool? unlockField,
+        List<string> changes)
+    {
+        if (lockField == true)
+        {
+            field.IsLocked = true;
+            changes.Add("Field locked");
+        }
+        else if (unlockField == true)
+        {
+            field.IsLocked = false;
+            changes.Add("Field unlocked");
+        }
     }
 
     /// <summary>

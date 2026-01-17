@@ -1,3 +1,5 @@
+using System.Buffers;
+
 namespace AsposeMcpServer.Handlers.Excel.Sheet;
 
 /// <summary>
@@ -8,7 +10,8 @@ public static class ExcelSheetHelper
     /// <summary>
     ///     Characters that are not allowed in Excel sheet names.
     /// </summary>
-    private static readonly char[] InvalidSheetNameChars = ['\\', '/', '?', '*', '[', ']', ':'];
+    private static readonly SearchValues<char> InvalidSheetNameChars =
+        SearchValues.Create(['\\', '/', '?', '*', '[', ']', ':']);
 
     /// <summary>
     ///     Validates that the sheet name meets Excel requirements.
@@ -27,7 +30,7 @@ public static class ExcelSheetHelper
             throw new ArgumentException(
                 $"{paramName} '{name}' (length: {name.Length}) exceeds Excel's limit of 31 characters");
 
-        var invalidCharIndex = name.IndexOfAny(InvalidSheetNameChars);
+        var invalidCharIndex = name.AsSpan().IndexOfAny(InvalidSheetNameChars);
         if (invalidCharIndex >= 0)
             throw new ArgumentException(
                 $"{paramName} contains invalid character '{name[invalidCharIndex]}'. Sheet names cannot contain: \\ / ? * [ ] :");

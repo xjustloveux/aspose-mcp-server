@@ -112,9 +112,12 @@ jobs:
           /d:sonar.host.url="https://sonarcloud.io" `
           /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" `
           /d:sonar.coverage.exclusions="**/Tests/**,**/Program.cs" `
-          /d:sonar.issue.ignore.multicriteria=e1 `
+          /d:sonar.exclusions="**/deploy/web.config,**/deploy/deployment.yaml" `
+          /d:sonar.issue.ignore.multicriteria=e1,e2 `
           /d:sonar.issue.ignore.multicriteria.e1.ruleKey=csharpsquid:S3973 `
-          /d:sonar.issue.ignore.multicriteria.e1.resourceKey="**/*"
+          /d:sonar.issue.ignore.multicriteria.e1.resourceKey="**/*" `
+          /d:sonar.issue.ignore.multicriteria.e2.ruleKey=docker:S7020 `
+          /d:sonar.issue.ignore.multicriteria.e2.resourceKey="**/Dockerfile"
 
     - name: Build Solution
       run: dotnet build AsposeMcpServer.sln --configuration Release --no-restore

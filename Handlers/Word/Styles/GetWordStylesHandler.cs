@@ -23,7 +23,9 @@ public class GetWordStylesHandler : OperationHandlerBase<Document>
     ///     Optional: includeBuiltIn
     /// </param>
     /// <returns>JSON string containing style information.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override string
+        Execute(OperationContext<Document> context,
+            OperationParameters parameters) // NOSONAR S3776 - Filter selection and list building
     {
         var p = ExtractGetWordStylesParameters(parameters);
         var doc = context.Document;

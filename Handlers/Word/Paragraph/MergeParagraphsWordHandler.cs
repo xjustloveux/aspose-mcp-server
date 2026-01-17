@@ -19,7 +19,9 @@ public class MergeParagraphsWordHandler : OperationHandlerBase<Document>
     ///     Required: startParagraphIndex, endParagraphIndex
     /// </param>
     /// <returns>Success message with merge details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override string
+        Execute(OperationContext<Document> context,
+            OperationParameters parameters) // NOSONAR S3776 - Linear validation and merge loop
     {
         var mergeParams = ExtractMergeParagraphsParameters(parameters);
 

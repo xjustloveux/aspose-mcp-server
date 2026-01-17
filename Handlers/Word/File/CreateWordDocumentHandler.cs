@@ -25,7 +25,9 @@ public class CreateWordDocumentHandler : OperationHandlerBase<Document>
     /// </param>
     /// <returns>Success message with output path.</returns>
     /// <exception cref="ArgumentException">Thrown when outputPath is missing.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override string
+        Execute(OperationContext<Document> context,
+            OperationParameters parameters) // NOSONAR S3776 - Mutually exclusive page setup branches
     {
         var p = ExtractCreateParameters(parameters);
 

@@ -6,6 +6,19 @@ using Section = Aspose.Words.Section;
 namespace AsposeMcpServer.Handlers.Word.HeaderFooter;
 
 /// <summary>
+///     Font settings for header/footer text.
+/// </summary>
+/// <param name="FontName">The font name.</param>
+/// <param name="FontNameAscii">The ASCII font name.</param>
+/// <param name="FontNameFarEast">The Far East font name.</param>
+/// <param name="FontSize">The font size.</param>
+public sealed record FontSettings(
+    string? FontName,
+    string? FontNameAscii,
+    string? FontNameFarEast,
+    double? FontSize);
+
+/// <summary>
 ///     Helper class providing shared methods for Word header/footer handlers.
 /// </summary>
 public static class WordHeaderFooterHelper
@@ -76,14 +89,10 @@ public static class WordHeaderFooterHelper
     /// </summary>
     /// <param name="builder">The document builder.</param>
     /// <param name="text">The text to insert. Field codes start with { and end with }.</param>
-    /// <param name="fontName">Optional font name.</param>
-    /// <param name="fontNameAscii">Optional ASCII font name.</param>
-    /// <param name="fontNameFarEast">Optional Far East font name.</param>
-    /// <param name="fontSize">Optional font size.</param>
-    public static void InsertTextOrField(DocumentBuilder builder, string text, string? fontName,
-        string? fontNameAscii, string? fontNameFarEast, double? fontSize)
+    /// <param name="fontSettings">The font settings to apply.</param>
+    public static void InsertTextOrField(DocumentBuilder builder, string text, FontSettings fontSettings)
     {
-        ApplyFontSettings(builder, fontName, fontNameAscii, fontNameFarEast, fontSize);
+        ApplyFontSettings(builder, fontSettings);
 
         if (IsFieldCode(text))
             InsertField(builder, text);
@@ -95,24 +104,20 @@ public static class WordHeaderFooterHelper
     ///     Applies font settings to the document builder.
     /// </summary>
     /// <param name="builder">The document builder.</param>
-    /// <param name="fontName">Optional font name.</param>
-    /// <param name="fontNameAscii">Optional ASCII font name.</param>
-    /// <param name="fontNameFarEast">Optional Far East font name.</param>
-    /// <param name="fontSize">Optional font size.</param>
-    private static void ApplyFontSettings(DocumentBuilder builder, string? fontName, string? fontNameAscii,
-        string? fontNameFarEast, double? fontSize)
+    /// <param name="fontSettings">The font settings to apply.</param>
+    private static void ApplyFontSettings(DocumentBuilder builder, FontSettings fontSettings)
     {
-        if (!string.IsNullOrEmpty(fontName))
-            builder.Font.Name = fontName;
+        if (!string.IsNullOrEmpty(fontSettings.FontName))
+            builder.Font.Name = fontSettings.FontName;
 
-        if (!string.IsNullOrEmpty(fontNameAscii))
-            builder.Font.NameAscii = fontNameAscii;
+        if (!string.IsNullOrEmpty(fontSettings.FontNameAscii))
+            builder.Font.NameAscii = fontSettings.FontNameAscii;
 
-        if (!string.IsNullOrEmpty(fontNameFarEast))
-            builder.Font.NameFarEast = fontNameFarEast;
+        if (!string.IsNullOrEmpty(fontSettings.FontNameFarEast))
+            builder.Font.NameFarEast = fontSettings.FontNameFarEast;
 
-        if (fontSize.HasValue)
-            builder.Font.Size = fontSize.Value;
+        if (fontSettings.FontSize.HasValue)
+            builder.Font.Size = fontSettings.FontSize.Value;
     }
 
     /// <summary>

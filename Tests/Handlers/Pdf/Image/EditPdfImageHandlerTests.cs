@@ -176,7 +176,7 @@ public class EditPdfImageHandlerTests : PdfHandlerTestBase
         AssertModified(context);
     }
 
-    private string CreateTestImageFile()
+    private static string CreateTestImageFile()
     {
         var path = Path.Combine(Path.GetTempPath(), $"test_image_{Guid.NewGuid()}.bmp");
         using var ms = CreateSimpleImageStream();

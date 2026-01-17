@@ -83,7 +83,8 @@ public class MergeCellsWordTableHandler : OperationHandlerBase<Document>
     /// <param name="endRow">End row index.</param>
     /// <param name="startCol">Start column index.</param>
     /// <param name="endCol">End column index.</param>
-    private static void ApplyMerge(Aspose.Words.Tables.Table table, int startRow, int endRow, int startCol, int endCol)
+    private static void ApplyMerge( // NOSONAR S3776 - Simple nested loop with boundary checks
+        Aspose.Words.Tables.Table table, int startRow, int endRow, int startCol, int endCol)
     {
         for (var row = startRow; row <= endRow; row++)
         {

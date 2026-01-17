@@ -6,7 +6,7 @@ namespace AsposeMcpServer.Core.Session;
 ///     Manages temporary files created by session disconnect behavior.
 ///     Handles cleanup of expired files and recovery of saved sessions.
 /// </summary>
-public class TempFileManager : IHostedService, IDisposable
+public class TempFileManager : IHostedService, IDisposable // NOSONAR S3881 - Simple dispose pattern sufficient
 {
     private const string TempFilePrefix = "aspose_session_";
     private const string MetadataExtension = ".meta.json";

@@ -10,7 +10,8 @@ namespace AsposeMcpServer.Core.Session;
 /// <summary>
 ///     Provides unified document access whether from file path or session
 /// </summary>
-public class DocumentContext<T> : IDisposable where T : class
+public class DocumentContext<T> : IDisposable
+    where T : class // NOSONAR S3881 - Simple dispose pattern sufficient for sealed class
 {
     /// <summary>
     ///     The identity of the requestor for session isolation

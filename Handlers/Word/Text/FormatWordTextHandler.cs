@@ -209,7 +209,8 @@ public class FormatWordTextHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="changes">The list to add changes to.</param>
     /// <param name="p">The format parameters containing font settings.</param>
-    private static void CollectChanges(List<string> changes, FormatParameters p)
+    private static void
+        CollectChanges(List<string> changes, FormatParameters p) // NOSONAR S3776 - Linear parameter validation sequence
     {
         if (!string.IsNullOrEmpty(p.FontNameAscii))
             changes.Add($"Font (ASCII): {p.FontNameAscii}");

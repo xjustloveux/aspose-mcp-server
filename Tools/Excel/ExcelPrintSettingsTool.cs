@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Cells;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -163,7 +163,7 @@ Usage examples:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107
+    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
         string operation,
         int sheetIndex,
         string? range,
@@ -246,7 +246,8 @@ Usage examples:
     /// <param name="fitToPagesWide">The number of pages wide to fit content.</param>
     /// <param name="fitToPagesTall">The number of pages tall to fit content.</param>
     /// <returns>OperationParameters configured for setting page setup.</returns>
-    private static OperationParameters BuildSetPageSetupParameters(OperationParameters parameters, string? orientation,
+    private static OperationParameters BuildSetPageSetupParameters( // NOSONAR S107 - MCP protocol parameter building
+        OperationParameters parameters, string? orientation,
         string? paperSize, double? leftMargin, double? rightMargin, double? topMargin, double? bottomMargin,
         string? header, string? footer, bool? fitToPage, int? fitToPagesWide, int? fitToPagesTall)
     {
@@ -283,7 +284,8 @@ Usage examples:
     /// <param name="fitToPagesWide">The number of pages wide to fit content.</param>
     /// <param name="fitToPagesTall">The number of pages tall to fit content.</param>
     /// <returns>OperationParameters configured for setting all print settings.</returns>
-    private static OperationParameters BuildSetAllParameters(OperationParameters parameters, string? range,
+    private static OperationParameters BuildSetAllParameters( // NOSONAR S107 - MCP protocol parameter building
+        OperationParameters parameters, string? range,
         string? rows, string? columns, string? orientation, string? paperSize, double? leftMargin, double? rightMargin,
         double? topMargin, double? bottomMargin, string? header, string? footer, bool? fitToPage, int? fitToPagesWide,
         int? fitToPagesTall)

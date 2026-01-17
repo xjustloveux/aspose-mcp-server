@@ -30,7 +30,7 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "chartType", "column" },
-            { "data", new[] { new[] { "A", "B" }, new[] { "1", "2" } } },
+            { "data", new[] { new[] { "A", "B" }, new[] { "1", "2" } } }, // NOSONAR CA1861 - Test data array
             { "alignment", alignment }
         });
 
@@ -52,7 +52,9 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "chartType", "column" },
-            { "data", new[] { new[] { "Category", "Value" }, new[] { "A", "10" }, new[] { "B", "20" } } }
+            {
+                "data", new[] { new[] { "Category", "Value" }, new[] { "A", "10" }, new[] { "B", "20" } }
+            } // NOSONAR CA1861 - Test data array
         });
 
         var result = _handler.Execute(context, parameters);
@@ -69,7 +71,9 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "chartType", "bar" },
-            { "data", new[] { new[] { "Cat", "Val" }, new[] { "X", "15" }, new[] { "Y", "25" } } }
+            {
+                "data", new[] { new[] { "Cat", "Val" }, new[] { "X", "15" }, new[] { "Y", "25" } }
+            } // NOSONAR CA1861 - Test data array
         });
 
         var result = _handler.Execute(context, parameters);
@@ -85,7 +89,9 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "chartType", "pie" },
-            { "data", new[] { new[] { "Item", "Value" }, new[] { "A", "30" }, new[] { "B", "70" } } }
+            {
+                "data", new[] { new[] { "Item", "Value" }, new[] { "A", "30" }, new[] { "B", "70" } }
+            } // NOSONAR CA1861 - Test data array
         });
 
         var result = _handler.Execute(context, parameters);
@@ -100,7 +106,7 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
-            { "data", new[] { new[] { "X", "Y" }, new[] { "1", "2" } } },
+            { "data", new[] { new[] { "X", "Y" }, new[] { "1", "2" } } }, // NOSONAR CA1861 - Test data array
             { "chartTitle", "My Chart" }
         });
 
@@ -144,7 +150,9 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "chartType", "line" },
-            { "data", new[] { new[] { "Month", "Value" }, new[] { "Jan", "100" }, new[] { "Feb", "120" } } }
+            {
+                "data", new[] { new[] { "Month", "Value" }, new[] { "Jan", "100" }, new[] { "Feb", "120" } }
+            } // NOSONAR CA1861 - Test data array
         });
 
         var result = _handler.Execute(context, parameters);
@@ -161,7 +169,9 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "chartType", "area" },
-            { "data", new[] { new[] { "Q", "Sales" }, new[] { "Q1", "500" }, new[] { "Q2", "600" } } }
+            {
+                "data", new[] { new[] { "Q", "Sales" }, new[] { "Q1", "500" }, new[] { "Q2", "600" } }
+            } // NOSONAR CA1861 - Test data array
         });
 
         var result = _handler.Execute(context, parameters);
@@ -178,7 +188,9 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "chartType", "scatter" },
-            { "data", new[] { new[] { "X", "Y" }, new[] { "1", "5" }, new[] { "2", "10" } } }
+            {
+                "data", new[] { new[] { "X", "Y" }, new[] { "1", "5" }, new[] { "2", "10" } }
+            } // NOSONAR CA1861 - Test data array
         });
 
         var result = _handler.Execute(context, parameters);
@@ -195,7 +207,9 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "chartType", "doughnut" },
-            { "data", new[] { new[] { "Category", "Value" }, new[] { "A", "40" }, new[] { "B", "60" } } }
+            {
+                "data", new[] { new[] { "Category", "Value" }, new[] { "A", "40" }, new[] { "B", "60" } }
+            } // NOSONAR CA1861 - Test data array
         });
 
         var result = _handler.Execute(context, parameters);
@@ -216,7 +230,7 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "chartType", "column" },
-            { "data", new[] { new[] { "A", "B" }, new[] { "1", "2" } } },
+            { "data", new[] { new[] { "A", "B" }, new[] { "1", "2" } } }, // NOSONAR CA1861 - Test data array
             { "chartWidth", 600.0 }
         });
 
@@ -234,7 +248,7 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "chartType", "column" },
-            { "data", new[] { new[] { "A", "B" }, new[] { "1", "2" } } },
+            { "data", new[] { new[] { "A", "B" }, new[] { "1", "2" } } }, // NOSONAR CA1861 - Test data array
             { "chartHeight", 300.0 }
         });
 
@@ -255,7 +269,7 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
-            { "data", new[] { new[] { "X", "Y" }, new[] { "1", "2" } } },
+            { "data", new[] { new[] { "X", "Y" }, new[] { "1", "2" } } }, // NOSONAR CA1861 - Test data array
             { "paragraphIndex", -1 }
         });
 
@@ -272,7 +286,7 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
-            { "data", new[] { new[] { "X", "Y" }, new[] { "1", "2" } } },
+            { "data", new[] { new[] { "X", "Y" }, new[] { "1", "2" } } }, // NOSONAR CA1861 - Test data array
             { "paragraphIndex", 0 }
         });
 
@@ -289,7 +303,7 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
-            { "data", new[] { new[] { "X", "Y" }, new[] { "1", "2" } } },
+            { "data", new[] { new[] { "X", "Y" }, new[] { "1", "2" } } }, // NOSONAR CA1861 - Test data array
             { "paragraphIndex", 99 }
         });
 

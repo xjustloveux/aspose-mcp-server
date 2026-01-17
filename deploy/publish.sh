@@ -76,7 +76,7 @@ for arg in "$@"; do
 done
 
 # Clean if requested
-if [ "$CLEAN" = true ] || [ "$ALL" = true ]; then
+if [[ "$CLEAN" = true ]] || [[ "$ALL" = true ]]; then
     echo -e "${YELLOW}Cleaning output directory...${NC}"
     rm -rf publish
 fi
@@ -93,7 +93,7 @@ build_platform() {
     local output_path="publish/$platform"
     
     # Get version from Git tag if available, otherwise use default
-    if [ -n "$VERSION" ]; then
+    if [[ -n "$VERSION" ]]; then
         version="$VERSION"
     else
         git_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v1.0.0")
@@ -112,17 +112,17 @@ build_platform() {
         --nologo \
         --verbosity quiet
     
-    if [ $? -eq 0 ]; then
+    if [[ $? -eq 0 ]]; then
         echo -e "  ${GREEN}✓ Build successful: $output_path${NC}"
         
         # Copy license file
-        if [ -f "Aspose.Total.lic" ]; then
+        if [[ -f "Aspose.Total.lic" ]]; then
             cp "Aspose.Total.lic" "$output_path/"
             echo -e "  ${GREEN}✓ License file copied${NC}"
         fi
         
         # Make executable (for Linux/macOS)
-        if [ "$runtime" != "win-x64" ]; then
+        if [[ "$runtime" != "win-x64" ]]; then
             chmod +x "$output_path/AsposeMcpServer"
             echo -e "  ${GREEN}✓ Set executable permission${NC}"
         fi
@@ -132,30 +132,32 @@ build_platform() {
         echo -e "  ${GRAY}Size: $size MB${NC}"
     else
         echo -e "  ${RED}✗ Build failed${NC}"
+        return 1
     fi
     echo ""
+    return 0
 }
 
 # Build for selected platforms
-if [ "$ALL" = true ] || [ "$WINDOWS" = true ]; then
+if [[ "$ALL" = true ]] || [[ "$WINDOWS" = true ]]; then
     build_platform "win-x64" "windows-x64"
 fi
 
-if [ "$ALL" = true ] || [ "$LINUX" = true ]; then
+if [[ "$ALL" = true ]] || [[ "$LINUX" = true ]]; then
     build_platform "linux-x64" "linux-x64"
 fi
 
-if [ "$ALL" = true ] || [ "$MACOS" = true ]; then
+if [[ "$ALL" = true ]] || [[ "$MACOS" = true ]]; then
     build_platform "osx-x64" "macos-x64"
     build_platform "osx-arm64" "macos-arm64"
-elif [ "$MACOS_X64" = true ]; then
+elif [[ "$MACOS_X64" = true ]]; then
     build_platform "osx-x64" "macos-x64"
-elif [ "$MACOS_ARM64" = true ]; then
+elif [[ "$MACOS_ARM64" = true ]]; then
     build_platform "osx-arm64" "macos-arm64"
 fi
 
 # If no platform specified, show help
-if [ "$WINDOWS" = false ] && [ "$LINUX" = false ] && [ "$MACOS" = false ] && [ "$MACOS_X64" = false ] && [ "$MACOS_ARM64" = false ] && [ "$ALL" = false ]; then
+if [[ "$WINDOWS" = false ]] && [[ "$LINUX" = false ]] && [[ "$MACOS" = false ]] && [[ "$MACOS_X64" = false ]] && [[ "$MACOS_ARM64" = false ]] && [[ "$ALL" = false ]]; then
     echo -e "${YELLOW}Usage:${NC}"
     echo -e "  ${GRAY}./publish.sh --windows    # Build for Windows${NC}"
     echo -e "  ${GRAY}./publish.sh --linux      # Build for Linux${NC}"

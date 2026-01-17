@@ -22,7 +22,9 @@ public class ApplyWordStyleHandler : OperationHandlerBase<Document>
     ///     Optional: paragraphIndex, paragraphIndices, sectionIndex, tableIndex, applyToAllParagraphs
     /// </param>
     /// <returns>Success message with application details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override string
+        Execute(OperationContext<Document> context,
+            OperationParameters parameters) // NOSONAR S3776 - Mutually exclusive target selection
     {
         var p = ExtractApplyWordStyleParameters(parameters);
 

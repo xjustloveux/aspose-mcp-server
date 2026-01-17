@@ -35,7 +35,7 @@ public class DeleteWordListItemHandler : OperationHandlerBase<Document>
             throw new InvalidOperationException($"Unable to get paragraph at index {p.ParagraphIndex}");
 
         var itemText = paraToDelete.GetText().Trim();
-        var itemPreview = itemText.Length > 50 ? itemText.Substring(0, 50) + "..." : itemText;
+        var itemPreview = itemText.Length > 50 ? string.Concat(itemText.AsSpan(0, 50), "...") : itemText;
         var isListItem = paraToDelete.ListFormat.IsListItem;
         var listInfo = isListItem ? " (list item)" : " (regular paragraph)";
 

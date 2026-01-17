@@ -225,7 +225,7 @@ public class ApplyWordStyleHandlerTests : WordHandlerTestBase
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "styleName", "Normal" },
-            { "paragraphIndices", new[] { 0, 2 } }
+            { "paragraphIndices", new[] { 0, 2 } } // NOSONAR CA1861 - Test data array
         });
 
         var result = _handler.Execute(context, parameters);
@@ -242,7 +242,7 @@ public class ApplyWordStyleHandlerTests : WordHandlerTestBase
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "styleName", "Normal" },
-            { "paragraphIndices", new[] { 0, 99 } }
+            { "paragraphIndices", new[] { 0, 99 } } // NOSONAR CA1861 - Test data array
         });
 
         var result = _handler.Execute(context, parameters);

@@ -55,6 +55,7 @@ public static class McpServerBuilderExtensions
     /// <param name="toolType">The tool type to register.</param>
     private static void RegisterToolType(IMcpServerBuilder builder, Type toolType)
     {
+        // NOSONAR S3011 - Reflection to own private method for generic tool registration
         var withToolsMethod = typeof(McpServerBuilderExtensions)
             .GetMethod(nameof(RegisterToolGeneric), BindingFlags.NonPublic | BindingFlags.Static)?
             .MakeGenericMethod(toolType);

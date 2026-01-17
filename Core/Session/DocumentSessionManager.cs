@@ -11,7 +11,7 @@ namespace AsposeMcpServer.Core.Session;
 /// <summary>
 ///     Manages document sessions for in-memory document editing
 /// </summary>
-public class DocumentSessionManager : IDisposable
+public class DocumentSessionManager : IDisposable // NOSONAR S3881 - Simple dispose pattern sufficient
 {
     /// <summary>
     ///     Timer for periodic cleanup of idle sessions

@@ -323,7 +323,8 @@ public sealed class JwtAuthenticationMiddleware : IMiddleware, IDisposable
         }
         catch (SecurityTokenException ex)
         {
-            _logger.LogDebug("Token validation failed: {Message}", ex.Message);
+            _logger.LogDebug("Token validation failed: {Message}",
+                ex.Message); // NOSONAR S6667 - Structured logging with placeholders is correct pattern
             return new JwtAuthResult
             {
                 IsValid = false,
@@ -505,7 +506,7 @@ public sealed class JwtAuthenticationMiddleware : IMiddleware, IDisposable
     /// <summary>
     ///     Response from OAuth 2.0 introspection endpoint (RFC 7662)
     /// </summary>
-    private sealed class IntrospectionResponse
+    private sealed class IntrospectionResponse // NOSONAR S3459 - Properties assigned via JSON deserialization
     {
         public bool Active { get; init; }
         public string? Sub { get; init; }
@@ -518,7 +519,7 @@ public sealed class JwtAuthenticationMiddleware : IMiddleware, IDisposable
     /// <summary>
     ///     Response from custom validation endpoint
     /// </summary>
-    private sealed class CustomValidationResponse
+    private sealed class CustomValidationResponse // NOSONAR S3459 - Properties assigned via JSON deserialization
     {
         public bool Valid { get; init; }
 

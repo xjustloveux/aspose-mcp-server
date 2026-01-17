@@ -46,7 +46,7 @@ public class DeleteParagraphWordHandler : OperationHandlerBase<Document>
             throw new InvalidOperationException($"Unable to get paragraph at index {idx}");
 
         var textPreview = paragraphToDelete.GetText().Trim();
-        if (textPreview.Length > 50) textPreview = textPreview.Substring(0, 50) + "...";
+        if (textPreview.Length > 50) textPreview = string.Concat(textPreview.AsSpan(0, 50), "...");
 
         paragraphToDelete.Remove();
 

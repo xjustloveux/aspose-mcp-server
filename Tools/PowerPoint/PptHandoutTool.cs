@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Slides;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -114,7 +114,7 @@ Usage examples:
     /// <param name="dateText">The date/time text for handout pages.</param>
     /// <param name="showPageNumber">Whether to show page number on handout pages.</param>
     /// <returns>OperationParameters configured for the handout operation.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107
+    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
         string? headerText,
         string? footerText,
         string? dateText,

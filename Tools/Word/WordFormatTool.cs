@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -198,7 +198,7 @@ Usage examples:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107
+    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
         string operation,
         int? paragraphIndex,
         int? runIndex,
@@ -273,7 +273,8 @@ Usage examples:
     /// <param name="underline">Whether the text is underlined.</param>
     /// <param name="color">The text color in hex format.</param>
     /// <returns>OperationParameters configured for setting run format.</returns>
-    private static OperationParameters BuildSetRunFormatParameters(int? paragraphIndex, int? runIndex, string? fontName,
+    private static OperationParameters BuildSetRunFormatParameters( // NOSONAR S107 - MCP protocol parameter building
+        int? paragraphIndex, int? runIndex, string? fontName,
         string? fontNameAscii, string? fontNameFarEast, double? fontSize, bool? bold, bool? italic, bool? underline,
         string? color)
     {
@@ -357,9 +358,11 @@ Usage examples:
     /// <param name="lineWidth">The border line width in points.</param>
     /// <param name="lineColor">The border line color in hex format.</param>
     /// <returns>OperationParameters configured for setting paragraph border.</returns>
-    private static OperationParameters BuildSetParagraphBorderParameters(int? paragraphIndex, string? borderPosition,
-        bool borderTop, bool borderBottom, bool borderLeft, bool borderRight, string lineStyle, double lineWidth,
-        string lineColor)
+    private static OperationParameters
+        BuildSetParagraphBorderParameters( // NOSONAR S107 - MCP protocol parameter building
+            int? paragraphIndex, string? borderPosition,
+            bool borderTop, bool borderBottom, bool borderLeft, bool borderRight, string lineStyle, double lineWidth,
+            string lineColor)
     {
         var parameters = new OperationParameters();
         parameters.Set("paragraphIndex", paragraphIndex ?? 0);

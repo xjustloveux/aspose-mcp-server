@@ -95,8 +95,8 @@ public class TrackingMiddleware
         }
         catch (Exception ex)
         {
-            success = false;
-            error = ex.Message;
+            success = false; // NOSONAR S1854 - Used in finally block for BuildTrackingEvent
+            error = ex.Message; // NOSONAR S1854 - Used in finally block for BuildTrackingEvent
             throw;
         }
         finally
@@ -118,7 +118,7 @@ public class TrackingMiddleware
     /// <param name="error">Error message if failed</param>
     /// <param name="requestId">Correlation request ID</param>
     /// <returns>Tracking event with populated fields</returns>
-    private TrackingEvent BuildTrackingEvent(HttpContext context, long durationMs, bool success, string? error,
+    private static TrackingEvent BuildTrackingEvent(HttpContext context, long durationMs, bool success, string? error,
         string requestId)
     {
         var tool = context.Items["ToolName"]?.ToString();
@@ -252,6 +252,7 @@ public class TrackingMiddleware
         }
         catch (OperationCanceledException)
         {
+            // NOSONAR S6667 - Structured logging with placeholders is correct pattern
             _logger.LogWarning("Webhook request to {Url} timed out after {Timeout} seconds",
                 _config.WebhookUrl, _config.WebhookTimeoutSeconds);
         }

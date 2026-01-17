@@ -190,7 +190,7 @@ public static class WordTableHelper
                 {
                     text = text.Replace("\r", "").Replace("\a", "");
                     if (text.Length > maxLength)
-                        return text.Substring(0, maxLength) + "...";
+                        return string.Concat(text.AsSpan(0, maxLength), "...");
                     return text;
                 }
             }

@@ -100,7 +100,7 @@ public static class WordContentHelper
     /// <summary>
     ///     State class to track text cleaning context.
     /// </summary>
-    private class CleanTextState
+    private class CleanTextState // NOSONAR S3260 - Mutable state class requires mutable properties
     {
         /// <summary>
         ///     Gets or sets whether the last processed character was a newline.

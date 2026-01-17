@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using Aspose.Slides;
 using AsposeMcpServer.Core.Handlers;
@@ -115,7 +116,7 @@ public class SetPptPropertiesHandler : OperationHandlerBase<Presentation>
     /// <returns>True if parsing succeeded; otherwise, false.</returns>
     private static bool TryParseDateTime(string value, out DateTime result)
     {
-        return DateTime.TryParse(value, out result);
+        return DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out result);
     }
 
     private static SetPptPropertiesParameters ExtractSetPptPropertiesParameters(OperationParameters parameters)

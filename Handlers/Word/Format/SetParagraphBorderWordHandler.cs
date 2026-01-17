@@ -21,7 +21,9 @@ public class SetParagraphBorderWordHandler : OperationHandlerBase<Document>
     ///     Optional: borderPosition, borderTop, borderBottom, borderLeft, borderRight, lineStyle, lineWidth, lineColor
     /// </param>
     /// <returns>Success message.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override string
+        Execute(OperationContext<Document> context,
+            OperationParameters parameters) // NOSONAR S3776 - Switch-based border direction selection
     {
         var p = ExtractSetParagraphBorderParameters(parameters);
 

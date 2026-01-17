@@ -225,7 +225,7 @@ Usage examples:
     {
         var effectiveOutputPath = outputPath ?? path;
         if (!string.IsNullOrEmpty(effectiveOutputPath))
-            SecurityHelper.ValidateFilePath(effectiveOutputPath, "outputPath", true);
+            SecurityHelper.ValidateFilePath(effectiveOutputPath, nameof(outputPath), true);
 
         var parameters = BuildParameters(text, fontName, fontNameAscii, fontNameFarEast, fontSize, bold, italic,
             underline, color, strikethrough, superscript, subscript, find, replace, useRegex, replaceInFields,
@@ -261,7 +261,7 @@ Usage examples:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values for text operations.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107
+    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
         string? text, string? fontName, string? fontNameAscii, string? fontNameFarEast, double? fontSize,
         bool? bold, bool? italic, string? underline, string? color, bool? strikethrough, bool? superscript,
         bool? subscript, string? find, string? replace, bool useRegex, bool replaceInFields, string? searchText,

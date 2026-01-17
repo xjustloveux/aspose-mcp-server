@@ -69,7 +69,7 @@ Usage examples:
         if (string.IsNullOrEmpty(outputPath))
             throw new ArgumentException("outputPath is required");
 
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+        SecurityHelper.ValidateFilePath(outputPath, nameof(outputPath), true);
 
         if (string.IsNullOrEmpty(inputPath) && string.IsNullOrEmpty(sessionId))
             throw new ArgumentException("Either inputPath or sessionId must be provided");
@@ -77,7 +77,7 @@ Usage examples:
         if (!string.IsNullOrEmpty(sessionId))
             return ConvertFromSession(sessionId, outputPath);
 
-        SecurityHelper.ValidateFilePath(inputPath!, "inputPath", true);
+        SecurityHelper.ValidateFilePath(inputPath!, nameof(inputPath), true);
         return ConvertFromFile(inputPath!, outputPath);
     }
 

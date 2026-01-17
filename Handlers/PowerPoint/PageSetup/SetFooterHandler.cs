@@ -44,7 +44,7 @@ public class SetFooterHandler : OperationHandlerBase<Presentation>
     /// <param name="presentation">The presentation to get slides from.</param>
     /// <param name="slideIndices">The specific slide indices, or null for all slides.</param>
     /// <returns>A list of target slides.</returns>
-    private static List<ISlide> GetTargetSlides(IPresentation presentation, int[]? slideIndices)
+    private static List<ISlide> GetTargetSlides(Presentation presentation, int[]? slideIndices)
     {
         if (slideIndices == null || slideIndices.Length == 0)
             return presentation.Slides.ToList();
@@ -66,7 +66,7 @@ public class SetFooterHandler : OperationHandlerBase<Presentation>
     /// <param name="footerText">The footer text to display.</param>
     /// <param name="showSlideNumber">Whether to show slide numbers.</param>
     /// <param name="dateText">The date text to display.</param>
-    private static void EnableMasterVisibility(IPresentation presentation, string? footerText, bool showSlideNumber,
+    private static void EnableMasterVisibility(Presentation presentation, string? footerText, bool showSlideNumber,
         string? dateText)
     {
         var manager = presentation.HeaderFooterManager;

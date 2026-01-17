@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
@@ -196,7 +196,7 @@ Usage examples:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107
+    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
         string operation,
         string? headerLeft,
         string? headerCenter,
@@ -259,7 +259,8 @@ Usage examples:
     /// <param name="clearExisting">Whether to clear existing content before setting.</param>
     /// <param name="clearTextOnly">Whether to only clear text content, preserving images.</param>
     /// <returns>OperationParameters configured for the set header text operation.</returns>
-    private static OperationParameters BuildHeaderTextParameters(OperationParameters parameters, string? headerLeft,
+    private static OperationParameters BuildHeaderTextParameters( // NOSONAR S107 - MCP protocol parameter building
+        OperationParameters parameters, string? headerLeft,
         string? headerCenter, string? headerRight, string? fontName, string? fontNameAscii, string? fontNameFarEast,
         double? fontSize, bool autoTabStops, bool clearExisting, bool clearTextOnly)
     {
@@ -291,7 +292,8 @@ Usage examples:
     /// <param name="clearExisting">Whether to clear existing content before setting.</param>
     /// <param name="clearTextOnly">Whether to only clear text content, preserving images.</param>
     /// <returns>OperationParameters configured for the set footer text operation.</returns>
-    private static OperationParameters BuildFooterTextParameters(OperationParameters parameters, string? footerLeft,
+    private static OperationParameters BuildFooterTextParameters( // NOSONAR S107 - MCP protocol parameter building
+        OperationParameters parameters, string? footerLeft,
         string? footerCenter, string? footerRight, string? fontName, string? fontNameAscii, string? fontNameFarEast,
         double? fontSize, bool autoTabStops, bool clearExisting, bool clearTextOnly)
     {
@@ -376,7 +378,8 @@ Usage examples:
     /// <param name="clearExisting">Whether to clear existing content before setting.</param>
     /// <param name="clearTextOnly">Whether to only clear text content, preserving images.</param>
     /// <returns>OperationParameters configured for the set header footer operation.</returns>
-    private static OperationParameters BuildHeaderFooterParameters(OperationParameters parameters, string? headerLeft,
+    private static OperationParameters BuildHeaderFooterParameters( // NOSONAR S107 - MCP protocol parameter building
+        OperationParameters parameters, string? headerLeft,
         string? headerCenter, string? headerRight, string? footerLeft, string? footerCenter, string? footerRight,
         string? fontName, string? fontNameAscii, string? fontNameFarEast, double? fontSize, bool autoTabStops,
         bool clearExisting, bool clearTextOnly)

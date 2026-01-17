@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Text.Json;
 using Aspose.Slides;
 using AsposeMcpServer.Core.Handlers;
@@ -146,7 +146,7 @@ Usage examples:
         if (string.IsNullOrEmpty(path))
             throw new ArgumentException("Either sessionId or path must be provided");
 
-        SecurityHelper.ValidateFilePath(path, "path", true);
+        SecurityHelper.ValidateFilePath(path, nameof(path), true);
 
         var info = PresentationFactory.Instance.GetPresentationInfo(path);
         var props = info.ReadDocumentProperties();
@@ -182,7 +182,7 @@ Usage examples:
     /// <param name="manager">The manager name.</param>
     /// <param name="customProperties">Custom properties as key-value pairs.</param>
     /// <returns>OperationParameters configured for the properties operation.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107
+    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
         string? title,
         string? subject,
         string? author,

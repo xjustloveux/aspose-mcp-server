@@ -94,7 +94,7 @@ Default: 'removeUnusedFields,removeEmptyParagraphs'")]
             throw new ArgumentException("Either templatePath or sessionId must be provided");
 
         if (!string.IsNullOrEmpty(templatePath))
-            SecurityHelper.ValidateFilePath(templatePath, "templatePath", true);
+            SecurityHelper.ValidateFilePath(templatePath, nameof(templatePath), true);
 
         var parameters = BuildParameters(outputPath, data, dataArray, cleanupOptions);
 

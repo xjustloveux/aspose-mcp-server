@@ -62,8 +62,7 @@ public class SetHeaderTextHandler : OperationHandlerBase<Document>
         var builder = new DocumentBuilder(doc);
         builder.MoveTo(headerPara);
 
-        InsertTextContent(builder, p.HeaderLeft, p.HeaderCenter, p.HeaderRight, p.FontName,
-            p.FontNameAscii, p.FontNameFarEast, p.FontSize);
+        InsertTextContent(builder, p.HeaderLeft, p.HeaderCenter, p.HeaderRight, p.FontSettings);
     }
 
     /// <summary>
@@ -102,23 +101,21 @@ public class SetHeaderTextHandler : OperationHandlerBase<Document>
     ///     Inserts text content with optional tab separators.
     /// </summary>
     private static void InsertTextContent(DocumentBuilder builder, string? left, string? center, string? right,
-        string? fontName, string? fontNameAscii, string? fontNameFarEast, double? fontSize)
+        FontSettings fontSettings)
     {
         if (!string.IsNullOrEmpty(left))
-            WordHeaderFooterHelper.InsertTextOrField(builder, left, fontName, fontNameAscii, fontNameFarEast, fontSize);
+            WordHeaderFooterHelper.InsertTextOrField(builder, left, fontSettings);
 
         if (!string.IsNullOrEmpty(center))
         {
             builder.Write("\t");
-            WordHeaderFooterHelper.InsertTextOrField(builder, center, fontName, fontNameAscii, fontNameFarEast,
-                fontSize);
+            WordHeaderFooterHelper.InsertTextOrField(builder, center, fontSettings);
         }
 
         if (!string.IsNullOrEmpty(right))
         {
             builder.Write("\t");
-            WordHeaderFooterHelper.InsertTextOrField(builder, right, fontName, fontNameAscii, fontNameFarEast,
-                fontSize);
+            WordHeaderFooterHelper.InsertTextOrField(builder, right, fontSettings);
         }
     }
 
@@ -145,14 +142,17 @@ public class SetHeaderTextHandler : OperationHandlerBase<Document>
     /// <returns>The extracted parameters.</returns>
     private static SetHeaderTextParameters ExtractSetHeaderTextParameters(OperationParameters parameters)
     {
+        var fontSettings = new FontSettings(
+            parameters.GetOptional<string?>("fontName"),
+            parameters.GetOptional<string?>("fontNameAscii"),
+            parameters.GetOptional<string?>("fontNameFarEast"),
+            parameters.GetOptional<double?>("fontSize"));
+
         return new SetHeaderTextParameters(
             parameters.GetOptional<string?>("headerLeft"),
             parameters.GetOptional<string?>("headerCenter"),
             parameters.GetOptional<string?>("headerRight"),
-            parameters.GetOptional<string?>("fontName"),
-            parameters.GetOptional<string?>("fontNameAscii"),
-            parameters.GetOptional<string?>("fontNameFarEast"),
-            parameters.GetOptional<double?>("fontSize"),
+            fontSettings,
             parameters.GetOptional("sectionIndex", 0),
             parameters.GetOptional("headerFooterType", "primary"),
             parameters.GetOptional("autoTabStops", true),
@@ -167,10 +167,7 @@ public class SetHeaderTextHandler : OperationHandlerBase<Document>
     /// <param name="HeaderLeft">The left header text.</param>
     /// <param name="HeaderCenter">The center header text.</param>
     /// <param name="HeaderRight">The right header text.</param>
-    /// <param name="FontName">The font name.</param>
-    /// <param name="FontNameAscii">The ASCII font name.</param>
-    /// <param name="FontNameFarEast">The Far East font name.</param>
-    /// <param name="FontSize">The font size.</param>
+    /// <param name="FontSettings">The font settings.</param>
     /// <param name="SectionIndex">The section index.</param>
     /// <param name="HeaderFooterType">The header/footer type.</param>
     /// <param name="AutoTabStops">Whether to auto-create tab stops.</param>
@@ -180,10 +177,7 @@ public class SetHeaderTextHandler : OperationHandlerBase<Document>
         string? HeaderLeft,
         string? HeaderCenter,
         string? HeaderRight,
-        string? FontName,
-        string? FontNameAscii,
-        string? FontNameFarEast,
-        double? FontSize,
+        FontSettings FontSettings,
         int SectionIndex,
         string HeaderFooterType,
         bool AutoTabStops,

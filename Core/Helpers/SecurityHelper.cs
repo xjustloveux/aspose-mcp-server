@@ -65,9 +65,10 @@ public static class SecurityHelper
 
         if (filePath.Length > MaxPathLength) return false;
 
-        if (filePath.Contains("..") || filePath.Contains("~")) return false;
+        if (filePath.Contains("..", StringComparison.Ordinal) || filePath.Contains('~')) return false;
 
-        if (filePath.Contains("//") || filePath.Contains("\\\\")) return false;
+        if (filePath.Contains("//", StringComparison.Ordinal) ||
+            filePath.Contains("\\\\", StringComparison.Ordinal)) return false;
 
         if (Path.IsPathRooted(filePath))
         {
@@ -76,7 +77,7 @@ public static class SecurityHelper
             try
             {
                 var fullPath = Path.GetFullPath(filePath);
-                if (fullPath.Contains("..")) return false;
+                if (fullPath.Contains("..", StringComparison.Ordinal)) return false;
             }
             catch
             {

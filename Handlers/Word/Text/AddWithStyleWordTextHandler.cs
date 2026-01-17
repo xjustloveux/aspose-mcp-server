@@ -342,7 +342,9 @@ public class AddWithStyleWordTextHandler : OperationHandlerBase<Document>
     /// <param name="p">The parameters containing formatting settings.</param>
     /// <param name="warningMessage">Any warning message to append.</param>
     /// <returns>The formatted result message.</returns>
-    private static string BuildResultMessage(AddWithStyleParameters p, string warningMessage)
+    private static string
+        BuildResultMessage(AddWithStyleParameters p,
+            string warningMessage) // NOSONAR S3776 - Linear parameter validation sequence
     {
         var result = "Text added successfully.";
 

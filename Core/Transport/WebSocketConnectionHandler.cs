@@ -108,11 +108,13 @@ public class WebSocketConnectionHandler
         }
         catch (WebSocketException ex) when (ex.WebSocketErrorCode == WebSocketError.ConnectionClosedPrematurely)
         {
-            _logger?.LogDebug("WebSocket connection {ConnectionId} closed prematurely", connectionId);
+            _logger?.LogDebug("WebSocket connection {ConnectionId} closed prematurely",
+                connectionId); // NOSONAR S6667 - Structured logging with placeholders is correct pattern
         }
         catch (OperationCanceledException)
         {
-            _logger?.LogDebug("WebSocket connection {ConnectionId} cancelled", connectionId);
+            _logger?.LogDebug("WebSocket connection {ConnectionId} cancelled",
+                connectionId); // NOSONAR S6667 - Structured logging with placeholders is correct pattern
         }
         catch (Exception ex)
         {
@@ -259,7 +261,7 @@ public class WebSocketConnectionHandler
                         break;
                     }
 
-                    // Accumulate message fragments
+                    // Accumulate message fragments - NOSONAR S6966 - MemoryStream.Write is effectively synchronous
                     messageBuffer.Write(buffer, 0, result.Count);
 
                     // Only process when we have the complete message

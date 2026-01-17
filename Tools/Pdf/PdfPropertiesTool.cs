@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Pdf;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -117,7 +117,7 @@ Usage examples:
     /// <param name="creator">The document creator.</param>
     /// <param name="producer">The document producer.</param>
     /// <returns>OperationParameters configured for the properties operation.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107
+    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
         string operation,
         string? title,
         string? author,

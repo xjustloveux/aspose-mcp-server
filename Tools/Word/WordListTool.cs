@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
@@ -102,7 +102,7 @@ Usage examples:
         [Description("List type: bullet, number, custom (default: bullet)")]
         string listType = "bullet",
         [Description("Custom bullet character (for custom type)")]
-        string bulletChar = "•",
+        string bulletChar = "�E",
         [Description("Number format: arabic, roman, letter (default: arabic)")]
         string numberFormat = "arabic",
         [Description("Continue numbering from last list (default: false)")]
@@ -165,7 +165,7 @@ Usage examples:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107
+    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
         string operation,
         JsonArray? items,
         string listType,

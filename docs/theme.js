@@ -6,11 +6,11 @@
     function getPreferredTheme() {
         const saved = localStorage.getItem('theme');
         if (saved) return saved;
-        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        return globalThis.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     }
 
     function setTheme(theme) {
-        html.setAttribute('data-theme', theme);
+        html.dataset.theme = theme;
         localStorage.setItem('theme', theme);
 
         const themeToggle = document.getElementById('themeToggle');
@@ -29,13 +29,13 @@
         const themeToggle = document.getElementById('themeToggle');
         if (themeToggle) {
             // Update button state
-            const currentTheme = html.getAttribute('data-theme') || 'light';
+            const currentTheme = html.dataset.theme || 'light';
             themeToggle.textContent = currentTheme === 'dark' ? '\u2600\uFE0F' : '\uD83C\uDF19';
             themeToggle.title = currentTheme === 'dark' ? '\u5207\u63DB\u81F3\u4EAE\u8272\u4E3B\u984C' : '\u5207\u63DB\u81F3\u6697\u8272\u4E3B\u984C';
 
             // Toggle theme on button click
             themeToggle.addEventListener('click', function() {
-                const current = html.getAttribute('data-theme');
+                const current = html.dataset.theme;
                 setTheme(current === 'dark' ? 'light' : 'dark');
             });
         }
@@ -54,7 +54,7 @@
             const menuLinks = navMenu.querySelectorAll('a');
             menuLinks.forEach(function(link) {
                 link.addEventListener('click', function() {
-                    if (window.innerWidth <= 768) {
+                    if (globalThis.innerWidth <= 768) {
                         navMenu.classList.remove('active');
                         menuToggle.textContent = '\u2630';
                     }
@@ -64,7 +64,7 @@
     });
 
     // Listen for system theme changes
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+    globalThis.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
         if (!localStorage.getItem('theme')) {
             setTheme(e.matches ? 'dark' : 'light');
         }

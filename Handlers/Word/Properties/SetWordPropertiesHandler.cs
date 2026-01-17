@@ -20,7 +20,9 @@ public class SetWordPropertiesHandler : OperationHandlerBase<Document>
     ///     Optional: title, subject, author, keywords, comments, category, company, manager, customProperties
     /// </param>
     /// <returns>Success message indicating properties were updated.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override string
+        Execute(OperationContext<Document> context,
+            OperationParameters parameters) // NOSONAR S3776 - Linear property assignment sequence
     {
         var setParams = ExtractSetPropertiesParameters(parameters);
 

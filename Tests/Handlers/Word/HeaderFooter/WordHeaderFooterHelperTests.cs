@@ -139,8 +139,9 @@ public class WordHeaderFooterHelperTests : WordTestBase
     {
         var doc = new Document();
         var builder = new DocumentBuilder(doc);
+        var fontSettings = new FontSettings(null, null, null, null);
 
-        WordHeaderFooterHelper.InsertTextOrField(builder, "Hello World", null, null, null, null);
+        WordHeaderFooterHelper.InsertTextOrField(builder, "Hello World", fontSettings);
 
         Assert.Contains("Hello World", doc.GetText());
     }
@@ -150,8 +151,9 @@ public class WordHeaderFooterHelperTests : WordTestBase
     {
         var doc = new Document();
         var builder = new DocumentBuilder(doc);
+        var fontSettings = new FontSettings(null, null, null, null);
 
-        WordHeaderFooterHelper.InsertTextOrField(builder, "{PAGE}", null, null, null, null);
+        WordHeaderFooterHelper.InsertTextOrField(builder, "{PAGE}", fontSettings);
 
         var fields = doc.Range.Fields;
         Assert.True(fields.Count > 0);
@@ -162,8 +164,9 @@ public class WordHeaderFooterHelperTests : WordTestBase
     {
         var doc = new Document();
         var builder = new DocumentBuilder(doc);
+        var fontSettings = new FontSettings("Arial", null, null, 14);
 
-        WordHeaderFooterHelper.InsertTextOrField(builder, "Styled Text", "Arial", null, null, 14);
+        WordHeaderFooterHelper.InsertTextOrField(builder, "Styled Text", fontSettings);
 
         Assert.Equal("Arial", builder.Font.Name);
         Assert.Equal(14, builder.Font.Size);
@@ -180,8 +183,9 @@ public class WordHeaderFooterHelperTests : WordTestBase
     {
         var doc = new Document();
         var builder = new DocumentBuilder(doc);
+        var fontSettings = new FontSettings(null, null, null, null);
 
-        WordHeaderFooterHelper.InsertTextOrField(builder, fieldCode, null, null, null, null);
+        WordHeaderFooterHelper.InsertTextOrField(builder, fieldCode, fontSettings);
 
         var fields = doc.Range.Fields;
         Assert.True(fields.Count > 0);
@@ -192,8 +196,9 @@ public class WordHeaderFooterHelperTests : WordTestBase
     {
         var doc = new Document();
         var builder = new DocumentBuilder(doc);
+        var fontSettings = new FontSettings(null, null, null, null);
 
-        WordHeaderFooterHelper.InsertTextOrField(builder, "{CUSTOMFIELD}", null, null, null, null);
+        WordHeaderFooterHelper.InsertTextOrField(builder, "{CUSTOMFIELD}", fontSettings);
 
         var fields = doc.Range.Fields;
         Assert.True(fields.Count > 0);

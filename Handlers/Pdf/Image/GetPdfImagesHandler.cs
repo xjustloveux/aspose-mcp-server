@@ -47,7 +47,7 @@ public class GetPdfImagesHandler : OperationHandlerBase<Document>
     /// <param name="document">The PDF document.</param>
     /// <param name="pageIndex">The 1-based page index.</param>
     /// <returns>JSON string containing image information from the specified page.</returns>
-    private string GetImagesFromSinglePage(Document document, int pageIndex)
+    private static string GetImagesFromSinglePage(Document document, int pageIndex)
     {
         if (pageIndex < 1 || pageIndex > document.Pages.Count)
             throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
@@ -78,7 +78,7 @@ public class GetPdfImagesHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="document">The PDF document.</param>
     /// <returns>JSON string containing image information from all pages.</returns>
-    private string GetImagesFromAllPages(Document document)
+    private static string GetImagesFromAllPages(Document document)
     {
         List<object> imageList = [];
 

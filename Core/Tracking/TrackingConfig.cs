@@ -86,6 +86,7 @@ public class TrackingConfig
             WebhookTimeoutSeconds = 5;
         }
 
+        // NOSONAR S1075 - URL path prefix, not file system path
         if (!string.IsNullOrEmpty(MetricsPath) && !MetricsPath.StartsWith('/')) MetricsPath = "/" + MetricsPath;
     }
 
@@ -125,7 +126,8 @@ public class TrackingConfig
     ///     Loads configuration from command line arguments (overrides environment variables)
     /// </summary>
     /// <param name="args">Command line arguments</param>
-    private void LoadFromCommandLine(string[] args)
+    private void
+        LoadFromCommandLine(string[] args) // NOSONAR S3776 - Command-line argument parsing requires if-else chain
     {
         foreach (var arg in args)
             if (arg.Equals("--log-enabled", StringComparison.OrdinalIgnoreCase))

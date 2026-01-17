@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Pdf;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -136,7 +136,7 @@ Usage examples:
     /// <param name="horizontalAlignment">The horizontal alignment.</param>
     /// <param name="verticalAlignment">The vertical alignment.</param>
     /// <returns>OperationParameters configured for the watermark operation.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107
+    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
         string? text,
         double opacity,
         double fontSize,

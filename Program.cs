@@ -1,3 +1,5 @@
+// NOSONAR S3776 S6966 - Top-level statements entry point; sync Console.Error for startup logging
+
 using System.Net;
 using System.Text;
 using AsposeMcpServer.Core;

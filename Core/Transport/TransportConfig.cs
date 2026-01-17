@@ -113,7 +113,9 @@ public class TransportConfig
     ///     Loads configuration from command line arguments (overrides environment variables)
     /// </summary>
     /// <param name="args">Command line arguments</param>
-    private void LoadFromCommandLine(string[] args)
+    private void
+        LoadFromCommandLine(
+            string[] args) // NOSONAR S3776 S127 - Command-line argument parsing requires if-else chain and loop counter increment for value arguments
     {
         for (var i = 0; i < args.Length; i++)
         {

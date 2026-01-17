@@ -1,3 +1,4 @@
+using System.Text;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
 using WordParagraph = Aspose.Words.Paragraph;
@@ -164,51 +165,75 @@ public class DeleteWordTextHandler : OperationHandlerBase<Document>
     private static string ExtractDeletedText(NodeCollection paragraphs, WordParagraph startPara, WordParagraph endPara,
         int startParagraphIndex, int endParagraphIndex, int startRunIndex, int? endRunIndex)
     {
-        var deletedText = "";
         try
         {
-            var startRuns = startPara.GetChildNodes(NodeType.Run, false);
-            var endRuns = endPara.GetChildNodes(NodeType.Run, false);
-
-            if (startParagraphIndex == endParagraphIndex)
-            {
-                if (startRuns is { Count: > 0 })
-                {
-                    var actualEndRunIndex = endRunIndex ?? startRuns.Count - 1;
-                    if (startRunIndex >= 0 && startRunIndex < startRuns.Count &&
-                        actualEndRunIndex >= 0 && actualEndRunIndex < startRuns.Count &&
-                        startRunIndex <= actualEndRunIndex)
-                        for (var i = startRunIndex; i <= actualEndRunIndex; i++)
-                            if (startRuns[i] is Run run)
-                                deletedText += run.Text;
-                }
-            }
-            else
-            {
-                if (startRuns != null && startRuns.Count > startRunIndex)
-                    for (var i = startRunIndex; i < startRuns.Count; i++)
-                        if (startRuns[i] is Run run)
-                            deletedText += run.Text;
-
-                for (var p = startParagraphIndex + 1; p < endParagraphIndex; p++)
-                    if (paragraphs[p] is WordParagraph para)
-                        deletedText += para.GetText();
-
-                if (endRuns is { Count: > 0 })
-                {
-                    var actualEndRunIndex = endRunIndex ?? endRuns.Count - 1;
-                    for (var i = 0; i <= actualEndRunIndex && i < endRuns.Count; i++)
-                        if (endRuns[i] is Run run)
-                            deletedText += run.Text;
-                }
-            }
+            return startParagraphIndex == endParagraphIndex
+                ? ExtractFromSameParagraph(startPara, startRunIndex, endRunIndex)
+                : ExtractFromMultipleParagraphs(paragraphs, startPara, endPara, startParagraphIndex, endParagraphIndex,
+                    startRunIndex, endRunIndex);
         }
         catch
         {
-            // Ignore exceptions when extracting deleted text
+            return "";
+        }
+    }
+
+    /// <summary>
+    ///     Extracts deleted text when start and end are in the same paragraph.
+    /// </summary>
+    private static string ExtractFromSameParagraph(WordParagraph para, int startRunIndex, int? endRunIndex)
+    {
+        var runs = para.GetChildNodes(NodeType.Run, false);
+        if (runs is not { Count: > 0 }) return "";
+
+        var actualEndRunIndex = endRunIndex ?? runs.Count - 1;
+        if (!IsValidRunRange(startRunIndex, actualEndRunIndex, runs.Count)) return "";
+
+        var sb = new StringBuilder();
+        for (var i = startRunIndex; i <= actualEndRunIndex; i++)
+            if (runs[i] is Run run)
+                sb.Append(run.Text);
+        return sb.ToString();
+    }
+
+    /// <summary>
+    ///     Extracts deleted text spanning multiple paragraphs.
+    /// </summary>
+    private static string ExtractFromMultipleParagraphs(NodeCollection paragraphs, WordParagraph startPara,
+        WordParagraph endPara, int startParagraphIndex, int endParagraphIndex, int startRunIndex, int? endRunIndex)
+    {
+        var sb = new StringBuilder();
+
+        var startRuns = startPara.GetChildNodes(NodeType.Run, false);
+        if (startRuns != null && startRuns.Count > startRunIndex)
+            for (var i = startRunIndex; i < startRuns.Count; i++)
+                if (startRuns[i] is Run run)
+                    sb.Append(run.Text);
+
+        for (var p = startParagraphIndex + 1; p < endParagraphIndex; p++)
+            if (paragraphs[p] is WordParagraph para)
+                sb.Append(para.GetText());
+
+        var endRuns = endPara.GetChildNodes(NodeType.Run, false);
+        if (endRuns is { Count: > 0 })
+        {
+            var actualEndRunIndex = endRunIndex ?? endRuns.Count - 1;
+            for (var i = 0; i <= actualEndRunIndex && i < endRuns.Count; i++)
+                if (endRuns[i] is Run run)
+                    sb.Append(run.Text);
         }
 
-        return deletedText;
+        return sb.ToString();
+    }
+
+    /// <summary>
+    ///     Validates if the run range is within bounds.
+    /// </summary>
+    private static bool IsValidRunRange(int startRunIndex, int endRunIndex, int runCount)
+    {
+        return startRunIndex >= 0 && startRunIndex < runCount &&
+               endRunIndex >= 0 && endRunIndex < runCount &&
+               startRunIndex <= endRunIndex;
     }
 
     /// <summary>
@@ -218,36 +243,48 @@ public class DeleteWordTextHandler : OperationHandlerBase<Document>
         int startParagraphIndex, int endParagraphIndex, int startRunIndex, int? endRunIndex)
     {
         if (startParagraphIndex == endParagraphIndex)
-        {
-            var runs = startPara.GetChildNodes(NodeType.Run, false);
-            if (runs is { Count: > 0 })
-            {
-                var actualEndRunIndex = endRunIndex ?? runs.Count - 1;
-                if (startRunIndex >= 0 && startRunIndex < runs.Count &&
-                    actualEndRunIndex >= 0 && actualEndRunIndex < runs.Count &&
-                    startRunIndex <= actualEndRunIndex)
-                    for (var i = actualEndRunIndex; i >= startRunIndex; i--)
-                        runs[i]?.Remove();
-            }
-        }
+            DeleteFromSameParagraph(startPara, startRunIndex, endRunIndex);
         else
+            DeleteFromMultipleParagraphs(paragraphs, startPara, endPara, startParagraphIndex, endParagraphIndex,
+                startRunIndex, endRunIndex);
+    }
+
+    /// <summary>
+    ///     Deletes runs from a single paragraph.
+    /// </summary>
+    private static void DeleteFromSameParagraph(WordParagraph para, int startRunIndex, int? endRunIndex)
+    {
+        var runs = para.GetChildNodes(NodeType.Run, false);
+        if (runs is not { Count: > 0 }) return;
+
+        var actualEndRunIndex = endRunIndex ?? runs.Count - 1;
+        if (!IsValidRunRange(startRunIndex, actualEndRunIndex, runs.Count)) return;
+
+        for (var i = actualEndRunIndex; i >= startRunIndex; i--)
+            runs[i]?.Remove();
+    }
+
+    /// <summary>
+    ///     Deletes content spanning multiple paragraphs.
+    /// </summary>
+    private static void DeleteFromMultipleParagraphs(NodeCollection paragraphs, WordParagraph startPara,
+        WordParagraph endPara, int startParagraphIndex, int endParagraphIndex, int startRunIndex, int? endRunIndex)
+    {
+        var startRuns = startPara.GetChildNodes(NodeType.Run, false);
+        if (startRuns != null && startRuns.Count > startRunIndex)
+            for (var i = startRuns.Count - 1; i >= startRunIndex; i--)
+                startRuns[i]?.Remove();
+
+        for (var p = endParagraphIndex - 1; p > startParagraphIndex; p--)
+            paragraphs[p]?.Remove();
+
+        var endRuns = endPara.GetChildNodes(NodeType.Run, false);
+        if (endRuns is { Count: > 0 })
         {
-            var startRuns = startPara.GetChildNodes(NodeType.Run, false);
-            if (startRuns != null && startRuns.Count > startRunIndex)
-                for (var i = startRuns.Count - 1; i >= startRunIndex; i--)
-                    startRuns[i]?.Remove();
-
-            for (var p = endParagraphIndex - 1; p > startParagraphIndex; p--)
-                paragraphs[p]?.Remove();
-
-            var endRuns = endPara.GetChildNodes(NodeType.Run, false);
-            if (endRuns is { Count: > 0 })
-            {
-                var actualEndRunIndex = endRunIndex ?? endRuns.Count - 1;
-                for (var i = actualEndRunIndex; i >= 0; i--)
-                    if (i < endRuns.Count)
-                        endRuns[i]?.Remove();
-            }
+            var actualEndRunIndex = endRunIndex ?? endRuns.Count - 1;
+            for (var i = actualEndRunIndex; i >= 0; i--)
+                if (i < endRuns.Count)
+                    endRuns[i]?.Remove();
         }
     }
 

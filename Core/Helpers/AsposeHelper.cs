@@ -237,7 +237,9 @@ public static class PowerPointHelper
     /// </summary>
     /// <param name="shape">The shape to extract text from.</param>
     /// <param name="textContent">List to add extracted text.</param>
-    public static void ExtractTextFromShape(IShape shape, List<string> textContent)
+    public static void
+        ExtractTextFromShape(IShape shape,
+            List<string> textContent) // NOSONAR S3776 - Polymorphic shape type handling requires switch
     {
         switch (shape)
         {
@@ -245,14 +247,14 @@ public static class PowerPointHelper
                 textContent.Add(text);
                 break;
             case ITable table:
-                foreach (var row in table.Rows)
+                foreach (var row in table.Rows) // NOSONAR S3267 - Loop has side effects, not suitable for LINQ
                 foreach (var cell in row)
                     if (!string.IsNullOrWhiteSpace(cell.TextFrame?.Text))
                         textContent.Add(cell.TextFrame.Text);
 
                 break;
             case ISmartArt smartArt:
-                foreach (var node in smartArt.AllNodes)
+                foreach (var node in smartArt.AllNodes) // NOSONAR S3267 - Loop has side effects, not suitable for LINQ
                     if (!string.IsNullOrWhiteSpace(node.TextFrame?.Text))
                         textContent.Add(node.TextFrame.Text);
                 break;
@@ -268,7 +270,8 @@ public static class PowerPointHelper
     /// </summary>
     /// <param name="shape">The shape to count characters from.</param>
     /// <returns>Total character count.</returns>
-    public static int CountTextCharacters(IShape shape)
+    public static int
+        CountTextCharacters(IShape shape) // NOSONAR S3776 - Polymorphic shape type handling requires switch
     {
         var count = 0;
         switch (shape)
@@ -277,14 +280,14 @@ public static class PowerPointHelper
                 count += text.Length;
                 break;
             case ITable table:
-                foreach (var row in table.Rows)
+                foreach (var row in table.Rows) // NOSONAR S3267 - Loop has side effects, not suitable for LINQ
                 foreach (var cell in row)
                     if (!string.IsNullOrWhiteSpace(cell.TextFrame?.Text))
                         count += cell.TextFrame.Text.Length;
 
                 break;
             case ISmartArt smartArt:
-                foreach (var node in smartArt.AllNodes)
+                foreach (var node in smartArt.AllNodes) // NOSONAR S3267 - Loop has side effects, not suitable for LINQ
                     if (!string.IsNullOrWhiteSpace(node.TextFrame?.Text))
                         count += node.TextFrame.Text.Length;
                 break;

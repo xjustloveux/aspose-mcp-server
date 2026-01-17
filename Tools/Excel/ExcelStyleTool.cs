@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Cells;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -165,7 +165,7 @@ Usage examples:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107
+    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
         string operation,
         int sheetIndex,
         int sourceSheetIndex,
@@ -222,7 +222,8 @@ Usage examples:
     /// <param name="horizontalAlignment">The horizontal alignment.</param>
     /// <param name="verticalAlignment">The vertical alignment.</param>
     /// <returns>OperationParameters configured for formatting cells.</returns>
-    private static OperationParameters BuildFormatParameters(int sheetIndex, string? range, string? ranges,
+    private static OperationParameters BuildFormatParameters( // NOSONAR S107 - MCP protocol parameter building
+        int sheetIndex, string? range, string? ranges,
         string? fontName, int? fontSize, bool? bold, bool? italic, string? fontColor, string? backgroundColor,
         string? patternType, string? patternColor, string? numberFormat, string? borderStyle, string? borderColor,
         string? horizontalAlignment, string? verticalAlignment)

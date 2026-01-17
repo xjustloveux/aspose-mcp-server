@@ -21,7 +21,9 @@ public class AddIndexWordHandler : OperationHandlerBase<Document>
     ///     Optional: insertIndexAtEnd (default: true), headingStyle (default: Heading 1)
     /// </param>
     /// <returns>Success message with count of entries added.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override string
+        Execute(OperationContext<Document> context,
+            OperationParameters parameters) // NOSONAR S3776 - Linear field code building
     {
         var p = ExtractAddIndexParameters(parameters);
 

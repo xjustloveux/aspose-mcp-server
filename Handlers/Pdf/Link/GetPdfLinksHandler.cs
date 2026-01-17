@@ -47,7 +47,7 @@ public class GetPdfLinksHandler : OperationHandlerBase<Document>
     /// <param name="doc">The PDF document.</param>
     /// <param name="pageIndex">The 1-based page index.</param>
     /// <returns>JSON string containing link information from the specified page.</returns>
-    private string GetLinksFromPage(Document doc, int pageIndex)
+    private static string GetLinksFromPage(Document doc, int pageIndex)
     {
         if (pageIndex < 1 || pageIndex > doc.Pages.Count)
             throw new ArgumentException($"pageIndex must be between 1 and {doc.Pages.Count}");
@@ -73,7 +73,7 @@ public class GetPdfLinksHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="doc">The PDF document.</param>
     /// <returns>JSON string containing link information from all pages.</returns>
-    private string GetLinksFromDocument(Document doc)
+    private static string GetLinksFromDocument(Document doc)
     {
         List<object> linkList = [];
 

@@ -138,24 +138,18 @@ public class SetHeaderFooterHandler : OperationHandlerBase<Document>
         builder.MoveTo(para);
 
         if (!string.IsNullOrEmpty(content.Left))
-            WordHeaderFooterHelper.InsertTextOrField(builder, content.Left, fontSettings.FontName,
-                fontSettings.FontNameAscii,
-                fontSettings.FontNameFarEast, fontSettings.FontSize);
+            WordHeaderFooterHelper.InsertTextOrField(builder, content.Left, fontSettings);
 
         if (!string.IsNullOrEmpty(content.Center))
         {
             builder.Write("\t");
-            WordHeaderFooterHelper.InsertTextOrField(builder, content.Center, fontSettings.FontName,
-                fontSettings.FontNameAscii,
-                fontSettings.FontNameFarEast, fontSettings.FontSize);
+            WordHeaderFooterHelper.InsertTextOrField(builder, content.Center, fontSettings);
         }
 
         if (!string.IsNullOrEmpty(content.Right))
         {
             builder.Write("\t");
-            WordHeaderFooterHelper.InsertTextOrField(builder, content.Right, fontSettings.FontName,
-                fontSettings.FontNameAscii,
-                fontSettings.FontNameFarEast, fontSettings.FontSize);
+            WordHeaderFooterHelper.InsertTextOrField(builder, content.Right, fontSettings);
         }
     }
 
@@ -184,19 +178,6 @@ public class SetHeaderFooterHandler : OperationHandlerBase<Document>
             parameters.GetOptional("clearTextOnly", false)
         );
     }
-
-    /// <summary>
-    ///     Record to hold font settings.
-    /// </summary>
-    /// <param name="FontName">The font name.</param>
-    /// <param name="FontNameAscii">The ASCII font name.</param>
-    /// <param name="FontNameFarEast">The Far East font name.</param>
-    /// <param name="FontSize">The font size.</param>
-    private sealed record FontSettings(
-        string? FontName,
-        string? FontNameAscii,
-        string? FontNameFarEast,
-        double? FontSize);
 
     /// <summary>
     ///     Record to hold header/footer content (left, center, right).

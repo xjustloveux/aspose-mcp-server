@@ -103,7 +103,7 @@ public class GetStructureWordTableHandler : OperationHandlerBase<Document>
                 var cell = row.Cells[j];
                 var cellText = cell.GetText().Trim().Replace("\r", "").Replace("\n", " ");
                 if (cellText.Length > 30)
-                    cellText = cellText.Substring(0, 27) + "...";
+                    cellText = string.Concat(cellText.AsSpan(0, 27), "...");
                 result.Append($"{cellText} | ");
             }
 

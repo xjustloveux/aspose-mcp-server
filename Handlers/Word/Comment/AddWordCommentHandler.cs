@@ -9,6 +9,8 @@ namespace AsposeMcpServer.Handlers.Word.Comment;
 /// </summary>
 public class AddWordCommentHandler : OperationHandlerBase<Document>
 {
+    private const string UnableToDetermineCommentRange = "UnableToDetermineCommentRange";
+
     /// <inheritdoc />
     public override string Operation => "add";
 
@@ -127,8 +129,8 @@ public class AddWordCommentHandler : OperationHandlerBase<Document>
         if (startRunIndex.HasValue)
             return GetRunRangeWithStartIndex(runs, startRunIndex.Value);
 
-        var start = runs[0] as Run ?? throw new InvalidOperationException("Unable to determine comment range");
-        var end = runs[^1] as Run ?? throw new InvalidOperationException("Unable to determine comment range");
+        var start = runs[0] as Run ?? throw new InvalidOperationException(UnableToDetermineCommentRange);
+        var end = runs[^1] as Run ?? throw new InvalidOperationException(UnableToDetermineCommentRange);
         return (start, end);
     }
 
@@ -149,8 +151,8 @@ public class AddWordCommentHandler : OperationHandlerBase<Document>
             throw new ArgumentException($"Run index is out of range (paragraph has {runs.Count} Runs)");
 
         var startRun = runs[startIndex] as Run ??
-                       throw new InvalidOperationException("Unable to determine comment range");
-        var endRun = runs[endIndex] as Run ?? throw new InvalidOperationException("Unable to determine comment range");
+                       throw new InvalidOperationException(UnableToDetermineCommentRange);
+        var endRun = runs[endIndex] as Run ?? throw new InvalidOperationException(UnableToDetermineCommentRange);
         return (startRun, endRun);
     }
 
@@ -167,7 +169,7 @@ public class AddWordCommentHandler : OperationHandlerBase<Document>
             throw new ArgumentException($"Run index is out of range (paragraph has {runs.Count} Runs)");
 
         var startRun = runs[startIndex] as Run ??
-                       throw new InvalidOperationException("Unable to determine comment range");
+                       throw new InvalidOperationException(UnableToDetermineCommentRange);
         return (startRun, startRun);
     }
 

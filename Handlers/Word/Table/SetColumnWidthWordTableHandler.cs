@@ -47,7 +47,7 @@ public class SetColumnWidthWordTableHandler : OperationHandlerBase<Document>
             throw new ArgumentException($"Column index {p.ColumnIndex} out of range");
 
         var cellsUpdated = 0;
-        foreach (var row in table.Rows.Cast<Row>())
+        foreach (var row in table.Rows.Cast<Row>()) // NOSONAR S3267 - Loop modifies collection
             if (p.ColumnIndex < row.Cells.Count)
             {
                 row.Cells[p.ColumnIndex].CellFormat.PreferredWidth = PreferredWidth.FromPoints(p.ColumnWidth);

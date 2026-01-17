@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Text.Json.Nodes;
 using Aspose.Slides;
 using AsposeMcpServer.Core.Handlers;
@@ -135,7 +135,7 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107
+    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
         string operation,
         int slideIndex,
         int? shapeIndex,
@@ -222,8 +222,7 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
     /// <returns>OperationParameters configured for getting chart data.</returns>
     private static OperationParameters BuildGetDataParameters(OperationParameters parameters, int? shapeIndex)
     {
-        if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
-        return parameters;
+        return BuildDeleteParameters(parameters, shapeIndex);
     }
 
     /// <summary>
