@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Slides;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -60,7 +60,7 @@ Usage examples:
 - Get content: ppt_data_operations(operation='get_content', path='presentation.pptx')
 - Get slide details: ppt_data_operations(operation='get_slide_details', path='presentation.pptx', slideIndex=0)
 - Get slide details with thumbnail: ppt_data_operations(operation='get_slide_details', path='presentation.pptx', slideIndex=0, includeThumbnail=true)")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description("Operation: get_statistics, get_content, get_slide_details")]
         string operation,
         [Description("Presentation file path (required if no sessionId)")]
@@ -95,7 +95,7 @@ Usage examples:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildParameters(
         string operation,
         int? slideIndex,
         bool includeThumbnail)

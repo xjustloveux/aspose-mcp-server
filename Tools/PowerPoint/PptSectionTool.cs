@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Slides;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -65,7 +65,7 @@ Usage examples:
 - Rename section: ppt_section(operation='rename', path='presentation.pptx', sectionIndex=0, newName='New Section')
 - Delete section: ppt_section(operation='delete', path='presentation.pptx', sectionIndex=0)
 - Get sections: ppt_section(operation='get', path='presentation.pptx')")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description("Operation: add, rename, delete, get")]
         string operation,
         [Description("Presentation file path (required if no sessionId)")]
@@ -117,7 +117,7 @@ Usage examples:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildParameters(
         string operation,
         string? name,
         int? slideIndex,

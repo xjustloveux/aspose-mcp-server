@@ -1,4 +1,4 @@
-using Aspose.Words;
+﻿using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Styles;
 using AsposeMcpServer.Tests.Helpers;
 
@@ -225,7 +225,7 @@ public class ApplyWordStyleHandlerTests : WordHandlerTestBase
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "styleName", "Normal" },
-            { "paragraphIndices", new[] { 0, 2 } } // NOSONAR CA1861 - Test data array
+            { "paragraphIndices", new[] { 0, 2 } }
         });
 
         var result = _handler.Execute(context, parameters);
@@ -242,7 +242,7 @@ public class ApplyWordStyleHandlerTests : WordHandlerTestBase
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "styleName", "Normal" },
-            { "paragraphIndices", new[] { 0, 99 } } // NOSONAR CA1861 - Test data array
+            { "paragraphIndices", new[] { 0, 99 } }
         });
 
         var result = _handler.Execute(context, parameters);

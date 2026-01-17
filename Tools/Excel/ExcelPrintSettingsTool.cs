@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Cells;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -79,7 +79,7 @@ Usage examples:
 - Set margins: excel_print_settings(operation='set_page_setup', path='book.xlsx', leftMargin=0.5, topMargin=0.75)
 - Set fit to page: excel_print_settings(operation='set_all', path='book.xlsx', fitToPage=true, fitToPagesWide=1, fitToPagesTall=0)
 - Set all: excel_print_settings(operation='set_all', path='book.xlsx', range='A1:D10', orientation='Portrait')")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description(@"Operation to perform.
 - 'set_print_area': Set print area (required params: path, range or clearPrintArea)
 - 'set_print_titles': Set print titles (required params: path)
@@ -163,7 +163,7 @@ Usage examples:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildParameters(
         string operation,
         int sheetIndex,
         string? range,
@@ -246,7 +246,7 @@ Usage examples:
     /// <param name="fitToPagesWide">The number of pages wide to fit content.</param>
     /// <param name="fitToPagesTall">The number of pages tall to fit content.</param>
     /// <returns>OperationParameters configured for setting page setup.</returns>
-    private static OperationParameters BuildSetPageSetupParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildSetPageSetupParameters(
         OperationParameters parameters, string? orientation,
         string? paperSize, double? leftMargin, double? rightMargin, double? topMargin, double? bottomMargin,
         string? header, string? footer, bool? fitToPage, int? fitToPagesWide, int? fitToPagesTall)
@@ -284,7 +284,7 @@ Usage examples:
     /// <param name="fitToPagesWide">The number of pages wide to fit content.</param>
     /// <param name="fitToPagesTall">The number of pages tall to fit content.</param>
     /// <returns>OperationParameters configured for setting all print settings.</returns>
-    private static OperationParameters BuildSetAllParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildSetAllParameters(
         OperationParameters parameters, string? range,
         string? rows, string? columns, string? orientation, string? paperSize, double? leftMargin, double? rightMargin,
         double? topMargin, double? bottomMargin, string? header, string? footer, bool? fitToPage, int? fitToPagesWide,

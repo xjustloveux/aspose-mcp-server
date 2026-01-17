@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Cells;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -68,7 +68,7 @@ Usage examples:
 - Merge workbooks: excel_file_operations(operation='merge', path='merged.xlsx', inputPaths=['book1.xlsx', 'book2.xlsx'])
 - Split workbook: excel_file_operations(operation='split', inputPath='book.xlsx', outputDirectory='output/')
 - Split from session: excel_file_operations(operation='split', sessionId='sess_xxx', outputDirectory='output/')")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description(@"Operation to perform.
 - 'create': Create a new workbook (required params: path or outputPath)
 - 'convert': Convert workbook format (required params: inputPath or sessionId, outputPath, format)
@@ -123,7 +123,7 @@ Usage examples:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildParameters(
         string operation,
         string? sessionId,
         string? path,

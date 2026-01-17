@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Cells;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -73,7 +73,7 @@ Usage examples:
 - Unprotect sheet: excel_protect(operation='unprotect', path='book.xlsx', sheetIndex=0, password='password')
 - Get protection: excel_protect(operation='get', path='book.xlsx', sheetIndex=0)
 - Set cell locked: excel_protect(operation='set_cell_locked', path='book.xlsx', range='A1:B10', locked=true)")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description(@"Operation to perform.
 - 'protect': Protect workbook or sheet (required params: path, password)
 - 'unprotect': Unprotect workbook or sheet (required params: path, password)
@@ -137,7 +137,7 @@ Usage examples:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildParameters(
         string operation,
         int? sheetIndex,
         string? password,

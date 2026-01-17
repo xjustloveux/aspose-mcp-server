@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
@@ -103,7 +103,7 @@ Important notes for 'get' operation:
 - Paragraphs inside table cells are marked with '[Cell]' in the location field
 - Paragraphs inside TextBoxes are marked with '[TextBox]' in the location field
 - To check paragraph styles in table cells, use includeCommentParagraphs=true")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description("Operation: insert, delete, edit, get, get_format, copy_format, merge")]
         string operation,
         [Description("Document file path (required if no sessionId)")]
@@ -202,7 +202,7 @@ Important notes for 'get' operation:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildParameters(
         string operation,
         int? paragraphIndex,
         string? text,
@@ -322,7 +322,7 @@ Important notes for 'get' operation:
     /// <param name="lineSpacingRule">The line spacing rule: 'single', 'oneAndHalf', 'double', etc.</param>
     /// <param name="tabStops">The custom tab stops array.</param>
     /// <returns>OperationParameters configured for the edit operation.</returns>
-    private static OperationParameters BuildEditParameters( // NOSONAR S3776 S107 - MCP protocol parameter building
+    private static OperationParameters BuildEditParameters(
         OperationParameters parameters, int? paragraphIndex,
         int? sectionIndex, string? text, string? styleName, string? alignment, string? fontName, string? fontNameAscii,
         string? fontNameFarEast, double? fontSize, bool? bold, bool? italic, bool? underline, string? color,

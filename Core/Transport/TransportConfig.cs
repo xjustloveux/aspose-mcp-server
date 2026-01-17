@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 
 namespace AsposeMcpServer.Core.Transport;
 
@@ -115,7 +115,7 @@ public class TransportConfig
     /// <param name="args">Command line arguments</param>
     private void
         LoadFromCommandLine(
-            string[] args) // NOSONAR S3776 S127 - Command-line argument parsing requires if-else chain and loop counter increment for value arguments
+            string[] args) // NOSONAR S127 - Loop counter increment for consuming paired CLI arguments is intentional
     {
         for (var i = 0; i < args.Length; i++)
         {

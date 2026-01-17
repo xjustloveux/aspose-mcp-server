@@ -2,6 +2,7 @@ using System.ComponentModel;
 using Aspose.Cells;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Core.Tools;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -10,22 +11,17 @@ namespace AsposeMcpServer.Tools.Excel;
 ///     Unified tool for managing Excel properties (workbook properties, sheet properties, sheet info).
 /// </summary>
 [McpServerToolType]
-public class ExcelPropertiesTool
+public class ExcelPropertiesTool : PropertiesToolBase<Workbook>
 {
     /// <summary>
-    ///     Handler registry for properties operations.
+    ///     Read-only operations that return results directly without saving.
     /// </summary>
-    private readonly HandlerRegistry<Workbook> _handlerRegistry;
-
-    /// <summary>
-    ///     Session identity accessor for session isolation support.
-    /// </summary>
-    private readonly ISessionIdentityAccessor? _identityAccessor;
-
-    /// <summary>
-    ///     Document session manager for in-memory editing support.
-    /// </summary>
-    private readonly DocumentSessionManager? _sessionManager;
+    private static readonly HashSet<string> ReadOnlyOperations = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "get_workbook_properties",
+        "get_sheet_properties",
+        "get_sheet_info"
+    };
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="ExcelPropertiesTool" /> class.
@@ -34,10 +30,8 @@ public class ExcelPropertiesTool
     /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
     public ExcelPropertiesTool(DocumentSessionManager? sessionManager = null,
         ISessionIdentityAccessor? identityAccessor = null)
+        : base(sessionManager, identityAccessor, "AsposeMcpServer.Handlers.Excel.Properties")
     {
-        _sessionManager = sessionManager;
-        _identityAccessor = identityAccessor;
-        _handlerRegistry = HandlerRegistry<Workbook>.CreateFromNamespace("AsposeMcpServer.Handlers.Excel.Properties");
     }
 
     /// <summary>
@@ -78,7 +72,7 @@ Usage examples:
 - Get sheet properties: excel_properties(operation='get_sheet_properties', path='book.xlsx', sheetIndex=0)
 - Edit sheet properties: excel_properties(operation='edit_sheet_properties', path='book.xlsx', sheetIndex=0, name='New Name')
 - Get sheet info: excel_properties(operation='get_sheet_info', path='book.xlsx')")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description(@"Operation to perform.
 - 'get_workbook_properties': Get workbook properties (required params: path)
 - 'set_workbook_properties': Set workbook properties (required params: path)
@@ -123,33 +117,16 @@ Usage examples:
         [Description("Sheet index for get_sheet_info (optional, if not provided returns all sheets)")]
         int? targetSheetIndex = null)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
-
         var parameters = BuildParameters(operation, sheetIndex, title, subject, author, keywords, comments,
             category, company, manager, customProperties, name, isVisible, tabColor, isSelected, targetSheetIndex);
 
-        var handler = _handlerRegistry.GetHandler(operation);
-
-        var operationContext = new OperationContext<Workbook>
-        {
-            Document = ctx.Document,
-            SessionManager = _sessionManager,
-            IdentityAccessor = _identityAccessor,
-            SessionId = sessionId,
-            SourcePath = path,
-            OutputPath = outputPath
-        };
-
-        var result = handler.Execute(operationContext, parameters);
-
-        var op = operation.ToLowerInvariant();
-        if (op == "get_workbook_properties" || op == "get_sheet_properties" || op == "get_sheet_info")
-            return result;
-
-        if (operationContext.IsModified)
-            ctx.Save(outputPath);
-
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ExecuteOperation(
+            operation,
+            sessionId,
+            path,
+            outputPath,
+            parameters,
+            op => ReadOnlyOperations.Contains(op));
     }
 
     /// <summary>
@@ -157,7 +134,7 @@ Usage examples:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildParameters(
         string operation,
         int sheetIndex,
         string? title,

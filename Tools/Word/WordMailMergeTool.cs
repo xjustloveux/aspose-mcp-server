@@ -65,7 +65,7 @@ Usage examples:
 - Single record: word_mail_merge(templatePath='template.docx', outputPath='output.docx', data={'name':'John','address':'123 Main St'})
 - Multiple records: word_mail_merge(templatePath='template.docx', outputPath='output.docx', dataArray=[{'name':'John'},{'name':'Jane'}])
 - From session: word_mail_merge(sessionId='sess_xxx', outputPath='output.docx', data={'name':'John'})")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description(@"Operation to perform.
 - 'execute': Execute mail merge (required params: outputPath, and either data or dataArray)")]
         string operation = "execute",

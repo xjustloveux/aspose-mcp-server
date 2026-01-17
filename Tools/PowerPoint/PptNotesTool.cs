@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Slides;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -71,7 +71,7 @@ Usage examples:
 - Get notes: ppt_notes(operation='get', path='presentation.pptx', slideIndex=0)
 - Clear notes: ppt_notes(operation='clear', path='presentation.pptx', slideIndices=[0,1,2])
 - Set header/footer: ppt_notes(operation='set_header_footer', path='presentation.pptx', headerText='Header', footerText='Footer')")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description("Operation: set, get, clear, set_header_footer")]
         string operation,
         [Description("Presentation file path (required if no sessionId)")]
@@ -128,7 +128,7 @@ Usage examples:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildParameters(
         string operation,
         int? slideIndex,
         string? notes,

@@ -57,7 +57,7 @@ Usage examples:
 - Get content from all pages: pdf_info(operation='get_content', path='doc.pdf')
 - Get content with limit: pdf_info(operation='get_content', path='doc.pdf', maxPages=50)
 - Get statistics: pdf_info(operation='get_statistics', path='doc.pdf')")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description(@"Operation to perform.
 - 'get_content': Get text content from page(s) (required params: path)
 - 'get_statistics': Get document statistics (required params: path)")]

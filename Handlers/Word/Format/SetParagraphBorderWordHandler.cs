@@ -1,4 +1,4 @@
-using Aspose.Words;
+﻿using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Helpers;
 
@@ -23,7 +23,7 @@ public class SetParagraphBorderWordHandler : OperationHandlerBase<Document>
     /// <returns>Success message.</returns>
     public override string
         Execute(OperationContext<Document> context,
-            OperationParameters parameters) // NOSONAR S3776 - Switch-based border direction selection
+            OperationParameters parameters)
     {
         var p = ExtractSetParagraphBorderParameters(parameters);
 

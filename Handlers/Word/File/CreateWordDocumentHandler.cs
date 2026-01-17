@@ -1,4 +1,4 @@
-using Aspose.Words;
+﻿using Aspose.Words;
 using Aspose.Words.Settings;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Helpers;
@@ -27,7 +27,7 @@ public class CreateWordDocumentHandler : OperationHandlerBase<Document>
     /// <exception cref="ArgumentException">Thrown when outputPath is missing.</exception>
     public override string
         Execute(OperationContext<Document> context,
-            OperationParameters parameters) // NOSONAR S3776 - Mutually exclusive page setup branches
+            OperationParameters parameters)
     {
         var p = ExtractCreateParameters(parameters);
 

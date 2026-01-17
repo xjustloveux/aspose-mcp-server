@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Cells;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -64,7 +64,7 @@ Usage examples:
 - Filter by value: excel_filter(operation='filter', path='book.xlsx', range='A1:C10', columnIndex=0, criteria='Completed')
 - Filter by custom: excel_filter(operation='filter', path='book.xlsx', range='A1:C10', columnIndex=1, filterOperator='GreaterThan', criteria='100')
 - Get filter status: excel_filter(operation='get_status', path='book.xlsx')")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description(@"Operation to perform.
 - 'apply': Apply auto filter dropdown buttons (required params: path, range)
 - 'remove': Remove auto filter completely (required params: path)
@@ -120,7 +120,7 @@ Usage examples:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildParameters(
         string operation,
         int sheetIndex,
         string? range,

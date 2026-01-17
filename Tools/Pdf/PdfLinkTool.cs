@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Pdf;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -64,7 +64,7 @@ Usage examples:
 - Delete link: pdf_link(operation='delete', path='doc.pdf', pageIndex=1, linkIndex=0)
 - Edit link: pdf_link(operation='edit', path='doc.pdf', pageIndex=1, linkIndex=0, url='https://newurl.com')
 - Get links: pdf_link(operation='get', path='doc.pdf', pageIndex=1)")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description(@"Operation to perform.
 - 'add': Add a link (required params: path, pageIndex, x, y, width, height, url)
 - 'delete': Delete a link (required params: path, pageIndex, linkIndex)
@@ -126,7 +126,7 @@ Usage examples:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildParameters(
         string operation,
         int pageIndex,
         int linkIndex,

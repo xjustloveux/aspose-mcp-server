@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Pdf;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -67,7 +67,7 @@ Usage examples:
 - Add colored watermark: pdf_watermark(operation='add', path='doc.pdf', text='URGENT', color='Red')
 - Add watermark to specific pages: pdf_watermark(operation='add', path='doc.pdf', text='DRAFT', pageRange='1,3,5-10')
 - Add background watermark: pdf_watermark(operation='add', path='doc.pdf', text='SAMPLE', isBackground=true)")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description("Operation: add")] string operation,
         [Description("PDF file path (required if no sessionId)")]
         string? path = null,
@@ -136,7 +136,7 @@ Usage examples:
     /// <param name="horizontalAlignment">The horizontal alignment.</param>
     /// <param name="verticalAlignment">The vertical alignment.</param>
     /// <returns>OperationParameters configured for the watermark operation.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildParameters(
         string? text,
         double opacity,
         double fontSize,

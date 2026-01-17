@@ -2,6 +2,7 @@ using System.ComponentModel;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Core.Tools;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
@@ -11,23 +12,8 @@ namespace AsposeMcpServer.Tools.Word;
 ///     Merges: WordGetDocumentPropertiesTool, WordSetDocumentPropertiesTool, WordSetPropertiesTool
 /// </summary>
 [McpServerToolType]
-public class WordPropertiesTool
+public class WordPropertiesTool : PropertiesToolBase<Document>
 {
-    /// <summary>
-    ///     Handler registry for properties operations
-    /// </summary>
-    private readonly HandlerRegistry<Document> _handlerRegistry;
-
-    /// <summary>
-    ///     Identity accessor for session isolation
-    /// </summary>
-    private readonly ISessionIdentityAccessor? _identityAccessor;
-
-    /// <summary>
-    ///     Session manager for document session operations
-    /// </summary>
-    private readonly DocumentSessionManager? _sessionManager;
-
     /// <summary>
     ///     Initializes a new instance of the WordPropertiesTool class
     /// </summary>
@@ -35,10 +21,8 @@ public class WordPropertiesTool
     /// <param name="identityAccessor">Optional identity accessor for session isolation</param>
     public WordPropertiesTool(DocumentSessionManager? sessionManager = null,
         ISessionIdentityAccessor? identityAccessor = null)
+        : base(sessionManager, identityAccessor, "AsposeMcpServer.Handlers.Word.Properties")
     {
-        _sessionManager = sessionManager;
-        _identityAccessor = identityAccessor;
-        _handlerRegistry = HandlerRegistry<Document>.CreateFromNamespace("AsposeMcpServer.Handlers.Word.Properties");
     }
 
     /// <summary>
@@ -70,7 +54,7 @@ Notes:
 - The 'set' operation is for content metadata (title, author, subject, etc.), not for statistics (word count, page count)
 - Statistics like word count and page count are automatically calculated by Word and cannot be manually set
 - Custom properties support multiple types: string, number (integer/double), boolean, and datetime (ISO 8601 format)")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description("Operation: get, set")] string operation,
         [Description("Document file path (required if no sessionId)")]
         string? path = null,
@@ -101,30 +85,13 @@ Notes:
         var parameters = BuildParameters(operation, title, subject, author, keywords, comments, category, company,
             manager, customProperties);
 
-        var handler = _handlerRegistry.GetHandler(operation);
-
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
-
-        var effectiveOutputPath = outputPath ?? path;
-
-        var operationContext = new OperationContext<Document>
-        {
-            Document = ctx.Document,
-            SessionManager = _sessionManager,
-            IdentityAccessor = _identityAccessor,
-            SessionId = sessionId,
-            SourcePath = path,
-            OutputPath = effectiveOutputPath
-        };
-
-        var result = handler.Execute(operationContext, parameters);
-
-        if (operationContext.IsModified)
-            ctx.Save(effectiveOutputPath);
-
-        if (ctx.IsSession || !operationContext.IsModified)
-            return result;
-        return $"{result}\n{ctx.GetOutputMessage(effectiveOutputPath)}";
+        return ExecuteOperation(
+            operation,
+            sessionId,
+            path,
+            outputPath,
+            parameters,
+            op => string.Equals(op, "get", StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>
@@ -141,7 +108,7 @@ Notes:
     /// <param name="manager">The manager name.</param>
     /// <param name="customProperties">Custom properties as JSON string.</param>
     /// <returns>OperationParameters configured for the properties operation.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildParameters(
         string operation,
         string? title,
         string? subject,

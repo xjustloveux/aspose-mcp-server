@@ -118,12 +118,13 @@ var config = JsonSerializer.Deserialize<AuthConfig>(json);
 | **級別** | Note |
 | **數量** | 1 |
 | **訊息** | Class is never instantiated |
+| **處理方式** | 已添加 `// ReSharper disable once` 註解 |
 
 ### 受影響檔案
 
 | 檔案 | 行號 | 類別 |
 |------|------|------|
-| `Tests/Core/Handlers/HandlerRegistryAutoDiscoveryTests.cs` | 115 | `DifferentContextDocument` |
+| `Tests/Core/Handlers/HandlerRegistryAutoDiscoveryTests.cs` | 116 | `DifferentContextDocument` |
 
 ### 問題描述
 
@@ -166,7 +167,7 @@ public class DifferentContextHandler : OperationHandlerBase<DifferentContextDocu
 
 | 檔案 | 行號 | 類別 |
 |------|------|------|
-| `Tests/Core/Handlers/HandlerRegistryAutoDiscoveryTests.cs` | 163 | `NoParameterlessCtorHandler` |
+| `Tests/Core/Handlers/HandlerRegistryAutoDiscoveryTests.cs` | 160 | `NoParameterlessCtorHandler` |
 
 ### 問題描述
 
@@ -244,7 +245,7 @@ public class NoParameterlessCtorHandler(string requiredValue) : OperationHandler
 
 | 檔案 | 行號 | 成員 |
 |------|------|------|
-| `Tests/Helpers/TestBase.cs` | 19 | `AsposeLibraryType` enum |
+| `Tests/Helpers/TestBase.cs` | 491 | `AsposeLibraryType` enum |
 
 ### 問題描述
 
@@ -265,13 +266,13 @@ Enum 可以改為 protected 可見性。
 | **級別** | Note |
 | **數量** | 1 |
 | **訊息** | Method has overload with cancellation support |
-| **處理方式** | 測試檔案已在 `.editorconfig` 中排除 |
+| **處理方式** | 測試檔案已在 `.editorconfig` 中排除；生產代碼已添加 `// ReSharper disable once` 註解 |
 
 ### 受影響檔案
 
 | 檔案 | 行號 | 方法 | 備註 |
 |------|------|------|------|
-| `Core/Transport/WebSocketConnectionHandler.cs` | 107 | `WaitAsync` | 生產代碼 |
+| `Core/Transport/WebSocketConnectionHandler.cs` | 108 | `WaitAsync` | 生產代碼 |
 
 ### 問題描述
 
@@ -345,7 +346,7 @@ public string Host { get; init; } = "localhost";  // 會導致反序列化失敗
 
 | 檔案 | 行號 | 屬性 |
 |------|------|------|
-| `Core/Tracking/TrackingConfig.cs` | 262 | `Error.get` |
+| `Core/Tracking/TrackingConfig.cs` | 264 | `Error.get` |
 | `Core/Session/DocumentSessionManager.cs` | 771 | `EstimatedMemoryMb.get` |
 | `Core/Session/DocumentSessionManager.cs` | 766 | `LastAccessedAt.get` |
 | `Core/Session/DocumentSessionManager.cs` | 761 | `OpenedAt.get` |
@@ -384,7 +385,7 @@ public string Host { get; init; } = "localhost";  // 會導致反序列化失敗
 | `Tests/Helpers/PdfTestBase.cs` | 11 | `IsEvaluationMode()` |
 | `Core/Session/DocumentSession.cs` | 226 | `GetDocumentAsync()` |
 | `Core/Session/DocumentSessionManager.cs` | 467 | `OnServerShutdown()` |
-| `Core/Tracking/TrackingMiddleware.cs` | 404 | `UseTracking()` |
+| `Core/Tracking/TrackingMiddleware.cs` | 405 | `UseTracking()` |
 
 ### 問題描述
 
@@ -406,12 +407,13 @@ public string Host { get; init; } = "localhost";  // 會導致反序列化失敗
 | **級別** | Note |
 | **數量** | 1 |
 | **訊息** | Return value of method is never used |
+| **處理方式** | 已添加 `// ReSharper disable once` 註解 |
 
 ### 受影響檔案
 
 | 檔案 | 行號 | 方法 |
 |------|------|------|
-| `Core/McpServerBuilderExtensions.cs` | 19 | `WithFilteredTools()` |
+| `Core/McpServerBuilderExtensions.cs` | 20 | `WithFilteredTools()` |
 
 ### 問題描述
 
@@ -449,7 +451,7 @@ builder.WithFilteredTools(filter);
 
 | 檔案 | 行號 | 類型 |
 |------|------|------|
-| `Core/Tracking/TrackingMiddleware.cs` | 396 | `TrackingExtensions` |
+| `Core/Tracking/TrackingMiddleware.cs` | 397 | `TrackingExtensions` |
 
 ### 問題描述
 
@@ -554,13 +556,13 @@ var builder = new DocumentBuilder(doc)
 | **級別** | Note |
 | **數量** | 2 |
 | **訊息** | Collection expression can be converted to a UTF-8 string literal |
+| **處理方式** | 已添加 `// ReSharper disable` / `// ReSharper restore` 註解對 (行 72-82) |
 
 ### 受影響檔案
 
 | 檔案 | 行號 | 說明 |
 |------|------|------|
-| `Tests/Core/ShapeDetailProviders/PictureFrameDetailProviderTests.cs` | 73 | 誤判 |
-| `Tests/Core/ShapeDetailProviders/PictureFrameDetailProviderTests.cs` | 79 | 誤判 |
+| `Tests/Core/ShapeDetailProviders/PictureFrameDetailProviderTests.cs` | 73-81 | 誤判 (PNG 二進制數據) |
 
 ### 問題描述
 
@@ -589,18 +591,18 @@ PNG 檔案的 signature 包含 `0x89` 等非 ASCII 字元，這些是二進制�
 |----------|------|------|----------|----------|
 | AccessToDisposedClosure | 6 | Warning | 測試邏輯需要 | 文件記錄 |
 | AutoPropertyCanBeMadeGetOnly.Global | 2 | Note | JSON 序列化 | 文件記錄 |
-| ClassNeverInstantiated.Global | 1 | Note | 測試類別 | 文件記錄 |
+| ClassNeverInstantiated.Global | 1 | Note | 測試類別 | ReSharper disable once |
 | ConvertToPrimaryConstructor | 1 | Note | 風格選擇 | .editorconfig 排除 |
 | MemberCanBePrivate.Global | 6 | Note | 公開 API | 文件記錄 |
 | MemberCanBeProtected.Global | 1 | Note | 測試彈性 | 文件記錄 |
-| MethodSupportsCancellation | 1 | Note | 複雜度考量 | 文件記錄 |
+| MethodSupportsCancellation | 1 | Note | 複雜度考量 | ReSharper disable once |
 | PropertyCanBeMadeInitOnly.Global | 38 | Note | JSON 序列化 | 文件記錄 |
 | UnusedAutoPropertyAccessor.Global | 7 | Warning | JSON 序列化 / 外部 API | 文件記錄 |
 | UnusedMember.Global | 7 | Note | 公開 API | 文件記錄 |
-| UnusedMethodReturnValue.Global | 1 | Note | 公開 API | 文件記錄 |
+| UnusedMethodReturnValue.Global | 1 | Note | 公開 API | ReSharper disable once |
 | UnusedType.Global | 1 | Note | 公開 API | 文件記錄 |
 | UseObjectOrCollectionInitializer | 26 | Note | 測試可讀性/誤判 | 文件記錄 |
-| UseUtf8StringLiteral | 2 | Note | 誤判 | 文件記錄 |
+| UseUtf8StringLiteral | 2 | Note | 誤判 | ReSharper disable/restore |
 | **總計** | **100** | - | - | - |
 
 ---

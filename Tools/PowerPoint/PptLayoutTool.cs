@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Slides;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -75,7 +75,7 @@ Usage examples:
 - Apply master: ppt_layout(operation='apply_master', path='presentation.pptx', slideIndices=[0,1,2], masterIndex=0, layoutIndex=0)
 - Apply layout range: ppt_layout(operation='apply_layout_range', path='presentation.pptx', slideIndices=[0,1,2], layout='Title')
 - Apply theme: ppt_layout(operation='apply_theme', path='presentation.pptx', themePath='theme.potx')")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description("Operation: set, get_layouts, get_masters, apply_master, apply_layout_range, apply_theme")]
         string operation,
         [Description("Presentation file path (required if no sessionId)")]
@@ -132,7 +132,7 @@ Usage examples:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildParameters(
         string operation,
         int? slideIndex,
         string? layout,

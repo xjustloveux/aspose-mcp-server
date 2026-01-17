@@ -85,7 +85,7 @@ Usage examples:
 
 After opening a document, use the returned sessionId with other tools to edit the document in memory.
 Changes are only written to disk when you call 'save' or 'close' (without discard=true).")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description(@"Operation to perform:
 Session operations:
 - 'open': Open document and create session (required: path)

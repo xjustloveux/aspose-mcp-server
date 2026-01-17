@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Helpers;
@@ -344,7 +344,7 @@ public class AddWithStyleWordTextHandler : OperationHandlerBase<Document>
     /// <returns>The formatted result message.</returns>
     private static string
         BuildResultMessage(AddWithStyleParameters p,
-            string warningMessage) // NOSONAR S3776 - Linear parameter validation sequence
+            string warningMessage)
     {
         var result = "Text added successfully.";
 

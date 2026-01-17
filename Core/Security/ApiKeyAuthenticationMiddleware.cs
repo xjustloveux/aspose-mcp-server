@@ -1,4 +1,4 @@
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -397,7 +397,7 @@ public sealed class ApiKeyAuthenticationMiddleware : IMiddleware, IDisposable
     /// <summary>
     ///     Response from introspection endpoint
     /// </summary>
-    private sealed class IntrospectionResponse // NOSONAR S3459 - Properties assigned via JSON deserialization
+    private sealed class IntrospectionResponse
     {
         public bool Active { get; init; }
 
@@ -407,7 +407,7 @@ public sealed class ApiKeyAuthenticationMiddleware : IMiddleware, IDisposable
     /// <summary>
     ///     Response from custom validation endpoint
     /// </summary>
-    private sealed class CustomValidationResponse // NOSONAR S3459 - Properties assigned via JSON deserialization
+    private sealed class CustomValidationResponse
     {
         public bool Valid { get; init; }
 

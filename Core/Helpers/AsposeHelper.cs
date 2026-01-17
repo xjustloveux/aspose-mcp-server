@@ -1,4 +1,4 @@
-using System.Drawing.Imaging;
+﻿using System.Drawing.Imaging;
 using Aspose.Cells;
 using Aspose.Slides;
 using Aspose.Slides.Charts;
@@ -239,7 +239,7 @@ public static class PowerPointHelper
     /// <param name="textContent">List to add extracted text.</param>
     public static void
         ExtractTextFromShape(IShape shape,
-            List<string> textContent) // NOSONAR S3776 - Polymorphic shape type handling requires switch
+            List<string> textContent)
     {
         switch (shape)
         {
@@ -271,7 +271,7 @@ public static class PowerPointHelper
     /// <param name="shape">The shape to count characters from.</param>
     /// <returns>Total character count.</returns>
     public static int
-        CountTextCharacters(IShape shape) // NOSONAR S3776 - Polymorphic shape type handling requires switch
+        CountTextCharacters(IShape shape)
     {
         var count = 0;
         switch (shape)

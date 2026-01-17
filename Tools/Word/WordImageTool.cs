@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -83,7 +83,7 @@ Usage examples:
 - Get all images: word_image(operation='get', path='doc.docx')
 - Replace image: word_image(operation='replace', path='doc.docx', imageIndex=0, imagePath='new_image.png')
 - Extract images: word_image(operation='extract', path='doc.docx', outputDir='images/')")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description(@"Operation to perform.
 - 'add': Add a new image (required params: path, imagePath)
 - 'edit': Edit existing image (required params: path, imageIndex)
@@ -184,7 +184,7 @@ Usage examples:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildParameters(
         string operation,
         string? imagePath,
         int? imageIndex,
@@ -238,7 +238,7 @@ Usage examples:
     /// <param name="alternativeText">The alternative text for accessibility.</param>
     /// <param name="title">The image title.</param>
     /// <returns>OperationParameters configured for adding an image.</returns>
-    private static OperationParameters BuildAddParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildAddParameters(
         string? imagePath, double? width, double? height,
         string alignment, string textWrapping, string? caption, string captionPosition, string? linkUrl,
         string? alternativeText, string? title)
@@ -273,7 +273,7 @@ Usage examples:
     /// <param name="title">The image title.</param>
     /// <param name="linkUrl">The hyperlink URL for the image.</param>
     /// <returns>OperationParameters configured for editing an image.</returns>
-    private static OperationParameters BuildEditParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildEditParameters(
         int? imageIndex, int sectionIndex, double? width,
         double? height, string alignment, string textWrapping, bool? aspectRatioLocked, string? horizontalAlignment,
         string? verticalAlignment, string? alternativeText, string? title, string? linkUrl)

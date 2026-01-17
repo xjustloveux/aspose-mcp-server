@@ -104,17 +104,20 @@ public class WebSocketConnectionHandler
                 readTask.ContinueWith(_ => { }, TaskContinuationOptions.OnlyOnFaulted),
                 writeTask.ContinueWith(_ => { }, TaskContinuationOptions.OnlyOnFaulted),
                 stderrTask.ContinueWith(_ => { }, TaskContinuationOptions.OnlyOnFaulted)
+                // ReSharper disable once MethodSupportsCancellation - Timeout-only wait during cleanup, no cancellation needed
             ).WaitAsync(TimeSpan.FromSeconds(2));
         }
         catch (WebSocketException ex) when (ex.WebSocketErrorCode == WebSocketError.ConnectionClosedPrematurely)
         {
-            _logger?.LogDebug("WebSocket connection {ConnectionId} closed prematurely",
-                connectionId); // NOSONAR S6667 - Structured logging with placeholders is correct pattern
+            _logger?.LogDebug(
+                "WebSocket connection {ConnectionId} closed prematurely", // NOSONAR S6667 - Structured logging with placeholders is correct pattern
+                connectionId);
         }
         catch (OperationCanceledException)
         {
-            _logger?.LogDebug("WebSocket connection {ConnectionId} cancelled",
-                connectionId); // NOSONAR S6667 - Structured logging with placeholders is correct pattern
+            _logger?.LogDebug(
+                "WebSocket connection {ConnectionId} cancelled", // NOSONAR S6667 - Structured logging with placeholders is correct pattern
+                connectionId);
         }
         catch (Exception ex)
         {

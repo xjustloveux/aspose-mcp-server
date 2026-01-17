@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -66,7 +66,7 @@ Usage examples:
 - Edit hyperlink: word_hyperlink(operation='edit', path='doc.docx', hyperlinkIndex=0, url='https://newurl.com')
 - Delete hyperlink: word_hyperlink(operation='delete', path='doc.docx', hyperlinkIndex=0)
 - Get hyperlinks: word_hyperlink(operation='get', path='doc.docx')")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description(@"Operation to perform.
 - 'add': Add a hyperlink (required params: path, text, url)
 - 'edit': Edit a hyperlink (required params: path, hyperlinkIndex, url)
@@ -134,7 +134,7 @@ Usage examples:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildParameters(
         string operation,
         string? text,
         string? url,

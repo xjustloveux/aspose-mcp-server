@@ -1,3 +1,4 @@
+﻿using System.Globalization;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
@@ -22,7 +23,7 @@ public class SetWordPropertiesHandler : OperationHandlerBase<Document>
     /// <returns>Success message indicating properties were updated.</returns>
     public override string
         Execute(OperationContext<Document> context,
-            OperationParameters parameters) // NOSONAR S3776 - Linear property assignment sequence
+            OperationParameters parameters)
     {
         var setParams = ExtractSetPropertiesParameters(parameters);
 
@@ -95,7 +96,7 @@ public class SetWordPropertiesHandler : OperationHandlerBase<Document>
 
             if (jv.TryGetValue<string>(out var strVal) && !string.IsNullOrEmpty(strVal))
             {
-                if (DateTime.TryParse(strVal, out var dateVal))
+                if (DateTime.TryParse(strVal, CultureInfo.InvariantCulture, out var dateVal))
                 {
                     doc.CustomDocumentProperties.Add(key, dateVal);
                     return;

@@ -59,7 +59,7 @@ Usage examples:
 - Convert Excel to CSV: convert_document(inputPath='book.xlsx', outputPath='book.csv')
 - Convert PowerPoint to PDF: convert_document(inputPath='presentation.pptx', outputPath='presentation.pdf')
 - Convert from session: convert_document(sessionId='sess_xxx', outputPath='doc.pdf')")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description("Input file path (required if no sessionId)")]
         string? inputPath = null,
         [Description("Session ID to convert document from session")]

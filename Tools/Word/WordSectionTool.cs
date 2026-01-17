@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -66,7 +66,7 @@ Notes:
 - Section break types: NextPage (new page), Continuous (same page), EvenPage, OddPage
 - IMPORTANT: Deleting a section will also delete all content within that section (paragraphs, tables, images)
 - Use 'get' operation first to see section indices and their content statistics before deleting")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description("Operation: insert, delete, get")]
         string operation,
         [Description("Document file path (required if no sessionId)")]
@@ -116,7 +116,7 @@ Notes:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildParameters(
         string operation,
         string? sectionBreakType,
         int? insertAtParagraphIndex,

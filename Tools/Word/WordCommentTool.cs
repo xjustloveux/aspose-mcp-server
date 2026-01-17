@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -65,7 +65,7 @@ Usage examples:
 - Delete comment: word_comment(operation='delete', path='doc.docx', commentIndex=0)
 - Get all comments: word_comment(operation='get', path='doc.docx')
 - Reply to comment: word_comment(operation='reply', path='doc.docx', commentIndex=0, text='This is a reply')")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description("Operation: add, delete, get, reply")]
         string operation,
         [Description("Document file path (required if no sessionId)")]
@@ -119,7 +119,7 @@ Usage examples:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildParameters(
         string operation,
         string? text,
         string? author,

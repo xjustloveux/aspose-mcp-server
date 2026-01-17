@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Pdf;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -64,7 +64,7 @@ Usage examples:
 - Rotate page: pdf_page(operation='rotate', path='doc.pdf', pageIndex=1, rotation=90)
 - Get page details: pdf_page(operation='get_details', path='doc.pdf', pageIndex=1)
 - Get page info: pdf_page(operation='get_info', path='doc.pdf')")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description(@"Operation to perform.
 - 'add': Add page(s) (required params: path)
 - 'delete': Delete a page (required params: path, pageIndex)
@@ -125,7 +125,7 @@ Usage examples:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildParameters(
         string operation,
         int count,
         int? insertAt,

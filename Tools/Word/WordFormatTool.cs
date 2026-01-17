@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -92,7 +92,7 @@ Usage examples:
 - Add tab stop: word_format(operation='add_tab_stop', path='doc.docx', paragraphIndex=0, tabPosition=72, tabAlignment='center')
 - Clear tab stops: word_format(operation='clear_tab_stops', path='doc.docx', paragraphIndex=0)
 - Set paragraph border: word_format(operation='set_paragraph_border', path='doc.docx', paragraphIndex=0, borderPosition='all', lineStyle='single', lineWidth=1.0)")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description(@"Operation to perform.
 - 'get_run_format': Get run formatting (required params: path, paragraphIndex, runIndex)
 - 'set_run_format': Set run formatting (required params: path, paragraphIndex, runIndex)
@@ -198,7 +198,7 @@ Usage examples:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildParameters(
         string operation,
         int? paragraphIndex,
         int? runIndex,
@@ -273,7 +273,7 @@ Usage examples:
     /// <param name="underline">Whether the text is underlined.</param>
     /// <param name="color">The text color in hex format.</param>
     /// <returns>OperationParameters configured for setting run format.</returns>
-    private static OperationParameters BuildSetRunFormatParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildSetRunFormatParameters(
         int? paragraphIndex, int? runIndex, string? fontName,
         string? fontNameAscii, string? fontNameFarEast, double? fontSize, bool? bold, bool? italic, bool? underline,
         string? color)
@@ -359,7 +359,7 @@ Usage examples:
     /// <param name="lineColor">The border line color in hex format.</param>
     /// <returns>OperationParameters configured for setting paragraph border.</returns>
     private static OperationParameters
-        BuildSetParagraphBorderParameters( // NOSONAR S107 - MCP protocol parameter building
+        BuildSetParagraphBorderParameters(
             int? paragraphIndex, string? borderPosition,
             bool borderTop, bool borderBottom, bool borderLeft, bool borderRight, string lineStyle, double lineWidth,
             string lineColor)

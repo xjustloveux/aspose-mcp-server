@@ -1,4 +1,4 @@
-using Aspose.Words;
+﻿using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Helpers;
 using WordParagraph = Aspose.Words.Paragraph;
@@ -27,7 +27,7 @@ public class EditTextBoxContentWordHandler : OperationHandlerBase<Document>
     /// <exception cref="Exception">Thrown when textbox paragraph cannot be retrieved.</exception>
     public override string
         Execute(OperationContext<Document> context,
-            OperationParameters parameters) // NOSONAR S3776 - Sequential text and format processing
+            OperationParameters parameters)
     {
         var p = ExtractEditTextBoxContentParameters(parameters);
 

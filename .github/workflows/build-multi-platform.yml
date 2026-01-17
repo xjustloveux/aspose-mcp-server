@@ -230,7 +230,7 @@ jobs:
           zip -r "../aspose-mcp-server-${platform}.zip" "$dir"
         done
         cd ..
-        ls -lh *.zip
+        ls -lh ./*.zip
     
     - name: Create Release with GitHub CLI
       shell: bash

@@ -1,4 +1,4 @@
-using Aspose.Words;
+﻿using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
 using WordParagraph = Aspose.Words.Paragraph;
 using WordStyle = Aspose.Words.Style;
@@ -25,7 +25,7 @@ public class GetWordStylesHandler : OperationHandlerBase<Document>
     /// <returns>JSON string containing style information.</returns>
     public override string
         Execute(OperationContext<Document> context,
-            OperationParameters parameters) // NOSONAR S3776 - Filter selection and list building
+            OperationParameters parameters)
     {
         var p = ExtractGetWordStylesParameters(parameters);
         var doc = context.Document;

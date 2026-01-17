@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Slides;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -73,7 +73,7 @@ Usage examples:
 - Merge presentations: ppt_file_operations(operation='merge', inputPath='presentation1.pptx', outputPath='merged.pptx', inputPaths=['presentation2.pptx'])
 - Split presentation: ppt_file_operations(operation='split', inputPath='presentation.pptx', outputDirectory='output/')
 - Split from session: ppt_file_operations(operation='split', sessionId='sess_xxx', outputDirectory='output/')")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description("Operation: create, convert, merge, split")]
         string operation,
         [Description("Session ID to read presentation from session (for convert, split)")]
@@ -128,7 +128,7 @@ Usage examples:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildParameters(
         string operation,
         string? sessionId,
         string? path,

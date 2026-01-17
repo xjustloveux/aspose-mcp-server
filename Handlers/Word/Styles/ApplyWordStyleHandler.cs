@@ -1,4 +1,4 @@
-using Aspose.Words;
+﻿using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
 using WordParagraph = Aspose.Words.Paragraph;
 using WordTable = Aspose.Words.Tables.Table;
@@ -24,7 +24,7 @@ public class ApplyWordStyleHandler : OperationHandlerBase<Document>
     /// <returns>Success message with application details.</returns>
     public override string
         Execute(OperationContext<Document> context,
-            OperationParameters parameters) // NOSONAR S3776 - Mutually exclusive target selection
+            OperationParameters parameters)
     {
         var p = ExtractApplyWordStyleParameters(parameters);
 

@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Cells;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -67,7 +67,7 @@ Usage examples:
 - Move sheet: excel_sheet(operation='move', path='book.xlsx', sheetIndex=0, insertAt=2)
 - Copy sheet: excel_sheet(operation='copy', path='book.xlsx', sheetIndex=0, newName='Copy')
 - Hide sheet: excel_sheet(operation='hide', path='book.xlsx', sheetIndex=1)")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description("Operation to perform: add, delete, get, rename, move, copy, hide")]
         string operation,
         [Description("Excel file path (required if no sessionId)")]
@@ -121,7 +121,7 @@ Usage examples:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildParameters(
         string operation,
         int sheetIndex,
         string? sheetName,

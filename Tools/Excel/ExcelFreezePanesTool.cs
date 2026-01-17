@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Cells;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -59,7 +59,7 @@ Usage examples:
 - Freeze panes: excel_freeze_panes(operation='freeze', path='book.xlsx', row=1, column=1)
 - Unfreeze panes: excel_freeze_panes(operation='unfreeze', path='book.xlsx')
 - Get freeze status: excel_freeze_panes(operation='get', path='book.xlsx')")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description(@"Operation to perform.
 - 'freeze': Freeze panes at specified row and column (required params: path, row, column)
 - 'unfreeze': Remove freeze panes (required params: path)
@@ -110,7 +110,7 @@ Usage examples:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildParameters(
         string operation,
         int sheetIndex,
         int row,

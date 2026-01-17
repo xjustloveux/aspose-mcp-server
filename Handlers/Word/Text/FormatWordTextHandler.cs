@@ -1,4 +1,4 @@
-using Aspose.Words;
+﻿using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Helpers;
 using WordParagraph = Aspose.Words.Paragraph;
@@ -210,7 +210,7 @@ public class FormatWordTextHandler : OperationHandlerBase<Document>
     /// <param name="changes">The list to add changes to.</param>
     /// <param name="p">The format parameters containing font settings.</param>
     private static void
-        CollectChanges(List<string> changes, FormatParameters p) // NOSONAR S3776 - Linear parameter validation sequence
+        CollectChanges(List<string> changes, FormatParameters p)
     {
         if (!string.IsNullOrEmpty(p.FontNameAscii))
             changes.Add($"Font (ASCII): {p.FontNameAscii}");

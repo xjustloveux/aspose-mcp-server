@@ -16,6 +16,7 @@ public static class McpServerBuilderExtensions
     /// <param name="serverConfig">The server configuration for tool filtering.</param>
     /// <param name="sessionConfig">The session configuration for session tool filtering.</param>
     /// <returns>The builder for method chaining.</returns>
+    // ReSharper disable once UnusedMethodReturnValue.Global - Fluent API design, return value is optional for chaining
     public static IMcpServerBuilder WithFilteredTools(
         this IMcpServerBuilder builder,
         ServerConfig serverConfig,

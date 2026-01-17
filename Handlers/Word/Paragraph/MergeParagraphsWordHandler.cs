@@ -1,4 +1,4 @@
-using Aspose.Words;
+﻿using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
 
 namespace AsposeMcpServer.Handlers.Word.Paragraph;
@@ -21,7 +21,7 @@ public class MergeParagraphsWordHandler : OperationHandlerBase<Document>
     /// <returns>Success message with merge details.</returns>
     public override string
         Execute(OperationContext<Document> context,
-            OperationParameters parameters) // NOSONAR S3776 - Linear validation and merge loop
+            OperationParameters parameters)
     {
         var mergeParams = ExtractMergeParagraphsParameters(parameters);
 

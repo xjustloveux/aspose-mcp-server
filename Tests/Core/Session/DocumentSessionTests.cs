@@ -152,7 +152,7 @@ public class DocumentSessionTests : IDisposable
         var session = CreateSession();
         var initialTime = session.LastAccessedAt;
 
-        Thread.Sleep(10);
+        Thread.Sleep(10); // NOSONAR S2925 - Simple delay for testing time-based behavior
         session.GetDocument<MockDocument>();
 
         Assert.True(session.LastAccessedAt > initialTime);

@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
 
@@ -23,7 +23,7 @@ public class AddIndexWordHandler : OperationHandlerBase<Document>
     /// <returns>Success message with count of entries added.</returns>
     public override string
         Execute(OperationContext<Document> context,
-            OperationParameters parameters) // NOSONAR S3776 - Linear field code building
+            OperationParameters parameters)
     {
         var p = ExtractAddIndexParameters(parameters);
 

@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
@@ -87,7 +87,7 @@ Usage examples:
 - Get list format: word_list(operation='get_format', path='doc.docx', paragraphIndex=0)
 - Restart numbering: word_list(operation='restart_numbering', path='doc.docx', paragraphIndex=2, startAt=1)
 - Convert to list: word_list(operation='convert_to_list', path='doc.docx', startParagraphIndex=0, endParagraphIndex=5)")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description(
             "Operation: add_list, add_item, delete_item, edit_item, set_format, get_format, restart_numbering, convert_to_list")]
         string operation,
@@ -165,7 +165,7 @@ Usage examples:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildParameters(
         string operation,
         JsonArray? items,
         string listType,

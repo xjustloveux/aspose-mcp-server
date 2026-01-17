@@ -1,4 +1,4 @@
-using Aspose.Words;
+﻿using Aspose.Words;
 using Aspose.Words.Lists;
 using AsposeMcpServer.Core.Handlers;
 using WordParagraph = Aspose.Words.Paragraph;
@@ -24,7 +24,7 @@ public class ConvertToWordListHandler : OperationHandlerBase<Document>
     /// <returns>Success message with conversion details.</returns>
     public override string
         Execute(OperationContext<Document> context,
-            OperationParameters parameters) // NOSONAR S3776 - Linear validation and conversion
+            OperationParameters parameters)
     {
         var p = ExtractConvertToListParameters(parameters);
 

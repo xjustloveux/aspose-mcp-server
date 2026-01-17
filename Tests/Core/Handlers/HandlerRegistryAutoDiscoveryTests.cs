@@ -112,6 +112,7 @@ namespace AsposeMcpServer.Tests.Core.Handlers
         public string Content { get; set; } = "";
     }
 
+    // ReSharper disable once ClassNeverInstantiated.Global - Used as generic type parameter for HandlerRegistry<T>
     public class DifferentContextDocument
     {
         public int Value { get; set; }

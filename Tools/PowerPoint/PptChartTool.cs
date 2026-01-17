@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Text.Json.Nodes;
 using Aspose.Slides;
 using AsposeMcpServer.Core.Handlers;
@@ -73,7 +73,7 @@ Usage examples:
 - Update data: ppt_chart(operation='update_data', path='presentation.pptx', slideIndex=0, shapeIndex=0, data={categories:['A','B'],series:[{name:'Sales',values:[1,2]}]})
 
 Note: shapeIndex refers to the chart index (0-based) among all charts on the slide, not the absolute shape index.")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description("Operation: add, edit, delete, get_data, update_data")]
         string operation,
         [Description("Slide index (0-based)")] int slideIndex,
@@ -135,7 +135,7 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildParameters(
         string operation,
         int slideIndex,
         int? shapeIndex,

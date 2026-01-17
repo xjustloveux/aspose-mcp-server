@@ -252,8 +252,8 @@ public class TrackingMiddleware
         }
         catch (OperationCanceledException)
         {
-            // NOSONAR S6667 - Structured logging with placeholders is correct pattern
-            _logger.LogWarning("Webhook request to {Url} timed out after {Timeout} seconds",
+            _logger.LogWarning(
+                "Webhook request to {Url} timed out after {Timeout} seconds", // NOSONAR S6667 - Structured logging with placeholders is correct pattern
                 _config.WebhookUrl, _config.WebhookTimeoutSeconds);
         }
         catch (Exception ex)

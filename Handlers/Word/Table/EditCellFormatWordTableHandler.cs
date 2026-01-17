@@ -1,4 +1,4 @@
-using Aspose.Words;
+﻿using Aspose.Words;
 using Aspose.Words.Tables;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Helpers;
@@ -78,7 +78,7 @@ public class EditCellFormatWordTableHandler : OperationHandlerBase<Document>
     /// <param name="applyToTable">Whether to apply to entire table.</param>
     /// <returns>List of target cells.</returns>
     /// <exception cref="ArgumentException">Thrown when required indices are missing.</exception>
-    private static List<Cell> GetTargetCells( // NOSONAR S3776 - Mutually exclusive cell selection
+    private static List<Cell> GetTargetCells(
         Aspose.Words.Tables.Table table, int? rowIndex, int? columnIndex,
         bool applyToRow, bool applyToColumn, bool applyToTable)
     {

@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Slides;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -79,7 +79,7 @@ Usage examples:
 - Insert column: ppt_table(operation='insert_column', path='presentation.pptx', slideIndex=0, shapeIndex=0, columnIndex=1)
 - Delete row: ppt_table(operation='delete_row', path='presentation.pptx', slideIndex=0, shapeIndex=0, rowIndex=1)
 - Edit cell: ppt_table(operation='edit_cell', path='presentation.pptx', slideIndex=0, shapeIndex=0, rowIndex=0, columnIndex=0, text='New Value')")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description(@"Operation to perform.
 - 'add': Add a table (required params: path, slideIndex, rows, columns)
 - 'edit': Edit table data (required params: path, slideIndex, shapeIndex, data)
@@ -150,7 +150,7 @@ Usage examples:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildParameters(
         string operation,
         int slideIndex,
         int? shapeIndex,

@@ -432,7 +432,7 @@ cd aspose-mcp-server">
 <script>
         function copyCode(button) {
             const codeBlock = button.previousElementSibling;
-            const text = codeBlock.getAttribute('data-code') || codeBlock.textContent.trim();
+            const text = codeBlock.dataset.code || codeBlock.textContent.trim();
             
             navigator.clipboard.writeText(text).then(function() {
                 const spans = button.querySelectorAll('span');

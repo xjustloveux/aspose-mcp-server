@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Pdf;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -69,7 +69,7 @@ Usage examples:
 - Edit form field: pdf_form_field(operation='edit', path='doc.pdf', fieldName='name', value='New Value')
 - Get form fields: pdf_form_field(operation='get', path='doc.pdf')
 - Get form fields with limit: pdf_form_field(operation='get', path='doc.pdf', limit=50)")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description(@"Operation to perform.
 - 'add': Add a form field (required params: path, pageIndex, fieldType, fieldName, x, y, width, height)
 - 'delete': Delete a form field (required params: path, fieldName)
@@ -138,7 +138,7 @@ Usage examples:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildParameters(
         string operation,
         int? pageIndex,
         string? fieldType,

@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -72,7 +72,7 @@ Usage examples:
 - Delete footnote: word_note(operation='delete_footnote', path='doc.docx', noteIndex=0)
 - Edit footnote: word_note(operation='edit_footnote', path='doc.docx', noteIndex=0, text='Updated footnote')
 - Get footnotes: word_note(operation='get_footnotes', path='doc.docx')")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description(
             "Operation: add_footnote, add_endnote, delete_footnote, delete_endnote, edit_footnote, edit_endnote, get_footnotes, get_endnotes")]
         string operation,
@@ -126,7 +126,7 @@ Usage examples:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildParameters(
         string operation,
         string? text,
         int? paragraphIndex,

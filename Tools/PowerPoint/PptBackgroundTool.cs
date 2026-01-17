@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Slides;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -62,7 +62,7 @@ Usage examples:
 - Set background image: ppt_background(operation='set', path='presentation.pptx', slideIndex=0, imagePath='bg.png')
 - Apply to all slides: ppt_background(operation='set', path='presentation.pptx', color='#FFFFFF', applyToAll=true)
 - Get background: ppt_background(operation='get', path='presentation.pptx', slideIndex=0)")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description("Operation: set, get")] string operation,
         [Description("Presentation file path (required if no sessionId)")]
         string? path = null,
@@ -110,7 +110,7 @@ Usage examples:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildParameters(
         string operation,
         int slideIndex,
         string? color,

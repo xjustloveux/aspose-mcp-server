@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Pdf;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -70,7 +70,7 @@ Usage examples:
 - Edit table cell: pdf_table(operation='edit', path='doc.pdf', tableIndex=0, cellRow=0, cellColumn=1, cellValue='NewValue')
 
 Note: PDF table editing has limitations. After saving, tables may be converted to graphics and cannot be edited as Table objects.")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description("Operation: add, edit")] string operation,
         [Description("PDF file path (required if no sessionId)")]
         string? path = null,
@@ -131,7 +131,7 @@ Note: PDF table editing has limitations. After saving, tables may be converted t
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildParameters(
         string operation,
         int pageIndex,
         int rows,

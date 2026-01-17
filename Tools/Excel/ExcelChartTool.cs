@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Cells;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -73,7 +73,7 @@ Usage examples:
 - Get charts: excel_chart(operation='get', path='book.xlsx')
 - Update data: excel_chart(operation='update_data', path='book.xlsx', chartIndex=0, dataRange='A1:C10')
 - Set properties: excel_chart(operation='set_properties', path='book.xlsx', chartIndex=0, title='Chart Title')")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description("Operation: add, edit, delete, get, update_data, set_properties")]
         string operation,
         [Description("Excel file path (required if no sessionId)")]
@@ -145,7 +145,7 @@ Usage examples:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildParameters(
         string operation,
         int sheetIndex,
         int chartIndex,

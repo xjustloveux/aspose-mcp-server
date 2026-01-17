@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Pdf;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -67,7 +67,7 @@ Usage examples:
 - Replace image: pdf_image(operation='edit', path='doc.pdf', pageIndex=1, imageIndex=1, imagePath='new.png', x=200, y=200)
 - Extract image: pdf_image(operation='extract', path='doc.pdf', pageIndex=1, imageIndex=1, outputPath='image.png')
 - Get images: pdf_image(operation='get', path='doc.pdf', pageIndex=1)")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description(@"Operation to perform.
 - 'add': Add an image (required params: path, pageIndex, imagePath)
 - 'delete': Delete an image (required params: path, pageIndex, imageIndex)
@@ -133,7 +133,7 @@ Usage examples:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildParameters(
         string operation,
         int pageIndex,
         string? imagePath,

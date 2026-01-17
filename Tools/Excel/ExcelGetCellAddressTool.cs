@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Cells;
 using AsposeMcpServer.Core.Handlers;
 using ModelContextProtocol.Server;
@@ -40,7 +40,7 @@ public class ExcelGetCellAddressTool
 Usage examples:
 - Convert A1 to index: excel_get_cell_address(operation='from_a1', cellAddress='B2') returns row/column index
 - Convert index to A1: excel_get_cell_address(operation='from_index', row=1, column=1) returns 'B2'")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description("Operation: from_a1 (convert A1 to index), from_index (convert index to A1)")]
         string operation,
         [Description("Cell address in A1 notation (e.g., 'A1', 'B2', 'AA100'). Required for from_a1.")]
@@ -66,7 +66,7 @@ Usage examples:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildParameters(
         string operation,
         string? cellAddress,
         int? row,

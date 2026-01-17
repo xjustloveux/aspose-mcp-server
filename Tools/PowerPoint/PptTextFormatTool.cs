@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Slides;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -67,7 +67,7 @@ Usage examples:
 - Format all slides: ppt_text_format(operation='format', path='presentation.pptx', fontName='Arial', fontSize=14, bold=true)
 - Format specific slides: ppt_text_format(operation='format', path='presentation.pptx', slideIndices='[0,1,2]', fontName='Times New Roman', fontSize=12)
 - Format with color: ppt_text_format(operation='format', path='presentation.pptx', color='#FF0000') or ppt_text_format(operation='format', path='presentation.pptx', color='Red')")]
-    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
+    public string Execute(
         [Description("Operation: format")] string operation = "format",
         [Description("Presentation file path (required if no sessionId)")]
         string? path = null,
@@ -118,7 +118,7 @@ Usage examples:
     /// <param name="italic">Whether to apply italic formatting.</param>
     /// <param name="color">The text color (hex or named color).</param>
     /// <returns>OperationParameters configured for text formatting.</returns>
-    private static OperationParameters BuildParameters( // NOSONAR S107 - MCP protocol parameter building
+    private static OperationParameters BuildParameters(
         string? slideIndices,
         string? fontName,
         double? fontSize,

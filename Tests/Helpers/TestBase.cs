@@ -14,17 +14,6 @@ namespace AsposeMcpServer.Tests.Helpers;
 public abstract class TestBase : IDisposable
 {
     /// <summary>
-    ///     Aspose library types for evaluation mode checking
-    /// </summary>
-    protected enum AsposeLibraryType
-    {
-        Slides,
-        Words,
-        Cells,
-        Pdf
-    }
-
-    /// <summary>
     ///     Tracks which Aspose licenses were successfully loaded during initialization.
     ///     Used by IsEvaluationMode() to determine if a specific library is licensed.
     /// </summary>
@@ -494,5 +483,16 @@ public abstract class TestBase : IDisposable
         if (!string.IsNullOrEmpty(outputPath)) args["outputPath"] = outputPath;
 
         return args;
+    }
+
+    /// <summary>
+    ///     Aspose library types for evaluation mode checking
+    /// </summary>
+    protected enum AsposeLibraryType
+    {
+        Slides,
+        Words,
+        Cells,
+        Pdf
     }
 }
