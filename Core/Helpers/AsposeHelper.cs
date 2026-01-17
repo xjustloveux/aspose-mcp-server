@@ -247,14 +247,14 @@ public static class PowerPointHelper
                 textContent.Add(text);
                 break;
             case ITable table:
-                foreach (var row in table.Rows) // NOSONAR S3267 - Loop has side effects, not suitable for LINQ
+                foreach (var row in table.Rows)
                 foreach (var cell in row)
                     if (!string.IsNullOrWhiteSpace(cell.TextFrame?.Text))
                         textContent.Add(cell.TextFrame.Text);
 
                 break;
             case ISmartArt smartArt:
-                foreach (var node in smartArt.AllNodes) // NOSONAR S3267 - Loop has side effects, not suitable for LINQ
+                foreach (var node in smartArt.AllNodes)
                     if (!string.IsNullOrWhiteSpace(node.TextFrame?.Text))
                         textContent.Add(node.TextFrame.Text);
                 break;
@@ -280,14 +280,14 @@ public static class PowerPointHelper
                 count += text.Length;
                 break;
             case ITable table:
-                foreach (var row in table.Rows) // NOSONAR S3267 - Loop has side effects, not suitable for LINQ
+                foreach (var row in table.Rows)
                 foreach (var cell in row)
                     if (!string.IsNullOrWhiteSpace(cell.TextFrame?.Text))
                         count += cell.TextFrame.Text.Length;
 
                 break;
             case ISmartArt smartArt:
-                foreach (var node in smartArt.AllNodes) // NOSONAR S3267 - Loop has side effects, not suitable for LINQ
+                foreach (var node in smartArt.AllNodes)
                     if (!string.IsNullOrWhiteSpace(node.TextFrame?.Text))
                         count += node.TextFrame.Text.Length;
                 break;

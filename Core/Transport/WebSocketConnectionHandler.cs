@@ -109,14 +109,14 @@ public class WebSocketConnectionHandler
         }
         catch (WebSocketException ex) when (ex.WebSocketErrorCode == WebSocketError.ConnectionClosedPrematurely)
         {
-            _logger?.LogDebug(
-                "WebSocket connection {ConnectionId} closed prematurely", // NOSONAR S6667 - Structured logging with placeholders is correct pattern
+            _logger?.LogDebug( // NOSONAR S6667 - Structured logging with placeholders is correct pattern
+                "WebSocket connection {ConnectionId} closed prematurely",
                 connectionId);
         }
         catch (OperationCanceledException)
         {
-            _logger?.LogDebug(
-                "WebSocket connection {ConnectionId} cancelled", // NOSONAR S6667 - Structured logging with placeholders is correct pattern
+            _logger?.LogDebug( // NOSONAR S6667 - Structured logging with placeholders is correct pattern
+                "WebSocket connection {ConnectionId} cancelled",
                 connectionId);
         }
         catch (Exception ex)

@@ -323,8 +323,8 @@ public sealed class JwtAuthenticationMiddleware : IMiddleware, IDisposable
         }
         catch (SecurityTokenException ex)
         {
-            _logger.LogDebug(
-                "Token validation failed: {Message}", // NOSONAR S6667 - Structured logging with placeholders is correct pattern
+            _logger.LogDebug( // NOSONAR S6667 - Structured logging with placeholders is correct pattern
+                "Token validation failed: {Message}",
                 ex.Message);
             return new JwtAuthResult
             {

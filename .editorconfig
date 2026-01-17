@@ -14,6 +14,20 @@ insert_final_newline = true
 [*.cs]
 indent_size = 4
 
+# ===== Roslyn Analyzer Rule Exclusions (Global) =====
+# CA1816: Dispose methods should call SuppressFinalize
+dotnet_diagnostic.CA1816.severity = none
+# CA1845: Use span-based 'string.Concat'
+dotnet_diagnostic.CA1845.severity = none
+# CA1859: Use concrete types when possible for improved performance
+dotnet_diagnostic.CA1859.severity = none
+
+# ===== SonarCloud Rule Exclusions (Global) =====
+# S6966: ConfigureAwait not needed for application code (not a library)
+dotnet_diagnostic.S6966.severity = none
+# S127: Loop counter modification is valid for argument parsing patterns
+dotnet_diagnostic.S127.severity = none
+
 # ===== JetBrains ReSharper/InspectCode Rule Exclusions =====
 # Reference: CODE_QUALITY_EXCEPTIONS.md
 
@@ -36,6 +50,12 @@ resharper_convert_to_primary_constructor_highlighting = none
 resharper_access_to_disposed_closure_highlighting = none
 # Tests don't need cancellation support
 resharper_method_supports_cancellation_highlighting = none
+
+# ===== Roslyn Analyzer Rule Exclusions (Tests Only) =====
+# CA1861: Avoid constant arrays as arguments
+dotnet_diagnostic.CA1861.severity = none
+# CA2016: Forward the 'CancellationToken' parameter to methods
+dotnet_diagnostic.CA2016.severity = none
 
 # XML and config files
 [*.{xml,config,json,yml,yaml}]

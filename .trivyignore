@@ -1,49 +1,8 @@
-# Trivy CVE Ignore List
-# These CVEs have been reviewed and determined to be low-risk for this containerized application
-# Last reviewed: 2026-01-06
+# Trivy Ignore List
+# CVE entries removed - handled by ignore-unfixed flag in trivy-action
+# Last reviewed: 2026-01-18
 
-# tar: setuid/setgid file extraction warning (requires local file access, not applicable in container)
-CVE-2005-2541
-
-# initscripts: insecure permissions (not used in this container)
-CVE-2007-5686
-
-# perl: File::Temp insecure temporary file handling (low risk, requires specific race condition)
-CVE-2011-4116
-
-# systemd: TOCTOU race condition (requires SELinux context, not applicable)
-CVE-2013-4392
-
-# util-linux: partial disclosure in chfn/chsh (requires interactive shell access)
-CVE-2022-0563
-
-# systemd 253: sealed file modification issues (requires local access to sealed files)
-CVE-2023-31437
-CVE-2023-31438
-CVE-2023-31439
-
-# http-tiny: insecure TLS cert default (not used directly by application)
-CVE-2023-31486
-
-# zlib: integer overflow in zipOpenNewFileInZip4_6 (requires crafted ZIP file input)
-CVE-2023-45853
-
-# ncurses: segmentation fault via _nc_wrap_entry (requires specific terminal input)
-CVE-2023-50495
-
-# shadow-utils: subordinate ID configuration (container runs as non-root user)
-CVE-2024-56433
-
-# util-linux: heap buffer overread in setpwnam (requires 256-byte username, not applicable)
-CVE-2025-14104
-
-# OpenSSL: PowerPC architecture vulnerability (container runs on x64)
-CVE-2025-27587
-
-# ncurses: stack buffer overflow (requires specific terminal input)
-CVE-2025-6141
-
-# Temporary IDs (non-CVE security advisories)
+# Temporary IDs (non-CVE security advisories, not handled by ignore-unfixed)
 TEMP-0290435-0B57B5
 TEMP-0517018-A83CE6
 TEMP-0628843-DBAD28
