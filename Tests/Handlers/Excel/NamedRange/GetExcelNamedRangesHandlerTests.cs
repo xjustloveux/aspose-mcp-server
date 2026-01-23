@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.NamedRange;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Excel.NamedRange;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.NamedRange;
 
@@ -38,10 +39,12 @@ public class GetExcelNamedRangesHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"count\": 0", result);
-        Assert.Contains("No named ranges found", result);
+        var result = Assert.IsType<GetNamedRangesResult>(res);
+
+        Assert.Equal(0, result.Count);
+        Assert.Equal("No named ranges found", result.Message);
         AssertNotModified(context);
     }
 
@@ -52,23 +55,26 @@ public class GetExcelNamedRangesHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("TestRange", result);
-        Assert.Contains("count", result.ToLower());
+        var result = Assert.IsType<GetNamedRangesResult>(res);
+
+        Assert.True(result.Count > 0);
+        Assert.Contains(result.Items, item => item.Name == "TestRange");
     }
 
     [Fact]
-    public void Execute_ReturnsJsonFormat()
+    public void Execute_ReturnsItems()
     {
         var workbook = CreateEmptyWorkbook();
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("{", result);
-        Assert.Contains("}", result);
+        var result = Assert.IsType<GetNamedRangesResult>(res);
+
+        Assert.NotNull(result.Items);
     }
 
     #endregion

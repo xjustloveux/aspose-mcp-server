@@ -1,7 +1,8 @@
 using System.Drawing;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Shape;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Shape;
 
@@ -34,9 +35,11 @@ public class ClearPptShapeFormatHandlerTests : PptHandlerTestBase
             { "shapeIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("cleared", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("cleared", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -55,10 +58,12 @@ public class ClearPptShapeFormatHandlerTests : PptHandlerTestBase
             { "shapeIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("shape 0", result);
-        Assert.Contains("slide 0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("shape 0", result.Message);
+        Assert.Contains("slide 0", result.Message);
     }
 
     #endregion
@@ -211,9 +216,11 @@ public class ClearPptShapeFormatHandlerTests : PptHandlerTestBase
             { "shapeIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("1", result.Message);
         Assert.Equal(FillType.NoFill, pres.Slides[1].Shapes[0].FillFormat.FillType);
     }
 
@@ -230,9 +237,11 @@ public class ClearPptShapeFormatHandlerTests : PptHandlerTestBase
             { "shapeIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("0", result.Message);
         Assert.Equal(FillType.NoFill, pres.Slides[0].Shapes[0].FillFormat.FillType);
     }
 

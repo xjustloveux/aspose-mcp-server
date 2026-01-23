@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Table;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Table;
 
@@ -57,9 +58,11 @@ public class MergeCellsWordTableHandlerTests : WordHandlerTestBase
             { "endCol", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("merged", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("merged", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -76,9 +79,11 @@ public class MergeCellsWordTableHandlerTests : WordHandlerTestBase
             { "endCol", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("merged", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("merged", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -94,9 +99,11 @@ public class MergeCellsWordTableHandlerTests : WordHandlerTestBase
             { "endCol", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("merged", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("merged", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

@@ -1,5 +1,7 @@
-using Aspose.Words;
-using AsposeMcpServer.Tests.Helpers;
+﻿using Aspose.Words;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Word.Bookmark;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Word;
 
 namespace AsposeMcpServer.Tests.Tools.Word;
@@ -43,8 +45,9 @@ public class WordBookmarkToolTests : WordTestBase
         doc.Save(docPath);
 
         var result = _tool.Execute("get", docPath);
-        Assert.Contains("Bookmark1", result);
-        Assert.Contains("\"count\":", result);
+        var data = GetResultData<GetBookmarksResult>(result);
+        Assert.True(data.Count > 0);
+        Assert.Contains(data.Bookmarks, b => b.Name == "Bookmark1");
     }
 
     [Fact]
@@ -95,8 +98,9 @@ public class WordBookmarkToolTests : WordTestBase
         doc.Save(docPath);
 
         var result = _tool.Execute("goto", docPath, name: "TargetBookmark");
-        Assert.Contains("TargetBookmark", result);
-        Assert.Contains("Target content", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("TargetBookmark", data.Message);
+        Assert.Contains("Target content", data.Message);
     }
 
     #endregion
@@ -112,7 +116,8 @@ public class WordBookmarkToolTests : WordTestBase
         var docPath = CreateWordDocumentWithContent($"test_case_{operation}.docx", "Test");
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.docx");
         var result = _tool.Execute(operation, docPath, outputPath: outputPath, name: $"BM_{operation}", text: "Text");
-        Assert.StartsWith("Bookmark added successfully", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Bookmark added successfully", data.Message);
     }
 
     [Fact]
@@ -140,7 +145,10 @@ public class WordBookmarkToolTests : WordTestBase
         var docPath = CreateWordDocumentWithContent("test_session_add.docx", "Test content");
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("add", sessionId: sessionId, name: "SessionBookmark", text: "Session text");
-        Assert.Contains("SessionBookmark", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("SessionBookmark", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
 
         var doc = SessionManager.GetDocument<Document>(sessionId);
         var bookmark = doc.Range.Bookmarks["SessionBookmark"];
@@ -159,7 +167,10 @@ public class WordBookmarkToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("get", sessionId: sessionId);
-        Assert.Contains("ExistingBookmark", result);
+        var data = GetResultData<GetBookmarksResult>(result);
+        Assert.Contains(data.Bookmarks, b => b.Name == "ExistingBookmark");
+        var output = GetResultOutput<GetBookmarksResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -211,8 +222,11 @@ public class WordBookmarkToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("goto", sessionId: sessionId, name: "NavigateHere");
-        Assert.Contains("NavigateHere", result);
-        Assert.Contains("Target content", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("NavigateHere", data.Message);
+        Assert.Contains("Target content", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -241,8 +255,9 @@ public class WordBookmarkToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath2);
         var result = _tool.Execute("get", docPath1, sessionId);
-        Assert.Contains("SessionBookmark", result);
-        Assert.DoesNotContain("PathBookmark", result);
+        var data = GetResultData<GetBookmarksResult>(result);
+        Assert.Contains(data.Bookmarks, b => b.Name == "SessionBookmark");
+        Assert.DoesNotContain(data.Bookmarks, b => b.Name == "PathBookmark");
     }
 
     #endregion

@@ -1,11 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Table;
 
 /// <summary>
 ///     Handler for editing table properties in PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class EditPptTableHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -20,7 +24,7 @@ public class EditPptTableHandler : OperationHandlerBase<Presentation>
     ///     Optional: slideIndex (default: 0), x, y, width, height.
     /// </param>
     /// <returns>Success message with edit details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var editParams = ExtractEditTableParameters(parameters);
 
@@ -42,7 +46,7 @@ public class EditPptTableHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Table properties updated on slide {editParams.SlideIndex}.");
+        return new SuccessResult { Message = $"Table properties updated on slide {editParams.SlideIndex}." };
     }
 
     /// <summary>

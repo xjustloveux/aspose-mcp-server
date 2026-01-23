@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.ViewSettings;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.ViewSettings;
 
@@ -49,9 +50,11 @@ public class SetAllExcelViewHandlerTests : ExcelHandlerTestBase
             { "showZeroValues", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(150, workbook.Worksheets[0].Zoom);
         Assert.False(workbook.Worksheets[0].IsGridlinesVisible);
         Assert.False(workbook.Worksheets[0].IsRowColumnHeadersVisible);
@@ -72,9 +75,11 @@ public class SetAllExcelViewHandlerTests : ExcelHandlerTestBase
             { "showGridlines", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(200, workbook.Worksheets[1].Zoom);
         Assert.False(workbook.Worksheets[1].IsGridlinesVisible);
     }

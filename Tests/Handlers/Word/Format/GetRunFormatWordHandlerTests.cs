@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Word.Format;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Word.Format;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Format;
 
@@ -47,10 +48,13 @@ public class GetRunFormatWordHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("runs", result);
-        Assert.Contains("count", result);
+        var result = Assert.IsType<GetRunFormatAllResult>(res);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.Runs);
+        Assert.True(result.Count > 0);
         AssertNotModified(context);
     }
 
@@ -65,11 +69,13 @@ public class GetRunFormatWordHandlerTests : WordHandlerTestBase
             { "runIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("fontName", result);
-        Assert.Contains("fontSize", result);
-        Assert.Contains("bold", result);
+        var result = Assert.IsType<GetRunFormatWordResult>(res);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.FontName);
+        Assert.True(result.FontSize > 0);
     }
 
     [Fact]
@@ -84,9 +90,12 @@ public class GetRunFormatWordHandlerTests : WordHandlerTestBase
             { "includeInherited", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("inherited", result);
+        var result = Assert.IsType<GetRunFormatWordResult>(res);
+
+        Assert.NotNull(result);
+        Assert.Equal("inherited", result.FormatType);
     }
 
     #endregion

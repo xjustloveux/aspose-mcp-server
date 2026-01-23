@@ -1,12 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Shape;
 
 /// <summary>
 ///     Handler for clearing shape format properties in PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class ClearPptShapeFormatHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class ClearPptShapeFormatHandler : OperationHandlerBase<Presentation>
     ///     Optional: slideIndex (default: 0), clearFill (default: true), clearLine (default: true).
     /// </param>
     /// <returns>Success message with clear details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractClearPptShapeFormatParameters(parameters);
         var presentation = context.Document;
@@ -39,7 +42,7 @@ public class ClearPptShapeFormatHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Format cleared from shape {p.ShapeIndex} on slide {p.SlideIndex}.");
+        return new SuccessResult { Message = $"Format cleared from shape {p.ShapeIndex} on slide {p.SlideIndex}." };
     }
 
     private static ClearPptShapeFormatParameters ExtractClearPptShapeFormatParameters(OperationParameters parameters)

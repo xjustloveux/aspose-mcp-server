@@ -1,13 +1,16 @@
 using Aspose.Slides;
 using Aspose.Slides.Animation;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Animation;
 
 /// <summary>
 ///     Handler for editing animations in PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class EditPptAnimationHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -23,7 +26,7 @@ public class EditPptAnimationHandler : OperationHandlerBase<Presentation>
     ///     Optional: animationIndex, effectType, effectSubtype, triggerType, duration, delay
     /// </param>
     /// <returns>Success message with update details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var animParams = ExtractAnimationParameters(parameters);
         var presentation = context.Document;
@@ -40,7 +43,8 @@ public class EditPptAnimationHandler : OperationHandlerBase<Presentation>
             ReplaceAllAnimations(sequence, shape, animations, animParams);
 
         MarkModified(context);
-        return Success($"Animation updated on slide {animParams.SlideIndex}, shape {animParams.ShapeIndex}.");
+        return new SuccessResult
+            { Message = $"Animation updated on slide {animParams.SlideIndex}, shape {animParams.ShapeIndex}." };
     }
 
     /// <summary>

@@ -1,5 +1,7 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.Field;
@@ -7,6 +9,7 @@ namespace AsposeMcpServer.Handlers.Word.Field;
 /// <summary>
 ///     Handler for inserting fields in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class InsertFieldWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class InsertFieldWordHandler : OperationHandlerBase<Document>
     ///     Optional: fieldArgument, paragraphIndex, insertAtStart
     /// </param>
     /// <returns>Success message with field details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var fieldParams = ExtractFieldParameters(parameters);
         var document = context.Document;
@@ -128,26 +131,26 @@ public class InsertFieldWordHandler : OperationHandlerBase<Document>
     /// <param name="code">The field code.</param>
     /// <param name="field">The inserted field.</param>
     /// <returns>The result message.</returns>
-    private static string BuildResultMessage(string fieldType, string? fieldArgument, string code,
+    private static SuccessResult BuildResultMessage(string fieldType, string? fieldArgument, string code,
         Aspose.Words.Fields.Field field)
     {
-        var result = $"Field inserted successfully\nField type: {fieldType}\n";
+        var message = $"Field inserted successfully\nField type: {fieldType}\n";
         if (!string.IsNullOrEmpty(fieldArgument))
-            result += $"Field argument: {fieldArgument}\n";
-        result += $"Field code: {code}\n";
+            message += $"Field argument: {fieldArgument}\n";
+        message += $"Field code: {code}\n";
 
         try
         {
             var fieldResult = field.Result;
             if (!string.IsNullOrEmpty(fieldResult))
-                result += $"Field result: {fieldResult}";
+                message += $"Field result: {fieldResult}";
         }
         catch
         {
             // Ignore errors reading field result (some fields may not have results)
         }
 
-        return result;
+        return new SuccessResult { Message = message };
     }
 
     /// <summary>

@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Sheet;
 
 /// <summary>
 ///     Handler for deleting worksheets from Excel workbooks.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeleteExcelSheetHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class DeleteExcelSheetHandler : OperationHandlerBase<Workbook>
     ///     Required: sheetIndex (0-based index of sheet to delete)
     /// </param>
     /// <returns>Success message with operation details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractDeleteExcelSheetParameters(parameters);
 
@@ -35,7 +38,7 @@ public class DeleteExcelSheetHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Worksheet '{sheetName}' (index {p.SheetIndex}) deleted.");
+        return new SuccessResult { Message = $"Worksheet '{sheetName}' (index {p.SheetIndex}) deleted." };
     }
 
     private static DeleteExcelSheetParameters ExtractDeleteExcelSheetParameters(OperationParameters parameters)

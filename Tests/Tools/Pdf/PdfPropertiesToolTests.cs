@@ -1,6 +1,7 @@
-using System.Text.Json;
-using Aspose.Pdf;
-using AsposeMcpServer.Tests.Helpers;
+﻿using Aspose.Pdf;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Pdf.Properties;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Pdf;
 
 namespace AsposeMcpServer.Tests.Tools.Pdf;
@@ -35,10 +36,9 @@ public class PdfPropertiesToolTests : PdfTestBase
     {
         var pdfPath = CreateTestPdf("test_get.pdf");
         var result = _tool.Execute("get", pdfPath);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
-        Assert.True(json.TryGetProperty("title", out _));
-        Assert.True(json.TryGetProperty("author", out _));
-        Assert.True(json.TryGetProperty("totalPages", out _));
+        var data = GetResultData<GetPropertiesPdfResult>(result);
+        Assert.NotNull(data);
+        Assert.True(data.TotalPages > 0);
     }
 
     [Fact]
@@ -49,7 +49,8 @@ public class PdfPropertiesToolTests : PdfTestBase
         var result = _tool.Execute("set", pdfPath, outputPath: outputPath,
             title: "Test PDF", author: "Test Author", subject: "Test Subject");
         Assert.True(File.Exists(outputPath));
-        Assert.StartsWith("Document properties updated", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Document properties updated", data.Message);
     }
 
     #endregion
@@ -64,7 +65,9 @@ public class PdfPropertiesToolTests : PdfTestBase
     {
         var pdfPath = CreateTestPdf($"test_case_{operation}.pdf");
         var result = _tool.Execute(operation, pdfPath);
-        Assert.Contains("title", result);
+        var data = GetResultData<GetPropertiesPdfResult>(result);
+        Assert.NotNull(data);
+        Assert.True(data.TotalPages > 0);
     }
 
     [Fact]
@@ -85,9 +88,11 @@ public class PdfPropertiesToolTests : PdfTestBase
         var pdfPath = CreateTestPdf("test_session_get.pdf");
         var sessionId = OpenSession(pdfPath);
         var result = _tool.Execute("get", sessionId: sessionId);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
-        Assert.True(json.TryGetProperty("title", out _));
-        Assert.True(json.TryGetProperty("totalPages", out _));
+        var data = GetResultData<GetPropertiesPdfResult>(result);
+        Assert.NotNull(data);
+        Assert.True(data.TotalPages > 0);
+        var output = GetResultOutput<GetPropertiesPdfResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -97,8 +102,10 @@ public class PdfPropertiesToolTests : PdfTestBase
         var sessionId = OpenSession(pdfPath);
         var result = _tool.Execute("set", sessionId: sessionId,
             title: "Session Title", author: "Session Author");
-        Assert.StartsWith("Document properties updated", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Document properties updated", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var doc = SessionManager.GetDocument<Document>(sessionId);
         Assert.Equal("Session Title", doc.Info.Title);
         Assert.Equal("Session Author", doc.Info.Author);

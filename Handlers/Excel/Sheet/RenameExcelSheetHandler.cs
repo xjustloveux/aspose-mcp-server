@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Sheet;
 
 /// <summary>
 ///     Handler for renaming worksheets in Excel workbooks.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class RenameExcelSheetHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class RenameExcelSheetHandler : OperationHandlerBase<Workbook>
     ///     Required: sheetIndex (0-based), newName (max 31 characters)
     /// </param>
     /// <returns>Success message with operation details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractRenameExcelSheetParameters(parameters);
 
@@ -40,7 +43,7 @@ public class RenameExcelSheetHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Worksheet '{oldName}' renamed to '{newName}'.");
+        return new SuccessResult { Message = $"Worksheet '{oldName}' renamed to '{newName}'." };
     }
 
     private static RenameExcelSheetParameters ExtractRenameExcelSheetParameters(OperationParameters parameters)

@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Field;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Field;
 
@@ -47,9 +48,11 @@ public class UpdateFieldWordHandlerTests : WordHandlerTestBase
             { "fieldIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -63,9 +66,11 @@ public class UpdateFieldWordHandlerTests : WordHandlerTestBase
             { "updateAll", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -79,9 +84,11 @@ public class UpdateFieldWordHandlerTests : WordHandlerTestBase
             { "fieldIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("locked", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("locked", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

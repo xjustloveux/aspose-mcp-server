@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Comment;
 
 /// <summary>
 ///     Handler for deleting comments from Excel cells.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeleteExcelCommentHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class DeleteExcelCommentHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex
     /// </param>
     /// <returns>Success message with operation details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var deleteParams = ExtractDeleteParameters(parameters);
 
@@ -38,7 +41,8 @@ public class DeleteExcelCommentHandler : OperationHandlerBase<Workbook>
 
             MarkModified(context);
 
-            return Success($"Comment deleted from cell {deleteParams.Cell} in sheet {deleteParams.SheetIndex}.");
+            return new SuccessResult
+                { Message = $"Comment deleted from cell {deleteParams.Cell} in sheet {deleteParams.SheetIndex}." };
         }
         catch (CellsException ex)
         {

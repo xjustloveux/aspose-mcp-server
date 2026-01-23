@@ -1,9 +1,10 @@
-﻿using System.ComponentModel;
-using System.Text.Json;
+using System.ComponentModel;
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.PowerPoint.Properties;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
@@ -12,6 +13,7 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 ///     Unified tool for managing PowerPoint document properties (get, set).
 ///     Uses IPresentationInfo for efficient property reading without loading entire presentation.
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.PowerPoint.Properties")]
 [McpServerToolType]
 public class PptPropertiesTool
 {
@@ -65,7 +67,14 @@ public class PptPropertiesTool
     /// </param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "ppt_properties")]
+    [McpServerTool(
+        Name = "ppt_properties",
+        Title = "PowerPoint Properties Operations",
+        Destructive = false,
+        Idempotent = true,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage PowerPoint document properties. Supports 2 operations: get, set.
 
 Warning: If outputPath is not provided for 'set' operation, the original file will be overwritten.
@@ -75,7 +84,7 @@ Usage examples:
 - Get properties: ppt_properties(operation='get', path='presentation.pptx')
 - Set properties: ppt_properties(operation='set', path='presentation.pptx', title='Title', author='Author')
 - Set custom properties: ppt_properties(operation='set', path='presentation.pptx', customProperties={'Count': 42, 'IsPublished': true})")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: get, set")] string operation,
         [Description("Presentation file path (required if no sessionId)")]
         string? path = null,
@@ -104,7 +113,7 @@ Usage examples:
         Dictionary<string, object>? customProperties = null)
     {
         if (operation.Equals("get", StringComparison.OrdinalIgnoreCase) && string.IsNullOrEmpty(sessionId))
-            return GetPropertiesEfficient(path);
+            return ResultHelper.FinalizeResult((dynamic)GetPropertiesEfficient(path), outputPath, sessionId);
 
         using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
@@ -126,12 +135,12 @@ Usage examples:
         var result = handler.Execute(operationContext, parameters);
 
         if (operation.Equals("get", StringComparison.OrdinalIgnoreCase))
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>
@@ -139,9 +148,9 @@ Usage examples:
     ///     This method reads properties without loading the entire presentation.
     /// </summary>
     /// <param name="path">The presentation file path.</param>
-    /// <returns>A JSON string containing the document properties.</returns>
+    /// <returns>An object containing the document properties.</returns>
     /// <exception cref="ArgumentException">Thrown when path is not provided.</exception>
-    private static string GetPropertiesEfficient(string? path)
+    private static GetPropertiesPptResult GetPropertiesEfficient(string? path)
     {
         if (string.IsNullOrEmpty(path))
             throw new ArgumentException("Either sessionId or path must be provided");
@@ -151,22 +160,20 @@ Usage examples:
         var info = PresentationFactory.Instance.GetPresentationInfo(path);
         var props = info.ReadDocumentProperties();
 
-        var result = new
+        return new GetPropertiesPptResult
         {
-            title = props.Title,
-            subject = props.Subject,
-            author = props.Author,
-            keywords = props.Keywords,
-            comments = props.Comments,
-            category = props.Category,
-            company = props.Company,
-            manager = props.Manager,
-            createdTime = props.CreatedTime,
-            lastSavedTime = props.LastSavedTime,
-            revisionNumber = props.RevisionNumber
+            Title = props.Title,
+            Subject = props.Subject,
+            Author = props.Author,
+            Keywords = props.Keywords,
+            Comments = props.Comments,
+            Category = props.Category,
+            Company = props.Company,
+            Manager = props.Manager,
+            CreatedTime = props.CreatedTime,
+            LastSavedTime = props.LastSavedTime,
+            RevisionNumber = props.RevisionNumber
         };
-
-        return JsonSerializer.Serialize(result, JsonDefaults.Indented);
     }
 
     /// <summary>

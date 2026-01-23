@@ -1,12 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Chart;
 
 /// <summary>
 ///     Handler for editing chart properties in PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class EditPptChartHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class EditPptChartHandler : OperationHandlerBase<Presentation>
     ///     Optional: title, chartType
     /// </param>
     /// <returns>Success message with update details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractEditChartParameters(parameters);
 
@@ -51,7 +54,7 @@ public class EditPptChartHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Chart {p.ChartIndex} updated on slide {p.SlideIndex}.");
+        return new SuccessResult { Message = $"Chart {p.ChartIndex} updated on slide {p.SlideIndex}." };
     }
 
     /// <summary>

@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Image;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 using WordShape = Aspose.Words.Drawing.Shape;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Image;
@@ -34,9 +35,11 @@ public class ReplaceImageWordHandlerTests : WordHandlerTestBase
             { "newImagePath", tempFile2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("replaced", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("replaced", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -53,9 +56,11 @@ public class ReplaceImageWordHandlerTests : WordHandlerTestBase
             { "imagePath", tempFile2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("replaced", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("replaced", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -75,9 +80,11 @@ public class ReplaceImageWordHandlerTests : WordHandlerTestBase
             { "preserveSize", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("preserved size", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("preserved size", result.Message, StringComparison.OrdinalIgnoreCase);
         var newShape = GetFirstImage(doc);
         Assert.Equal(originalWidth, newShape.Width, 1);
         Assert.Equal(originalHeight, newShape.Height, 1);
@@ -97,9 +104,11 @@ public class ReplaceImageWordHandlerTests : WordHandlerTestBase
             { "preservePosition", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("preserved position", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("preserved position", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -117,9 +126,11 @@ public class ReplaceImageWordHandlerTests : WordHandlerTestBase
             { "smartFit", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("smart fit", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("smart fit", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

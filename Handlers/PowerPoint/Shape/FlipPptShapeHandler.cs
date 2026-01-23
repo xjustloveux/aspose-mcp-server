@@ -1,12 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Shape;
 
 /// <summary>
 ///     Handler for flipping a shape horizontally or vertically.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class FlipPptShapeHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class FlipPptShapeHandler : OperationHandlerBase<Presentation>
     ///     Required: at least one of flipHorizontal or flipVertical must be provided
     /// </param>
     /// <returns>Success message with flip details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractFlipPptShapeParameters(parameters);
 
@@ -46,7 +49,7 @@ public class FlipPptShapeHandler : OperationHandlerBase<Presentation>
         if (p.FlipHorizontal.HasValue) flipDesc.Add($"H={p.FlipHorizontal.Value}");
         if (p.FlipVertical.HasValue) flipDesc.Add($"V={p.FlipVertical.Value}");
 
-        return Success($"Shape {p.ShapeIndex} flipped ({string.Join(", ", flipDesc)}).");
+        return new SuccessResult { Message = $"Shape {p.ShapeIndex} flipped ({string.Join(", ", flipDesc)})." };
     }
 
     /// <summary>

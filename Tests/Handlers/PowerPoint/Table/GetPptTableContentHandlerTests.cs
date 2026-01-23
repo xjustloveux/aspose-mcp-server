@@ -1,7 +1,7 @@
-using System.Text.Json;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Table;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.PowerPoint.Table;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Table;
 
@@ -33,10 +33,11 @@ public class GetPptTableContentHandlerTests : PptHandlerTestBase
             { "shapeIndex", tableShapeIndex }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(1, json.RootElement.GetProperty("slideIndex").GetInt32());
+        var result = Assert.IsType<GetTableContentResult>(res);
+
+        Assert.Equal(1, result.SlideIndex);
     }
 
     #endregion
@@ -53,11 +54,12 @@ public class GetPptTableContentHandlerTests : PptHandlerTestBase
             { "shapeIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.True(json.RootElement.TryGetProperty("rowCount", out _));
-        Assert.True(json.RootElement.TryGetProperty("columnCount", out _));
+        var result = Assert.IsType<GetTableContentResult>(res);
+
+        Assert.True(result.RowCount > 0);
+        Assert.True(result.ColumnCount > 0);
         AssertNotModified(context);
     }
 
@@ -71,10 +73,11 @@ public class GetPptTableContentHandlerTests : PptHandlerTestBase
             { "shapeIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(4, json.RootElement.GetProperty("rowCount").GetInt32());
+        var result = Assert.IsType<GetTableContentResult>(res);
+
+        Assert.Equal(4, result.RowCount);
     }
 
     [Fact]
@@ -87,10 +90,11 @@ public class GetPptTableContentHandlerTests : PptHandlerTestBase
             { "shapeIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(5, json.RootElement.GetProperty("columnCount").GetInt32());
+        var result = Assert.IsType<GetTableContentResult>(res);
+
+        Assert.Equal(5, result.ColumnCount);
     }
 
     [Fact]
@@ -103,11 +107,12 @@ public class GetPptTableContentHandlerTests : PptHandlerTestBase
             { "shapeIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.True(json.RootElement.TryGetProperty("data", out var data));
-        Assert.Equal(JsonValueKind.Array, data.ValueKind);
+        var result = Assert.IsType<GetTableContentResult>(res);
+
+        Assert.NotNull(result.Data);
+        Assert.Equal(2, result.Data.Count);
     }
 
     [Fact]
@@ -120,10 +125,11 @@ public class GetPptTableContentHandlerTests : PptHandlerTestBase
             { "shapeIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.True(json.RootElement.TryGetProperty("slideIndex", out _));
+        var result = Assert.IsType<GetTableContentResult>(res);
+
+        Assert.Equal(0, result.SlideIndex);
     }
 
     [Fact]
@@ -136,10 +142,11 @@ public class GetPptTableContentHandlerTests : PptHandlerTestBase
             { "shapeIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(0, json.RootElement.GetProperty("shapeIndex").GetInt32());
+        var result = Assert.IsType<GetTableContentResult>(res);
+
+        Assert.Equal(0, result.ShapeIndex);
     }
 
     #endregion
@@ -156,14 +163,14 @@ public class GetPptTableContentHandlerTests : PptHandlerTestBase
             { "shapeIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
-        var data = json.RootElement.GetProperty("data");
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal("A1", data[0][0].GetString());
-        Assert.Equal("B1", data[0][1].GetString());
-        Assert.Equal("A2", data[1][0].GetString());
-        Assert.Equal("B2", data[1][1].GetString());
+        var result = Assert.IsType<GetTableContentResult>(res);
+
+        Assert.Equal("A1", result.Data[0][0]);
+        Assert.Equal("B1", result.Data[0][1]);
+        Assert.Equal("A2", result.Data[1][0]);
+        Assert.Equal("B2", result.Data[1][1]);
     }
 
     [Fact]
@@ -176,11 +183,11 @@ public class GetPptTableContentHandlerTests : PptHandlerTestBase
             { "shapeIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
-        var data = json.RootElement.GetProperty("data");
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(string.Empty, data[0][0].GetString());
+        var result = Assert.IsType<GetTableContentResult>(res);
+
+        Assert.Equal(string.Empty, result.Data[0][0]);
     }
 
     #endregion

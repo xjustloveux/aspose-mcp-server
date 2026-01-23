@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Pdf;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Pdf;
 /// <summary>
 ///     Tool for managing attachments in PDF documents (add, delete, get)
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Pdf.Attachment")]
 [McpServerToolType]
 public class PdfAttachmentTool
 {
@@ -52,14 +55,21 @@ public class PdfAttachmentTool
     /// <param name="description">Attachment description (optional for add).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "pdf_attachment")]
+    [McpServerTool(
+        Name = "pdf_attachment",
+        Title = "PDF Attachment Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage attachments in PDF documents. Supports 3 operations: add, delete, get.
 
 Usage examples:
 - Add attachment: pdf_attachment(operation='add', path='doc.pdf', attachmentPath='file.pdf', attachmentName='attachment.pdf')
 - Delete attachment: pdf_attachment(operation='delete', path='doc.pdf', attachmentName='attachment.pdf')
 - Get attachments: pdf_attachment(operation='get', path='doc.pdf')")]
-    public string Execute(
+    public object Execute(
         [Description(@"Operation to perform.
 - 'add': Add an attachment (required params: path, attachmentPath, attachmentName)
 - 'delete': Delete an attachment (required params: path, attachmentName)
@@ -97,12 +107,12 @@ Usage examples:
         var result = handler.Execute(operationContext, parameters);
 
         if (string.Equals(operation, "get", StringComparison.OrdinalIgnoreCase))
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

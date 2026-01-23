@@ -3,7 +3,8 @@ using System.Drawing.Imaging;
 using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Handlers.PowerPoint.Image;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 #pragma warning disable CA1416
 
@@ -56,9 +57,11 @@ public class ExtractPptImageHandlerTests : PptHandlerTestBase
             { "outputDir", outputDir }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("extracted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("extracted", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(Directory.Exists(outputDir));
         var files = Directory.GetFiles(outputDir);
         Assert.NotEmpty(files);
@@ -87,9 +90,11 @@ public class ExtractPptImageHandlerTests : PptHandlerTestBase
             { "skipDuplicates", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("extracted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("extracted", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -110,9 +115,11 @@ public class ExtractPptImageHandlerTests : PptHandlerTestBase
             { "format", "jpeg" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("extracted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("extracted", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -132,9 +139,11 @@ public class ExtractPptImageHandlerTests : PptHandlerTestBase
             { "outputDir", outputDir }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("extracted 0 images", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("extracted 0 images", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.Comment;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Comment;
 
@@ -55,9 +56,11 @@ public class DeleteExcelCommentHandlerTests : ExcelHandlerTestBase
             { "cell", "A1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -76,10 +79,12 @@ public class DeleteExcelCommentHandlerTests : ExcelHandlerTestBase
             { "cell", "B5" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("B5", result);
-        Assert.Contains("sheet", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("B5", result.Message);
+        Assert.Contains("sheet", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -99,9 +104,11 @@ public class DeleteExcelCommentHandlerTests : ExcelHandlerTestBase
             { "cell", "A1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Null(sheet.Comments["A1"]);
         AssertModified(context);
     }
@@ -145,9 +152,11 @@ public class DeleteExcelCommentHandlerTests : ExcelHandlerTestBase
             { "cell", "A1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("sheet 1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("sheet 1", result.Message);
         Assert.Null(workbook.Worksheets[1].Comments["A1"]);
     }
 
@@ -163,9 +172,11 @@ public class DeleteExcelCommentHandlerTests : ExcelHandlerTestBase
             { "cell", "A1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("sheet 0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("sheet 0", result.Message);
         Assert.Null(workbook.Worksheets[0].Comments["A1"]);
     }
 

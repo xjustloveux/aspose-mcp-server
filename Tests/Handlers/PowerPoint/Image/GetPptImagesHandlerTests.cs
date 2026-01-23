@@ -1,9 +1,9 @@
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.Text.Json;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Image;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.PowerPoint.Image;
+using AsposeMcpServer.Tests.Infrastructure;
 
 #pragma warning disable CA1416
 
@@ -94,11 +94,12 @@ public class GetPptImagesHandlerTests : PptHandlerTestBase
             { "slideIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("imageCount", out _));
-        Assert.True(json.RootElement.TryGetProperty("images", out _));
+        var result = Assert.IsType<GetImagesPptResult>(res);
+
+        Assert.True(result.ImageCount >= 0);
+        Assert.NotNull(result.Images);
     }
 
     [Fact]
@@ -111,10 +112,11 @@ public class GetPptImagesHandlerTests : PptHandlerTestBase
             { "slideIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(0, json.RootElement.GetProperty("imageCount").GetInt32());
+        var result = Assert.IsType<GetImagesPptResult>(res);
+
+        Assert.Equal(0, result.ImageCount);
     }
 
     [Fact]
@@ -127,16 +129,16 @@ public class GetPptImagesHandlerTests : PptHandlerTestBase
             { "slideIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var images = json.RootElement.GetProperty("images");
-        Assert.True(images.GetArrayLength() > 0);
-        var firstImage = images[0];
-        Assert.True(firstImage.TryGetProperty("x", out _));
-        Assert.True(firstImage.TryGetProperty("y", out _));
-        Assert.True(firstImage.TryGetProperty("width", out _));
-        Assert.True(firstImage.TryGetProperty("height", out _));
+        var result = Assert.IsType<GetImagesPptResult>(res);
+
+        Assert.True(result.Images.Count > 0);
+        var firstImage = result.Images[0];
+        Assert.True(firstImage.X >= 0);
+        Assert.True(firstImage.Y >= 0);
+        Assert.True(firstImage.Width >= 0);
+        Assert.True(firstImage.Height >= 0);
     }
 
     #endregion

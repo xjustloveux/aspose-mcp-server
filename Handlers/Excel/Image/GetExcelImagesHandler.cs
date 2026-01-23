@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Excel.Image;
 
 namespace AsposeMcpServer.Handlers.Excel.Image;
 
 /// <summary>
 ///     Handler for getting images from Excel worksheets.
 /// </summary>
+[ResultType(typeof(GetImagesExcelResult))]
 public class GetExcelImagesHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class GetExcelImagesHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0)
     /// </param>
     /// <returns>JSON result with image information.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var getParams = ExtractGetParameters(parameters);
 
@@ -29,48 +32,48 @@ public class GetExcelImagesHandler : OperationHandlerBase<Workbook>
         var pictures = worksheet.Pictures;
 
         if (pictures.Count == 0)
-            return JsonResult(new
+            return new GetImagesExcelResult
             {
-                count = 0,
-                worksheetName = worksheet.Name,
-                items = Array.Empty<object>(),
-                message = "No images found"
-            });
+                Count = 0,
+                WorksheetName = worksheet.Name,
+                Items = Array.Empty<ExcelImageInfo>(),
+                Message = "No images found"
+            };
 
-        List<object> imageList = [];
+        List<ExcelImageInfo> imageList = [];
         for (var i = 0; i < pictures.Count; i++)
         {
             var picture = pictures[i];
             var upperLeftCell = CellsHelper.CellIndexToName(picture.UpperLeftRow, picture.UpperLeftColumn);
             var lowerRightCell = CellsHelper.CellIndexToName(picture.LowerRightRow, picture.LowerRightColumn);
 
-            imageList.Add(new
+            imageList.Add(new ExcelImageInfo
             {
-                index = i,
-                name = picture.Name,
-                alternativeText = picture.AlternativeText,
-                imageType = picture.ImageType.ToString(),
-                location = new
+                Index = i,
+                Name = picture.Name,
+                AlternativeText = picture.AlternativeText,
+                ImageType = picture.ImageType.ToString(),
+                Location = new ExcelImageLocation
                 {
-                    upperLeftCell,
-                    lowerRightCell,
-                    upperLeftRow = picture.UpperLeftRow,
-                    upperLeftColumn = picture.UpperLeftColumn,
-                    lowerRightRow = picture.LowerRightRow,
-                    lowerRightColumn = picture.LowerRightColumn
+                    UpperLeftCell = upperLeftCell,
+                    LowerRightCell = lowerRightCell,
+                    UpperLeftRow = picture.UpperLeftRow,
+                    UpperLeftColumn = picture.UpperLeftColumn,
+                    LowerRightRow = picture.LowerRightRow,
+                    LowerRightColumn = picture.LowerRightColumn
                 },
-                width = picture.Width,
-                height = picture.Height,
-                isLockAspectRatio = picture.IsLockAspectRatio
+                Width = picture.Width,
+                Height = picture.Height,
+                IsLockAspectRatio = picture.IsLockAspectRatio
             });
         }
 
-        return JsonResult(new
+        return new GetImagesExcelResult
         {
-            count = pictures.Count,
-            worksheetName = worksheet.Name,
-            items = imageList
-        });
+            Count = pictures.Count,
+            WorksheetName = worksheet.Name,
+            Items = imageList
+        };
     }
 
     private static GetParameters ExtractGetParameters(OperationParameters parameters)

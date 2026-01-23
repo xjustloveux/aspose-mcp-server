@@ -1,7 +1,9 @@
 ﻿using Aspose.Words;
 using Aspose.Words.Tables;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.Table;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Handlers.Word.Table;
 /// <summary>
 ///     Handler for editing cell format in Word document tables.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class EditCellFormatWordTableHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -25,7 +28,7 @@ public class EditCellFormatWordTableHandler : OperationHandlerBase<Document>
     /// </param>
     /// <returns>Success message with formatted cell count.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or indices are out of range.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractEditCellFormatParameters(parameters);
 
@@ -64,7 +67,8 @@ public class EditCellFormatWordTableHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Successfully edited {targetDescription} format ({targetCells.Count} cells).");
+        return new SuccessResult
+            { Message = $"Successfully edited {targetDescription} format ({targetCells.Count} cells)." };
     }
 
     /// <summary>

@@ -1,12 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Image;
 
 /// <summary>
 ///     Handler for editing images in PowerPoint slides.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class EditPptImageHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class EditPptImageHandler : OperationHandlerBase<Presentation>
     ///     Optional: imagePath, x, y, width, height, jpegQuality, maxWidth, maxHeight
     /// </param>
     /// <returns>Success message with edit details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractEditParameters(parameters);
 
@@ -61,7 +64,7 @@ public class EditPptImageHandler : OperationHandlerBase<Presentation>
         MarkModified(context);
 
         var changesStr = changes.Count > 0 ? string.Join(", ", changes) : "position updated";
-        return Success($"Image {p.ImageIndex} on slide {p.SlideIndex} updated ({changesStr}).");
+        return new SuccessResult { Message = $"Image {p.ImageIndex} on slide {p.SlideIndex} updated ({changesStr})." };
     }
 
     /// <summary>

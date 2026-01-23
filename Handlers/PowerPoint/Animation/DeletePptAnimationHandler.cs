@@ -1,12 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Animation;
 
 /// <summary>
 ///     Handler for deleting animations from PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeletePptAnimationHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class DeletePptAnimationHandler : OperationHandlerBase<Presentation>
     ///     Optional: shapeIndex, animationIndex
     /// </param>
     /// <returns>Success message with deletion details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractDeleteAnimationParameters(parameters);
 
@@ -54,7 +57,7 @@ public class DeletePptAnimationHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Animation(s) deleted from slide {p.SlideIndex}.");
+        return new SuccessResult { Message = $"Animation(s) deleted from slide {p.SlideIndex}." };
     }
 
     /// <summary>

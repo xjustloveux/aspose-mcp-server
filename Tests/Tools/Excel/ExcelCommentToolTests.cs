@@ -1,6 +1,7 @@
-using System.Text.Json;
-using Aspose.Cells;
-using AsposeMcpServer.Tests.Helpers;
+﻿using Aspose.Cells;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Excel.Comment;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Excel;
 
 namespace AsposeMcpServer.Tests.Tools.Excel;
@@ -42,7 +43,8 @@ public class ExcelCommentToolTests : ExcelTestBase
         var outputPath = CreateTestFilePath("test_add_output.xlsx");
         var result = _tool.Execute("add", workbookPath, cell: "A1", comment: "This is a test comment",
             outputPath: outputPath);
-        Assert.StartsWith("Comment added", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Comment added", data.Message);
         using var workbook = new Workbook(outputPath);
         var comment = workbook.Worksheets[0].Comments["A1"];
         Assert.NotNull(comment);
@@ -54,9 +56,9 @@ public class ExcelCommentToolTests : ExcelTestBase
     {
         var workbookPath = CreateWorkbookWithComment("test_get.xlsx");
         var result = _tool.Execute("get", workbookPath);
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(1, json.RootElement.GetProperty("count").GetInt32());
-        Assert.Contains("Test comment", result);
+        var data = GetResultData<GetCommentsExcelResult>(result);
+        Assert.Equal(1, data.Count);
+        Assert.Contains("Test comment", data.Items[0].Note);
     }
 
     [Fact]
@@ -65,7 +67,8 @@ public class ExcelCommentToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithComment("test_edit.xlsx", "A1", "Old comment");
         var outputPath = CreateTestFilePath("test_edit_output.xlsx");
         var result = _tool.Execute("edit", workbookPath, cell: "A1", comment: "New comment", outputPath: outputPath);
-        Assert.StartsWith("Comment edited", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Comment edited", data.Message);
         using var workbook = new Workbook(outputPath);
         var comment = workbook.Worksheets[0].Comments["A1"];
         Assert.Contains("New", comment.Note, StringComparison.OrdinalIgnoreCase);
@@ -77,7 +80,8 @@ public class ExcelCommentToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithComment("test_delete.xlsx");
         var outputPath = CreateTestFilePath("test_delete_output.xlsx");
         var result = _tool.Execute("delete", workbookPath, cell: "A1", outputPath: outputPath);
-        Assert.StartsWith("Comment deleted", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Comment deleted", data.Message);
         using var workbook = new Workbook(outputPath);
         Assert.Null(workbook.Worksheets[0].Comments["A1"]);
     }
@@ -95,7 +99,8 @@ public class ExcelCommentToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbook($"test_case_{operation}.xlsx");
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.xlsx");
         var result = _tool.Execute(operation, workbookPath, cell: "A1", comment: "Test", outputPath: outputPath);
-        Assert.StartsWith("Comment added", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Comment added", data.Message);
     }
 
     [Fact]
@@ -122,7 +127,10 @@ public class ExcelCommentToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbook("test_session_add.xlsx");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("add", sessionId: sessionId, cell: "A1", comment: "Session Test Comment");
-        Assert.StartsWith("Comment added", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Comment added", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         var comment = workbook.Worksheets[0].Comments["A1"];
         Assert.NotNull(comment);
@@ -135,7 +143,10 @@ public class ExcelCommentToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithComment("test_session_get.xlsx", "A1", "Session comment");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("get", sessionId: sessionId);
-        Assert.Contains("Session comment", result);
+        var data = GetResultData<GetCommentsExcelResult>(result);
+        Assert.Contains("Session comment", data.Items[0].Note);
+        var output = GetResultOutput<GetCommentsExcelResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -172,9 +183,9 @@ public class ExcelCommentToolTests : ExcelTestBase
         var sessionWorkbook = CreateWorkbookWithComment("test_session_file.xlsx", "A1", "SessionComment");
         var sessionId = OpenSession(sessionWorkbook);
         var result = _tool.Execute("get", pathWorkbook, sessionId);
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(1, json.RootElement.GetProperty("count").GetInt32());
-        Assert.Contains("SessionComment", result);
+        var data = GetResultData<GetCommentsExcelResult>(result);
+        Assert.Equal(1, data.Count);
+        Assert.Contains("SessionComment", data.Items[0].Note);
     }
 
     #endregion

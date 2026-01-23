@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.DataValidation;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.DataValidation;
 
@@ -56,10 +57,12 @@ public class SetMessagesExcelDataValidationHandlerTests : ExcelHandlerTestBase
             { "errorMessage", "Invalid value!" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Updated", result);
-        Assert.Contains("ErrorMessage=Invalid value!", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Updated", result.Message);
+        Assert.Contains("ErrorMessage=Invalid value!", result.Message);
         Assert.Equal("Invalid value!", workbook.Worksheets[0].Validations[0].ErrorMessage);
         Assert.True(workbook.Worksheets[0].Validations[0].ShowError);
         AssertModified(context);
@@ -76,9 +79,11 @@ public class SetMessagesExcelDataValidationHandlerTests : ExcelHandlerTestBase
             { "inputMessage", "Select a value" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("InputMessage=Select a value", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("InputMessage=Select a value", result.Message);
         Assert.Equal("Select a value", workbook.Worksheets[0].Validations[0].InputMessage);
         Assert.True(workbook.Worksheets[0].Validations[0].ShowInput);
         AssertModified(context);
@@ -96,10 +101,12 @@ public class SetMessagesExcelDataValidationHandlerTests : ExcelHandlerTestBase
             { "inputMessage", "Help text" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("ErrorMessage=Error!", result);
-        Assert.Contains("InputMessage=Help text", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("ErrorMessage=Error!", result.Message);
+        Assert.Contains("InputMessage=Help text", result.Message);
         Assert.Equal("Error!", workbook.Worksheets[0].Validations[0].ErrorMessage);
         Assert.Equal("Help text", workbook.Worksheets[0].Validations[0].InputMessage);
     }
@@ -200,9 +207,11 @@ public class SetMessagesExcelDataValidationHandlerTests : ExcelHandlerTestBase
             { "validationIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("No changes", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("No changes", result.Message);
     }
 
     [Fact]
@@ -216,9 +225,11 @@ public class SetMessagesExcelDataValidationHandlerTests : ExcelHandlerTestBase
             { "errorMessage", "Error" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("#0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("#0", result.Message);
     }
 
     #endregion

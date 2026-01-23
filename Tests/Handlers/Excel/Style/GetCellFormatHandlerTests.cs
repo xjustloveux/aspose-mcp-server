@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.Style;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Excel.Style;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Style;
 
@@ -44,10 +45,13 @@ public class GetCellFormatHandlerTests : ExcelHandlerTestBase
             { "cell", "A1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("A1", result);
-        Assert.Contains("format", result.ToLower());
+        var result = Assert.IsType<GetCellFormatResult>(res);
+        Assert.Equal(1, result.Count);
+        Assert.Single(result.Items);
+        Assert.Equal("A1", result.Items[0].Cell);
+        Assert.NotNull(result.Items[0].Format);
         AssertNotModified(context);
     }
 
@@ -61,9 +65,10 @@ public class GetCellFormatHandlerTests : ExcelHandlerTestBase
             { "range", "A1:B2" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("count", result.ToLower());
+        var result = Assert.IsType<GetCellFormatResult>(res);
+        Assert.True(result.Count > 0);
     }
 
     [Fact]
@@ -77,13 +82,16 @@ public class GetCellFormatHandlerTests : ExcelHandlerTestBase
             { "fields", "font" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("fontName", result);
+        var result = Assert.IsType<GetCellFormatResult>(res);
+        Assert.Single(result.Items);
+        Assert.NotNull(result.Items[0].Format);
+        Assert.NotNull(result.Items[0].Format!.FontName);
     }
 
     [Fact]
-    public void Execute_ReturnsJsonFormat()
+    public void Execute_ReturnsGetCellFormatResult()
     {
         var workbook = CreateEmptyWorkbook();
         var context = CreateContext(workbook);
@@ -92,10 +100,13 @@ public class GetCellFormatHandlerTests : ExcelHandlerTestBase
             { "cell", "A1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("{", result);
-        Assert.Contains("}", result);
+        var result = Assert.IsType<GetCellFormatResult>(res);
+        Assert.NotNull(result);
+        Assert.NotNull(result.WorksheetName);
+        Assert.NotNull(result.Range);
+        Assert.NotNull(result.Items);
     }
 
     #endregion

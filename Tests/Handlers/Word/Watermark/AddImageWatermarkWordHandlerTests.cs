@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Watermark;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Watermark;
 
@@ -34,9 +35,11 @@ public class AddImageWatermarkWordHandlerTests : WordHandlerTestBase
             { "imagePath", tempFile }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("watermark added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("watermark added", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(WatermarkType.Image, doc.Watermark.Type);
     }
 
@@ -55,9 +58,11 @@ public class AddImageWatermarkWordHandlerTests : WordHandlerTestBase
             { "imagePath", tempFile }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("watermark added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("watermark added", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(WatermarkType.Image, doc.Watermark.Type);
         AssertModified(context);
     }
@@ -73,9 +78,11 @@ public class AddImageWatermarkWordHandlerTests : WordHandlerTestBase
             { "imagePath", tempFile }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains(Path.GetFileName(tempFile), result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains(Path.GetFileName(tempFile), result.Message);
     }
 
     [Fact]
@@ -90,9 +97,11 @@ public class AddImageWatermarkWordHandlerTests : WordHandlerTestBase
             { "scale", 0.5 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Scale: 0.5", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Scale: 0.5", result.Message);
         Assert.Equal(WatermarkType.Image, doc.Watermark.Type);
     }
 
@@ -108,9 +117,11 @@ public class AddImageWatermarkWordHandlerTests : WordHandlerTestBase
             { "isWashout", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Washout: False", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Washout: False", result.Message);
         Assert.Equal(WatermarkType.Image, doc.Watermark.Type);
     }
 
@@ -127,10 +138,12 @@ public class AddImageWatermarkWordHandlerTests : WordHandlerTestBase
             { "isWashout", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Scale: 2", result);
-        Assert.Contains("Washout: True", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Scale: 2", result.Message);
+        Assert.Contains("Washout: True", result.Message);
         Assert.Equal(WatermarkType.Image, doc.Watermark.Type);
     }
 

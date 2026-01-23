@@ -1,6 +1,7 @@
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Slide;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Slide;
 
@@ -35,9 +36,11 @@ public class DuplicatePptSlideHandlerTests : PptHandlerTestBase
             { "slideIndex", slideIndex }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("duplicated", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("duplicated", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(initialCount + 1, pres.Slides.Count);
         AssertModified(context);
     }
@@ -82,9 +85,11 @@ public class DuplicatePptSlideHandlerTests : PptHandlerTestBase
             { "insertAt", insertAt }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("duplicated", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("duplicated", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(4, pres.Slides.Count);
     }
 
@@ -157,9 +162,11 @@ public class DuplicatePptSlideHandlerTests : PptHandlerTestBase
             { "slideIndex", 3 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("3", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("3", result.Message);
     }
 
     [Fact]
@@ -172,9 +179,11 @@ public class DuplicatePptSlideHandlerTests : PptHandlerTestBase
             { "slideIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("6", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("6", result.Message);
     }
 
     #endregion

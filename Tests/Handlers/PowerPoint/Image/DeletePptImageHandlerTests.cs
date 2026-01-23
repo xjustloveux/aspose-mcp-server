@@ -2,7 +2,8 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Image;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 #pragma warning disable CA1416
 
@@ -36,9 +37,11 @@ public class DeletePptImageHandlerTests : PptHandlerTestBase
             { "imageIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(initialCount - 1, GetPictureFrames(pres.Slides[0]).Count);
         AssertModified(context);
     }

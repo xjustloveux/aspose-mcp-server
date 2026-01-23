@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -11,6 +13,7 @@ namespace AsposeMcpServer.Tools.Excel;
 ///     Merges: ExcelAddPivotTableTool, ExcelEditPivotTableTool, ExcelDeletePivotTableTool,
 ///     ExcelGetPivotTablesTool, ExcelAddPivotTableFieldTool, ExcelDeletePivotTableFieldTool, ExcelRefreshPivotTableTool
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Excel.PivotTable")]
 [McpServerToolType]
 public class ExcelPivotTableTool
 {
@@ -71,7 +74,14 @@ public class ExcelPivotTableTool
     /// </param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "excel_pivot_table")]
+    [McpServerTool(
+        Name = "excel_pivot_table",
+        Title = "Excel Pivot Table Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(
         @"Manage Excel pivot tables. Supports 7 operations: add, edit, delete, get, add_field, delete_field, refresh.
 
@@ -91,7 +101,7 @@ Usage examples:
 - Add field: excel_pivot_table(operation='add_field', path='book.xlsx', pivotTableIndex=0, fieldName='Column1', area='Row')
 - Delete field: excel_pivot_table(operation='delete_field', path='book.xlsx', pivotTableIndex=0, fieldName='Column1', fieldType='Row')
 - Refresh: excel_pivot_table(operation='refresh', path='book.xlsx', pivotTableIndex=0) or excel_pivot_table(operation='refresh', path='book.xlsx') to refresh all")]
-    public string Execute(
+    public object Execute(
         [Description(@"Operation to perform.
 - 'add': Add a pivot table (required params: path, sourceRange, destCell)
 - 'edit': Edit pivot table (required params: path, pivotTableIndex)
@@ -162,12 +172,12 @@ Usage examples:
         var result = handler.Execute(operationContext, parameters);
 
         if (string.Equals(operation, "get", StringComparison.OrdinalIgnoreCase))
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

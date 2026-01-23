@@ -1,11 +1,14 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Sheet;
 
 /// <summary>
 ///     Handler for moving worksheets to different positions in Excel workbooks.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class MoveExcelSheetHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class MoveExcelSheetHandler : OperationHandlerBase<Workbook>
     ///     Required (one of): targetIndex or insertAt (0-based target position)
     /// </param>
     /// <returns>Success message with operation details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractMoveExcelSheetParameters(parameters);
 
@@ -40,7 +43,7 @@ public class MoveExcelSheetHandler : OperationHandlerBase<Workbook>
                 $"Target index {finalTargetIndex} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
 
         if (p.SheetIndex == finalTargetIndex)
-            return Success($"Worksheet is already at position {p.SheetIndex}, no move needed.");
+            return new SuccessResult { Message = $"Worksheet is already at position {p.SheetIndex}, no move needed." };
 
         var sheetName = workbook.Worksheets[p.SheetIndex].Name;
         var worksheet = workbook.Worksheets[p.SheetIndex];
@@ -49,7 +52,8 @@ public class MoveExcelSheetHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Worksheet '{sheetName}' moved from position {p.SheetIndex} to {finalTargetIndex}.");
+        return new SuccessResult
+            { Message = $"Worksheet '{sheetName}' moved from position {p.SheetIndex} to {finalTargetIndex}." };
     }
 
     private static MoveExcelSheetParameters ExtractMoveExcelSheetParameters(OperationParameters parameters)

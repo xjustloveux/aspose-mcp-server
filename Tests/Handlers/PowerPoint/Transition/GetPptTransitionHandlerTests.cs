@@ -1,8 +1,8 @@
-using System.Text.Json;
 using Aspose.Slides;
 using Aspose.Slides.SlideShow;
 using AsposeMcpServer.Handlers.PowerPoint.Transition;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.PowerPoint.Transition;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Transition;
 
@@ -33,11 +33,12 @@ public class GetPptTransitionHandlerTests : PptHandlerTestBase
             { "slideIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(1, json.RootElement.GetProperty("slideIndex").GetInt32());
-        Assert.Equal("Wipe", json.RootElement.GetProperty("type").GetString());
+        var result = Assert.IsType<GetTransitionResult>(res);
+
+        Assert.Equal(1, result.SlideIndex);
+        Assert.Equal("Wipe", result.Type);
     }
 
     #endregion
@@ -95,11 +96,12 @@ public class GetPptTransitionHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("type", out _));
-        Assert.True(json.RootElement.TryGetProperty("hasTransition", out _));
+        var result = Assert.IsType<GetTransitionResult>(res);
+
+        Assert.NotNull(result.Type);
+        Assert.False(result.HasTransition);
         AssertNotModified(context);
     }
 
@@ -110,11 +112,12 @@ public class GetPptTransitionHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal("None", json.RootElement.GetProperty("type").GetString());
-        Assert.False(json.RootElement.GetProperty("hasTransition").GetBoolean());
+        var result = Assert.IsType<GetTransitionResult>(res);
+
+        Assert.Equal("None", result.Type);
+        Assert.False(result.HasTransition);
     }
 
     [Fact]
@@ -124,11 +127,12 @@ public class GetPptTransitionHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal("Fade", json.RootElement.GetProperty("type").GetString());
-        Assert.True(json.RootElement.GetProperty("hasTransition").GetBoolean());
+        var result = Assert.IsType<GetTransitionResult>(res);
+
+        Assert.Equal("Fade", result.Type);
+        Assert.True(result.HasTransition);
     }
 
     [Fact]
@@ -138,10 +142,11 @@ public class GetPptTransitionHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(0, json.RootElement.GetProperty("slideIndex").GetInt32());
+        var result = Assert.IsType<GetTransitionResult>(res);
+
+        Assert.Equal(0, result.SlideIndex);
     }
 
     [Fact]
@@ -151,12 +156,14 @@ public class GetPptTransitionHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("advanceOnClick", out _));
-        Assert.True(json.RootElement.TryGetProperty("advanceAfter", out _));
-        Assert.True(json.RootElement.TryGetProperty("advanceAfterSeconds", out _));
+        var result = Assert.IsType<GetTransitionResult>(res);
+
+        Assert.NotNull(result);
+        Assert.True(result.AdvanceOnClick || !result.AdvanceOnClick);
+        Assert.True(result.AdvanceAfter || !result.AdvanceAfter);
+        Assert.True(result.AdvanceAfterSeconds >= 0 || result.AdvanceAfterSeconds < 0);
     }
 
     #endregion

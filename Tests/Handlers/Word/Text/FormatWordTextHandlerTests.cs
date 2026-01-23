@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Text;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Text;
 
@@ -34,9 +35,11 @@ public class FormatWordTextHandlerTests : WordHandlerTestBase
             { "color", color }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("formatting", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("formatting", result.Message, StringComparison.OrdinalIgnoreCase);
         var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
         Assert.Equal(r, runs[0].Font.Color.R);
         Assert.Equal(g, runs[0].Font.Color.G);
@@ -116,9 +119,11 @@ public class FormatWordTextHandlerTests : WordHandlerTestBase
             { "bold", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Run index", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Run index", result.Message);
         AssertModified(context);
     }
 
@@ -141,9 +146,11 @@ public class FormatWordTextHandlerTests : WordHandlerTestBase
             { "italic", italic }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("formatting", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("formatting", result.Message, StringComparison.OrdinalIgnoreCase);
         var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
         Assert.NotEmpty(runs);
         Assert.Equal(bold, runs[0].Font.Bold);
@@ -166,9 +173,11 @@ public class FormatWordTextHandlerTests : WordHandlerTestBase
             { "fontSize", fontSize }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("formatting", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("formatting", result.Message, StringComparison.OrdinalIgnoreCase);
         var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
         Assert.Equal(fontSize, runs[0].Font.Size);
         AssertModified(context);
@@ -188,9 +197,11 @@ public class FormatWordTextHandlerTests : WordHandlerTestBase
             { "fontName", fontName }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("formatting", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("formatting", result.Message, StringComparison.OrdinalIgnoreCase);
         var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
         Assert.Equal(fontName, runs[0].Font.Name);
         AssertModified(context);

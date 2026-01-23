@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.ViewSettings;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.ViewSettings;
 
@@ -30,9 +31,11 @@ public class SetColumnWidthExcelViewHandlerTests : ExcelHandlerTestBase
             { "width", 20.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("width set to 20", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("width set to 20", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(20.0, workbook.Worksheets[0].Cells.GetColumnWidth(0));
         AssertModified(context);
     }
@@ -50,9 +53,11 @@ public class SetColumnWidthExcelViewHandlerTests : ExcelHandlerTestBase
             { "width", 15.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("column 2", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("column 2", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(15.0, workbook.Worksheets[1].Cells.GetColumnWidth(2));
     }
 
@@ -70,10 +75,12 @@ public class SetColumnWidthExcelViewHandlerTests : ExcelHandlerTestBase
             { "width", 20.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("column 0", result.ToLower());
-        Assert.Contains("width set to 20", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("column 0", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("width set to 20", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -86,9 +93,11 @@ public class SetColumnWidthExcelViewHandlerTests : ExcelHandlerTestBase
             { "columnIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("width set to", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("width set to", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -116,9 +125,11 @@ public class SetColumnWidthExcelViewHandlerTests : ExcelHandlerTestBase
             { "width", 0.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("width set to", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("width set to", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -146,9 +157,11 @@ public class SetColumnWidthExcelViewHandlerTests : ExcelHandlerTestBase
             { "width", 0.1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("width set to", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("width set to", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -162,9 +175,11 @@ public class SetColumnWidthExcelViewHandlerTests : ExcelHandlerTestBase
             { "width", 255.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("width set to 255", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("width set to 255", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -178,9 +193,11 @@ public class SetColumnWidthExcelViewHandlerTests : ExcelHandlerTestBase
             { "width", 25.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("column 0", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("column 0", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

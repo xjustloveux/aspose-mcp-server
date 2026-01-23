@@ -1,6 +1,8 @@
-using Aspose.Words;
+﻿using Aspose.Words;
 using Aspose.Words.Fields;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Word.Field;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Word;
 
 namespace AsposeMcpServer.Tests.Tools.Word;
@@ -42,8 +44,9 @@ public class WordFieldToolTests : WordTestBase
         builder.InsertField("TIME", "");
         doc.Save(docPath);
         var result = _tool.Execute("get_fields", docPath);
-        Assert.Contains("count", result);
-        Assert.Contains("DATE", result);
+        var data = GetResultData<GetFieldsWordResult>(result);
+        Assert.True(data.Count > 0);
+        Assert.Contains(data.Fields, f => f.Type == "FieldDate");
     }
 
     [Fact]
@@ -57,7 +60,8 @@ public class WordFieldToolTests : WordTestBase
 
         var outputPath = CreateTestFilePath("test_update_field_output.docx");
         var result = _tool.Execute("update_field", docPath, outputPath: outputPath, fieldIndex: 0);
-        Assert.Contains("updated", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("updated", data.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -72,7 +76,8 @@ public class WordFieldToolTests : WordTestBase
 
         var outputPath = CreateTestFilePath("test_update_all_output.docx");
         var result = _tool.Execute("update_all", docPath, outputPath: outputPath);
-        Assert.StartsWith("Updated", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Updated", data.Message);
     }
 
     [Fact]
@@ -87,7 +92,8 @@ public class WordFieldToolTests : WordTestBase
         var outputPath = CreateTestFilePath("test_edit_field_output.docx");
         var result = _tool.Execute("edit_field", docPath, outputPath: outputPath,
             fieldIndex: 0, fieldCode: "DATE \\@ \"yyyy-MM-dd\"");
-        Assert.Contains("edited", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("edited", data.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -114,8 +120,9 @@ public class WordFieldToolTests : WordTestBase
         builder.InsertField("DATE", "");
         doc.Save(docPath);
         var result = _tool.Execute("get_field_detail", docPath, fieldIndex: 0);
-        Assert.Contains("type", result);
-        Assert.Contains("code", result);
+        var data = GetResultData<GetFieldDetailWordResult>(result);
+        Assert.NotNull(data.Type);
+        Assert.NotNull(data.Code);
     }
 
     [Fact]
@@ -139,8 +146,9 @@ public class WordFieldToolTests : WordTestBase
         builder.InsertCheckBox("Accept", false, 0);
         doc.Save(docPath);
         var result = _tool.Execute("get_form_fields", docPath);
-        Assert.Contains("count", result);
-        Assert.Contains("Name", result);
+        var data = GetResultData<GetFormFieldsWordResult>(result);
+        Assert.True(data.Count > 0);
+        Assert.Contains(data.FormFields, f => f.Name == "Name");
     }
 
     #endregion
@@ -156,7 +164,8 @@ public class WordFieldToolTests : WordTestBase
         var docPath = CreateWordDocument($"test_case_{operation.Replace("_", "")}.docx");
         var outputPath = CreateTestFilePath($"test_case_{operation.Replace("_", "")}_output.docx");
         var result = _tool.Execute(operation, docPath, outputPath: outputPath, fieldType: "DATE");
-        Assert.StartsWith("Field inserted successfully", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Field inserted successfully", data.Message);
     }
 
     [Fact]
@@ -184,7 +193,10 @@ public class WordFieldToolTests : WordTestBase
         var docPath = CreateWordDocument("test_session_insert.docx");
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("insert_field", sessionId: sessionId, fieldType: "DATE");
-        Assert.Contains("field", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("field", data.Message, StringComparison.OrdinalIgnoreCase);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var doc = SessionManager.GetDocument<Document>(sessionId);
         Assert.True(doc.Range.Fields.Count > 0);
     }
@@ -200,7 +212,10 @@ public class WordFieldToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("get_fields", sessionId: sessionId);
-        Assert.Contains("count", result);
+        var data = GetResultData<GetFieldsWordResult>(result);
+        Assert.True(data.Count > 0);
+        var output = GetResultOutput<GetFieldsWordResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -233,7 +248,10 @@ public class WordFieldToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("update_all", sessionId: sessionId);
-        Assert.StartsWith("Updated", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Updated", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -243,7 +261,10 @@ public class WordFieldToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("add_form_field", sessionId: sessionId,
             formFieldType: "TextInput", fieldName: "SessionField", defaultValue: "Default");
-        Assert.StartsWith("TextInput field 'SessionField' added", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("TextInput field 'SessionField' added", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var doc = SessionManager.GetDocument<Document>(sessionId);
         Assert.True(doc.Range.FormFields.Count > 0);
     }
@@ -259,7 +280,10 @@ public class WordFieldToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("get_form_fields", sessionId: sessionId);
-        Assert.Contains("Name", result);
+        var data = GetResultData<GetFormFieldsWordResult>(result);
+        Assert.Contains(data.FormFields, f => f.Name == "Name");
+        var output = GetResultOutput<GetFormFieldsWordResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -286,8 +310,9 @@ public class WordFieldToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath2);
         var result = _tool.Execute("get_fields", docPath1, sessionId);
-        Assert.Contains("TITLE", result);
-        Assert.DoesNotContain("AUTHOR", result);
+        var data = GetResultData<GetFieldsWordResult>(result);
+        Assert.Contains(data.Fields, f => f.Type == "FieldTitle");
+        Assert.DoesNotContain(data.Fields, f => f.Type == "FieldAuthor");
     }
 
     #endregion

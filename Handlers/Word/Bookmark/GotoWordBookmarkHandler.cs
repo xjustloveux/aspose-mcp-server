@@ -1,5 +1,7 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.Bookmark;
@@ -7,6 +9,7 @@ namespace AsposeMcpServer.Handlers.Word.Bookmark;
 /// <summary>
 ///     Handler for getting bookmark location information in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class GotoWordBookmarkHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class GotoWordBookmarkHandler : OperationHandlerBase<Document>
     /// </param>
     /// <returns>A message containing the bookmark's location information.</returns>
     /// <exception cref="ArgumentException">Thrown when bookmark name is not provided or bookmark is not found.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractGotoParameters(parameters);
 
@@ -44,20 +47,20 @@ public class GotoWordBookmarkHandler : OperationHandlerBase<Document>
                 break;
             }
 
-        var result = "Bookmark location information\n";
-        result += $"Bookmark name: {p.Name}\n";
-        result += $"Bookmark text: {bookmarkText}\n";
-        if (paragraphIndex >= 0) result += $"Paragraph index: {paragraphIndex}\n";
-        result += $"Bookmark range length: {bookmarkText.Length} characters";
+        var message = "Bookmark location information\n";
+        message += $"Bookmark name: {p.Name}\n";
+        message += $"Bookmark text: {bookmarkText}\n";
+        if (paragraphIndex >= 0) message += $"Paragraph index: {paragraphIndex}\n";
+        message += $"Bookmark range length: {bookmarkText.Length} characters";
 
         if (bookmarkRange != null)
         {
             var paraText = bookmarkRange.GetText().Trim();
             if (paraText.Length > 100) paraText = paraText[..100] + "...";
-            result += $"\nParagraph content: {paraText}";
+            message += $"\nParagraph content: {paraText}";
         }
 
-        return result;
+        return new SuccessResult { Message = message };
     }
 
     /// <summary>

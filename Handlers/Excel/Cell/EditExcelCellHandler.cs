@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Cell;
 
 /// <summary>
 ///     Handler for editing Excel cells with value, formula, or clearing.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class EditExcelCellHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -22,7 +25,7 @@ public class EditExcelCellHandler : OperationHandlerBase<Workbook>
     /// </param>
     /// <returns>Success message.</returns>
     /// <exception cref="ArgumentException">Thrown when no edit operation is specified.</exception>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var editParams = ExtractEditParameters(parameters);
 
@@ -43,7 +46,7 @@ public class EditExcelCellHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Cell {editParams.Cell} edited in sheet {editParams.SheetIndex}.");
+        return new SuccessResult { Message = $"Cell {editParams.Cell} edited in sheet {editParams.SheetIndex}." };
     }
 
     /// <summary>

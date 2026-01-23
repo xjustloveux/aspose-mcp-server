@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Pdf.Attachment;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Attachment;
 
@@ -33,10 +34,12 @@ public class AddPdfAttachmentHandlerTests : PdfHandlerTestBase
             { "attachmentName", "test.txt" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result.ToLower());
-        Assert.Contains("test.txt", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("test.txt", result.Message);
         AssertModified(context);
     }
 
@@ -55,9 +58,11 @@ public class AddPdfAttachmentHandlerTests : PdfHandlerTestBase
             { "description", "A test document" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

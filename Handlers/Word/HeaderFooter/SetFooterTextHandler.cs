@@ -1,5 +1,8 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 using Section = Aspose.Words.Section;
 
@@ -8,6 +11,7 @@ namespace AsposeMcpServer.Handlers.Word.HeaderFooter;
 /// <summary>
 ///     Handler for setting footer text in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetFooterTextHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -22,7 +26,7 @@ public class SetFooterTextHandler : OperationHandlerBase<Document>
     ///     fontSize, sectionIndex, headerFooterType, autoTabStops, clearExisting, clearTextOnly
     /// </param>
     /// <returns>Success message.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractSetFooterTextParameters(parameters);
 
@@ -31,7 +35,7 @@ public class SetFooterTextHandler : OperationHandlerBase<Document>
         var hasContent = !string.IsNullOrEmpty(p.FooterLeft) || !string.IsNullOrEmpty(p.FooterCenter) ||
                          !string.IsNullOrEmpty(p.FooterRight);
         if (!hasContent)
-            return "Warning: No footer text content provided";
+            return new SuccessResult { Message = "Warning: No footer text content provided" };
 
         var hfType = WordHeaderFooterHelper.GetHeaderFooterType(p.HeaderFooterType, false);
         var sections = p.SectionIndex == -1 ? doc.Sections.Cast<Section>() : [doc.Sections[p.SectionIndex]];
@@ -41,7 +45,8 @@ public class SetFooterTextHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success(BuildResultMessage("Footer", p.FooterLeft, p.FooterCenter, p.FooterRight, p.SectionIndex));
+        return new SuccessResult
+            { Message = BuildResultMessage("Footer", p.FooterLeft, p.FooterCenter, p.FooterRight, p.SectionIndex) };
     }
 
     /// <summary>

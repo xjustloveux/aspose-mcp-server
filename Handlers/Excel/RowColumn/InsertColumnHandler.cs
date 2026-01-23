@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.RowColumn;
 
 /// <summary>
 ///     Handler for inserting columns into Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class InsertColumnHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class InsertColumnHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0), count (default: 1)
     /// </param>
     /// <returns>Success message with insertion details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractInsertColumnParameters(parameters);
 
@@ -32,7 +35,7 @@ public class InsertColumnHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Inserted {p.Count} column(s) at column {p.ColumnIndex}.");
+        return new SuccessResult { Message = $"Inserted {p.Count} column(s) at column {p.ColumnIndex}." };
     }
 
     private static InsertColumnParameters ExtractInsertColumnParameters(OperationParameters parameters)

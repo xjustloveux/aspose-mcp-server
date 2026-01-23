@@ -1,7 +1,7 @@
-using System.Text.Json;
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Bookmark;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Word.Bookmark;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Bookmark;
 
@@ -28,11 +28,13 @@ public class GetWordBookmarksHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(0, json.RootElement.GetProperty("count").GetInt32());
-        Assert.Contains("No bookmarks found", json.RootElement.GetProperty("message").GetString());
+        var result = Assert.IsType<GetBookmarksResult>(res);
+
+        Assert.Equal(0, result.Count);
+        Assert.NotNull(result.Message);
+        Assert.Contains("No bookmarks found", result.Message);
     }
 
     #endregion
@@ -65,10 +67,11 @@ public class GetWordBookmarksHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.True(json.RootElement.TryGetProperty("count", out _));
+        var result = Assert.IsType<GetBookmarksResult>(res);
+
+        Assert.True(result.Count >= 0);
     }
 
     [Fact]
@@ -78,10 +81,11 @@ public class GetWordBookmarksHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(3, json.RootElement.GetProperty("count").GetInt32());
+        var result = Assert.IsType<GetBookmarksResult>(res);
+
+        Assert.Equal(3, result.Count);
     }
 
     [Fact]
@@ -91,10 +95,11 @@ public class GetWordBookmarksHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(2, json.RootElement.GetProperty("bookmarks").GetArrayLength());
+        var result = Assert.IsType<GetBookmarksResult>(res);
+
+        Assert.Equal(2, result.Bookmarks.Count);
     }
 
     #endregion
@@ -108,11 +113,12 @@ public class GetWordBookmarksHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
-        var firstBookmark = json.RootElement.GetProperty("bookmarks")[0];
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(0, firstBookmark.GetProperty("index").GetInt32());
+        var result = Assert.IsType<GetBookmarksResult>(res);
+        var firstBookmark = result.Bookmarks[0];
+
+        Assert.Equal(0, firstBookmark.Index);
     }
 
     [Fact]
@@ -126,11 +132,12 @@ public class GetWordBookmarksHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
-        var firstBookmark = json.RootElement.GetProperty("bookmarks")[0];
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal("CustomName", firstBookmark.GetProperty("name").GetString());
+        var result = Assert.IsType<GetBookmarksResult>(res);
+        var firstBookmark = result.Bookmarks[0];
+
+        Assert.Equal("CustomName", firstBookmark.Name);
     }
 
     [Fact]
@@ -144,11 +151,12 @@ public class GetWordBookmarksHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
-        var firstBookmark = json.RootElement.GetProperty("bookmarks")[0];
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal("Bookmark Content", firstBookmark.GetProperty("text").GetString());
+        var result = Assert.IsType<GetBookmarksResult>(res);
+        var firstBookmark = result.Bookmarks[0];
+
+        Assert.Equal("Bookmark Content", firstBookmark.Text);
     }
 
     [Fact]
@@ -162,11 +170,12 @@ public class GetWordBookmarksHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
-        var firstBookmark = json.RootElement.GetProperty("bookmarks")[0];
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(5, firstBookmark.GetProperty("length").GetInt32());
+        var result = Assert.IsType<GetBookmarksResult>(res);
+        var firstBookmark = result.Bookmarks[0];
+
+        Assert.Equal(5, firstBookmark.Length);
     }
 
     #endregion

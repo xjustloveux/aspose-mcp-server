@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.Sheet;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Sheet;
 
@@ -54,10 +55,12 @@ public class RenameExcelSheetHandlerTests : ExcelHandlerTestBase
             { "newName", "NewName" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Sheet1", result);
-        Assert.Contains("NewName", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Sheet1", result.Message);
+        Assert.Contains("NewName", result.Message);
     }
 
     #endregion
@@ -75,9 +78,11 @@ public class RenameExcelSheetHandlerTests : ExcelHandlerTestBase
             { "newName", "RenamedSheet" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("renamed", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("renamed", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("RenamedSheet", workbook.Worksheets[0].Name);
         AssertModified(context);
     }

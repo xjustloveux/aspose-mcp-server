@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Field;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Field;
 
@@ -42,9 +43,11 @@ public class InsertFieldWordHandlerTests : WordHandlerTestBase
             { "fieldType", "DATE" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("inserted successfully", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("inserted successfully", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(doc.Range.Fields.Count > 0);
         AssertModified(context);
     }
@@ -59,9 +62,11 @@ public class InsertFieldWordHandlerTests : WordHandlerTestBase
             { "fieldType", "PAGE" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("inserted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("inserted", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -76,10 +81,12 @@ public class InsertFieldWordHandlerTests : WordHandlerTestBase
             { "fieldArgument", @"\@ ""MMMM d, yyyy""" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("inserted", result.ToLower());
-        Assert.Contains("argument", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("inserted", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("argument", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -93,9 +100,11 @@ public class InsertFieldWordHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("inserted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("inserted", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -109,9 +118,11 @@ public class InsertFieldWordHandlerTests : WordHandlerTestBase
             { "paragraphIndex", -1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("inserted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("inserted", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

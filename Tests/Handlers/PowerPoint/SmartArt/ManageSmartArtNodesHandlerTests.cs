@@ -1,7 +1,8 @@
 using Aspose.Slides;
 using Aspose.Slides.SmartArt;
 using AsposeMcpServer.Handlers.PowerPoint.SmartArt;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.SmartArt;
 
@@ -47,9 +48,11 @@ public class ManageSmartArtNodesHandlerTests : PptHandlerTestBase
             { "text", "New Node" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("node added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("node added", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -67,9 +70,11 @@ public class ManageSmartArtNodesHandlerTests : PptHandlerTestBase
             { "text", "Updated Text" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("edited", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("edited", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -86,9 +91,11 @@ public class ManageSmartArtNodesHandlerTests : PptHandlerTestBase
             { "targetPath", "[0]" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -247,9 +254,11 @@ public class ManageSmartArtNodesHandlerTests : PptHandlerTestBase
             { "position", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("position 0", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("position 0", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 

@@ -1,6 +1,6 @@
-using System.Text.Json;
 using AsposeMcpServer.Handlers.Excel.Image;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Excel.Image;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Image;
 
@@ -31,10 +31,11 @@ public class GetExcelImagesHandlerTests : ExcelHandlerTestBase
             { "sheetIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal("ImageSheet", json.RootElement.GetProperty("worksheetName").GetString());
+        var result = Assert.IsType<GetImagesExcelResult>(res);
+
+        Assert.Equal("ImageSheet", result.WorksheetName);
     }
 
     #endregion
@@ -81,11 +82,12 @@ public class GetExcelImagesHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(0, json.RootElement.GetProperty("count").GetInt32());
-        Assert.Contains("No images found", json.RootElement.GetProperty("message").GetString());
+        var result = Assert.IsType<GetImagesExcelResult>(res);
+
+        Assert.Equal(0, result.Count);
+        Assert.Contains("No images found", result.Message);
         AssertNotModified(context);
     }
 
@@ -96,10 +98,11 @@ public class GetExcelImagesHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal("Sheet1", json.RootElement.GetProperty("worksheetName").GetString());
+        var result = Assert.IsType<GetImagesExcelResult>(res);
+
+        Assert.Equal("Sheet1", result.WorksheetName);
     }
 
     [Fact]
@@ -109,12 +112,13 @@ public class GetExcelImagesHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("count", out _));
-        Assert.True(json.RootElement.TryGetProperty("worksheetName", out _));
-        Assert.True(json.RootElement.TryGetProperty("items", out _));
+        var result = Assert.IsType<GetImagesExcelResult>(res);
+
+        Assert.True(result.Count >= 0);
+        Assert.NotNull(result.WorksheetName);
+        Assert.NotNull(result.Items);
     }
 
     #endregion

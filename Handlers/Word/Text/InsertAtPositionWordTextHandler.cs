@@ -1,5 +1,7 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.Text;
@@ -7,6 +9,7 @@ namespace AsposeMcpServer.Handlers.Word.Text;
 /// <summary>
 ///     Handler for inserting text at a specific position in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class InsertAtPositionWordTextHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -22,7 +25,7 @@ public class InsertAtPositionWordTextHandler : OperationHandlerBase<Document>
     /// </param>
     /// <returns>Success message.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or indices are out of range.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractInsertAtPositionParameters(parameters);
 
@@ -39,7 +42,7 @@ public class InsertAtPositionWordTextHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success("Text inserted at position.");
+        return new SuccessResult { Message = "Text inserted at position." };
     }
 
     private static InsertAtPositionParameters ExtractInsertAtPositionParameters(OperationParameters parameters)

@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.Comment;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Comment;
 
@@ -30,10 +31,12 @@ public class AddExcelCommentHandlerTests : ExcelHandlerTestBase
             { "comment", "Test" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("B5", result);
-        Assert.Contains("sheet", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("B5", result.Message);
+        Assert.Contains("sheet", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -51,9 +54,11 @@ public class AddExcelCommentHandlerTests : ExcelHandlerTestBase
             { "comment", "Test comment" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.NotNull(workbook.Worksheets[0].Comments["A1"]);
         AssertModified(context);
     }
@@ -135,9 +140,11 @@ public class AddExcelCommentHandlerTests : ExcelHandlerTestBase
             { "comment", "Comment on Sheet2" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("sheet 1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("sheet 1", result.Message);
         Assert.NotNull(workbook.Worksheets[1].Comments["A1"]);
     }
 
@@ -153,9 +160,11 @@ public class AddExcelCommentHandlerTests : ExcelHandlerTestBase
             { "comment", "Comment on first sheet" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("sheet 0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("sheet 0", result.Message);
         Assert.NotNull(workbook.Worksheets[0].Comments["A1"]);
     }
 

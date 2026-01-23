@@ -1,7 +1,8 @@
 using Aspose.Words;
 using Aspose.Words.Fields;
 using AsposeMcpServer.Handlers.Word.Field;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Field;
 
@@ -33,9 +34,11 @@ public class DeleteFormFieldWordHandlerTests : WordHandlerTestBase
             { "fieldName", "TestField" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(0, doc.Range.FormFields.Count);
         AssertModified(context);
     }
@@ -50,10 +53,12 @@ public class DeleteFormFieldWordHandlerTests : WordHandlerTestBase
             { "fieldNames", FieldNamesToDelete }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted", result.ToLower());
-        Assert.Contains("2", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2", result.Message);
     }
 
     [Fact]
@@ -64,10 +69,12 @@ public class DeleteFormFieldWordHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted", result.ToLower());
-        Assert.Contains(initialCount.ToString(), result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(initialCount.ToString(), result.Message);
     }
 
     [Fact]
@@ -80,9 +87,11 @@ public class DeleteFormFieldWordHandlerTests : WordHandlerTestBase
             { "fieldName", "NonExistent" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("0", result.Message);
     }
 
     #endregion

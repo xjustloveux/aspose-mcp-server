@@ -1,7 +1,8 @@
-using System.Text.Json;
-using Aspose.Slides;
+﻿using Aspose.Slides;
 using Aspose.Slides.Export;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.PowerPoint.Properties;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.PowerPoint;
 
 namespace AsposeMcpServer.Tests.Tools.PowerPoint;
@@ -37,10 +38,10 @@ public class PptPropertiesToolTests : PptTestBase
     {
         var pptPath = CreatePresentation("test_get.pptx");
         var result = _tool.Execute("get", pptPath);
-        Assert.NotNull(result);
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("title", out _));
-        Assert.True(json.RootElement.TryGetProperty("author", out _));
+        var data = GetResultData<GetPropertiesPptResult>(result);
+        Assert.NotNull(data);
+        Assert.NotNull(data.Title);
+        Assert.NotNull(data.Author);
     }
 
     [Fact]
@@ -50,8 +51,9 @@ public class PptPropertiesToolTests : PptTestBase
         var outputPath = CreateTestFilePath("test_set_basic_output.pptx");
         var result = _tool.Execute("set", pptPath, title: "Test Presentation", author: "Test Author",
             outputPath: outputPath);
-        Assert.StartsWith("Document properties updated", result);
-        Assert.Contains("Title", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Document properties updated", data.Message);
+        Assert.Contains("Title", data.Message);
     }
 
     #endregion
@@ -66,7 +68,8 @@ public class PptPropertiesToolTests : PptTestBase
     {
         var pptPath = CreatePresentation($"test_case_get_{operation}.pptx");
         var result = _tool.Execute(operation, pptPath);
-        Assert.StartsWith("{", result);
+        var data = GetResultData<GetPropertiesPptResult>(result);
+        Assert.NotNull(data);
     }
 
     [Fact]
@@ -87,10 +90,12 @@ public class PptPropertiesToolTests : PptTestBase
         var pptPath = CreatePresentationWithProperties("test_session_get.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("get", sessionId: sessionId);
-        Assert.NotNull(result);
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("title", out _));
-        Assert.True(json.RootElement.TryGetProperty("author", out _));
+        var data = GetResultData<GetPropertiesPptResult>(result);
+        Assert.NotNull(data);
+        Assert.NotNull(data.Title);
+        Assert.NotNull(data.Author);
+        var output = GetResultOutput<GetPropertiesPptResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -99,8 +104,10 @@ public class PptPropertiesToolTests : PptTestBase
         var pptPath = CreatePresentation("test_session_set.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("set", sessionId: sessionId, title: "Session Title", author: "Session Author");
-        Assert.StartsWith("Document properties updated", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Document properties updated", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -122,7 +129,10 @@ public class PptPropertiesToolTests : PptTestBase
 
         var sessionId = OpenSession(pptPath2);
         var result = _tool.Execute("get", pptPath1, sessionId);
-        Assert.NotNull(result);
+        var data = GetResultData<GetPropertiesPptResult>(result);
+        Assert.NotNull(data);
+        var output = GetResultOutput<GetPropertiesPptResult>(result);
+        Assert.True(output.IsSession);
     }
 
     #endregion

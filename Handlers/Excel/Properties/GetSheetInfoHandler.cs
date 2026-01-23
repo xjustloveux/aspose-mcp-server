@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Excel.Properties;
 
 namespace AsposeMcpServer.Handlers.Excel.Properties;
 
 /// <summary>
 ///     Handler for getting sheet information from Excel files.
 /// </summary>
+[ResultType(typeof(GetSheetInfoResult))]
 public class GetSheetInfoHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -20,13 +23,13 @@ public class GetSheetInfoHandler : OperationHandlerBase<Workbook>
     ///     Optional: targetSheetIndex (if not provided, returns all sheets)
     /// </param>
     /// <returns>JSON result with sheet information.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var getParams = ExtractGetSheetInfoParameters(parameters);
 
         var workbook = context.Document;
 
-        List<object> sheetList = [];
+        List<SheetInfoDetail> sheetList = [];
 
         if (getParams.TargetSheetIndex.HasValue)
         {
@@ -39,14 +42,12 @@ public class GetSheetInfoHandler : OperationHandlerBase<Workbook>
                 sheetList.Add(CreateSheetInfo(workbook.Worksheets[i], i));
         }
 
-        var result = new
+        return new GetSheetInfoResult
         {
-            count = sheetList.Count,
-            totalWorksheets = workbook.Worksheets.Count,
-            items = sheetList
+            Count = sheetList.Count,
+            TotalWorksheets = workbook.Worksheets.Count,
+            Items = sheetList
         };
-
-        return JsonResult(result);
     }
 
     /// <summary>
@@ -54,27 +55,27 @@ public class GetSheetInfoHandler : OperationHandlerBase<Workbook>
     /// </summary>
     /// <param name="worksheet">The worksheet to get information from.</param>
     /// <param name="index">The index of the worksheet.</param>
-    /// <returns>An object containing the worksheet's information.</returns>
-    private static object CreateSheetInfo(Worksheet worksheet, int index)
+    /// <returns>A SheetInfoDetail object containing the worksheet's information.</returns>
+    private static SheetInfoDetail CreateSheetInfo(Worksheet worksheet, int index)
     {
-        return new
+        return new SheetInfoDetail
         {
-            index,
-            name = worksheet.Name,
-            visibility = worksheet.VisibilityType.ToString(),
-            dataRowCount = worksheet.Cells.MaxDataRow + 1,
-            dataColumnCount = worksheet.Cells.MaxDataColumn + 1,
-            usedRange = new
+            Index = index,
+            Name = worksheet.Name,
+            Visibility = worksheet.VisibilityType.ToString(),
+            DataRowCount = worksheet.Cells.MaxDataRow + 1,
+            DataColumnCount = worksheet.Cells.MaxDataColumn + 1,
+            UsedRange = new UsedRangeInfo
             {
-                rowCount = worksheet.Cells.MaxRow + 1,
-                columnCount = worksheet.Cells.MaxColumn + 1
+                RowCount = worksheet.Cells.MaxRow + 1,
+                ColumnCount = worksheet.Cells.MaxColumn + 1
             },
-            pageOrientation = worksheet.PageSetup.Orientation.ToString(),
-            paperSize = worksheet.PageSetup.PaperSize.ToString(),
-            freezePanes = new
+            PageOrientation = worksheet.PageSetup.Orientation.ToString(),
+            PaperSize = worksheet.PageSetup.PaperSize.ToString(),
+            FreezePanes = new FreezePanesInfo
             {
-                row = worksheet.FirstVisibleRow,
-                column = worksheet.FirstVisibleColumn
+                Row = worksheet.FirstVisibleRow,
+                Column = worksheet.FirstVisibleColumn
             }
         };
     }

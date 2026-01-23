@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Pdf;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Pdf;
 /// <summary>
 ///     Tool for managing images in PDF documents (add, delete, edit, extract, get)
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Pdf.Image")]
 [McpServerToolType]
 public class PdfImageTool
 {
@@ -57,7 +60,14 @@ public class PdfImageTool
     /// <param name="outputDir">Output directory for extracted images (for extract).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "pdf_image")]
+    [McpServerTool(
+        Name = "pdf_image",
+        Title = "PDF Image Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage images in PDF documents. Supports 5 operations: add, delete, edit, extract, get.
 
 Usage examples:
@@ -67,7 +77,7 @@ Usage examples:
 - Replace image: pdf_image(operation='edit', path='doc.pdf', pageIndex=1, imageIndex=1, imagePath='new.png', x=200, y=200)
 - Extract image: pdf_image(operation='extract', path='doc.pdf', pageIndex=1, imageIndex=1, outputPath='image.png')
 - Get images: pdf_image(operation='get', path='doc.pdf', pageIndex=1)")]
-    public string Execute(
+    public object Execute(
         [Description(@"Operation to perform.
 - 'add': Add an image (required params: path, pageIndex, imagePath)
 - 'delete': Delete an image (required params: path, pageIndex, imageIndex)
@@ -120,12 +130,12 @@ Usage examples:
 
         if (operation.Equals("get", StringComparison.OrdinalIgnoreCase) ||
             operation.Equals("extract", StringComparison.OrdinalIgnoreCase))
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

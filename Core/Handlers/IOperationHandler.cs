@@ -34,7 +34,7 @@ public interface IOperationHandler<TContext> where TContext : class
     /// </summary>
     /// <param name="context">The document context containing the document and metadata.</param>
     /// <param name="parameters">The operation parameters from the MCP request.</param>
-    /// <returns>The result message or JSON data describing the operation outcome.</returns>
+    /// <returns>The result object describing the operation outcome.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or invalid.</exception>
-    string Execute(OperationContext<TContext> context, OperationParameters parameters);
+    object Execute(OperationContext<TContext> context, OperationParameters parameters);
 }

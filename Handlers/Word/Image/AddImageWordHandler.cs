@@ -1,7 +1,10 @@
 using System.Globalization;
 using Aspose.Words;
 using Aspose.Words.Drawing;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 using IOFile = System.IO.File;
 using WordShape = Aspose.Words.Drawing.Shape;
 
@@ -10,6 +13,7 @@ namespace AsposeMcpServer.Handlers.Word.Image;
 /// <summary>
 ///     Handler for adding images to Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddImageWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -24,7 +28,7 @@ public class AddImageWordHandler : OperationHandlerBase<Document>
     ///     Optional: width, height, alignment, textWrapping, caption, captionPosition, linkUrl, alternativeText, title
     /// </param>
     /// <returns>Success message with image details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var imageParams = ExtractImageParameters(parameters);
         ValidateImagePath(imageParams.ImagePath);
@@ -194,8 +198,8 @@ public class AddImageWordHandler : OperationHandlerBase<Document>
     ///     Builds the result message for a successful image addition.
     /// </summary>
     /// <param name="p">The image parameters.</param>
-    /// <returns>The formatted result message.</returns>
-    private static string BuildResultMessage(ImageParameters p)
+    /// <returns>The success result with formatted message.</returns>
+    private static SuccessResult BuildResultMessage(ImageParameters p)
     {
         var result = $"Image added successfully\nImage: {Path.GetFileName(p.ImagePath)}\n";
         if (p.Width.HasValue || p.Height.HasValue)
@@ -206,7 +210,7 @@ public class AddImageWordHandler : OperationHandlerBase<Document>
         if (!string.IsNullOrEmpty(p.AlternativeText)) result += $"Alt text: {p.AlternativeText}\n";
         if (!string.IsNullOrEmpty(p.Title)) result += $"Title: {p.Title}\n";
         if (!string.IsNullOrEmpty(p.Caption)) result += $"Caption: {p.Caption} ({p.CaptionPosition})\n";
-        return result.TrimEnd();
+        return new SuccessResult { Message = result.TrimEnd() };
     }
 
     /// <summary>

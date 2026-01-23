@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Reference;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Reference;
 
@@ -45,9 +46,11 @@ public class AddTableOfContentsWordHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("table of contents added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("table of contents added", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -61,9 +64,11 @@ public class AddTableOfContentsWordHandlerTests : WordHandlerTestBase
             { "title", "Contents" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("table of contents added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("table of contents added", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -76,9 +81,11 @@ public class AddTableOfContentsWordHandlerTests : WordHandlerTestBase
             { "maxLevel", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -91,9 +98,11 @@ public class AddTableOfContentsWordHandlerTests : WordHandlerTestBase
             { "position", "end" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

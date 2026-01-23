@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
@@ -11,6 +13,7 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 ///     Supports 12 operations: get, get_details, delete, edit, set_format, clear_format,
 ///     group, ungroup, copy, reorder, align, flip
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.PowerPoint.Shape")]
 [McpServerToolType]
 public class PptShapeTool
 {
@@ -77,7 +80,14 @@ public class PptShapeTool
     /// <param name="flipVertical">Flip vertically (for flip/edit).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "ppt_shape")]
+    [McpServerTool(
+        Name = "ppt_shape",
+        Title = "PowerPoint Shape Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Unified PowerPoint shape management tool. Supports 12 operations.
 
 Note: Position/size units are in points (1 point = 1/72 inch).
@@ -101,7 +111,7 @@ Usage examples:
 - Reorder: ppt_shape(operation='reorder', path='file.pptx', slideIndex=0, shapeIndex=0, toIndex=2)
 - Align: ppt_shape(operation='align', path='file.pptx', slideIndex=0, shapeIndices=[0,1], align='left')
 - Flip: ppt_shape(operation='flip', path='file.pptx', slideIndex=0, shapeIndex=0, flipHorizontal=true)")]
-    public string Execute(
+    public object Execute(
         [Description(
             "Operation: get, get_details, delete, edit, set_format, clear_format, group, ungroup, copy, reorder, align, flip")]
         string operation,
@@ -177,12 +187,12 @@ Usage examples:
 
         var op = operation.ToLowerInvariant();
         if (op == "get" || op == "get_details")
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

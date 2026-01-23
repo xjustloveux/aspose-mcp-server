@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.RowColumn;
 
 /// <summary>
 ///     Handler for deleting rows from Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeleteRowHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class DeleteRowHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0), count (default: 1)
     /// </param>
     /// <returns>Success message with deletion details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractDeleteRowParameters(parameters);
 
@@ -32,7 +35,7 @@ public class DeleteRowHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Deleted {p.Count} row(s) starting from row {p.RowIndex}.");
+        return new SuccessResult { Message = $"Deleted {p.Count} row(s) starting from row {p.RowIndex}." };
     }
 
     private static DeleteRowParameters ExtractDeleteRowParameters(OperationParameters parameters)

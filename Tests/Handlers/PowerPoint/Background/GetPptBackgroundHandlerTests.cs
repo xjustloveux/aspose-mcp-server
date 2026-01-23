@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.PowerPoint.Background;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.PowerPoint.Background;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Background;
 
@@ -43,10 +44,12 @@ public class GetPptBackgroundHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("slideIndex", result);
-        Assert.Contains("hasBackground", result);
+        var result = Assert.IsType<GetBackgroundResult>(res);
+
+        Assert.Equal(0, result.SlideIndex);
+        Assert.True(result.HasBackground || !result.HasBackground); // Property exists
         AssertNotModified(context);
     }
 
@@ -60,23 +63,28 @@ public class GetPptBackgroundHandlerTests : PptHandlerTestBase
             { "slideIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"slideIndex\": 1", result);
+        var result = Assert.IsType<GetBackgroundResult>(res);
+
+        Assert.Equal(1, result.SlideIndex);
         AssertNotModified(context);
     }
 
     [Fact]
-    public void Execute_ReturnsJsonFormat()
+    public void Execute_ReturnsAllBackgroundProperties()
     {
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("{", result);
-        Assert.Contains("}", result);
+        var result = Assert.IsType<GetBackgroundResult>(res);
+
+        Assert.IsType<int>(result.SlideIndex);
+        Assert.IsType<bool>(result.HasBackground);
+        Assert.IsType<bool>(result.IsPictureFill);
     }
 
     #endregion

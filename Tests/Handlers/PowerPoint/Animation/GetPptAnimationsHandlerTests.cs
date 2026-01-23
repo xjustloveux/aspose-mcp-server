@@ -1,8 +1,8 @@
-using System.Text.Json;
 using Aspose.Slides;
 using Aspose.Slides.Animation;
 using AsposeMcpServer.Handlers.PowerPoint.Animation;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.PowerPoint.Animation;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Animation;
 
@@ -33,11 +33,12 @@ public class GetPptAnimationsHandlerTests : PptHandlerTestBase
             { "shapeIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.True(json.RootElement.TryGetProperty("filterByShapeIndex", out var filter));
-        Assert.Equal(0, filter.GetInt32());
+        var result = Assert.IsType<GetAnimationsResult>(res);
+
+        Assert.NotNull(result.FilterByShapeIndex);
+        Assert.Equal(0, result.FilterByShapeIndex.Value);
     }
 
     #endregion
@@ -54,11 +55,12 @@ public class GetPptAnimationsHandlerTests : PptHandlerTestBase
             { "slideIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(0, json.RootElement.GetProperty("totalAnimationsOnSlide").GetInt32());
-        Assert.Equal(0, json.RootElement.GetProperty("animations").GetArrayLength());
+        var result = Assert.IsType<GetAnimationsResult>(res);
+
+        Assert.Equal(0, result.TotalAnimationsOnSlide);
+        Assert.Empty(result.Animations);
     }
 
     #endregion
@@ -75,10 +77,11 @@ public class GetPptAnimationsHandlerTests : PptHandlerTestBase
             { "slideIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.True(json.RootElement.TryGetProperty("slideIndex", out _));
+        var result = Assert.IsType<GetAnimationsResult>(res);
+
+        Assert.Equal(0, result.SlideIndex);
     }
 
     [Fact]
@@ -91,10 +94,11 @@ public class GetPptAnimationsHandlerTests : PptHandlerTestBase
             { "slideIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(0, json.RootElement.GetProperty("slideIndex").GetInt32());
+        var result = Assert.IsType<GetAnimationsResult>(res);
+
+        Assert.Equal(0, result.SlideIndex);
     }
 
     [Fact]
@@ -107,10 +111,11 @@ public class GetPptAnimationsHandlerTests : PptHandlerTestBase
             { "slideIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(1, json.RootElement.GetProperty("totalAnimationsOnSlide").GetInt32());
+        var result = Assert.IsType<GetAnimationsResult>(res);
+
+        Assert.Equal(1, result.TotalAnimationsOnSlide);
     }
 
     [Fact]
@@ -123,11 +128,12 @@ public class GetPptAnimationsHandlerTests : PptHandlerTestBase
             { "slideIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.True(json.RootElement.TryGetProperty("animations", out var animations));
-        Assert.Equal(JsonValueKind.Array, animations.ValueKind);
+        var result = Assert.IsType<GetAnimationsResult>(res);
+
+        Assert.NotNull(result.Animations);
+        Assert.True(result.Animations.Count >= 0);
     }
 
     #endregion
@@ -144,11 +150,12 @@ public class GetPptAnimationsHandlerTests : PptHandlerTestBase
             { "slideIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
-        var firstAnimation = json.RootElement.GetProperty("animations")[0];
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(0, firstAnimation.GetProperty("index").GetInt32());
+        var result = Assert.IsType<GetAnimationsResult>(res);
+
+        var firstAnimation = result.Animations[0];
+        Assert.Equal(0, firstAnimation.Index);
     }
 
     [Fact]
@@ -161,11 +168,12 @@ public class GetPptAnimationsHandlerTests : PptHandlerTestBase
             { "slideIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
-        var firstAnimation = json.RootElement.GetProperty("animations")[0];
+        var res = _handler.Execute(context, parameters);
 
-        Assert.True(firstAnimation.TryGetProperty("shapeIndex", out _));
+        var result = Assert.IsType<GetAnimationsResult>(res);
+
+        var firstAnimation = result.Animations[0];
+        Assert.True(firstAnimation.ShapeIndex >= 0 || firstAnimation.ShapeIndex == -1);
     }
 
     [Fact]
@@ -178,11 +186,12 @@ public class GetPptAnimationsHandlerTests : PptHandlerTestBase
             { "slideIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
-        var firstAnimation = json.RootElement.GetProperty("animations")[0];
+        var res = _handler.Execute(context, parameters);
 
-        Assert.NotNull(firstAnimation.GetProperty("effectType").GetString());
+        var result = Assert.IsType<GetAnimationsResult>(res);
+
+        var firstAnimation = result.Animations[0];
+        Assert.NotNull(firstAnimation.EffectType);
     }
 
     #endregion
@@ -239,11 +248,12 @@ public class GetPptAnimationsHandlerTests : PptHandlerTestBase
             { "shapeIndex", -1 }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.True(json.RootElement.TryGetProperty("filterByShapeIndex", out var filter));
-        Assert.Equal(-1, filter.GetInt32());
+        var result = Assert.IsType<GetAnimationsResult>(res);
+
+        Assert.NotNull(result.FilterByShapeIndex);
+        Assert.Equal(-1, result.FilterByShapeIndex.Value);
     }
 
     [Theory]

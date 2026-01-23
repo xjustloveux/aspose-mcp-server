@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.FileOperations;
 
 /// <summary>
 ///     Handler for merging multiple Excel workbooks into one.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class MergeWorkbooksHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class MergeWorkbooksHandler : OperationHandlerBase<Workbook>
     ///     Optional: mergeSheets (default: false)
     /// </param>
     /// <returns>Success message with merge details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractMergeParameters(parameters);
 
@@ -53,7 +56,8 @@ public class MergeWorkbooksHandler : OperationHandlerBase<Workbook>
 
         targetWorkbook.Save(targetPath);
 
-        return Success($"Merged {validPaths.Count} workbooks successfully. Output: {targetPath}");
+        return new SuccessResult
+            { Message = $"Merged {validPaths.Count} workbooks successfully. Output: {targetPath}" };
     }
 
     /// <summary>

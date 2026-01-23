@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.ConditionalFormatting;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.ConditionalFormatting;
 
@@ -55,10 +56,12 @@ public class AddExcelConditionalFormattingHandlerTests : ExcelHandlerTestBase
             { "value", "10" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result.ToLower());
-        Assert.Contains("A1:B5", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("A1:B5", result.Message);
         Assert.Single(workbook.Worksheets[0].ConditionalFormattings);
         AssertModified(context);
     }
@@ -137,9 +140,11 @@ public class AddExcelConditionalFormattingHandlerTests : ExcelHandlerTestBase
             { "backgroundColor", "Red" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 

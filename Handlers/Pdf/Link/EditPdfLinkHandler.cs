@@ -1,12 +1,15 @@
 using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.Link;
 
 /// <summary>
 ///     Handler for editing links in PDF documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class EditPdfLinkHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class EditPdfLinkHandler : OperationHandlerBase<Document>
     ///     Optional: url, targetPage
     /// </param>
     /// <returns>Success message with edit details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractEditParameters(parameters);
 
@@ -51,7 +54,7 @@ public class EditPdfLinkHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Edited link {p.LinkIndex} on page {p.PageIndex}.");
+        return new SuccessResult { Message = $"Edited link {p.LinkIndex} on page {p.PageIndex}." };
     }
 
     /// <summary>

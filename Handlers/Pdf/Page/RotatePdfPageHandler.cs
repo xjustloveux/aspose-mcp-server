@@ -1,11 +1,14 @@
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.Page;
 
 /// <summary>
 ///     Handler for rotating pages in PDF documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class RotatePdfPageHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -23,7 +26,7 @@ public class RotatePdfPageHandler : OperationHandlerBase<Document>
     /// </param>
     /// <returns>Success message.</returns>
     /// <exception cref="ArgumentException">Thrown when rotation value is invalid.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractRotateParameters(parameters);
 
@@ -54,7 +57,7 @@ public class RotatePdfPageHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Rotated {pagesToRotate.Count} page(s) by {p.Rotation} degrees.");
+        return new SuccessResult { Message = $"Rotated {pagesToRotate.Count} page(s) by {p.Rotation} degrees." };
     }
 
     /// <summary>

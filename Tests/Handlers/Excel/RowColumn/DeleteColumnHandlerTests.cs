@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.RowColumn;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.RowColumn;
 
@@ -34,9 +35,11 @@ public class DeleteColumnHandlerTests : ExcelHandlerTestBase
             { "count", count }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains($"{count} column(s)", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains($"{count} column(s)", result.Message);
     }
 
     #endregion
@@ -53,9 +56,11 @@ public class DeleteColumnHandlerTests : ExcelHandlerTestBase
             { "columnIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Deleted", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Deleted", result.Message);
         AssertModified(context);
     }
 
@@ -69,9 +74,11 @@ public class DeleteColumnHandlerTests : ExcelHandlerTestBase
             { "columnIndex", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("column 2", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("column 2", result.Message);
     }
 
     [Fact]
@@ -85,9 +92,11 @@ public class DeleteColumnHandlerTests : ExcelHandlerTestBase
             { "count", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("2 column(s)", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("2 column(s)", result.Message);
     }
 
     [Fact]
@@ -100,9 +109,11 @@ public class DeleteColumnHandlerTests : ExcelHandlerTestBase
             { "columnIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("1 column(s)", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("1 column(s)", result.Message);
     }
 
     #endregion
@@ -121,9 +132,11 @@ public class DeleteColumnHandlerTests : ExcelHandlerTestBase
             { "columnIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Deleted", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Deleted", result.Message);
     }
 
     [Fact]
@@ -136,9 +149,11 @@ public class DeleteColumnHandlerTests : ExcelHandlerTestBase
             { "columnIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Deleted", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Deleted", result.Message);
     }
 
     #endregion
@@ -213,9 +228,11 @@ public class DeleteColumnHandlerTests : ExcelHandlerTestBase
             { "count", count }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains($"{count} column(s)", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains($"{count} column(s)", result.Message);
     }
 
     [Fact]
@@ -228,10 +245,12 @@ public class DeleteColumnHandlerTests : ExcelHandlerTestBase
             { "columnIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Deleted", result);
-        Assert.Contains("column 0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Deleted", result.Message);
+        Assert.Contains("column 0", result.Message);
     }
 
     #endregion

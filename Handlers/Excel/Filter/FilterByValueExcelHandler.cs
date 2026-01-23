@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Filter;
 
 /// <summary>
 ///     Handler for applying filter criteria to Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class FilterByValueExcelHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class FilterByValueExcelHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0), columnIndex (default: 0), filterOperator (default: "Equal")
     /// </param>
     /// <returns>Success message with filter details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var filterParams = ExtractFilterByValueParameters(parameters);
 
@@ -51,8 +54,11 @@ public class FilterByValueExcelHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success(
-            $"Filter applied to column {filterParams.ColumnIndex} with criteria '{filterParams.Criteria}' (operator: {filterParams.FilterOperator}).");
+        return new SuccessResult
+        {
+            Message =
+                $"Filter applied to column {filterParams.ColumnIndex} with criteria '{filterParams.Criteria}' (operator: {filterParams.FilterOperator})."
+        };
     }
 
     /// <summary>

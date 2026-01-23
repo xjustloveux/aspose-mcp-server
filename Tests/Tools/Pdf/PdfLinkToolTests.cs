@@ -1,7 +1,8 @@
-using System.Text.Json;
-using Aspose.Pdf;
+﻿using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Pdf.Link;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Pdf;
 
 namespace AsposeMcpServer.Tests.Tools.Pdf;
@@ -53,7 +54,8 @@ public class PdfLinkToolTests : PdfTestBase
         var outputPath = CreateTestFilePath("test_add_output.pdf");
         var result = _tool.Execute("add", pdfPath, outputPath: outputPath,
             pageIndex: 1, x: 100, y: 100, width: 200, height: 30, url: "https://example.com");
-        Assert.StartsWith("Link added to page 1", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Link added to page 1", data.Message);
         using var document = new Document(outputPath);
         Assert.True(document.Pages[1].Annotations.Count > 0);
     }
@@ -65,7 +67,8 @@ public class PdfLinkToolTests : PdfTestBase
         var outputPath = CreateTestFilePath("test_delete_output.pdf");
         var result = _tool.Execute("delete", pdfPath, outputPath: outputPath,
             pageIndex: 1, linkIndex: 0);
-        Assert.StartsWith("Link 0 deleted from page", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Link 0 deleted from page", data.Message);
         using var document = new Document(outputPath);
         Assert.Empty(document.Pages[1].Annotations.OfType<LinkAnnotation>());
     }
@@ -77,7 +80,8 @@ public class PdfLinkToolTests : PdfTestBase
         var outputPath = CreateTestFilePath("test_edit_output.pdf");
         var result = _tool.Execute("edit", pdfPath, outputPath: outputPath,
             pageIndex: 1, linkIndex: 0, url: "https://updated.com");
-        Assert.StartsWith("Edited link 0", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Edited link 0", data.Message);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -86,8 +90,8 @@ public class PdfLinkToolTests : PdfTestBase
     {
         var pdfPath = CreatePdfWithLink("test_get.pdf");
         var result = _tool.Execute("get", pdfPath, pageIndex: 1);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
-        Assert.True(json.GetProperty("count").GetInt32() > 0);
+        var data = GetResultData<GetLinksResult>(result);
+        Assert.True(data.Count > 0);
     }
 
     [Fact]
@@ -95,8 +99,8 @@ public class PdfLinkToolTests : PdfTestBase
     {
         var pdfPath = CreateTestPdf("test_get_empty.pdf");
         var result = _tool.Execute("get", pdfPath, pageIndex: 1);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
-        Assert.Equal(0, json.GetProperty("count").GetInt32());
+        var data = GetResultData<GetLinksResult>(result);
+        Assert.Equal(0, data.Count);
     }
 
     #endregion
@@ -113,7 +117,8 @@ public class PdfLinkToolTests : PdfTestBase
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.pdf");
         var result = _tool.Execute(operation, pdfPath, outputPath: outputPath,
             pageIndex: 1, x: 100, y: 100, width: 200, height: 30, url: "https://example.com");
-        Assert.StartsWith("Link added to page", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Link added to page", data.Message);
     }
 
     [Fact]
@@ -140,8 +145,8 @@ public class PdfLinkToolTests : PdfTestBase
         var pdfPath = CreatePdfWithLink("test_session_get.pdf");
         var sessionId = OpenSession(pdfPath);
         var result = _tool.Execute("get", sessionId: sessionId, pageIndex: 1);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
-        Assert.True(json.GetProperty("count").GetInt32() > 0);
+        var data = GetResultData<GetLinksResult>(result);
+        Assert.True(data.Count > 0);
     }
 
     [Fact]
@@ -153,7 +158,8 @@ public class PdfLinkToolTests : PdfTestBase
         var countBefore = docBefore.Pages[1].Annotations.Count;
         var result = _tool.Execute("add", sessionId: sessionId,
             pageIndex: 1, x: 100, y: 100, width: 200, height: 30, url: "https://session.com");
-        Assert.StartsWith("Link added to page", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Link added to page", data.Message);
         var docAfter = SessionManager.GetDocument<Document>(sessionId);
         Assert.True(docAfter.Pages[1].Annotations.Count > countBefore);
     }
@@ -166,7 +172,8 @@ public class PdfLinkToolTests : PdfTestBase
         var docBefore = SessionManager.GetDocument<Document>(sessionId);
         var countBefore = docBefore.Pages[1].Annotations.Count;
         var result = _tool.Execute("delete", sessionId: sessionId, pageIndex: 1, linkIndex: 0);
-        Assert.StartsWith("Link 0 deleted", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Link 0 deleted", data.Message);
         var docAfter = SessionManager.GetDocument<Document>(sessionId);
         Assert.True(docAfter.Pages[1].Annotations.Count < countBefore);
     }
@@ -178,7 +185,8 @@ public class PdfLinkToolTests : PdfTestBase
         var sessionId = OpenSession(pdfPath);
         var result = _tool.Execute("edit", sessionId: sessionId,
             pageIndex: 1, linkIndex: 0, url: "https://updated.com");
-        Assert.StartsWith("Edited link", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Edited link", data.Message);
     }
 
     [Fact]
@@ -194,8 +202,8 @@ public class PdfLinkToolTests : PdfTestBase
         var pdfPath2 = CreatePdfWithLink("test_session_link.pdf");
         var sessionId = OpenSession(pdfPath2);
         var result = _tool.Execute("get", pdfPath1, sessionId, pageIndex: 1);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
-        Assert.True(json.GetProperty("count").GetInt32() > 0);
+        var data = GetResultData<GetLinksResult>(result);
+        Assert.True(data.Count > 0);
     }
 
     #endregion

@@ -1,9 +1,11 @@
-using System.Drawing;
+﻿using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.Versioning;
 using Aspose.Words;
 using Aspose.Words.Drawing;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Word.Image;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Word;
 
 namespace AsposeMcpServer.Tests.Tools.Word;
@@ -57,7 +59,9 @@ public class WordImageToolTests : WordTestBase
         builder.InsertImage(imagePath);
         doc.Save(docPath);
         var result = _tool.Execute("get", docPath);
-        Assert.Contains("Image", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<GetImagesWordResult>(result);
+        Assert.NotNull(data.Images);
+        Assert.True(data.Count > 0);
     }
 
     [Fact]
@@ -140,7 +144,8 @@ public class WordImageToolTests : WordTestBase
         var imagePath = CreateTestImage($"test_case_{operation}.png");
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.docx");
         var result = _tool.Execute(operation, docPath, outputPath: outputPath, imagePath: imagePath);
-        Assert.StartsWith("Image added", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Image added", data.Message);
     }
 
     [Fact]
@@ -174,7 +179,9 @@ public class WordImageToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("get", sessionId: sessionId);
-        Assert.Contains("Image", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<GetImagesWordResult>(result);
+        Assert.NotNull(data.Images);
+        Assert.True(data.Count > 0);
     }
 
     [Fact]
@@ -184,7 +191,8 @@ public class WordImageToolTests : WordTestBase
         var imagePath = CreateTestImage("test_image_session_add.png");
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("add", sessionId: sessionId, imagePath: imagePath, width: 150);
-        Assert.Contains("added", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("added", data.Message, StringComparison.OrdinalIgnoreCase);
 
         var doc = SessionManager.GetDocument<Document>(sessionId);
         var shapes = doc.GetChildNodes(NodeType.Shape, true).Cast<Shape>().Where(s => s.HasImage).ToList();
@@ -203,7 +211,8 @@ public class WordImageToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("edit", sessionId: sessionId, imageIndex: 0, width: 250, height: 180);
-        Assert.Contains("Image", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Image", data.Message);
     }
 
     [Fact]
@@ -240,7 +249,8 @@ public class WordImageToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         var newImagePath = CreateTestImage("test_session_replace_new.png");
         var result = _tool.Execute("replace", sessionId: sessionId, imageIndex: 0, newImagePath: newImagePath);
-        Assert.StartsWith("Image #0 replaced", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Image #0 replaced", data.Message);
     }
 
     [Fact]
@@ -271,9 +281,11 @@ public class WordImageToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath2);
         var result = _tool.Execute("get", docPath1, sessionId);
+        var data = GetResultData<GetImagesWordResult>(result);
 
-        Assert.Contains("Session Image Alt Unique", result);
-        Assert.DoesNotContain("Path Image Alt", result);
+        Assert.NotNull(data.Images);
+        Assert.Contains(data.Images, img => img.AltText == "Session Image Alt Unique");
+        Assert.DoesNotContain(data.Images, img => img.AltText == "Path Image Alt");
     }
 
     #endregion

@@ -1,7 +1,8 @@
 using Aspose.Words;
 using Aspose.Words.Drawing;
 using AsposeMcpServer.Handlers.Word.Shape;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Word.Shape;
+using AsposeMcpServer.Tests.Infrastructure;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Shape;
@@ -53,9 +54,11 @@ public class GetTextboxesWordHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("no textboxes found", result.ToLower());
+        var result = Assert.IsType<GetTextboxesWordResult>(res);
+
+        Assert.Contains("no textboxes found", result.Content.ToLower());
     }
 
     [Fact]
@@ -65,11 +68,13 @@ public class GetTextboxesWordHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("total textboxes:", result.ToLower());
-        Assert.Contains("width:", result.ToLower());
-        Assert.Contains("height:", result.ToLower());
+        var result = Assert.IsType<GetTextboxesWordResult>(res);
+
+        Assert.Contains("total textboxes:", result.Content.ToLower());
+        Assert.Contains("width:", result.Content.ToLower());
+        Assert.Contains("height:", result.Content.ToLower());
     }
 
     [Fact]
@@ -82,9 +87,11 @@ public class GetTextboxesWordHandlerTests : WordHandlerTestBase
             { "includeContent", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("content", result.ToLower());
+        var result = Assert.IsType<GetTextboxesWordResult>(res);
+
+        Assert.Contains("content", result.Content.ToLower());
     }
 
     #endregion

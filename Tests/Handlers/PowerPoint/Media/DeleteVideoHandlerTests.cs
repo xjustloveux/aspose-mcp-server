@@ -1,5 +1,5 @@
 using AsposeMcpServer.Handlers.PowerPoint.Media;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Media;
 

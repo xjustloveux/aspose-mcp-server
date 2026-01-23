@@ -1,12 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Notes;
 
 /// <summary>
 ///     Handler for setting notes on PowerPoint slides.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetNotesHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class SetNotesHandler : OperationHandlerBase<Presentation>
     ///     Required: slideIndex, notes
     /// </param>
     /// <returns>Success message indicating notes were set.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractSetNotesParameters(parameters);
 
@@ -33,7 +36,7 @@ public class SetNotesHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Notes set for slide {p.SlideIndex}.");
+        return new SuccessResult { Message = $"Notes set for slide {p.SlideIndex}." };
     }
 
     /// <summary>

@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.PivotTable;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Excel.PivotTable;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.PivotTable;
 
@@ -48,10 +49,12 @@ public class GetExcelPivotTablesHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"count\": 0", result);
-        Assert.Contains("No pivot tables found", result);
+        var result = Assert.IsType<GetPivotTablesResult>(res);
+
+        Assert.Equal(0, result.Count);
+        Assert.Equal("No pivot tables found", result.Message);
         AssertNotModified(context);
     }
 
@@ -62,23 +65,26 @@ public class GetExcelPivotTablesHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("count", result.ToLower());
-        Assert.Contains("items", result.ToLower());
+        var result = Assert.IsType<GetPivotTablesResult>(res);
+
+        Assert.True(result.Count > 0);
+        Assert.NotNull(result.Items);
     }
 
     [Fact]
-    public void Execute_ReturnsJsonFormat()
+    public void Execute_ReturnsWorksheetName()
     {
         var workbook = CreateEmptyWorkbook();
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("{", result);
-        Assert.Contains("}", result);
+        var result = Assert.IsType<GetPivotTablesResult>(res);
+
+        Assert.NotNull(result.WorksheetName);
     }
 
     #endregion

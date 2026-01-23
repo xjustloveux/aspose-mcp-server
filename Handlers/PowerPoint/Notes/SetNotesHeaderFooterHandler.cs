@@ -1,11 +1,14 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Notes;
 
 /// <summary>
 ///     Handler for setting header and footer on notes master.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetNotesHeaderFooterHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -19,7 +22,7 @@ public class SetNotesHeaderFooterHandler : OperationHandlerBase<Presentation>
     ///     Optional: headerText, footerText, dateText, showPageNumber (default: true)
     /// </param>
     /// <returns>Success message indicating what settings were updated.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractNotesHeaderFooterParameters(parameters);
 
@@ -66,7 +69,7 @@ public class SetNotesHeaderFooterHandler : OperationHandlerBase<Presentation>
         if (!string.IsNullOrEmpty(p.DateText)) settings.Add("date");
         settings.Add(p.ShowPageNumber ? "page number shown" : "page number hidden");
 
-        return Success($"Notes master header/footer updated ({string.Join(", ", settings)}).");
+        return new SuccessResult { Message = $"Notes master header/footer updated ({string.Join(", ", settings)})." };
     }
 
     /// <summary>

@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Revision;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Word.Revision;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Revision;
 
@@ -42,10 +43,13 @@ public class GetRevisionsHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("count", result);
-        Assert.Contains("revisions", result);
+        var result = Assert.IsType<GetRevisionsWordResult>(res);
+
+        Assert.NotNull(result);
+        Assert.True(result.Count >= 0);
+        Assert.NotNull(result.Revisions);
     }
 
     [Fact]
@@ -55,9 +59,12 @@ public class GetRevisionsHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"count\": 0", result);
+        var result = Assert.IsType<GetRevisionsWordResult>(res);
+
+        Assert.NotNull(result);
+        Assert.Equal(0, result.Count);
     }
 
     [Fact]
@@ -67,11 +74,16 @@ public class GetRevisionsHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("type", result);
-        Assert.Contains("author", result);
-        Assert.Contains("date", result);
+        var result = Assert.IsType<GetRevisionsWordResult>(res);
+
+        Assert.NotNull(result);
+        Assert.NotEmpty(result.Revisions);
+        var firstRevision = result.Revisions[0];
+        Assert.NotNull(firstRevision.Type);
+        Assert.NotNull(firstRevision.Author);
+        Assert.NotNull(firstRevision.Date);
     }
 
     [Fact]
@@ -81,9 +93,13 @@ public class GetRevisionsHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("text", result);
+        var result = Assert.IsType<GetRevisionsWordResult>(res);
+
+        Assert.NotNull(result);
+        Assert.NotEmpty(result.Revisions);
+        Assert.NotNull(result.Revisions[0].Text);
     }
 
     #endregion

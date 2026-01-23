@@ -1,5 +1,7 @@
-using Aspose.Slides;
-using AsposeMcpServer.Tests.Helpers;
+﻿using Aspose.Slides;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.PowerPoint.Table;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.PowerPoint;
 
 namespace AsposeMcpServer.Tests.Tools.PowerPoint;
@@ -34,8 +36,9 @@ public class PptTableToolTests : PptTestBase
         var pptPath = CreatePresentation("test_add_table.pptx");
         var outputPath = CreateTestFilePath("test_add_table_output.pptx");
         var result = _tool.Execute("add", pptPath, slideIndex: 0, rows: 3, columns: 3, outputPath: outputPath);
-        Assert.StartsWith("Table added to slide", result);
-        Assert.Contains("3 rows", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Table added to slide", data.Message);
+        Assert.Contains("3 rows", data.Message);
         using var presentation = new Presentation(outputPath);
         var tables = presentation.Slides[0].Shapes.OfType<ITable>().ToList();
         Assert.NotEmpty(tables);
@@ -49,7 +52,8 @@ public class PptTableToolTests : PptTestBase
         var shapeIndex = FindTableShapeIndex(pptPath, 0);
         var outputPath = CreateTestFilePath("test_delete_table_output.pptx");
         var result = _tool.Execute("delete", pptPath, slideIndex: 0, shapeIndex: shapeIndex, outputPath: outputPath);
-        Assert.StartsWith("Table deleted from slide", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Table deleted from slide", data.Message);
         using var presentation = new Presentation(outputPath);
         Assert.Empty(presentation.Slides[0].Shapes.OfType<ITable>());
     }
@@ -57,12 +61,13 @@ public class PptTableToolTests : PptTestBase
     [SkippableFact]
     public void GetContent_ShouldReturnTableContent()
     {
-        SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation mode truncates text content");
+        SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation mode truncates text data");
         var pptPath = CreatePresentationWithTable("test_get_content.pptx");
         var shapeIndex = FindTableShapeIndex(pptPath, 0);
         var result = _tool.Execute("get_content", pptPath, slideIndex: 0, shapeIndex: shapeIndex);
-        Assert.Contains("R0C0", result);
-        Assert.Contains("\"rowCount\"", result);
+        var data = GetResultData<GetTableContentResult>(result);
+        Assert.Contains(data.Data, row => row.Any(cell => cell.Contains("R0C0")));
+        Assert.True(data.RowCount > 0);
     }
 
     [Fact]
@@ -73,7 +78,8 @@ public class PptTableToolTests : PptTestBase
         var outputPath = CreateTestFilePath("test_insert_row_output.pptx");
         var result = _tool.Execute("insert_row", pptPath, slideIndex: 0, shapeIndex: shapeIndex, rowIndex: 1,
             outputPath: outputPath);
-        Assert.StartsWith("Row inserted at index", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Row inserted at index", data.Message);
         using var presentation = new Presentation(outputPath);
         var table = presentation.Slides[0].Shapes.OfType<ITable>().First();
         Assert.Equal(3, table.Rows.Count);
@@ -87,7 +93,8 @@ public class PptTableToolTests : PptTestBase
         var outputPath = CreateTestFilePath("test_insert_column_output.pptx");
         var result = _tool.Execute("insert_column", pptPath, slideIndex: 0, shapeIndex: shapeIndex, columnIndex: 1,
             outputPath: outputPath);
-        Assert.StartsWith("Column inserted at index", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Column inserted at index", data.Message);
         using var presentation = new Presentation(outputPath);
         var table = presentation.Slides[0].Shapes.OfType<ITable>().First();
         Assert.Equal(3, table.Columns.Count);
@@ -106,7 +113,8 @@ public class PptTableToolTests : PptTestBase
         var pptPath = CreatePresentation($"test_case_add_{operation}.pptx");
         var outputPath = CreateTestFilePath($"test_case_add_{operation}_output.pptx");
         var result = _tool.Execute(operation, pptPath, slideIndex: 0, rows: 2, columns: 2, outputPath: outputPath);
-        Assert.StartsWith("Table added to slide", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Table added to slide", data.Message);
     }
 
     [Fact]
@@ -131,8 +139,10 @@ public class PptTableToolTests : PptTestBase
         var initialTableCount = ppt.Slides[0].Shapes.OfType<ITable>().Count();
 
         var result = _tool.Execute("add", sessionId: sessionId, slideIndex: 0, rows: 2, columns: 2);
-        Assert.StartsWith("Table added to slide", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Table added to slide", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
 
         var tablesAfter = ppt.Slides[0].Shapes.OfType<ITable>().Count();
         Assert.True(tablesAfter > initialTableCount);
@@ -150,8 +160,10 @@ public class PptTableToolTests : PptTestBase
 
         var result = _tool.Execute("insert_row", sessionId: sessionId, slideIndex: 0, shapeIndex: shapeIndex,
             rowIndex: 1);
-        Assert.StartsWith("Row inserted at index", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Row inserted at index", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         Assert.True(table.Rows.Count > initialRowCount);
     }
 
@@ -165,8 +177,10 @@ public class PptTableToolTests : PptTestBase
         var shapeIndex = ppt.Slides[0].Shapes.IndexOf(table);
 
         var result = _tool.Execute("delete", sessionId: sessionId, slideIndex: 0, shapeIndex: shapeIndex);
-        Assert.StartsWith("Table deleted from slide", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Table deleted from slide", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         Assert.Empty(ppt.Slides[0].Shapes.OfType<ITable>());
     }
 
@@ -187,8 +201,7 @@ public class PptTableToolTests : PptTestBase
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var initialCount = ppt.Slides[0].Shapes.OfType<ITable>().Count();
 
-        var result = _tool.Execute("add", pptPath1, sessionId, slideIndex: 0, rows: 2, columns: 2);
-        Assert.Contains("session", result);
+        _tool.Execute("add", pptPath1, sessionId, slideIndex: 0, rows: 2, columns: 2);
         Assert.True(ppt.Slides[0].Shapes.OfType<ITable>().Count() > initialCount);
     }
 

@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Excel;
 /// <summary>
 ///     Unified tool for managing Excel protection (protect, unprotect, get, set_cell_locked).
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Excel.Protect")]
 [McpServerToolType]
 public class ExcelProtectTool
 {
@@ -65,7 +68,14 @@ public class ExcelProtectTool
     /// <param name="locked">Locked status (true = locked, false = unlocked, required for set_cell_locked).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "excel_protect")]
+    [McpServerTool(
+        Name = "excel_protect",
+        Title = "Excel Protection Operations",
+        Destructive = false,
+        Idempotent = true,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage Excel protection. Supports 4 operations: protect, unprotect, get, set_cell_locked.
 
 Usage examples:
@@ -73,7 +83,7 @@ Usage examples:
 - Unprotect sheet: excel_protect(operation='unprotect', path='book.xlsx', sheetIndex=0, password='password')
 - Get protection: excel_protect(operation='get', path='book.xlsx', sheetIndex=0)
 - Set cell locked: excel_protect(operation='set_cell_locked', path='book.xlsx', range='A1:B10', locked=true)")]
-    public string Execute(
+    public object Execute(
         [Description(@"Operation to perform.
 - 'protect': Protect workbook or sheet (required params: path, password)
 - 'unprotect': Unprotect workbook or sheet (required params: path, password)
@@ -124,12 +134,12 @@ Usage examples:
         var result = handler.Execute(operationContext, parameters);
 
         if (string.Equals(operation, "get", StringComparison.OrdinalIgnoreCase))
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

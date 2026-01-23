@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
 
 namespace AsposeMcpServer.Core.Tracking;
 
@@ -202,7 +202,7 @@ public class TrackingMiddleware
     /// </summary>
     /// <param name="trackingEvent">Event to write</param>
     /// <param name="json">JSON-serialized event data</param>
-    // ReSharper disable UnusedParameter.Local
+    // ReSharper disable UnusedParameter.Local - Parameters used only in WINDOWS conditional compilation
     private static void WriteToEventLog(TrackingEvent trackingEvent, string json)
         // ReSharper restore UnusedParameter.Local
     {
@@ -270,145 +270,5 @@ public class TrackingMiddleware
     {
         context.Response.ContentType = "text/plain; version=0.0.4; charset=utf-8";
         await context.Response.WriteAsync(_metrics.GetPrometheusMetrics());
-    }
-}
-
-/// <summary>
-///     Simple in-memory metrics collector for Prometheus format
-/// </summary>
-public class TrackingMetrics
-{
-    /// <summary>
-    ///     Lock for thread-safe metric updates
-    /// </summary>
-    private readonly object _lock = new();
-
-    /// <summary>
-    ///     Request counts by tool name
-    /// </summary>
-    private readonly Dictionary<string, long> _requestsByTool = new();
-
-    /// <summary>
-    ///     Total failed request count
-    /// </summary>
-    private long _failedRequests;
-
-    /// <summary>
-    ///     Total successful request count
-    /// </summary>
-    private long _successfulRequests;
-
-    /// <summary>
-    ///     Total cumulative request duration in milliseconds
-    /// </summary>
-    private long _totalDurationMs;
-
-    /// <summary>
-    ///     Total request count
-    /// </summary>
-    private long _totalRequests;
-
-    /// <summary>
-    ///     Records a tracking event for metrics collection
-    /// </summary>
-    /// <param name="evt">The tracking event to record</param>
-    public void RecordRequest(TrackingEvent evt)
-    {
-        lock (_lock)
-        {
-            _totalRequests++;
-            _totalDurationMs += evt.DurationMs;
-
-            if (evt.Success)
-                _successfulRequests++;
-            else
-                _failedRequests++;
-
-            if (!string.IsNullOrEmpty(evt.Tool))
-            {
-                _requestsByTool.TryGetValue(evt.Tool, out var count);
-                _requestsByTool[evt.Tool] = count + 1;
-            }
-        }
-    }
-
-    /// <summary>
-    ///     Returns metrics in Prometheus text format
-    /// </summary>
-    /// <returns>Prometheus-formatted metrics string</returns>
-    public string GetPrometheusMetrics()
-    {
-        var sb = new StringBuilder();
-
-        lock (_lock)
-        {
-            sb.AppendLine("# HELP aspose_mcp_requests_total Total number of MCP requests");
-            sb.AppendLine("# TYPE aspose_mcp_requests_total counter");
-            sb.AppendLine($"aspose_mcp_requests_total {_totalRequests}");
-
-            sb.AppendLine("# HELP aspose_mcp_requests_successful_total Total number of successful MCP requests");
-            sb.AppendLine("# TYPE aspose_mcp_requests_successful_total counter");
-            sb.AppendLine($"aspose_mcp_requests_successful_total {_successfulRequests}");
-
-            sb.AppendLine("# HELP aspose_mcp_requests_failed_total Total number of failed MCP requests");
-            sb.AppendLine("# TYPE aspose_mcp_requests_failed_total counter");
-            sb.AppendLine($"aspose_mcp_requests_failed_total {_failedRequests}");
-
-            var avgDuration = _totalRequests > 0 ? (double)_totalDurationMs / _totalRequests : 0;
-            sb.AppendLine("# HELP aspose_mcp_request_duration_ms_avg Average request duration in milliseconds");
-            sb.AppendLine("# TYPE aspose_mcp_request_duration_ms_avg gauge");
-            sb.AppendLine($"aspose_mcp_request_duration_ms_avg {avgDuration:F2}");
-
-            sb.AppendLine("# HELP aspose_mcp_requests_by_tool Total requests by tool");
-            sb.AppendLine("# TYPE aspose_mcp_requests_by_tool counter");
-            foreach (var (tool, count) in _requestsByTool)
-                sb.AppendLine($"aspose_mcp_requests_by_tool{{tool=\"{SanitizeLabelValue(tool)}\"}} {count}");
-
-            var memoryMb = Process.GetCurrentProcess().WorkingSet64 / (1024.0 * 1024.0);
-            sb.AppendLine("# HELP aspose_mcp_memory_mb Current memory usage in MB");
-            sb.AppendLine("# TYPE aspose_mcp_memory_mb gauge");
-            sb.AppendLine($"aspose_mcp_memory_mb {memoryMb:F2}");
-        }
-
-        return sb.ToString();
-    }
-
-    /// <summary>
-    ///     Sanitizes a string for use as a Prometheus label value.
-    ///     Escapes backslashes, double quotes, and newlines.
-    /// </summary>
-    /// <param name="value">The label value to sanitize</param>
-    /// <returns>Sanitized label value safe for Prometheus format</returns>
-    private static string SanitizeLabelValue(string value)
-    {
-        if (string.IsNullOrEmpty(value))
-            return value;
-
-        return value
-            .Replace("\\", "\\\\")
-            .Replace("\"", "\\\"")
-            .Replace("\n", "\\n");
-    }
-}
-
-/// <summary>
-///     Extension methods for adding tracking middleware
-/// </summary>
-public static class TrackingExtensions
-{
-    /// <summary>
-    ///     Adds tracking middleware to the application pipeline
-    /// </summary>
-    /// <param name="app">The application builder</param>
-    /// <param name="config">Tracking configuration</param>
-    /// <returns>The application builder for chaining</returns>
-    public static IApplicationBuilder UseTracking(
-        this IApplicationBuilder app,
-        TrackingConfig config)
-    {
-        if (config is { LogEnabled: false, WebhookEnabled: false, MetricsEnabled: false })
-            return app;
-
-        return app.UseMiddleware<TrackingMiddleware>(config);
     }
 }

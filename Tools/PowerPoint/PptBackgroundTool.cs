@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 /// <summary>
 ///     Unified tool for managing PowerPoint backgrounds (set, get).
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.PowerPoint.Background")]
 [McpServerToolType]
 public class PptBackgroundTool
 {
@@ -54,7 +57,14 @@ public class PptBackgroundTool
     /// <param name="applyToAll">Apply background to all slides (default: false).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "ppt_background")]
+    [McpServerTool(
+        Name = "ppt_background",
+        Title = "PowerPoint Background Operations",
+        Destructive = false,
+        Idempotent = true,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage PowerPoint backgrounds. Supports 2 operations: set, get.
 
 Usage examples:
@@ -62,7 +72,7 @@ Usage examples:
 - Set background image: ppt_background(operation='set', path='presentation.pptx', slideIndex=0, imagePath='bg.png')
 - Apply to all slides: ppt_background(operation='set', path='presentation.pptx', color='#FFFFFF', applyToAll=true)
 - Get background: ppt_background(operation='get', path='presentation.pptx', slideIndex=0)")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: set, get")] string operation,
         [Description("Presentation file path (required if no sessionId)")]
         string? path = null,
@@ -97,12 +107,12 @@ Usage examples:
         var result = handler.Execute(operationContext, parameters);
 
         if (string.Equals(operation, "get", StringComparison.OrdinalIgnoreCase))
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

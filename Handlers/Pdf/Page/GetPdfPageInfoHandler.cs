@@ -1,11 +1,14 @@
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Pdf.Page;
 
 namespace AsposeMcpServer.Handlers.Pdf.Page;
 
 /// <summary>
 ///     Handler for getting information about all pages in PDF documents.
 /// </summary>
+[ResultType(typeof(GetPdfPageInfoResult))]
 public class GetPdfPageInfoHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -17,29 +20,27 @@ public class GetPdfPageInfoHandler : OperationHandlerBase<Document>
     /// <param name="context">The document context.</param>
     /// <param name="parameters">No parameters required.</param>
     /// <returns>JSON string containing page information for all pages.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var doc = context.Document;
-        List<object> pageList = [];
+        List<PdfPageInfo> pageList = [];
 
         for (var i = 1; i <= doc.Pages.Count; i++)
         {
             var page = doc.Pages[i];
-            pageList.Add(new
+            pageList.Add(new PdfPageInfo
             {
-                pageIndex = i,
-                width = page.Rect.Width,
-                height = page.Rect.Height,
-                rotation = page.Rotate.ToString()
+                PageIndex = i,
+                Width = page.Rect.Width,
+                Height = page.Rect.Height,
+                Rotation = page.Rotate.ToString()
             });
         }
 
-        var result = new
+        return new GetPdfPageInfoResult
         {
-            count = doc.Pages.Count,
-            items = pageList
+            Count = doc.Pages.Count,
+            Items = pageList
         };
-
-        return JsonResult(result);
     }
 }

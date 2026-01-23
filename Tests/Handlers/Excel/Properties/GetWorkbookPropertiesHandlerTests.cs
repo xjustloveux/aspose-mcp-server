@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.Properties;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Excel.Properties;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Properties;
 
@@ -28,29 +29,38 @@ public class GetWorkbookPropertiesHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Test Title", result);
-        Assert.Contains("Test Author", result);
-        Assert.Contains("totalSheets", result);
+        var result = Assert.IsType<GetWorkbookPropertiesResult>(res);
+        Assert.Equal("Test Title", result.Title);
+        Assert.Equal("Test Author", result.Author);
+        Assert.True(result.TotalSheets >= 1);
     }
 
     [Fact]
     public void Execute_ReturnsAllBuiltInProperties()
     {
         var workbook = CreateEmptyWorkbook();
+        workbook.BuiltInDocumentProperties.Title = "TestTitle";
+        workbook.BuiltInDocumentProperties.Subject = "TestSubject";
+        workbook.BuiltInDocumentProperties.Author = "TestAuthor";
+        workbook.BuiltInDocumentProperties.Keywords = "TestKeywords";
+        workbook.BuiltInDocumentProperties.Comments = "TestComments";
+        workbook.BuiltInDocumentProperties.Category = "TestCategory";
+        workbook.BuiltInDocumentProperties.Company = "TestCompany";
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("title", result);
-        Assert.Contains("subject", result);
-        Assert.Contains("author", result);
-        Assert.Contains("keywords", result);
-        Assert.Contains("comments", result);
-        Assert.Contains("category", result);
-        Assert.Contains("company", result);
+        var result = Assert.IsType<GetWorkbookPropertiesResult>(res);
+        Assert.Equal("TestTitle", result.Title);
+        Assert.Equal("TestSubject", result.Subject);
+        Assert.Equal("TestAuthor", result.Author);
+        Assert.Equal("TestKeywords", result.Keywords);
+        Assert.Equal("TestComments", result.Comments);
+        Assert.Equal("TestCategory", result.Category);
+        Assert.Equal("TestCompany", result.Company);
     }
 
     [Fact]
@@ -61,11 +71,11 @@ public class GetWorkbookPropertiesHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("customProperties", result);
-        Assert.Contains("CustomProp", result);
-        Assert.Contains("CustomValue", result);
+        var result = Assert.IsType<GetWorkbookPropertiesResult>(res);
+        Assert.NotNull(result.CustomProperties);
+        Assert.Contains(result.CustomProperties, p => p is { Name: "CustomProp", Value: "CustomValue" });
     }
 
     [Fact]
@@ -75,10 +85,11 @@ public class GetWorkbookPropertiesHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("created", result);
-        Assert.Contains("modified", result);
+        var result = Assert.IsType<GetWorkbookPropertiesResult>(res);
+        Assert.NotNull(result.Created);
+        Assert.NotNull(result.Modified);
     }
 
     #endregion

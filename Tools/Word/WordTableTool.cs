@@ -1,8 +1,9 @@
 ﻿using System.ComponentModel;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
@@ -11,6 +12,7 @@ namespace AsposeMcpServer.Tools.Word;
 ///     Unified tool for managing tables in Word documents.
 ///     Dispatches operations to specialized handlers.
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Word.Table")]
 [McpServerToolType]
 public class WordTableTool
 {
@@ -117,7 +119,14 @@ public class WordTableTool
     /// <param name="heightRule">Height rule (for set_row_height).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "word_table")]
+    [McpServerTool(
+        Name = "word_table",
+        Title = "Word Table Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(
         @"Manage tables in Word documents. Supports 16 operations: create, delete, get, insert_row, delete_row, insert_column, delete_column, merge_cells, split_cell, edit_cell_format, move_table, copy_table, get_structure, set_border, set_column_width, set_row_height.
 
@@ -135,7 +144,7 @@ Notes:
 - Use sectionIndex to specify which section's tables to work with
 - cellColors format: [[row, col, '#RRGGBB'], ...] for per-cell coloring
 - mergeCells format: [{startRow, endRow, startCol, endCol}, ...] for batch merging")]
-    public string Execute(
+    public object Execute(
         [Description(
             "Operation: create, delete, get, insert_row, delete_row, insert_column, delete_column, merge_cells, split_cell, edit_cell_format, move_table, copy_table, get_structure, set_border, set_column_width, set_row_height")]
         string operation,
@@ -299,7 +308,7 @@ Notes:
         if (operationContext.IsModified)
             ctx.Save(effectiveOutputPath);
 
-        return AppendOutputMessage(result, ctx, effectiveOutputPath);
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, effectiveOutputPath);
     }
 
     /// <summary>
@@ -386,16 +395,5 @@ Notes:
         parameters.Set("heightRule", heightRule);
 
         return parameters;
-    }
-
-    /// <summary>
-    ///     Appends output message to result.
-    /// </summary>
-    private static string AppendOutputMessage(string result, DocumentContext<Document> ctx, string? outputPath)
-    {
-        var outputMessage = ctx.GetOutputMessage(outputPath);
-        if (!string.IsNullOrEmpty(outputMessage) && !result.Contains(outputMessage))
-            return result + "\n" + outputMessage;
-        return result;
     }
 }

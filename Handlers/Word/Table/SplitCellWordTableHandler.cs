@@ -1,6 +1,8 @@
 using Aspose.Words;
 using Aspose.Words.Tables;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.Table;
@@ -8,6 +10,7 @@ namespace AsposeMcpServer.Handlers.Word.Table;
 /// <summary>
 ///     Handler for splitting cells in Word document tables.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SplitCellWordTableHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -24,7 +27,7 @@ public class SplitCellWordTableHandler : OperationHandlerBase<Document>
     /// <returns>Success message with split dimensions.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or indices are out of range.</exception>
     /// <exception cref="InvalidOperationException">Thrown when trying to split a merged cell.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractSplitCellParameters(parameters);
 
@@ -63,8 +66,11 @@ public class SplitCellWordTableHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success(
-            $"Successfully split cell [{p.RowIndex}, {p.ColumnIndex}] into {p.SplitRows} rows x {p.SplitCols} columns.");
+        return new SuccessResult
+        {
+            Message =
+                $"Successfully split cell [{p.RowIndex}, {p.ColumnIndex}] into {p.SplitRows} rows x {p.SplitCols} columns."
+        };
     }
 
     /// <summary>

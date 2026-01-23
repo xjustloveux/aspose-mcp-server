@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.Sheet;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Sheet;
 
@@ -54,9 +55,11 @@ public class HideExcelSheetHandlerTests : ExcelHandlerTestBase
             { "sheetIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("hidden", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("hidden", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.False(workbook.Worksheets[0].IsVisible);
         AssertModified(context);
     }
@@ -98,9 +101,11 @@ public class HideExcelSheetHandlerTests : ExcelHandlerTestBase
             { "sheetIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("shown", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("shown", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(workbook.Worksheets[0].IsVisible);
         AssertModified(context);
     }
@@ -169,10 +174,12 @@ public class HideExcelSheetHandlerTests : ExcelHandlerTestBase
             { "sheetIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Sheet1", result);
-        Assert.Contains("hidden", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Sheet1", result.Message);
+        Assert.Contains("hidden", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -187,10 +194,12 @@ public class HideExcelSheetHandlerTests : ExcelHandlerTestBase
             { "sheetIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Sheet1", result);
-        Assert.Contains("shown", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Sheet1", result.Message);
+        Assert.Contains("shown", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

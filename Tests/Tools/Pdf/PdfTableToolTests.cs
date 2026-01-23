@@ -1,6 +1,7 @@
-using Aspose.Pdf;
+﻿using Aspose.Pdf;
 using Aspose.Pdf.Text;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Pdf;
 
 namespace AsposeMcpServer.Tests.Tools.Pdf;
@@ -41,7 +42,8 @@ public class PdfTableToolTests : PdfTestBase
             pageIndex: 1, rows: 3, columns: 3);
 
         Assert.True(File.Exists(outputPath));
-        Assert.StartsWith("Added table (3 rows x 3 columns) to page 1", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Added table (3 rows x 3 columns) to page 1", data.Message);
 
         using var outputDoc = new Document(outputPath);
         var tableAbsorber = new TableAbsorber();
@@ -54,13 +56,14 @@ public class PdfTableToolTests : PdfTestBase
     {
         var pdfPath = CreatePdfDocument("test_add_data.pdf");
         var outputPath = CreateTestFilePath("test_add_data_output.pdf");
-        var data = new[] { new[] { "A1", "B1" }, new[] { "A2", "B2" } };
+        var tableData = new[] { new[] { "A1", "B1" }, new[] { "A2", "B2" } };
 
         var result = _tool.Execute("add", pdfPath, outputPath: outputPath,
-            pageIndex: 1, rows: 2, columns: 2, data: data);
+            pageIndex: 1, rows: 2, columns: 2, data: tableData);
 
         Assert.True(File.Exists(outputPath));
-        Assert.StartsWith("Added table (2 rows x 2 columns) to page 1", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Added table (2 rows x 2 columns) to page 1", data.Message);
     }
 
     #endregion
@@ -78,8 +81,8 @@ public class PdfTableToolTests : PdfTestBase
 
         var result = _tool.Execute(operation, pdfPath, outputPath: outputPath,
             pageIndex: 1, rows: 2, columns: 2);
-
-        Assert.StartsWith("Added table (2 rows x 2 columns) to page 1", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Added table (2 rows x 2 columns) to page 1", data.Message);
     }
 
     [Fact]
@@ -102,9 +105,10 @@ public class PdfTableToolTests : PdfTestBase
 
         var result = _tool.Execute("add", sessionId: sessionId,
             pageIndex: 1, rows: 3, columns: 3);
-
-        Assert.StartsWith("Added table (3 rows x 3 columns) to page 1", result);
-        Assert.Contains(sessionId, result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Added table (3 rows x 3 columns) to page 1", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var document = SessionManager.GetDocument<Document>(sessionId);
         Assert.NotNull(document);
 
@@ -129,8 +133,8 @@ public class PdfTableToolTests : PdfTestBase
 
         var result = _tool.Execute("add", pdfPath1, sessionId,
             pageIndex: 1, rows: 2, columns: 2);
-
-        Assert.Contains(sessionId, result);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var document = SessionManager.GetDocument<Document>(sessionId);
         Assert.NotNull(document);
     }

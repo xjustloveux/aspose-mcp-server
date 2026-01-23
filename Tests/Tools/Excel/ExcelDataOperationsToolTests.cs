@@ -1,6 +1,8 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using Aspose.Cells;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Excel.DataOperations;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Excel;
 
 namespace AsposeMcpServer.Tests.Tools.Excel;
@@ -96,8 +98,9 @@ public class ExcelDataOperationsToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbookWithData("test_get_content.xlsx", 3);
         var result = _tool.Execute("get_content", workbookPath, range: "A1:B2");
-        Assert.NotEmpty(result);
-        Assert.Contains("R1C1", result);
+        var data = GetResultData<GetContentResult>(result);
+        Assert.NotEmpty(data.Rows);
+        Assert.Contains(data.Rows, r => r.Values.Any(v => v?.ToString() == "R1C1"));
     }
 
     [Fact]
@@ -105,8 +108,10 @@ public class ExcelDataOperationsToolTests : ExcelTestBase
     {
         var workbookPath = CreateWorkbookWithNumericData("test_get_statistics.xlsx");
         var result = _tool.Execute("get_statistics", workbookPath, range: "A1:A3");
-        Assert.Contains("Sum", result, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("60", result);
+        var data = GetResultData<GetStatisticsResult>(result);
+        Assert.NotEmpty(data.Worksheets);
+        Assert.NotNull(data.Worksheets[0].RangeStatistics);
+        Assert.Equal(60, data.Worksheets[0].RangeStatistics!.Sum);
     }
 
     [Fact]
@@ -114,7 +119,9 @@ public class ExcelDataOperationsToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbookWithData("test_get_used_range.xlsx", 3);
         var result = _tool.Execute("get_used_range", workbookPath);
-        Assert.Contains("range", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<GetUsedRangeResult>(result);
+        Assert.NotNull(data.Range);
+        Assert.NotEmpty(data.WorksheetName);
     }
 
     #endregion
@@ -130,7 +137,8 @@ public class ExcelDataOperationsToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookForSort($"test_case_{operation}.xlsx");
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.xlsx");
         var result = _tool.Execute(operation, workbookPath, range: "A1:A3", sortColumn: 0, outputPath: outputPath);
-        Assert.StartsWith("Sorted range", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Sorted range", data.Message);
     }
 
     [Fact]
@@ -178,9 +186,10 @@ public class ExcelDataOperationsToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbook("test_session_batch_write.xlsx");
         var sessionId = OpenSession(workbookPath);
-        var data = JsonNode.Parse("{\"A1\":\"SessionValue1\",\"B1\":\"SessionValue2\"}");
-        var result = _tool.Execute("batch_write", sessionId: sessionId, data: data);
-        Assert.StartsWith("Batch write completed", result);
+        var batchData = JsonNode.Parse("{\"A1\":\"SessionValue1\",\"B1\":\"SessionValue2\"}");
+        var result = _tool.Execute("batch_write", sessionId: sessionId, data: batchData);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Batch write completed", data.Message);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.Equal("SessionValue1", workbook.Worksheets[0].Cells["A1"].Value?.ToString());
         Assert.Equal("SessionValue2", workbook.Worksheets[0].Cells["B1"].Value?.ToString());
@@ -192,7 +201,9 @@ public class ExcelDataOperationsToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbookWithData("test_session_get_content.xlsx", 3);
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("get_content", sessionId: sessionId, range: "A1:B2");
-        Assert.Contains("R1C1", result);
+        var data = GetResultData<GetContentResult>(result);
+        Assert.NotEmpty(data.Rows);
+        Assert.Contains(data.Rows, r => r.Values.Any(v => v?.ToString() == "R1C1"));
     }
 
     [Fact]
@@ -201,7 +212,10 @@ public class ExcelDataOperationsToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithNumericData("test_session_get_statistics.xlsx");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("get_statistics", sessionId: sessionId, range: "A1:A3");
-        Assert.Contains("sum", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<GetStatisticsResult>(result);
+        Assert.NotEmpty(data.Worksheets);
+        Assert.NotNull(data.Worksheets[0].RangeStatistics);
+        Assert.Equal(60, data.Worksheets[0].RangeStatistics!.Sum);
     }
 
     [Fact]
@@ -210,7 +224,9 @@ public class ExcelDataOperationsToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbookWithData("test_session_get_used_range.xlsx", 3);
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("get_used_range", sessionId: sessionId);
-        Assert.Contains("range", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<GetUsedRangeResult>(result);
+        Assert.NotNull(data.Range);
+        Assert.NotEmpty(data.WorksheetName);
     }
 
     [Fact]
@@ -234,7 +250,8 @@ public class ExcelDataOperationsToolTests : ExcelTestBase
 
         var sessionId = OpenSession(sessionWorkbook);
         var result = _tool.Execute("get_used_range", pathWorkbook, sessionId);
-        Assert.Contains("SessionSheet", result);
+        var data = GetResultData<GetUsedRangeResult>(result);
+        Assert.Equal("SessionSheet", data.WorksheetName);
     }
 
     #endregion

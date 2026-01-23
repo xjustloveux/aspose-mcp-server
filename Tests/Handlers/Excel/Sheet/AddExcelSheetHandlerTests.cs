@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.Sheet;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Sheet;
 
@@ -29,10 +30,12 @@ public class AddExcelSheetHandlerTests : ExcelHandlerTestBase
             { "sheetName", "TestSheet" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("TestSheet", result);
-        Assert.Contains("added", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("TestSheet", result.Message);
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -50,9 +53,11 @@ public class AddExcelSheetHandlerTests : ExcelHandlerTestBase
             { "sheetName", "NewSheet" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("NewSheet", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("NewSheet", result.Message);
         Assert.Equal(initialCount + 1, workbook.Worksheets.Count);
         AssertModified(context);
     }
@@ -70,9 +75,11 @@ public class AddExcelSheetHandlerTests : ExcelHandlerTestBase
             { "sheetName", sheetName }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains(sheetName, result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains(sheetName, result.Message);
         Assert.NotNull(workbook.Worksheets[sheetName]);
         AssertModified(context);
     }

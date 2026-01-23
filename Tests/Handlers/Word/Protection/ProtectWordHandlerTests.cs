@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Protection;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Protection;
 
@@ -30,9 +31,11 @@ public class ProtectWordHandlerTests : WordHandlerTestBase
             { "password", "test123" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("protected", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("protected", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.NotEqual(ProtectionType.NoProtection, doc.ProtectionType);
         AssertModified(context);
     }
@@ -83,9 +86,11 @@ public class ProtectWordHandlerTests : WordHandlerTestBase
             { "protectionType", "AllowOnlyComments" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("AllowOnlyComments", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("AllowOnlyComments", result.Message);
     }
 
     #endregion
@@ -100,7 +105,7 @@ public class ProtectWordHandlerTests : WordHandlerTestBase
         var parameters = CreateEmptyParameters();
 
         var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
-        Assert.Contains("password", ex.Message.ToLower());
+        Assert.Contains("password", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -114,7 +119,7 @@ public class ProtectWordHandlerTests : WordHandlerTestBase
         });
 
         var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
-        Assert.Contains("password", ex.Message.ToLower());
+        Assert.Contains("password", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -128,7 +133,7 @@ public class ProtectWordHandlerTests : WordHandlerTestBase
         });
 
         var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
-        Assert.Contains("password", ex.Message.ToLower());
+        Assert.Contains("password", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

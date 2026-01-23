@@ -1,7 +1,9 @@
 ﻿using System.ComponentModel;
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Pdf;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Pdf;
 /// <summary>
 ///     Tool for getting content and statistics from PDF documents
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Pdf.Info")]
 [McpServerToolType]
 public class PdfInfoTool
 {
@@ -49,7 +52,14 @@ public class PdfInfoTool
     /// <param name="maxPages">Maximum pages to extract (for get_content without pageIndex, default: 100).</param>
     /// <returns>A JSON string containing content or statistics data.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "pdf_info")]
+    [McpServerTool(
+        Name = "pdf_info",
+        Title = "PDF Info Operations",
+        Destructive = false,
+        Idempotent = true,
+        OpenWorld = false,
+        ReadOnly = true,
+        UseStructuredContent = true)]
     [Description(@"Get content and statistics from PDF documents. Supports 2 operations: get_content, get_statistics.
 
 Usage examples:
@@ -57,7 +67,7 @@ Usage examples:
 - Get content from all pages: pdf_info(operation='get_content', path='doc.pdf')
 - Get content with limit: pdf_info(operation='get_content', path='doc.pdf', maxPages=50)
 - Get statistics: pdf_info(operation='get_statistics', path='doc.pdf')")]
-    public string Execute(
+    public object Execute(
         [Description(@"Operation to perform.
 - 'get_content': Get text content from page(s) (required params: path)
 - 'get_statistics': Get document statistics (required params: path)")]
@@ -86,7 +96,8 @@ Usage examples:
             SourcePath = path
         };
 
-        return handler.Execute(operationContext, parameters);
+        var result = handler.Execute(operationContext, parameters);
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, null);
     }
 
     /// <summary>

@@ -1,6 +1,6 @@
 using Aspose.Words;
 using AsposeMcpServer.Core.Session;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Core.Session;
 

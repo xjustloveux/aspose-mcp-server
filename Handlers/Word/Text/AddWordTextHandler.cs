@@ -1,6 +1,8 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.Text;
@@ -8,6 +10,7 @@ namespace AsposeMcpServer.Handlers.Word.Text;
 /// <summary>
 ///     Handler for adding text to Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddWordTextHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -23,7 +26,7 @@ public class AddWordTextHandler : OperationHandlerBase<Document>
     /// </param>
     /// <returns>Success message with formatting details.</returns>
     /// <exception cref="ArgumentException">Thrown when text parameter is missing.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractAddWordTextParameters(parameters);
 
@@ -210,7 +213,7 @@ public class AddWordTextHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="p">The text parameters containing formatting settings.</param>
     /// <returns>The formatted result message.</returns>
-    private static string BuildResultMessage(AddWordTextParameters p)
+    private static SuccessResult BuildResultMessage(AddWordTextParameters p)
     {
         List<string> formatInfo = [];
         if (p.Bold == true) formatInfo.Add("bold");
@@ -220,11 +223,11 @@ public class AddWordTextHandler : OperationHandlerBase<Document>
         if (p.Superscript == true) formatInfo.Add("superscript");
         if (p.Subscript == true) formatInfo.Add("subscript");
 
-        var result = "Text added to document successfully.";
+        var message = "Text added to document successfully.";
         if (formatInfo.Count > 0)
-            result += $" Applied formats: {string.Join(", ", formatInfo)}.";
+            message += $" Applied formats: {string.Join(", ", formatInfo)}.";
 
-        return Success(result);
+        return new SuccessResult { Message = message };
     }
 
     /// <summary>

@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Filter;
 
 /// <summary>
 ///     Handler for applying auto filter to Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class ApplyExcelFilterHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class ApplyExcelFilterHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0)
     /// </param>
     /// <returns>Success message with filter details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var applyFilterParams = ExtractApplyFilterParameters(parameters);
 
@@ -33,8 +36,11 @@ public class ApplyExcelFilterHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success(
-            $"Auto filter applied to range {applyFilterParams.Range} in sheet {applyFilterParams.SheetIndex}.");
+        return new SuccessResult
+        {
+            Message =
+                $"Auto filter applied to range {applyFilterParams.Range} in sheet {applyFilterParams.SheetIndex}."
+        };
     }
 
     /// <summary>

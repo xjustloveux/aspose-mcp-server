@@ -1,8 +1,8 @@
-using System.Text.Json;
 using Aspose.Words;
 using Aspose.Words.Fields;
 using AsposeMcpServer.Handlers.Word.Field;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Word.Field;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Field;
 
@@ -45,10 +45,11 @@ public class GetFormFieldsWordHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(0, json.RootElement.GetProperty("count").GetInt32());
+        var result = Assert.IsType<GetFormFieldsWordResult>(res);
+
+        Assert.Equal(0, result.Count);
     }
 
     [Fact]
@@ -58,10 +59,11 @@ public class GetFormFieldsWordHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.GetProperty("count").GetInt32() > 0);
+        var result = Assert.IsType<GetFormFieldsWordResult>(res);
+
+        Assert.True(result.Count > 0);
     }
 
     [Fact]
@@ -71,10 +73,11 @@ public class GetFormFieldsWordHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.GetProperty("count").GetInt32() > 0);
+        var result = Assert.IsType<GetFormFieldsWordResult>(res);
+
+        Assert.True(result.Count > 0);
     }
 
     [Fact]
@@ -84,10 +87,11 @@ public class GetFormFieldsWordHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.GetProperty("count").GetInt32() > 0);
+        var result = Assert.IsType<GetFormFieldsWordResult>(res);
+
+        Assert.True(result.Count > 0);
     }
 
     #endregion

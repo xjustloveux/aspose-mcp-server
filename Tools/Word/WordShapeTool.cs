@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Word;
 /// <summary>
 ///     Tool for managing shapes (lines, textboxes, charts, etc.) in Word documents
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Word.Shape")]
 [McpServerToolType]
 public class WordShapeTool
 {
@@ -93,7 +96,14 @@ public class WordShapeTool
     /// <param name="alignment">Chart alignment (for add_chart).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "word_shape")]
+    [McpServerTool(
+        Name = "word_shape",
+        Title = "Word Shape Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(
         @"Manage shapes in Word documents. Supports 9 operations: add_line, add_textbox, get_textboxes, edit_textbox_content, set_textbox_border, add_chart, add, get, delete.
 
@@ -111,7 +121,7 @@ Usage examples:
 - Add generic shape: word_shape(operation='add', path='doc.docx', shapeType='Rectangle', width=100, height=50)
 - Get all shapes: word_shape(operation='get', path='doc.docx')
 - Delete shape: word_shape(operation='delete', path='doc.docx', shapeIndex=0)")]
-    public string Execute(
+    public object Execute(
         [Description(
             "Operation: add_line, add_textbox, get_textboxes, edit_textbox_content, set_textbox_border, add_chart, add, get, delete")]
         string operation,
@@ -225,14 +235,10 @@ Usage examples:
 
         var result = handler.Execute(operationContext, parameters);
 
-        // Read-only operations don't need to save
-        if (operation.ToLower() is "get_textboxes" or "get")
-            return result;
-
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

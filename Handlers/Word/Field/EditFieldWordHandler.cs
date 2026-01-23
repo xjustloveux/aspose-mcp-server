@@ -1,11 +1,14 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Field;
 
 /// <summary>
 ///     Handler for editing fields in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class EditFieldWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class EditFieldWordHandler : OperationHandlerBase<Document>
     ///     Optional: fieldCode, lockField, unlockField, updateField
     /// </param>
     /// <returns>Success message with edit details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractEditFieldParameters(parameters);
 
@@ -48,11 +51,11 @@ public class EditFieldWordHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        var result = $"Field #{p.FieldIndex} edited successfully\n";
-        result += $"Original field code: {oldFieldCode}\n";
+        var message = $"Field #{p.FieldIndex} edited successfully\n";
+        message += $"Original field code: {oldFieldCode}\n";
         if (changes.Count > 0)
-            result += $"Changes: {string.Join(", ", changes)}";
-        return result;
+            message += $"Changes: {string.Join(", ", changes)}";
+        return new SuccessResult { Message = message };
     }
 
     /// <summary>

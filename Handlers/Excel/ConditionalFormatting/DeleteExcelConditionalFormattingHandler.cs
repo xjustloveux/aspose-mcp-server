@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.ConditionalFormatting;
 
 /// <summary>
 ///     Handler for deleting conditional formatting from Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeleteExcelConditionalFormattingHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class DeleteExcelConditionalFormattingHandler : OperationHandlerBase<Work
     ///     Optional: sheetIndex (default: 0)
     /// </param>
     /// <returns>Success message with deletion details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var deleteParams = ExtractDeleteParameters(parameters);
 
@@ -38,8 +41,11 @@ public class DeleteExcelConditionalFormattingHandler : OperationHandlerBase<Work
 
         MarkModified(context);
 
-        return Success(
-            $"Deleted conditional formatting #{deleteParams.ConditionalFormattingIndex} (remaining: {conditionalFormattings.Count}).");
+        return new SuccessResult
+        {
+            Message =
+                $"Deleted conditional formatting #{deleteParams.ConditionalFormattingIndex} (remaining: {conditionalFormattings.Count})."
+        };
     }
 
     private static DeleteParameters ExtractDeleteParameters(OperationParameters parameters)

@@ -1,7 +1,9 @@
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Words.Tables;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.Table;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Handlers.Word.Table;
 /// <summary>
 ///     Handler for inserting rows into Word document tables.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class InsertRowWordTableHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -24,7 +27,7 @@ public class InsertRowWordTableHandler : OperationHandlerBase<Document>
     /// </param>
     /// <returns>Success message with inserted row index.</returns>
     /// <exception cref="ArgumentException">Thrown when rowIndex is missing or indices are out of range.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractInsertRowParameters(parameters);
 
@@ -64,7 +67,7 @@ public class InsertRowWordTableHandler : OperationHandlerBase<Document>
         MarkModified(context);
 
         var insertedIndex = p.InsertBefore ? p.RowIndex : p.RowIndex + 1;
-        return Success($"Successfully inserted row at index {insertedIndex}.");
+        return new SuccessResult { Message = $"Successfully inserted row at index {insertedIndex}." };
     }
 
     /// <summary>

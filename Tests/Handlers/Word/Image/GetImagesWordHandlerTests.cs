@@ -1,7 +1,7 @@
-using System.Text.Json;
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Image;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Word.Image;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Image;
 
@@ -22,7 +22,7 @@ public class GetImagesWordHandlerTests : WordHandlerTestBase
     #region Section Index Parameter
 
     [Fact]
-    public void Execute_WithAllSections_ReturnsNullSectionIndex()
+    public void Execute_WithAllSections_ReturnsNullOrOmitsSectionIndex()
     {
         var doc = CreateEmptyDocument();
         var context = CreateContext(doc);
@@ -31,11 +31,11 @@ public class GetImagesWordHandlerTests : WordHandlerTestBase
             { "sectionIndex", -1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("sectionIndex", out var sectionIndexElement));
-        Assert.Equal(JsonValueKind.Null, sectionIndexElement.ValueKind);
+        var result = Assert.IsType<GetImagesWordResult>(res);
+
+        Assert.Null(result.SectionIndex);
     }
 
     #endregion
@@ -77,27 +77,29 @@ public class GetImagesWordHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(0, json.RootElement.GetProperty("count").GetInt32());
-        Assert.True(json.RootElement.TryGetProperty("message", out var messageElement));
-        Assert.Contains("No images found", messageElement.GetString());
+        var result = Assert.IsType<GetImagesWordResult>(res);
+
+        Assert.Equal(0, result.Count);
+        Assert.NotNull(result.Message);
+        Assert.Contains("No images found", result.Message);
         AssertNotModified(context);
     }
 
     [Fact]
-    public void Execute_ReturnsValidJsonStructure()
+    public void Execute_ReturnsValidStructure()
     {
         var doc = CreateEmptyDocument();
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("count", out _));
-        Assert.True(json.RootElement.TryGetProperty("images", out _));
+        var result = Assert.IsType<GetImagesWordResult>(res);
+
+        Assert.NotNull(result.Images);
+        Assert.True(result.Count >= 0);
     }
 
     [Fact]
@@ -110,11 +112,12 @@ public class GetImagesWordHandlerTests : WordHandlerTestBase
             { "sectionIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("sectionIndex", out var sectionIndexElement));
-        Assert.Equal(0, sectionIndexElement.GetInt32());
+        var result = Assert.IsType<GetImagesWordResult>(res);
+
+        Assert.NotNull(result.SectionIndex);
+        Assert.Equal(0, result.SectionIndex);
     }
 
     #endregion
@@ -129,16 +132,16 @@ public class GetImagesWordHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(1, json.RootElement.GetProperty("count").GetInt32());
-        var images = json.RootElement.GetProperty("images");
-        Assert.Equal(1, images.GetArrayLength());
-        var firstImage = images[0];
-        Assert.True(firstImage.TryGetProperty("index", out _));
-        Assert.True(firstImage.TryGetProperty("width", out _));
-        Assert.True(firstImage.TryGetProperty("height", out _));
+        var result = Assert.IsType<GetImagesWordResult>(res);
+
+        Assert.Equal(1, result.Count);
+        Assert.Single(result.Images);
+        var firstImage = result.Images[0];
+        Assert.Equal(0, firstImage.Index);
+        Assert.True(firstImage.Width > 0);
+        Assert.True(firstImage.Height > 0);
     }
 
     [Fact]
@@ -149,12 +152,12 @@ public class GetImagesWordHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var images = json.RootElement.GetProperty("images");
-        var firstImage = images[0];
-        Assert.Equal(0, firstImage.GetProperty("index").GetInt32());
+        var result = Assert.IsType<GetImagesWordResult>(res);
+
+        var firstImage = result.Images[0];
+        Assert.Equal(0, firstImage.Index);
     }
 
     #endregion

@@ -1,13 +1,16 @@
 using System.Text.Json;
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Table;
 
 /// <summary>
 ///     Handler for adding tables to PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddPptTableHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -22,7 +25,7 @@ public class AddPptTableHandler : OperationHandlerBase<Presentation>
     ///     Optional: slideIndex (default: 0), x, y, columnWidth, rowHeight, data.
     /// </param>
     /// <returns>Success message with table creation details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var tableParams = ExtractTableParameters(parameters);
         ValidateTableParameters(tableParams);
@@ -36,8 +39,11 @@ public class AddPptTableHandler : OperationHandlerBase<Presentation>
         MarkModified(context);
 
         var shapeIndex = slide.Shapes.Count - 1;
-        return Success(
-            $"Table added to slide {tableParams.SlideIndex} with {tableParams.Rows} rows and {tableParams.Columns} columns (shapeIndex: {shapeIndex}).");
+        return new SuccessResult
+        {
+            Message =
+                $"Table added to slide {tableParams.SlideIndex} with {tableParams.Rows} rows and {tableParams.Columns} columns (shapeIndex: {shapeIndex})."
+        };
     }
 
     /// <summary>

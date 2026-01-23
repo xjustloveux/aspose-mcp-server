@@ -1,7 +1,7 @@
 using Aspose.Cells;
 using Aspose.Slides;
 using Aspose.Words;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
 using LoadOptions = Aspose.Words.Loading.LoadOptions;
 using SaveFormat = Aspose.Slides.Export.SaveFormat;
 
@@ -67,6 +67,11 @@ public class DocumentContext<T> : IDisposable
     ///     Whether this context is from a session
     /// </summary>
     public bool IsSession => _sessionId != null;
+
+    /// <summary>
+    ///     The session ID (null for file mode)
+    /// </summary>
+    public string? SessionId => _sessionId;
 
     /// <summary>
     ///     The source file path (null for session mode)
@@ -148,19 +153,6 @@ public class DocumentContext<T> : IDisposable
 
         var savePath = outputPath ?? SourcePath ?? throw new InvalidOperationException("No output path available");
         SaveDocument(Document, savePath);
-    }
-
-    /// <summary>
-    ///     Gets the output message based on context type
-    /// </summary>
-    /// <param name="outputPath">Output path (optional)</param>
-    /// <returns>Message describing where changes were applied or saved</returns>
-    public string GetOutputMessage(string? outputPath = null)
-    {
-        if (_sessionId != null)
-            return $"Changes applied to session {_sessionId}. Use document_session(operation='save') to save to disk.";
-
-        return $"Output: {outputPath ?? SourcePath}";
     }
 
     /// <summary>

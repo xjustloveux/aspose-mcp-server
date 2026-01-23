@@ -2,15 +2,19 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using Aspose.Slides;
 using Aspose.Slides.Export;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.FileOperations;
 
 /// <summary>
 ///     Handler for converting PowerPoint presentations to other formats.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class ConvertPresentationHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -25,7 +29,7 @@ public class ConvertPresentationHandler : OperationHandlerBase<Presentation>
     ///     Optional: inputPath, path, sessionId, slideIndex
     /// </param>
     /// <returns>Success message with output path.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractConvertParameters(parameters);
 
@@ -70,8 +74,11 @@ public class ConvertPresentationHandler : OperationHandlerBase<Presentation>
 #pragma warning restore CA1416
 
             var formatName = format == "png" ? "PNG" : "JPEG";
-            return Success(
-                $"Slide {p.SlideIndex} from {sourceDescription} converted to {formatName}. Output: {p.OutputPath}");
+            return new SuccessResult
+            {
+                Message =
+                    $"Slide {p.SlideIndex} from {sourceDescription} converted to {formatName}. Output: {p.OutputPath}"
+            };
         }
 
         var saveFormat = format switch
@@ -88,8 +95,11 @@ public class ConvertPresentationHandler : OperationHandlerBase<Presentation>
 
         presentation.Save(p.OutputPath, saveFormat);
 
-        return Success(
-            $"Presentation from {sourceDescription} converted to {format.ToUpper()} format. Output: {p.OutputPath}");
+        return new SuccessResult
+        {
+            Message =
+                $"Presentation from {sourceDescription} converted to {format.ToUpper()} format. Output: {p.OutputPath}"
+        };
     }
 
     /// <summary>

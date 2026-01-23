@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 /// <summary>
 ///     Unified tool for managing PowerPoint sections (add, rename, delete, get).
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.PowerPoint.Section")]
 [McpServerToolType]
 public class PptSectionTool
 {
@@ -55,7 +58,14 @@ public class PptSectionTool
     /// <param name="keepSlides">Keep slides in presentation (optional, for delete, default: true).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "ppt_section")]
+    [McpServerTool(
+        Name = "ppt_section",
+        Title = "PowerPoint Section Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage PowerPoint sections. Supports 4 operations: add, rename, delete, get.
 
 Warning: If outputPath is not provided for add/rename/delete operations, the original file will be overwritten.
@@ -65,7 +75,7 @@ Usage examples:
 - Rename section: ppt_section(operation='rename', path='presentation.pptx', sectionIndex=0, newName='New Section')
 - Delete section: ppt_section(operation='delete', path='presentation.pptx', sectionIndex=0)
 - Get sections: ppt_section(operation='get', path='presentation.pptx')")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: add, rename, delete, get")]
         string operation,
         [Description("Presentation file path (required if no sessionId)")]
@@ -104,12 +114,12 @@ Usage examples:
         var result = handler.Execute(operationContext, parameters);
 
         if (string.Equals(operation, "get", StringComparison.OrdinalIgnoreCase))
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

@@ -1,12 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.PowerPoint.Background;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Background;
 
 /// <summary>
 ///     Handler for getting PowerPoint slide background information.
 /// </summary>
+[ResultType(typeof(GetBackgroundResult))]
 public class GetPptBackgroundHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class GetPptBackgroundHandler : OperationHandlerBase<Presentation>
     ///     Optional: slideIndex (default: 0)
     /// </param>
     /// <returns>JSON string containing background information.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractGetBackgroundParameters(parameters);
 
@@ -49,17 +52,17 @@ public class GetPptBackgroundHandler : OperationHandlerBase<Presentation>
                 // Ignore: color extraction may fail for non-solid fills or unsupported color formats
             }
 
-        var result = new
+        var result = new GetBackgroundResult
         {
-            slideIndex = p.SlideIndex,
-            hasBackground = background != null,
-            fillType = fillFormat?.FillType.ToString(),
-            color = colorHex,
-            opacity,
-            isPictureFill = fillFormat?.FillType == FillType.Picture
+            SlideIndex = p.SlideIndex,
+            HasBackground = background != null,
+            FillType = fillFormat?.FillType.ToString(),
+            Color = colorHex,
+            Opacity = opacity,
+            IsPictureFill = fillFormat?.FillType == FillType.Picture
         };
 
-        return JsonResult(result);
+        return result;
     }
 
     /// <summary>

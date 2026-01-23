@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Pdf.Text;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Text;
 
@@ -31,9 +32,11 @@ public class AddPdfTextHandlerTests : PdfHandlerTestBase
             { "y", 500.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -52,10 +55,12 @@ public class AddPdfTextHandlerTests : PdfHandlerTestBase
             { "pageIndex", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("2", result);
-        Assert.Contains("added", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("2", result.Message);
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -72,10 +77,12 @@ public class AddPdfTextHandlerTests : PdfHandlerTestBase
             { "text", "Hello World" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("1", result.Message);
         AssertModified(context);
     }
 
@@ -92,9 +99,11 @@ public class AddPdfTextHandlerTests : PdfHandlerTestBase
             { "text", text }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -113,9 +122,11 @@ public class AddPdfTextHandlerTests : PdfHandlerTestBase
             { "pageIndex", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("2", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("2", result.Message);
         AssertModified(context);
     }
 
@@ -133,9 +144,11 @@ public class AddPdfTextHandlerTests : PdfHandlerTestBase
             { "pageIndex", pageIndex }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains(pageIndex.ToString(), result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains(pageIndex.ToString(), result.Message);
     }
 
     [Fact]
@@ -148,9 +161,11 @@ public class AddPdfTextHandlerTests : PdfHandlerTestBase
             { "text", "First Page" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("1", result.Message);
     }
 
     #endregion
@@ -169,9 +184,11 @@ public class AddPdfTextHandlerTests : PdfHandlerTestBase
             { "fontSize", 16.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -186,9 +203,11 @@ public class AddPdfTextHandlerTests : PdfHandlerTestBase
             { "color", "Red" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 

@@ -1,6 +1,7 @@
 using Aspose.Pdf;
 using AsposeMcpServer.Handlers.Pdf.Page;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Page;
 
@@ -34,9 +35,11 @@ public class RotatePdfPageHandlerTests : PdfHandlerTestBase
             { "pageIndices", MultiplePageIndices }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("3", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("3", result.Message);
         Assert.Equal(Rotation.on180, doc.Pages[1].Rotate);
         Assert.Equal(Rotation.None, doc.Pages[2].Rotate);
         Assert.Equal(Rotation.on180, doc.Pages[3].Rotate);
@@ -60,9 +63,11 @@ public class RotatePdfPageHandlerTests : PdfHandlerTestBase
             { "pageIndex", 100 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Rotated", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Rotated", result.Message);
     }
 
     #endregion
@@ -83,10 +88,12 @@ public class RotatePdfPageHandlerTests : PdfHandlerTestBase
             { "rotation", rotation }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Rotated", result);
-        Assert.Contains(rotation.ToString(), result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Rotated", result.Message);
+        Assert.Contains(rotation.ToString(), result.Message);
         AssertModified(context);
     }
 
@@ -100,9 +107,11 @@ public class RotatePdfPageHandlerTests : PdfHandlerTestBase
             { "rotation", 90 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("3", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("3", result.Message);
         Assert.Equal(Rotation.on90, doc.Pages[1].Rotate);
         Assert.Equal(Rotation.on90, doc.Pages[2].Rotate);
         Assert.Equal(Rotation.on90, doc.Pages[3].Rotate);
@@ -127,9 +136,11 @@ public class RotatePdfPageHandlerTests : PdfHandlerTestBase
             { "pageIndex", pageIndex }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("1", result.Message);
         Assert.Equal(Rotation.on90, doc.Pages[pageIndex].Rotate);
         AssertModified(context);
     }

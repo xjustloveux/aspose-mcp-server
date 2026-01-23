@@ -1,6 +1,7 @@
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Table;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Table;
 
@@ -31,11 +32,13 @@ public class AddPptTableHandlerTests : PptHandlerTestBase
             { "columns", 4 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Table added", result);
-        Assert.Contains("3 rows", result);
-        Assert.Contains("4 columns", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Table added", result.Message);
+        Assert.Contains("3 rows", result.Message);
+        Assert.Contains("4 columns", result.Message);
         AssertModified(context);
     }
 
@@ -50,9 +53,11 @@ public class AddPptTableHandlerTests : PptHandlerTestBase
             { "columns", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("shapeIndex", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("shapeIndex", result.Message);
     }
 
     [Fact]
@@ -107,9 +112,11 @@ public class AddPptTableHandlerTests : PptHandlerTestBase
             { "columns", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("slide 1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("slide 1", result.Message);
     }
 
     [Fact]
@@ -123,9 +130,11 @@ public class AddPptTableHandlerTests : PptHandlerTestBase
             { "columns", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("slide 0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("slide 0", result.Message);
     }
 
     #endregion

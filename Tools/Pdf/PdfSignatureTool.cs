@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Pdf;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Pdf;
 /// <summary>
 ///     Tool for managing digital signatures in PDF documents (sign, delete, get)
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Pdf.Signature")]
 [McpServerToolType]
 public class PdfSignatureTool
 {
@@ -60,7 +63,14 @@ public class PdfSignatureTool
     /// <param name="imagePath">Path to signature appearance image (for sign, optional).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "pdf_signature")]
+    [McpServerTool(
+        Name = "pdf_signature",
+        Title = "PDF Signature Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage digital signatures in PDF documents. Supports 3 operations: sign, delete, get.
 
 Usage examples:
@@ -69,7 +79,7 @@ Usage examples:
 - Sign with image: pdf_signature(operation='sign', path='doc.pdf', certificatePath='cert.pfx', certificatePassword='password', imagePath='stamp.png')
 - Delete signature: pdf_signature(operation='delete', path='doc.pdf', signatureIndex=0)
 - Get signatures: pdf_signature(operation='get', path='doc.pdf')")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: sign, delete, get")]
         string operation,
         [Description("PDF file path (required if no sessionId)")]
@@ -121,12 +131,12 @@ Usage examples:
         var result = handler.Execute(operationContext, parameters);
 
         if (string.Equals(operation, "get", StringComparison.OrdinalIgnoreCase))
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

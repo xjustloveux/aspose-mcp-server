@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Excel.Chart;
 
 namespace AsposeMcpServer.Handlers.Excel.Chart;
 
 /// <summary>
 ///     Handler for getting charts from Excel worksheets.
 /// </summary>
+[ResultType(typeof(GetChartsResult))]
 public class GetExcelChartsHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class GetExcelChartsHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex
     /// </param>
     /// <returns>JSON string containing chart information.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var getParams = ExtractGetParameters(parameters);
 
@@ -29,65 +32,60 @@ public class GetExcelChartsHandler : OperationHandlerBase<Workbook>
         var charts = worksheet.Charts;
 
         if (charts.Count == 0)
-        {
-            var emptyResult = new
+            return new GetChartsResult
             {
-                count = 0,
-                worksheetName = worksheet.Name,
-                items = Array.Empty<object>(),
-                message = "No charts found"
+                Count = 0,
+                WorksheetName = worksheet.Name,
+                Items = [],
+                Message = "No charts found"
             };
-            return JsonResult(emptyResult);
-        }
 
-        List<object> chartList = [];
+        List<ChartInfo> chartList = [];
         for (var i = 0; i < charts.Count; i++)
         {
             var chart = charts[i];
-            List<object> seriesList = [];
+            List<ChartSeriesInfo> seriesList = [];
 
             if (chart.NSeries is { Count: > 0 })
                 for (var j = 0; j < chart.NSeries.Count && j < 5; j++)
                 {
                     var series = chart.NSeries[j];
-                    seriesList.Add(new
+                    seriesList.Add(new ChartSeriesInfo
                     {
-                        index = j,
-                        name = series.Name ?? "(no name)",
-                        valuesRange = series.Values ?? "",
-                        categoryData = chart.NSeries.CategoryData
+                        Index = j,
+                        Name = series.Name ?? "(no name)",
+                        ValuesRange = series.Values ?? "",
+                        CategoryData = chart.NSeries.CategoryData
                     });
                 }
 
-            chartList.Add(new
+            chartList.Add(new ChartInfo
             {
-                index = i,
-                name = chart.Name ?? "(no name)",
-                type = chart.Type.ToString(),
-                location = new
+                Index = i,
+                Name = chart.Name ?? "(no name)",
+                Type = chart.Type.ToString(),
+                Location = new ChartLocation
                 {
-                    upperLeftRow = chart.ChartObject.UpperLeftRow,
-                    lowerRightRow = chart.ChartObject.LowerRightRow,
-                    upperLeftColumn = chart.ChartObject.UpperLeftColumn,
-                    lowerRightColumn = chart.ChartObject.LowerRightColumn
+                    UpperLeftRow = chart.ChartObject.UpperLeftRow,
+                    LowerRightRow = chart.ChartObject.LowerRightRow,
+                    UpperLeftColumn = chart.ChartObject.UpperLeftColumn,
+                    LowerRightColumn = chart.ChartObject.LowerRightColumn
                 },
-                width = chart.ChartObject.Width,
-                height = chart.ChartObject.Height,
-                title = chart.Title?.Text,
-                legendEnabled = chart.Legend != null,
-                seriesCount = chart.NSeries?.Count ?? 0,
-                series = seriesList
+                Width = chart.ChartObject.Width,
+                Height = chart.ChartObject.Height,
+                Title = chart.Title?.Text,
+                LegendEnabled = chart.Legend != null,
+                SeriesCount = chart.NSeries?.Count ?? 0,
+                Series = seriesList
             });
         }
 
-        var result = new
+        return new GetChartsResult
         {
-            count = charts.Count,
-            worksheetName = worksheet.Name,
-            items = chartList
+            Count = charts.Count,
+            WorksheetName = worksheet.Name,
+            Items = chartList
         };
-
-        return JsonResult(result);
     }
 
     /// <summary>

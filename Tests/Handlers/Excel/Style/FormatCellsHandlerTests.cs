@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.Style;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Style;
 
@@ -50,9 +51,11 @@ public class FormatCellsHandlerTests : ExcelHandlerTestBase
             { "verticalAlignment", alignment }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("formatted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("formatted", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -72,9 +75,11 @@ public class FormatCellsHandlerTests : ExcelHandlerTestBase
             { "horizontalAlignment", alignment }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("formatted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("formatted", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -92,9 +97,11 @@ public class FormatCellsHandlerTests : ExcelHandlerTestBase
             { "bold", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("formatted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("formatted", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -114,9 +121,11 @@ public class FormatCellsHandlerTests : ExcelHandlerTestBase
             { "bold", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("formatted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("formatted", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -134,9 +143,11 @@ public class FormatCellsHandlerTests : ExcelHandlerTestBase
             { "bold", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("formatted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("formatted", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -151,9 +162,11 @@ public class FormatCellsHandlerTests : ExcelHandlerTestBase
             { "fontName", "Arial" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("formatted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("formatted", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -167,9 +180,11 @@ public class FormatCellsHandlerTests : ExcelHandlerTestBase
             { "fontSize", 14 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("formatted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("formatted", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -183,9 +198,11 @@ public class FormatCellsHandlerTests : ExcelHandlerTestBase
             { "backgroundColor", "#FF0000" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("formatted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("formatted", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -199,9 +216,11 @@ public class FormatCellsHandlerTests : ExcelHandlerTestBase
             { "borderStyle", "thin" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("formatted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("formatted", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -215,9 +234,11 @@ public class FormatCellsHandlerTests : ExcelHandlerTestBase
             { "horizontalAlignment", "center" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("formatted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("formatted", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -252,9 +273,11 @@ public class FormatCellsHandlerTests : ExcelHandlerTestBase
             { "backgroundColor", "#FFFF00" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("formatted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("formatted", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -270,9 +293,11 @@ public class FormatCellsHandlerTests : ExcelHandlerTestBase
             { "patternColor", "#0000FF" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("formatted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("formatted", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -290,9 +315,11 @@ public class FormatCellsHandlerTests : ExcelHandlerTestBase
             { "numberFormat", "#,##0.00" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("formatted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("formatted", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -306,9 +333,11 @@ public class FormatCellsHandlerTests : ExcelHandlerTestBase
             { "numberFormat", "4" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("formatted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("formatted", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -333,9 +362,11 @@ public class FormatCellsHandlerTests : ExcelHandlerTestBase
             { "borderStyle", borderStyle }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("formatted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("formatted", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -350,9 +381,11 @@ public class FormatCellsHandlerTests : ExcelHandlerTestBase
             { "borderColor", "#FF0000" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("formatted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("formatted", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -370,9 +403,11 @@ public class FormatCellsHandlerTests : ExcelHandlerTestBase
             { "italic", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("formatted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("formatted", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -386,9 +421,11 @@ public class FormatCellsHandlerTests : ExcelHandlerTestBase
             { "fontColor", "#0000FF" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("formatted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("formatted", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

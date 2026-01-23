@@ -1,12 +1,15 @@
 using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.Link;
 
 /// <summary>
 ///     Handler for deleting links from PDF documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeletePdfLinkHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class DeletePdfLinkHandler : OperationHandlerBase<Document>
     ///     Required: pageIndex, linkIndex.
     /// </param>
     /// <returns>Success message with deletion details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractDeleteParameters(parameters);
 
@@ -43,7 +46,7 @@ public class DeletePdfLinkHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Link {p.LinkIndex} deleted from page {p.PageIndex}.");
+        return new SuccessResult { Message = $"Link {p.LinkIndex} deleted from page {p.PageIndex}." };
     }
 
     /// <summary>

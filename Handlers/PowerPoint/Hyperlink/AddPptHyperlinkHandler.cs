@@ -1,12 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Hyperlink;
 
 /// <summary>
 ///     Handler for adding hyperlinks to PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddPptHyperlinkHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class AddPptHyperlinkHandler : OperationHandlerBase<Presentation>
     ///     Optional: shapeIndex, text, linkText, url, slideTargetIndex, x, y, width, height
     /// </param>
     /// <returns>Success message with hyperlink details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractHyperlinkParameters(parameters);
         var presentation = context.Document;
@@ -33,7 +36,7 @@ public class AddPptHyperlinkHandler : OperationHandlerBase<Presentation>
         var finalDescription = ApplyHyperlink(autoShape, hyperlink, linkDescription, p.Text, p.LinkText);
 
         MarkModified(context);
-        return Success($"Hyperlink added to slide {p.SlideIndex}: {finalDescription}.");
+        return new SuccessResult { Message = $"Hyperlink added to slide {p.SlideIndex}: {finalDescription}." };
     }
 
     /// <summary>

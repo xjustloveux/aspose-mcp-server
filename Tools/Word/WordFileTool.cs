@@ -1,7 +1,9 @@
 ﻿using System.ComponentModel;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Word;
 /// <summary>
 ///     Tool for Word file operations (create, create_from_template, convert, merge, split).
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Word.File")]
 [McpServerToolType]
 public class WordFileTool
 {
@@ -74,7 +77,14 @@ public class WordFileTool
     /// <exception cref="ArgumentException">Thrown when the operation is unknown or required parameters are missing.</exception>
     /// <exception cref="InvalidOperationException">Thrown when session management is not enabled but sessionId is provided.</exception>
     /// <exception cref="FileNotFoundException">Thrown when the template file is not found.</exception>
-    [McpServerTool(Name = "word_file")]
+    [McpServerTool(
+        Name = "word_file",
+        Title = "Word File Operations",
+        Destructive = false,
+        Idempotent = true,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(
         @"Perform file operations on Word documents. Supports 5 operations: create, create_from_template, convert, merge, split.
 
@@ -92,7 +102,7 @@ Template syntax (LINQ Reporting Engine, use 'ds' as data source prefix):
 - Simple value: <<[ds.Name]>>
 - Nested object: <<[ds.Customer.Address.City]>>
 - Array iteration: <<foreach [item in ds.Items]>><<[item.Product]>>: <<[item.Price]>><</foreach>>")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: create, create_from_template, convert, merge, split")]
         string operation,
         [Description("Session ID to read document from session (for convert, split, create_from_template)")]
@@ -161,7 +171,8 @@ Template syntax (LINQ Reporting Engine, use 'ds' as data source prefix):
             OutputPath = outputPath
         };
 
-        return handler.Execute(operationContext, parameters);
+        var message = handler.Execute(operationContext, parameters);
+        return ResultHelper.FinalizeResult((dynamic)message, outputPath, sessionId);
     }
 
     /// <summary>

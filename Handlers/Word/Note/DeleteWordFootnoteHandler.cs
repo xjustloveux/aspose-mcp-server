@@ -1,12 +1,16 @@
 using Aspose.Words;
 using Aspose.Words.Notes;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Note;
 
 /// <summary>
 ///     Handler for deleting footnotes from Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeleteWordFootnoteHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,7 +24,7 @@ public class DeleteWordFootnoteHandler : OperationHandlerBase<Document>
     ///     Optional: referenceMark, noteIndex (if neither provided, deletes all footnotes)
     /// </param>
     /// <returns>Success message with deletion details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractDeleteFootnoteParameters(parameters);
 
@@ -62,7 +66,7 @@ public class DeleteWordFootnoteHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Deleted {deletedCount} footnote(s)");
+        return new SuccessResult { Message = $"Deleted {deletedCount} footnote(s)" };
     }
 
     /// <summary>

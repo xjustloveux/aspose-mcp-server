@@ -1,12 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Shape;
 
 /// <summary>
 ///     Handler for deleting shapes from PowerPoint slides.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeletePptShapeHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class DeletePptShapeHandler : OperationHandlerBase<Presentation>
     ///     Optional: slideIndex (default: 0).
     /// </param>
     /// <returns>Success message with deletion details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractDeletePptShapeParameters(parameters);
 
@@ -34,7 +37,7 @@ public class DeletePptShapeHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Shape {p.ShapeIndex} deleted from slide {p.SlideIndex}.");
+        return new SuccessResult { Message = $"Shape {p.ShapeIndex} deleted from slide {p.SlideIndex}." };
     }
 
     /// <summary>

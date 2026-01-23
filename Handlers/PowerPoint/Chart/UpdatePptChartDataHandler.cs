@@ -2,14 +2,18 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Charts;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Chart;
 
 /// <summary>
 ///     Handler for updating chart data in PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class UpdatePptChartDataHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -24,7 +28,7 @@ public class UpdatePptChartDataHandler : OperationHandlerBase<Presentation>
     ///     Optional: data, clearExisting
     /// </param>
     /// <returns>Success message with update details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractUpdateChartDataParameters(parameters);
 
@@ -35,7 +39,7 @@ public class UpdatePptChartDataHandler : OperationHandlerBase<Presentation>
         var (categories, seriesList) = ParseChartData(p.Data);
 
         if (categories == null && seriesList == null && !p.ClearExisting)
-            return Success($"No changes made to chart {p.ChartIndex} on slide {p.SlideIndex}.");
+            return new SuccessResult { Message = $"No changes made to chart {p.ChartIndex} on slide {p.SlideIndex}." };
 
         var chartData = chart.ChartData;
         var workbook = chartData.ChartDataWorkbook;
@@ -52,7 +56,7 @@ public class UpdatePptChartDataHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Chart {p.ChartIndex} data updated on slide {p.SlideIndex}.");
+        return new SuccessResult { Message = $"Chart {p.ChartIndex} data updated on slide {p.SlideIndex}." };
     }
 
     /// <summary>

@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Word.Format;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Format;
 
@@ -34,9 +35,11 @@ public class AddTabStopWordHandlerTests : WordHandlerTestBase
             { "tabAlignment", alignment }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains(alignment, result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains(alignment, result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -60,9 +63,11 @@ public class AddTabStopWordHandlerTests : WordHandlerTestBase
             { "tabLeader", leader }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains(leader, result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains(leader, result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -81,10 +86,12 @@ public class AddTabStopWordHandlerTests : WordHandlerTestBase
             { "tabPosition", 72.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("tab stop added", result.ToLower());
-        Assert.Contains("72", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("tab stop added", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("72", result.Message);
         AssertModified(context);
     }
 
@@ -100,9 +107,11 @@ public class AddTabStopWordHandlerTests : WordHandlerTestBase
             { "tabAlignment", "center" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("center", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("center", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -117,9 +126,11 @@ public class AddTabStopWordHandlerTests : WordHandlerTestBase
             { "tabLeader", "dots" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("dots", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("dots", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -137,9 +148,11 @@ public class AddTabStopWordHandlerTests : WordHandlerTestBase
             { "tabPosition", 72.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("left", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("left", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -153,9 +166,11 @@ public class AddTabStopWordHandlerTests : WordHandlerTestBase
             { "tabPosition", 72.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("none", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("none", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

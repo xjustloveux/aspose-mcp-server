@@ -1,13 +1,16 @@
 using System.Text;
 using Aspose.Pdf;
 using Aspose.Pdf.Text;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Pdf.Info;
 
 namespace AsposeMcpServer.Handlers.Pdf.Info;
 
 /// <summary>
 ///     Handler for extracting text content from PDF documents.
 /// </summary>
+[ResultType(typeof(GetPdfContentResult))]
 public class GetPdfContentHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class GetPdfContentHandler : OperationHandlerBase<Document>
     ///     Optional: pageIndex (1-based), maxPages (default: 100).
     /// </param>
     /// <returns>JSON string containing the extracted text content.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractGetContentParameters(parameters);
 
@@ -35,12 +38,12 @@ public class GetPdfContentHandler : OperationHandlerBase<Document>
             var textAbsorber = new TextAbsorber();
             document.Pages[p.PageIndex.Value].Accept(textAbsorber);
 
-            return JsonResult(new
+            return new GetPdfContentResult
             {
-                pageIndex = p.PageIndex.Value,
-                totalPages = document.Pages.Count,
-                content = textAbsorber.Text
-            });
+                PageIndex = p.PageIndex.Value,
+                TotalPages = document.Pages.Count,
+                Content = textAbsorber.Text
+            };
         }
 
         var pagesToExtract = Math.Min(p.MaxPages, document.Pages.Count);
@@ -54,13 +57,13 @@ public class GetPdfContentHandler : OperationHandlerBase<Document>
             contentBuilder.AppendLine(textAbsorber.Text);
         }
 
-        return JsonResult(new
+        return new GetPdfContentResult
         {
-            totalPages = document.Pages.Count,
-            extractedPages = pagesToExtract,
-            truncated,
-            content = contentBuilder.ToString()
-        });
+            TotalPages = document.Pages.Count,
+            ExtractedPages = pagesToExtract,
+            Truncated = truncated,
+            Content = contentBuilder.ToString()
+        };
     }
 
     /// <summary>

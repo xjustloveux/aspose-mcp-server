@@ -1,12 +1,15 @@
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.FileOperations;
 
 /// <summary>
 ///     Handler for creating a new empty PDF document.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class CreatePdfFileHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class CreatePdfFileHandler : OperationHandlerBase<Document>
     ///     Required: outputPath
     /// </param>
     /// <returns>Success message with output path.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var createParams = ExtractCreateParameters(parameters);
 
@@ -30,7 +33,7 @@ public class CreatePdfFileHandler : OperationHandlerBase<Document>
         document.Pages.Add();
         document.Save(createParams.OutputPath);
 
-        return Success($"PDF document created. Output: {createParams.OutputPath}");
+        return new SuccessResult { Message = $"PDF document created. Output: {createParams.OutputPath}" };
     }
 
     /// <summary>

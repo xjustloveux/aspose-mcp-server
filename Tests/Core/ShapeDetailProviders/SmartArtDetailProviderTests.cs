@@ -1,7 +1,7 @@
 using Aspose.Slides;
 using Aspose.Slides.SmartArt;
 using AsposeMcpServer.Core.ShapeDetailProviders;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Core.ShapeDetailProviders;
 

@@ -1,7 +1,8 @@
 using Aspose.Words;
 using Aspose.Words.Notes;
 using AsposeMcpServer.Handlers.Word.Note;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Word.Note;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Note;
 
@@ -43,10 +44,13 @@ public class GetWordEndnotesHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"count\": 0", result);
-        Assert.Contains("endnote", result.ToLower());
+        var result = Assert.IsType<GetWordNotesResult>(res);
+
+        Assert.NotNull(result);
+        Assert.Equal(0, result.Count);
+        Assert.Contains("endnote", result.NoteType.ToLower());
         AssertNotModified(context);
     }
 
@@ -57,25 +61,30 @@ public class GetWordEndnotesHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("noteIndex", result);
-        Assert.Contains("referenceMark", result);
-        Assert.Contains("text", result);
+        var result = Assert.IsType<GetWordNotesResult>(res);
+
+        Assert.NotNull(result);
+        Assert.True(result.Count >= 2);
+        Assert.NotNull(result.Notes);
+        Assert.NotEmpty(result.Notes);
+        Assert.True(result.Notes[0].NoteIndex >= 0);
     }
 
     [Fact]
-    public void Execute_ReturnsJsonFormat()
+    public void Execute_ReturnsNoteType()
     {
         var doc = CreateDocumentWithText("Sample text.");
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("{", result);
-        Assert.Contains("}", result);
-        Assert.Contains("noteType", result);
+        var result = Assert.IsType<GetWordNotesResult>(res);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.NoteType);
     }
 
     #endregion

@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Filter;
 
 /// <summary>
 ///     Handler for removing auto filter from Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class RemoveExcelFilterHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class RemoveExcelFilterHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0)
     /// </param>
     /// <returns>Success message.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var removeFilterParams = ExtractRemoveFilterParameters(parameters);
 
@@ -31,7 +34,7 @@ public class RemoveExcelFilterHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Auto filter removed from sheet {removeFilterParams.SheetIndex}.");
+        return new SuccessResult { Message = $"Auto filter removed from sheet {removeFilterParams.SheetIndex}." };
     }
 
     /// <summary>

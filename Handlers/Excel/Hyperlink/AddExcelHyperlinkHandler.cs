@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Hyperlink;
 
 /// <summary>
 ///     Handler for adding hyperlinks to Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddExcelHyperlinkHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class AddExcelHyperlinkHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0), displayText
     /// </param>
     /// <returns>Success message with hyperlink details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var addParams = ExtractAddParameters(parameters);
 
@@ -41,7 +44,7 @@ public class AddExcelHyperlinkHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Hyperlink added to {addParams.Cell}: {addParams.Url}.");
+        return new SuccessResult { Message = $"Hyperlink added to {addParams.Cell}: {addParams.Url}." };
     }
 
     private static AddParameters ExtractAddParameters(OperationParameters parameters)

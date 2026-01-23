@@ -1,12 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Shape;
 
 /// <summary>
 ///     Handler for editing shape properties in PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class EditPptShapeHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class EditPptShapeHandler : OperationHandlerBase<Presentation>
     ///     Optional: slideIndex (default: 0), x, y, width, height, rotation, name, text.
     /// </param>
     /// <returns>Success message with edit details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractEditPptShapeParameters(parameters);
 
@@ -55,7 +58,7 @@ public class EditPptShapeHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Shape {p.ShapeIndex} updated on slide {p.SlideIndex}.");
+        return new SuccessResult { Message = $"Shape {p.ShapeIndex} updated on slide {p.SlideIndex}." };
     }
 
     /// <summary>

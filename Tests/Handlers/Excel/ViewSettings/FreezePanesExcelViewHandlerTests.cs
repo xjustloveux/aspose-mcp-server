@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.ViewSettings;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.ViewSettings;
 
@@ -56,9 +57,11 @@ public class FreezePanesExcelViewHandlerTests : ExcelHandlerTestBase
             { "freezeColumn", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("frozen", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("frozen", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -72,10 +75,12 @@ public class FreezePanesExcelViewHandlerTests : ExcelHandlerTestBase
             { "freezeRow", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("frozen", result.ToLower());
-        Assert.Contains("row 2", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("frozen", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("row 2", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -89,9 +94,11 @@ public class FreezePanesExcelViewHandlerTests : ExcelHandlerTestBase
             { "unfreeze", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("unfrozen", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("unfrozen", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -107,9 +114,11 @@ public class FreezePanesExcelViewHandlerTests : ExcelHandlerTestBase
             { "freezeRow", 3 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("frozen", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("frozen", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

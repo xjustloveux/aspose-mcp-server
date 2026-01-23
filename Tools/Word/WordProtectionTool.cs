@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
@@ -10,6 +12,7 @@ namespace AsposeMcpServer.Tools.Word;
 ///     Unified tool for managing Word document protection (protect, unprotect)
 ///     Merges: WordProtectTool, WordUnprotectTool
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Word.Protection")]
 [McpServerToolType]
 public class WordProtectionTool
 {
@@ -52,7 +55,14 @@ public class WordProtectionTool
     /// <param name="protectionType">Protection type: ReadOnly, AllowOnlyComments, AllowOnlyFormFields, AllowOnlyRevisions.</param>
     /// <returns>A message indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">Thrown when password is missing for protect operation or the operation is unknown.</exception>
-    [McpServerTool(Name = "word_protection")]
+    [McpServerTool(
+        Name = "word_protection",
+        Title = "Word Protection Operations",
+        Destructive = false,
+        Idempotent = true,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Protect or unprotect a Word document. Supports 2 operations: protect, unprotect.
 
 Usage examples:
@@ -70,7 +80,7 @@ Notes:
 - Password is optional for 'unprotect' (some documents may not require password)
 - If unprotect fails, verify the password is correct
 - For encrypted documents (with open password), the same password will be used to open the file")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: protect, unprotect")]
         string operation,
         [Description("Document file path (required if no sessionId)")]
@@ -109,7 +119,7 @@ Notes:
         if (shouldSave)
             ctx.Save(effectiveOutputPath);
 
-        return ctx.IsSession ? result : $"{result}\n{ctx.GetOutputMessage(effectiveOutputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, effectiveOutputPath);
     }
 
     /// <summary>

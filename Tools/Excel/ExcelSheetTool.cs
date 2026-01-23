@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Excel;
 /// <summary>
 ///     Unified tool for managing Excel sheets (add, delete, get, rename, move, copy, hide)
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Excel.Sheet")]
 [McpServerToolType]
 public class ExcelSheetTool
 {
@@ -56,7 +59,14 @@ public class ExcelSheetTool
     /// <returns>A message indicating the result of the operation, or JSON data for get operation.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     /// <exception cref="InvalidOperationException">Thrown when attempting to delete the last worksheet.</exception>
-    [McpServerTool(Name = "excel_sheet")]
+    [McpServerTool(
+        Name = "excel_sheet",
+        Title = "Excel Sheet Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage Excel sheets. Supports 7 operations: add, delete, get, rename, move, copy, hide.
 
 Usage examples:
@@ -67,7 +77,7 @@ Usage examples:
 - Move sheet: excel_sheet(operation='move', path='book.xlsx', sheetIndex=0, insertAt=2)
 - Copy sheet: excel_sheet(operation='copy', path='book.xlsx', sheetIndex=0, newName='Copy')
 - Hide sheet: excel_sheet(operation='hide', path='book.xlsx', sheetIndex=1)")]
-    public string Execute(
+    public object Execute(
         [Description("Operation to perform: add, delete, get, rename, move, copy, hide")]
         string operation,
         [Description("Excel file path (required if no sessionId)")]
@@ -108,12 +118,12 @@ Usage examples:
         var result = handler.Execute(operationContext, parameters);
 
         if (string.Equals(operation, "get", StringComparison.OrdinalIgnoreCase))
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

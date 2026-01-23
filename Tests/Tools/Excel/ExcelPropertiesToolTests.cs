@@ -1,6 +1,7 @@
-using System.Text.Json;
-using Aspose.Cells;
-using AsposeMcpServer.Tests.Helpers;
+﻿using Aspose.Cells;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Excel.Properties;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Excel;
 
 namespace AsposeMcpServer.Tests.Tools.Excel;
@@ -26,9 +27,9 @@ public class ExcelPropertiesToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbook("test_get_workbook.xlsx");
         var result = _tool.Execute("get_workbook_properties", workbookPath);
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("title", out _));
-        Assert.True(json.RootElement.TryGetProperty("author", out _));
+        var data = GetResultData<GetWorkbookPropertiesResult>(result);
+        Assert.NotNull(data.Created);
+        Assert.NotNull(data.Modified);
     }
 
     [Fact]
@@ -38,7 +39,8 @@ public class ExcelPropertiesToolTests : ExcelTestBase
         var outputPath = CreateTestFilePath("test_set_workbook_output.xlsx");
         var result = _tool.Execute("set_workbook_properties", workbookPath,
             title: "Test Title", author: "Test Author", outputPath: outputPath);
-        Assert.Contains("Workbook properties updated", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Workbook properties updated", data.Message);
         using var workbook = new Workbook(outputPath);
         Assert.Equal("Test Title", workbook.BuiltInDocumentProperties.Title);
         Assert.Equal("Test Author", workbook.BuiltInDocumentProperties.Author);
@@ -49,9 +51,9 @@ public class ExcelPropertiesToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbookWithData("test_get_sheet.xlsx");
         var result = _tool.Execute("get_sheet_properties", workbookPath, sheetIndex: 0);
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("name", out _));
-        Assert.True(json.RootElement.TryGetProperty("isVisible", out _));
+        var data = GetResultData<GetSheetPropertiesResult>(result);
+        Assert.NotNull(data.Name);
+        Assert.True(data.IsVisible);
     }
 
     [Fact]
@@ -76,8 +78,8 @@ public class ExcelPropertiesToolTests : ExcelTestBase
         }
 
         var result = _tool.Execute("get_sheet_info", workbookPath);
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.GetProperty("count").GetInt32() >= 2);
+        var data = GetResultData<GetSheetInfoResult>(result);
+        Assert.True(data.Count >= 2);
     }
 
     #endregion
@@ -92,7 +94,8 @@ public class ExcelPropertiesToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbook($"test_case_{operation.Replace("_", "")}.xlsx");
         var result = _tool.Execute(operation, workbookPath);
-        Assert.Contains("title", result);
+        var data = GetResultData<GetWorkbookPropertiesResult>(result);
+        Assert.NotNull(data.Created);
     }
 
     [Fact]
@@ -119,8 +122,8 @@ public class ExcelPropertiesToolTests : ExcelTestBase
 
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("get_workbook_properties", sessionId: sessionId);
-        var json = JsonDocument.Parse(result);
-        Assert.Equal("Session Title", json.RootElement.GetProperty("title").GetString());
+        var data = GetResultData<GetWorkbookPropertiesResult>(result);
+        Assert.Equal("Session Title", data.Title);
     }
 
     [Fact]
@@ -129,7 +132,8 @@ public class ExcelPropertiesToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbook("test_session_set_workbook.xlsx");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("set_workbook_properties", sessionId: sessionId, title: "Updated Title");
-        Assert.Contains("Workbook properties updated", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Workbook properties updated", data.Message);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.Equal("Updated Title", workbook.BuiltInDocumentProperties.Title);
     }
@@ -154,7 +158,8 @@ public class ExcelPropertiesToolTests : ExcelTestBase
 
         var sessionId = OpenSession(workbookPath2);
         var result = _tool.Execute("get_workbook_properties", workbookPath1, sessionId);
-        Assert.Contains("Session Title", result);
+        var data = GetResultData<GetWorkbookPropertiesResult>(result);
+        Assert.Equal("Session Title", data.Title);
     }
 
     #endregion

@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.PowerPoint.Media;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Media;
 
@@ -31,9 +32,11 @@ public class AddAudioHandlerTests : PptHandlerTestBase
             { "audioPath", tempFile }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Audio embedded", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Audio embedded", result.Message);
         Assert.True(pres.Slides[0].Shapes.Count > initialShapeCount);
         AssertModified(context);
     }
@@ -50,9 +53,11 @@ public class AddAudioHandlerTests : PptHandlerTestBase
             { "slideIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("slide 0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("slide 0", result.Message);
     }
 
     [Fact]
@@ -68,10 +73,12 @@ public class AddAudioHandlerTests : PptHandlerTestBase
             { "y", 150f }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("200", result);
-        Assert.Contains("150", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("200", result.Message);
+        Assert.Contains("150", result.Message);
     }
 
     #endregion

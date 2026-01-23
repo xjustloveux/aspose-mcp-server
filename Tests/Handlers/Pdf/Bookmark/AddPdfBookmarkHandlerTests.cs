@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Pdf.Bookmark;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Bookmark;
 
@@ -30,9 +31,11 @@ public class AddPdfBookmarkHandlerTests : PdfHandlerTestBase
             { "pageIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("My Bookmark", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("My Bookmark", result.Message);
     }
 
     [SkippableFact]
@@ -47,9 +50,11 @@ public class AddPdfBookmarkHandlerTests : PdfHandlerTestBase
             { "pageIndex", 3 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("page 3", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("page 3", result.Message);
     }
 
     [Theory]
@@ -66,9 +71,11 @@ public class AddPdfBookmarkHandlerTests : PdfHandlerTestBase
             { "pageIndex", pageIndex }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Added bookmark", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Added bookmark", result.Message);
     }
 
     [Fact]

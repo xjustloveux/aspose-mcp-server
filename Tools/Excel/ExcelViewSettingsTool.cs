@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -12,6 +14,7 @@ namespace AsposeMcpServer.Tools.Excel;
 ///     ExcelSetZeroValuesVisibleTool, ExcelSetViewSettingsTool, ExcelSetColumnWidthTool, ExcelSetRowHeightTool,
 ///     ExcelSetSheetBackgroundTool, ExcelSetSheetTabColorTool
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Excel.ViewSettings")]
 [McpServerToolType]
 public class ExcelViewSettingsTool
 {
@@ -82,7 +85,14 @@ public class ExcelViewSettingsTool
     /// <param name="endColumn">End column index for auto fit range (0-based, for auto_fit_row).</param>
     /// <returns>A message indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "excel_view_settings")]
+    [McpServerTool(
+        Name = "excel_view_settings",
+        Title = "Excel View Settings Operations",
+        Destructive = false,
+        Idempotent = true,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(
         @"Manage Excel view settings. Supports 14 operations: set_zoom, set_gridlines, set_headers, set_zero_values, set_column_width, set_row_height, set_background, set_tab_color, set_all, freeze_panes, split_window, auto_fit_column, auto_fit_row, show_formulas.
 
@@ -96,7 +106,7 @@ Usage examples:
 - Auto fit column: excel_view_settings(operation='auto_fit_column', path='book.xlsx', columnIndex=0)
 - Show formulas: excel_view_settings(operation='show_formulas', path='book.xlsx', visible=true)
 - Set all: excel_view_settings(operation='set_all', path='book.xlsx', zoom=150, showGridlines=true)")]
-    public string Execute(
+    public object Execute(
         [Description(
             "Operation: set_zoom, set_gridlines, set_headers, set_zero_values, set_column_width, set_row_height, set_background, set_tab_color, set_all, freeze_panes, split_window, auto_fit_column, auto_fit_row, show_formulas")]
         string operation,
@@ -179,7 +189,7 @@ Usage examples:
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

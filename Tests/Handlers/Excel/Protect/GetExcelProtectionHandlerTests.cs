@@ -1,7 +1,7 @@
-using System.Text.Json;
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.Protect;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Excel.Protect;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Protect;
 
@@ -31,13 +31,13 @@ public class GetExcelProtectionHandlerTests : ExcelHandlerTestBase
             { "sheetIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(1, json.RootElement.GetProperty("count").GetInt32());
-        Assert.Equal(3, json.RootElement.GetProperty("totalWorksheets").GetInt32());
-        var worksheet = json.RootElement.GetProperty("worksheets")[0];
-        Assert.Equal(1, worksheet.GetProperty("index").GetInt32());
+        var result = Assert.IsType<GetProtectionResult>(res);
+
+        Assert.Equal(1, result.Count);
+        Assert.Equal(3, result.TotalWorksheets);
+        Assert.Equal(1, result.Worksheets[0].Index);
     }
 
     #endregion
@@ -84,12 +84,13 @@ public class GetExcelProtectionHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("count", out _));
-        Assert.True(json.RootElement.TryGetProperty("totalWorksheets", out _));
-        Assert.True(json.RootElement.TryGetProperty("worksheets", out _));
+        var result = Assert.IsType<GetProtectionResult>(res);
+
+        Assert.True(result.Count >= 0);
+        Assert.True(result.TotalWorksheets >= 0);
+        Assert.NotNull(result.Worksheets);
     }
 
     [Fact]
@@ -99,12 +100,13 @@ public class GetExcelProtectionHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(3, json.RootElement.GetProperty("count").GetInt32());
-        Assert.Equal(3, json.RootElement.GetProperty("totalWorksheets").GetInt32());
-        Assert.Equal(3, json.RootElement.GetProperty("worksheets").GetArrayLength());
+        var result = Assert.IsType<GetProtectionResult>(res);
+
+        Assert.Equal(3, result.Count);
+        Assert.Equal(3, result.TotalWorksheets);
+        Assert.Equal(3, result.Worksheets.Count);
     }
 
     [Fact]
@@ -114,13 +116,13 @@ public class GetExcelProtectionHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var worksheet = json.RootElement.GetProperty("worksheets")[0];
-        Assert.True(worksheet.TryGetProperty("isProtected", out _));
-        Assert.True(worksheet.TryGetProperty("name", out _));
-        Assert.True(worksheet.TryGetProperty("index", out _));
+        var result = Assert.IsType<GetProtectionResult>(res);
+
+        var worksheet = result.Worksheets[0];
+        Assert.NotNull(worksheet.Name);
+        Assert.True(worksheet.Index >= 0);
     }
 
     [Fact]
@@ -130,15 +132,17 @@ public class GetExcelProtectionHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var worksheet = json.RootElement.GetProperty("worksheets")[0];
-        Assert.True(worksheet.TryGetProperty("allowSelectingLockedCell", out _));
-        Assert.True(worksheet.TryGetProperty("allowSelectingUnlockedCell", out _));
-        Assert.True(worksheet.TryGetProperty("allowFormattingCell", out _));
-        Assert.True(worksheet.TryGetProperty("allowFiltering", out _));
-        Assert.True(worksheet.TryGetProperty("allowSorting", out _));
+        var result = Assert.IsType<GetProtectionResult>(res);
+
+        var worksheet = result.Worksheets[0];
+        // These are boolean properties so they should have defined values
+        Assert.True(worksheet.AllowSelectingLockedCell || !worksheet.AllowSelectingLockedCell);
+        Assert.True(worksheet.AllowSelectingUnlockedCell || !worksheet.AllowSelectingUnlockedCell);
+        Assert.True(worksheet.AllowFormattingCell || !worksheet.AllowFormattingCell);
+        Assert.True(worksheet.AllowFiltering || !worksheet.AllowFiltering);
+        Assert.True(worksheet.AllowSorting || !worksheet.AllowSorting);
     }
 
     [Fact]
@@ -150,11 +154,11 @@ public class GetExcelProtectionHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var worksheet = json.RootElement.GetProperty("worksheets")[0];
-        Assert.True(worksheet.GetProperty("isProtected").GetBoolean());
+        var result = Assert.IsType<GetProtectionResult>(res);
+
+        Assert.True(result.Worksheets[0].IsProtected);
     }
 
     [Fact]
@@ -164,11 +168,11 @@ public class GetExcelProtectionHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var worksheet = json.RootElement.GetProperty("worksheets")[0];
-        Assert.False(worksheet.GetProperty("isProtected").GetBoolean());
+        var result = Assert.IsType<GetProtectionResult>(res);
+
+        Assert.False(result.Worksheets[0].IsProtected);
     }
 
     #endregion

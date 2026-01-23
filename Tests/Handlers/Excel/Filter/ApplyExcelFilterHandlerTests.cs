@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.Filter;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Filter;
 
@@ -53,10 +54,12 @@ public class ApplyExcelFilterHandlerTests : ExcelHandlerTestBase
             { "range", "A1:C10" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Auto filter applied", result);
-        Assert.Contains("A1:C10", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Auto filter applied", result.Message);
+        Assert.Contains("A1:C10", result.Message);
         Assert.Equal("A1:C10", workbook.Worksheets[0].AutoFilter.Range);
         AssertModified(context);
     }
@@ -71,9 +74,11 @@ public class ApplyExcelFilterHandlerTests : ExcelHandlerTestBase
             { "range", "A1:B5" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("sheet 0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("sheet 0", result.Message);
     }
 
     [Theory]

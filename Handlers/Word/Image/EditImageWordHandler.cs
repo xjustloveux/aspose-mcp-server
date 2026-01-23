@@ -1,6 +1,9 @@
 using Aspose.Words;
 using Aspose.Words.Drawing;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 using WordShape = Aspose.Words.Drawing.Shape;
 
@@ -9,6 +12,7 @@ namespace AsposeMcpServer.Handlers.Word.Image;
 /// <summary>
 ///     Handler for editing images in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class EditImageWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -24,7 +28,7 @@ public class EditImageWordHandler : OperationHandlerBase<Document>
     ///     horizontalAlignment, verticalAlignment, alternativeText, title, linkUrl
     /// </param>
     /// <returns>Success message with edit details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractImageParameters(parameters);
         var doc = context.Document;
@@ -40,7 +44,7 @@ public class EditImageWordHandler : OperationHandlerBase<Document>
         ApplyMetadataProperties(shape, p);
 
         MarkModified(context);
-        return Success($"Image {p.ImageIndex} edited ({BuildChangesDescription(p)})");
+        return new SuccessResult { Message = $"Image {p.ImageIndex} edited ({BuildChangesDescription(p)})" };
     }
 
     /// <summary>

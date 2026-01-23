@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.PowerPoint.Text;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.PowerPoint.Text;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Text;
 
@@ -30,9 +31,35 @@ public class ReplacePptTextHandlerTests : PptHandlerTestBase
             { "replaceText", "New" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("0 occurrences", result);
+        var result = Assert.IsType<TextReplaceResult>(res);
+
+        Assert.Equal(0, result.ReplacementCount);
+    }
+
+    #endregion
+
+    #region Result Properties
+
+    [Fact]
+    public void Execute_ReturnsCorrectProperties()
+    {
+        var pres = CreatePresentationWithText("Original Value");
+        var context = CreateContext(pres);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "findText", "Original" },
+            { "replaceText", "New" }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<TextReplaceResult>(res);
+
+        Assert.Equal("Original", result.FindText);
+        Assert.Equal("New", result.ReplaceText);
+        Assert.Equal(1, result.ReplacementCount);
     }
 
     #endregion
@@ -50,9 +77,13 @@ public class ReplacePptTextHandlerTests : PptHandlerTestBase
             { "replaceText", "Universe" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Replaced", result);
+        var result = Assert.IsType<TextReplaceResult>(res);
+
+        Assert.Equal("World", result.FindText);
+        Assert.Equal("Universe", result.ReplaceText);
+        Assert.True(result.ReplacementCount > 0);
         AssertModified(context);
     }
 
@@ -67,9 +98,11 @@ public class ReplacePptTextHandlerTests : PptHandlerTestBase
             { "replaceText", "New" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Test", result);
+        var result = Assert.IsType<TextReplaceResult>(res);
+
+        Assert.Equal("Test", result.FindText);
     }
 
     [Fact]
@@ -83,9 +116,11 @@ public class ReplacePptTextHandlerTests : PptHandlerTestBase
             { "replaceText", "New" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("New", result);
+        var result = Assert.IsType<TextReplaceResult>(res);
+
+        Assert.Equal("New", result.ReplaceText);
     }
 
     [Fact]
@@ -99,9 +134,11 @@ public class ReplacePptTextHandlerTests : PptHandlerTestBase
             { "replaceText", "New" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("occurrences", result);
+        var result = Assert.IsType<TextReplaceResult>(res);
+
+        Assert.True(result.ReplacementCount > 0);
     }
 
     #endregion
@@ -120,9 +157,11 @@ public class ReplacePptTextHandlerTests : PptHandlerTestBase
             { "matchCase", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Replaced", result);
+        var result = Assert.IsType<TextReplaceResult>(res);
+
+        Assert.True(result.ReplacementCount > 0);
     }
 
     [Fact]
@@ -137,9 +176,11 @@ public class ReplacePptTextHandlerTests : PptHandlerTestBase
             { "matchCase", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Replaced", result);
+        var result = Assert.IsType<TextReplaceResult>(res);
+
+        Assert.Equal(1, result.ReplacementCount);
     }
 
     [Fact]
@@ -153,9 +194,12 @@ public class ReplacePptTextHandlerTests : PptHandlerTestBase
             { "replaceText", "new" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Replaced", result);
+        var result = Assert.IsType<TextReplaceResult>(res);
+
+        // Default is case-insensitive, so both TEST and test should be replaced
+        Assert.True(result.ReplacementCount > 0);
     }
 
     #endregion

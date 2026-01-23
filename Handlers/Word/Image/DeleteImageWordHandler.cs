@@ -1,11 +1,15 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Image;
 
 /// <summary>
 ///     Handler for deleting images from Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeleteImageWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,7 +24,7 @@ public class DeleteImageWordHandler : OperationHandlerBase<Document>
     ///     Optional: sectionIndex
     /// </param>
     /// <returns>Success message with deletion details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractDeleteImageParameters(parameters);
 
@@ -51,7 +55,7 @@ public class DeleteImageWordHandler : OperationHandlerBase<Document>
 
         var remainingCount = WordImageHelper.GetAllImages(doc, p.SectionIndex).Count;
 
-        return $"{imageInfo} deleted successfully\nRemaining images: {remainingCount}";
+        return new SuccessResult { Message = $"{imageInfo} deleted successfully\nRemaining images: {remainingCount}" };
     }
 
     /// <summary>

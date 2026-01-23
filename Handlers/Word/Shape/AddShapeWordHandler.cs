@@ -1,11 +1,15 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Shape;
 
 /// <summary>
 ///     Handler for adding generic shapes to Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddShapeWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -21,7 +25,7 @@ public class AddShapeWordHandler : OperationHandlerBase<Document>
     /// </param>
     /// <returns>Success message with shape details.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractAddShapeParameters(parameters);
 
@@ -35,7 +39,7 @@ public class AddShapeWordHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return $"Successfully added {p.ShapeType} shape.";
+        return new SuccessResult { Message = $"Successfully added {p.ShapeType} shape." };
     }
 
     private static AddShapeParameters ExtractAddShapeParameters(OperationParameters parameters)

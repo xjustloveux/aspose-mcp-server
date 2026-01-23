@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -11,6 +13,7 @@ namespace AsposeMcpServer.Tools.Excel;
 ///     Merges: ExcelWriteRangeTool, ExcelEditRangeTool, ExcelGetRangeTool, ExcelClearRangeTool,
 ///     ExcelCopyRangeTool, ExcelMoveRangeTool, ExcelCopyFormatTool
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Excel.Range")]
 [McpServerToolType]
 public class ExcelRangeTool
 {
@@ -74,7 +77,14 @@ public class ExcelRangeTool
     /// <param name="copyValue">Copy cell values as well (optional, for copy_format, default: false).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "excel_range")]
+    [McpServerTool(
+        Name = "excel_range",
+        Title = "Excel Range Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage Excel ranges. Supports 7 operations: write, edit, get, clear, copy, move, copy_format.
 
 Usage examples:
@@ -85,7 +95,7 @@ Usage examples:
 - Copy range: excel_range(operation='copy', path='book.xlsx', sourceRange='A1:B2', destCell='C1')
 - Move range: excel_range(operation='move', path='book.xlsx', sourceRange='A1:B2', destCell='C1')
 - Copy format: excel_range(operation='copy_format', path='book.xlsx', sourceRange='A1:B2', destCell='C1')")]
-    public string Execute(
+    public object Execute(
         [Description(@"Operation to perform.
 - 'write': Write data to range (required params: path, startCell, data)
 - 'edit': Edit range data (required params: path, range, data)
@@ -161,12 +171,12 @@ Usage examples:
         var result = handler.Execute(operationContext, parameters);
 
         if (string.Equals(operation, "get", StringComparison.OrdinalIgnoreCase))
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

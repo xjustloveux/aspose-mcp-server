@@ -1,13 +1,16 @@
 ﻿using System.Globalization;
 using System.Text.Json.Nodes;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Properties;
 
 /// <summary>
 ///     Handler for setting Word document properties.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetWordPropertiesHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class SetWordPropertiesHandler : OperationHandlerBase<Document>
     ///     Optional: title, subject, author, keywords, comments, category, company, manager, customProperties
     /// </param>
     /// <returns>Success message indicating properties were updated.</returns>
-    public override string
+    public override object
         Execute(OperationContext<Document> context,
             OperationParameters parameters)
     {
@@ -57,7 +60,7 @@ public class SetWordPropertiesHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success("Document properties updated");
+        return new SuccessResult { Message = "Document properties updated" };
     }
 
     /// <summary>

@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Word.Text;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Text;
 
@@ -34,9 +35,11 @@ public class ReplaceWordTextHandlerTests : WordHandlerTestBase
             { "caseSensitive", caseSensitive }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("replaced", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("replaced", result.Message, StringComparison.OrdinalIgnoreCase);
         if (shouldContainReplaced)
             AssertContainsText(doc, "Replaced");
         if (shouldRemoveAll)
@@ -63,13 +66,15 @@ public class ReplaceWordTextHandlerTests : WordHandlerTestBase
             { "replaceInFields", replaceInFields }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("replaced", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("replaced", result.Message, StringComparison.OrdinalIgnoreCase);
         if (shouldContainExcluded)
-            Assert.Contains("excluded", result, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("excluded", result.Message, StringComparison.OrdinalIgnoreCase);
         else
-            Assert.DoesNotContain("excluded", result, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("excluded", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -88,9 +93,11 @@ public class ReplaceWordTextHandlerTests : WordHandlerTestBase
             { "replace", "Replacement" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("replaced", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("replaced", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertContainsText(doc, "Hello World");
     }
 
@@ -109,9 +116,11 @@ public class ReplaceWordTextHandlerTests : WordHandlerTestBase
             { "replace", "Universe" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("replaced", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("replaced", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertContainsText(doc, "Universe");
         AssertDoesNotContainText(doc, "World");
         AssertModified(context);
@@ -131,9 +140,11 @@ public class ReplaceWordTextHandlerTests : WordHandlerTestBase
             { "replace", replace }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("replaced", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("replaced", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertContainsText(doc, expectedInResult);
         AssertModified(context);
     }
@@ -149,9 +160,11 @@ public class ReplaceWordTextHandlerTests : WordHandlerTestBase
             { "replace", "Hi" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("replaced", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("replaced", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertContainsText(doc, "Hi");
         AssertDoesNotContainText(doc, "Hello");
         AssertModified(context);
@@ -172,9 +185,11 @@ public class ReplaceWordTextHandlerTests : WordHandlerTestBase
             { "replace", "replaced" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("replaced", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("replaced", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertContainsText(doc, "replaced");
         AssertDoesNotContainText(doc, "target");
         AssertModified(context);
@@ -196,9 +211,11 @@ public class ReplaceWordTextHandlerTests : WordHandlerTestBase
             { "useRegex", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("replaced", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("replaced", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertContainsText(doc, "XXX");
         AssertDoesNotContainText(doc, "123");
         AssertModified(context);
@@ -220,9 +237,11 @@ public class ReplaceWordTextHandlerTests : WordHandlerTestBase
             { "useRegex", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("replaced", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("replaced", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertContainsText(doc, expected);
         AssertModified(context);
     }
@@ -239,9 +258,11 @@ public class ReplaceWordTextHandlerTests : WordHandlerTestBase
             { "useRegex", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("replaced", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("replaced", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertContainsText(doc, "XXX");
         AssertModified(context);
     }
@@ -326,9 +347,11 @@ public class ReplaceWordTextHandlerTests : WordHandlerTestBase
             { "replace", "" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("replaced", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("replaced", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertDoesNotContainText(doc, "World");
         AssertModified(context);
     }
@@ -351,16 +374,18 @@ public class ReplaceWordTextHandlerTests : WordHandlerTestBase
             { "replace", replace }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("replaced", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("replaced", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertContainsText(doc, replace);
         AssertModified(context);
     }
 
     [Theory]
-    [InlineData("Unicode: 中文", "替換")]
-    [InlineData("日本語テスト", "置換済み")]
+    [InlineData("Unicode: 中�?", "?��?")]
+    [InlineData("?�本語�??��?", "置�?済み")]
     public void Execute_WithUnicode_ReplacesCorrectly(string find, string replace)
     {
         var doc = CreateDocumentWithText(find);
@@ -371,9 +396,11 @@ public class ReplaceWordTextHandlerTests : WordHandlerTestBase
             { "replace", replace }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("replaced", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("replaced", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertContainsText(doc, replace);
         AssertModified(context);
     }

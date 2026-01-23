@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.ViewSettings;
 
 /// <summary>
 ///     Handler for setting zoom level in Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetZoomExcelViewHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -22,7 +25,7 @@ public class SetZoomExcelViewHandler : OperationHandlerBase<Workbook>
     /// </param>
     /// <returns>Success message.</returns>
     /// <exception cref="ArgumentException">Thrown when zoom value is not between 10 and 400.</exception>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractSetZoomParameters(parameters);
 
@@ -33,7 +36,7 @@ public class SetZoomExcelViewHandler : OperationHandlerBase<Workbook>
         worksheet.Zoom = p.Zoom;
 
         MarkModified(context);
-        return Success($"Zoom level set to {p.Zoom}% for sheet {p.SheetIndex}.");
+        return new SuccessResult { Message = $"Zoom level set to {p.Zoom}% for sheet {p.SheetIndex}." };
     }
 
     /// <summary>

@@ -1,12 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Layout;
 
 /// <summary>
 ///     Handler for setting layout on a PowerPoint slide.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetLayoutHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class SetLayoutHandler : OperationHandlerBase<Presentation>
     ///     Required: slideIndex, layout
     /// </param>
     /// <returns>Success message with layout details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractSetLayoutParameters(parameters);
 
@@ -32,7 +35,7 @@ public class SetLayoutHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Layout '{p.Layout}' set for slide {p.SlideIndex}.");
+        return new SuccessResult { Message = $"Layout '{p.Layout}' set for slide {p.SlideIndex}." };
     }
 
     /// <summary>

@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
@@ -10,6 +12,7 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 ///     Unified tool for managing PowerPoint media.
 ///     Supports: add_audio, delete_audio, add_video, delete_video, set_playback
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.PowerPoint.Media")]
 [McpServerToolType]
 public class PptMediaTool
 {
@@ -63,7 +66,14 @@ public class PptMediaTool
     /// <param name="volume">Volume level: mute|low|medium|loud (optional, default: medium).</param>
     /// <returns>A message indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "ppt_media")]
+    [McpServerTool(
+        Name = "ppt_media",
+        Title = "PowerPoint Media Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(
         @"Manage PowerPoint media. Supports 5 operations: add_audio, delete_audio, add_video, delete_video, set_playback.
 
@@ -76,7 +86,7 @@ Usage examples:
 - Add video: ppt_media(operation='add_video', path='presentation.pptx', slideIndex=0, videoPath='video.mp4', x=100, y=100)
 - Delete video: ppt_media(operation='delete_video', path='presentation.pptx', slideIndex=0, shapeIndex=0)
 - Set playback: ppt_media(operation='set_playback', path='presentation.pptx', slideIndex=0, shapeIndex=0, playMode='auto', loop=true)")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: add_audio, delete_audio, add_video, delete_video, set_playback")]
         string operation,
         [Description("Presentation file path (required if no sessionId)")]
@@ -132,7 +142,7 @@ Usage examples:
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

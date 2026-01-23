@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.FileOperations;
 
 /// <summary>
 ///     Handler for creating new Excel workbooks.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class CreateWorkbookHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class CreateWorkbookHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetName
     /// </param>
     /// <returns>Success message with output path.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractCreateParameters(parameters);
 
@@ -35,7 +38,7 @@ public class CreateWorkbookHandler : OperationHandlerBase<Workbook>
 
         workbook.Save(targetPath);
 
-        return Success($"Excel workbook created successfully. Output: {targetPath}");
+        return new SuccessResult { Message = $"Excel workbook created successfully. Output: {targetPath}" };
     }
 
     /// <summary>

@@ -1,7 +1,9 @@
 ﻿using Aspose.Words;
 using Aspose.Words.Settings;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.File;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Handlers.Word.File;
 /// <summary>
 ///     Handler for creating new Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class CreateWordDocumentHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -25,7 +28,7 @@ public class CreateWordDocumentHandler : OperationHandlerBase<Document>
     /// </param>
     /// <returns>Success message with output path.</returns>
     /// <exception cref="ArgumentException">Thrown when outputPath is missing.</exception>
-    public override string
+    public override object
         Execute(OperationContext<Document> context,
             OperationParameters parameters)
     {
@@ -113,7 +116,7 @@ public class CreateWordDocumentHandler : OperationHandlerBase<Document>
         }
 
         doc.Save(p.OutputPath);
-        return $"Word document created successfully at: {p.OutputPath}";
+        return new SuccessResult { Message = $"Word document created successfully at: {p.OutputPath}" };
     }
 
     private static CreateParameters ExtractCreateParameters(OperationParameters parameters)

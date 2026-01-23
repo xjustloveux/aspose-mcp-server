@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Protection;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Protection;
 
@@ -58,9 +59,11 @@ public class UnprotectWordHandlerTests : WordHandlerTestBase
             { "password", "test123" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("removed", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("removed", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(ProtectionType.NoProtection, doc.ProtectionType);
         AssertModified(context);
     }
@@ -75,9 +78,11 @@ public class UnprotectWordHandlerTests : WordHandlerTestBase
             { "password", "test123" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("AllowOnlyComments", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("AllowOnlyComments", result.Message);
     }
 
     [Fact]
@@ -87,9 +92,11 @@ public class UnprotectWordHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("not protected", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("not protected", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -110,9 +117,11 @@ public class UnprotectWordHandlerTests : WordHandlerTestBase
             { "password", "test123" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("removed", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("removed", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(ProtectionType.NoProtection, doc.ProtectionType);
     }
 
@@ -126,9 +135,11 @@ public class UnprotectWordHandlerTests : WordHandlerTestBase
             { "password", "pass" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("AllowOnlyFormFields", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("AllowOnlyFormFields", result.Message);
     }
 
     [Fact]
@@ -141,9 +152,11 @@ public class UnprotectWordHandlerTests : WordHandlerTestBase
             { "password", "pass" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("AllowOnlyRevisions", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("AllowOnlyRevisions", result.Message);
     }
 
     #endregion

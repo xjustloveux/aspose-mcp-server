@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Content;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Word.Content;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Content;
 
@@ -30,9 +31,12 @@ public class GetWordContentHandlerTests : WordHandlerTestBase
             { "maxChars", 10 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("use offset=", result);
+        var result = Assert.IsType<GetWordContentResult>(res);
+
+        Assert.NotNull(result);
+        Assert.True(result.HasMore);
     }
 
     #endregion
@@ -46,9 +50,12 @@ public class GetWordContentHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Document Content", result);
+        var result = Assert.IsType<GetWordContentResult>(res);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.Content);
     }
 
     #endregion
@@ -66,11 +73,14 @@ public class GetWordContentHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("First paragraph", result);
-        Assert.Contains("Second paragraph", result);
-        Assert.Contains("Third paragraph", result);
+        var result = Assert.IsType<GetWordContentResult>(res);
+
+        Assert.NotNull(result);
+        Assert.Contains("First paragraph", result.Content);
+        Assert.Contains("Second paragraph", result.Content);
+        Assert.Contains("Third paragraph", result.Content);
     }
 
     #endregion
@@ -84,9 +94,12 @@ public class GetWordContentHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Document Content", result);
+        var result = Assert.IsType<GetWordContentResult>(res);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.Content);
     }
 
     [Fact]
@@ -96,9 +109,12 @@ public class GetWordContentHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Test content here", result);
+        var result = Assert.IsType<GetWordContentResult>(res);
+
+        Assert.NotNull(result);
+        Assert.Contains("Test content here", result.Content);
     }
 
     [Fact]
@@ -127,9 +143,13 @@ public class GetWordContentHandlerTests : WordHandlerTestBase
             { "maxChars", 10 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Showing chars", result);
+        var result = Assert.IsType<GetWordContentResult>(res);
+
+        Assert.NotNull(result);
+        Assert.Equal(10, result.Content.Length);
+        Assert.True(result.HasMore);
     }
 
     [Fact]
@@ -142,9 +162,13 @@ public class GetWordContentHandlerTests : WordHandlerTestBase
             { "maxChars", 5 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Showing chars 0 to", result);
+        var result = Assert.IsType<GetWordContentResult>(res);
+
+        Assert.NotNull(result);
+        Assert.Equal(0, result.Offset);
+        Assert.Equal(5, result.Content.Length);
     }
 
     [Fact]
@@ -157,9 +181,12 @@ public class GetWordContentHandlerTests : WordHandlerTestBase
             { "maxChars", 10 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("More content available", result);
+        var result = Assert.IsType<GetWordContentResult>(res);
+
+        Assert.NotNull(result);
+        Assert.True(result.HasMore);
     }
 
     #endregion
@@ -176,9 +203,13 @@ public class GetWordContentHandlerTests : WordHandlerTestBase
             { "offset", 6 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Document Content", result);
+        var result = Assert.IsType<GetWordContentResult>(res);
+
+        Assert.NotNull(result);
+        Assert.Equal(6, result.Offset);
+        Assert.Contains("World Test", result.Content);
     }
 
     [Fact]
@@ -192,9 +223,13 @@ public class GetWordContentHandlerTests : WordHandlerTestBase
             { "maxChars", 10 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Showing chars 5 to", result);
+        var result = Assert.IsType<GetWordContentResult>(res);
+
+        Assert.NotNull(result);
+        Assert.Equal(5, result.Offset);
+        Assert.Equal(10, result.Content.Length);
     }
 
     [Fact]
@@ -207,9 +242,12 @@ public class GetWordContentHandlerTests : WordHandlerTestBase
             { "offset", 1000 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Document Content", result);
+        var result = Assert.IsType<GetWordContentResult>(res);
+
+        Assert.NotNull(result);
+        Assert.Empty(result.Content);
     }
 
     #endregion

@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Pdf;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Pdf;
 /// <summary>
 ///     Tool for managing pages in PDF documents (add, delete, insert, extract, rotate, resize)
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Pdf.Page")]
 [McpServerToolType]
 public class PdfPageTool
 {
@@ -55,7 +58,14 @@ public class PdfPageTool
     /// <param name="pageIndices">Array of page indices to rotate (1-based, for rotate, optional).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "pdf_page")]
+    [McpServerTool(
+        Name = "pdf_page",
+        Title = "PDF Page Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage pages in PDF documents. Supports 5 operations: add, delete, rotate, get_details, get_info.
 
 Usage examples:
@@ -64,7 +74,7 @@ Usage examples:
 - Rotate page: pdf_page(operation='rotate', path='doc.pdf', pageIndex=1, rotation=90)
 - Get page details: pdf_page(operation='get_details', path='doc.pdf', pageIndex=1)
 - Get page info: pdf_page(operation='get_info', path='doc.pdf')")]
-    public string Execute(
+    public object Execute(
         [Description(@"Operation to perform.
 - 'add': Add page(s) (required params: path)
 - 'delete': Delete a page (required params: path, pageIndex)
@@ -112,12 +122,12 @@ Usage examples:
         var result = handler.Execute(operationContext, parameters);
 
         if (operation.ToLowerInvariant() is "get_details" or "get_info")
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

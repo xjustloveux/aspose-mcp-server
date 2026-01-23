@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.ViewSettings;
 
 /// <summary>
 ///     Handler for setting zero values visibility in Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetZeroValuesExcelViewHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class SetZeroValuesExcelViewHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0), visible (default: true)
     /// </param>
     /// <returns>Success message.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractSetZeroValuesParameters(parameters);
 
@@ -28,7 +31,7 @@ public class SetZeroValuesExcelViewHandler : OperationHandlerBase<Workbook>
         worksheet.DisplayZeros = p.Visible;
 
         MarkModified(context);
-        return Success($"Zero values visibility set to {(p.Visible ? "visible" : "hidden")}.");
+        return new SuccessResult { Message = $"Zero values visibility set to {(p.Visible ? "visible" : "hidden")}." };
     }
 
     /// <summary>

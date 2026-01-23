@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Protect;
 
 /// <summary>
 ///     Handler for removing protection from Excel workbook or worksheet.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class UnprotectExcelHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class UnprotectExcelHandler : OperationHandlerBase<Workbook>
     /// </param>
     /// <returns>Success message with unprotection details.</returns>
     /// <exception cref="ArgumentException">Thrown when incorrect password is provided.</exception>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractUnprotectExcelParameters(parameters);
 
@@ -34,7 +37,7 @@ public class UnprotectExcelHandler : OperationHandlerBase<Workbook>
             if (!worksheet.IsProtected)
             {
                 MarkModified(context);
-                return Success($"Worksheet '{worksheet.Name}' is not protected.");
+                return new SuccessResult { Message = $"Worksheet '{worksheet.Name}' is not protected." };
             }
 
             try
@@ -48,12 +51,12 @@ public class UnprotectExcelHandler : OperationHandlerBase<Workbook>
             }
 
             MarkModified(context);
-            return Success($"Worksheet '{worksheet.Name}' protection removed successfully.");
+            return new SuccessResult { Message = $"Worksheet '{worksheet.Name}' protection removed successfully." };
         }
 
         workbook.Unprotect(p.Password);
         MarkModified(context);
-        return Success("Workbook protection removed successfully.");
+        return new SuccessResult { Message = "Workbook protection removed successfully." };
     }
 
     /// <summary>

@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Range;
 
 /// <summary>
 ///     Handler for clearing content and/or format from Excel ranges.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class ClearExcelRangeHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class ClearExcelRangeHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex, clearContent, clearFormat
     /// </param>
     /// <returns>Success message with clear details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractClearExcelRangeParameters(parameters);
 
@@ -55,7 +58,7 @@ public class ClearExcelRangeHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Range {p.Range} cleared.");
+        return new SuccessResult { Message = $"Range {p.Range} cleared." };
     }
 
     /// <summary>

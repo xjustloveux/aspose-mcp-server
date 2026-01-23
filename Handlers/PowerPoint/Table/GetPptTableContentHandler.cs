@@ -1,11 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.PowerPoint.Table;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Table;
 
 /// <summary>
 ///     Handler for getting table content from PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(GetTableContentResult))]
 public class GetPptTableContentHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -20,7 +24,7 @@ public class GetPptTableContentHandler : OperationHandlerBase<Presentation>
     ///     Optional: slideIndex (default: 0).
     /// </param>
     /// <returns>JSON result with table content.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var getParams = ExtractGetContentParameters(parameters);
 
@@ -41,16 +45,16 @@ public class GetPptTableContentHandler : OperationHandlerBase<Presentation>
             rows.Add(rowData);
         }
 
-        var result = new
+        var result = new GetTableContentResult
         {
-            slideIndex = getParams.SlideIndex,
-            shapeIndex = getParams.ShapeIndex,
-            rowCount = table.Rows.Count,
-            columnCount = table.Columns.Count,
-            data = rows
+            SlideIndex = getParams.SlideIndex,
+            ShapeIndex = getParams.ShapeIndex,
+            RowCount = table.Rows.Count,
+            ColumnCount = table.Columns.Count,
+            Data = rows
         };
 
-        return JsonResult(result);
+        return result;
     }
 
     /// <summary>

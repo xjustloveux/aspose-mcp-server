@@ -1,12 +1,15 @@
 using Aspose.Pdf;
 using Aspose.Pdf.Forms;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.Signature;
 
 /// <summary>
 ///     Handler for deleting signatures from PDF documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeletePdfSignatureHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class DeletePdfSignatureHandler : OperationHandlerBase<Document>
     ///     Required: signatureName or signatureIndex.
     /// </param>
     /// <returns>Success message with deletion details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractDeleteParameters(parameters);
 
@@ -56,7 +59,7 @@ public class DeletePdfSignatureHandler : OperationHandlerBase<Document>
         {
             document.Form.Delete(fieldToDelete.PartialName);
             MarkModified(context);
-            return Success($"Signature '{fieldToDelete.PartialName}' deleted.");
+            return new SuccessResult { Message = $"Signature '{fieldToDelete.PartialName}' deleted." };
         }
 
         throw new ArgumentException("Could not find signature to delete");

@@ -1,5 +1,7 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Word.Content;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.Content;
@@ -7,6 +9,7 @@ namespace AsposeMcpServer.Handlers.Word.Content;
 /// <summary>
 ///     Handler for getting Word document metadata and properties.
 /// </summary>
+[ResultType(typeof(GetWordDocumentInfoResult))]
 public class GetWordDocumentInfoHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,14 +23,14 @@ public class GetWordDocumentInfoHandler : OperationHandlerBase<Document>
     ///     Optional: includeTabStops (default: false)
     /// </param>
     /// <returns>JSON string containing document metadata and properties.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractGetDocumentInfoParameters(parameters);
 
         var document = context.Document;
         var props = document.BuiltInDocumentProperties;
 
-        List<object>? tabStopsList = null;
+        List<TabStopsByParagraph>? tabStopsList = null;
         if (p.IncludeTabStops)
         {
             tabStopsList = [];
@@ -40,22 +43,22 @@ public class GetWordDocumentInfoHandler : OperationHandlerBase<Document>
                     var para = paragraphs[paraIndex];
                     if (para.ParagraphFormat.TabStops.Count > 0)
                     {
-                        List<object> stops = [];
+                        List<TabStopInfo> stops = [];
                         for (var i = 0; i < para.ParagraphFormat.TabStops.Count; i++)
                         {
                             var tabStop = para.ParagraphFormat.TabStops[i];
-                            stops.Add(new
+                            stops.Add(new TabStopInfo
                             {
-                                position = tabStop.Position,
-                                alignment = tabStop.Alignment.ToString()
+                                Position = tabStop.Position,
+                                Alignment = tabStop.Alignment.ToString()
                             });
                         }
 
-                        tabStopsList.Add(new
+                        tabStopsList.Add(new TabStopsByParagraph
                         {
-                            sectionIndex,
-                            paragraphIndex = paraIndex,
-                            tabStops = stops
+                            SectionIndex = sectionIndex,
+                            ParagraphIndex = paraIndex,
+                            TabStops = stops
                         });
                     }
                 }
@@ -64,20 +67,18 @@ public class GetWordDocumentInfoHandler : OperationHandlerBase<Document>
             }
         }
 
-        var result = new
+        return new GetWordDocumentInfoResult
         {
-            title = props.Title,
-            author = props.Author,
-            subject = props.Subject,
-            created = props.CreatedTime.ToString("yyyy-MM-dd HH:mm:ss"),
-            modified = props.LastSavedTime.ToString("yyyy-MM-dd HH:mm:ss"),
-            pages = props.Pages,
-            sections = document.Sections.Count,
-            tabStopsIncluded = p.IncludeTabStops,
-            tabStops = tabStopsList
+            Title = props.Title,
+            Author = props.Author,
+            Subject = props.Subject,
+            Created = props.CreatedTime.ToString("yyyy-MM-dd HH:mm:ss"),
+            Modified = props.LastSavedTime.ToString("yyyy-MM-dd HH:mm:ss"),
+            Pages = props.Pages,
+            Sections = document.Sections.Count,
+            TabStopsIncluded = p.IncludeTabStops,
+            TabStops = tabStopsList
         };
-
-        return JsonResult(result);
     }
 
     /// <summary>

@@ -1,11 +1,14 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Page;
 
 /// <summary>
 ///     Handler for setting multiple page setup options (margins and orientation) in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetPageSetupWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class SetPageSetupWordHandler : OperationHandlerBase<Document>
     ///     Optional: sectionIndex
     /// </param>
     /// <returns>Success message with changes made.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var setParams = ExtractSetPageSetupParameters(parameters);
 
@@ -69,7 +72,7 @@ public class SetPageSetupWordHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return $"Page setup updated: {string.Join(", ", changes)}";
+        return new SuccessResult { Message = $"Page setup updated: {string.Join(", ", changes)}" };
     }
 
     /// <summary>

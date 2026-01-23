@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Word.List;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.List;
 
@@ -29,9 +30,11 @@ public class DeleteWordListItemHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted successfully", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted successfully", result.Message);
         AssertModified(context);
     }
 
@@ -45,9 +48,11 @@ public class DeleteWordListItemHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("#1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("#1", result.Message);
     }
 
     [Fact]
@@ -60,9 +65,11 @@ public class DeleteWordListItemHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Remaining paragraphs:", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Remaining paragraphs:", result.Message);
     }
 
     [SkippableFact]
@@ -100,9 +107,11 @@ public class DeleteWordListItemHandlerTests : WordHandlerTestBase
             { "paragraphIndex", index }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted successfully", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted successfully", result.Message);
     }
 
     [Fact]
@@ -115,9 +124,11 @@ public class DeleteWordListItemHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("#0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("#0", result.Message);
     }
 
     [Fact]
@@ -130,9 +141,11 @@ public class DeleteWordListItemHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("#2", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("#2", result.Message);
     }
 
     #endregion

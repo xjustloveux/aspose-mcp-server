@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.ViewSettings;
 
 /// <summary>
 ///     Handler for setting all view settings at once in Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetAllExcelViewHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -22,7 +25,7 @@ public class SetAllExcelViewHandler : OperationHandlerBase<Workbook>
     /// </param>
     /// <returns>Success message.</returns>
     /// <exception cref="ArgumentException">Thrown when zoom value is not between 10 and 400.</exception>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractSetAllParameters(parameters);
 
@@ -48,7 +51,7 @@ public class SetAllExcelViewHandler : OperationHandlerBase<Workbook>
             worksheet.DisplayRightToLeft = p.DisplayRightToLeft.Value;
 
         MarkModified(context);
-        return Success($"View settings updated for sheet {p.SheetIndex}.");
+        return new SuccessResult { Message = $"View settings updated for sheet {p.SheetIndex}." };
     }
 
     /// <summary>

@@ -1,6 +1,7 @@
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Hyperlink;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.PowerPoint.Hyperlink;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Hyperlink;
 
@@ -57,10 +58,12 @@ public class GetPptHyperlinksHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("totalCount", result);
-        Assert.Contains("slides", result.ToLower());
+        var result = Assert.IsType<GetHyperlinksPptResult>(res);
+
+        Assert.NotNull(result.TotalCount);
+        Assert.NotNull(result.Slides);
         AssertNotModified(context);
     }
 
@@ -74,24 +77,28 @@ public class GetPptHyperlinksHandlerTests : PptHandlerTestBase
             { "slideIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"slideIndex\": 0", result);
-        Assert.Contains("hyperlinks", result.ToLower());
+        var result = Assert.IsType<GetHyperlinksPptResult>(res);
+
+        Assert.Equal(0, result.SlideIndex);
+        Assert.NotNull(result.Hyperlinks);
         AssertNotModified(context);
     }
 
     [Fact]
-    public void Execute_ReturnsJsonFormat()
+    public void Execute_ReturnsResultWithProperties()
     {
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("{", result);
-        Assert.Contains("}", result);
+        var result = Assert.IsType<GetHyperlinksPptResult>(res);
+
+        Assert.NotNull(result);
+        Assert.IsType<GetHyperlinksPptResult>(result);
     }
 
     #endregion

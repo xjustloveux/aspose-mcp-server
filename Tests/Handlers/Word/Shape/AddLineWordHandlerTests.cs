@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Word.Shape;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Shape;
 
@@ -26,10 +27,12 @@ public class AddLineWordHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("successfully inserted line", result.ToLower());
-        Assert.Contains("document body", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("successfully inserted line", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("document body", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -43,10 +46,12 @@ public class AddLineWordHandlerTests : WordHandlerTestBase
             { "location", "header" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("successfully inserted line", result.ToLower());
-        Assert.Contains("header", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("successfully inserted line", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("header", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -59,10 +64,12 @@ public class AddLineWordHandlerTests : WordHandlerTestBase
             { "location", "footer" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("successfully inserted line", result.ToLower());
-        Assert.Contains("footer", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("successfully inserted line", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("footer", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -75,9 +82,11 @@ public class AddLineWordHandlerTests : WordHandlerTestBase
             { "position", "start" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("start position", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("start position", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -92,9 +101,11 @@ public class AddLineWordHandlerTests : WordHandlerTestBase
             { "lineColor", "FF0000" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("successfully inserted line", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("successfully inserted line", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

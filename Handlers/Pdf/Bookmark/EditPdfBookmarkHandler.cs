@@ -1,12 +1,15 @@
 using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.Bookmark;
 
 /// <summary>
 ///     Handler for editing bookmarks in PDF documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class EditPdfBookmarkHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class EditPdfBookmarkHandler : OperationHandlerBase<Document>
     ///     Optional: title, pageIndex
     /// </param>
     /// <returns>Success message with edit details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var editParams = ExtractEditParameters(parameters);
 
@@ -44,7 +47,7 @@ public class EditPdfBookmarkHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Edited bookmark (index {editParams.BookmarkIndex}).");
+        return new SuccessResult { Message = $"Edited bookmark (index {editParams.BookmarkIndex})." };
     }
 
     /// <summary>

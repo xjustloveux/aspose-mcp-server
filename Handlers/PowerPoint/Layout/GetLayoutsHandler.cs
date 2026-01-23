@@ -1,12 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.PowerPoint.Layout;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Layout;
 
 /// <summary>
 ///     Handler for getting available layouts from a PowerPoint presentation.
 /// </summary>
+[ResultType(typeof(GetLayoutsResult))]
 public class GetLayoutsHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class GetLayoutsHandler : OperationHandlerBase<Presentation>
     ///     Optional: masterIndex
     /// </param>
     /// <returns>JSON string containing layout information.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractGetLayoutsParameters(parameters);
 
@@ -33,37 +36,37 @@ public class GetLayoutsHandler : OperationHandlerBase<Presentation>
             var master = presentation.Masters[p.MasterIndex.Value];
             var layoutsList = PptLayoutHelper.BuildLayoutsList(master.LayoutSlides);
 
-            var result = new
+            var result = new GetLayoutsResult
             {
-                masterIndex = p.MasterIndex.Value,
-                count = master.LayoutSlides.Count,
-                layouts = layoutsList
+                MasterIndex = p.MasterIndex.Value,
+                Count = master.LayoutSlides.Count,
+                Layouts = layoutsList
             };
 
-            return JsonResult(result);
+            return result;
         }
         else
         {
-            List<object> mastersList = [];
+            List<GetLayoutMasterInfo> mastersList = [];
 
             for (var i = 0; i < presentation.Masters.Count; i++)
             {
                 var master = presentation.Masters[i];
-                mastersList.Add(new
+                mastersList.Add(new GetLayoutMasterInfo
                 {
-                    masterIndex = i,
-                    layoutCount = master.LayoutSlides.Count,
-                    layouts = PptLayoutHelper.BuildLayoutsList(master.LayoutSlides)
+                    MasterIndex = i,
+                    LayoutCount = master.LayoutSlides.Count,
+                    Layouts = PptLayoutHelper.BuildLayoutsList(master.LayoutSlides)
                 });
             }
 
-            var result = new
+            var result = new GetLayoutsResult
             {
-                mastersCount = presentation.Masters.Count,
-                masters = mastersList
+                MastersCount = presentation.Masters.Count,
+                Masters = mastersList
             };
 
-            return JsonResult(result);
+            return result;
         }
     }
 

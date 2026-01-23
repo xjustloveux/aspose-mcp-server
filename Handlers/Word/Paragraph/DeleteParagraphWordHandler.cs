@@ -1,11 +1,14 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Paragraph;
 
 /// <summary>
 ///     Handler for deleting paragraphs from Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeleteParagraphWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -19,7 +22,7 @@ public class DeleteParagraphWordHandler : OperationHandlerBase<Document>
     ///     Required: paragraphIndex
     /// </param>
     /// <returns>Success message with deletion details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var deleteParams = ExtractDeleteParagraphParameters(parameters);
 
@@ -52,11 +55,11 @@ public class DeleteParagraphWordHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        var result = $"Paragraph #{idx} deleted successfully\n";
-        if (!string.IsNullOrEmpty(textPreview)) result += $"Content preview: {textPreview}\n";
-        result += $"Remaining paragraphs: {doc.GetChildNodes(NodeType.Paragraph, true).Count}";
+        var message = $"Paragraph #{idx} deleted successfully\n";
+        if (!string.IsNullOrEmpty(textPreview)) message += $"Content preview: {textPreview}\n";
+        message += $"Remaining paragraphs: {doc.GetChildNodes(NodeType.Paragraph, true).Count}";
 
-        return result;
+        return new SuccessResult { Message = message };
     }
 
     /// <summary>

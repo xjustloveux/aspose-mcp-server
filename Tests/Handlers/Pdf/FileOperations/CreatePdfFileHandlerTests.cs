@@ -1,6 +1,7 @@
 using Aspose.Pdf;
 using AsposeMcpServer.Handlers.Pdf.FileOperations;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.FileOperations;
 
@@ -45,9 +46,11 @@ public class CreatePdfFileHandlerTests : PdfHandlerTestBase
             { "outputPath", outputPath }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("created", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("created", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(File.Exists(outputPath));
         var fileInfo = new FileInfo(outputPath);
         Assert.True(fileInfo.Length > 0, "Created PDF should have content");

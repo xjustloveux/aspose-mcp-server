@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Word.List;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.List;
 
@@ -34,9 +35,11 @@ public class AddWordListItemHandlerTests : WordHandlerTestBase
             { "listLevel", level }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains($"Level: {level}", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains($"Level: {level}", result.Message);
     }
 
     #endregion
@@ -54,9 +57,11 @@ public class AddWordListItemHandlerTests : WordHandlerTestBase
             { "styleName", "List Paragraph" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("List item added successfully", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("List item added successfully", result.Message);
         AssertModified(context);
     }
 
@@ -71,9 +76,11 @@ public class AddWordListItemHandlerTests : WordHandlerTestBase
             { "styleName", "List Paragraph" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Style: List Paragraph", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Style: List Paragraph", result.Message);
     }
 
     [SkippableFact]
@@ -109,9 +116,11 @@ public class AddWordListItemHandlerTests : WordHandlerTestBase
             { "applyStyleIndent", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Using style-defined indent", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Using style-defined indent", result.Message);
     }
 
     [Fact]
@@ -127,9 +136,11 @@ public class AddWordListItemHandlerTests : WordHandlerTestBase
             { "applyStyleIndent", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Manually set", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Manually set", result.Message);
     }
 
     #endregion

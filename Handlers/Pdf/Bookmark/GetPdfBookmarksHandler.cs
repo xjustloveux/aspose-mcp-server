@@ -1,12 +1,15 @@
 using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Pdf.Bookmark;
 
 namespace AsposeMcpServer.Handlers.Pdf.Bookmark;
 
 /// <summary>
 ///     Handler for getting bookmarks from PDF documents.
 /// </summary>
+[ResultType(typeof(GetBookmarksPdfResult))]
 public class GetPdfBookmarksHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -18,42 +21,39 @@ public class GetPdfBookmarksHandler : OperationHandlerBase<Document>
     /// <param name="context">The document context.</param>
     /// <param name="parameters">No required parameters.</param>
     /// <returns>JSON string containing bookmark information.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var document = context.Document;
 
         if (document.Outlines.Count == 0)
-            return JsonResult(new
+            return new GetBookmarksPdfResult
             {
-                count = 0,
-                items = Array.Empty<object>(),
-                message = "No bookmarks found"
-            });
+                Count = 0,
+                Items = [],
+                Message = "No bookmarks found"
+            };
 
-        List<object> bookmarkList = [];
+        var bookmarkList = new List<PdfBookmarkInfo>();
         var index = 0;
 
         foreach (var bookmark in document.Outlines)
         {
             index++;
-            var bookmarkInfo = new Dictionary<string, object?>
-            {
-                ["index"] = index,
-                ["title"] = bookmark.Title
-            };
-
             var extractedPageIndex = ExtractPageIndex(bookmark, document);
-            if (extractedPageIndex.HasValue)
-                bookmarkInfo["pageIndex"] = extractedPageIndex.Value;
 
-            bookmarkList.Add(bookmarkInfo);
+            bookmarkList.Add(new PdfBookmarkInfo
+            {
+                Index = index,
+                Title = bookmark.Title,
+                PageIndex = extractedPageIndex
+            });
         }
 
-        return JsonResult(new
+        return new GetBookmarksPdfResult
         {
-            count = bookmarkList.Count,
-            items = bookmarkList
-        });
+            Count = bookmarkList.Count,
+            Items = bookmarkList
+        };
     }
 
     /// <summary>

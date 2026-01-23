@@ -1,7 +1,8 @@
 using Aspose.Words;
 using Aspose.Words.Tables;
 using AsposeMcpServer.Handlers.Word.Table;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Table;
 
@@ -28,9 +29,11 @@ public class CreateWordTableHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("created", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("created", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(GetTableCount(doc) > 0);
         AssertModified(context);
     }
@@ -49,10 +52,12 @@ public class CreateWordTableHandlerTests : WordHandlerTestBase
             { "columns", cols }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains($"{rows} rows", result);
-        Assert.Contains($"{cols} columns", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains($"{rows} rows", result.Message);
+        Assert.Contains($"{cols} columns", result.Message);
         var table = GetFirstTable(doc);
         Assert.Equal(rows, table.Rows.Count);
         Assert.Equal(cols, table.Rows[0].Cells.Count);

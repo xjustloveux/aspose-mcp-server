@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.DataValidation;
 
 /// <summary>
 ///     Handler for adding data validation to Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddExcelDataValidationHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class AddExcelDataValidationHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0), formula2, operatorType, inCellDropDown, errorMessage, inputMessage
     /// </param>
     /// <returns>Success message with validation details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var addParams = ExtractAddParameters(parameters);
 
@@ -67,8 +70,11 @@ public class AddExcelDataValidationHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success(
-            $"Data validation added to range {addParams.Range} (type: {addParams.ValidationType}, index: {validationIndex}).");
+        return new SuccessResult
+        {
+            Message =
+                $"Data validation added to range {addParams.Range} (type: {addParams.ValidationType}, index: {validationIndex})."
+        };
     }
 
     private static AddParameters ExtractAddParameters(OperationParameters parameters)

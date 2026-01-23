@@ -1,6 +1,8 @@
-using Aspose.Words;
+﻿using Aspose.Words;
 using Aspose.Words.Tables;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Word.Table;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Word;
 
 namespace AsposeMcpServer.Tests.Tools.Word;
@@ -47,7 +49,8 @@ public class WordTableToolTests : WordTestBase
         builder.Document.Save(docPath);
 
         var result = _tool.Execute("get", docPath);
-        Assert.Contains("count", result);
+        var data = GetResultData<GetTablesWordResult>(result);
+        Assert.Equal(1, data.Count);
     }
 
     [Fact]
@@ -165,8 +168,9 @@ public class WordTableToolTests : WordTestBase
         builder.Document.Save(docPath);
 
         var result = _tool.Execute("get_structure", docPath, tableIndex: 0);
-        Assert.Contains("Table", result);
-        Assert.Contains("Rows", result);
+        var data = GetResultData<GetTableStructureWordResult>(result);
+        Assert.Contains("Table", data.Content);
+        Assert.Contains("Rows", data.Content);
     }
 
     #endregion
@@ -221,8 +225,10 @@ public class WordTableToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("get", sessionId: sessionId);
 
-        Assert.Contains("count", result);
-        Assert.Contains("1", result);
+        var data = GetResultData<GetTablesWordResult>(result);
+        Assert.Equal(1, data.Count);
+        var output = GetResultOutput<GetTablesWordResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -231,7 +237,10 @@ public class WordTableToolTests : WordTestBase
         var docPath = CreateWordDocument("test_session_create_table.docx");
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("create", sessionId: sessionId, rows: 2, columns: 3);
-        Assert.StartsWith("Successfully created table", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Successfully created table", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
 
         var doc = SessionManager.GetDocument<Document>(sessionId);
         var tables = doc.GetChildNodes(NodeType.Table, true).Cast<Table>().ToList();
@@ -375,8 +384,8 @@ public class WordTableToolTests : WordTestBase
         var sessionId = OpenSession(docPath2);
         var result = _tool.Execute("get", docPath1, sessionId);
 
-        Assert.Contains("count", result);
-        Assert.Contains("1", result);
+        var data = GetResultData<GetTablesWordResult>(result);
+        Assert.Equal(1, data.Count);
     }
 
     #endregion

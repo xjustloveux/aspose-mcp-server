@@ -1,12 +1,16 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Text;
 
 /// <summary>
 ///     Handler for editing text in PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class EditPptTextHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -21,7 +25,7 @@ public class EditPptTextHandler : OperationHandlerBase<Presentation>
     ///     Optional: slideIndex (default: 0), text, fontName, fontSize, bold, italic, color.
     /// </param>
     /// <returns>Success message with edit details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var textParams = ExtractTextParameters(parameters);
         var presentation = context.Document;
@@ -35,7 +39,8 @@ public class EditPptTextHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Text edited in shape {textParams.ShapeIndex} on slide {textParams.SlideIndex}.");
+        return new SuccessResult
+            { Message = $"Text edited in shape {textParams.ShapeIndex} on slide {textParams.SlideIndex}." };
     }
 
     /// <summary>

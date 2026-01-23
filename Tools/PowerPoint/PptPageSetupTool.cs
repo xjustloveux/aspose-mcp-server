@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
@@ -10,6 +12,7 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 ///     Unified tool for PowerPoint page setup (slide size, orientation, footer, slide numbering).
 ///     Merges: PptSetSlideSizeTool, PptSetSlideOrientationTool, PptHeaderFooterTool
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.PowerPoint.PageSetup")]
 [McpServerToolType]
 public class PptPageSetupTool
 {
@@ -60,7 +63,14 @@ public class PptPageSetupTool
     /// <param name="slideIndices">Slide indices (0-based, optional, for set_footer, if not provided applies to all slides).</param>
     /// <returns>A message indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "ppt_page_setup")]
+    [McpServerTool(
+        Name = "ppt_page_setup",
+        Title = "PowerPoint Page Setup Operations",
+        Destructive = false,
+        Idempotent = true,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(
         @"Manage PowerPoint page setup. Supports 4 operations: set_size, set_orientation, set_footer, set_slide_numbering.
 
@@ -73,7 +83,7 @@ Usage examples:
 - Set orientation: ppt_page_setup(operation='set_orientation', path='presentation.pptx', orientation='Portrait')
 - Set footer: ppt_page_setup(operation='set_footer', path='presentation.pptx', footerText='Footer', showSlideNumber=true)
 - Set slide numbering: ppt_page_setup(operation='set_slide_numbering', path='presentation.pptx', showSlideNumber=true, firstNumber=1)")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: set_size, set_orientation, set_footer, set_slide_numbering")]
         string operation,
         [Description("Presentation file path (required if no sessionId)")]
@@ -123,7 +133,7 @@ Usage examples:
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

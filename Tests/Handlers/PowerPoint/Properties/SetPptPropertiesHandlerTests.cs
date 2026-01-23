@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.PowerPoint.Properties;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Properties;
 
@@ -29,9 +30,11 @@ public class SetPptPropertiesHandlerTests : PptHandlerTestBase
             { "title", "New Title" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Title", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Title", result.Message);
         Assert.Equal("New Title", pres.DocumentProperties.Title);
         AssertModified(context);
     }
@@ -46,9 +49,11 @@ public class SetPptPropertiesHandlerTests : PptHandlerTestBase
             { "subject", "New Subject" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Subject", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Subject", result.Message);
         Assert.Equal("New Subject", pres.DocumentProperties.Subject);
     }
 
@@ -62,9 +67,11 @@ public class SetPptPropertiesHandlerTests : PptHandlerTestBase
             { "author", "New Author" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Author", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Author", result.Message);
         Assert.Equal("New Author", pres.DocumentProperties.Author);
     }
 
@@ -78,9 +85,11 @@ public class SetPptPropertiesHandlerTests : PptHandlerTestBase
             { "keywords", "keyword1, keyword2" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Keywords", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Keywords", result.Message);
         Assert.Equal("keyword1, keyword2", pres.DocumentProperties.Keywords);
     }
 
@@ -94,9 +103,11 @@ public class SetPptPropertiesHandlerTests : PptHandlerTestBase
             { "comments", "New Comments" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Comments", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Comments", result.Message);
         Assert.Equal("New Comments", pres.DocumentProperties.Comments);
     }
 
@@ -110,9 +121,11 @@ public class SetPptPropertiesHandlerTests : PptHandlerTestBase
             { "category", "New Category" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Category", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Category", result.Message);
         Assert.Equal("New Category", pres.DocumentProperties.Category);
     }
 
@@ -126,9 +139,11 @@ public class SetPptPropertiesHandlerTests : PptHandlerTestBase
             { "company", "New Company" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Company", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Company", result.Message);
         Assert.Equal("New Company", pres.DocumentProperties.Company);
     }
 
@@ -142,9 +157,11 @@ public class SetPptPropertiesHandlerTests : PptHandlerTestBase
             { "manager", "New Manager" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Manager", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Manager", result.Message);
         Assert.Equal("New Manager", pres.DocumentProperties.Manager);
     }
 
@@ -160,11 +177,13 @@ public class SetPptPropertiesHandlerTests : PptHandlerTestBase
             { "company", "Multi Company" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Title", result);
-        Assert.Contains("Author", result);
-        Assert.Contains("Company", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Title", result.Message);
+        Assert.Contains("Author", result.Message);
+        Assert.Contains("Company", result.Message);
         Assert.Equal("Multi Title", pres.DocumentProperties.Title);
         Assert.Equal("Multi Author", pres.DocumentProperties.Author);
         Assert.Equal("Multi Company", pres.DocumentProperties.Company);
@@ -184,9 +203,11 @@ public class SetPptPropertiesHandlerTests : PptHandlerTestBase
             { "customProperties", customProps }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("CustomProperties", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("CustomProperties", result.Message);
         Assert.Equal("CustomValue", pres.DocumentProperties["CustomKey"]);
     }
 
@@ -201,9 +222,11 @@ public class SetPptPropertiesHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 

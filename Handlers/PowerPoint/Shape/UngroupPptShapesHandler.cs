@@ -1,12 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Shape;
 
 /// <summary>
 ///     Handler for ungrouping a group shape.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class UngroupPptShapesHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class UngroupPptShapesHandler : OperationHandlerBase<Presentation>
     ///     Required: slideIndex, shapeIndex
     /// </param>
     /// <returns>Success message with ungroup details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractUngroupPptShapesParameters(parameters);
 
@@ -45,7 +48,7 @@ public class UngroupPptShapesHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Ungrouped {shapesInGroup.Count} shapes on slide {p.SlideIndex}.");
+        return new SuccessResult { Message = $"Ungrouped {shapesInGroup.Count} shapes on slide {p.SlideIndex}." };
     }
 
     /// <summary>

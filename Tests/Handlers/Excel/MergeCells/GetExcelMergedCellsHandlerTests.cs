@@ -1,7 +1,7 @@
-using System.Text.Json;
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.MergeCells;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Excel.MergeCells;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.MergeCells;
 
@@ -34,10 +34,11 @@ public class GetExcelMergedCellsHandlerTests : ExcelHandlerTestBase
             { "sheetIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(2, json.RootElement.GetProperty("count").GetInt32());
+        var result = Assert.IsType<GetMergedCellsResult>(res);
+
+        Assert.Equal(2, result.Count);
     }
 
     #endregion
@@ -84,12 +85,13 @@ public class GetExcelMergedCellsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("count", out _));
-        Assert.True(json.RootElement.TryGetProperty("worksheetName", out _));
-        Assert.True(json.RootElement.TryGetProperty("items", out _));
+        var result = Assert.IsType<GetMergedCellsResult>(res);
+
+        Assert.True(result.Count >= 0);
+        Assert.NotNull(result.WorksheetName);
+        Assert.NotNull(result.Items);
     }
 
     [Fact]
@@ -99,12 +101,13 @@ public class GetExcelMergedCellsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(0, json.RootElement.GetProperty("count").GetInt32());
-        Assert.True(json.RootElement.TryGetProperty("message", out var message));
-        Assert.Contains("no merged", message.GetString()?.ToLower());
+        var result = Assert.IsType<GetMergedCellsResult>(res);
+
+        Assert.Equal(0, result.Count);
+        Assert.NotNull(result.Message);
+        Assert.Contains("no merged", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -114,11 +117,12 @@ public class GetExcelMergedCellsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(3, json.RootElement.GetProperty("count").GetInt32());
-        Assert.Equal(3, json.RootElement.GetProperty("items").GetArrayLength());
+        var result = Assert.IsType<GetMergedCellsResult>(res);
+
+        Assert.Equal(3, result.Count);
+        Assert.Equal(3, result.Items.Count);
     }
 
     [Fact]
@@ -128,16 +132,17 @@ public class GetExcelMergedCellsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var item = json.RootElement.GetProperty("items")[0];
-        Assert.True(item.TryGetProperty("index", out _));
-        Assert.True(item.TryGetProperty("range", out _));
-        Assert.True(item.TryGetProperty("startCell", out _));
-        Assert.True(item.TryGetProperty("endCell", out _));
-        Assert.True(item.TryGetProperty("rowCount", out _));
-        Assert.True(item.TryGetProperty("columnCount", out _));
+        var result = Assert.IsType<GetMergedCellsResult>(res);
+
+        var item = result.Items[0];
+        Assert.True(item.Index >= 0);
+        Assert.NotNull(item.Range);
+        Assert.NotNull(item.StartCell);
+        Assert.NotNull(item.EndCell);
+        Assert.True(item.RowCount > 0);
+        Assert.True(item.ColumnCount > 0);
     }
 
     [Fact]
@@ -148,14 +153,15 @@ public class GetExcelMergedCellsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var item = json.RootElement.GetProperty("items")[0];
-        Assert.Equal("B2", item.GetProperty("startCell").GetString());
-        Assert.Equal("D4", item.GetProperty("endCell").GetString());
-        Assert.Equal(3, item.GetProperty("rowCount").GetInt32());
-        Assert.Equal(3, item.GetProperty("columnCount").GetInt32());
+        var result = Assert.IsType<GetMergedCellsResult>(res);
+
+        var item = result.Items[0];
+        Assert.Equal("B2", item.StartCell);
+        Assert.Equal("D4", item.EndCell);
+        Assert.Equal(3, item.RowCount);
+        Assert.Equal(3, item.ColumnCount);
     }
 
     [Fact]
@@ -167,11 +173,11 @@ public class GetExcelMergedCellsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var item = json.RootElement.GetProperty("items")[0];
-        Assert.Equal("Test Value", item.GetProperty("value").GetString());
+        var result = Assert.IsType<GetMergedCellsResult>(res);
+
+        Assert.Equal("Test Value", result.Items[0].Value);
     }
 
     #endregion

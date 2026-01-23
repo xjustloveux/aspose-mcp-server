@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Table;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Table;
 
@@ -27,10 +28,12 @@ public class DeleteWordTableHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Remaining", result);
-        Assert.Contains("4", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Remaining", result.Message);
+        Assert.Contains("4", result.Message);
     }
 
     #endregion
@@ -44,9 +47,11 @@ public class DeleteWordTableHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(0, GetTableCount(doc));
         AssertModified(context);
     }
@@ -80,9 +85,11 @@ public class DeleteWordTableHandlerTests : WordHandlerTestBase
             { "tableIndex", tableIndex }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains($"#{tableIndex}", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains($"#{tableIndex}", result.Message);
         Assert.Equal(2, GetTableCount(doc));
     }
 

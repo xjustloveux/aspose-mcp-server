@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.Filter;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Filter;
 
@@ -55,10 +56,12 @@ public class FilterByValueExcelHandlerTests : ExcelHandlerTestBase
             { "criteria", "Item1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Filter applied", result);
-        Assert.Contains("Item1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Filter applied", result.Message);
+        Assert.Contains("Item1", result.Message);
         AssertModified(context);
     }
 
@@ -74,9 +77,11 @@ public class FilterByValueExcelHandlerTests : ExcelHandlerTestBase
             { "columnIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("column 1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("column 1", result.Message);
     }
 
     [Fact]
@@ -91,9 +96,11 @@ public class FilterByValueExcelHandlerTests : ExcelHandlerTestBase
             { "filterOperator", "GreaterThan" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("GreaterThan", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("GreaterThan", result.Message);
     }
 
     [Theory]
@@ -112,10 +119,12 @@ public class FilterByValueExcelHandlerTests : ExcelHandlerTestBase
             { "filterOperator", filterOperator }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Filter applied", result);
-        Assert.Contains(filterOperator, result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Filter applied", result.Message);
+        Assert.Contains(filterOperator, result.Message);
     }
 
     #endregion

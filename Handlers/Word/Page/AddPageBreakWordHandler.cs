@@ -1,5 +1,7 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.Page;
@@ -7,6 +9,7 @@ namespace AsposeMcpServer.Handlers.Word.Page;
 /// <summary>
 ///     Handler for adding a page break at a specified paragraph or at document end in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddPageBreakWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class AddPageBreakWordHandler : OperationHandlerBase<Document>
     ///     Optional: paragraphIndex (0-based paragraph index to insert page break after)
     /// </param>
     /// <returns>Success message with page break location.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var addParams = ExtractAddPageBreakParameters(parameters);
 
@@ -47,7 +50,7 @@ public class AddPageBreakWordHandler : OperationHandlerBase<Document>
         var location = addParams.ParagraphIndex.HasValue
             ? $"after paragraph {addParams.ParagraphIndex.Value}"
             : "at document end";
-        return Success($"Page break added {location}");
+        return new SuccessResult { Message = $"Page break added {location}" };
     }
 
     /// <summary>

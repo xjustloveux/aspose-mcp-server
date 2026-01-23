@@ -1,7 +1,8 @@
 using Aspose.Pdf;
 using Aspose.Pdf.Forms;
 using AsposeMcpServer.Handlers.Pdf.Signature;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Pdf.Signature;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Signature;
 
@@ -44,10 +45,11 @@ public class GetPdfSignaturesHandlerTests : PdfHandlerTestBase
         var context = CreateContext(document);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"count\": 0", result);
-        Assert.Contains("No signatures found", result);
+        var result = Assert.IsType<GetSignaturesResult>(res);
+        Assert.Equal(0, result.Count);
+        Assert.Equal("No signatures found", result.Message);
     }
 
     [SkippableFact]
@@ -58,10 +60,11 @@ public class GetPdfSignaturesHandlerTests : PdfHandlerTestBase
         var context = CreateContext(document);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("count", result);
-        Assert.Contains("items", result);
+        var result = Assert.IsType<GetSignaturesResult>(res);
+        Assert.True(result.Count >= 0);
+        Assert.NotNull(result.Items);
     }
 
     #endregion

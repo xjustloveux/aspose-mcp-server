@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Comment;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Comment;
 
@@ -51,9 +52,11 @@ public class ReplyWordCommentHandlerTests : WordHandlerTestBase
             { "replyText", "This is a reply" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Reply added", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Reply added", result.Message);
         AssertModified(context);
     }
 
@@ -68,9 +71,11 @@ public class ReplyWordCommentHandlerTests : WordHandlerTestBase
             { "replyText", "Reply text" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("#1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("#1", result.Message);
     }
 
     [Fact]
@@ -84,9 +89,11 @@ public class ReplyWordCommentHandlerTests : WordHandlerTestBase
             { "replyText", "My reply content" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("My reply content", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("My reply content", result.Message);
     }
 
     [Fact]
@@ -100,9 +107,11 @@ public class ReplyWordCommentHandlerTests : WordHandlerTestBase
             { "replyText", "Reply text" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Original author", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Original author", result.Message);
     }
 
     [Fact]
@@ -117,9 +126,11 @@ public class ReplyWordCommentHandlerTests : WordHandlerTestBase
             { "author", "Jane Doe" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Jane Doe", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Jane Doe", result.Message);
     }
 
     #endregion
@@ -151,7 +162,7 @@ public class ReplyWordCommentHandlerTests : WordHandlerTestBase
         });
 
         var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
-        Assert.Contains("text", ex.Message.ToLower());
+        Assert.Contains("text", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

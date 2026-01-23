@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Word.Note;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Note;
 
@@ -29,10 +30,12 @@ public class AddWordFootnoteHandlerTests : WordHandlerTestBase
             { "text", "This is a footnote" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added successfully", result.ToLower());
-        Assert.Contains("This is a footnote", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added successfully", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("This is a footnote", result.Message);
         AssertModified(context);
     }
 
@@ -47,9 +50,11 @@ public class AddWordFootnoteHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added successfully", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added successfully", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -63,9 +68,11 @@ public class AddWordFootnoteHandlerTests : WordHandlerTestBase
             { "customMark", "*" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added successfully", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added successfully", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

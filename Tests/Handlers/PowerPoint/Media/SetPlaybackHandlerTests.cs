@@ -1,6 +1,7 @@
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Media;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Media;
 
@@ -35,9 +36,11 @@ public class SetPlaybackHandlerTests : PptHandlerTestBase
             { "volume", "medium" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(AudioPlayModePreset.Auto, audioFrame.PlayMode);
         Assert.Equal(AudioVolumeMode.Medium, audioFrame.Volume);
         AssertModified(context);
@@ -57,9 +60,11 @@ public class SetPlaybackHandlerTests : PptHandlerTestBase
             { "playMode", "onclick" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("onclick", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("onclick", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(AudioPlayModePreset.OnClick, audioFrame.PlayMode);
     }
 
@@ -77,9 +82,11 @@ public class SetPlaybackHandlerTests : PptHandlerTestBase
             { "loop", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("loop=true", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("loop=true", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(audioFrame.PlayLoopMode);
     }
 
@@ -101,9 +108,11 @@ public class SetPlaybackHandlerTests : PptHandlerTestBase
             { "volume", volumeStr }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains(volumeStr, result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains(volumeStr, result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(expectedMode, audioFrame.Volume);
     }
 

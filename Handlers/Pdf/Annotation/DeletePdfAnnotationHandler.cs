@@ -1,11 +1,14 @@
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.Annotation;
 
 /// <summary>
 ///     Handler for deleting annotations from PDF documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeletePdfAnnotationHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class DeletePdfAnnotationHandler : OperationHandlerBase<Document>
     ///     Optional: annotationIndex (if omitted, deletes all annotations on the page)
     /// </param>
     /// <returns>Success message with deletion details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var deleteParams = ExtractDeleteParameters(parameters);
 
@@ -40,8 +43,11 @@ public class DeletePdfAnnotationHandler : OperationHandlerBase<Document>
 
             MarkModified(context);
 
-            return Success(
-                $"Deleted annotation {deleteParams.AnnotationIndex.Value} from page {deleteParams.PageIndex}.");
+            return new SuccessResult
+            {
+                Message =
+                    $"Deleted annotation {deleteParams.AnnotationIndex.Value} from page {deleteParams.PageIndex}."
+            };
         }
 
         var count = page.Annotations.Count;
@@ -52,7 +58,7 @@ public class DeletePdfAnnotationHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Deleted all {count} annotation(s) from page {deleteParams.PageIndex}.");
+        return new SuccessResult { Message = $"Deleted all {count} annotation(s) from page {deleteParams.PageIndex}." };
     }
 
     /// <summary>

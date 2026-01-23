@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.Range;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Range;
 
@@ -81,10 +82,12 @@ public class EditExcelRangeHandlerTests : ExcelHandlerTestBase
             { "data", "[[\"X\"]]" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("A1:B2", result);
-        Assert.Contains("edited", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("A1:B2", result.Message);
+        Assert.Contains("edited", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -106,9 +109,11 @@ public class EditExcelRangeHandlerTests : ExcelHandlerTestBase
             { "data", "[[\"New1\",\"New2\"],[\"New3\",\"New4\"]]" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("edited", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("edited", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("New1", workbook.Worksheets[0].Cells["A1"].StringValue);
         Assert.Equal("New4", workbook.Worksheets[0].Cells["B2"].StringValue);
         AssertModified(context);
@@ -133,9 +138,11 @@ public class EditExcelRangeHandlerTests : ExcelHandlerTestBase
             { "data", "[[\"X\"]]" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("edited", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("edited", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 

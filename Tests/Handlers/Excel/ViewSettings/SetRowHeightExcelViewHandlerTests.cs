@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.ViewSettings;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.ViewSettings;
 
@@ -30,9 +31,11 @@ public class SetRowHeightExcelViewHandlerTests : ExcelHandlerTestBase
             { "height", 25.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("height set to 25", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("height set to 25", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(25.0, workbook.Worksheets[0].Cells.GetRowHeight(0));
         AssertModified(context);
     }
@@ -50,9 +53,11 @@ public class SetRowHeightExcelViewHandlerTests : ExcelHandlerTestBase
             { "height", 30.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("row 3", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("row 3", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(30.0, workbook.Worksheets[1].Cells.GetRowHeight(3));
     }
 
@@ -70,10 +75,12 @@ public class SetRowHeightExcelViewHandlerTests : ExcelHandlerTestBase
             { "height", 25.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("row 0", result.ToLower());
-        Assert.Contains("height set to 25", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("row 0", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("height set to 25", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -86,9 +93,11 @@ public class SetRowHeightExcelViewHandlerTests : ExcelHandlerTestBase
             { "rowIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("height set to 15", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("height set to 15", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -102,9 +111,11 @@ public class SetRowHeightExcelViewHandlerTests : ExcelHandlerTestBase
             { "height", 25.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("height set to", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("height set to", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -118,9 +129,11 @@ public class SetRowHeightExcelViewHandlerTests : ExcelHandlerTestBase
             { "height", 0.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("height set to", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("height set to", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -148,9 +161,11 @@ public class SetRowHeightExcelViewHandlerTests : ExcelHandlerTestBase
             { "height", 0.1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("height set to", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("height set to", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -164,9 +179,11 @@ public class SetRowHeightExcelViewHandlerTests : ExcelHandlerTestBase
             { "height", 400.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("height set to 400", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("height set to 400", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -194,9 +211,11 @@ public class SetRowHeightExcelViewHandlerTests : ExcelHandlerTestBase
             { "height", 20.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("row 0", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("row 0", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

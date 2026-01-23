@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Word.List;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.List;
 
@@ -35,9 +36,11 @@ public class ConvertToWordListHandlerTests : WordHandlerTestBase
             { "numberFormat", format }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains($"Number format: {format}", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains($"Number format: {format}", result.Message);
     }
 
     #endregion
@@ -59,9 +62,11 @@ public class ConvertToWordListHandlerTests : WordHandlerTestBase
             { "endParagraphIndex", end }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains($"paragraph {start} to {end}", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains($"paragraph {start} to {end}", result.Message);
     }
 
     #endregion
@@ -79,9 +84,11 @@ public class ConvertToWordListHandlerTests : WordHandlerTestBase
             { "endParagraphIndex", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("converted to list successfully", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("converted to list successfully", result.Message);
         AssertModified(context);
     }
 
@@ -96,9 +103,11 @@ public class ConvertToWordListHandlerTests : WordHandlerTestBase
             { "endParagraphIndex", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("paragraph 0 to 2", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("paragraph 0 to 2", result.Message);
     }
 
     [Fact]
@@ -112,9 +121,11 @@ public class ConvertToWordListHandlerTests : WordHandlerTestBase
             { "endParagraphIndex", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Converted:", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Converted:", result.Message);
     }
 
     [Fact]
@@ -128,9 +139,11 @@ public class ConvertToWordListHandlerTests : WordHandlerTestBase
             { "endParagraphIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("converted to list successfully", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("converted to list successfully", result.Message);
     }
 
     #endregion
@@ -148,9 +161,11 @@ public class ConvertToWordListHandlerTests : WordHandlerTestBase
             { "endParagraphIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("List type: bullet", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("List type: bullet", result.Message);
     }
 
     [Fact]
@@ -165,9 +180,11 @@ public class ConvertToWordListHandlerTests : WordHandlerTestBase
             { "listType", "number" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("List type: number", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("List type: number", result.Message);
     }
 
     #endregion

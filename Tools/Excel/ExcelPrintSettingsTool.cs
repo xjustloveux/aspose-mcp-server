@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Excel;
 /// <summary>
 ///     Unified tool for managing Excel print settings (print area, titles, page setup, etc.).
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Excel.PrintSettings")]
 [McpServerToolType]
 public class ExcelPrintSettingsTool
 {
@@ -67,7 +70,14 @@ public class ExcelPrintSettingsTool
     /// <param name="fitToPagesTall">Number of pages tall to fit content.</param>
     /// <returns>A message indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "excel_print_settings")]
+    [McpServerTool(
+        Name = "excel_print_settings",
+        Title = "Excel Print Settings Operations",
+        Destructive = false,
+        Idempotent = true,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(
         @"Manage Excel print settings. Supports 4 operations: set_print_area, set_print_titles, set_page_setup, set_all.
 
@@ -79,7 +89,7 @@ Usage examples:
 - Set margins: excel_print_settings(operation='set_page_setup', path='book.xlsx', leftMargin=0.5, topMargin=0.75)
 - Set fit to page: excel_print_settings(operation='set_all', path='book.xlsx', fitToPage=true, fitToPagesWide=1, fitToPagesTall=0)
 - Set all: excel_print_settings(operation='set_all', path='book.xlsx', range='A1:D10', orientation='Portrait')")]
-    public string Execute(
+    public object Execute(
         [Description(@"Operation to perform.
 - 'set_print_area': Set print area (required params: path, range or clearPrintArea)
 - 'set_print_titles': Set print titles (required params: path)
@@ -155,7 +165,7 @@ Usage examples:
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

@@ -1,13 +1,17 @@
 using System.Drawing;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Format;
 
 /// <summary>
 ///     Handler for setting run format in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetRunFormatWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -22,7 +26,7 @@ public class SetRunFormatWordHandler : OperationHandlerBase<Document>
     ///     Optional: runIndex, fontName, fontNameAscii, fontNameFarEast, fontSize, bold, italic, underline, color
     /// </param>
     /// <returns>Success message.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var paragraphIndex = parameters.GetOptional("paragraphIndex", 0);
         var runIndex = parameters.GetOptional<int?>("runIndex");
@@ -39,7 +43,7 @@ public class SetRunFormatWordHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
         var colorMsg = isAutoColor ? " (color reset to auto)" : "";
-        return Success($"Run format updated{colorMsg}");
+        return new SuccessResult { Message = $"Run format updated{colorMsg}" };
     }
 
     /// <summary>

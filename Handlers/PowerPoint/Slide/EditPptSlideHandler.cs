@@ -1,12 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Slide;
 
 /// <summary>
 ///     Handler for editing slide properties in PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class EditPptSlideHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class EditPptSlideHandler : OperationHandlerBase<Presentation>
     ///     Optional: layoutIndex (0-based, to change layout)
     /// </param>
     /// <returns>Success message with edit details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractEditPptSlideParameters(parameters);
 
@@ -38,7 +41,7 @@ public class EditPptSlideHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Slide {p.SlideIndex} updated.");
+        return new SuccessResult { Message = $"Slide {p.SlideIndex} updated." };
     }
 
     /// <summary>

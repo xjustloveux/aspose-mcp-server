@@ -1,11 +1,14 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Word.Revision;
 
 namespace AsposeMcpServer.Handlers.Word.Revision;
 
 /// <summary>
 ///     Handler for getting all revisions from Word documents.
 /// </summary>
+[ResultType(typeof(GetRevisionsWordResult))]
 public class GetRevisionsHandler : OperationHandlerBase<Document>
 {
     private const int MaxRevisionTextLength = 100;
@@ -19,11 +22,11 @@ public class GetRevisionsHandler : OperationHandlerBase<Document>
     /// <param name="context">The document context.</param>
     /// <param name="parameters">No parameters required.</param>
     /// <returns>JSON string containing revision information.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var doc = context.Document;
         var revisions = doc.Revisions.ToList();
-        List<object> revisionList = [];
+        List<RevisionInfo> revisionList = [];
 
         for (var i = 0; i < revisions.Count; i++)
         {
@@ -31,23 +34,21 @@ public class GetRevisionsHandler : OperationHandlerBase<Document>
             var text = revision.ParentNode?.ToString(SaveFormat.Text)?.Trim() ?? "(none)";
             var truncatedText = TruncateText(text, MaxRevisionTextLength);
 
-            revisionList.Add(new
+            revisionList.Add(new RevisionInfo
             {
-                index = i,
-                type = revision.RevisionType.ToString(),
-                author = revision.Author,
-                date = revision.DateTime.ToString("yyyy-MM-dd HH:mm:ss"),
-                text = truncatedText
+                Index = i,
+                Type = revision.RevisionType.ToString(),
+                Author = revision.Author,
+                Date = revision.DateTime.ToString("yyyy-MM-dd HH:mm:ss"),
+                Text = truncatedText
             });
         }
 
-        var result = new
+        return new GetRevisionsWordResult
         {
-            count = revisions.Count,
-            revisions = revisionList
+            Count = revisions.Count,
+            Revisions = revisionList
         };
-
-        return JsonResult(result);
     }
 
     /// <summary>

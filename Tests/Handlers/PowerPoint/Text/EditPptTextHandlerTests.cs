@@ -1,6 +1,7 @@
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Text;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Text;
 
@@ -33,9 +34,11 @@ public class EditPptTextHandlerTests : PptHandlerTestBase
             { "text", "Updated" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("slide 1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("slide 1", result.Message);
     }
 
     #endregion
@@ -64,9 +67,11 @@ public class EditPptTextHandlerTests : PptHandlerTestBase
             { "text", "Updated" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Text edited", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Text edited", result.Message);
         AssertModified(context);
     }
 
@@ -80,9 +85,11 @@ public class EditPptTextHandlerTests : PptHandlerTestBase
             { "shapeIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("shape 0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("shape 0", result.Message);
     }
 
     [Fact]
@@ -96,9 +103,11 @@ public class EditPptTextHandlerTests : PptHandlerTestBase
             { "slideIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("slide 0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("slide 0", result.Message);
     }
 
     #endregion
@@ -116,9 +125,11 @@ public class EditPptTextHandlerTests : PptHandlerTestBase
             { "fontName", "Arial" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("edited", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("edited", result.Message);
     }
 
     [Fact]
@@ -132,9 +143,11 @@ public class EditPptTextHandlerTests : PptHandlerTestBase
             { "fontSize", 24f }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("edited", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("edited", result.Message);
     }
 
     [Fact]
@@ -148,9 +161,11 @@ public class EditPptTextHandlerTests : PptHandlerTestBase
             { "bold", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("edited", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("edited", result.Message);
     }
 
     [Fact]
@@ -164,9 +179,11 @@ public class EditPptTextHandlerTests : PptHandlerTestBase
             { "italic", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("edited", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("edited", result.Message);
     }
 
     [Fact]
@@ -180,9 +197,11 @@ public class EditPptTextHandlerTests : PptHandlerTestBase
             { "color", "#0000FF" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("edited", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("edited", result.Message);
     }
 
     #endregion

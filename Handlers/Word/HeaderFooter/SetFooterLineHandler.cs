@@ -1,5 +1,8 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 using Section = Aspose.Words.Section;
 
@@ -8,6 +11,7 @@ namespace AsposeMcpServer.Handlers.Word.HeaderFooter;
 /// <summary>
 ///     Handler for setting footer lines in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetFooterLineHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -21,7 +25,7 @@ public class SetFooterLineHandler : OperationHandlerBase<Document>
     ///     Optional: lineStyle, lineWidth, sectionIndex, headerFooterType
     /// </param>
     /// <returns>Success message.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractSetFooterLineParameters(parameters);
 
@@ -48,7 +52,7 @@ public class SetFooterLineHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success("Footer line set");
+        return new SuccessResult { Message = "Footer line set" };
     }
 
     /// <summary>

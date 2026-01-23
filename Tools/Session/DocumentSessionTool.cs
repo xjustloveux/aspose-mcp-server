@@ -1,7 +1,8 @@
-﻿using System.ComponentModel;
-using System.Text.Json;
-using AsposeMcpServer.Core.Helpers;
+using System.ComponentModel;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.Session;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Session;
@@ -53,8 +54,16 @@ public class DocumentSessionTool
     /// <param name="mode">Access mode (for 'open' operation)</param>
     /// <param name="discard">Discard changes (for 'close' operation)</param>
     /// <param name="deleteAfterRecover">Delete temp file after recovery (for 'recover' operation)</param>
-    /// <returns>Operation result as JSON string</returns>
-    [McpServerTool(Name = "document_session")]
+    /// <returns>Operation result object</returns>
+    [McpServerTool(
+        Name = "document_session",
+        Title = "Manage Document Sessions",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
+    [OutputSchema(typeof(DocumentSessionResults))]
     [Description(@"Manage document sessions for in-memory editing. Supports Word, Excel, PowerPoint, and PDF files.
 
 Session Operations:
@@ -85,7 +94,7 @@ Usage examples:
 
 After opening a document, use the returned sessionId with other tools to edit the document in memory.
 Changes are only written to disk when you call 'save' or 'close' (without discard=true).")]
-    public string Execute(
+    public object Execute(
         [Description(@"Operation to perform:
 Session operations:
 - 'open': Open document and create session (required: path)
@@ -113,7 +122,7 @@ Temp file operations:
         [Description("Delete temp file after recovery (for 'recover', default: true)")]
         bool deleteAfterRecover = true)
     {
-        return operation.ToLower() switch
+        object result = operation.ToLower() switch
         {
             // Session operations
             "open" => OpenDocument(path!, mode),
@@ -129,6 +138,7 @@ Temp file operations:
             "temp_stats" => GetTempStats(),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
+        return ResultHelper.FinalizeResult((dynamic)result, outputPath, sessionId);
     }
 
     /// <summary>
@@ -136,9 +146,9 @@ Temp file operations:
     /// </summary>
     /// <param name="path">The file path of the document to open.</param>
     /// <param name="mode">The access mode ('readonly' or 'readwrite').</param>
-    /// <returns>A JSON string containing the session information.</returns>
+    /// <returns>The open session result.</returns>
     /// <exception cref="ArgumentException">Thrown when path is null or empty.</exception>
-    private string OpenDocument(string path, string mode)
+    private OpenSessionResult OpenDocument(string path, string mode)
     {
         if (string.IsNullOrEmpty(path))
             throw new ArgumentException("path is required for 'open' operation");
@@ -147,13 +157,13 @@ Temp file operations:
         var newSessionId = _sessionManager.OpenDocument(path, identity, mode);
         var session = _sessionManager.GetSessionStatus(newSessionId, identity);
 
-        return JsonSerializer.Serialize(new
+        return new OpenSessionResult
         {
-            success = true,
-            sessionId = newSessionId,
-            message = "Document opened successfully",
-            session
-        }, JsonDefaults.Indented);
+            Success = true,
+            SessionId = newSessionId,
+            Message = "Document opened successfully",
+            Session = ToSessionInfoDto(session!)
+        };
     }
 
     /// <summary>
@@ -161,9 +171,9 @@ Temp file operations:
     /// </summary>
     /// <param name="sessionId">The session identifier.</param>
     /// <param name="outputPath">Optional output path. If null, saves to original path.</param>
-    /// <returns>A JSON string containing the save result.</returns>
+    /// <returns>The save session result.</returns>
     /// <exception cref="ArgumentException">Thrown when sessionId is null or empty.</exception>
-    private string SaveDocument(string sessionId, string? outputPath)
+    private SaveSessionResult SaveDocument(string sessionId, string? outputPath)
     {
         if (string.IsNullOrEmpty(sessionId))
             throw new ArgumentException("sessionId is required for 'save' operation");
@@ -172,14 +182,14 @@ Temp file operations:
         _sessionManager.SaveDocument(sessionId, identity, outputPath);
         var session = _sessionManager.GetSessionStatus(sessionId, identity);
 
-        return JsonSerializer.Serialize(new
+        return new SaveSessionResult
         {
-            success = true,
-            message = outputPath != null
+            Success = true,
+            Message = outputPath != null
                 ? $"Document saved to: {outputPath}"
                 : "Document saved to original path",
-            session
-        }, JsonDefaults.Indented);
+            Session = ToSessionInfoDto(session!)
+        };
     }
 
     /// <summary>
@@ -187,9 +197,9 @@ Temp file operations:
     /// </summary>
     /// <param name="sessionId">The session identifier.</param>
     /// <param name="discard">If true, discards unsaved changes; otherwise saves before closing.</param>
-    /// <returns>A JSON string containing the close result.</returns>
+    /// <returns>The close session result.</returns>
     /// <exception cref="ArgumentException">Thrown when sessionId is null or empty.</exception>
-    private string CloseDocument(string sessionId, bool discard)
+    private CloseSessionResult CloseDocument(string sessionId, bool discard)
     {
         if (string.IsNullOrEmpty(sessionId))
             throw new ArgumentException("sessionId is required for 'close' operation");
@@ -197,41 +207,41 @@ Temp file operations:
         var identity = _identityAccessor.GetCurrentIdentity();
         _sessionManager.CloseDocument(sessionId, identity, discard);
 
-        return JsonSerializer.Serialize(new
+        return new CloseSessionResult
         {
-            success = true,
-            message = discard
+            Success = true,
+            Message = discard
                 ? "Session closed (changes discarded)"
                 : "Session closed (changes saved)"
-        }, JsonDefaults.Indented);
+        };
     }
 
     /// <summary>
     ///     Lists all active document sessions.
     /// </summary>
-    /// <returns>A JSON string containing the list of sessions and memory usage.</returns>
-    private string ListSessions()
+    /// <returns>The list sessions result.</returns>
+    private ListSessionsResult ListSessions()
     {
         var identity = _identityAccessor.GetCurrentIdentity();
         var sessions = _sessionManager.ListSessions(identity).ToList();
 
-        return JsonSerializer.Serialize(new
+        return new ListSessionsResult
         {
-            success = true,
-            count = sessions.Count,
-            totalMemoryMB = _sessionManager.GetTotalMemoryMb(),
-            sessions
-        }, JsonDefaults.Indented);
+            Success = true,
+            Count = sessions.Count,
+            TotalMemoryMb = _sessionManager.GetTotalMemoryMb(),
+            Sessions = sessions.Select(ToSessionInfoDto).ToList()
+        };
     }
 
     /// <summary>
     ///     Gets the status of a specific document session.
     /// </summary>
     /// <param name="sessionId">The session identifier.</param>
-    /// <returns>A JSON string containing the session status.</returns>
+    /// <returns>The session status result.</returns>
     /// <exception cref="ArgumentException">Thrown when sessionId is null or empty.</exception>
     /// <exception cref="KeyNotFoundException">Thrown when the session is not found.</exception>
-    private string GetStatus(string sessionId)
+    private SessionStatusResult GetStatus(string sessionId)
     {
         if (string.IsNullOrEmpty(sessionId))
             throw new ArgumentException("sessionId is required for 'status' operation");
@@ -242,37 +252,37 @@ Temp file operations:
         if (session == null)
             throw new KeyNotFoundException($"Session not found: {sessionId}");
 
-        return JsonSerializer.Serialize(new
+        return new SessionStatusResult
         {
-            success = true,
-            session
-        }, JsonDefaults.Indented);
+            Success = true,
+            Session = ToSessionInfoDto(session)
+        };
     }
 
     /// <summary>
     ///     Lists all recoverable temporary files.
     /// </summary>
-    /// <returns>A JSON string containing the list of recoverable files.</returns>
-    private string ListTempFiles()
+    /// <returns>The list temp files result.</returns>
+    private ListTempFilesResult ListTempFiles()
     {
         var identity = _identityAccessor.GetCurrentIdentity();
         var files = _tempFileManager.ListRecoverableFiles(identity).ToList();
 
-        return JsonSerializer.Serialize(new
+        return new ListTempFilesResult
         {
-            success = true,
-            count = files.Count,
-            files = files.Select(f => new
+            Success = true,
+            Count = files.Count,
+            Files = files.Select(f => new TempFileInfoDto
             {
-                f.SessionId,
-                f.OriginalPath,
-                f.DocumentType,
-                f.SavedAt,
-                f.ExpiresAt,
+                SessionId = f.SessionId,
+                OriginalPath = f.OriginalPath,
+                DocumentType = f.DocumentType,
+                SavedAt = f.SavedAt,
+                ExpiresAt = f.ExpiresAt,
                 FileSizeMb = f.FileSizeBytes / (1024.0 * 1024.0),
-                f.PromptOnReconnect
-            })
-        }, JsonDefaults.Indented);
+                PromptOnReconnect = f.PromptOnReconnect
+            }).ToList()
+        };
     }
 
     /// <summary>
@@ -281,9 +291,9 @@ Temp file operations:
     /// <param name="sessionId">The session identifier to recover.</param>
     /// <param name="outputPath">Optional output path. If null, recovers to original path.</param>
     /// <param name="deleteAfterRecover">Whether to delete the temp file after recovery.</param>
-    /// <returns>A JSON string containing the recovery result.</returns>
+    /// <returns>The recover temp file result.</returns>
     /// <exception cref="ArgumentException">Thrown when sessionId is null or empty.</exception>
-    private string RecoverTempFile(string sessionId, string? outputPath, bool deleteAfterRecover)
+    private RecoverTempFileResult RecoverTempFile(string sessionId, string? outputPath, bool deleteAfterRecover)
     {
         if (string.IsNullOrEmpty(sessionId))
             throw new ArgumentException("sessionId is required for 'recover' operation");
@@ -291,26 +301,26 @@ Temp file operations:
         var identity = _identityAccessor.GetCurrentIdentity();
         var result = _tempFileManager.RecoverSession(sessionId, identity, outputPath, deleteAfterRecover);
 
-        return JsonSerializer.Serialize(new
+        return new RecoverTempFileResult
         {
-            result.Success,
-            result.SessionId,
-            result.RecoveredPath,
-            result.OriginalPath,
-            result.ErrorMessage,
-            message = result.Success
+            Success = result.Success,
+            SessionId = result.SessionId,
+            RecoveredPath = result.RecoveredPath,
+            OriginalPath = result.OriginalPath,
+            ErrorMessage = result.ErrorMessage,
+            Message = result.Success
                 ? $"Successfully recovered to: {result.RecoveredPath}"
                 : $"Recovery failed: {result.ErrorMessage}"
-        }, JsonDefaults.Indented);
+        };
     }
 
     /// <summary>
     ///     Deletes a specific temporary file.
     /// </summary>
     /// <param name="sessionId">The session identifier to delete.</param>
-    /// <returns>A JSON string containing the deletion result.</returns>
+    /// <returns>The delete temp file result.</returns>
     /// <exception cref="ArgumentException">Thrown when sessionId is null or empty.</exception>
-    private string DeleteTempFile(string sessionId)
+    private DeleteTempFileResult DeleteTempFile(string sessionId)
     {
         if (string.IsNullOrEmpty(sessionId))
             throw new ArgumentException("sessionId is required for 'delete_temp' operation");
@@ -318,49 +328,69 @@ Temp file operations:
         var identity = _identityAccessor.GetCurrentIdentity();
         var deleted = _tempFileManager.DeleteTempSession(sessionId, identity);
 
-        return JsonSerializer.Serialize(new
+        return new DeleteTempFileResult
         {
-            success = deleted,
-            sessionId,
-            message = deleted
+            Success = deleted,
+            SessionId = sessionId,
+            Message = deleted
                 ? "Temp file deleted successfully"
                 : "Temp file not found"
-        }, JsonDefaults.Indented);
+        };
     }
 
     /// <summary>
     ///     Cleans up expired temporary files.
     /// </summary>
-    /// <returns>A JSON string containing the cleanup result.</returns>
-    private string CleanupTempFiles()
+    /// <returns>The cleanup temp files result.</returns>
+    private CleanupTempFilesResult CleanupTempFiles()
     {
         var result = _tempFileManager.CleanupExpiredFiles();
 
-        return JsonSerializer.Serialize(new
+        return new CleanupTempFilesResult
         {
-            success = true,
-            result.ScannedCount,
-            result.DeletedCount,
-            result.ErrorCount,
-            message = $"Cleaned up {result.DeletedCount} expired files"
-        }, JsonDefaults.Indented);
+            Success = true,
+            ScannedCount = result.ScannedCount,
+            DeletedCount = result.DeletedCount,
+            ErrorCount = result.ErrorCount,
+            Message = $"Cleaned up {result.DeletedCount} expired files"
+        };
     }
 
     /// <summary>
     ///     Gets temp file statistics.
     /// </summary>
-    /// <returns>A JSON string containing temp file statistics.</returns>
-    private string GetTempStats()
+    /// <returns>The temp file stats result.</returns>
+    private TempFileStatsResult GetTempStats()
     {
         var stats = _tempFileManager.GetStats();
 
-        return JsonSerializer.Serialize(new
+        return new TempFileStatsResult
         {
-            success = true,
-            stats.TotalCount,
-            stats.TotalSizeMb,
-            stats.ExpiredCount,
-            retentionHours = _sessionManager.Config.TempRetentionHours
-        }, JsonDefaults.Indented);
+            Success = true,
+            TotalCount = stats.TotalCount,
+            TotalSizeMb = stats.TotalSizeMb,
+            ExpiredCount = stats.ExpiredCount,
+            RetentionHours = _sessionManager.Config.TempRetentionHours
+        };
+    }
+
+    /// <summary>
+    ///     Converts a SessionInfo to SessionInfoDto.
+    /// </summary>
+    /// <param name="session">The session info to convert.</param>
+    /// <returns>The session info DTO.</returns>
+    private static SessionInfoDto ToSessionInfoDto(SessionInfo session)
+    {
+        return new SessionInfoDto
+        {
+            SessionId = session.SessionId,
+            DocumentType = session.DocumentType,
+            Path = session.Path,
+            Mode = session.Mode,
+            IsDirty = session.IsDirty,
+            OpenedAt = session.OpenedAt,
+            LastAccessedAt = session.LastAccessedAt,
+            EstimatedMemoryMb = session.EstimatedMemoryMb
+        };
     }
 }

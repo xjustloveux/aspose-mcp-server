@@ -1,5 +1,7 @@
-using Aspose.Words;
-using AsposeMcpServer.Tests.Helpers;
+﻿using Aspose.Words;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Word.SectionBreak;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Word;
 
 namespace AsposeMcpServer.Tests.Tools.Word;
@@ -27,7 +29,8 @@ public class WordSectionToolTests : WordTestBase
         var outputPath = CreateTestFilePath("test_insert_section_output.docx");
         var result = _tool.Execute("insert", docPath, outputPath: outputPath,
             sectionBreakType: "NextPage", insertAtParagraphIndex: 0);
-        Assert.StartsWith("Section break inserted", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Section break inserted", data.Message);
         var doc = new Document(outputPath);
         Assert.True(doc.Sections.Count > 1);
     }
@@ -42,8 +45,9 @@ public class WordSectionToolTests : WordTestBase
         doc.Save(docPath);
         var result = _tool.Execute("get", docPath);
         Assert.NotNull(result);
-        Assert.Contains("\"sections\"", result);
-        Assert.Contains("\"sectionBreak\"", result);
+        var data = GetResultData<GetSectionsWordResult>(result);
+        Assert.NotNull(data.Sections);
+        Assert.Equal(2, data.TotalSections);
     }
 
     [Fact]
@@ -62,7 +66,8 @@ public class WordSectionToolTests : WordTestBase
         var result = _tool.Execute("delete", docPath, outputPath: outputPath, sectionIndex: 1);
         var resultDoc = new Document(outputPath);
         Assert.Equal(sectionsBefore - 1, resultDoc.Sections.Count);
-        Assert.StartsWith("Deleted", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Deleted", data.Message);
     }
 
     #endregion
@@ -77,7 +82,8 @@ public class WordSectionToolTests : WordTestBase
     {
         var docPath = CreateWordDocument($"test_case_{operation}.docx");
         var result = _tool.Execute(operation, docPath);
-        Assert.Contains("\"sections\"", result);
+        var data = GetResultData<GetSectionsWordResult>(result);
+        Assert.NotNull(data.Sections);
     }
 
     [Fact]
@@ -105,7 +111,11 @@ public class WordSectionToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("get", sessionId: sessionId);
-        Assert.Contains("\"sections\"", result);
+        var data = GetResultData<GetSectionsWordResult>(result);
+        Assert.NotNull(data.Sections);
+        Assert.Equal(2, data.TotalSections);
+        var output = GetResultOutput<GetSectionsWordResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -115,7 +125,10 @@ public class WordSectionToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("insert", sessionId: sessionId,
             sectionBreakType: "NextPage", insertAtParagraphIndex: 0);
-        Assert.StartsWith("Section break inserted", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Section break inserted", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         Assert.True(sessionDoc.Sections.Count > 1);
     }
@@ -132,7 +145,10 @@ public class WordSectionToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("delete", sessionId: sessionId, sectionIndex: 1);
-        Assert.StartsWith("Deleted", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Deleted", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         Assert.Equal(1, sessionDoc.Sections.Count);
     }
@@ -157,8 +173,11 @@ public class WordSectionToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath2);
         var result = _tool.Execute("get", docPath1, sessionId);
-        Assert.Contains("\"sections\"", result);
-        Assert.Contains("\"index\": 1", result);
+        var data = GetResultData<GetSectionsWordResult>(result);
+        Assert.NotNull(data.Sections);
+        Assert.Equal(2, data.TotalSections);
+        var output = GetResultOutput<GetSectionsWordResult>(result);
+        Assert.True(output.IsSession);
     }
 
     #endregion

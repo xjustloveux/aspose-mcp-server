@@ -1,6 +1,9 @@
 using Aspose.Words;
 using Aspose.Words.Fields;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.Hyperlink;
@@ -8,6 +11,7 @@ namespace AsposeMcpServer.Handlers.Word.Hyperlink;
 /// <summary>
 ///     Handler for adding hyperlinks to Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddWordHyperlinkHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -22,7 +26,7 @@ public class AddWordHyperlinkHandler : OperationHandlerBase<Document>
     ///     Optional: paragraphIndex, tooltip
     /// </param>
     /// <returns>Success message with hyperlink details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractAddHyperlinkParameters(parameters);
 
@@ -181,15 +185,15 @@ public class AddWordHyperlinkHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="p">The add hyperlink parameters.</param>
     /// <returns>A formatted result message.</returns>
-    private static string BuildResultMessage(AddHyperlinkParameters p)
+    private static SuccessResult BuildResultMessage(AddHyperlinkParameters p)
     {
-        var result = "Hyperlink added successfully\n";
-        result += $"Display text: {p.Text}\n";
-        if (!string.IsNullOrEmpty(p.Url)) result += $"URL: {p.Url}\n";
-        if (!string.IsNullOrEmpty(p.SubAddress)) result += $"SubAddress (bookmark): {p.SubAddress}\n";
-        if (!string.IsNullOrEmpty(p.Tooltip)) result += $"Tooltip: {p.Tooltip}\n";
-        result += GetInsertPositionMessage(p.ParagraphIndex);
-        return result;
+        var message = "Hyperlink added successfully\n";
+        message += $"Display text: {p.Text}\n";
+        if (!string.IsNullOrEmpty(p.Url)) message += $"URL: {p.Url}\n";
+        if (!string.IsNullOrEmpty(p.SubAddress)) message += $"SubAddress (bookmark): {p.SubAddress}\n";
+        if (!string.IsNullOrEmpty(p.Tooltip)) message += $"Tooltip: {p.Tooltip}\n";
+        message += GetInsertPositionMessage(p.ParagraphIndex);
+        return new SuccessResult { Message = message };
     }
 
     /// <summary>

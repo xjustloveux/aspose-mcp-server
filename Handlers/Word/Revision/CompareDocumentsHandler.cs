@@ -1,13 +1,16 @@
 using Aspose.Words;
 using Aspose.Words.Comparing;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.Word.Revision;
 
 namespace AsposeMcpServer.Handlers.Word.Revision;
 
 /// <summary>
 ///     Handler for comparing two Word documents.
 /// </summary>
+[ResultType(typeof(CompareDocumentsResult))]
 public class CompareDocumentsHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -24,7 +27,7 @@ public class CompareDocumentsHandler : OperationHandlerBase<Document>
     /// </param>
     /// <returns>Success message with comparison result and number of differences found.</returns>
     /// <exception cref="ArgumentException">Thrown when required paths are not provided.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractCompareDocumentsParameters(parameters);
 
@@ -41,7 +44,11 @@ public class CompareDocumentsHandler : OperationHandlerBase<Document>
         var revisionCount = originalDoc.Revisions.Count;
         originalDoc.Save(p.OutputPath);
 
-        return Success($"Comparison completed: {revisionCount} difference(s) found\nOutput: {p.OutputPath}");
+        return new CompareDocumentsResult
+        {
+            RevisionCount = revisionCount,
+            OutputPath = p.OutputPath
+        };
     }
 
     private static CompareDocumentsParameters ExtractCompareDocumentsParameters(OperationParameters parameters)

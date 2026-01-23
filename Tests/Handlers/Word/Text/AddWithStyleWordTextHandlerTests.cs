@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Text;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Text;
@@ -24,7 +25,7 @@ public class AddWithStyleWordTextHandlerTests : WordHandlerTestBase
     [Theory]
     [InlineData("Simple text")]
     [InlineData("Text with numbers 123")]
-    [InlineData("Unicode: 中文測試")]
+    [InlineData("Unicode: 中�?測試")]
     public void Execute_AddsTextToDocument(string text)
     {
         var doc = CreateEmptyDocument();
@@ -34,9 +35,11 @@ public class AddWithStyleWordTextHandlerTests : WordHandlerTestBase
             { "text", text }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertContainsText(doc, text);
         AssertModified(context);
     }
@@ -74,10 +77,12 @@ public class AddWithStyleWordTextHandlerTests : WordHandlerTestBase
             { "alignment", "center" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Bold", result);
-        Assert.Contains("Italic", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Bold", result.Message);
+        Assert.Contains("Italic", result.Message);
         var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
         var run = runs.FirstOrDefault(r => r.Text.Contains("Fully formatted"));
         Assert.NotNull(run);
@@ -105,9 +110,11 @@ public class AddWithStyleWordTextHandlerTests : WordHandlerTestBase
             { "styleName", styleName }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("style", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("style", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertContainsText(doc, "Styled text");
         AssertModified(context);
     }
@@ -145,9 +152,11 @@ public class AddWithStyleWordTextHandlerTests : WordHandlerTestBase
             { "italic", italic }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
         var run = runs.FirstOrDefault(r => r.Text.Contains("Formatted text"));
         Assert.NotNull(run);
@@ -220,9 +229,11 @@ public class AddWithStyleWordTextHandlerTests : WordHandlerTestBase
             { "alignment", alignment }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Alignment", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Alignment", result.Message, StringComparison.OrdinalIgnoreCase);
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
         var para = paragraphs.FirstOrDefault(p => p.GetText().Contains("Aligned text"));
         Assert.NotNull(para);
@@ -244,9 +255,11 @@ public class AddWithStyleWordTextHandlerTests : WordHandlerTestBase
             { "indentLevel", indentLevel }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Indent level", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Indent level", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -267,9 +280,11 @@ public class AddWithStyleWordTextHandlerTests : WordHandlerTestBase
             { "paragraphIndexForAdd", paragraphIndex }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertContainsText(doc, "New text");
         AssertModified(context);
     }
@@ -303,9 +318,11 @@ public class AddWithStyleWordTextHandlerTests : WordHandlerTestBase
             { "underline", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Underline", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Underline", result.Message);
         var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
         var run = runs.FirstOrDefault(r => r.Text.Contains("Underlined text"));
         Assert.NotNull(run);
@@ -324,9 +341,11 @@ public class AddWithStyleWordTextHandlerTests : WordHandlerTestBase
             { "color", "#FF0000" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Color", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Color", result.Message);
         AssertModified(context);
     }
 
@@ -347,9 +366,11 @@ public class AddWithStyleWordTextHandlerTests : WordHandlerTestBase
             { "leftIndent", leftIndent }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Left indent", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Left indent", result.Message);
         AssertModified(context);
     }
 
@@ -366,9 +387,11 @@ public class AddWithStyleWordTextHandlerTests : WordHandlerTestBase
             { "firstLineIndent", firstLineIndent }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("First line indent", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("First line indent", result.Message);
         AssertModified(context);
     }
 
@@ -387,9 +410,11 @@ public class AddWithStyleWordTextHandlerTests : WordHandlerTestBase
             { "fontNameAscii", "Courier New" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Font (ASCII)", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Font (ASCII)", result.Message);
         AssertModified(context);
     }
 
@@ -404,9 +429,11 @@ public class AddWithStyleWordTextHandlerTests : WordHandlerTestBase
             { "fontNameFarEast", "MS Gothic" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Font (Far East)", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Font (Far East)", result.Message);
         AssertModified(context);
     }
 
@@ -426,9 +453,11 @@ public class AddWithStyleWordTextHandlerTests : WordHandlerTestBase
             { "tabStops", tabStopsJson }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -445,9 +474,11 @@ public class AddWithStyleWordTextHandlerTests : WordHandlerTestBase
             { "tabStops", tabStopsJson }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -463,9 +494,11 @@ public class AddWithStyleWordTextHandlerTests : WordHandlerTestBase
             { "tabStops", tabStopsJson }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 

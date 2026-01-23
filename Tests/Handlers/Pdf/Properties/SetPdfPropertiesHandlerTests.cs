@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Pdf.Properties;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Properties;
 
@@ -29,9 +30,11 @@ public class SetPdfPropertiesHandlerTests : PdfHandlerTestBase
             { "author", "John Doe" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message);
     }
 
     #endregion
@@ -48,9 +51,11 @@ public class SetPdfPropertiesHandlerTests : PdfHandlerTestBase
             { "subject", "Test Subject" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message);
     }
 
     #endregion
@@ -67,9 +72,11 @@ public class SetPdfPropertiesHandlerTests : PdfHandlerTestBase
             { "keywords", "test, pdf, keywords" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message);
     }
 
     #endregion
@@ -86,9 +93,11 @@ public class SetPdfPropertiesHandlerTests : PdfHandlerTestBase
             { "creator", "Test Application" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message);
     }
 
     #endregion
@@ -105,9 +114,11 @@ public class SetPdfPropertiesHandlerTests : PdfHandlerTestBase
             { "producer", "Test Producer" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message);
     }
 
     #endregion
@@ -124,9 +135,11 @@ public class SetPdfPropertiesHandlerTests : PdfHandlerTestBase
             { "title", "New Title" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message);
         AssertModified(context);
     }
 
@@ -140,9 +153,11 @@ public class SetPdfPropertiesHandlerTests : PdfHandlerTestBase
             { "author", "New Author" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("properties", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("properties", result.Message);
     }
 
     [Fact]
@@ -152,9 +167,11 @@ public class SetPdfPropertiesHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message);
     }
 
     #endregion
@@ -171,9 +188,11 @@ public class SetPdfPropertiesHandlerTests : PdfHandlerTestBase
             { "title", "Document Title" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message);
     }
 
     [Fact]
@@ -208,9 +227,11 @@ public class SetPdfPropertiesHandlerTests : PdfHandlerTestBase
             { "keywords", "key1, key2, key3" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message);
         AssertModified(context);
     }
 
@@ -229,9 +250,11 @@ public class SetPdfPropertiesHandlerTests : PdfHandlerTestBase
             { "producer", "Full Producer" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message);
     }
 
     #endregion
@@ -248,9 +271,11 @@ public class SetPdfPropertiesHandlerTests : PdfHandlerTestBase
             { "title", "" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message);
     }
 
     [Fact]
@@ -263,9 +288,11 @@ public class SetPdfPropertiesHandlerTests : PdfHandlerTestBase
             { "title", null }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message);
     }
 
     #endregion

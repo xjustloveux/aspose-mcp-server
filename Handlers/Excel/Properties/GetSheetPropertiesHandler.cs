@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Excel.Properties;
 
 namespace AsposeMcpServer.Handlers.Excel.Properties;
 
 /// <summary>
 ///     Handler for getting worksheet properties from Excel files.
 /// </summary>
+[ResultType(typeof(GetSheetPropertiesResult))]
 public class GetSheetPropertiesHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class GetSheetPropertiesHandler : OperationHandlerBase<Workbook>
     ///     Required: sheetIndex (0-based)
     /// </param>
     /// <returns>JSON result with worksheet properties.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var getParams = ExtractGetSheetPropertiesParameters(parameters);
 
@@ -28,33 +31,31 @@ public class GetSheetPropertiesHandler : OperationHandlerBase<Workbook>
         var worksheet = ExcelHelper.GetWorksheet(workbook, getParams.SheetIndex);
         var pageSetup = worksheet.PageSetup;
 
-        var result = new
+        return new GetSheetPropertiesResult
         {
-            name = worksheet.Name,
-            index = getParams.SheetIndex,
-            isVisible = worksheet.IsVisible,
-            tabColor = worksheet.TabColor.ToString(),
-            isSelected = workbook.Worksheets.ActiveSheetIndex == getParams.SheetIndex,
-            dataRowCount = worksheet.Cells.MaxDataRow + 1,
-            dataColumnCount = worksheet.Cells.MaxDataColumn + 1,
-            isProtected = worksheet.Protection.IsProtectedWithPassword,
-            commentsCount = worksheet.Comments.Count,
-            chartsCount = worksheet.Charts.Count,
-            picturesCount = worksheet.Pictures.Count,
-            hyperlinksCount = worksheet.Hyperlinks.Count,
-            printSettings = new
+            Name = worksheet.Name,
+            Index = getParams.SheetIndex,
+            IsVisible = worksheet.IsVisible,
+            TabColor = worksheet.TabColor.ToString(),
+            IsSelected = workbook.Worksheets.ActiveSheetIndex == getParams.SheetIndex,
+            DataRowCount = worksheet.Cells.MaxDataRow + 1,
+            DataColumnCount = worksheet.Cells.MaxDataColumn + 1,
+            IsProtected = worksheet.Protection.IsProtectedWithPassword,
+            CommentsCount = worksheet.Comments.Count,
+            ChartsCount = worksheet.Charts.Count,
+            PicturesCount = worksheet.Pictures.Count,
+            HyperlinksCount = worksheet.Hyperlinks.Count,
+            PrintSettings = new PrintSettingsInfo
             {
-                printArea = pageSetup.PrintArea,
-                printTitleRows = pageSetup.PrintTitleRows,
-                printTitleColumns = pageSetup.PrintTitleColumns,
-                orientation = pageSetup.Orientation.ToString(),
-                paperSize = pageSetup.PaperSize.ToString(),
-                fitToPagesWide = pageSetup.FitToPagesWide,
-                fitToPagesTall = pageSetup.FitToPagesTall
+                PrintArea = pageSetup.PrintArea,
+                PrintTitleRows = pageSetup.PrintTitleRows,
+                PrintTitleColumns = pageSetup.PrintTitleColumns,
+                Orientation = pageSetup.Orientation.ToString(),
+                PaperSize = pageSetup.PaperSize.ToString(),
+                FitToPagesWide = pageSetup.FitToPagesWide,
+                FitToPagesTall = pageSetup.FitToPagesTall
             }
         };
-
-        return JsonResult(result);
     }
 
     /// <summary>

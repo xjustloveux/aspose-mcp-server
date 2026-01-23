@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.PowerPoint.Hyperlink;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Hyperlink;
 
@@ -30,9 +31,11 @@ public class AddPptHyperlinkHandlerTests : PptHandlerTestBase
             { "url", "https://example.com" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("hyperlink added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("hyperlink added", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -47,9 +50,11 @@ public class AddPptHyperlinkHandlerTests : PptHandlerTestBase
             { "slideTargetIndex", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("hyperlink added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("hyperlink added", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -66,9 +71,11 @@ public class AddPptHyperlinkHandlerTests : PptHandlerTestBase
             { "linkText", "here" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("hyperlink added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("hyperlink added", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 

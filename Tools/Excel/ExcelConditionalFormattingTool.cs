@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Excel;
 /// <summary>
 ///     Unified tool for managing Excel conditional formatting (add, edit, delete, get)
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Excel.ConditionalFormatting")]
 [McpServerToolType]
 public class ExcelConditionalFormattingTool
 {
@@ -58,7 +61,14 @@ public class ExcelConditionalFormattingTool
     /// <param name="backgroundColor">Background color for matching cells.</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operation.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "excel_conditional_formatting")]
+    [McpServerTool(
+        Name = "excel_conditional_formatting",
+        Title = "Excel Conditional Formatting Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage Excel conditional formatting. Supports 4 operations: add, edit, delete, get.
 
 You can add multiple conditional formatting rules to the same range by calling the 'add' operation multiple times. Each rule is independent and will be evaluated separately. To add multiple rules, simply call the 'add' operation multiple times with different conditions for the same range.
@@ -69,7 +79,7 @@ Usage examples:
 - Edit conditional formatting: excel_conditional_formatting(operation='edit', path='book.xlsx', conditionalFormattingIndex=0, condition='GreaterThan', value='50')
 - Delete conditional formatting: excel_conditional_formatting(operation='delete', path='book.xlsx', conditionalFormattingIndex=0)
 - Get conditional formatting: excel_conditional_formatting(operation='get', path='book.xlsx', range='A1:A10')")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: add, edit, delete, get")]
         string operation,
         [Description("Excel file path (required if no sessionId)")]
@@ -115,12 +125,12 @@ Usage examples:
         var result = handler.Execute(operationContext, parameters);
 
         if (string.Equals(operation, "get", StringComparison.OrdinalIgnoreCase))
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

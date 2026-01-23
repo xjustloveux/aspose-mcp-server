@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Excel;
 /// <summary>
 ///     Unified tool for managing Excel rows and columns (insert/delete rows, columns, cells)
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Excel.RowColumn")]
 [McpServerToolType]
 public class ExcelRowColumnTool
 {
@@ -59,7 +62,14 @@ public class ExcelRowColumnTool
     /// <param name="shiftDirection">Shift direction: 'Right'/'Down' for insert_cells, 'Left'/'Up' for delete_cells.</param>
     /// <returns>A message indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "excel_row_column")]
+    [McpServerTool(
+        Name = "excel_row_column",
+        Title = "Excel Row and Column Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(
         @"Manage Excel rows and columns. Supports 6 operations: insert_row, delete_row, insert_column, delete_column, insert_cells, delete_cells.
 
@@ -70,7 +80,7 @@ Usage examples:
 - Delete column: excel_row_column(operation='delete_column', path='book.xlsx', columnIndex=2)
 - Insert cells: excel_row_column(operation='insert_cells', path='book.xlsx', range='A1:C5', shiftDirection='Down')
 - Delete cells: excel_row_column(operation='delete_cells', path='book.xlsx', range='A1:C5', shiftDirection='Up')")]
-    public string Execute(
+    public object Execute(
         [Description(
             "Operation to perform: insert_row, delete_row, insert_column, delete_column, insert_cells, delete_cells")]
         string operation,
@@ -119,7 +129,7 @@ Usage examples:
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

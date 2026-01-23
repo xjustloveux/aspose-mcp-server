@@ -1,13 +1,16 @@
 using Aspose.Cells;
 using Aspose.Cells.Pivot;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.PivotTable;
 
 /// <summary>
 ///     Handler for adding a new pivot table to the worksheet.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddExcelPivotTableHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -22,7 +25,7 @@ public class AddExcelPivotTableHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex, name
     /// </param>
     /// <returns>Success message with add details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractAddPivotTableParameters(parameters);
 
@@ -41,7 +44,7 @@ public class AddExcelPivotTableHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Pivot table '{pivotName}' added to worksheet.");
+        return new SuccessResult { Message = $"Pivot table '{pivotName}' added to worksheet." };
     }
 
     private static AddPivotTableParameters ExtractAddPivotTableParameters(OperationParameters parameters)

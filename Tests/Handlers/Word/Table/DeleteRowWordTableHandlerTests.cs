@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Table;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Table;
 
@@ -52,9 +53,11 @@ public class DeleteRowWordTableHandlerTests : WordHandlerTestBase
             { "rowIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Remaining", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Remaining", result.Message);
     }
 
     #endregion

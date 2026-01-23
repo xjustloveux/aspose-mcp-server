@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.ViewSettings;
 
 /// <summary>
 ///     Handler for splitting or removing window splits in Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SplitWindowExcelViewHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class SplitWindowExcelViewHandler : OperationHandlerBase<Workbook>
     /// </param>
     /// <returns>Success message.</returns>
     /// <exception cref="ArgumentException">Thrown when neither splitRow, splitColumn, nor removeSplit is provided.</exception>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractSplitWindowParameters(parameters);
 
@@ -44,9 +47,12 @@ public class SplitWindowExcelViewHandler : OperationHandlerBase<Workbook>
         }
 
         MarkModified(context);
-        return p.RemoveSplit
-            ? Success($"Window split removed for sheet {p.SheetIndex}.")
-            : Success($"Window split at row {p.SplitRow ?? 0}, column {p.SplitColumn ?? 0} for sheet {p.SheetIndex}.");
+        return new SuccessResult
+        {
+            Message = p.RemoveSplit
+                ? $"Window split removed for sheet {p.SheetIndex}."
+                : $"Window split at row {p.SplitRow ?? 0}, column {p.SplitColumn ?? 0} for sheet {p.SheetIndex}."
+        };
     }
 
     /// <summary>

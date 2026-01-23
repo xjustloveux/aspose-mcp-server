@@ -1,7 +1,8 @@
 using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
 using AsposeMcpServer.Handlers.Pdf.Link;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Link;
 
@@ -54,9 +55,11 @@ public class DeletePdfLinkHandlerTests : PdfHandlerTestBase
             { "linkIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted", result.Message);
         AssertModified(context);
     }
 
@@ -71,9 +74,11 @@ public class DeletePdfLinkHandlerTests : PdfHandlerTestBase
             { "linkIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Link 1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Link 1", result.Message);
     }
 
     [Fact]
@@ -87,9 +92,11 @@ public class DeletePdfLinkHandlerTests : PdfHandlerTestBase
             { "linkIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("page 1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("page 1", result.Message);
     }
 
     [Theory]
@@ -106,9 +113,11 @@ public class DeletePdfLinkHandlerTests : PdfHandlerTestBase
             { "linkIndex", linkIndex }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted", result.Message);
     }
 
     [Fact]

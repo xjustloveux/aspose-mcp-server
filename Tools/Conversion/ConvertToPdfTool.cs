@@ -2,8 +2,10 @@
 using Aspose.Cells;
 using Aspose.Slides;
 using Aspose.Words;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.Conversion;
 using ModelContextProtocol.Server;
 using SaveFormat = Aspose.Words.SaveFormat;
 
@@ -43,14 +45,22 @@ public class ConvertToPdfTool
     /// <param name="inputPath">Input file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID to convert document from session.</param>
     /// <param name="outputPath">Output PDF file path (required).</param>
-    /// <returns>A message indicating the conversion result with output path information.</returns>
+    /// <returns>A ConversionResult indicating the conversion result with output path information.</returns>
     /// <exception cref="ArgumentException">
     ///     Thrown when outputPath is not provided, neither inputPath nor sessionId is provided,
     ///     or when attempting to convert PDF to PDF.
     /// </exception>
     /// <exception cref="InvalidOperationException">Thrown when session management is not enabled but sessionId is provided.</exception>
     /// <exception cref="KeyNotFoundException">Thrown when the specified session is not found or access is denied.</exception>
-    [McpServerTool(Name = "convert_to_pdf")]
+    [McpServerTool(
+        Name = "convert_to_pdf",
+        Title = "Convert Document to PDF",
+        Destructive = false,
+        Idempotent = true,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
+    [OutputSchema(typeof(ConversionResult))]
     [Description(@"Convert any document (Word, Excel, PowerPoint) to PDF.
 
 Usage examples:
@@ -58,7 +68,7 @@ Usage examples:
 - Convert Excel to PDF: convert_to_pdf(inputPath='book.xlsx', outputPath='book.pdf')
 - Convert PowerPoint to PDF: convert_to_pdf(inputPath='presentation.pptx', outputPath='presentation.pdf')
 - Convert from session: convert_to_pdf(sessionId='sess_xxx', outputPath='doc.pdf')")]
-    public string Execute(
+    public ConversionResult Execute(
         [Description("Input file path (required if no sessionId)")]
         string? inputPath = null,
         [Description("Session ID to convert document from session")]
@@ -75,7 +85,7 @@ Usage examples:
             throw new ArgumentException("Either inputPath or sessionId must be provided");
 
         if (!string.IsNullOrEmpty(sessionId))
-            return ConvertFromSession(sessionId, outputPath);
+            return ConvertFromSession(sessionId, outputPath, $"session:{sessionId}");
 
         SecurityHelper.ValidateFilePath(inputPath!, nameof(inputPath), true);
         return ConvertFromFile(inputPath!, outputPath);
@@ -86,11 +96,12 @@ Usage examples:
     /// </summary>
     /// <param name="sessionId">The session ID containing the document.</param>
     /// <param name="outputPath">The output PDF file path.</param>
-    /// <returns>A message indicating the conversion result.</returns>
+    /// <param name="sourcePath">The source path for the result.</param>
+    /// <returns>A ConversionResult indicating the conversion result.</returns>
     /// <exception cref="InvalidOperationException">Thrown when session management is not enabled.</exception>
     /// <exception cref="KeyNotFoundException">Thrown when the session is not found or access is denied.</exception>
     /// <exception cref="ArgumentException">Thrown when the document type is PDF (cannot convert PDF to PDF) or unsupported.</exception>
-    private string ConvertFromSession(string sessionId, string outputPath)
+    private ConversionResult ConvertFromSession(string sessionId, string outputPath, string sourcePath)
     {
         if (_sessionManager == null)
             throw new InvalidOperationException("Session management is not enabled");
@@ -99,21 +110,25 @@ Usage examples:
         var session = _sessionManager.TryGetSession(sessionId, identity)
                       ?? throw new KeyNotFoundException($"Session '{sessionId}' not found or access denied");
 
+        string sourceFormat;
         switch (session.Type)
         {
             case DocumentType.Word:
                 var wordDoc = _sessionManager.GetDocument<Document>(sessionId, identity);
                 wordDoc.Save(outputPath, SaveFormat.Pdf);
+                sourceFormat = "Word";
                 break;
 
             case DocumentType.Excel:
                 var workbook = _sessionManager.GetDocument<Workbook>(sessionId, identity);
                 workbook.Save(outputPath, Aspose.Cells.SaveFormat.Pdf);
+                sourceFormat = "Excel";
                 break;
 
             case DocumentType.PowerPoint:
                 var presentation = _sessionManager.GetDocument<Presentation>(sessionId, identity);
                 presentation.Save(outputPath, Aspose.Slides.Export.SaveFormat.Pdf);
+                sourceFormat = "PowerPoint";
                 break;
 
             case DocumentType.Pdf:
@@ -123,7 +138,15 @@ Usage examples:
                 throw new ArgumentException($"Unsupported document type: {session.Type}");
         }
 
-        return $"Document from session {sessionId} converted to PDF. Output: {outputPath}";
+        return new ConversionResult
+        {
+            SourcePath = sourcePath,
+            OutputPath = outputPath,
+            SourceFormat = sourceFormat,
+            TargetFormat = "PDF",
+            FileSize = File.Exists(outputPath) ? new FileInfo(outputPath).Length : null,
+            Message = $"Document from session {sessionId} converted to PDF"
+        };
     }
 
     /// <summary>
@@ -131,11 +154,12 @@ Usage examples:
     /// </summary>
     /// <param name="inputPath">The source document file path.</param>
     /// <param name="outputPath">The output PDF file path.</param>
-    /// <returns>A message indicating the conversion result.</returns>
+    /// <returns>A ConversionResult indicating the conversion result.</returns>
     /// <exception cref="ArgumentException">Thrown when the file format is not supported.</exception>
-    private static string ConvertFromFile(string inputPath, string outputPath)
+    private static ConversionResult ConvertFromFile(string inputPath, string outputPath)
     {
         var extension = Path.GetExtension(inputPath).ToLower();
+        string sourceFormat;
 
         switch (extension)
         {
@@ -145,6 +169,7 @@ Usage examples:
             case ".odt":
                 var wordDoc = new Document(inputPath);
                 wordDoc.Save(outputPath, SaveFormat.Pdf);
+                sourceFormat = "Word";
                 break;
 
             case ".xls":
@@ -156,6 +181,7 @@ Usage examples:
                     workbook.Save(outputPath, Aspose.Cells.SaveFormat.Pdf);
                 }
 
+                sourceFormat = "Excel";
                 break;
 
             case ".ppt":
@@ -166,12 +192,21 @@ Usage examples:
                     presentation.Save(outputPath, Aspose.Slides.Export.SaveFormat.Pdf);
                 }
 
+                sourceFormat = "PowerPoint";
                 break;
 
             default:
                 throw new ArgumentException($"Unsupported file format: {extension}");
         }
 
-        return $"Document converted to PDF. Output: {outputPath}";
+        return new ConversionResult
+        {
+            SourcePath = inputPath,
+            OutputPath = outputPath,
+            SourceFormat = sourceFormat,
+            TargetFormat = "PDF",
+            FileSize = File.Exists(outputPath) ? new FileInfo(outputPath).Length : null,
+            Message = "Document converted to PDF"
+        };
     }
 }

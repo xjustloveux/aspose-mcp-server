@@ -1,7 +1,10 @@
 using Aspose.Words;
 using Aspose.Words.Drawing;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 using IOFile = System.IO.File;
 using WordShape = Aspose.Words.Drawing.Shape;
 
@@ -10,6 +13,7 @@ namespace AsposeMcpServer.Handlers.Word.Image;
 /// <summary>
 ///     Handler for replacing images in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class ReplaceImageWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -24,7 +28,7 @@ public class ReplaceImageWordHandler : OperationHandlerBase<Document>
     ///     Optional: preserveSize, smartFit, preservePosition, sectionIndex
     /// </param>
     /// <returns>Success message with replacement details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractReplaceImageParameters(parameters);
         ValidateParameters(p);
@@ -169,7 +173,7 @@ public class ReplaceImageWordHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Builds the result message.
     /// </summary>
-    private static string BuildResultMessage(ReplaceImageParameters p, double originalWidth, double newHeight)
+    private static SuccessResult BuildResultMessage(ReplaceImageParameters p, double originalWidth, double newHeight)
     {
         var result = $"Image #{p.ImageIndex} replaced successfully\n";
         result += $"New image: {Path.GetFileName(p.NewImagePath)}\n";
@@ -182,7 +186,7 @@ public class ReplaceImageWordHandler : OperationHandlerBase<Document>
         if (p.PreservePosition)
             result += "Preserved position and wrapping";
 
-        return result.TrimEnd();
+        return new SuccessResult { Message = result.TrimEnd() };
     }
 
     private static ReplaceImageParameters ExtractReplaceImageParameters(OperationParameters parameters)

@@ -1,6 +1,7 @@
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Slide;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Slide;
 
@@ -55,9 +56,11 @@ public class AddPptSlideHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(initialCount + 1, pres.Slides.Count);
         AssertModified(context);
     }
@@ -95,9 +98,11 @@ public class AddPptSlideHandlerTests : PptHandlerTestBase
             { "layoutType", layoutType }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         var lastSlide = pres.Slides[^1];
         Assert.NotNull(lastSlide.LayoutSlide);
         AssertModified(context);
@@ -117,9 +122,11 @@ public class AddPptSlideHandlerTests : PptHandlerTestBase
             { "layoutType", layoutType }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -137,9 +144,11 @@ public class AddPptSlideHandlerTests : PptHandlerTestBase
             { "layoutType", layoutType }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(initialCount + 1, pres.Slides.Count);
         AssertModified(context);
     }
@@ -168,10 +177,12 @@ public class AddPptSlideHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("total", result, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains(pres.Slides.Count.ToString(), result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("total", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(pres.Slides.Count.ToString(), result.Message);
     }
 
     [Fact]
@@ -181,9 +192,11 @@ public class AddPptSlideHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("6", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("6", result.Message);
     }
 
     #endregion

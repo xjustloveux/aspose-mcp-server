@@ -1,5 +1,5 @@
 using AsposeMcpServer.Handlers.Word.Styles;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Styles;
 

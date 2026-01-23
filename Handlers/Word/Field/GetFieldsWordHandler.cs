@@ -1,14 +1,16 @@
-using System.Text.Json;
 using Aspose.Words;
 using Aspose.Words.Fields;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Results.Word.Field;
+using WordFieldInfo = AsposeMcpServer.Results.Word.Field.FieldInfo;
 
 namespace AsposeMcpServer.Handlers.Word.Field;
 
 /// <summary>
 ///     Handler for getting all fields from Word documents.
 /// </summary>
+[ResultType(typeof(GetFieldsWordResult))]
 public class GetFieldsWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -22,12 +24,12 @@ public class GetFieldsWordHandler : OperationHandlerBase<Document>
     ///     Optional: includeCode (default: true), includeResult (default: true)
     /// </param>
     /// <returns>A JSON string containing the list of fields and statistics.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractGetFieldsParameters(parameters);
 
         var document = context.Document;
-        List<object> fieldsList = [];
+        List<WordFieldInfo> fieldsList = [];
         var fieldIndex = 0;
 
         foreach (var field in document.Range.Fields)
@@ -38,32 +40,30 @@ public class GetFieldsWordHandler : OperationHandlerBase<Document>
             else if (field is FieldRef refField)
                 extraInfo = $"Bookmark: {refField.BookmarkName ?? ""}";
 
-            fieldsList.Add(new
+            fieldsList.Add(new WordFieldInfo
             {
-                index = fieldIndex++,
-                type = field.Type.ToString(),
-                code = p.IncludeCode ? field.GetFieldCode() : null,
-                result = p.IncludeResult ? field.Result ?? "" : null,
-                isLocked = field.IsLocked,
-                isDirty = field.IsDirty,
-                extraInfo
+                Index = fieldIndex++,
+                Type = field.Type.ToString(),
+                Code = p.IncludeCode ? field.GetFieldCode() : null,
+                Result = p.IncludeResult ? field.Result ?? "" : null,
+                IsLocked = field.IsLocked,
+                IsDirty = field.IsDirty,
+                ExtraInfo = extraInfo
             });
         }
 
         var statistics = fieldsList
-            .GroupBy(f => ((dynamic)f).type as string)
+            .GroupBy(f => f.Type)
             .OrderBy(g => g.Key)
-            .Select(g => new { type = g.Key, count = g.Count() })
+            .Select(g => new FieldTypeStatistics { Type = g.Key, Count = g.Count() })
             .ToList();
 
-        var result = new
+        return new GetFieldsWordResult
         {
-            count = fieldsList.Count,
-            fields = fieldsList,
-            statisticsByType = statistics
+            Count = fieldsList.Count,
+            Fields = fieldsList,
+            StatisticsByType = statistics
         };
-
-        return JsonSerializer.Serialize(result, JsonDefaults.Indented);
     }
 
     /// <summary>

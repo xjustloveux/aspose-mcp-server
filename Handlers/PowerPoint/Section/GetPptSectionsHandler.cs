@@ -1,11 +1,14 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.PowerPoint.Section;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Section;
 
 /// <summary>
 ///     Handler for getting sections from PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(GetSectionsResult))]
 public class GetPptSectionsHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -16,41 +19,41 @@ public class GetPptSectionsHandler : OperationHandlerBase<Presentation>
     /// </summary>
     /// <param name="context">The presentation context.</param>
     /// <param name="parameters">No parameters required.</param>
-    /// <returns>JSON string containing section information.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    /// <returns>GetSectionsResult containing section information.</returns>
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         _ = parameters;
 
         var presentation = context.Document;
 
         if (presentation.Sections.Count == 0)
-            return JsonResult(new
+            return new GetSectionsResult
             {
-                count = 0,
-                sections = Array.Empty<object>(),
-                message = "No sections found"
-            });
+                Count = 0,
+                Sections = [],
+                Message = "No sections found"
+            };
 
-        List<object> sectionsList = [];
+        List<SectionInfo> sectionsList = [];
         for (var i = 0; i < presentation.Sections.Count; i++)
         {
             var sec = presentation.Sections[i];
             var startSlideIndex = sec.StartedFromSlide != null
                 ? presentation.Slides.IndexOf(sec.StartedFromSlide)
                 : -1;
-            sectionsList.Add(new
+            sectionsList.Add(new SectionInfo
             {
-                index = i,
-                name = sec.Name,
-                startSlideIndex,
-                slideCount = sec.GetSlidesListOfSection().Count
+                Index = i,
+                Name = sec.Name,
+                StartSlideIndex = startSlideIndex,
+                SlideCount = sec.GetSlidesListOfSection().Count
             });
         }
 
-        return JsonResult(new
+        return new GetSectionsResult
         {
-            count = presentation.Sections.Count,
-            sections = sectionsList
-        });
+            Count = presentation.Sections.Count,
+            Sections = sectionsList
+        };
     }
 }

@@ -1,7 +1,9 @@
 ﻿using System.ComponentModel;
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
@@ -10,6 +12,7 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 ///     Unified tool for PowerPoint data operations (get statistics, get content, get slide details)
 ///     Merges: PptGetStatisticsTool, PptGetContentTool, PptGetSlideDetailsTool
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.PowerPoint.DataOperations")]
 [McpServerToolType]
 public class PptDataOperationsTool
 {
@@ -52,7 +55,14 @@ public class PptDataOperationsTool
     /// <param name="includeThumbnail">Include Base64 encoded thumbnail image (optional for get_slide_details, default false).</param>
     /// <returns>A JSON string containing the requested data (statistics, content, or slide details).</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "ppt_data_operations")]
+    [McpServerTool(
+        Name = "ppt_data_operations",
+        Title = "PowerPoint Data Operations",
+        Destructive = false,
+        Idempotent = true,
+        OpenWorld = false,
+        ReadOnly = true,
+        UseStructuredContent = true)]
     [Description(@"PowerPoint data operations. Supports 3 operations: get_statistics, get_content, get_slide_details.
 
 Usage examples:
@@ -60,7 +70,7 @@ Usage examples:
 - Get content: ppt_data_operations(operation='get_content', path='presentation.pptx')
 - Get slide details: ppt_data_operations(operation='get_slide_details', path='presentation.pptx', slideIndex=0)
 - Get slide details with thumbnail: ppt_data_operations(operation='get_slide_details', path='presentation.pptx', slideIndex=0, includeThumbnail=true)")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: get_statistics, get_content, get_slide_details")]
         string operation,
         [Description("Presentation file path (required if no sessionId)")]
@@ -87,7 +97,8 @@ Usage examples:
             SourcePath = path
         };
 
-        return handler.Execute(operationContext, parameters);
+        var result = handler.Execute(operationContext, parameters);
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, null);
     }
 
     /// <summary>

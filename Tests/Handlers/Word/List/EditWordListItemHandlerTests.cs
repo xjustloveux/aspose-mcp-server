@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Word.List;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.List;
 
@@ -33,10 +34,12 @@ public class EditWordListItemHandlerTests : WordHandlerTestBase
             { "text", $"Updated {index}" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("edited successfully", result);
-        Assert.Contains($"Paragraph index: {index}", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("edited successfully", result.Message);
+        Assert.Contains($"Paragraph index: {index}", result.Message);
     }
 
     #endregion
@@ -54,9 +57,11 @@ public class EditWordListItemHandlerTests : WordHandlerTestBase
             { "text", "Updated Item" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("List item edited successfully", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("List item edited successfully", result.Message);
         AssertModified(context);
     }
 
@@ -71,9 +76,11 @@ public class EditWordListItemHandlerTests : WordHandlerTestBase
             { "text", "New Text" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Paragraph index: 0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Paragraph index: 0", result.Message);
     }
 
     [Fact]
@@ -87,9 +94,11 @@ public class EditWordListItemHandlerTests : WordHandlerTestBase
             { "text", "Updated Content" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("New text: Updated Content", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("New text: Updated Content", result.Message);
     }
 
     [SkippableFact]
@@ -128,9 +137,11 @@ public class EditWordListItemHandlerTests : WordHandlerTestBase
             { "level", level }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains($"Level: {level}", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains($"Level: {level}", result.Message);
     }
 
     [Fact]
@@ -144,9 +155,11 @@ public class EditWordListItemHandlerTests : WordHandlerTestBase
             { "text", "Updated" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.DoesNotContain("Level:", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.DoesNotContain("Level:", result.Message);
     }
 
     #endregion

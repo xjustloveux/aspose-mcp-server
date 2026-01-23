@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Word.Format;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Format;
 
@@ -49,11 +50,13 @@ public class SetParagraphBorderWordHandlerTests : WordHandlerTestBase
             { "borderBottom", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("borders set", result.ToLower());
-        Assert.Contains("top", result.ToLower());
-        Assert.Contains("bottom", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("borders set", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("top", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("bottom", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -68,12 +71,14 @@ public class SetParagraphBorderWordHandlerTests : WordHandlerTestBase
             { "borderPosition", "all" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("top", result.ToLower());
-        Assert.Contains("bottom", result.ToLower());
-        Assert.Contains("left", result.ToLower());
-        Assert.Contains("right", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("top", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("bottom", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("left", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("right", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -87,9 +92,11 @@ public class SetParagraphBorderWordHandlerTests : WordHandlerTestBase
             { "borderPosition", "none" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("none", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("none", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -106,9 +113,11 @@ public class SetParagraphBorderWordHandlerTests : WordHandlerTestBase
             { "lineColor", "FF0000" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("top", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("top", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

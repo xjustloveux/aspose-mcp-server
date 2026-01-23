@@ -1,8 +1,8 @@
-using System.Text.Json;
 using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
 using AsposeMcpServer.Handlers.Pdf.Bookmark;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Pdf.Bookmark;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Bookmark;
 
@@ -29,11 +29,12 @@ public class GetPdfBookmarksHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(0, json.RootElement.GetProperty("count").GetInt32());
-        Assert.Contains("No bookmarks found", json.RootElement.GetProperty("message").GetString());
+        var result = Assert.IsType<GetBookmarksPdfResult>(res);
+
+        Assert.Equal(0, result.Count);
+        Assert.Contains("No bookmarks found", result.Message);
     }
 
     #endregion
@@ -70,10 +71,11 @@ public class GetPdfBookmarksHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.True(json.RootElement.TryGetProperty("count", out _));
+        var result = Assert.IsType<GetBookmarksPdfResult>(res);
+
+        Assert.True(result.Count >= 0);
     }
 
     [Fact]
@@ -83,10 +85,11 @@ public class GetPdfBookmarksHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(3, json.RootElement.GetProperty("count").GetInt32());
+        var result = Assert.IsType<GetBookmarksPdfResult>(res);
+
+        Assert.Equal(3, result.Count);
     }
 
     [Fact]
@@ -96,10 +99,11 @@ public class GetPdfBookmarksHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(2, json.RootElement.GetProperty("items").GetArrayLength());
+        var result = Assert.IsType<GetBookmarksPdfResult>(res);
+
+        Assert.Equal(2, result.Items.Count);
     }
 
     #endregion
@@ -113,11 +117,12 @@ public class GetPdfBookmarksHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
-        var firstBookmark = json.RootElement.GetProperty("items")[0];
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(1, firstBookmark.GetProperty("index").GetInt32());
+        var result = Assert.IsType<GetBookmarksPdfResult>(res);
+        var firstBookmark = result.Items[0];
+
+        Assert.Equal(1, firstBookmark.Index);
     }
 
     [Fact]
@@ -133,11 +138,12 @@ public class GetPdfBookmarksHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
-        var firstBookmark = json.RootElement.GetProperty("items")[0];
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal("My Custom Title", firstBookmark.GetProperty("title").GetString());
+        var result = Assert.IsType<GetBookmarksPdfResult>(res);
+        var firstBookmark = result.Items[0];
+
+        Assert.Equal("My Custom Title", firstBookmark.Title);
     }
 
     #endregion

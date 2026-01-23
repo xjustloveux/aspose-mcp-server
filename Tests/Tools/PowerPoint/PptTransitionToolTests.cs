@@ -1,7 +1,9 @@
-using Aspose.Slides;
+﻿using Aspose.Slides;
 using Aspose.Slides.Export;
 using Aspose.Slides.SlideShow;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.PowerPoint.Transition;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.PowerPoint;
 
 namespace AsposeMcpServer.Tests.Tools.PowerPoint;
@@ -48,8 +50,9 @@ public class PptTransitionToolTests : PptTestBase
         }
 
         var result = _tool.Execute("get", pptPath, slideIndex: 0);
-        Assert.Contains("\"type\": \"Fade\"", result);
-        Assert.Contains("\"hasTransition\": true", result);
+        var data = GetResultData<GetTransitionResult>(result);
+        Assert.Equal("Fade", data.Type);
+        Assert.True(data.HasTransition);
     }
 
     [Fact]
@@ -57,8 +60,9 @@ public class PptTransitionToolTests : PptTestBase
     {
         var pptPath = CreatePresentation("test_get_no_transition.pptx");
         var result = _tool.Execute("get", pptPath, slideIndex: 0);
-        Assert.Contains("\"hasTransition\": false", result);
-        Assert.Contains("\"type\": \"None\"", result);
+        var data = GetResultData<GetTransitionResult>(result);
+        Assert.False(data.HasTransition);
+        Assert.Equal("None", data.Type);
     }
 
     [Fact]
@@ -91,7 +95,8 @@ public class PptTransitionToolTests : PptTestBase
         var pptPath = CreatePresentation($"test_case_set_{operation}.pptx");
         var outputPath = CreateTestFilePath($"test_case_set_{operation}_output.pptx");
         var result = _tool.Execute(operation, pptPath, slideIndex: 0, transitionType: "Fade", outputPath: outputPath);
-        Assert.StartsWith("Transition 'Fade' set", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Transition 'Fade' set", data.Message);
     }
 
     [Fact]
@@ -114,7 +119,9 @@ public class PptTransitionToolTests : PptTestBase
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("set", sessionId: sessionId, slideIndex: 0, transitionType: "Push",
             advanceAfterSeconds: 2.5);
-        Assert.StartsWith("Transition 'Push' set for slide 0", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Transition 'Push' set for slide 0", data.Message);
+        Assert.NotNull(SessionManager.GetSessionStatus(sessionId));
 
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var slide = ppt.Slides[0];
@@ -134,8 +141,10 @@ public class PptTransitionToolTests : PptTestBase
 
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("get", sessionId: sessionId, slideIndex: 0);
-        Assert.Contains("\"type\": \"Fade\"", result);
-        Assert.Contains("\"hasTransition\": true", result);
+        var data = GetResultData<GetTransitionResult>(result);
+        Assert.Equal("Fade", data.Type);
+        Assert.True(data.HasTransition);
+        Assert.NotNull(SessionManager.GetSessionStatus(sessionId));
     }
 
     [Fact]
@@ -151,7 +160,9 @@ public class PptTransitionToolTests : PptTestBase
 
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("delete", sessionId: sessionId, slideIndex: 0);
-        Assert.StartsWith("Transition removed", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Transition removed", data.Message);
+        Assert.NotNull(SessionManager.GetSessionStatus(sessionId));
 
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         Assert.Equal(TransitionType.None, ppt.Slides[0].SlideShowTransition.Type);
@@ -183,7 +194,8 @@ public class PptTransitionToolTests : PptTestBase
 
         var sessionId = OpenSession(pptPath2);
         var result = _tool.Execute("get", pptPath1, sessionId, slideIndex: 0);
-        Assert.Contains("\"type\": \"Push\"", result);
+        var data = GetResultData<GetTransitionResult>(result);
+        Assert.Equal("Push", data.Type);
     }
 
     #endregion

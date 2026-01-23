@@ -167,6 +167,15 @@
             <li>生產環境不暴露詳細錯誤資訊</li>
         </ul>
 
+        <h3>Origin 驗證（DNS 重綁定攻擊防護）</h3>
+        <ul class="feature-list">
+            <li>SSE 和 WebSocket 模式預設啟用 Origin 標頭驗證</li>
+            <li>支援配置允許的來源域名清單</li>
+            <li>可配置是否允許 localhost 來源（開發環境）</li>
+            <li>可配置是否要求必須有 Origin 標頭</li>
+            <li>健康檢查端點（/health, /ready）自動排除驗證</li>
+        </ul>
+
         <h3>安全限制</h3>
         <div class="security-grid">
             <div class="security-item">
@@ -193,8 +202,25 @@
         <h3>MCP 2025-11-25 規範支援</h3>
         <ul class="feature-list">
             <li>符合最新 MCP 協議規範（protocolVersion: 2025-11-25）</li>
-            <li>自動工具註解（readonly/destructive）基於命名約定</li>
+            <li>使用 ModelContextProtocol SDK 0.6.0-preview.1</li>
             <li>完整的 JSON-RPC 2.0 錯誤處理</li>
+        </ul>
+
+        <h3>Tool Annotations（工具行為標註）</h3>
+        <ul class="feature-list">
+            <li><strong>Title</strong> - 人類可讀的工具標題</li>
+            <li><strong>ReadOnly</strong> - 標示只讀操作（如 get、list）</li>
+            <li><strong>Destructive</strong> - 標示可能造成破壞性變更的操作（如 delete）</li>
+            <li><strong>Idempotent</strong> - 標示冪等操作（重複調用產生相同結果）</li>
+            <li><strong>OpenWorld = false</strong> - 所有工具都是本地檔案操作，不與外部實體交互</li>
+        </ul>
+
+        <h3>結構化輸出（outputSchema）</h3>
+        <ul class="feature-list">
+            <li>所有工具回傳結構化 JSON 結果</li>
+            <li>SDK 自動生成 outputSchema（使用 oneOf 支援多種結果類型）</li>
+            <li>包含 <code>output</code> 欄位（path 或 sessionId）指示輸出位置</li>
+            <li>客戶端可根據 schema 自動解析結果</li>
         </ul>
     </div>
 
@@ -216,12 +242,20 @@
             <li>啟用任何文檔工具時，自動包含 `convert_to_pdf`（轉換為PDF）</li>
             <li>啟用兩個或以上文檔工具時，自動包含 `convert_document`（跨格式轉換，如Word轉Excel）</li>
         </ul>
+
+        <h3>異步任務執行</h3>
+        <ul class="feature-list">
+            <li>支援長時間運行的操作異步執行（大型文檔轉換等）</li>
+            <li>可配置最大並行任務數（1-100）</li>
+            <li>任務結果自動清理機制（可配置保留時間）</li>
+            <li>支援任務狀態查詢和結果獲取</li>
+        </ul>
     </div>
 </div>
 
 <footer>
     <div class="container">
-        <p>基於 .NET 8.0 和 Aspose.Total 23.10.0 構建</p>
+        <p>基於 .NET 8.0、Aspose.Total 23.10.0 和 MCP SDK 0.6.0 構建</p>
         <p class="footer-links" style="margin-top: 10px;">
             <a href="https://github.com/xjustloveux/aspose-mcp-server" target="_blank">GitHub</a> |
             <a href="https://www.aspose.com/" target="_blank">Aspose</a> |

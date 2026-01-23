@@ -1,7 +1,9 @@
-using Aspose.Slides;
+﻿using Aspose.Slides;
 using Aspose.Slides.Animation;
 using Aspose.Slides.Export;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.PowerPoint.Animation;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.PowerPoint;
 
 namespace AsposeMcpServer.Tests.Tools.PowerPoint;
@@ -53,8 +55,9 @@ public class PptAnimationToolTests : PptTestBase
         var outputPath = CreateTestFilePath("test_add_output.pptx");
         var result = _tool.Execute("add", 0, pptPath, shapeIndex: shapeIndex, effectType: "Fade",
             outputPath: outputPath);
-        Assert.StartsWith("Animation", result);
-        Assert.Contains("added", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Animation", data.Message);
+        Assert.Contains("added", data.Message);
         using var presentation = new Presentation(outputPath);
         Assert.True(presentation.Slides[0].Timeline.MainSequence.Count > 0);
     }
@@ -67,7 +70,8 @@ public class PptAnimationToolTests : PptTestBase
         var outputPath = CreateTestFilePath("test_edit_output.pptx");
         var result = _tool.Execute("edit", 0, pptPath, shapeIndex: shapeIndex, effectType: "Fly", duration: 2.0f,
             outputPath: outputPath);
-        Assert.StartsWith("Animation updated", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Animation updated", data.Message);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -77,7 +81,8 @@ public class PptAnimationToolTests : PptTestBase
         var pptPath = CreatePresentationWithAnimation("test_delete.pptx");
         var outputPath = CreateTestFilePath("test_delete_output.pptx");
         var result = _tool.Execute("delete", 0, pptPath, outputPath: outputPath);
-        Assert.Contains("deleted", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("deleted", data.Message, StringComparison.OrdinalIgnoreCase);
         using var presentation = new Presentation(outputPath);
         Assert.Equal(0, presentation.Slides[0].Timeline.MainSequence.Count);
     }
@@ -87,8 +92,9 @@ public class PptAnimationToolTests : PptTestBase
     {
         var pptPath = CreatePresentationWithAnimation("test_get.pptx");
         var result = _tool.Execute("get", 0, pptPath);
-        Assert.Contains("\"totalAnimationsOnSlide\":", result);
-        Assert.Contains("\"effectType\": \"Fade\"", result);
+        var data = GetResultData<GetAnimationsResult>(result);
+        Assert.True(data.TotalAnimationsOnSlide > 0);
+        Assert.Contains(data.Animations, a => a.EffectType == "Fade");
     }
 
     [Fact]
@@ -96,7 +102,9 @@ public class PptAnimationToolTests : PptTestBase
     {
         var pptPath = CreatePresentationWithShape("test_get_empty.pptx");
         var result = _tool.Execute("get", 0, pptPath);
-        Assert.Contains("\"totalAnimationsOnSlide\": 0", result);
+        var data = GetResultData<GetAnimationsResult>(result);
+        Assert.Equal(0, data.TotalAnimationsOnSlide);
+        Assert.Empty(data.Animations);
     }
 
     #endregion
@@ -114,7 +122,8 @@ public class PptAnimationToolTests : PptTestBase
         var outputPath = CreateTestFilePath($"test_case_add_{operation}_output.pptx");
         var result = _tool.Execute(operation, 0, pptPath, shapeIndex: shapeIndex, effectType: "Fade",
             outputPath: outputPath);
-        Assert.Contains("added", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("added", data.Message);
     }
 
     [Fact]
@@ -138,9 +147,11 @@ public class PptAnimationToolTests : PptTestBase
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var initialCount = ppt.Slides[0].Timeline.MainSequence.Count;
         var result = _tool.Execute("add", 0, sessionId: sessionId, shapeIndex: shapeIndex, effectType: "Fade");
-        Assert.StartsWith("Animation", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Animation", data.Message);
         Assert.True(ppt.Slides[0].Timeline.MainSequence.Count > initialCount);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -151,9 +162,12 @@ public class PptAnimationToolTests : PptTestBase
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("edit", 0, sessionId: sessionId, shapeIndex: shapeIndex, animationIndex: 0,
             duration: 3.0f);
-        Assert.StartsWith("Animation updated", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Animation updated", data.Message);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         Assert.Equal(3.0f, ppt.Slides[0].Timeline.MainSequence[0].Timing.Duration, 1);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -164,8 +178,11 @@ public class PptAnimationToolTests : PptTestBase
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var initialCount = ppt.Slides[0].Timeline.MainSequence.Count;
         var result = _tool.Execute("delete", 0, sessionId: sessionId);
-        Assert.Contains("deleted", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("deleted", data.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(ppt.Slides[0].Timeline.MainSequence.Count < initialCount);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -174,8 +191,11 @@ public class PptAnimationToolTests : PptTestBase
         var pptPath = CreatePresentationWithAnimation("test_session_get.pptx", EffectType.Appear);
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("get", 0, sessionId: sessionId);
-        Assert.Contains("\"totalAnimationsOnSlide\": 1", result);
-        Assert.Contains("\"effectType\": \"Appear\"", result);
+        var data = GetResultData<GetAnimationsResult>(result);
+        Assert.Equal(1, data.TotalAnimationsOnSlide);
+        Assert.Contains(data.Animations, a => a.EffectType == "Appear");
+        var output = GetResultOutput<GetAnimationsResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -191,7 +211,8 @@ public class PptAnimationToolTests : PptTestBase
         var pptPath2 = CreatePresentationWithAnimation("test_session_anim.pptx", EffectType.Zoom);
         var sessionId = OpenSession(pptPath2);
         var result = _tool.Execute("get", 0, pptPath1, sessionId);
-        Assert.Contains("\"effectType\": \"Zoom\"", result);
+        var data = GetResultData<GetAnimationsResult>(result);
+        Assert.Contains(data.Animations, a => a.EffectType == "Zoom");
     }
 
     #endregion

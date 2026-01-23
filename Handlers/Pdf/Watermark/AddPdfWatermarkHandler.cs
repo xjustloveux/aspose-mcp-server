@@ -1,13 +1,17 @@
 using Aspose.Pdf;
 using Aspose.Pdf.Text;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.Pdf;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.Watermark;
 
 /// <summary>
 ///     Handler for adding watermarks to PDF documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddPdfWatermarkHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -24,7 +28,7 @@ public class AddPdfWatermarkHandler : OperationHandlerBase<Document>
     ///     horizontalAlignment (default: Center), verticalAlignment (default: Center).
     /// </param>
     /// <returns>Success message with the number of pages watermarked.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractAddParameters(parameters);
 
@@ -75,7 +79,7 @@ public class AddPdfWatermarkHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Watermark added to {appliedCount} page(s).");
+        return new SuccessResult { Message = $"Watermark added to {appliedCount} page(s)." };
     }
 
     /// <summary>

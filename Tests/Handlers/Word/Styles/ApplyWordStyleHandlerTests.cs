@@ -1,6 +1,7 @@
-﻿using Aspose.Words;
+using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Styles;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Styles;
 
@@ -35,9 +36,11 @@ public class ApplyWordStyleHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("applied style", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("applied style", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -80,9 +83,11 @@ public class ApplyWordStyleHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("applied style", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("applied style", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -97,9 +102,11 @@ public class ApplyWordStyleHandlerTests : WordHandlerTestBase
             { "applyToAllParagraphs", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("3", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("3", result.Message);
     }
 
     #endregion
@@ -192,9 +199,11 @@ public class ApplyWordStyleHandlerTests : WordHandlerTestBase
             { "tableIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("applied style", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("applied style", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -228,9 +237,11 @@ public class ApplyWordStyleHandlerTests : WordHandlerTestBase
             { "paragraphIndices", new[] { 0, 2 } }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("2", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("2", result.Message);
         AssertModified(context);
     }
 
@@ -245,9 +256,11 @@ public class ApplyWordStyleHandlerTests : WordHandlerTestBase
             { "paragraphIndices", new[] { 0, 99 } }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("1", result.Message);
         AssertModified(context);
     }
 

@@ -1,7 +1,7 @@
-using System.Text.Json;
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Hyperlink;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Word.Hyperlink;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Hyperlink;
 
@@ -28,11 +28,13 @@ public class GetWordHyperlinksHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(0, json.RootElement.GetProperty("count").GetInt32());
-        Assert.Contains("No hyperlinks found", json.RootElement.GetProperty("message").GetString());
+        var result = Assert.IsType<GetHyperlinksResult>(res);
+
+        Assert.Equal(0, result.Count);
+        Assert.NotNull(result.Message);
+        Assert.Contains("No hyperlinks found", result.Message);
     }
 
     #endregion
@@ -46,10 +48,11 @@ public class GetWordHyperlinksHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.True(json.RootElement.TryGetProperty("count", out _));
+        var result = Assert.IsType<GetHyperlinksResult>(res);
+
+        Assert.True(result.Count >= 0);
     }
 
     [Fact]
@@ -59,10 +62,11 @@ public class GetWordHyperlinksHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(3, json.RootElement.GetProperty("count").GetInt32());
+        var result = Assert.IsType<GetHyperlinksResult>(res);
+
+        Assert.Equal(3, result.Count);
     }
 
     [Fact]
@@ -72,10 +76,11 @@ public class GetWordHyperlinksHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(2, json.RootElement.GetProperty("hyperlinks").GetArrayLength());
+        var result = Assert.IsType<GetHyperlinksResult>(res);
+
+        Assert.Equal(2, result.Hyperlinks.Count);
     }
 
     #endregion
@@ -89,11 +94,12 @@ public class GetWordHyperlinksHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
-        var firstHyperlink = json.RootElement.GetProperty("hyperlinks")[0];
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(0, firstHyperlink.GetProperty("index").GetInt32());
+        var result = Assert.IsType<GetHyperlinksResult>(res);
+        var firstHyperlink = result.Hyperlinks[0];
+
+        Assert.Equal(0, firstHyperlink.Index);
     }
 
     [Fact]
@@ -103,11 +109,12 @@ public class GetWordHyperlinksHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
-        var firstHyperlink = json.RootElement.GetProperty("hyperlinks")[0];
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal("Click Me", firstHyperlink.GetProperty("displayText").GetString());
+        var result = Assert.IsType<GetHyperlinksResult>(res);
+        var firstHyperlink = result.Hyperlinks[0];
+
+        Assert.Equal("Click Me", firstHyperlink.DisplayText);
     }
 
     [Fact]
@@ -117,11 +124,12 @@ public class GetWordHyperlinksHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
-        var firstHyperlink = json.RootElement.GetProperty("hyperlinks")[0];
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal("https://test.example.com", firstHyperlink.GetProperty("address").GetString());
+        var result = Assert.IsType<GetHyperlinksResult>(res);
+        var firstHyperlink = result.Hyperlinks[0];
+
+        Assert.Equal("https://test.example.com", firstHyperlink.Address);
     }
 
     #endregion

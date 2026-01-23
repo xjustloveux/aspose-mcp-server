@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Bookmark;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Bookmark;
 
@@ -73,9 +74,11 @@ public class EditWordBookmarkHandlerTests : WordHandlerTestBase
             { "newText", "Updated content" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("edited successfully", result);
+        var result = Assert.IsType<SuccessResult>(res).Message;
+
+        Assert.Contains("edited successfully", result, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -90,9 +93,11 @@ public class EditWordBookmarkHandlerTests : WordHandlerTestBase
             { "newName", "NewBookmarkName" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Original name: Bookmark0", result);
+        var result = Assert.IsType<SuccessResult>(res).Message;
+
+        Assert.Contains("Original name: Bookmark0", result, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -126,9 +131,11 @@ public class EditWordBookmarkHandlerTests : WordHandlerTestBase
             { "newName", "NewName" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("New name: NewName", result);
+        var result = Assert.IsType<SuccessResult>(res).Message;
+
+        Assert.Contains("New name: NewName", result, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -162,9 +169,11 @@ public class EditWordBookmarkHandlerTests : WordHandlerTestBase
             { "newText", "Updated text" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("New content: Updated text", result);
+        var result = Assert.IsType<SuccessResult>(res).Message;
+
+        Assert.Contains("New content: Updated text", result, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

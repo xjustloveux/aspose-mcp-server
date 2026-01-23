@@ -1,11 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Excel.CellAddress;
 
 namespace AsposeMcpServer.Handlers.Excel.GetCellAddress;
 
 /// <summary>
 ///     Handler for converting cell address from A1 notation to row/column indices.
 /// </summary>
+[ResultType(typeof(CellAddressResult))]
 public class FromA1NotationHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -19,7 +23,7 @@ public class FromA1NotationHandler : OperationHandlerBase<Workbook>
     ///     Required: cellAddress (cell reference like "A1", "B2", "AA100")
     /// </param>
     /// <returns>A message containing the cell address in both A1 notation and row/column index format.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractFromA1NotationParameters(parameters);
 
@@ -28,7 +32,12 @@ public class FromA1NotationHandler : OperationHandlerBase<Workbook>
         ExcelGetCellAddressHelper.ValidateIndexBounds(row, column);
 
         var a1Notation = CellsHelper.CellIndexToName(row, column);
-        return $"{a1Notation} = Row {row}, Column {column}";
+        return new CellAddressResult
+        {
+            A1Notation = a1Notation,
+            Row = row,
+            Column = column
+        };
     }
 
     private static FromA1NotationParameters ExtractFromA1NotationParameters(OperationParameters parameters)

@@ -1,11 +1,15 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Format;
 
 /// <summary>
 ///     Handler for clearing tab stops in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class ClearTabStopsWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -19,7 +23,7 @@ public class ClearTabStopsWordHandler : OperationHandlerBase<Document>
     ///     Required: paragraphIndex
     /// </param>
     /// <returns>Success message.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractClearTabStopsParameters(parameters);
 
@@ -30,7 +34,7 @@ public class ClearTabStopsWordHandler : OperationHandlerBase<Document>
         para.ParagraphFormat.TabStops.Clear();
 
         MarkModified(context);
-        return Success($"Cleared {count} tab stop(s) from paragraph {p.ParagraphIndex}");
+        return new SuccessResult { Message = $"Cleared {count} tab stop(s) from paragraph {p.ParagraphIndex}" };
     }
 
     private static ClearTabStopsParameters ExtractClearTabStopsParameters(OperationParameters parameters)

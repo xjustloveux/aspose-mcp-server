@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using AsposeMcpServer.Handlers.Word.List;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.List;
 
@@ -36,9 +37,11 @@ public class AddWordListHandlerTests : WordHandlerTestBase
             { "numberFormat", format }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains($"Number format: {format}", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains($"Number format: {format}", result.Message);
     }
 
     #endregion
@@ -60,9 +63,11 @@ public class AddWordListHandlerTests : WordHandlerTestBase
             { "items", items }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Item count: 2", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Item count: 2", result.Message);
         AssertModified(context);
     }
 
@@ -81,9 +86,11 @@ public class AddWordListHandlerTests : WordHandlerTestBase
             { "items", items }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("List added successfully", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("List added successfully", result.Message);
         AssertModified(context);
     }
 
@@ -98,9 +105,11 @@ public class AddWordListHandlerTests : WordHandlerTestBase
             { "items", items }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Item count: 2", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Item count: 2", result.Message);
     }
 
     [SkippableFact]
@@ -137,9 +146,11 @@ public class AddWordListHandlerTests : WordHandlerTestBase
             { "listType", "bullet" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Type: bullet", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Type: bullet", result.Message);
     }
 
     [Fact]
@@ -154,9 +165,11 @@ public class AddWordListHandlerTests : WordHandlerTestBase
             { "listType", "number" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Type: number", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Type: number", result.Message);
     }
 
     [Fact]
@@ -172,10 +185,12 @@ public class AddWordListHandlerTests : WordHandlerTestBase
             { "bulletChar", "★" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Type: custom", result);
-        Assert.Contains("Bullet character: ★", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Type: custom", result.Message);
+        Assert.Contains("Bullet character: ★", result.Message);
     }
 
     #endregion
@@ -204,9 +219,11 @@ public class AddWordListHandlerTests : WordHandlerTestBase
             { "continuePrevious", true }
         });
 
-        var result = _handler.Execute(context, params2);
+        var res = _handler.Execute(context, params2);
 
-        Assert.Contains("continuing previous list", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("continuing previous list", result.Message);
     }
 
     [Fact]
@@ -221,9 +238,11 @@ public class AddWordListHandlerTests : WordHandlerTestBase
             { "continuePrevious", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("List added successfully", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("List added successfully", result.Message);
     }
 
     #endregion

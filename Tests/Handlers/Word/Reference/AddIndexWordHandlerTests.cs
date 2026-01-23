@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Word.Reference;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Reference;
 
@@ -29,10 +30,12 @@ public class AddIndexWordHandlerTests : WordHandlerTestBase
             { "indexEntries", "[{\"text\":\"Sample\"},{\"text\":\"Document\"}]" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("index entries added", result.ToLower());
-        Assert.Contains("2", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("index entries added", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2", result.Message);
         AssertModified(context);
     }
 
@@ -46,9 +49,11 @@ public class AddIndexWordHandlerTests : WordHandlerTestBase
             { "indexEntries", "[{\"text\":\"Animals\",\"subEntry\":\"Dogs\"}]" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("index entries added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("index entries added", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

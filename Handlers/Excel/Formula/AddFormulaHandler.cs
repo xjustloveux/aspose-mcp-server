@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Formula;
 
 /// <summary>
 ///     Handler for adding formulas to Excel cells.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddFormulaHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class AddFormulaHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0), autoCalculate (default: true)
     /// </param>
     /// <returns>Success message with formula details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var addParams = ExtractAddParameters(parameters);
 
@@ -56,9 +59,9 @@ public class AddFormulaHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        var result = $"Formula added to {addParams.Cell}: {addParams.Formula}";
-        if (!string.IsNullOrEmpty(warningMessage)) result += $".{warningMessage}";
-        return result;
+        var message = $"Formula added to {addParams.Cell}: {addParams.Formula}";
+        if (!string.IsNullOrEmpty(warningMessage)) message += $".{warningMessage}";
+        return new SuccessResult { Message = message };
     }
 
     /// <summary>

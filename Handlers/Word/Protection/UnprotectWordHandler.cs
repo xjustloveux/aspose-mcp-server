@@ -1,11 +1,14 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Protection;
 
 /// <summary>
 ///     Handler for removing protection from Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class UnprotectWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -19,7 +22,7 @@ public class UnprotectWordHandler : OperationHandlerBase<Document>
     ///     Optional: password
     /// </param>
     /// <returns>Success message with unprotection details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var unprotectParams = ExtractUnprotectParameters(parameters);
 
@@ -27,7 +30,7 @@ public class UnprotectWordHandler : OperationHandlerBase<Document>
         var previousProtectionType = doc.ProtectionType;
 
         if (previousProtectionType == ProtectionType.NoProtection)
-            return Success("Document is not protected, no need to unprotect");
+            return new SuccessResult { Message = "Document is not protected, no need to unprotect" };
 
         try
         {
@@ -46,7 +49,7 @@ public class UnprotectWordHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Protection removed successfully (was: {previousProtectionType})");
+        return new SuccessResult { Message = $"Protection removed successfully (was: {previousProtectionType})" };
     }
 
     /// <summary>

@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Pdf;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Pdf;
 /// <summary>
 ///     Tool for managing annotations in PDF documents (add, delete, edit, get)
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Pdf.Annotation")]
 [McpServerToolType]
 public class PdfAnnotationTool
 {
@@ -54,7 +57,14 @@ public class PdfAnnotationTool
     /// <param name="y">Y position in points (origin is bottom-left, 72 points = 1 inch).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "pdf_annotation")]
+    [McpServerTool(
+        Name = "pdf_annotation",
+        Title = "PDF Annotation Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage annotations in PDF documents. Supports 4 operations: add, delete, edit, get.
 
 Usage examples:
@@ -62,7 +72,7 @@ Usage examples:
 - Delete annotation: pdf_annotation(operation='delete', path='doc.pdf', pageIndex=1, annotationIndex=1)
 - Edit annotation: pdf_annotation(operation='edit', path='doc.pdf', pageIndex=1, annotationIndex=1, text='Updated Note')
 - Get annotations: pdf_annotation(operation='get', path='doc.pdf', pageIndex=1)")]
-    public string Execute(
+    public object Execute(
         [Description(@"Operation to perform.
 - 'add': Add an annotation (required params: path, pageIndex, text, x, y)
 - 'delete': Delete annotation(s) (required params: path, pageIndex; optional: annotationIndex, deletes all if omitted)
@@ -105,12 +115,12 @@ Usage examples:
         var result = handler.Execute(operationContext, parameters);
 
         if (string.Equals(operation, "get", StringComparison.OrdinalIgnoreCase))
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

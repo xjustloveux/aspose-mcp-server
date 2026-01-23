@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
@@ -10,6 +12,7 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 ///     Tool for managing PowerPoint handout settings (header/footer).
 ///     Note: Handout pages have separate header and footer fields (unlike slides which only have footer).
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.PowerPoint.Handout")]
 [McpServerToolType]
 public class PptHandoutTool
 {
@@ -56,7 +59,14 @@ public class PptHandoutTool
     /// <returns>A message indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">Thrown when the operation is unknown.</exception>
     /// <exception cref="InvalidOperationException">Thrown when the presentation does not have a handout master slide.</exception>
-    [McpServerTool(Name = "ppt_handout")]
+    [McpServerTool(
+        Name = "ppt_handout",
+        Title = "PowerPoint Handout Operations",
+        Destructive = false,
+        Idempotent = true,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage PowerPoint handout settings. Supports 1 operation: set_header_footer.
 
 Note: Handout pages have separate header and footer fields (unlike slides which only have footer).
@@ -64,7 +74,7 @@ Important: Presentation must have a handout master (created via PowerPoint: View
 
 Usage examples:
 - Set header/footer: ppt_handout(operation='set_header_footer', path='presentation.pptx', headerText='Header', footerText='Footer')")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: set_header_footer")]
         string operation,
         [Description("Presentation file path (required if no sessionId)")]
@@ -103,7 +113,7 @@ Usage examples:
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

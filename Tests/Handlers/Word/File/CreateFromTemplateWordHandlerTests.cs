@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.File;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.File;
 
@@ -44,9 +45,11 @@ public class CreateFromTemplateWordHandlerTests : WordHandlerTestBase
             { "dataJson", "{\"name\": \"World\"}" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("created from template", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("created from template", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(System.IO.File.Exists(outputPath));
     }
 

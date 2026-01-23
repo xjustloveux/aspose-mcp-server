@@ -1,12 +1,15 @@
 using Aspose.Pdf;
 using Aspose.Pdf.Forms;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.FormField;
 
 /// <summary>
 ///     Handler for adding form fields to PDF documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddPdfFormFieldHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class AddPdfFormFieldHandler : OperationHandlerBase<Document>
     ///     Optional: defaultValue
     /// </param>
     /// <returns>Success message with field creation details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractAddParameters(parameters);
 
@@ -61,7 +64,7 @@ public class AddPdfFormFieldHandler : OperationHandlerBase<Document>
         document.Form.Add(field);
         MarkModified(context);
 
-        return Success($"Added {p.FieldType} field '{p.FieldName}'.");
+        return new SuccessResult { Message = $"Added {p.FieldType} field '{p.FieldName}'." };
     }
 
     /// <summary>

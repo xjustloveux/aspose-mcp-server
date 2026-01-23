@@ -1,12 +1,16 @@
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.Pdf;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.Attachment;
 
 /// <summary>
 ///     Handler for adding attachments to PDF documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddPdfAttachmentHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -21,7 +25,7 @@ public class AddPdfAttachmentHandler : OperationHandlerBase<Document>
     ///     Optional: description
     /// </param>
     /// <returns>Success message.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var addParams = ExtractAddParameters(parameters);
 
@@ -49,7 +53,7 @@ public class AddPdfAttachmentHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Added attachment '{addParams.AttachmentName}'.");
+        return new SuccessResult { Message = $"Added attachment '{addParams.AttachmentName}'." };
     }
 
     /// <summary>

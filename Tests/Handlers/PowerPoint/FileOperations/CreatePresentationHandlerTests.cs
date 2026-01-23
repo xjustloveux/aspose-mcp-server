@@ -1,6 +1,7 @@
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.FileOperations;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.FileOperations;
 
@@ -45,9 +46,11 @@ public class CreatePresentationHandlerTests : PptHandlerTestBase
             { "path", outputPath }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("created successfully", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("created successfully", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(File.Exists(outputPath));
         var fileInfo = new FileInfo(outputPath);
         Assert.True(fileInfo.Length > 0, "Created presentation should have content");
@@ -64,9 +67,11 @@ public class CreatePresentationHandlerTests : PptHandlerTestBase
             { "outputPath", outputPath }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("created successfully", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("created successfully", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(File.Exists(outputPath));
         var fileInfo = new FileInfo(outputPath);
         Assert.True(fileInfo.Length > 0, "Created presentation should have content");

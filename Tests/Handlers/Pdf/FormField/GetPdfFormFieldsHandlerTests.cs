@@ -1,8 +1,8 @@
-using System.Text.Json;
 using Aspose.Pdf;
 using Aspose.Pdf.Forms;
 using AsposeMcpServer.Handlers.Pdf.FormField;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Pdf.FormField;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.FormField;
 
@@ -29,11 +29,12 @@ public class GetPdfFormFieldsHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(0, json.RootElement.GetProperty("count").GetInt32());
-        Assert.Contains("No form fields found", json.RootElement.GetProperty("message").GetString());
+        var result = Assert.IsType<GetFormFieldsResult>(res);
+
+        Assert.Equal(0, result.Count);
+        Assert.Contains("No form fields found", result.Message);
     }
 
     #endregion
@@ -50,12 +51,13 @@ public class GetPdfFormFieldsHandlerTests : PdfHandlerTestBase
             { "limit", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(2, json.RootElement.GetProperty("count").GetInt32());
-        Assert.Equal(5, json.RootElement.GetProperty("totalCount").GetInt32());
-        Assert.True(json.RootElement.GetProperty("truncated").GetBoolean());
+        var result = Assert.IsType<GetFormFieldsResult>(res);
+
+        Assert.Equal(2, result.Count);
+        Assert.Equal(5, result.TotalCount);
+        Assert.True(result.Truncated);
     }
 
     #endregion
@@ -90,10 +92,11 @@ public class GetPdfFormFieldsHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.True(json.RootElement.TryGetProperty("count", out _));
+        var result = Assert.IsType<GetFormFieldsResult>(res);
+
+        Assert.True(result.Count >= 0);
     }
 
     [Fact]
@@ -103,10 +106,11 @@ public class GetPdfFormFieldsHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(3, json.RootElement.GetProperty("count").GetInt32());
+        var result = Assert.IsType<GetFormFieldsResult>(res);
+
+        Assert.Equal(3, result.Count);
     }
 
     [Fact]
@@ -116,10 +120,11 @@ public class GetPdfFormFieldsHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(2, json.RootElement.GetProperty("items").GetArrayLength());
+        var result = Assert.IsType<GetFormFieldsResult>(res);
+
+        Assert.Equal(2, result.Items.Count);
     }
 
     [Fact]
@@ -129,10 +134,11 @@ public class GetPdfFormFieldsHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(3, json.RootElement.GetProperty("totalCount").GetInt32());
+        var result = Assert.IsType<GetFormFieldsResult>(res);
+
+        Assert.Equal(3, result.TotalCount);
     }
 
     #endregion
@@ -146,11 +152,12 @@ public class GetPdfFormFieldsHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
-        var firstField = json.RootElement.GetProperty("items")[0];
+        var res = _handler.Execute(context, parameters);
 
-        Assert.NotNull(firstField.GetProperty("name").GetString());
+        var result = Assert.IsType<GetFormFieldsResult>(res);
+        var firstField = result.Items[0];
+
+        Assert.NotNull(firstField.Name);
     }
 
     [Fact]
@@ -160,11 +167,12 @@ public class GetPdfFormFieldsHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
-        var firstField = json.RootElement.GetProperty("items")[0];
+        var res = _handler.Execute(context, parameters);
 
-        Assert.NotNull(firstField.GetProperty("type").GetString());
+        var result = Assert.IsType<GetFormFieldsResult>(res);
+        var firstField = result.Items[0];
+
+        Assert.NotNull(firstField.Type);
     }
 
     #endregion

@@ -1,6 +1,7 @@
 using Aspose.Pdf;
 using AsposeMcpServer.Handlers.Pdf.Image;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Image;
 
@@ -67,9 +68,11 @@ public class ExtractPdfImageHandlerTests : PdfHandlerTestBase
             { "pageIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("No images found", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("No images found", result.Message);
     }
 
     [Fact]
@@ -79,9 +82,11 @@ public class ExtractPdfImageHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("page 1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("page 1", result.Message);
     }
 
     #endregion
@@ -98,9 +103,11 @@ public class ExtractPdfImageHandlerTests : PdfHandlerTestBase
             { "pageIndex", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("page 2", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("page 2", result.Message);
     }
 
     [Fact]
@@ -113,9 +120,11 @@ public class ExtractPdfImageHandlerTests : PdfHandlerTestBase
             { "pageIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("No images found", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("No images found", result.Message);
     }
 
     #endregion

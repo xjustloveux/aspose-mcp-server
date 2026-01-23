@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Word;
 /// <summary>
 ///     Tool for managing styles in Word documents (get, create, apply, copy)
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Word.Styles")]
 [McpServerToolType]
 public class WordStyleTool
 {
@@ -73,7 +76,14 @@ public class WordStyleTool
     /// <param name="overwriteExisting">Overwrite existing styles (for copy_styles, default: false).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get_styles.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "word_style")]
+    [McpServerTool(
+        Name = "word_style",
+        Title = "Word Style Operations",
+        Destructive = false,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(
         @"Manage styles in Word documents. Supports 4 operations: get_styles, create_style, apply_style, copy_styles.
 
@@ -82,7 +92,7 @@ Usage examples:
 - Create style: word_style(operation='create_style', path='doc.docx', styleName='CustomStyle', styleType='paragraph', fontSize=14, bold=true)
 - Apply style: word_style(operation='apply_style', path='doc.docx', styleName='Heading 1', paragraphIndex=0)
 - Copy styles: word_style(operation='copy_styles', path='doc.docx', sourceDocument='template.docx')")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: get_styles, create_style, apply_style, copy_styles")]
         string operation,
         [Description("Document file path (required if no sessionId)")]
@@ -166,7 +176,7 @@ Usage examples:
         if (operationContext.IsModified)
             ctx.Save(effectiveOutputPath);
 
-        return ctx.IsSession ? result : $"{result}\n{ctx.GetOutputMessage(effectiveOutputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, effectiveOutputPath);
     }
 
     /// <summary>

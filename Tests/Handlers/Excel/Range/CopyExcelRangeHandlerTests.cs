@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.Range;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Range;
 
@@ -54,11 +55,13 @@ public class CopyExcelRangeHandlerTests : ExcelHandlerTestBase
             { "destCell", "D1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("A1:B2", result);
-        Assert.Contains("D1", result);
-        Assert.Contains("copied", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("A1:B2", result.Message);
+        Assert.Contains("D1", result.Message);
+        Assert.Contains("copied", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -80,9 +83,11 @@ public class CopyExcelRangeHandlerTests : ExcelHandlerTestBase
             { "destCell", "D1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("copied", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("copied", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("A", workbook.Worksheets[0].Cells["D1"].Value);
         Assert.Equal("B", workbook.Worksheets[0].Cells["E1"].Value);
         Assert.Equal("C", workbook.Worksheets[0].Cells["D2"].Value);
@@ -108,9 +113,11 @@ public class CopyExcelRangeHandlerTests : ExcelHandlerTestBase
             { "destCell", destCell }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("copied", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("copied", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 

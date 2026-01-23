@@ -1,13 +1,16 @@
 using Aspose.Slides;
 using Aspose.Slides.Export;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.FileOperations;
 
 /// <summary>
 ///     Handler for creating a new PowerPoint presentation.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class CreatePresentationHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class CreatePresentationHandler : OperationHandlerBase<Presentation>
     ///     Required: path or outputPath
     /// </param>
     /// <returns>Success message with output path.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractCreateParameters(parameters);
 
@@ -34,7 +37,7 @@ public class CreatePresentationHandler : OperationHandlerBase<Presentation>
         using var presentation = new Presentation();
         presentation.Save(savePath, SaveFormat.Pptx);
 
-        return Success($"PowerPoint presentation created successfully. Output: {savePath}");
+        return new SuccessResult { Message = $"PowerPoint presentation created successfully. Output: {savePath}" };
     }
 
     /// <summary>

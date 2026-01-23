@@ -1,13 +1,15 @@
-using System.Text.Json;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Word.Format;
 
 namespace AsposeMcpServer.Handlers.Word.Format;
 
 /// <summary>
 ///     Handler for getting run format information in Word documents.
 /// </summary>
+[ResultType(typeof(GetRunFormatWordResult))]
 public class GetRunFormatWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -22,7 +24,7 @@ public class GetRunFormatWordHandler : OperationHandlerBase<Document>
     ///     Optional: runIndex, includeInherited
     /// </param>
     /// <returns>A JSON string containing the run format information.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractGetRunFormatParameters(parameters);
 
@@ -42,83 +44,56 @@ public class GetRunFormatWordHandler : OperationHandlerBase<Document>
             var colorHex = $"#{font.Color.R:X2}{font.Color.G:X2}{font.Color.B:X2}";
             var colorName = WordFormatHelper.GetColorName(font.Color);
 
-            object result;
-            if (p.IncludeInherited)
-                result = new
-                {
-                    paragraphIndex = p.ParagraphIndex,
-                    runIndex = p.RunIndex.Value,
-                    text = run.Text,
-                    formatType = "inherited",
-                    fontName = font.Name,
-                    fontNameAscii = font.NameAscii,
-                    fontNameFarEast = font.NameFarEast,
-                    fontSize = font.Size,
-                    bold = font.Bold,
-                    italic = font.Italic,
-                    underline = font.Underline.ToString(),
-                    strikeThrough = font.StrikeThrough,
-                    superscript = font.Superscript,
-                    subscript = font.Subscript,
-                    color = colorHex,
-                    colorName,
-                    isAutoColor = font.Color is { IsEmpty: true } or { R: 0, G: 0, B: 0, A: 0 }
-                };
-            else
-                result = new
-                {
-                    paragraphIndex = p.ParagraphIndex,
-                    runIndex = p.RunIndex.Value,
-                    text = run.Text,
-                    formatType = "explicit",
-                    fontName = font.Name,
-                    fontNameAscii = font.NameAscii,
-                    fontNameFarEast = font.NameFarEast,
-                    fontSize = font.Size,
-                    bold = font.Bold,
-                    italic = font.Italic,
-                    underline = font.Underline.ToString(),
-                    strikeThrough = font.StrikeThrough,
-                    superscript = font.Superscript,
-                    subscript = font.Subscript,
-                    color = colorHex,
-                    colorName,
-                    isAutoColor = font.Color is { IsEmpty: true } or { R: 0, G: 0, B: 0, A: 0 }
-                };
-            return JsonSerializer.Serialize(result, JsonDefaults.Indented);
-        }
-        else
-        {
-            var runsList = runs.Select((run, i) =>
+            return new GetRunFormatWordResult
             {
-                var font = run.Font;
-                var colorHex = $"#{font.Color.R:X2}{font.Color.G:X2}{font.Color.B:X2}";
-                return new
-                {
-                    index = i,
-                    text = run.Text,
-                    fontNameAscii = font.NameAscii,
-                    fontNameFarEast = font.NameFarEast,
-                    fontSize = font.Size,
-                    bold = font.Bold,
-                    italic = font.Italic,
-                    underline = font.Underline.ToString(),
-                    strikeThrough = font.StrikeThrough,
-                    superscript = font.Superscript,
-                    subscript = font.Subscript,
-                    color = colorHex,
-                    colorName = WordFormatHelper.GetColorName(font.Color)
-                };
-            }).ToList();
-
-            var result = new
-            {
-                paragraphIndex = p.ParagraphIndex,
-                count = runs.Count,
-                runs = runsList
+                ParagraphIndex = p.ParagraphIndex,
+                RunIndex = p.RunIndex.Value,
+                Text = run.Text,
+                FormatType = p.IncludeInherited ? "inherited" : "explicit",
+                FontName = font.Name,
+                FontNameAscii = font.NameAscii,
+                FontNameFarEast = font.NameFarEast,
+                FontSize = font.Size,
+                Bold = font.Bold,
+                Italic = font.Italic,
+                Underline = font.Underline.ToString(),
+                StrikeThrough = font.StrikeThrough,
+                Superscript = font.Superscript,
+                Subscript = font.Subscript,
+                Color = colorHex,
+                ColorName = colorName,
+                IsAutoColor = font.Color is { IsEmpty: true } or { R: 0, G: 0, B: 0, A: 0 }
             };
-            return JsonSerializer.Serialize(result, JsonDefaults.Indented);
         }
+
+        var runsList = runs.Select((run, i) =>
+        {
+            var font = run.Font;
+            var colorHex = $"#{font.Color.R:X2}{font.Color.G:X2}{font.Color.B:X2}";
+            return new RunFormatInfo
+            {
+                Index = i,
+                Text = run.Text,
+                FontNameAscii = font.NameAscii,
+                FontNameFarEast = font.NameFarEast,
+                FontSize = font.Size,
+                Bold = font.Bold,
+                Italic = font.Italic,
+                Underline = font.Underline.ToString(),
+                StrikeThrough = font.StrikeThrough,
+                Superscript = font.Superscript,
+                Subscript = font.Subscript,
+                Color = colorHex,
+                ColorName = WordFormatHelper.GetColorName(font.Color)
+            };
+        }).ToList();
+
+        return new GetRunFormatAllResult
+        {
+            ParagraphIndex = p.ParagraphIndex,
+            Count = runs.Count,
+            Runs = runsList
+        };
     }
 
     private static GetRunFormatParameters ExtractGetRunFormatParameters(OperationParameters parameters)

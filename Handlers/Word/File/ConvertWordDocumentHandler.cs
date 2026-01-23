@@ -1,13 +1,16 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.File;
 
 /// <summary>
 ///     Handler for converting Word documents to other formats.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class ConvertWordDocumentHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -24,7 +27,7 @@ public class ConvertWordDocumentHandler : OperationHandlerBase<Document>
     /// <returns>Success message with conversion details.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or format is unsupported.</exception>
     /// <exception cref="InvalidOperationException">Thrown when session management is not enabled.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractConvertParameters(parameters);
 
@@ -93,7 +96,8 @@ public class ConvertWordDocumentHandler : OperationHandlerBase<Document>
         };
 
         doc.Save(p.OutputPath, saveFormat);
-        return $"Document converted from {sourceDescription} to {p.OutputPath} ({formatLower})";
+        return new SuccessResult
+            { Message = $"Document converted from {sourceDescription} to {p.OutputPath} ({formatLower})" };
     }
 
     private static ConvertParameters ExtractConvertParameters(OperationParameters parameters)

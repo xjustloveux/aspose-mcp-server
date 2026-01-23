@@ -1,11 +1,14 @@
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Pdf.Image;
 
 namespace AsposeMcpServer.Handlers.Pdf.Image;
 
 /// <summary>
 ///     Handler for getting image information from PDF documents.
 /// </summary>
+[ResultType(typeof(GetImagesPdfResult))]
 public class GetPdfImagesHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -18,8 +21,8 @@ public class GetPdfImagesHandler : OperationHandlerBase<Document>
     /// <param name="parameters">
     ///     Optional: pageIndex
     /// </param>
-    /// <returns>JSON string containing image information.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    /// <returns>Result containing image information.</returns>
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractGetParameters(parameters);
         var document = context.Document;
@@ -46,8 +49,8 @@ public class GetPdfImagesHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="document">The PDF document.</param>
     /// <param name="pageIndex">The 1-based page index.</param>
-    /// <returns>JSON string containing image information from the specified page.</returns>
-    private static string GetImagesFromSinglePage(Document document, int pageIndex)
+    /// <returns>Result containing image information from the specified page.</returns>
+    private static GetImagesPdfResult GetImagesFromSinglePage(Document document, int pageIndex)
     {
         if (pageIndex < 1 || pageIndex > document.Pages.Count)
             throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
@@ -56,31 +59,31 @@ public class GetPdfImagesHandler : OperationHandlerBase<Document>
         var images = page.Resources?.Images;
 
         if (images == null || images.Count == 0)
-            return JsonResult(new
+            return new GetImagesPdfResult
             {
-                count = 0,
-                pageIndex,
-                items = Array.Empty<object>(),
-                message = $"No images found on page {pageIndex}"
-            });
+                Count = 0,
+                PageIndex = pageIndex,
+                Items = [],
+                Message = $"No images found on page {pageIndex}"
+            };
 
         var imageList = CollectImagesFromPage(images, pageIndex);
-        return JsonResult(new
+        return new GetImagesPdfResult
         {
-            count = imageList.Count,
-            pageIndex,
-            items = imageList
-        });
+            Count = imageList.Count,
+            PageIndex = pageIndex,
+            Items = imageList
+        };
     }
 
     /// <summary>
     ///     Retrieves images from all pages in the document.
     /// </summary>
     /// <param name="document">The PDF document.</param>
-    /// <returns>JSON string containing image information from all pages.</returns>
-    private static string GetImagesFromAllPages(Document document)
+    /// <returns>Result containing image information from all pages.</returns>
+    private static GetImagesPdfResult GetImagesFromAllPages(Document document)
     {
-        List<object> imageList = [];
+        List<PdfImageInfo> imageList = [];
 
         for (var pageNum = 1; pageNum <= document.Pages.Count; pageNum++)
         {
@@ -91,18 +94,18 @@ public class GetPdfImagesHandler : OperationHandlerBase<Document>
         }
 
         if (imageList.Count == 0)
-            return JsonResult(new
+            return new GetImagesPdfResult
             {
-                count = 0,
-                items = Array.Empty<object>(),
-                message = "No images found in document"
-            });
+                Count = 0,
+                Items = [],
+                Message = "No images found in document"
+            };
 
-        return JsonResult(new
+        return new GetImagesPdfResult
         {
-            count = imageList.Count,
-            items = imageList
-        });
+            Count = imageList.Count,
+            Items = imageList
+        };
     }
 
     /// <summary>
@@ -111,9 +114,9 @@ public class GetPdfImagesHandler : OperationHandlerBase<Document>
     /// <param name="images">The image collection from the page.</param>
     /// <param name="pageNum">The 1-based page number.</param>
     /// <returns>A list of image information objects.</returns>
-    private static List<object> CollectImagesFromPage(XImageCollection images, int pageNum)
+    private static List<PdfImageInfo> CollectImagesFromPage(XImageCollection images, int pageNum)
     {
-        List<object> imageList = [];
+        List<PdfImageInfo> imageList = [];
 
         for (var i = 1; i <= images.Count; i++)
             try
@@ -124,42 +127,44 @@ public class GetPdfImagesHandler : OperationHandlerBase<Document>
             }
             catch (Exception ex)
             {
-                imageList.Add(new { index = i, pageIndex = pageNum, error = ex.Message });
+                imageList.Add(new PdfImageInfo { Index = i, PageIndex = pageNum, Error = ex.Message });
             }
 
         return imageList;
     }
 
     /// <summary>
-    ///     Creates an image information dictionary.
+    ///     Creates an image information record.
     /// </summary>
     /// <param name="image">The XImage object.</param>
     /// <param name="index">The 1-based image index within the page.</param>
     /// <param name="pageNum">The 1-based page number.</param>
-    /// <returns>A dictionary containing image information.</returns>
-    private static Dictionary<string, object?> CreateImageInfo(XImage image, int index, int pageNum)
+    /// <returns>A PdfImageInfo containing image information.</returns>
+    private static PdfImageInfo CreateImageInfo(XImage image, int index, int pageNum)
     {
-        var imageInfo = new Dictionary<string, object?>
-        {
-            ["index"] = index,
-            ["pageIndex"] = pageNum
-        };
+        int? width = null;
+        int? height = null;
 
         try
         {
             if (image is { Width: > 0, Height: > 0 })
             {
-                imageInfo["width"] = image.Width;
-                imageInfo["height"] = image.Height;
+                width = image.Width;
+                height = image.Height;
             }
         }
         catch
         {
-            imageInfo["width"] = null;
-            imageInfo["height"] = null;
+            // Ignore dimension retrieval errors
         }
 
-        return imageInfo;
+        return new PdfImageInfo
+        {
+            Index = index,
+            PageIndex = pageNum,
+            Width = width,
+            Height = height
+        };
     }
 
     /// <summary>

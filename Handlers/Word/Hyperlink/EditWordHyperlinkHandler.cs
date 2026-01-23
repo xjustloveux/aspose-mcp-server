@@ -1,11 +1,15 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Hyperlink;
 
 /// <summary>
 ///     Handler for editing hyperlinks in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class EditWordHyperlinkHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,7 +24,7 @@ public class EditWordHyperlinkHandler : OperationHandlerBase<Document>
     ///     Optional: url, subAddress, displayText, tooltip
     /// </param>
     /// <returns>Success message with edit details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractEditHyperlinkParameters(parameters);
 
@@ -68,13 +72,13 @@ public class EditWordHyperlinkHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        var result = $"Hyperlink #{p.HyperlinkIndex} edited successfully\n";
+        var message = $"Hyperlink #{p.HyperlinkIndex} edited successfully\n";
         if (changes.Count > 0)
-            result += $"Changes: {string.Join(", ", changes)}";
+            message += $"Changes: {string.Join(", ", changes)}";
         else
-            result += "No change parameters provided";
+            message += "No change parameters provided";
 
-        return result;
+        return new SuccessResult { Message = message };
     }
 
     /// <summary>

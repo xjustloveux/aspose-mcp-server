@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Image;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Image;
 
@@ -31,9 +32,11 @@ public class ExtractImagesWordHandlerTests : WordHandlerTestBase
             { "outputDir", outputDir }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("No images found", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("No images found", result.Message);
     }
 
     [Fact]
@@ -48,9 +51,11 @@ public class ExtractImagesWordHandlerTests : WordHandlerTestBase
             { "outputDir", outputDir }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Successfully extracted", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Successfully extracted", result.Message);
         Assert.True(Directory.Exists(outputDir));
         var files = Directory.GetFiles(outputDir);
         Assert.NotEmpty(files);
@@ -73,9 +78,11 @@ public class ExtractImagesWordHandlerTests : WordHandlerTestBase
             { "outputDir", outputDir }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("3 images", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("3 images", result.Message);
     }
 
     #endregion
@@ -120,9 +127,11 @@ public class ExtractImagesWordHandlerTests : WordHandlerTestBase
             { "extractImageIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("image #1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("image #1", result.Message);
         var files = Directory.GetFiles(outputDir);
         Assert.Single(files);
         var fileInfo = new FileInfo(files[0]);

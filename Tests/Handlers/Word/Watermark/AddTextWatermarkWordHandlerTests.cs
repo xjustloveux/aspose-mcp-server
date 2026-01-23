@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Watermark;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Watermark;
 
@@ -31,9 +32,11 @@ public class AddTextWatermarkWordHandlerTests : WordHandlerTestBase
             { "text", "NEW" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("watermark added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("watermark added", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(WatermarkType.Text, doc.Watermark.Type);
         AssertModified(context);
     }
@@ -52,9 +55,11 @@ public class AddTextWatermarkWordHandlerTests : WordHandlerTestBase
             { "text", "CONFIDENTIAL" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("watermark added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("watermark added", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(WatermarkType.Text, doc.Watermark.Type);
         AssertModified(context);
     }
@@ -70,9 +75,11 @@ public class AddTextWatermarkWordHandlerTests : WordHandlerTestBase
             { "fontFamily", "Times New Roman" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("watermark added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("watermark added", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(WatermarkType.Text, doc.Watermark.Type);
     }
 
@@ -87,9 +94,11 @@ public class AddTextWatermarkWordHandlerTests : WordHandlerTestBase
             { "fontSize", 48.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("watermark added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("watermark added", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(WatermarkType.Text, doc.Watermark.Type);
     }
 
@@ -104,9 +113,11 @@ public class AddTextWatermarkWordHandlerTests : WordHandlerTestBase
             { "layout", "Diagonal" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("watermark added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("watermark added", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(WatermarkType.Text, doc.Watermark.Type);
     }
 
@@ -121,9 +132,11 @@ public class AddTextWatermarkWordHandlerTests : WordHandlerTestBase
             { "layout", "Horizontal" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("watermark added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("watermark added", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(WatermarkType.Text, doc.Watermark.Type);
     }
 
@@ -138,9 +151,11 @@ public class AddTextWatermarkWordHandlerTests : WordHandlerTestBase
             { "isSemitransparent", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("watermark added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("watermark added", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(WatermarkType.Text, doc.Watermark.Type);
     }
 
@@ -158,9 +173,11 @@ public class AddTextWatermarkWordHandlerTests : WordHandlerTestBase
             { "layout", "Horizontal" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("watermark added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("watermark added", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(WatermarkType.Text, doc.Watermark.Type);
     }
 

@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.Properties;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Excel.Properties;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Properties;
 
@@ -27,11 +28,12 @@ public class GetSheetPropertiesHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("TestSheet", result);
-        Assert.Contains("\"index\"", result);
-        Assert.Contains("isVisible", result);
+        var result = Assert.IsType<GetSheetPropertiesResult>(res);
+        Assert.Equal("TestSheet", result.Name);
+        Assert.Equal(0, result.Index);
+        Assert.True(result.IsVisible);
     }
 
     [Fact]
@@ -45,9 +47,10 @@ public class GetSheetPropertiesHandlerTests : ExcelHandlerTestBase
             { "sheetIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("SecondSheet", result);
+        var result = Assert.IsType<GetSheetPropertiesResult>(res);
+        Assert.Equal("SecondSheet", result.Name);
     }
 
     [Fact]
@@ -59,10 +62,11 @@ public class GetSheetPropertiesHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("dataRowCount", result);
-        Assert.Contains("dataColumnCount", result);
+        var result = Assert.IsType<GetSheetPropertiesResult>(res);
+        Assert.True(result.DataRowCount >= 0);
+        Assert.True(result.DataColumnCount >= 0);
     }
 
     [Fact]
@@ -72,12 +76,12 @@ public class GetSheetPropertiesHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("printSettings", result);
-        Assert.Contains("printArea", result);
-        Assert.Contains("orientation", result);
-        Assert.Contains("paperSize", result);
+        var result = Assert.IsType<GetSheetPropertiesResult>(res);
+        Assert.NotNull(result.PrintSettings);
+        Assert.NotNull(result.PrintSettings.Orientation);
+        Assert.NotNull(result.PrintSettings.PaperSize);
     }
 
     [Fact]
@@ -87,12 +91,13 @@ public class GetSheetPropertiesHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("commentsCount", result);
-        Assert.Contains("chartsCount", result);
-        Assert.Contains("picturesCount", result);
-        Assert.Contains("hyperlinksCount", result);
+        var result = Assert.IsType<GetSheetPropertiesResult>(res);
+        Assert.True(result.CommentsCount >= 0);
+        Assert.True(result.ChartsCount >= 0);
+        Assert.True(result.PicturesCount >= 0);
+        Assert.True(result.HyperlinksCount >= 0);
     }
 
     #endregion

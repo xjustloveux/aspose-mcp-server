@@ -1,6 +1,8 @@
-using Aspose.Slides;
+﻿using Aspose.Slides;
 using Aspose.Slides.Export;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.PowerPoint.Hyperlink;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.PowerPoint;
 
 namespace AsposeMcpServer.Tests.Tools.PowerPoint;
@@ -52,7 +54,8 @@ public class PptHyperlinkToolTests : PptTestBase
         var outputPath = CreateTestFilePath("test_add_hyperlink_output.pptx");
         var result = _tool.Execute("add", pptPath, slideIndex: 0, shapeIndex: shapeIndex, url: "https://example.com",
             text: "Click here", outputPath: outputPath);
-        Assert.StartsWith("Hyperlink added to slide", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Hyperlink added to slide", data.Message);
         using var presentation = new Presentation(outputPath);
         var shape = presentation.Slides[0].Shapes[shapeIndex];
         Assert.NotNull(shape.HyperlinkClick);
@@ -66,7 +69,8 @@ public class PptHyperlinkToolTests : PptTestBase
         var outputPath = CreateTestFilePath("test_edit_hyperlink_output.pptx");
         var result = _tool.Execute("edit", pptPath, slideIndex: 0, shapeIndex: 0, url: "https://new.com",
             outputPath: outputPath);
-        Assert.StartsWith("Hyperlink updated on slide", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Hyperlink updated on slide", data.Message);
         using var presentation = new Presentation(outputPath);
         Assert.Contains("new.com", presentation.Slides[0].Shapes[0].HyperlinkClick?.ExternalUrl ?? "");
     }
@@ -77,7 +81,8 @@ public class PptHyperlinkToolTests : PptTestBase
         var pptPath = CreatePresentationWithHyperlink("test_delete_hyperlink.pptx");
         var outputPath = CreateTestFilePath("test_delete_hyperlink_output.pptx");
         var result = _tool.Execute("delete", pptPath, slideIndex: 0, shapeIndex: 0, outputPath: outputPath);
-        Assert.StartsWith("Hyperlink deleted from slide", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Hyperlink deleted from slide", data.Message);
         using var presentation = new Presentation(outputPath);
         Assert.Null(presentation.Slides[0].Shapes[0].HyperlinkClick);
     }
@@ -87,8 +92,9 @@ public class PptHyperlinkToolTests : PptTestBase
     {
         var pptPath = CreatePresentationWithHyperlink("test_get_hyperlinks.pptx");
         var result = _tool.Execute("get", pptPath);
-        Assert.NotNull(result);
-        Assert.Contains("Hyperlink", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<GetHyperlinksPptResult>(result);
+        Assert.NotNull(data.TotalCount);
+        Assert.NotNull(data.Slides);
     }
 
     #endregion
@@ -105,7 +111,8 @@ public class PptHyperlinkToolTests : PptTestBase
         var outputPath = CreateTestFilePath($"test_case_add_{operation}_output.pptx");
         var result = _tool.Execute(operation, pptPath, slideIndex: 0, url: "https://example.com", text: "Link",
             outputPath: outputPath);
-        Assert.StartsWith("Hyperlink added to slide", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Hyperlink added to slide", data.Message);
     }
 
     [Fact]
@@ -126,7 +133,11 @@ public class PptHyperlinkToolTests : PptTestBase
         var pptPath = CreatePresentationWithHyperlink("test_session_get_hyperlinks.pptx", "https://session-test.com");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("get", sessionId: sessionId);
-        Assert.Contains("Hyperlink", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<GetHyperlinksPptResult>(result);
+        Assert.NotNull(data.TotalCount);
+        Assert.NotNull(data.Slides);
+        var output = GetResultOutput<GetHyperlinksPptResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -138,7 +149,10 @@ public class PptHyperlinkToolTests : PptTestBase
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var result = _tool.Execute("add", sessionId: sessionId, slideIndex: 0, shapeIndex: shapeIndex,
             url: "https://session-example.com", text: "Session Link");
-        Assert.StartsWith("Hyperlink added to slide", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Hyperlink added to slide", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var shape = ppt.Slides[0].Shapes[shapeIndex];
         Assert.NotNull(shape.HyperlinkClick);
         Assert.Contains("session-example.com", shape.HyperlinkClick.ExternalUrl ?? "");
@@ -152,7 +166,10 @@ public class PptHyperlinkToolTests : PptTestBase
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var result = _tool.Execute("edit", sessionId: sessionId, slideIndex: 0, shapeIndex: 0,
             url: "https://session-new.com");
-        Assert.StartsWith("Hyperlink updated on slide", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Hyperlink updated on slide", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         Assert.Contains("session-new.com", ppt.Slides[0].Shapes[0].HyperlinkClick?.ExternalUrl ?? "");
     }
 
@@ -163,7 +180,10 @@ public class PptHyperlinkToolTests : PptTestBase
         var sessionId = OpenSession(pptPath);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var result = _tool.Execute("delete", sessionId: sessionId, slideIndex: 0, shapeIndex: 0);
-        Assert.StartsWith("Hyperlink deleted from slide", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Hyperlink deleted from slide", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         Assert.Null(ppt.Slides[0].Shapes[0].HyperlinkClick);
     }
 
@@ -180,7 +200,8 @@ public class PptHyperlinkToolTests : PptTestBase
         var pptPath2 = CreatePresentationWithHyperlink("test_session_hyperlink.pptx", "https://session-url.com");
         var sessionId = OpenSession(pptPath2);
         var result = _tool.Execute("get", pptPath1, sessionId);
-        Assert.Contains("session-url.com", result);
+        var data = GetResultData<GetHyperlinksPptResult>(result);
+        Assert.True(data.TotalCount > 0);
     }
 
     #endregion

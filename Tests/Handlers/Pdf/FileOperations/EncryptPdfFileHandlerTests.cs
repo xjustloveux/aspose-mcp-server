@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Pdf.FileOperations;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.FileOperations;
 
@@ -30,9 +31,11 @@ public class EncryptPdfFileHandlerTests : PdfHandlerTestBase
             { "ownerPassword", "owner456" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("encrypted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("encrypted", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
         Assert.True(doc.IsEncrypted, "Document should be encrypted after operation");
     }

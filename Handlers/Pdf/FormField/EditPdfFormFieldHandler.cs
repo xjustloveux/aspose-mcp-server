@@ -1,12 +1,15 @@
 using Aspose.Pdf;
 using Aspose.Pdf.Forms;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.FormField;
 
 /// <summary>
 ///     Handler for editing form field values in PDF documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class EditPdfFormFieldHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class EditPdfFormFieldHandler : OperationHandlerBase<Document>
     ///     Optional: value (for text/radio), checkedValue (for checkbox)
     /// </param>
     /// <returns>Success message with edit details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractEditParameters(parameters);
 
@@ -39,7 +42,7 @@ public class EditPdfFormFieldHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Edited form field '{p.FieldName}'.");
+        return new SuccessResult { Message = $"Edited form field '{p.FieldName}'." };
     }
 
     /// <summary>

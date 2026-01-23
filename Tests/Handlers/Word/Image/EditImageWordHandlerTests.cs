@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Image;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 using WordShape = Aspose.Words.Drawing.Shape;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Image;
@@ -34,11 +35,13 @@ public class EditImageWordHandlerTests : WordHandlerTestBase
             { "height", 150.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("edited", result.ToLower());
-        Assert.Contains("width", result.ToLower());
-        Assert.Contains("height", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("edited", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("width", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("height", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -54,9 +57,11 @@ public class EditImageWordHandlerTests : WordHandlerTestBase
             { "alternativeText", "New alt text" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("alt text", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("alt text", result.Message, StringComparison.OrdinalIgnoreCase);
         var shape = GetFirstImage(doc);
         Assert.Equal("New alt text", shape.AlternativeText);
     }
@@ -73,9 +78,11 @@ public class EditImageWordHandlerTests : WordHandlerTestBase
             { "title", "New title" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("title", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("title", result.Message, StringComparison.OrdinalIgnoreCase);
         var shape = GetFirstImage(doc);
         Assert.Equal("New title", shape.Title);
     }
@@ -92,9 +99,11 @@ public class EditImageWordHandlerTests : WordHandlerTestBase
             { "linkUrl", "https://example.com" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("hyperlink", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("hyperlink", result.Message, StringComparison.OrdinalIgnoreCase);
         var shape = GetFirstImage(doc);
         Assert.Equal("https://example.com", shape.HRef);
     }

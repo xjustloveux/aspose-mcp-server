@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.ViewSettings;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.ViewSettings;
 
@@ -29,9 +30,11 @@ public class SetZoomExcelViewHandlerTests : ExcelHandlerTestBase
             { "zoom", 150 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("150%", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("150%", result.Message);
         Assert.Equal(150, workbook.Worksheets[0].Zoom);
         AssertModified(context);
     }
@@ -48,9 +51,11 @@ public class SetZoomExcelViewHandlerTests : ExcelHandlerTestBase
             { "zoom", 200 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("200%", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("200%", result.Message);
         Assert.Equal(200, workbook.Worksheets[1].Zoom);
     }
 
@@ -107,9 +112,11 @@ public class SetZoomExcelViewHandlerTests : ExcelHandlerTestBase
             { "zoom", zoom }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains($"{zoom}%", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains($"{zoom}%", result.Message);
         Assert.Equal(zoom, workbook.Worksheets[0].Zoom);
     }
 

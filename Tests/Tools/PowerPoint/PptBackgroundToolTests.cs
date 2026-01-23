@@ -1,8 +1,9 @@
-using System.Drawing;
-using System.Text.Json;
+﻿using System.Drawing;
 using Aspose.Slides;
 using Aspose.Slides.Export;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.PowerPoint.Background;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.PowerPoint;
 
 namespace AsposeMcpServer.Tests.Tools.PowerPoint;
@@ -40,7 +41,8 @@ public class PptBackgroundToolTests : PptTestBase
         var pptPath = CreatePresentation("test_set_color.pptx");
         var outputPath = CreateTestFilePath("test_set_color_output.pptx");
         var result = _tool.Execute("set", pptPath, slideIndex: 0, color: "#FF0000", outputPath: outputPath);
-        Assert.StartsWith("Background", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Background", data.Message);
         using var presentation = new Presentation(outputPath);
         Assert.Equal(FillType.Solid, presentation.Slides[0].Background.FillFormat.FillType);
     }
@@ -50,10 +52,9 @@ public class PptBackgroundToolTests : PptTestBase
     {
         var pptPath = CreatePresentation("test_get.pptx");
         var result = _tool.Execute("get", pptPath, slideIndex: 0);
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("slideIndex", out _));
-        Assert.True(json.RootElement.TryGetProperty("hasBackground", out _));
-        Assert.True(json.RootElement.TryGetProperty("fillType", out _));
+        var data = GetResultData<GetBackgroundResult>(result);
+        Assert.True(data.SlideIndex >= 0);
+        Assert.NotNull(data.FillType);
     }
 
     #endregion
@@ -69,7 +70,8 @@ public class PptBackgroundToolTests : PptTestBase
         var pptPath = CreatePresentation($"test_case_set_{operation}.pptx");
         var outputPath = CreateTestFilePath($"test_case_set_{operation}_output.pptx");
         var result = _tool.Execute(operation, pptPath, slideIndex: 0, color: "#FF0000", outputPath: outputPath);
-        Assert.StartsWith("Background", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Background", data.Message);
     }
 
     [Fact]
@@ -90,10 +92,12 @@ public class PptBackgroundToolTests : PptTestBase
         var pptPath = CreatePresentation("test_session_set.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("set", sessionId: sessionId, slideIndex: 0, color: "#FF0000");
-        Assert.StartsWith("Background", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Background", data.Message);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         Assert.Equal(FillType.Solid, ppt.Slides[0].Background.FillFormat.FillType);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -102,9 +106,9 @@ public class PptBackgroundToolTests : PptTestBase
         var pptPath = CreatePresentation("test_session_get.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("get", sessionId: sessionId, slideIndex: 0);
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("slideIndex", out _));
-        Assert.True(json.RootElement.TryGetProperty("fillType", out _));
+        var data = GetResultData<GetBackgroundResult>(result);
+        Assert.True(data.SlideIndex >= 0);
+        Assert.NotNull(data.FillType);
     }
 
     [Fact]
@@ -120,9 +124,9 @@ public class PptBackgroundToolTests : PptTestBase
         var pptPath2 = CreatePresentationWithSolidBackground("test_session_bg.pptx", Color.Blue);
         var sessionId = OpenSession(pptPath2);
         var result = _tool.Execute("get", pptPath1, sessionId, slideIndex: 0);
-        var json = JsonDocument.Parse(result);
-        var colorHex = json.RootElement.GetProperty("color").GetString();
-        Assert.Contains("0000FF", colorHex!);
+        var data = GetResultData<GetBackgroundResult>(result);
+        Assert.NotNull(data.Color);
+        Assert.Contains("0000FF", data.Color);
     }
 
     #endregion

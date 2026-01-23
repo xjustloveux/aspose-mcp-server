@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.PivotTable;
 
 /// <summary>
 ///     Handler for editing an existing pivot table.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class EditExcelPivotTableHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class EditExcelPivotTableHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex, name, style, showRowGrand, showColumnGrand, autoFitColumns, refreshData
     /// </param>
     /// <returns>Success message with edit details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractEditPivotTableParameters(parameters);
 
@@ -76,7 +79,7 @@ public class EditExcelPivotTableHandler : OperationHandlerBase<Workbook>
         MarkModified(context);
 
         var changesStr = changes.Count > 0 ? string.Join(", ", changes) : "no changes";
-        return Success($"Pivot table #{p.PivotTableIndex} edited ({changesStr}).");
+        return new SuccessResult { Message = $"Pivot table #{p.PivotTableIndex} edited ({changesStr})." };
     }
 
     private static EditPivotTableParameters ExtractEditPivotTableParameters(OperationParameters parameters)

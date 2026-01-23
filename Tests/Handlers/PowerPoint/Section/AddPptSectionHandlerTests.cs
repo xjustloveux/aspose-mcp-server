@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.PowerPoint.Section;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Section;
 
@@ -33,9 +34,11 @@ public class AddPptSectionHandlerTests : PptHandlerTestBase
             { "slideIndex", slideIndex }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message);
     }
 
     #endregion
@@ -78,10 +81,12 @@ public class AddPptSectionHandlerTests : PptHandlerTestBase
             { "slideIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Section", result);
-        Assert.Contains("added", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Section", result.Message);
+        Assert.Contains("added", result.Message);
         AssertModified(context);
     }
 
@@ -96,9 +101,11 @@ public class AddPptSectionHandlerTests : PptHandlerTestBase
             { "slideIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Introduction", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Introduction", result.Message);
     }
 
     [Fact]
@@ -112,9 +119,11 @@ public class AddPptSectionHandlerTests : PptHandlerTestBase
             { "slideIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("slide 1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("slide 1", result.Message);
     }
 
     [Fact]

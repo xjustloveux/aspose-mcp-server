@@ -1,4 +1,5 @@
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Word.Content;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Word;
 
 namespace AsposeMcpServer.Tests.Tools.Word;
@@ -25,7 +26,8 @@ public class WordContentToolTests : WordTestBase
         var docPath = CreateWordDocumentWithContent("test_get_content.docx", "Test content for extraction");
         var result = _tool.Execute("get_content", docPath);
         Assert.NotNull(result);
-        Assert.Contains("content", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<GetWordContentResult>(result);
+        Assert.Contains("Test content for extraction", data.Content);
     }
 
     [Fact]
@@ -33,8 +35,8 @@ public class WordContentToolTests : WordTestBase
     {
         var docPath = CreateWordDocumentWithContent("test_detailed.docx", "Detailed content");
         var result = _tool.Execute("get_content_detailed", docPath);
-        Assert.Contains("Detailed Document Content", result);
-        Assert.Contains("Body Content", result);
+        var data = GetResultData<GetWordContentDetailedResult>(result);
+        Assert.Contains("Detailed content", data.Content);
     }
 
     [Fact]
@@ -42,9 +44,10 @@ public class WordContentToolTests : WordTestBase
     {
         var docPath = CreateWordDocumentWithContent("test_statistics.docx", "Test document for statistics");
         var result = _tool.Execute("get_statistics", docPath);
-        Assert.Contains("\"pages\"", result);
-        Assert.Contains("\"words\"", result);
-        Assert.Contains("\"paragraphs\"", result);
+        var data = GetResultData<GetWordStatisticsResult>(result);
+        Assert.True(data.Pages >= 0);
+        Assert.True(data.Words >= 0);
+        Assert.True(data.Paragraphs >= 0);
     }
 
     [Fact]
@@ -52,9 +55,10 @@ public class WordContentToolTests : WordTestBase
     {
         var docPath = CreateWordDocument("test_doc_info.docx");
         var result = _tool.Execute("get_document_info", docPath);
-        Assert.Contains("\"title\"", result);
-        Assert.Contains("\"author\"", result);
-        Assert.Contains("\"sections\"", result);
+        var data = GetResultData<GetWordDocumentInfoResult>(result);
+        Assert.NotNull(data.Created);
+        Assert.NotNull(data.Modified);
+        Assert.True(data.Sections >= 0);
     }
 
     #endregion
@@ -69,7 +73,8 @@ public class WordContentToolTests : WordTestBase
     {
         var docPath = CreateWordDocumentWithContent($"test_case_{operation.Replace("_", "")}.docx", "Test");
         var result = _tool.Execute(operation, docPath);
-        Assert.Contains("Document Content", result);
+        var data = GetResultData<GetWordContentResult>(result);
+        Assert.Contains("Test", data.Content);
     }
 
     [Fact]
@@ -91,7 +96,8 @@ public class WordContentToolTests : WordTestBase
         var docPath = CreateWordDocumentWithContent("test_session_content.docx", "Session content for extraction");
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("get_content", sessionId: sessionId);
-        Assert.Contains("Session content", result);
+        var data = GetResultData<GetWordContentResult>(result);
+        Assert.Contains("Session content", data.Content);
     }
 
     [Fact]
@@ -100,8 +106,9 @@ public class WordContentToolTests : WordTestBase
         var docPath = CreateWordDocumentWithContent("test_session_stats.docx", "Session document for statistics");
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("get_statistics", sessionId: sessionId);
-        Assert.Contains("\"pages\"", result);
-        Assert.Contains("\"words\"", result);
+        var data = GetResultData<GetWordStatisticsResult>(result);
+        Assert.True(data.Pages >= 0);
+        Assert.True(data.Words >= 0);
     }
 
     [Fact]
@@ -118,8 +125,9 @@ public class WordContentToolTests : WordTestBase
         var docPath2 = CreateWordDocumentWithContent("test_session_content2.docx", "SessionDocumentContent");
         var sessionId = OpenSession(docPath2);
         var result = _tool.Execute("get_content", docPath1, sessionId);
-        Assert.Contains("SessionDocumentContent", result);
-        Assert.DoesNotContain("PathDocumentContent", result);
+        var data = GetResultData<GetWordContentResult>(result);
+        Assert.Contains("SessionDocumentContent", data.Content);
+        Assert.DoesNotContain("PathDocumentContent", data.Content);
     }
 
     #endregion

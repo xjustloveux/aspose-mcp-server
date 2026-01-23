@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.Sheet;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Sheet;
 
@@ -74,9 +75,11 @@ public class CopyExcelSheetHandlerTests : ExcelHandlerTestBase
             { "sheetIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Sheet1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Sheet1", result.Message);
     }
 
     #endregion
@@ -95,9 +98,11 @@ public class CopyExcelSheetHandlerTests : ExcelHandlerTestBase
             { "targetIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("1", result.Message);
     }
 
     [Fact]
@@ -181,9 +186,11 @@ public class CopyExcelSheetHandlerTests : ExcelHandlerTestBase
             { "copyToPath", outputPath }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("external file", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("external file", result.Message);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -200,9 +207,11 @@ public class CopyExcelSheetHandlerTests : ExcelHandlerTestBase
             { "copyToPath", outputPath }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("CustomSheet", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("CustomSheet", result.Message);
     }
 
     [Fact]

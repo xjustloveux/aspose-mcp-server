@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.Protect;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Protect;
 
@@ -30,10 +31,12 @@ public class ProtectExcelHandlerTests : ExcelHandlerTestBase
             { "protectWorkbook", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("protected", result.ToLower());
-        Assert.Contains("workbook", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("protected", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("workbook", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -49,9 +52,11 @@ public class ProtectExcelHandlerTests : ExcelHandlerTestBase
             { "protectStructure", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("protected", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("protected", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -67,9 +72,11 @@ public class ProtectExcelHandlerTests : ExcelHandlerTestBase
             { "protectWindows", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("protected", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("protected", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -88,10 +95,12 @@ public class ProtectExcelHandlerTests : ExcelHandlerTestBase
             { "sheetIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("protected", result.ToLower());
-        Assert.Contains("worksheet", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("protected", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("worksheet", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(workbook.Worksheets[0].IsProtected);
         AssertModified(context);
     }

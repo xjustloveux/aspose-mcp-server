@@ -1,5 +1,7 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 using static Aspose.Words.ConvertUtil;
 using WordParagraph = Aspose.Words.Paragraph;
 using WordRun = Aspose.Words.Run;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Handlers.Word.List;
 /// <summary>
 ///     Handler for adding a single list item to Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddWordListItemHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -23,7 +26,7 @@ public class AddWordListItemHandler : OperationHandlerBase<Document>
     ///     Optional: listLevel, applyStyleIndent
     /// </param>
     /// <returns>Success message with item creation details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractAddListItemParameters(parameters);
 
@@ -73,7 +76,7 @@ public class AddWordListItemHandler : OperationHandlerBase<Document>
         else if (p.ListLevel > 0)
             result += $"Indent: Manually set ({p.ListLevel * 36} points)";
 
-        return Success(result);
+        return new SuccessResult { Message = result };
     }
 
     private static AddListItemParameters ExtractAddListItemParameters(OperationParameters parameters)

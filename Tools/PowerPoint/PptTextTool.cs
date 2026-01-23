@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 /// <summary>
 ///     Unified tool for managing PowerPoint text (add, edit, replace)
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.PowerPoint.Text")]
 [McpServerToolType]
 public class PptTextTool
 {
@@ -59,7 +62,14 @@ public class PptTextTool
     /// <param name="height">Text box height in points (optional, for add, default: 100).</param>
     /// <returns>A message indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "ppt_text")]
+    [McpServerTool(
+        Name = "ppt_text",
+        Title = "PowerPoint Text Operations",
+        Destructive = false,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage PowerPoint text. Supports 3 operations: add, edit, replace.
 Searches text in AutoShapes, GroupShapes (recursive), and Table cells.
 
@@ -69,7 +79,7 @@ Usage examples:
 - Add text: ppt_text(operation='add', path='presentation.pptx', slideIndex=0, text='Hello World', x=100, y=100)
 - Edit text: ppt_text(operation='edit', path='presentation.pptx', slideIndex=0, shapeIndex=0, text='Updated Text')
 - Replace text: ppt_text(operation='replace', path='presentation.pptx', findText='old', replaceText='new')")]
-    public string Execute(
+    public object Execute(
         [Description(@"Operation to perform.
 - 'add': Add text to slide (required params: path, slideIndex, text)
 - 'edit': Edit text in shape (required params: path, slideIndex, shapeIndex, text)
@@ -124,7 +134,7 @@ Usage examples:
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

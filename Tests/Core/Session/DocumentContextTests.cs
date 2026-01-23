@@ -2,7 +2,7 @@ using Aspose.Cells;
 using Aspose.Slides;
 using Aspose.Words;
 using AsposeMcpServer.Core.Session;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Tests.Infrastructure;
 using SaveFormat = Aspose.Slides.Export.SaveFormat;
 
 namespace AsposeMcpServer.Tests.Core.Session;
@@ -49,26 +49,6 @@ public class DocumentContextTests : TestBase
         Assert.Contains(sessions, s => s.SessionId == sessionId && s.IsDirty);
 
         manager.CloseDocument(sessionId, true);
-    }
-
-    #endregion
-
-    #region GetOutputMessage Additional Tests
-
-    [Fact]
-    public void GetOutputMessage_WithOutputPathParameter_ShouldReturnOutputPath()
-    {
-        var docPath = CreateTestFilePath("test_msg.docx");
-        var outputPath = CreateTestFilePath("output_msg.docx");
-        var doc = new Document();
-        doc.Save(docPath);
-
-        using var context = DocumentContext<Document>.Create(null, null, docPath);
-
-        var message = context.GetOutputMessage(outputPath);
-
-        Assert.Contains("Output:", message);
-        Assert.Contains(outputPath, message);
     }
 
     #endregion
@@ -310,49 +290,6 @@ public class DocumentContextTests : TestBase
         var exception = Record.Exception(() => context.MarkDirty());
 
         Assert.Null(exception);
-    }
-
-    #endregion
-
-    #region GetOutputMessage Tests
-
-    [Fact]
-    public void GetOutputMessage_WithFilePath_ShouldReturnPathMessage()
-    {
-        var docPath = CreateTestFilePath("test.docx");
-        var doc = new Document();
-        doc.Save(docPath);
-
-        using var context = DocumentContext<Document>.Create(null, null, docPath);
-
-        var message = context.GetOutputMessage();
-
-        Assert.Contains("Output:", message);
-        Assert.Contains(docPath, message);
-    }
-
-    [Fact]
-    public void GetOutputMessage_WithSession_ShouldReturnSessionMessage()
-    {
-        var docPath = CreateTestFilePath("test.docx");
-        var doc = new Document();
-        doc.Save(docPath);
-
-        var config = new SessionConfig
-        {
-            MaxSessions = 10
-        };
-        var manager = new DocumentSessionManager(config);
-        var sessionId = manager.OpenDocument(docPath);
-
-        using var context = DocumentContext<Document>.Create(manager, sessionId, null);
-
-        var message = context.GetOutputMessage();
-
-        Assert.Contains("session", message);
-        Assert.Contains(sessionId, message);
-
-        manager.CloseDocument(sessionId, true);
     }
 
     #endregion

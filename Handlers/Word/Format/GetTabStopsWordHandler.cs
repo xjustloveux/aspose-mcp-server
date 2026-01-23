@@ -1,7 +1,7 @@
-using System.Text.Json;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Results.Word.Format;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.Format;
@@ -9,6 +9,7 @@ namespace AsposeMcpServer.Handlers.Word.Format;
 /// <summary>
 ///     Handler for getting tab stops in Word documents.
 /// </summary>
+[ResultType(typeof(GetTabStopsWordResult))]
 public class GetTabStopsWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -23,7 +24,7 @@ public class GetTabStopsWordHandler : OperationHandlerBase<Document>
     ///     Optional: location, sectionIndex, allParagraphs, includeStyle
     /// </param>
     /// <returns>A JSON string containing the tab stops information.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractGetTabStopsParameters(parameters);
 
@@ -44,30 +45,28 @@ public class GetTabStopsWordHandler : OperationHandlerBase<Document>
 
         var tabStopsList = allTabStops
             .OrderBy(x => x.Value.position)
-            .Select(kvp => new
+            .Select(kvp => new TabStopDetailInfo
             {
-                positionPt = kvp.Value.position,
-                positionCm = Math.Round(kvp.Value.position / 28.35, 2),
-                alignment = kvp.Value.alignment.ToString(),
-                leader = kvp.Value.leader.ToString(),
-                kvp.Value.source
+                PositionPt = kvp.Value.position,
+                PositionCm = Math.Round(kvp.Value.position / 28.35, 2),
+                Alignment = kvp.Value.alignment.ToString(),
+                Leader = kvp.Value.leader.ToString(),
+                Source = kvp.Value.source
             })
             .ToList();
 
-        var result = new
+        return new GetTabStopsWordResult
         {
-            location = p.Location,
-            locationDescription = locationDesc,
-            sectionIndex = p.SectionIndex,
-            paragraphIndex = p is { Location: "body", AllParagraphs: false } ? p.ParagraphIndex : (int?)null,
-            allParagraphs = p.AllParagraphs,
-            includeStyle = p.IncludeStyle,
-            paragraphCount = targetParagraphs.Count,
-            count = allTabStops.Count,
-            tabStops = tabStopsList
+            Location = p.Location,
+            LocationDescription = locationDesc,
+            SectionIndex = p.SectionIndex,
+            ParagraphIndex = p is { Location: "body", AllParagraphs: false } ? p.ParagraphIndex : null,
+            AllParagraphs = p.AllParagraphs,
+            IncludeStyle = p.IncludeStyle,
+            ParagraphCount = targetParagraphs.Count,
+            Count = allTabStops.Count,
+            TabStops = tabStopsList
         };
-
-        return JsonSerializer.Serialize(result, JsonDefaults.Indented);
     }
 
     /// <summary>

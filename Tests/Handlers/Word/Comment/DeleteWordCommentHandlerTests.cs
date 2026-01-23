@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Comment;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Comment;
 
@@ -50,9 +51,11 @@ public class DeleteWordCommentHandlerTests : WordHandlerTestBase
             { "commentIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted successfully", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted successfully", result.Message);
         AssertModified(context);
     }
 
@@ -66,9 +69,11 @@ public class DeleteWordCommentHandlerTests : WordHandlerTestBase
             { "commentIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("#1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("#1", result.Message);
     }
 
     [Fact]
@@ -81,9 +86,11 @@ public class DeleteWordCommentHandlerTests : WordHandlerTestBase
             { "commentIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Remaining comments", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Remaining comments", result.Message);
     }
 
     [Theory]
@@ -99,9 +106,11 @@ public class DeleteWordCommentHandlerTests : WordHandlerTestBase
             { "commentIndex", index }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted successfully", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted successfully", result.Message);
     }
 
     [Fact]

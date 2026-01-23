@@ -1,8 +1,9 @@
 ﻿using System.ComponentModel;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
@@ -11,6 +12,7 @@ namespace AsposeMcpServer.Tools.Word;
 ///     Unified tool for text operations in Word documents.
 ///     Dispatches operations to individual handlers via HandlerRegistry.
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Word.Text")]
 [McpServerToolType]
 public class WordTextTool
 {
@@ -94,7 +96,14 @@ public class WordTextTool
     /// <param name="tabStops">Custom tab stops as JSON array (for add_with_style).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for search operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "word_text")]
+    [McpServerTool(
+        Name = "word_text",
+        Title = "Word Text Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(
         @"Perform text operations in Word documents. Supports 8 operations: add, delete, replace, search, format, insert_at_position, delete_range, add_with_style.
 
@@ -107,7 +116,7 @@ Usage examples:
 - Insert at position: word_text(operation='insert_at_position', path='doc.docx', paragraphIndex=0, runIndex=0, text='Inserted')
 - Delete text: word_text(operation='delete', path='doc.docx', searchText='text to delete') or word_text(operation='delete', path='doc.docx', startParagraphIndex=0, endParagraphIndex=0)
 - Delete range: word_text(operation='delete_range', path='doc.docx', startParagraphIndex=0, startRunIndex=0, endParagraphIndex=0, endRunIndex=5)")]
-    public string Execute(
+    public object Execute(
         [Description(@"Operation to perform.
 - 'add': Add text at document end (required params: path, text)
 - 'delete': Delete text (required params: path, searchText OR startParagraphIndex+endParagraphIndex)
@@ -253,7 +262,7 @@ Usage examples:
         if (operationContext.IsModified)
             ctx.Save(effectiveOutputPath);
 
-        return AppendOutputMessage(result, ctx, effectiveOutputPath);
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, effectiveOutputPath);
     }
 
     /// <summary>
@@ -329,20 +338,5 @@ Usage examples:
         parameters.Set("tabStops", tabStops);
 
         return parameters;
-    }
-
-    /// <summary>
-    ///     Appends output message to the result if not already present.
-    /// </summary>
-    /// <param name="result">The handler result.</param>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <returns>Result with output message appended.</returns>
-    private static string AppendOutputMessage(string result, DocumentContext<Document> ctx, string? outputPath)
-    {
-        var outputMessage = ctx.GetOutputMessage(outputPath);
-        if (!result.Contains(outputMessage))
-            return $"{result}\n{outputMessage}";
-        return result;
     }
 }

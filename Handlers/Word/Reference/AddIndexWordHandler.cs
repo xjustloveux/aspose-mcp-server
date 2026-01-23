@@ -1,12 +1,15 @@
 ﻿using System.Text.Json.Nodes;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Reference;
 
 /// <summary>
 ///     Handler for adding index entries to Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddIndexWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class AddIndexWordHandler : OperationHandlerBase<Document>
     ///     Optional: insertIndexAtEnd (default: true), headingStyle (default: Heading 1)
     /// </param>
     /// <returns>Success message with count of entries added.</returns>
-    public override string
+    public override object
         Execute(OperationContext<Document> context,
             OperationParameters parameters)
     {
@@ -70,7 +73,7 @@ public class AddIndexWordHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Index entries added. Total entries: {indexEntriesArray.Count}");
+        return new SuccessResult { Message = $"Index entries added. Total entries: {indexEntriesArray.Count}" };
     }
 
     private static AddIndexParameters ExtractAddIndexParameters(OperationParameters parameters)

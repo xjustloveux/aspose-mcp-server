@@ -1,11 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Table;
 
 /// <summary>
 ///     Handler for deleting rows from PowerPoint tables.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeletePptTableRowHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -20,7 +24,7 @@ public class DeletePptTableRowHandler : OperationHandlerBase<Presentation>
     ///     Optional: slideIndex.
     /// </param>
     /// <returns>Success message with deletion details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var deleteParams = ExtractDeleteRowParameters(parameters);
 
@@ -32,7 +36,7 @@ public class DeletePptTableRowHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Row {deleteParams.RowIndex} deleted.");
+        return new SuccessResult { Message = $"Row {deleteParams.RowIndex} deleted." };
     }
 
     /// <summary>

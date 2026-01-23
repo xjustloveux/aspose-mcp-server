@@ -1,8 +1,9 @@
 ﻿using System.ComponentModel;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
@@ -11,6 +12,7 @@ namespace AsposeMcpServer.Tools.Word;
 ///     Tool for performing mail merge operations on Word document templates.
 ///     Dispatches operations to individual handlers via HandlerRegistry.
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Word.MailMerge")]
 [McpServerToolType]
 public class WordMailMergeTool
 {
@@ -58,14 +60,21 @@ public class WordMailMergeTool
     ///     neither data nor dataArray is provided, or both data and dataArray are provided.
     /// </exception>
     /// <exception cref="InvalidOperationException">Thrown when session management is not enabled or document cloning fails.</exception>
-    [McpServerTool(Name = "word_mail_merge")]
+    [McpServerTool(
+        Name = "word_mail_merge",
+        Title = "Word Mail Merge Operations",
+        Destructive = false,
+        Idempotent = true,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Perform mail merge on a Word document template.
 
 Usage examples:
 - Single record: word_mail_merge(templatePath='template.docx', outputPath='output.docx', data={'name':'John','address':'123 Main St'})
 - Multiple records: word_mail_merge(templatePath='template.docx', outputPath='output.docx', dataArray=[{'name':'John'},{'name':'Jane'}])
 - From session: word_mail_merge(sessionId='sess_xxx', outputPath='output.docx', data={'name':'John'})")]
-    public string Execute(
+    public object Execute(
         [Description(@"Operation to perform.
 - 'execute': Execute mail merge (required params: outputPath, and either data or dataArray)")]
         string operation = "execute",
@@ -114,7 +123,7 @@ Default: 'removeUnusedFields,removeEmptyParagraphs'")]
 
         var result = handler.Execute(operationContext, parameters);
 
-        return result;
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

@@ -1,7 +1,8 @@
 using Aspose.Pdf;
 using Aspose.Pdf.Forms;
 using AsposeMcpServer.Handlers.Pdf.Signature;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Signature;
 
@@ -52,9 +53,11 @@ public class DeletePdfSignatureHandlerTests : PdfHandlerTestBase
             { "signatureName", "TestSig" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -69,9 +72,11 @@ public class DeletePdfSignatureHandlerTests : PdfHandlerTestBase
             { "signatureIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

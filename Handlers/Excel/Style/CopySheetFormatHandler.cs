@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Style;
 
 /// <summary>
 ///     Handler for copying format from one sheet to another in Excel workbooks.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class CopySheetFormatHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class CopySheetFormatHandler : OperationHandlerBase<Workbook>
     ///     Optional: copyColumnWidths, copyRowHeights
     /// </param>
     /// <returns>Success message.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractCopySheetFormatParameters(parameters);
 
@@ -47,7 +50,8 @@ public class CopySheetFormatHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Sheet format copied from sheet {p.SourceSheetIndex} to sheet {p.TargetSheetIndex}.");
+        return new SuccessResult
+            { Message = $"Sheet format copied from sheet {p.SourceSheetIndex} to sheet {p.TargetSheetIndex}." };
     }
 
     /// <summary>

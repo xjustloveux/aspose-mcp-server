@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Hyperlink;
 
 /// <summary>
 ///     Handler for deleting hyperlinks from Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeleteExcelHyperlinkHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class DeleteExcelHyperlinkHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0)
     /// </param>
     /// <returns>Success message with deletion details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var deleteParams = ExtractDeleteParameters(parameters);
 
@@ -37,7 +40,8 @@ public class DeleteExcelHyperlinkHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Hyperlink at {cellRef} deleted. {hyperlinks.Count} hyperlinks remaining.");
+        return new SuccessResult
+            { Message = $"Hyperlink at {cellRef} deleted. {hyperlinks.Count} hyperlinks remaining." };
     }
 
     private static DeleteParameters ExtractDeleteParameters(OperationParameters parameters)

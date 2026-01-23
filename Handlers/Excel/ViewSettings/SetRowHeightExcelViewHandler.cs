@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.ViewSettings;
 
 /// <summary>
 ///     Handler for setting row height in Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetRowHeightExcelViewHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class SetRowHeightExcelViewHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0), rowIndex (default: 0), height (default: 15.0)
     /// </param>
     /// <returns>Success message.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractSetRowHeightParameters(parameters);
 
@@ -28,7 +31,7 @@ public class SetRowHeightExcelViewHandler : OperationHandlerBase<Workbook>
         worksheet.Cells.SetRowHeight(p.RowIndex, p.Height);
 
         MarkModified(context);
-        return Success($"Row {p.RowIndex} height set to {p.Height} points.");
+        return new SuccessResult { Message = $"Row {p.RowIndex} height set to {p.Height} points." };
     }
 
     /// <summary>

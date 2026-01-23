@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Word.HeaderFooter;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.HeaderFooter;
 
@@ -26,10 +27,12 @@ public class SetFooterTextHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("warning", result.ToLower());
-        Assert.Contains("no footer text", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("warning", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("no footer text", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -46,10 +49,12 @@ public class SetFooterTextHandlerTests : WordHandlerTestBase
             { "footerLeft", "Left Text" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("footer text set", result.ToLower());
-        Assert.Contains("left", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("footer text set", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("left", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -63,9 +68,11 @@ public class SetFooterTextHandlerTests : WordHandlerTestBase
             { "footerCenter", "Center Text" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("center", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("center", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -79,9 +86,11 @@ public class SetFooterTextHandlerTests : WordHandlerTestBase
             { "footerRight", "Right Text" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("right", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("right", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -97,11 +106,13 @@ public class SetFooterTextHandlerTests : WordHandlerTestBase
             { "footerRight", "Right" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("left", result.ToLower());
-        Assert.Contains("center", result.ToLower());
-        Assert.Contains("right", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("left", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("center", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("right", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -119,9 +130,11 @@ public class SetFooterTextHandlerTests : WordHandlerTestBase
             { "sectionIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("section 0", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("section 0", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -135,9 +148,11 @@ public class SetFooterTextHandlerTests : WordHandlerTestBase
             { "sectionIndex", -1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("all sections", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("all sections", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

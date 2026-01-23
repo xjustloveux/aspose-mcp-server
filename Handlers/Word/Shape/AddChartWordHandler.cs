@@ -2,7 +2,10 @@ using Aspose.Cells;
 using Aspose.Cells.Charts;
 using Aspose.Words;
 using Aspose.Words.Drawing;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 using ImageType = Aspose.Cells.Drawing.ImageType;
 using IOFile = System.IO.File;
@@ -12,6 +15,7 @@ namespace AsposeMcpServer.Handlers.Word.Shape;
 /// <summary>
 ///     Handler for adding charts to Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddChartWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -26,7 +30,7 @@ public class AddChartWordHandler : OperationHandlerBase<Document>
     ///     Optional: chartType, chartTitle, chartWidth, chartHeight, paragraphIndex, alignment
     /// </param>
     /// <returns>Success message with chart details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var chartParams = ExtractChartParameters(parameters);
         var tableData = ParseChartData(chartParams.Data);
@@ -40,7 +44,8 @@ public class AddChartWordHandler : OperationHandlerBase<Document>
             CleanupTempFile(tempImagePath);
 
             MarkModified(context);
-            return $"Successfully added chart. Type: {chartParams.ChartType}, Data rows: {tableData.Count}.";
+            return new SuccessResult
+                { Message = $"Successfully added chart. Type: {chartParams.ChartType}, Data rows: {tableData.Count}." };
         }
         catch (Exception ex)
         {

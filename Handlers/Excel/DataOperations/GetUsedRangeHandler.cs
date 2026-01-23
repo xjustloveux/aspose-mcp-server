@@ -1,13 +1,15 @@
-using System.Text.Json;
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Excel.DataOperations;
 
 namespace AsposeMcpServer.Handlers.Excel.DataOperations;
 
 /// <summary>
 ///     Handler for getting the used range information from Excel worksheets.
 /// </summary>
+[ResultType(typeof(GetUsedRangeResult))]
 public class GetUsedRangeHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +23,7 @@ public class GetUsedRangeHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex
     /// </param>
     /// <returns>JSON string containing the used range information.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var usedRangeParams = ExtractGetUsedRangeParameters(parameters);
 
@@ -39,18 +41,16 @@ public class GetUsedRangeHandler : OperationHandlerBase<Workbook>
                 rangeAddress = $"{firstCell}:{lastCell}";
             }
 
-            var result = new
+            return new GetUsedRangeResult
             {
-                worksheetName = worksheet.Name,
-                sheetIndex = usedRangeParams.SheetIndex,
-                firstRow = cells.MinDataRow,
-                lastRow = cells.MaxDataRow,
-                firstColumn = cells.MinDataColumn,
-                lastColumn = cells.MaxDataColumn,
-                range = rangeAddress
+                WorksheetName = worksheet.Name,
+                SheetIndex = usedRangeParams.SheetIndex,
+                FirstRow = cells.MinDataRow,
+                LastRow = cells.MaxDataRow,
+                FirstColumn = cells.MinDataColumn,
+                LastColumn = cells.MaxDataColumn,
+                Range = rangeAddress
             };
-
-            return JsonSerializer.Serialize(result, JsonDefaults.Indented);
         }
         catch (CellsException ex)
         {

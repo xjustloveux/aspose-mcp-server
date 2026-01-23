@@ -1,12 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Slide;
 
 /// <summary>
 ///     Handler for clearing slide content in PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class ClearPptSlideHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class ClearPptSlideHandler : OperationHandlerBase<Presentation>
     ///     Required: slideIndex (0-based)
     /// </param>
     /// <returns>Success message with clear details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractClearPptSlideParameters(parameters);
 
@@ -32,7 +35,7 @@ public class ClearPptSlideHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Cleared all shapes from slide {p.SlideIndex}.");
+        return new SuccessResult { Message = $"Cleared all shapes from slide {p.SlideIndex}." };
     }
 
     /// <summary>

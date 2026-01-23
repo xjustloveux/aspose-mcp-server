@@ -1,12 +1,15 @@
 using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.Link;
 
 /// <summary>
 ///     Handler for adding links to PDF documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddPdfLinkHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class AddPdfLinkHandler : OperationHandlerBase<Document>
     ///     Optional: x, y, width, height.
     /// </param>
     /// <returns>Success message with link details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractAddParameters(parameters);
 
@@ -55,7 +58,7 @@ public class AddPdfLinkHandler : OperationHandlerBase<Document>
         MarkModified(context);
 
         var linkType = !string.IsNullOrEmpty(p.Url) ? $"URL: {p.Url}" : $"Page: {p.TargetPage}";
-        return Success($"Link added to page {p.PageIndex} ({linkType}).");
+        return new SuccessResult { Message = $"Link added to page {p.PageIndex} ({linkType})." };
     }
 
     /// <summary>

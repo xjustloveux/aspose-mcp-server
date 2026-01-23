@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Range;
 
 /// <summary>
 ///     Handler for copying Excel ranges.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class CopyExcelRangeHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -22,7 +25,7 @@ public class CopyExcelRangeHandler : OperationHandlerBase<Workbook>
     /// </param>
     /// <returns>Success message with copy details.</returns>
     /// <exception cref="ArgumentException">Thrown when range format is invalid.</exception>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractCopyExcelRangeParameters(parameters);
 
@@ -50,7 +53,7 @@ public class CopyExcelRangeHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Range {p.SourceRange} copied to {p.DestCell}.");
+        return new SuccessResult { Message = $"Range {p.SourceRange} copied to {p.DestCell}." };
     }
 
     /// <summary>

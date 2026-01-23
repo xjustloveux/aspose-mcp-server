@@ -1,5 +1,7 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Word.Content;
 using WordShape = Aspose.Words.Drawing.Shape;
 
 namespace AsposeMcpServer.Handlers.Word.Content;
@@ -7,6 +9,7 @@ namespace AsposeMcpServer.Handlers.Word.Content;
 /// <summary>
 ///     Handler for getting Word document statistics.
 /// </summary>
+[ResultType(typeof(GetWordStatisticsResult))]
 public class GetWordStatisticsHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class GetWordStatisticsHandler : OperationHandlerBase<Document>
     ///     Optional: includeFootnotes (default: true)
     /// </param>
     /// <returns>JSON string containing document statistics.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractGetStatisticsParameters(parameters);
 
@@ -33,23 +36,21 @@ public class GetWordStatisticsHandler : OperationHandlerBase<Document>
         var shapes = document.GetChildNodes(NodeType.Shape, true).Cast<WordShape>().ToList();
         var images = shapes.Count(s => s.HasImage);
 
-        var result = new
+        return new GetWordStatisticsResult
         {
-            pages = stats.Pages,
-            words = stats.Words,
-            characters = stats.Characters,
-            charactersWithSpaces = stats.CharactersWithSpaces,
-            paragraphs = stats.Paragraphs,
-            lines = stats.Lines,
-            footnotes = p.IncludeFootnotes ? document.GetChildNodes(NodeType.Footnote, true).Count : (int?)null,
-            footnotesIncluded = p.IncludeFootnotes,
-            tables = tables.Count,
-            images,
-            shapes = shapes.Count,
-            statisticsUpdated = true
+            Pages = stats.Pages,
+            Words = stats.Words,
+            Characters = stats.Characters,
+            CharactersWithSpaces = stats.CharactersWithSpaces,
+            Paragraphs = stats.Paragraphs,
+            Lines = stats.Lines,
+            Footnotes = p.IncludeFootnotes ? document.GetChildNodes(NodeType.Footnote, true).Count : null,
+            FootnotesIncluded = p.IncludeFootnotes,
+            Tables = tables.Count,
+            Images = images,
+            Shapes = shapes.Count,
+            StatisticsUpdated = true
         };
-
-        return JsonResult(result);
     }
 
     /// <summary>

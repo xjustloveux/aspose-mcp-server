@@ -1,8 +1,9 @@
-using System.Drawing;
+﻿using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.Versioning;
 using Aspose.Words;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Word;
 using Font = System.Drawing.Font;
 
@@ -44,7 +45,8 @@ public class WordWatermarkToolTests : WordTestBase
         var result = _tool.Execute("add", docPath, outputPath: outputPath,
             text: "CONFIDENTIAL", fontSize: 72, isSemitransparent: true);
         Assert.True(File.Exists(outputPath));
-        Assert.StartsWith("Text watermark added to document", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Text watermark added to document", data.Message);
         var doc = new Document(outputPath);
         Assert.NotEqual(WatermarkType.None, doc.Watermark.Type);
     }
@@ -57,7 +59,8 @@ public class WordWatermarkToolTests : WordTestBase
         var outputPath = CreateTestFilePath("test_add_image_watermark_output.docx");
         var result = _tool.Execute("add_image", docPath, outputPath: outputPath, imagePath: imagePath);
         Assert.True(File.Exists(outputPath));
-        Assert.StartsWith("Image watermark added to document", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Image watermark added to document", data.Message);
         var doc = new Document(outputPath);
         Assert.Equal(WatermarkType.Image, doc.Watermark.Type);
     }
@@ -71,7 +74,8 @@ public class WordWatermarkToolTests : WordTestBase
         _tool.Execute("add", docPath, outputPath: watermarkedPath, text: "TO BE REMOVED");
         var result = _tool.Execute("remove", watermarkedPath, outputPath: outputPath);
         Assert.True(File.Exists(outputPath));
-        Assert.Contains("removed", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("removed", data.Message, StringComparison.OrdinalIgnoreCase);
         var doc = new Document(outputPath);
         Assert.Equal(WatermarkType.None, doc.Watermark.Type);
     }
@@ -89,7 +93,8 @@ public class WordWatermarkToolTests : WordTestBase
         var docPath = CreateWordDocument($"test_{operation}_case.docx");
         var outputPath = CreateTestFilePath($"test_{operation}_case_output.docx");
         var result = _tool.Execute(operation, docPath, outputPath: outputPath, text: "TEST");
-        Assert.StartsWith("Text watermark added to document", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Text watermark added to document", data.Message);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -112,7 +117,8 @@ public class WordWatermarkToolTests : WordTestBase
         var docPath = CreateWordDocument("test_session_add_watermark.docx");
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("add", sessionId: sessionId, text: "SESSION WATERMARK");
-        Assert.StartsWith("Text watermark added to document", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Text watermark added to document", data.Message);
         var doc = SessionManager.GetDocument<Document>(sessionId);
         Assert.NotEqual(WatermarkType.None, doc.Watermark.Type);
     }
@@ -124,7 +130,8 @@ public class WordWatermarkToolTests : WordTestBase
         var imagePath = CreateTestImage("session_watermark.png");
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("add_image", sessionId: sessionId, imagePath: imagePath);
-        Assert.StartsWith("Image watermark added to document", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Image watermark added to document", data.Message);
         var doc = SessionManager.GetDocument<Document>(sessionId);
         Assert.Equal(WatermarkType.Image, doc.Watermark.Type);
     }
@@ -137,7 +144,8 @@ public class WordWatermarkToolTests : WordTestBase
         _tool.Execute("add", docPath, outputPath: tempPath, text: "TO BE REMOVED");
         var sessionId = OpenSession(tempPath);
         var result = _tool.Execute("remove", sessionId: sessionId);
-        Assert.Contains("removed", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("removed", data.Message, StringComparison.OrdinalIgnoreCase);
         var doc = SessionManager.GetDocument<Document>(sessionId);
         Assert.Equal(WatermarkType.None, doc.Watermark.Type);
     }

@@ -1,7 +1,8 @@
 using Aspose.Words;
 using Aspose.Words.Drawing;
 using AsposeMcpServer.Handlers.Word.Shape;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Shape;
@@ -57,9 +58,11 @@ public class SetTextBoxBorderWordHandlerTests : WordHandlerTestBase
             { "borderColor", "#FF0000" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("successfully", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("successfully", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -74,9 +77,11 @@ public class SetTextBoxBorderWordHandlerTests : WordHandlerTestBase
             { "borderWidth", 2.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("successfully", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("successfully", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

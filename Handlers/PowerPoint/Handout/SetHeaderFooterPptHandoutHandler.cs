@@ -1,5 +1,7 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Handout;
 
@@ -7,6 +9,7 @@ namespace AsposeMcpServer.Handlers.PowerPoint.Handout;
 ///     Handler for setting header and footer on PowerPoint handout master.
 ///     Note: Handout pages have separate header and footer fields (unlike slides which only have footer).
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetHeaderFooterPptHandoutHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -23,7 +26,7 @@ public class SetHeaderFooterPptHandoutHandler : OperationHandlerBase<Presentatio
     /// <exception cref="InvalidOperationException">
     ///     Thrown when the presentation does not have a handout master slide.
     /// </exception>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractHeaderFooterParameters(parameters);
 
@@ -65,7 +68,7 @@ public class SetHeaderFooterPptHandoutHandler : OperationHandlerBase<Presentatio
         if (!string.IsNullOrEmpty(p.DateText)) settings.Add("date");
         settings.Add(p.ShowPageNumber ? "page number shown" : "page number hidden");
 
-        return Success($"Handout master header/footer updated ({string.Join(", ", settings)}).");
+        return new SuccessResult { Message = $"Handout master header/footer updated ({string.Join(", ", settings)})." };
     }
 
     /// <summary>

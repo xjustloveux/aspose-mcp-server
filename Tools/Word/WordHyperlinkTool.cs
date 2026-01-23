@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
@@ -10,6 +12,7 @@ namespace AsposeMcpServer.Tools.Word;
 ///     Unified tool for managing Word hyperlinks (add, edit, delete, get)
 ///     Merges: WordAddHyperlinkTool, WordEditHyperlinkTool, WordDeleteHyperlinkTool, WordGetHyperlinksTool
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Word.Hyperlink")]
 [McpServerToolType]
 public class WordHyperlinkTool
 {
@@ -58,7 +61,14 @@ public class WordHyperlinkTool
     /// <param name="keepText">Keep display text when deleting hyperlink (default: false).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "word_hyperlink")]
+    [McpServerTool(
+        Name = "word_hyperlink",
+        Title = "Word Hyperlink Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage Word hyperlinks. Supports 4 operations: add, edit, delete, get.
 
 Usage examples:
@@ -66,7 +76,7 @@ Usage examples:
 - Edit hyperlink: word_hyperlink(operation='edit', path='doc.docx', hyperlinkIndex=0, url='https://newurl.com')
 - Delete hyperlink: word_hyperlink(operation='delete', path='doc.docx', hyperlinkIndex=0)
 - Get hyperlinks: word_hyperlink(operation='get', path='doc.docx')")]
-    public string Execute(
+    public object Execute(
         [Description(@"Operation to perform.
 - 'add': Add a hyperlink (required params: path, text, url)
 - 'edit': Edit a hyperlink (required params: path, hyperlinkIndex, url)
@@ -124,9 +134,7 @@ Usage examples:
         if (operationContext.IsModified)
             ctx.Save(effectiveOutputPath);
 
-        if (ctx.IsSession || !operationContext.IsModified)
-            return result;
-        return $"{result}\n{ctx.GetOutputMessage(effectiveOutputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, effectiveOutputPath);
     }
 
     /// <summary>

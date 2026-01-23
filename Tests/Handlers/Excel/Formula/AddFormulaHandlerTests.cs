@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.Formula;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Formula;
 
@@ -58,10 +59,12 @@ public class AddFormulaHandlerTests : ExcelHandlerTestBase
             { "formula", "=A1+B1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Formula added", result);
-        Assert.Contains("C1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Formula added", result.Message);
+        Assert.Contains("C1", result.Message);
         AssertModified(context);
     }
 
@@ -83,10 +86,12 @@ public class AddFormulaHandlerTests : ExcelHandlerTestBase
             { "formula", formula }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Formula added", result);
-        Assert.Contains(formula, result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Formula added", result.Message);
+        Assert.Contains(formula, result.Message);
     }
 
     [Fact]
@@ -195,9 +200,11 @@ public class AddFormulaHandlerTests : ExcelHandlerTestBase
             { "formula", "=INVALIDFUNCTION()" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("#NAME?", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("#NAME?", result.Message);
     }
 
     #endregion

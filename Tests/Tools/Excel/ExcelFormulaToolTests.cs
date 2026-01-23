@@ -1,6 +1,7 @@
-using System.Text.Json;
-using Aspose.Cells;
-using AsposeMcpServer.Tests.Helpers;
+﻿using Aspose.Cells;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Excel.Formula;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Excel;
 
 namespace AsposeMcpServer.Tests.Tools.Excel;
@@ -68,10 +69,9 @@ public class ExcelFormulaToolTests : ExcelTestBase
     {
         var workbookPath = CreateWorkbookWithFormula("test_get.xlsx");
         var result = _tool.Execute("get", workbookPath);
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(1, json.RootElement.GetProperty("count").GetInt32());
-        var items = json.RootElement.GetProperty("items");
-        Assert.Equal("A3", items[0].GetProperty("cell").GetString());
+        var data = GetResultData<GetFormulasResult>(result);
+        Assert.Equal(1, data.Count);
+        Assert.Equal("A3", data.Items[0].Cell);
     }
 
     [Fact]
@@ -79,9 +79,9 @@ public class ExcelFormulaToolTests : ExcelTestBase
     {
         var workbookPath = CreateWorkbookWithFormula("test_get_result.xlsx");
         var result = _tool.Execute("get_result", workbookPath, cell: "A3");
-        var json = JsonDocument.Parse(result);
-        Assert.Equal("A3", json.RootElement.GetProperty("cell").GetString());
-        Assert.Contains("30", json.RootElement.GetProperty("calculatedValue").GetString());
+        var data = GetResultData<GetFormulaResultResult>(result);
+        Assert.Equal("A3", data.Cell);
+        Assert.Contains("30", data.CalculatedValue);
     }
 
     [Fact]
@@ -98,7 +98,8 @@ public class ExcelFormulaToolTests : ExcelTestBase
 
         var outputPath = CreateTestFilePath("test_calculate_output.xlsx");
         var result = _tool.Execute("calculate", workbookPath, outputPath: outputPath);
-        Assert.StartsWith("Formulas calculated", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Formulas calculated", data.Message);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -116,7 +117,8 @@ public class ExcelFormulaToolTests : ExcelTestBase
         var outputPath = CreateTestFilePath("test_set_array_output.xlsx");
         var result = _tool.Execute("set_array", workbookPath, range: "B1:B2", formula: "=A1:A2*2",
             outputPath: outputPath);
-        Assert.Contains("B1:B2", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("B1:B2", data.Message);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -125,8 +127,8 @@ public class ExcelFormulaToolTests : ExcelTestBase
     {
         var workbookPath = CreateWorkbookWithArrayFormula("test_get_array.xlsx");
         var result = _tool.Execute("get_array", workbookPath, cell: "B1");
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.GetProperty("isArrayFormula").GetBoolean());
+        var data = GetResultData<GetArrayFormulaResult>(result);
+        Assert.True(data.IsArrayFormula);
     }
 
     #endregion
@@ -148,7 +150,8 @@ public class ExcelFormulaToolTests : ExcelTestBase
 
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.xlsx");
         var result = _tool.Execute(operation, workbookPath, cell: "B1", formula: "=A1*2", outputPath: outputPath);
-        Assert.StartsWith("Formula added", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Formula added", data.Message);
     }
 
     [Fact]
@@ -182,7 +185,10 @@ public class ExcelFormulaToolTests : ExcelTestBase
 
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("add", sessionId: sessionId, cell: "A3", formula: "=A1+A2");
-        Assert.StartsWith("Formula added", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Formula added", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var sessionWorkbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.Equal("=A1+A2", sessionWorkbook.Worksheets[0].Cells["A3"].Formula);
     }
@@ -193,8 +199,10 @@ public class ExcelFormulaToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithFormula("test_session_get.xlsx");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("get", sessionId: sessionId);
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(1, json.RootElement.GetProperty("count").GetInt32());
+        var data = GetResultData<GetFormulasResult>(result);
+        Assert.Equal(1, data.Count);
+        var output = GetResultOutput<GetFormulasResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -203,8 +211,10 @@ public class ExcelFormulaToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithFormula("test_session_get_result.xlsx");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("get_result", sessionId: sessionId, cell: "A3");
-        var json = JsonDocument.Parse(result);
-        Assert.Equal("A3", json.RootElement.GetProperty("cell").GetString());
+        var data = GetResultData<GetFormulaResultResult>(result);
+        Assert.Equal("A3", data.Cell);
+        var output = GetResultOutput<GetFormulaResultResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -221,7 +231,10 @@ public class ExcelFormulaToolTests : ExcelTestBase
 
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("calculate", sessionId: sessionId);
-        Assert.StartsWith("Formulas calculated", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Formulas calculated", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var sessionWorkbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.NotNull(sessionWorkbook.Worksheets[0].Cells["A3"].Value);
     }
@@ -232,8 +245,10 @@ public class ExcelFormulaToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithArrayFormula("test_session_get_array.xlsx");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("get_array", sessionId: sessionId, cell: "B1");
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.GetProperty("isArrayFormula").GetBoolean());
+        var data = GetResultData<GetArrayFormulaResult>(result);
+        Assert.True(data.IsArrayFormula);
+        var output = GetResultOutput<GetArrayFormulaResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -256,7 +271,8 @@ public class ExcelFormulaToolTests : ExcelTestBase
 
         var sessionId = OpenSession(sessionWorkbook);
         var result = _tool.Execute("get", pathWorkbook, sessionId);
-        Assert.Contains("SessionSheet", result);
+        var data = GetResultData<GetFormulasResult>(result);
+        Assert.Equal("SessionSheet", data.WorksheetName);
     }
 
     #endregion

@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Styles;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Styles;
 
@@ -35,9 +36,11 @@ public class CreateWordStyleHandlerTests : WordHandlerTestBase
             { "styleType", styleType }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("created", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("created", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -54,9 +57,11 @@ public class CreateWordStyleHandlerTests : WordHandlerTestBase
             { "styleName", "MyCustomStyle" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("created successfully", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("created successfully", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.NotNull(doc.Styles["MyCustomStyle"]);
         AssertModified(context);
     }
@@ -74,9 +79,11 @@ public class CreateWordStyleHandlerTests : WordHandlerTestBase
             { "bold", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("created", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("created", result.Message, StringComparison.OrdinalIgnoreCase);
         var style = doc.Styles["BoldStyle"];
         Assert.NotNull(style);
         Assert.True(style.Font.Bold);
@@ -93,9 +100,11 @@ public class CreateWordStyleHandlerTests : WordHandlerTestBase
             { "styleType", "character" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("created", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("created", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -140,9 +149,11 @@ public class CreateWordStyleHandlerTests : WordHandlerTestBase
             { "baseStyle", "Normal" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("created", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("created", result.Message, StringComparison.OrdinalIgnoreCase);
         var style = doc.Styles["DerivedStyle"];
         Assert.Equal("Normal", style.BaseStyleName);
     }
@@ -158,9 +169,11 @@ public class CreateWordStyleHandlerTests : WordHandlerTestBase
             { "baseStyle", "NonExistentStyle" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("created", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("created", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -197,9 +210,11 @@ public class CreateWordStyleHandlerTests : WordHandlerTestBase
             { "color", "#FF0000" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("created", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("created", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -258,9 +273,11 @@ public class CreateWordStyleHandlerTests : WordHandlerTestBase
             { "alignment", alignment }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("created", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("created", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

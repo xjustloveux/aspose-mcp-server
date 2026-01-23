@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Table;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Word.Table;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Table;
 
@@ -27,11 +28,13 @@ public class GetStructureWordTableHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("[Table Format]", result);
-        Assert.Contains("Alignment:", result);
-        Assert.Contains("Allow Auto Fit:", result);
+        var result = Assert.IsType<GetTableStructureWordResult>(res);
+
+        Assert.Contains("[Table Format]", result.Content);
+        Assert.Contains("Alignment:", result.Content);
+        Assert.Contains("Allow Auto Fit:", result.Content);
     }
 
     #endregion
@@ -48,10 +51,12 @@ public class GetStructureWordTableHandlerTests : WordHandlerTestBase
             { "includeCellFormatting", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("[First Cell Formatting]", result);
-        Assert.Contains("Padding:", result);
+        var result = Assert.IsType<GetTableStructureWordResult>(res);
+
+        Assert.Contains("[First Cell Formatting]", result.Content);
+        Assert.Contains("Padding:", result.Content);
     }
 
     #endregion
@@ -81,11 +86,13 @@ public class GetStructureWordTableHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Structure", result);
-        Assert.Contains("Rows: 3", result);
-        Assert.Contains("Columns: 4", result);
+        var result = Assert.IsType<GetTableStructureWordResult>(res);
+
+        Assert.Contains("Structure", result.Content);
+        Assert.Contains("Rows: 3", result.Content);
+        Assert.Contains("Columns: 4", result.Content);
         AssertNotModified(context);
     }
 
@@ -96,11 +103,13 @@ public class GetStructureWordTableHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("[Basic Info]", result);
-        Assert.Contains("Rows:", result);
-        Assert.Contains("Columns:", result);
+        var result = Assert.IsType<GetTableStructureWordResult>(res);
+
+        Assert.Contains("[Basic Info]", result.Content);
+        Assert.Contains("Rows:", result.Content);
+        Assert.Contains("Columns:", result.Content);
     }
 
     #endregion
@@ -117,10 +126,12 @@ public class GetStructureWordTableHandlerTests : WordHandlerTestBase
             { "includeContent", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("[Content Preview]", result);
-        Assert.Contains("Row 0:", result);
+        var result = Assert.IsType<GetTableStructureWordResult>(res);
+
+        Assert.Contains("[Content Preview]", result.Content);
+        Assert.Contains("Row 0:", result.Content);
     }
 
     [Fact]
@@ -133,9 +144,11 @@ public class GetStructureWordTableHandlerTests : WordHandlerTestBase
             { "includeContent", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.DoesNotContain("[Content Preview]", result);
+        var result = Assert.IsType<GetTableStructureWordResult>(res);
+
+        Assert.DoesNotContain("[Content Preview]", result.Content);
     }
 
     #endregion
@@ -154,9 +167,11 @@ public class GetStructureWordTableHandlerTests : WordHandlerTestBase
             { "tableIndex", tableIndex }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains($"Table #{tableIndex}", result);
+        var result = Assert.IsType<GetTableStructureWordResult>(res);
+
+        Assert.Contains($"Table #{tableIndex}", result.Content);
     }
 
     [Fact]

@@ -1,6 +1,6 @@
-using System.Text.Json;
 using AsposeMcpServer.Handlers.Excel.Sheet;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Excel.Sheet;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Sheet;
 
@@ -45,10 +45,11 @@ public class GetExcelSheetsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("workbookName", out _));
+        var result = Assert.IsType<GetSheetsResult>(res);
+
+        Assert.NotNull(result.WorkbookName);
     }
 
     #endregion
@@ -62,11 +63,12 @@ public class GetExcelSheetsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("count", out _));
-        Assert.True(json.RootElement.TryGetProperty("items", out _));
+        var result = Assert.IsType<GetSheetsResult>(res);
+
+        Assert.True(result.Count >= 0);
+        Assert.NotNull(result.Items);
         AssertNotModified(context);
     }
 
@@ -82,10 +84,11 @@ public class GetExcelSheetsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(sheetCount, json.RootElement.GetProperty("count").GetInt32());
+        var result = Assert.IsType<GetSheetsResult>(res);
+
+        Assert.Equal(sheetCount, result.Count);
     }
 
     #endregion
@@ -100,12 +103,12 @@ public class GetExcelSheetsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("items", out var items));
-        Assert.Equal(JsonValueKind.Array, items.ValueKind);
-        Assert.Equal(2, items.GetArrayLength());
+        var result = Assert.IsType<GetSheetsResult>(res);
+
+        Assert.NotNull(result.Items);
+        Assert.Equal(2, result.Items.Count);
     }
 
     [Fact]
@@ -115,12 +118,11 @@ public class GetExcelSheetsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var items = json.RootElement.GetProperty("items");
-        Assert.True(items[0].TryGetProperty("index", out var index));
-        Assert.Equal(0, index.GetInt32());
+        var result = Assert.IsType<GetSheetsResult>(res);
+
+        Assert.Equal(0, result.Items[0].Index);
     }
 
     [Fact]
@@ -130,12 +132,11 @@ public class GetExcelSheetsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var items = json.RootElement.GetProperty("items");
-        Assert.True(items[0].TryGetProperty("name", out var name));
-        Assert.Equal("Sheet1", name.GetString());
+        var result = Assert.IsType<GetSheetsResult>(res);
+
+        Assert.Equal("Sheet1", result.Items[0].Name);
     }
 
     [Fact]
@@ -145,12 +146,11 @@ public class GetExcelSheetsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var items = json.RootElement.GetProperty("items");
-        Assert.True(items[0].TryGetProperty("visibility", out var visibility));
-        Assert.Equal("Visible", visibility.GetString());
+        var result = Assert.IsType<GetSheetsResult>(res);
+
+        Assert.Equal("Visible", result.Items[0].Visibility);
     }
 
     [Fact]
@@ -162,12 +162,12 @@ public class GetExcelSheetsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var items = json.RootElement.GetProperty("items");
-        var hiddenSheet = items.EnumerateArray().First(i => i.GetProperty("name").GetString() == "HiddenSheet");
-        Assert.Equal("Hidden", hiddenSheet.GetProperty("visibility").GetString());
+        var result = Assert.IsType<GetSheetsResult>(res);
+
+        var hiddenSheet = result.Items.First(i => i.Name == "HiddenSheet");
+        Assert.Equal("Hidden", hiddenSheet.Visibility);
     }
 
     #endregion

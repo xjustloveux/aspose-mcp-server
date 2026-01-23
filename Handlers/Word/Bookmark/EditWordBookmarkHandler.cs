@@ -1,11 +1,14 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Bookmark;
 
 /// <summary>
 ///     Handler for editing bookmarks in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class EditWordBookmarkHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class EditWordBookmarkHandler : OperationHandlerBase<Document>
     ///     Optional: newName, newText
     /// </param>
     /// <returns>Success message with edit details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractEditParameters(parameters);
 
@@ -59,18 +62,18 @@ public class EditWordBookmarkHandler : OperationHandlerBase<Document>
         }
 
         if (changes.Count == 0)
-            return "No changes made. Please provide newName or newText parameter.";
+            return new SuccessResult { Message = "No changes made. Please provide newName or newText parameter." };
 
         MarkModified(context);
 
-        var result = $"Bookmark '{p.Name}' edited successfully\n";
-        result += $"Original name: {oldName}\n";
-        result += $"Original content: {oldText}\n";
-        if (!string.IsNullOrEmpty(p.NewName)) result += $"New name: {p.NewName}\n";
-        if (!string.IsNullOrEmpty(p.NewText)) result += $"New content: {p.NewText}\n";
-        result += $"Changes: {string.Join(", ", changes)}";
+        var message = $"Bookmark '{p.Name}' edited successfully\n";
+        message += $"Original name: {oldName}\n";
+        message += $"Original content: {oldText}\n";
+        if (!string.IsNullOrEmpty(p.NewName)) message += $"New name: {p.NewName}\n";
+        if (!string.IsNullOrEmpty(p.NewText)) message += $"New content: {p.NewText}\n";
+        message += $"Changes: {string.Join(", ", changes)}";
 
-        return result;
+        return new SuccessResult { Message = message };
     }
 
     /// <summary>

@@ -1,7 +1,8 @@
 using Aspose.Cells;
 using Aspose.Cells.Charts;
 using AsposeMcpServer.Handlers.Excel.Chart;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Chart;
 
@@ -28,9 +29,11 @@ public class DeleteExcelChartHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("#0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("#0", result.Message);
     }
 
     #endregion
@@ -67,9 +70,11 @@ public class DeleteExcelChartHandlerTests : ExcelHandlerTestBase
             { "chartIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted", result.Message);
         AssertModified(context);
     }
 
@@ -83,9 +88,11 @@ public class DeleteExcelChartHandlerTests : ExcelHandlerTestBase
             { "chartIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("#1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("#1", result.Message);
     }
 
     [Fact]
@@ -98,9 +105,11 @@ public class DeleteExcelChartHandlerTests : ExcelHandlerTestBase
             { "chartIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("2 remaining", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("2 remaining", result.Message);
     }
 
     [Theory]
@@ -116,9 +125,11 @@ public class DeleteExcelChartHandlerTests : ExcelHandlerTestBase
             { "chartIndex", chartIndex }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted", result.Message);
     }
 
     [Fact]

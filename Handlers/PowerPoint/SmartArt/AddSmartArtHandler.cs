@@ -1,13 +1,16 @@
 using Aspose.Slides;
 using Aspose.Slides.SmartArt;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.SmartArt;
 
 /// <summary>
 ///     Handler for adding SmartArt shapes to PowerPoint slides.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddSmartArtHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -22,7 +25,7 @@ public class AddSmartArtHandler : OperationHandlerBase<Presentation>
     ///     Optional: x, y, width, height.
     /// </param>
     /// <returns>Success message with SmartArt creation details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var smartArtParams = ExtractSmartArtParameters(parameters);
 
@@ -38,7 +41,8 @@ public class AddSmartArtHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"SmartArt '{smartArtParams.Layout}' added to slide {smartArtParams.SlideIndex}.");
+        return new SuccessResult
+            { Message = $"SmartArt '{smartArtParams.Layout}' added to slide {smartArtParams.SlideIndex}." };
     }
 
     /// <summary>

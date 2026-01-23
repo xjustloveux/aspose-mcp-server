@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.DataValidation;
 
 /// <summary>
 ///     Handler for setting input/error messages on data validation in Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetMessagesExcelDataValidationHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class SetMessagesExcelDataValidationHandler : OperationHandlerBase<Workbo
     ///     Optional: sheetIndex (default: 0), errorMessage, inputMessage
     /// </param>
     /// <returns>Success message with changes details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var setParams = ExtractSetMessagesParameters(parameters);
 
@@ -52,7 +55,8 @@ public class SetMessagesExcelDataValidationHandler : OperationHandlerBase<Workbo
         MarkModified(context);
 
         var changesStr = changes.Count > 0 ? string.Join(", ", changes) : "No changes";
-        return Success($"Updated data validation #{setParams.ValidationIndex} messages ({changesStr}).");
+        return new SuccessResult
+            { Message = $"Updated data validation #{setParams.ValidationIndex} messages ({changesStr})." };
     }
 
     private static SetMessagesParameters ExtractSetMessagesParameters(OperationParameters parameters)

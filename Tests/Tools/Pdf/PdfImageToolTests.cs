@@ -1,9 +1,10 @@
-using System.Drawing;
+﻿using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.Versioning;
-using System.Text.Json;
 using Aspose.Pdf;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Pdf.Image;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Pdf;
 using DrawingColor = System.Drawing.Color;
 using Rectangle = Aspose.Pdf.Rectangle;
@@ -73,7 +74,8 @@ public class PdfImageToolTests : PdfTestBase
         var outputPath = CreateTestFilePath("test_add_output.pdf");
         var result = _tool.Execute("add", pdfPath, outputPath: outputPath,
             pageIndex: 1, imagePath: imagePath, x: 100, y: 100);
-        Assert.StartsWith("Added image", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Added image", data.Message);
         using var document = new Document(outputPath);
         Assert.True(document.Pages[1].Resources.Images.Count > 0);
     }
@@ -85,7 +87,8 @@ public class PdfImageToolTests : PdfTestBase
         var outputPath = CreateTestFilePath("test_delete_output.pdf");
         var result = _tool.Execute("delete", pdfPath, outputPath: outputPath,
             pageIndex: 1, imageIndex: 1);
-        Assert.StartsWith("Deleted image", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Deleted image", data.Message);
         using var document = new Document(outputPath);
         Assert.Empty(document.Pages[1].Resources.Images);
     }
@@ -97,7 +100,8 @@ public class PdfImageToolTests : PdfTestBase
         var outputImagePath = CreateTestFilePath("test_extracted.png");
         var result = _tool.Execute("extract", pdfPath,
             outputPath: outputImagePath, pageIndex: 1, imageIndex: 1);
-        Assert.StartsWith("Extracted image", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Extracted image", data.Message);
         Assert.True(File.Exists(outputImagePath));
     }
 
@@ -106,9 +110,9 @@ public class PdfImageToolTests : PdfTestBase
     {
         var pdfPath = CreatePdfWithImage("test_get.pdf");
         var result = _tool.Execute("get", pdfPath, pageIndex: 1);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
-        Assert.True(json.GetProperty("count").GetInt32() > 0);
-        Assert.True(json.TryGetProperty("items", out _));
+        var data = GetResultData<GetImagesPdfResult>(result);
+        Assert.True(data.Count > 0);
+        Assert.NotNull(data.Items);
     }
 
     #endregion
@@ -126,7 +130,8 @@ public class PdfImageToolTests : PdfTestBase
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.pdf");
         var result = _tool.Execute(operation, pdfPath, outputPath: outputPath,
             pageIndex: 1, imagePath: imagePath, x: 100, y: 100);
-        Assert.StartsWith("Added", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Added", data.Message);
     }
 
     [Fact]
@@ -147,8 +152,8 @@ public class PdfImageToolTests : PdfTestBase
         var pdfPath = CreatePdfWithImage("test_session_get.pdf");
         var sessionId = OpenSession(pdfPath);
         var result = _tool.Execute("get", sessionId: sessionId, pageIndex: 1);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
-        Assert.True(json.GetProperty("count").GetInt32() > 0);
+        var data = GetResultData<GetImagesPdfResult>(result);
+        Assert.True(data.Count > 0);
     }
 
     [Fact]
@@ -159,8 +164,10 @@ public class PdfImageToolTests : PdfTestBase
         var imagePath = CreateTestImage("test_session_add.png");
         var result = _tool.Execute("add", sessionId: sessionId,
             pageIndex: 1, imagePath: imagePath, x: 100, y: 100);
-        Assert.StartsWith("Added image", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Added image", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -170,8 +177,10 @@ public class PdfImageToolTests : PdfTestBase
         var sessionId = OpenSession(pdfPath);
         var result = _tool.Execute("delete", sessionId: sessionId,
             pageIndex: 1, imageIndex: 1);
-        Assert.StartsWith("Deleted", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Deleted", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -188,8 +197,8 @@ public class PdfImageToolTests : PdfTestBase
         var pdfPath2 = CreatePdfWithImage("test_session_image.pdf");
         var sessionId = OpenSession(pdfPath2);
         var result = _tool.Execute("get", pdfPath1, sessionId, pageIndex: 1);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
-        Assert.True(json.GetProperty("count").GetInt32() > 0);
+        var data = GetResultData<GetImagesPdfResult>(result);
+        Assert.True(data.Count > 0);
     }
 
     #endregion

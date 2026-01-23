@@ -1,12 +1,15 @@
 using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.Annotation;
 
 /// <summary>
 ///     Handler for adding text annotations to PDF documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddPdfAnnotationHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class AddPdfAnnotationHandler : OperationHandlerBase<Document>
     ///     Optional: x (default: 100), y (default: 700)
     /// </param>
     /// <returns>Success message with annotation details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var addParams = ExtractAddParameters(parameters);
 
@@ -45,7 +48,7 @@ public class AddPdfAnnotationHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Added annotation to page {addParams.PageIndex}.");
+        return new SuccessResult { Message = $"Added annotation to page {addParams.PageIndex}." };
     }
 
     /// <summary>

@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.Image;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Image;
 
@@ -36,9 +37,11 @@ public class ExtractExcelImageHandlerTests : ExcelHandlerTestBase
             { "exportPath", exportPath }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("extracted", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("extracted", result.Message);
         Assert.True(File.Exists(exportPath));
     }
 
@@ -71,9 +74,11 @@ public class ExtractExcelImageHandlerTests : ExcelHandlerTestBase
             { "exportPath", exportPath }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("extracted", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("extracted", result.Message);
         Assert.True(File.Exists(exportPath));
         var fileInfo = new FileInfo(exportPath);
         Assert.True(fileInfo.Length > 0, "Extracted image should have content");
@@ -92,9 +97,11 @@ public class ExtractExcelImageHandlerTests : ExcelHandlerTestBase
             { "exportPath", exportPath }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("#0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("#0", result.Message);
     }
 
     [Fact]
@@ -110,9 +117,11 @@ public class ExtractExcelImageHandlerTests : ExcelHandlerTestBase
             { "exportPath", exportPath }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains(exportPath, result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains(exportPath, result.Message);
     }
 
     #endregion

@@ -1,7 +1,9 @@
 using Aspose.Words;
 using Aspose.Words.Drawing;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 using WordHeaderFooter = Aspose.Words.HeaderFooter;
 
@@ -10,6 +12,7 @@ namespace AsposeMcpServer.Handlers.Word.Shape;
 /// <summary>
 ///     Handler for adding line shapes to Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddLineWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -23,7 +26,7 @@ public class AddLineWordHandler : OperationHandlerBase<Document>
     ///     Optional: location, position, lineStyle, lineWidth, lineColor, width
     /// </param>
     /// <returns>Success message with line details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var lineParams = ExtractLineParameters(parameters);
         var doc = context.Document;
@@ -38,7 +41,8 @@ public class AddLineWordHandler : OperationHandlerBase<Document>
         InsertParagraph(targetNode, linePara, lineParams.Position);
 
         MarkModified(context);
-        return $"Successfully inserted line in {locationDesc} at {lineParams.Position} position.";
+        return new SuccessResult
+            { Message = $"Successfully inserted line in {locationDesc} at {lineParams.Position} position." };
     }
 
     /// <summary>

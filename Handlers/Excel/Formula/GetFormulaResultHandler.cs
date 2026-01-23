@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Excel.Formula;
 
 namespace AsposeMcpServer.Handlers.Excel.Formula;
 
 /// <summary>
 ///     Handler for getting formula results from Excel cells.
 /// </summary>
+[ResultType(typeof(GetFormulaResultResult))]
 public class GetFormulaResultHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class GetFormulaResultHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0), calculateBeforeRead (default: true)
     /// </param>
     /// <returns>JSON string containing formula result information.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var getParams = ExtractGetResultParameters(parameters);
 
@@ -40,15 +43,13 @@ public class GetFormulaResultHandler : OperationHandlerBase<Workbook>
             if (string.IsNullOrEmpty(calculatedValue?.ToString())) calculatedValue = cellObj.Formula;
         }
 
-        var result = new
+        return new GetFormulaResultResult
         {
-            cell = getParams.Cell,
-            formula = cellObj.Formula,
-            calculatedValue = calculatedValue?.ToString() ?? "(empty)",
-            valueType = cellObj.Type.ToString()
+            Cell = getParams.Cell,
+            Formula = cellObj.Formula,
+            CalculatedValue = calculatedValue?.ToString() ?? "(empty)",
+            ValueType = cellObj.Type.ToString()
         };
-
-        return JsonResult(result);
     }
 
     /// <summary>

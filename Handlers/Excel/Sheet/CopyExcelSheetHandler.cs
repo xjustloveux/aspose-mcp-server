@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Sheet;
 
 /// <summary>
 ///     Handler for copying worksheets in Excel workbooks.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class CopyExcelSheetHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class CopyExcelSheetHandler : OperationHandlerBase<Workbook>
     ///     Optional: targetIndex (position for copy), copyToPath (external file path)
     /// </param>
     /// <returns>Success message with operation details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractCopyExcelSheetParameters(parameters);
 
@@ -43,7 +46,8 @@ public class CopyExcelSheetHandler : OperationHandlerBase<Workbook>
             targetWorkbook.Worksheets[0].Copy(sourceSheet);
             targetWorkbook.Worksheets[0].Name = sheetName;
             targetWorkbook.Save(p.CopyToPath);
-            return Success($"Worksheet '{sheetName}' copied to external file. Output: {p.CopyToPath}");
+            return new SuccessResult
+                { Message = $"Worksheet '{sheetName}' copied to external file. Output: {p.CopyToPath}" };
         }
 
         var targetIndex = p.TargetIndex ?? workbook.Worksheets.Count;
@@ -56,7 +60,7 @@ public class CopyExcelSheetHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Worksheet '{sheetName}' copied to position {targetIndex}.");
+        return new SuccessResult { Message = $"Worksheet '{sheetName}' copied to position {targetIndex}." };
     }
 
     private static CopyExcelSheetParameters ExtractCopyExcelSheetParameters(OperationParameters parameters)

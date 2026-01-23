@@ -1,6 +1,6 @@
-using System.Text.Json;
 using AsposeMcpServer.Handlers.Excel.Cell;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Excel.Cell;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Cell;
 
@@ -39,10 +39,11 @@ public class GetExcelCellHandlerTests : ExcelHandlerTestBase
             { "sheetIndex", sheetIndex }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(expectedValue, json.RootElement.GetProperty("value").GetString());
+        var result = Assert.IsType<GetCellResult>(res);
+
+        Assert.Equal(expectedValue, result.Value);
     }
 
     #endregion
@@ -79,10 +80,11 @@ public class GetExcelCellHandlerTests : ExcelHandlerTestBase
             { "cell", "A1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal("Test Value", json.RootElement.GetProperty("value").GetString());
+        var result = Assert.IsType<GetCellResult>(res);
+
+        Assert.Equal("Test Value", result.Value);
         AssertNotModified(context);
     }
 
@@ -100,10 +102,11 @@ public class GetExcelCellHandlerTests : ExcelHandlerTestBase
             { "cell", cell }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(expectedValue, json.RootElement.GetProperty("value").GetString());
+        var result = Assert.IsType<GetCellResult>(res);
+
+        Assert.Equal(expectedValue, result.Value);
         AssertNotModified(context);
     }
 
@@ -121,10 +124,11 @@ public class GetExcelCellHandlerTests : ExcelHandlerTestBase
             { "cell", "A1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Contains("123.45", json.RootElement.GetProperty("value").GetString());
+        var result = Assert.IsType<GetCellResult>(res);
+
+        Assert.Contains("123.45", result.Value);
     }
 
     [Fact]
@@ -137,10 +141,11 @@ public class GetExcelCellHandlerTests : ExcelHandlerTestBase
             { "cell", "A1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Contains("empty", json.RootElement.GetProperty("value").GetString(), StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<GetCellResult>(res);
+
+        Assert.Contains("empty", result.Value, StringComparison.OrdinalIgnoreCase);
         AssertNotModified(context);
     }
 
@@ -155,10 +160,11 @@ public class GetExcelCellHandlerTests : ExcelHandlerTestBase
             { "cell", "A1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("value", out _));
+        var result = Assert.IsType<GetCellResult>(res);
+
+        Assert.NotNull(result.Value);
     }
 
     [Fact]
@@ -172,10 +178,11 @@ public class GetExcelCellHandlerTests : ExcelHandlerTestBase
             { "cell", "A1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Contains("true", json.RootElement.GetProperty("value").GetString(), StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<GetCellResult>(res);
+
+        Assert.Contains("true", result.Value, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -198,11 +205,12 @@ public class GetExcelCellHandlerTests : ExcelHandlerTestBase
             { "includeFormula", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Contains("30", json.RootElement.GetProperty("value").GetString());
-        Assert.Contains("A1+B1", json.RootElement.GetProperty("formula").GetString());
+        var result = Assert.IsType<GetCellResult>(res);
+
+        Assert.Contains("30", result.Value);
+        Assert.Contains("A1+B1", result.Formula);
     }
 
     [Fact]
@@ -220,9 +228,11 @@ public class GetExcelCellHandlerTests : ExcelHandlerTestBase
             { "calculateFormula", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("50", result);
+        var result = Assert.IsType<GetCellResult>(res);
+
+        Assert.Contains("50", result.Value);
     }
 
     [Fact]
@@ -238,13 +248,11 @@ public class GetExcelCellHandlerTests : ExcelHandlerTestBase
             { "includeFormula", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(
-            !json.RootElement.TryGetProperty("formula", out var formulaProp) ||
-            formulaProp.ValueKind == JsonValueKind.Null,
-            "Formula should not be included or should be null");
+        var result = Assert.IsType<GetCellResult>(res);
+
+        Assert.Null(result.Formula);
     }
 
     #endregion
@@ -268,12 +276,13 @@ public class GetExcelCellHandlerTests : ExcelHandlerTestBase
             { "includeFormat", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var format = json.RootElement.GetProperty("format");
-        Assert.True(format.GetProperty("bold").GetBoolean());
-        Assert.Equal(14, format.GetProperty("fontSize").GetInt32());
+        var result = Assert.IsType<GetCellResult>(res);
+
+        Assert.NotNull(result.Format);
+        Assert.True(result.Format!.Bold);
+        Assert.Equal(14, result.Format!.FontSize);
     }
 
     [Fact]
@@ -287,10 +296,11 @@ public class GetExcelCellHandlerTests : ExcelHandlerTestBase
             { "includeFormat", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.False(json.RootElement.TryGetProperty("format", out _));
+        var result = Assert.IsType<GetCellResult>(res);
+
+        Assert.Null(result.Format);
     }
 
     #endregion
@@ -307,12 +317,13 @@ public class GetExcelCellHandlerTests : ExcelHandlerTestBase
             { "cell", "A1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("cell", out _));
-        Assert.True(json.RootElement.TryGetProperty("value", out _));
-        Assert.True(json.RootElement.TryGetProperty("valueType", out _));
+        var result = Assert.IsType<GetCellResult>(res);
+
+        Assert.NotNull(result.Cell);
+        Assert.NotNull(result.Value);
+        Assert.NotNull(result.ValueType);
     }
 
     [Fact]
@@ -326,10 +337,10 @@ public class GetExcelCellHandlerTests : ExcelHandlerTestBase
         });
 
         workbook.Worksheets[0].Cells["B5"].Value = "Test";
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
+        var result = Assert.IsType<GetCellResult>(res);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal("B5", json.RootElement.GetProperty("cell").GetString());
+        Assert.Equal("B5", result.Cell);
     }
 
     #endregion

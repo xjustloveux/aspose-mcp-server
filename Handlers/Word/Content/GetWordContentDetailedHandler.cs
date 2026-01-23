@@ -1,12 +1,16 @@
 using System.Text;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Word.Content;
 
 namespace AsposeMcpServer.Handlers.Word.Content;
 
 /// <summary>
 ///     Handler for getting detailed Word document content including headers and footers.
 /// </summary>
+[ResultType(typeof(GetWordContentDetailedResult))]
 public class GetWordContentDetailedHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,7 +24,7 @@ public class GetWordContentDetailedHandler : OperationHandlerBase<Document>
     ///     Optional: includeHeaders, includeFooters
     /// </param>
     /// <returns>Detailed document content as plain text.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractGetContentDetailedParameters(parameters);
 
@@ -36,7 +40,7 @@ public class GetWordContentDetailedHandler : OperationHandlerBase<Document>
         if (p.IncludeFooters)
             AppendHeadersFooters(sb, document, "Footers", IsFooterType);
 
-        return sb.ToString();
+        return new GetWordContentDetailedResult { Content = sb.ToString() };
     }
 
     /// <summary>

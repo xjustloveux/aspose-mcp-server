@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Pdf.Link;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Link;
 
@@ -34,9 +35,11 @@ public class AddPdfLinkHandlerTests : PdfHandlerTestBase
             { "height", 30.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Link added", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Link added", result.Message);
     }
 
     #endregion
@@ -54,9 +57,11 @@ public class AddPdfLinkHandlerTests : PdfHandlerTestBase
             { "url", "https://example.com" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Link added", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Link added", result.Message);
         AssertModified(context);
     }
 
@@ -71,9 +76,11 @@ public class AddPdfLinkHandlerTests : PdfHandlerTestBase
             { "url", "https://example.com" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("page 1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("page 1", result.Message);
     }
 
     [Fact]
@@ -87,9 +94,11 @@ public class AddPdfLinkHandlerTests : PdfHandlerTestBase
             { "url", "https://test.com" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("https://test.com", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("https://test.com", result.Message);
     }
 
     [Fact]
@@ -103,9 +112,11 @@ public class AddPdfLinkHandlerTests : PdfHandlerTestBase
             { "targetPage", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Page: 2", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Page: 2", result.Message);
     }
 
     [Theory]
@@ -121,9 +132,11 @@ public class AddPdfLinkHandlerTests : PdfHandlerTestBase
             { "url", "https://example.com" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Link added", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Link added", result.Message);
     }
 
     #endregion

@@ -1,12 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.PowerPoint.Animation;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Animation;
 
 /// <summary>
 ///     Handler for getting animation information from PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(GetAnimationsResult))]
 public class GetPptAnimationsHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class GetPptAnimationsHandler : OperationHandlerBase<Presentation>
     ///     Optional: shapeIndex
     /// </param>
     /// <returns>JSON string containing the animation information.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractGetAnimationsParameters(parameters);
 
@@ -29,7 +32,7 @@ public class GetPptAnimationsHandler : OperationHandlerBase<Presentation>
         var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
         var sequence = slide.Timeline.MainSequence;
 
-        List<object> animations = [];
+        List<AnimationInfo> animations = [];
         var index = 0;
 
         foreach (var effect in sequence)
@@ -44,30 +47,30 @@ public class GetPptAnimationsHandler : OperationHandlerBase<Presentation>
             var shapeName = effect.TargetShape?.Name ?? "(unknown)";
             var shapeIdx = effect.TargetShape != null ? slide.Shapes.IndexOf(effect.TargetShape) : -1;
 
-            animations.Add(new
+            animations.Add(new AnimationInfo
             {
-                index,
-                shapeIndex = shapeIdx,
-                shapeName,
-                effectType = effect.Type.ToString(),
-                effectSubtype = effect.Subtype.ToString(),
-                triggerType = effect.Timing.TriggerType.ToString(),
-                duration = effect.Timing.Duration,
-                delay = effect.Timing.TriggerDelayTime
+                Index = index,
+                ShapeIndex = shapeIdx,
+                ShapeName = shapeName,
+                EffectType = effect.Type.ToString(),
+                EffectSubtype = effect.Subtype.ToString(),
+                TriggerType = effect.Timing.TriggerType.ToString(),
+                Duration = effect.Timing.Duration,
+                Delay = effect.Timing.TriggerDelayTime
             });
 
             index++;
         }
 
-        var result = new
+        var result = new GetAnimationsResult
         {
-            slideIndex = p.SlideIndex,
-            filterByShapeIndex = p.ShapeIndex,
-            totalAnimationsOnSlide = sequence.Count,
-            animations
+            SlideIndex = p.SlideIndex,
+            FilterByShapeIndex = p.ShapeIndex,
+            TotalAnimationsOnSlide = sequence.Count,
+            Animations = animations
         };
 
-        return JsonResult(result);
+        return result;
     }
 
     /// <summary>

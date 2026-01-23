@@ -1,12 +1,15 @@
 using Aspose.Pdf;
 using Aspose.Pdf.Text;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Pdf.Text;
 
 namespace AsposeMcpServer.Handlers.Pdf.Text;
 
 /// <summary>
 ///     Handler for extracting text from PDF documents.
 /// </summary>
+[ResultType(typeof(ExtractPdfTextResult))]
 public class ExtractPdfTextHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class ExtractPdfTextHandler : OperationHandlerBase<Document>
     ///     Optional: pageIndex, includeFontInfo, extractionMode
     /// </param>
     /// <returns>JSON string containing the extracted text.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractExtractParameters(parameters);
 
@@ -40,31 +43,31 @@ public class ExtractPdfTextHandler : OperationHandlerBase<Document>
         {
             var textFragmentAbsorber = new TextFragmentAbsorber();
             page.Accept(textFragmentAbsorber);
-            List<object> fragments = [];
+            List<PdfTextFragment> fragments = [];
 
             foreach (var fragment in textFragmentAbsorber.TextFragments)
-                fragments.Add(new
+                fragments.Add(new PdfTextFragment
                 {
-                    text = fragment.Text,
-                    fontName = fragment.TextState.Font.FontName,
-                    fontSize = fragment.TextState.FontSize
+                    Text = fragment.Text,
+                    FontName = fragment.TextState.Font.FontName,
+                    FontSize = fragment.TextState.FontSize
                 });
 
-            return JsonResult(new
+            return new ExtractPdfTextResult
             {
-                pageIndex = p.PageIndex,
-                totalPages = document.Pages.Count,
-                fragmentCount = fragments.Count,
-                fragments
-            });
+                PageIndex = p.PageIndex,
+                TotalPages = document.Pages.Count,
+                FragmentCount = fragments.Count,
+                Fragments = fragments
+            };
         }
 
-        return JsonResult(new
+        return new ExtractPdfTextResult
         {
-            pageIndex = p.PageIndex,
-            totalPages = document.Pages.Count,
-            text = textAbsorber.Text
-        });
+            PageIndex = p.PageIndex,
+            TotalPages = document.Pages.Count,
+            Text = textAbsorber.Text
+        };
     }
 
     /// <summary>

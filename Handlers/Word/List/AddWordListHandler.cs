@@ -1,7 +1,10 @@
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Words.Lists;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 using WordList = Aspose.Words.Lists.List;
 using WordParagraph = Aspose.Words.Paragraph;
 
@@ -10,6 +13,7 @@ namespace AsposeMcpServer.Handlers.Word.List;
 /// <summary>
 ///     Handler for adding lists to Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddWordListHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -24,7 +28,7 @@ public class AddWordListHandler : OperationHandlerBase<Document>
     ///     Optional: listType, bulletChar, numberFormat, continuePrevious
     /// </param>
     /// <returns>Success message with list creation details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractAddListParameters(parameters);
 
@@ -43,8 +47,11 @@ public class AddWordListHandler : OperationHandlerBase<Document>
         builder.ListFormat.RemoveNumbers();
         MarkModified(context);
 
-        return Success(BuildResultMessage(isContinuing, p.ListType, p.BulletChar, p.NumberFormat, list,
-            parsedItems.Count));
+        return new SuccessResult
+        {
+            Message = BuildResultMessage(isContinuing, p.ListType, p.BulletChar, p.NumberFormat, list,
+                parsedItems.Count)
+        };
     }
 
     /// <summary>

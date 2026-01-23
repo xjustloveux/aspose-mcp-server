@@ -1,11 +1,14 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Layout;
 
 /// <summary>
 ///     Handler for applying a theme to the presentation by copying master slides.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class ApplyThemeHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -19,7 +22,7 @@ public class ApplyThemeHandler : OperationHandlerBase<Presentation>
     ///     Required: themePath
     /// </param>
     /// <returns>Success message with operation details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractApplyThemeParameters(parameters);
 
@@ -52,7 +55,8 @@ public class ApplyThemeHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Theme applied ({copiedCount} master(s) copied, layout applied to all slides).");
+        return new SuccessResult
+            { Message = $"Theme applied ({copiedCount} master(s) copied, layout applied to all slides)." };
     }
 
     /// <summary>

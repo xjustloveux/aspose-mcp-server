@@ -1,7 +1,8 @@
 using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
 using AsposeMcpServer.Handlers.Pdf.Annotation;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Annotation;
 
@@ -33,11 +34,13 @@ public class EditPdfAnnotationHandlerTests : PdfHandlerTestBase
             { "text", "Updated" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Annotation 1", result);
-        Assert.Contains("page 1", result);
-        Assert.Contains("updated", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Annotation 1", result.Message);
+        Assert.Contains("page 1", result.Message);
+        Assert.Contains("updated", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -56,9 +59,11 @@ public class EditPdfAnnotationHandlerTests : PdfHandlerTestBase
             { "text", "Updated text" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("Updated text", doc.Pages[1].Annotations[1].Contents);
         AssertModified(context);
     }

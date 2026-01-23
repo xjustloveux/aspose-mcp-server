@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.ViewSettings;
 
 /// <summary>
 ///     Handler for setting row and column headers visibility in Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetHeadersExcelViewHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class SetHeadersExcelViewHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0), visible (default: true)
     /// </param>
     /// <returns>Success message.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractSetHeadersParameters(parameters);
 
@@ -28,7 +31,8 @@ public class SetHeadersExcelViewHandler : OperationHandlerBase<Workbook>
         worksheet.IsRowColumnHeadersVisible = p.Visible;
 
         MarkModified(context);
-        return Success($"RowColumnHeaders visibility set to {(p.Visible ? "visible" : "hidden")}.");
+        return new SuccessResult
+            { Message = $"RowColumnHeaders visibility set to {(p.Visible ? "visible" : "hidden")}." };
     }
 
     /// <summary>

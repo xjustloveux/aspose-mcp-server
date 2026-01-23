@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Page;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Page;
 
@@ -64,9 +65,11 @@ public class SetPageSetupWordHandlerTests : WordHandlerTestBase
             { "orientation", "Landscape" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("page setup updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("page setup updated", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(72.0, doc.Sections[0].PageSetup.TopMargin);
         Assert.Equal(72.0, doc.Sections[0].PageSetup.BottomMargin);
         Assert.Equal(Orientation.Landscape, doc.Sections[0].PageSetup.Orientation);
@@ -105,9 +108,11 @@ public class SetPageSetupWordHandlerTests : WordHandlerTestBase
             { "top", 100.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("top margin: 100", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("top margin: 100", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

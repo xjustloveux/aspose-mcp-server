@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Word.Paragraph;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Paragraph;
 
@@ -86,9 +87,11 @@ public class DeleteParagraphWordHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Remaining", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Remaining", result.Message);
     }
 
     [Fact]
@@ -101,9 +104,11 @@ public class DeleteParagraphWordHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Content", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Content", result.Message);
     }
 
     #endregion

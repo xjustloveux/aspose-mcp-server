@@ -222,6 +222,55 @@
     }
   },
 
+  "_範例17": "========================================",
+  "_範例17說明": "SSE 模式 + Origin 驗證配置",
+  "_範例17適用": "需要嚴格控制允許的來源域名時",
+  "mcpServers_example17_origin_validation": {
+    "aspose-all": {
+      "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",
+      "args": [
+        "--all",
+        "--sse",
+        "--port:3000",
+        "--allowed-origins:https://myapp.example.com,https://admin.example.com",
+        "--require-origin",
+        "--no-localhost"
+      ]
+    }
+  },
+
+  "_範例18": "========================================",
+  "_範例18說明": "SSE 模式 + 異步任務配置",
+  "_範例18適用": "需要自訂異步任務參數時",
+  "mcpServers_example18_tasks_config": {
+    "aspose-all": {
+      "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",
+      "args": [
+        "--all",
+        "--sse",
+        "--port:3000",
+        "--tasks-max-concurrent:10",
+        "--tasks-default-ttl:600000",
+        "--tasks-max-ttl:1800000"
+      ]
+    }
+  },
+
+  "_範例19": "========================================",
+  "_範例19說明": "SSE 模式 + 停用異步任務",
+  "_範例19適用": "不需要異步任務功能時",
+  "mcpServers_example19_no_tasks": {
+    "aspose-all": {
+      "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",
+      "args": [
+        "--all",
+        "--sse",
+        "--port:3000",
+        "--no-tasks"
+      ]
+    }
+  },
+
   "_參數說明": "========================================",
   "_參數列表_工具": {
     "--word": "啟用 Word 工具（自動包含轉換功能）",
@@ -298,6 +347,30 @@
     "--metrics-disabled": "停用 Prometheus Metrics",
     "--metrics-path:path": "Metrics 路徑（預設：/metrics）"
   },
+  "_參數列表_Origin驗證": {
+    "--no-origin-validation": "停用 Origin 驗證",
+    "--no-localhost": "禁止 localhost 來源",
+    "--require-origin": "要求必須有 Origin 標頭",
+    "--allowed-origins:origins": "允許的來源（逗號分隔，如：https://app1.com,https://app2.com）"
+  },
+  "_參數列表_Origin驗證_環境變數": {
+    "ASPOSE_ORIGIN_VALIDATION": "true/false - 啟用或停用 Origin 驗證",
+    "ASPOSE_ALLOW_LOCALHOST": "true/false - 是否允許 localhost（預設：true）",
+    "ASPOSE_ALLOW_MISSING_ORIGIN": "true/false - 是否允許無 Origin 請求（預設：true）",
+    "ASPOSE_ALLOWED_ORIGINS": "允許的來源（逗號分隔）"
+  },
+  "_參數列表_Tasks異步任務": {
+    "--no-tasks": "停用異步任務功能",
+    "--tasks-max-concurrent:N": "最大並行任務數（預設：5，範圍：1-100）",
+    "--tasks-default-ttl:N": "預設結果保留時間毫秒（預設：300000，即 5 分鐘）",
+    "--tasks-max-ttl:N": "最大結果保留時間毫秒（預設：3600000，即 1 小時）"
+  },
+  "_參數列表_Tasks異步任務_環境變數": {
+    "ASPOSE_TASKS_ENABLED": "true/false - 啟用或停用異步任務",
+    "ASPOSE_TASKS_MAX_CONCURRENT": "最大並行任務數",
+    "ASPOSE_TASKS_DEFAULT_TTL": "預設結果保留時間毫秒",
+    "ASPOSE_TASKS_MAX_TTL": "最大結果保留時間毫秒"
+  },
 
   "_路徑說明": "========================================",
   "_Windows路徑範例": [
@@ -310,7 +383,9 @@
   "_使用建議": "========================================",
   "_一般用戶": "從 GitHub Releases 下載預編譯版本（範例1-7、10）",
   "_開發者": "克隆倉庫並本地編譯（範例8-9）",
-  "_遠端連線": "使用 SSE 或 WebSocket 模式（範例11-14）",
+  "_遠端連線": "使用 SSE 或 WebSocket 模式（範例11-16）",
+  "_安全配置": "SSE/WebSocket 模式預設啟用 Origin 驗證（範例17）",
+  "_異步任務": "長時間運行的操作使用異步任務（範例18-19）",
   "_授權配置": "優先使用自動搜尋，或使用 --license:路徑 參數（範例2、10）",
   "_多服務": "可同時配置多個服務實例（範例1、5-7）",
   "_下載地址": "https://github.com/xjustloveux/aspose-mcp-server/releases"

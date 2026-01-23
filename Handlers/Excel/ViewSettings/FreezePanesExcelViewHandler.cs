@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.ViewSettings;
 
 /// <summary>
 ///     Handler for freezing and unfreezing panes in Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class FreezePanesExcelViewHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class FreezePanesExcelViewHandler : OperationHandlerBase<Workbook>
     /// </param>
     /// <returns>Success message.</returns>
     /// <exception cref="ArgumentException">Thrown when neither freezeRow, freezeColumn, nor unfreeze is provided.</exception>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractFreezePanesParameters(parameters);
 
@@ -43,10 +46,12 @@ public class FreezePanesExcelViewHandler : OperationHandlerBase<Workbook>
         }
 
         MarkModified(context);
-        return p.Unfreeze
-            ? Success($"Panes unfrozen for sheet {p.SheetIndex}.")
-            : Success(
-                $"Panes frozen at row {p.FreezeRow ?? 0}, column {p.FreezeColumn ?? 0} for sheet {p.SheetIndex}.");
+        return new SuccessResult
+        {
+            Message = p.Unfreeze
+                ? $"Panes unfrozen for sheet {p.SheetIndex}."
+                : $"Panes frozen at row {p.FreezeRow ?? 0}, column {p.FreezeColumn ?? 0} for sheet {p.SheetIndex}."
+        };
     }
 
     /// <summary>

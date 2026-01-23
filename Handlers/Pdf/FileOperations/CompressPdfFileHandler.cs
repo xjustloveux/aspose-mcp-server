@@ -1,12 +1,15 @@
 using Aspose.Pdf;
 using Aspose.Pdf.Optimization;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.FileOperations;
 
 /// <summary>
 ///     Handler for compressing a PDF document.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class CompressPdfFileHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class CompressPdfFileHandler : OperationHandlerBase<Document>
     ///     Optional: compressImages (default: true), compressFonts (default: true), removeUnusedObjects (default: true)
     /// </param>
     /// <returns>Success message with compression statistics.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var compressParams = ExtractCompressParameters(parameters);
 
@@ -47,7 +50,7 @@ public class CompressPdfFileHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success("PDF compressed.");
+        return new SuccessResult { Message = "PDF compressed." };
     }
 
     /// <summary>

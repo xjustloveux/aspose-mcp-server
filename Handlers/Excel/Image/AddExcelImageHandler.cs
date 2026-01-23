@@ -1,12 +1,16 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Image;
 
 /// <summary>
 ///     Handler for adding images to Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddExcelImageHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +25,7 @@ public class AddExcelImageHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0), width, height, keepAspectRatio (default: true)
     /// </param>
     /// <returns>Success message with image details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var addParams = ExtractAddParameters(parameters);
 
@@ -48,7 +52,8 @@ public class AddExcelImageHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Image added to cell {addParams.Cell} (size: {picture.Width}x{picture.Height}).");
+        return new SuccessResult
+            { Message = $"Image added to cell {addParams.Cell} (size: {picture.Width}x{picture.Height})." };
     }
 
     private static AddParameters ExtractAddParameters(OperationParameters parameters)

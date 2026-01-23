@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.Cell;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Cell;
 
@@ -162,9 +163,11 @@ public class ClearExcelCellHandlerTests : ExcelHandlerTestBase
             { "cell", "A1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("cleared", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("cleared", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("", workbook.Worksheets[0].Cells["A1"].StringValue);
         AssertModified(context);
     }
@@ -183,9 +186,11 @@ public class ClearExcelCellHandlerTests : ExcelHandlerTestBase
             { "cell", cell }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("cleared", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("cleared", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("", workbook.Worksheets[0].Cells[cell].StringValue);
         AssertModified(context);
     }

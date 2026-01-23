@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.Group;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Group;
 
@@ -30,9 +31,11 @@ public class GroupExcelRowsHandlerTests : ExcelHandlerTestBase
             { "endRow", 5 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("grouped", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("grouped", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -48,9 +51,11 @@ public class GroupExcelRowsHandlerTests : ExcelHandlerTestBase
             { "isCollapsed", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("grouped", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("grouped", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -138,9 +143,11 @@ public class GroupExcelRowsHandlerTests : ExcelHandlerTestBase
             { "endRow", 5 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("grouped", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("grouped", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

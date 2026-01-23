@@ -9,6 +9,7 @@
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=xjustloveux_aspose-mcp-server&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=xjustloveux_aspose-mcp-server)
 [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=xjustloveux_aspose-mcp-server&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=xjustloveux_aspose-mcp-server)
 [![MCP Version](https://img.shields.io/badge/MCP-2025--11--25-blue?style=flat-square)](https://modelcontextprotocol.io/)
+[![MCP SDK](https://img.shields.io/badge/MCP%20SDK-0.6.0-purple?style=flat-square)](https://github.com/modelcontextprotocol/csharp-sdk)
 [![Aspose Version](https://img.shields.io/badge/Aspose-23.10.0-orange?style=flat-square)](https://products.aspose.com/total/net/)
 [![xUnit](https://img.shields.io/badge/xUnit-2.9.2-blue?style=flat-square&logo=xunit)](https://xunit.net/)
 
@@ -34,9 +35,13 @@
 - **Session 管理** - 在記憶體中編輯文件，支援 open/save/close 操作，支援多租戶隔離
 - **認證機制** - 可選的 API Key 和 JWT 認證（4 種驗證模式）
 - **追蹤系統** - 結構化日誌、Webhook 通知、Prometheus Metrics
+- **Origin 驗證** - 防止 DNS 重綁定攻擊（SSE/WebSocket 模式）
+- **Tasks 異步任務** - 支援長時間運行的操作異步執行
 
 ### 技術特性
-- **MCP SDK 原生整合** - 使用官方 ModelContextProtocol NuGet 套件
+- **MCP SDK 0.6.0** - 使用官方 ModelContextProtocol NuGet 套件，支援 Tool Annotations 和 outputSchema
+- **Tool Annotations** - 所有工具標註 ReadOnly、Destructive、Idempotent、OpenWorld 行為特性
+- **結構化輸出** - Handler 返回強型別結果，SDK 自動生成 outputSchema（oneOf JSON Schema）
 - **統一字型設定** - 多個工具支援中英文字型分別設定（`fontNameAscii` 和 `fontNameFarEast` 參數）
 - **靈活的授權配置** - 支援總授權或單一組件授權，自動搜尋、環境變數或命令列參數配置
 - **安全加固** - 全面的路徑驗證、輸入驗證和錯誤處理
@@ -596,6 +601,39 @@ set ASPOSE_METRICS_PATH=/metrics
 | `--metrics-disabled` | 停用 Metrics |
 | `--metrics-path:path` | Metrics 路徑 |
 
+## ⏱️ Tasks 異步任務
+
+Tasks 功能支援長時間運行的操作異步執行，適用於大型文檔轉換等耗時任務。
+
+> **注意**：Tasks 功能預設啟用。可使用 `--no-tasks` 參數或設定 `ASPOSE_TASKS_ENABLED=false` 環境變數停用。
+
+### 適用工具
+
+| 工具 | 適用原因 |
+|------|----------|
+| `convert_to_pdf` | 大型文檔轉換可能耗時 |
+| `convert_document` | 跨格式轉換可能耗時 |
+
+### Tasks 配置
+
+**環境變數：**
+
+| 變數 | 說明 | 預設值 |
+|------|------|--------|
+| `ASPOSE_TASKS_ENABLED` | 啟用 Tasks 功能 | true |
+| `ASPOSE_TASKS_MAX_CONCURRENT` | 最大併發任務數 | 5 |
+| `ASPOSE_TASKS_DEFAULT_TTL` | 預設任務結果保留時間（毫秒） | 300000 (5分鐘) |
+| `ASPOSE_TASKS_MAX_TTL` | 最大任務結果保留時間（毫秒） | 3600000 (1小時) |
+
+**命令行參數：**
+
+| 參數 | 說明 |
+|------|------|
+| `--no-tasks` | 停用 Tasks 功能 |
+| `--tasks-max-concurrent:N` | 最大併發任務數 |
+| `--tasks-default-ttl:N` | 預設任務結果保留時間（毫秒） |
+| `--tasks-max-ttl:N` | 最大任務結果保留時間（毫秒） |
+
 ## 🚢 部署指南
 
 Aspose MCP Server 支援多種部署方式：
@@ -661,6 +699,42 @@ SSE/WebSocket 模式下提供以下端點：
 
 ## 🔒 安全特性
 
+### Origin 驗證
+
+SSE 和 WebSocket 模式預設啟用 Origin 標頭驗證，防止 DNS 重綁定攻擊：
+
+```bash
+# 停用 Origin 驗證（不建議用於生產環境）
+AsposeMcpServer.exe --sse --no-origin-validation
+
+# 不允許 localhost（生產環境）
+AsposeMcpServer.exe --sse --no-localhost
+
+# 要求必須有 Origin 標頭
+AsposeMcpServer.exe --sse --require-origin
+
+# 指定允許的 Origin 清單
+AsposeMcpServer.exe --sse --allowed-origins:https://app.example.com,https://admin.example.com
+```
+
+**環境變數：**
+
+| 變數 | 說明 | 預設值 |
+|------|------|--------|
+| `ASPOSE_ORIGIN_VALIDATION` | 啟用 Origin 驗證 | true |
+| `ASPOSE_ALLOW_LOCALHOST` | 允許 localhost Origin | true |
+| `ASPOSE_ALLOW_MISSING_ORIGIN` | 允許缺少 Origin 標頭 | true |
+| `ASPOSE_ALLOWED_ORIGINS` | 允許的 Origin 清單（逗號分隔） | - |
+
+**命令行參數：**
+
+| 參數 | 說明 |
+|------|------|
+| `--no-origin-validation` | 停用 Origin 驗證 |
+| `--no-localhost` | 不允許 localhost Origin |
+| `--require-origin` | 要求必須有 Origin 標頭 |
+| `--allowed-origins:origins` | 允許的 Origin 清單（逗號分隔） |
+
 ### 路徑驗證
 - ✅ 所有檔案路徑都經過 `SecurityHelper.ValidateFilePath()` 驗證
 - ✅ 防止路徑遍歷攻擊（`../`, `..\`）
@@ -688,59 +762,47 @@ SSE/WebSocket 模式下提供以下端點：
 ### 倉庫結構
 ```
 aspose-mcp-server/
-├── Tools/                 📁 工具原始碼（MCP Tool 入口點）
-│   ├── Word/              24 個工具
-│   ├── Excel/             25 個工具
-│   ├── PowerPoint/        21 個工具
-│   ├── PDF/               15 個工具
-│   ├── Conversion/        2 個工具
-│   └── Session/           1 個工具 (DocumentSessionTool)
-├── Handlers/              📁 操作處理器（業務邏輯實作）
-│   ├── Word/              Word 處理器（Bookmark, Comment, Content, Field 等）
-│   ├── Excel/             Excel 處理器（Cell, Chart, DataOperations 等）
-│   ├── PowerPoint/        PowerPoint 處理器（Animation, Media, Shape 等）
-│   └── Pdf/               PDF 處理器（Annotation, Bookmark, FormField 等）
-├── Core/                  🔧 MCP 伺服器核心
-│   ├── Helpers/           通用輔助工具（Security、Color、Font、Value、Version）
-│   ├── Security/          認證模組（API Key、JWT）
-│   ├── Session/           Session 管理模組
-│   ├── Tracking/          追蹤模組（日誌、Webhook、Metrics）
-│   ├── Transport/         傳輸層模組（TransportConfig、WebSocketConnectionHandler）
-│   ├── ShapeDetailProviders/ PowerPoint 形狀詳細資訊提供者
-│   ├── ServerConfig.cs    伺服器配置（工具、授權）
-│   └── LicenseManager.cs  授權管理
-├── Tests/                 🧪 單元測試
-│   ├── Core/              核心功能測試
-│   │   ├── Handlers/      Handler 架構測試
-│   │   ├── Helpers/       Helper 測試
-│   │   ├── Security/      認證測試
-│   │   ├── Session/       Session 測試
-│   │   ├── Tracking/      追蹤測試
-│   │   └── Transport/     傳輸層測試
-│   ├── Handlers/          Handler 測試（408 個測試類）
-│   │   ├── Word/          Word Handler 測試
-│   │   ├── Excel/         Excel Handler 測試
-│   │   ├── PowerPoint/    PowerPoint Handler 測試
-│   │   └── Pdf/           PDF Handler 測試
-│   ├── Tools/             工具測試
-│   │   ├── Word/          24 個測試類
-│   │   ├── Excel/         25 個測試類
-│   │   ├── PowerPoint/    21 個測試類
-│   │   ├── Pdf/           15 個測試類
-│   │   ├── Conversion/    2 個測試類
-│   │   └── Session/       Session 工具測試
-│   └── Helpers/           測試基礎設施
-├── deploy/                🚢 部署與構建配置
-│   ├── build.ps1          構建腳本
-│   ├── publish.ps1        發布腳本 (Windows)
-│   ├── publish.sh         發布腳本 (Linux/macOS)
-│   ├── Dockerfile         Docker 映像
-│   ├── docker-compose.yml Docker Compose
-│   ├── deployment.yaml    Kubernetes 部署
-│   └── web.config         IIS 配置
-├── docs/                  📚 GitHub Pages 文檔
-├── .github/workflows/     🔄 GitHub Actions 工作流程
-└── bin/                   ❌ 本地編譯輸出（不在版本控制）
+├── Tools/                    📁 工具原始碼（MCP Tool 入口點）
+│   ├── Word/                 24 個工具
+│   ├── Excel/                25 個工具
+│   ├── PowerPoint/           21 個工具
+│   ├── PDF/                  15 個工具
+│   ├── Conversion/           2 個工具
+│   └── Session/              1 個工具 (DocumentSessionTool)
+├── Handlers/                 📁 操作處理器（業務邏輯實作）
+│   ├── Word/                 Word 處理器
+│   ├── Excel/                Excel 處理器
+│   ├── PowerPoint/           PowerPoint 處理器
+│   └── Pdf/                  PDF 處理器
+├── Helpers/                  🛠️ 通用輔助工具
+│   ├── Excel/                Excel 專用 Helper
+│   ├── Word/                 Word 專用 Helper
+│   ├── PowerPoint/           PowerPoint 專用 Helper
+│   └── Pdf/                  PDF 專用 Helper
+├── Results/                  📊 結果類型定義
+│   ├── Common/               通用結果類型（SuccessResult 等）
+│   ├── Word/                 Word 操作結果類型
+│   ├── Excel/                Excel 操作結果類型
+│   ├── PowerPoint/           PowerPoint 操作結果類型
+│   └── Pdf/                  PDF 操作結果類型
+├── Core/                     🔧 MCP 伺服器核心
+│   ├── Handlers/             Handler 基礎架構
+│   ├── Security/             安全模組（認證、Origin 驗證）
+│   ├── Session/              Session 管理模組
+│   ├── Tasks/                ⏱️ 異步任務模組
+│   ├── Tracking/             追蹤模組（日誌、Webhook、Metrics）
+│   ├── Transport/            傳輸層模組
+│   └── ShapeDetailProviders/ PowerPoint 形狀詳細資訊提供者
+├── Tests/                    🧪 單元測試
+│   ├── Core/                 核心功能測試
+│   ├── Handlers/             Handler 測試
+│   ├── Tools/                工具測試
+│   ├── Helpers/              Helper 單元測試
+│   └── Infrastructure/       測試基礎設施（TestBase 等）
+├── deploy/                   🚢 部署與構建配置
+├── docs/                     📚 GitHub Pages 文檔
+├── .github/workflows/        🔄 GitHub Actions 工作流程
+└── bin/                      ❌ 本地編譯輸出（不在版本控制）
 ```
 
 ### 本地開發
@@ -838,8 +900,8 @@ pwsh test.ps1 -Verbose -Coverage -Filter "FullyQualifiedName~Word"
 - `-SkipLicense` - 跳過授權載入，強制使用評估模式
 
 **測試結構：**
-- `Tests/Core/` - 核心功能測試（Handlers、Helpers、Security、Session、Tracking）
-- `Tests/Handlers/` - Handler 測試（408 個測試類）
+- `Tests/Core/` - 核心功能測試（Handlers、Security、Session、Tasks、Tracking）
+- `Tests/Handlers/` - Handler 測試
   - `Word/` - Word Handler 測試
   - `Excel/` - Excel Handler 測試
   - `PowerPoint/` - PowerPoint Handler 測試
@@ -849,7 +911,8 @@ pwsh test.ps1 -Verbose -Coverage -Filter "FullyQualifiedName~Word"
 - `Tests/Tools/PowerPoint/` - PowerPoint 工具測試（21 個測試類）
 - `Tests/Tools/Pdf/` - PDF 工具測試（15 個測試類）
 - `Tests/Tools/Conversion/` - 轉換工具測試（2 個測試類）
-- `Tests/Helpers/` - 測試基礎設施（TestBase、WordTestBase、ExcelTestBase、PdfTestBase、HandlerTestBase）
+- `Tests/Helpers/` - Helper 單元測試（Excel、Word、PowerPoint、PDF Helper 測試）
+- `Tests/Infrastructure/` - 測試基礎設施（TestBase、WordTestBase、ExcelTestBase、PdfTestBase、HandlerTestBase）
 
 **CI/CD 集成：**
 - 測試已集成到 GitHub Actions 工作流中

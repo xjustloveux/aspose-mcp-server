@@ -1,6 +1,8 @@
-using Aspose.Words;
+﻿using Aspose.Words;
 using Aspose.Words.Notes;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Word.Note;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Word;
 
 namespace AsposeMcpServer.Tests.Tools.Word;
@@ -58,7 +60,10 @@ public class WordNoteToolTests : WordTestBase
         builder.InsertFootnote(FootnoteType.Footnote, "Test footnote");
         doc.Save(docPath);
         var result = _tool.Execute("get_footnotes", docPath);
-        Assert.Contains("Footnote", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<GetWordNotesResult>(result);
+        Assert.Equal("footnote", data.NoteType);
+        Assert.True(data.Count > 0);
+        Assert.Contains(data.Notes, n => n.Text.Contains("Test footnote"));
     }
 
     [Fact]
@@ -71,7 +76,10 @@ public class WordNoteToolTests : WordTestBase
         builder.InsertFootnote(FootnoteType.Endnote, "Test endnote");
         doc.Save(docPath);
         var result = _tool.Execute("get_endnotes", docPath);
-        Assert.Contains("Endnote", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<GetWordNotesResult>(result);
+        Assert.Equal("endnote", data.NoteType);
+        Assert.True(data.Count > 0);
+        Assert.Contains(data.Notes, n => n.Text.Contains("Test endnote"));
     }
 
     [Fact]
@@ -198,7 +206,11 @@ public class WordNoteToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("get_footnotes", sessionId: sessionId);
-        Assert.Contains("footnote", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<GetWordNotesResult>(result);
+        Assert.Equal("footnote", data.NoteType);
+        Assert.Contains(data.Notes, n => n.Text.Contains("Session footnote"));
+        var output = GetResultOutput<GetWordNotesResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -213,7 +225,11 @@ public class WordNoteToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("get_endnotes", sessionId: sessionId);
-        Assert.Contains("endnote", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<GetWordNotesResult>(result);
+        Assert.Equal("endnote", data.NoteType);
+        Assert.Contains(data.Notes, n => n.Text.Contains("Session endnote"));
+        var output = GetResultOutput<GetWordNotesResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -223,7 +239,10 @@ public class WordNoteToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("add_footnote", sessionId: sessionId,
             text: "Session footnote text", paragraphIndex: 0);
-        Assert.StartsWith("Footnote added successfully", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Footnote added successfully", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
 
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         var footnotes = sessionDoc.GetChildNodes(NodeType.Footnote, true);
@@ -237,7 +256,10 @@ public class WordNoteToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("add_endnote", sessionId: sessionId,
             text: "Session endnote text", paragraphIndex: 0);
-        Assert.StartsWith("Endnote added successfully", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Endnote added successfully", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
 
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         var endnotes = sessionDoc.GetChildNodes(NodeType.Footnote, true)
@@ -258,7 +280,9 @@ public class WordNoteToolTests : WordTestBase
         doc.Save(docPath);
 
         var sessionId = OpenSession(docPath);
-        _tool.Execute("edit_footnote", sessionId: sessionId, noteIndex: 0, text: "Updated via session");
+        var result = _tool.Execute("edit_footnote", sessionId: sessionId, noteIndex: 0, text: "Updated via session");
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
 
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         var footnotes = sessionDoc.GetChildNodes(NodeType.Footnote, true).Cast<Footnote>().ToList();
@@ -276,7 +300,9 @@ public class WordNoteToolTests : WordTestBase
         doc.Save(docPath);
 
         var sessionId = OpenSession(docPath);
-        _tool.Execute("edit_endnote", sessionId: sessionId, noteIndex: 0, text: "Updated via session");
+        var result = _tool.Execute("edit_endnote", sessionId: sessionId, noteIndex: 0, text: "Updated via session");
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
 
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         var endnotes = sessionDoc.GetChildNodes(NodeType.Footnote, true)
@@ -297,7 +323,9 @@ public class WordNoteToolTests : WordTestBase
         doc.Save(docPath);
 
         var sessionId = OpenSession(docPath);
-        _tool.Execute("delete_footnote", sessionId: sessionId, noteIndex: 0);
+        var result = _tool.Execute("delete_footnote", sessionId: sessionId, noteIndex: 0);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
 
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         var footnotes = sessionDoc.GetChildNodes(NodeType.Footnote, true);
@@ -315,7 +343,9 @@ public class WordNoteToolTests : WordTestBase
         doc.Save(docPath);
 
         var sessionId = OpenSession(docPath);
-        _tool.Execute("delete_endnote", sessionId: sessionId, noteIndex: 0);
+        var result = _tool.Execute("delete_endnote", sessionId: sessionId, noteIndex: 0);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
 
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         var endnotes = sessionDoc.GetChildNodes(NodeType.Footnote, true)
@@ -351,9 +381,9 @@ public class WordNoteToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath2);
         var result = _tool.Execute("get_footnotes", docPath1, sessionId);
-
-        Assert.Contains("Session footnote", result);
-        Assert.DoesNotContain("Path footnote", result);
+        var data = GetResultData<GetWordNotesResult>(result);
+        Assert.Contains(data.Notes, n => n.Text.Contains("Session footnote"));
+        Assert.DoesNotContain(data.Notes, n => n.Text.Contains("Path footnote"));
     }
 
     #endregion

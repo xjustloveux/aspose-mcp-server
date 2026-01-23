@@ -1,12 +1,15 @@
 using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Pdf.Link;
 
 namespace AsposeMcpServer.Handlers.Pdf.Link;
 
 /// <summary>
 ///     Handler for getting links from PDF documents.
 /// </summary>
+[ResultType(typeof(GetLinksResult))]
 public class GetPdfLinksHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -19,8 +22,8 @@ public class GetPdfLinksHandler : OperationHandlerBase<Document>
     /// <param name="parameters">
     ///     Optional: pageIndex (if specified, gets links from that page only)
     /// </param>
-    /// <returns>JSON string containing link information.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    /// <returns>A GetLinksResult containing link information.</returns>
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractGetParameters(parameters);
         var doc = context.Document;
@@ -46,8 +49,8 @@ public class GetPdfLinksHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="doc">The PDF document.</param>
     /// <param name="pageIndex">The 1-based page index.</param>
-    /// <returns>JSON string containing link information from the specified page.</returns>
-    private static string GetLinksFromPage(Document doc, int pageIndex)
+    /// <returns>GetLinksResult containing link information from the specified page.</returns>
+    private static GetLinksResult GetLinksFromPage(Document doc, int pageIndex)
     {
         if (pageIndex < 1 || pageIndex > doc.Pages.Count)
             throw new ArgumentException($"pageIndex must be between 1 and {doc.Pages.Count}");
@@ -55,27 +58,32 @@ public class GetPdfLinksHandler : OperationHandlerBase<Document>
         var links = doc.Pages[pageIndex].Annotations.OfType<LinkAnnotation>().ToList();
 
         if (links.Count == 0)
-            return JsonResult(new
+            return new GetLinksResult
             {
-                count = 0,
-                pageIndex,
-                items = Array.Empty<object>(),
-                message = $"No links found on page {pageIndex}"
-            });
+                Count = 0,
+                PageIndex = pageIndex,
+                Items = [],
+                Message = $"No links found on page {pageIndex}"
+            };
 
         var linkList = links.Select((link, i) => CreateLinkInfo(link, i, pageIndex)).ToList();
 
-        return JsonResult(new { count = linkList.Count, pageIndex, items = linkList });
+        return new GetLinksResult
+        {
+            Count = linkList.Count,
+            PageIndex = pageIndex,
+            Items = linkList
+        };
     }
 
     /// <summary>
     ///     Retrieves link annotations from all pages in the document.
     /// </summary>
     /// <param name="doc">The PDF document.</param>
-    /// <returns>JSON string containing link information from all pages.</returns>
-    private static string GetLinksFromDocument(Document doc)
+    /// <returns>GetLinksResult containing link information from all pages.</returns>
+    private static GetLinksResult GetLinksFromDocument(Document doc)
     {
-        List<object> linkList = [];
+        List<LinkInfo> linkList = [];
 
         for (var p = 1; p <= doc.Pages.Count; p++)
         {
@@ -84,48 +92,57 @@ public class GetPdfLinksHandler : OperationHandlerBase<Document>
         }
 
         if (linkList.Count == 0)
-            return JsonResult(new
+            return new GetLinksResult
             {
-                count = 0,
-                items = Array.Empty<object>(),
-                message = "No links found in document"
-            });
+                Count = 0,
+                Items = [],
+                Message = "No links found in document"
+            };
 
-        return JsonResult(new { count = linkList.Count, items = linkList });
+        return new GetLinksResult
+        {
+            Count = linkList.Count,
+            Items = linkList
+        };
     }
 
     /// <summary>
-    ///     Creates a dictionary containing link annotation information.
+    ///     Creates a LinkInfo object containing link annotation information.
     /// </summary>
     /// <param name="link">The link annotation.</param>
     /// <param name="index">The 0-based link index within the page.</param>
     /// <param name="pageIndex">The 1-based page index.</param>
-    /// <returns>A dictionary containing link information.</returns>
-    private static Dictionary<string, object?> CreateLinkInfo(LinkAnnotation link, int index, int pageIndex)
+    /// <returns>A LinkInfo object containing link information.</returns>
+    private static LinkInfo CreateLinkInfo(LinkAnnotation link, int index, int pageIndex)
     {
-        var linkInfo = new Dictionary<string, object?>
-        {
-            ["index"] = index,
-            ["pageIndex"] = pageIndex,
-            ["x"] = link.Rect.LLX,
-            ["y"] = link.Rect.LLY
-        };
+        string? type = null;
+        string? url = null;
+        int? destinationPage = null;
 
         if (link.Action is GoToURIAction uriAction)
         {
-            linkInfo["type"] = "url";
-            linkInfo["url"] = uriAction.URI;
+            type = "url";
+            url = uriAction.URI;
         }
         else if (link.Action is GoToAction gotoAction)
         {
-            linkInfo["type"] = "page";
+            type = "page";
             if (gotoAction.Destination is XYZExplicitDestination xyzDest)
-                linkInfo["destinationPage"] = xyzDest.PageNumber;
+                destinationPage = xyzDest.PageNumber;
             else if (gotoAction.Destination is ExplicitDestination explicitDest)
-                linkInfo["destinationPage"] = explicitDest.PageNumber;
+                destinationPage = explicitDest.PageNumber;
         }
 
-        return linkInfo;
+        return new LinkInfo
+        {
+            Index = index,
+            PageIndex = pageIndex,
+            X = link.Rect.LLX,
+            Y = link.Rect.LLY,
+            Type = type,
+            Url = url,
+            DestinationPage = destinationPage
+        };
     }
 
     /// <summary>

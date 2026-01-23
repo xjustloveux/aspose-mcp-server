@@ -1,14 +1,17 @@
 using System.Drawing;
 using System.Text.Json;
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.TextFormat;
 
 /// <summary>
 ///     Handler for batch formatting text in PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class FormatPptTextHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -22,7 +25,7 @@ public class FormatPptTextHandler : OperationHandlerBase<Presentation>
     ///     Optional: slideIndices, fontName, fontSize, bold, italic, color.
     /// </param>
     /// <returns>Success message with formatting details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var formatParams = ExtractFormatParameters(parameters);
 
@@ -55,7 +58,7 @@ public class FormatPptTextHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Batch formatted text applied to {targets.Length} slides.");
+        return new SuccessResult { Message = $"Batch formatted text applied to {targets.Length} slides." };
     }
 
     /// <summary>

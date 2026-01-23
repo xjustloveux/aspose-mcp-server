@@ -1,12 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Shape;
 
 /// <summary>
 ///     Handler for grouping shapes in PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class GroupPptShapesHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class GroupPptShapesHandler : OperationHandlerBase<Presentation>
     ///     Optional: slideIndex (default: 0).
     /// </param>
     /// <returns>Success message with group details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractGroupPptShapesParameters(parameters);
 
@@ -62,7 +65,8 @@ public class GroupPptShapesHandler : OperationHandlerBase<Presentation>
         MarkModified(context);
 
         var newIndex = slide.Shapes.IndexOf(groupShape);
-        return Success($"Grouped {p.ShapeIndices.Length} shapes into group (shapeIndex: {newIndex}).");
+        return new SuccessResult
+            { Message = $"Grouped {p.ShapeIndices.Length} shapes into group (shapeIndex: {newIndex})." };
     }
 
     /// <summary>

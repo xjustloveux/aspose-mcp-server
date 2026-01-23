@@ -1,12 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Section;
 
 /// <summary>
 ///     Handler for renaming sections in PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class RenamePptSectionHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class RenamePptSectionHandler : OperationHandlerBase<Presentation>
     ///     Required: sectionIndex, newName
     /// </param>
     /// <returns>Success message with rename details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractRenamePptSectionParameters(parameters);
         var presentation = context.Document;
@@ -30,7 +33,7 @@ public class RenamePptSectionHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Section {p.SectionIndex} renamed to '{p.NewName}'.");
+        return new SuccessResult { Message = $"Section {p.SectionIndex} renamed to '{p.NewName}'." };
     }
 
     private static RenamePptSectionParameters ExtractRenamePptSectionParameters(OperationParameters parameters)

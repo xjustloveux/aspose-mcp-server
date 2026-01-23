@@ -1,12 +1,16 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Styles;
 
 /// <summary>
 ///     Handler for copying styles from one Word document to another.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class CopyWordStylesHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -21,7 +25,7 @@ public class CopyWordStylesHandler : OperationHandlerBase<Document>
     ///     Optional: styleNames, overwriteExisting
     /// </param>
     /// <returns>Success message with copy details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractCopyWordStylesParameters(parameters);
 
@@ -77,8 +81,11 @@ public class CopyWordStylesHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success(
-            $"Copied {copiedCount} style(s) from {Path.GetFileName(p.SourceDocument)}. Skipped: {skippedCount}.");
+        return new SuccessResult
+        {
+            Message =
+                $"Copied {copiedCount} style(s) from {Path.GetFileName(p.SourceDocument)}. Skipped: {skippedCount}."
+        };
     }
 
     private static CopyWordStylesParameters ExtractCopyWordStylesParameters(OperationParameters parameters)

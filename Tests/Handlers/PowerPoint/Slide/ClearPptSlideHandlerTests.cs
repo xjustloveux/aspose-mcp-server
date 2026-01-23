@@ -1,6 +1,7 @@
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Slide;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Slide;
 
@@ -82,9 +83,11 @@ public class ClearPptSlideHandlerTests : PptHandlerTestBase
             { "slideIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Cleared", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Cleared", result.Message);
         Assert.Empty(pres.Slides[0].Shapes);
     }
 
@@ -102,9 +105,11 @@ public class ClearPptSlideHandlerTests : PptHandlerTestBase
             { "slideIndex", 3 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("3", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("3", result.Message);
     }
 
     #endregion
@@ -138,9 +143,11 @@ public class ClearPptSlideHandlerTests : PptHandlerTestBase
             { "slideIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Cleared", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Cleared", result.Message);
         Assert.Empty(pres.Slides[0].Shapes);
         AssertModified(context);
     }
@@ -159,9 +166,11 @@ public class ClearPptSlideHandlerTests : PptHandlerTestBase
             { "slideIndex", slideIndex }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Cleared", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Cleared", result.Message);
         Assert.Empty(pres.Slides[slideIndex].Shapes);
         AssertModified(context);
     }

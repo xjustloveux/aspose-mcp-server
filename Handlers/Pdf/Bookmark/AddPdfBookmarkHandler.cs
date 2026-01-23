@@ -1,12 +1,15 @@
 using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.Bookmark;
 
 /// <summary>
 ///     Handler for adding bookmarks to PDF documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddPdfBookmarkHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class AddPdfBookmarkHandler : OperationHandlerBase<Document>
     ///     Required: title, pageIndex
     /// </param>
     /// <returns>Success message with bookmark details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var addParams = ExtractAddParameters(parameters);
 
@@ -38,7 +41,8 @@ public class AddPdfBookmarkHandler : OperationHandlerBase<Document>
         document.Outlines.Add(bookmark);
         MarkModified(context);
 
-        return Success($"Added bookmark '{addParams.Title}' pointing to page {addParams.PageIndex}.");
+        return new SuccessResult
+            { Message = $"Added bookmark '{addParams.Title}' pointing to page {addParams.PageIndex}." };
     }
 
     /// <summary>

@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.Style;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Style;
 
@@ -42,9 +43,11 @@ public class CopySheetFormatHandlerTests : ExcelHandlerTestBase
             { "targetSheetIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("copied", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("copied", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -61,9 +64,11 @@ public class CopySheetFormatHandlerTests : ExcelHandlerTestBase
             { "copyColumnWidths", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("copied", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("copied", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -79,9 +84,11 @@ public class CopySheetFormatHandlerTests : ExcelHandlerTestBase
             { "copyRowHeights", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("copied", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("copied", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

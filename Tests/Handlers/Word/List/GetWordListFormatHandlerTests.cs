@@ -1,8 +1,8 @@
-using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Words.Lists;
 using AsposeMcpServer.Handlers.Word.List;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Word.List;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.List;
 
@@ -50,10 +50,12 @@ public class GetWordListFormatHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("count", result);
-        Assert.Contains("0", result);
+        var result = Assert.IsType<GetWordListFormatResult>(res);
+
+        Assert.NotNull(result);
+        Assert.Equal(0, result.Count);
     }
 
     [Fact]
@@ -63,23 +65,27 @@ public class GetWordListFormatHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("count", result);
-        Assert.Contains("listParagraphs", result);
+        var result = Assert.IsType<GetWordListFormatResult>(res);
+
+        Assert.NotNull(result);
+        Assert.True(result.Count >= 3);
+        Assert.NotNull(result.ListParagraphs);
     }
 
     [Fact]
-    public void Execute_ReturnsJsonFormat()
+    public void Execute_ReturnsResult()
     {
         var doc = CreateDocumentWithList(2);
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonNode.Parse(result);
-        Assert.NotNull(json);
+        var result = Assert.IsType<GetWordListFormatResult>(res);
+
+        Assert.NotNull(result);
     }
 
     #endregion
@@ -96,9 +102,12 @@ public class GetWordListFormatHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("paragraphIndex", result);
+        var result = Assert.IsType<GetWordListFormatSingleResult>(res);
+
+        Assert.NotNull(result);
+        Assert.Equal(0, result.ParagraphIndex);
     }
 
     [Fact]
@@ -111,10 +120,12 @@ public class GetWordListFormatHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("isListItem", result);
-        Assert.Contains("false", result);
+        var result = Assert.IsType<GetWordListFormatSingleResult>(res);
+
+        Assert.NotNull(result);
+        Assert.False(result.IsListItem);
     }
 
     [Fact]
@@ -127,10 +138,12 @@ public class GetWordListFormatHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("isListItem", result);
-        Assert.Contains("true", result);
+        var result = Assert.IsType<GetWordListFormatSingleResult>(res);
+
+        Assert.NotNull(result);
+        Assert.True(result.IsListItem);
     }
 
     #endregion

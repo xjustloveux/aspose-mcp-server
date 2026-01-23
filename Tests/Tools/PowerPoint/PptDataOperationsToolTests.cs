@@ -1,5 +1,6 @@
 using System.Runtime.Versioning;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.PowerPoint.DataOperations;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.PowerPoint;
 
 namespace AsposeMcpServer.Tests.Tools.PowerPoint;
@@ -26,9 +27,10 @@ public class PptDataOperationsToolTests : PptTestBase
     {
         var pptPath = CreatePresentation("test_get_statistics.pptx");
         var result = _tool.Execute("get_statistics", pptPath);
-        Assert.Contains("\"totalSlides\":", result);
-        Assert.Contains("\"totalShapes\":", result);
-        Assert.Contains("\"slideSize\":", result);
+        var data = GetResultData<GetStatisticsResult>(result);
+        Assert.True(data.TotalSlides >= 0);
+        Assert.True(data.TotalShapes >= 0);
+        Assert.NotNull(data.SlideSize);
     }
 
     [Fact]
@@ -36,8 +38,9 @@ public class PptDataOperationsToolTests : PptTestBase
     {
         var pptPath = CreatePresentation("test_get_content.pptx");
         var result = _tool.Execute("get_content", pptPath);
-        Assert.Contains("\"totalSlides\":", result);
-        Assert.Contains("\"slides\":", result);
+        var data = GetResultData<GetContentPptResult>(result);
+        Assert.True(data.TotalSlides >= 0);
+        Assert.NotNull(data.Slides);
     }
 
     [Fact]
@@ -45,9 +48,10 @@ public class PptDataOperationsToolTests : PptTestBase
     {
         var pptPath = CreatePresentation("test_get_slide_details.pptx");
         var result = _tool.Execute("get_slide_details", pptPath, slideIndex: 0);
-        Assert.Contains("\"slideIndex\":", result);
-        Assert.Contains("\"slideSize\":", result);
-        Assert.Contains("\"shapesCount\":", result);
+        var data = GetResultData<GetSlideDetailsResult>(result);
+        Assert.Equal(0, data.SlideIndex);
+        Assert.NotNull(data.SlideSize);
+        Assert.True(data.ShapesCount >= 0);
     }
 
     #endregion
@@ -62,7 +66,8 @@ public class PptDataOperationsToolTests : PptTestBase
     {
         var pptPath = CreatePresentation($"test_case_stats_{operation.Replace("_", "")}.pptx");
         var result = _tool.Execute(operation, pptPath);
-        Assert.Contains("\"totalSlides\":", result);
+        var data = GetResultData<GetStatisticsResult>(result);
+        Assert.True(data.TotalSlides >= 0);
     }
 
     [Fact]
@@ -83,7 +88,8 @@ public class PptDataOperationsToolTests : PptTestBase
         var pptPath = CreatePresentation("test_session_get_statistics.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("get_statistics", sessionId: sessionId);
-        Assert.Contains("\"totalSlides\":", result);
+        var data = GetResultData<GetStatisticsResult>(result);
+        Assert.True(data.TotalSlides >= 0);
     }
 
     [Fact]
@@ -92,7 +98,8 @@ public class PptDataOperationsToolTests : PptTestBase
         var pptPath = CreatePresentation("test_session_get_content.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("get_content", sessionId: sessionId);
-        Assert.Contains("\"slides\":", result);
+        var data = GetResultData<GetContentPptResult>(result);
+        Assert.NotNull(data.Slides);
     }
 
     [Fact]
@@ -101,8 +108,9 @@ public class PptDataOperationsToolTests : PptTestBase
         var pptPath = CreatePresentation("test_session_get_slide_details.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("get_slide_details", sessionId: sessionId, slideIndex: 0);
-        Assert.Contains("\"slideIndex\":", result);
-        Assert.Contains("\"slideSize\":", result);
+        var data = GetResultData<GetSlideDetailsResult>(result);
+        Assert.Equal(0, data.SlideIndex);
+        Assert.NotNull(data.SlideSize);
     }
 
     [Fact]
@@ -118,7 +126,8 @@ public class PptDataOperationsToolTests : PptTestBase
         var pptPath2 = CreatePresentation("test_session_data.pptx", 5);
         var sessionId = OpenSession(pptPath2);
         var result = _tool.Execute("get_statistics", pptPath1, sessionId);
-        Assert.Contains("\"totalSlides\": 5", result);
+        var data = GetResultData<GetStatisticsResult>(result);
+        Assert.Equal(5, data.TotalSlides);
     }
 
     #endregion

@@ -1,12 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Shape;
 
 /// <summary>
 ///     Handler for reordering a shape's Z-order position.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class ReorderPptShapeHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class ReorderPptShapeHandler : OperationHandlerBase<Presentation>
     ///     Required: slideIndex, shapeIndex, toIndex
     /// </param>
     /// <returns>Success message with reorder details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractReorderPptShapeParameters(parameters);
 
@@ -35,7 +38,7 @@ public class ReorderPptShapeHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Shape Z-order changed: {p.ShapeIndex} -> {p.ToIndex}.");
+        return new SuccessResult { Message = $"Shape Z-order changed: {p.ShapeIndex} -> {p.ToIndex}." };
     }
 
     /// <summary>

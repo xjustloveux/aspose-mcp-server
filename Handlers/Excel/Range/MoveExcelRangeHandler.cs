@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Range;
 
 /// <summary>
 ///     Handler for moving Excel ranges.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class MoveExcelRangeHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class MoveExcelRangeHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex, sourceSheetIndex, destSheetIndex
     /// </param>
     /// <returns>Success message with move details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractMoveExcelRangeParameters(parameters);
 
@@ -44,7 +47,7 @@ public class MoveExcelRangeHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Range {p.SourceRange} moved to {p.DestCell}.");
+        return new SuccessResult { Message = $"Range {p.SourceRange} moved to {p.DestCell}." };
     }
 
     /// <summary>

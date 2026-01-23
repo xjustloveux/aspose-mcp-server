@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.FreezePanes;
 
 /// <summary>
 ///     Handler for freezing panes in Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class FreezeExcelPanesHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class FreezeExcelPanesHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0)
     /// </param>
     /// <returns>Success message with freeze details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractFreezeParameters(parameters);
 
@@ -32,7 +35,7 @@ public class FreezeExcelPanesHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Frozen panes at row {p.Row}, column {p.Column}.");
+        return new SuccessResult { Message = $"Frozen panes at row {p.Row}, column {p.Column}." };
     }
 
     private static FreezeParameters ExtractFreezeParameters(OperationParameters parameters)

@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.File;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.File;
 
@@ -45,9 +46,11 @@ public class CreateWordDocumentHandlerTests : WordHandlerTestBase
             { "outputPath", outputPath }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("created successfully", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("created successfully", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(System.IO.File.Exists(outputPath));
         var fileInfo = new FileInfo(outputPath);
         Assert.True(fileInfo.Length > 0, "Created document should have content");
@@ -65,9 +68,11 @@ public class CreateWordDocumentHandlerTests : WordHandlerTestBase
             { "content", "Hello World" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("created successfully", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("created successfully", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(System.IO.File.Exists(outputPath));
         var fileInfo = new FileInfo(outputPath);
         Assert.True(fileInfo.Length > 0, "Created document should have content");
@@ -88,9 +93,11 @@ public class CreateWordDocumentHandlerTests : WordHandlerTestBase
             { "paperSize", "Letter" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("created successfully", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("created successfully", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(System.IO.File.Exists(outputPath));
         var fileInfo = new FileInfo(outputPath);
         Assert.True(fileInfo.Length > 0, "Created document should have content");
@@ -108,9 +115,11 @@ public class CreateWordDocumentHandlerTests : WordHandlerTestBase
             { "skipInitialContent", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("created successfully", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("created successfully", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(System.IO.File.Exists(outputPath));
         var fileInfo = new FileInfo(outputPath);
         Assert.True(fileInfo.Length > 0, "Created document should have content");

@@ -1,11 +1,14 @@
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.Page;
 
 /// <summary>
 ///     Handler for adding pages to PDF documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddPdfPageHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -22,7 +25,7 @@ public class AddPdfPageHandler : OperationHandlerBase<Document>
     ///     height (page height in points)
     /// </param>
     /// <returns>Success message with new page information.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractAddParameters(parameters);
 
@@ -37,7 +40,7 @@ public class AddPdfPageHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Added {p.Count} page(s). Total pages: {doc.Pages.Count}");
+        return new SuccessResult { Message = $"Added {p.Count} page(s). Total pages: {doc.Pages.Count}" };
     }
 
     /// <summary>

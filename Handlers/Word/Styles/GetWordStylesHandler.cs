@@ -1,5 +1,7 @@
 ﻿using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Word.Styles;
 using WordParagraph = Aspose.Words.Paragraph;
 using WordStyle = Aspose.Words.Style;
 
@@ -8,6 +10,7 @@ namespace AsposeMcpServer.Handlers.Word.Styles;
 /// <summary>
 ///     Handler for getting styles from Word documents.
 /// </summary>
+[ResultType(typeof(GetWordStylesResult))]
 public class GetWordStylesHandler : OperationHandlerBase<Document>
 {
     private const double FloatTolerance = 0.0001;
@@ -23,7 +26,7 @@ public class GetWordStylesHandler : OperationHandlerBase<Document>
     ///     Optional: includeBuiltIn
     /// </param>
     /// <returns>JSON string containing style information.</returns>
-    public override string
+    public override object
         Execute(OperationContext<Document> context,
             OperationParameters parameters)
     {
@@ -54,53 +57,40 @@ public class GetWordStylesHandler : OperationHandlerBase<Document>
                 .ToList();
         }
 
-        List<object> styleList = [];
+        List<StyleInfo> styleList = [];
         foreach (var style in paraStyles)
         {
             var font = style.Font;
             var paraFormat = style.ParagraphFormat;
 
-            var styleInfo = new Dictionary<string, object?>
+            var styleInfo = new StyleInfo
             {
-                ["name"] = style.Name,
-                ["builtIn"] = style.BuiltIn
+                Name = style.Name,
+                BuiltIn = style.BuiltIn,
+                BasedOn = string.IsNullOrEmpty(style.BaseStyleName) ? null : style.BaseStyleName,
+                Font = font.NameAscii == font.NameFarEast ? font.Name : null,
+                FontAscii = font.NameAscii != font.NameFarEast ? font.NameAscii : null,
+                FontFarEast = font.NameAscii != font.NameFarEast ? font.NameFarEast : null,
+                FontSize = font.Size,
+                Bold = font.Bold,
+                Italic = font.Italic,
+                Alignment = paraFormat.Alignment.ToString(),
+                SpaceBefore = Math.Abs(paraFormat.SpaceBefore) > FloatTolerance ? paraFormat.SpaceBefore : 0,
+                SpaceAfter = Math.Abs(paraFormat.SpaceAfter) > FloatTolerance ? paraFormat.SpaceAfter : 0
             };
-
-            if (!string.IsNullOrEmpty(style.BaseStyleName))
-                styleInfo["basedOn"] = style.BaseStyleName;
-
-            if (font.NameAscii != font.NameFarEast)
-            {
-                styleInfo["fontAscii"] = font.NameAscii;
-                styleInfo["fontFarEast"] = font.NameFarEast;
-            }
-            else
-            {
-                styleInfo["font"] = font.Name;
-            }
-
-            styleInfo["fontSize"] = font.Size;
-            if (font.Bold) styleInfo["bold"] = true;
-            if (font.Italic) styleInfo["italic"] = true;
-
-            styleInfo["alignment"] = paraFormat.Alignment.ToString();
-            if (Math.Abs(paraFormat.SpaceBefore) > FloatTolerance) styleInfo["spaceBefore"] = paraFormat.SpaceBefore;
-            if (Math.Abs(paraFormat.SpaceAfter) > FloatTolerance) styleInfo["spaceAfter"] = paraFormat.SpaceAfter;
 
             styleList.Add(styleInfo);
         }
 
-        var result = new
+        return new GetWordStylesResult
         {
-            count = paraStyles.Count,
-            includeBuiltIn = p.IncludeBuiltIn,
-            note = p.IncludeBuiltIn
+            Count = paraStyles.Count,
+            IncludeBuiltIn = p.IncludeBuiltIn,
+            Note = p.IncludeBuiltIn
                 ? null
                 : "Showing custom styles and built-in styles actually used in the document",
-            paragraphStyles = styleList
+            ParagraphStyles = styleList
         };
-
-        return JsonResult(result);
     }
 
     private static GetWordStylesParameters ExtractGetWordStylesParameters(OperationParameters parameters)

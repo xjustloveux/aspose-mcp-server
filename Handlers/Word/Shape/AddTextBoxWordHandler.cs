@@ -1,7 +1,10 @@
 using Aspose.Words;
 using Aspose.Words.Drawing;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.Shape;
@@ -9,6 +12,7 @@ namespace AsposeMcpServer.Handlers.Word.Shape;
 /// <summary>
 ///     Handler for adding textboxes to Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddTextBoxWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -24,7 +28,7 @@ public class AddTextBoxWordHandler : OperationHandlerBase<Document>
     ///     borderWidth, fontName, fontNameAscii, fontNameFarEast, fontSize, bold, textAlignment
     /// </param>
     /// <returns>Success message.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var textBoxParams = ExtractTextBoxParameters(parameters);
         if (string.IsNullOrEmpty(textBoxParams.Text))
@@ -42,7 +46,7 @@ public class AddTextBoxWordHandler : OperationHandlerBase<Document>
         builder.InsertNode(textBox);
 
         MarkModified(context);
-        return "Successfully added textbox.";
+        return new SuccessResult { Message = "Successfully added textbox." };
     }
 
     /// <summary>

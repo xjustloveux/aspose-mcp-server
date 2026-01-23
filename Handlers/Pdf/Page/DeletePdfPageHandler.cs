@@ -1,11 +1,14 @@
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.Page;
 
 /// <summary>
 ///     Handler for deleting pages from PDF documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeletePdfPageHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class DeletePdfPageHandler : OperationHandlerBase<Document>
     /// </param>
     /// <returns>Success message.</returns>
     /// <exception cref="ArgumentException">Thrown when pageIndex is out of range.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractDeleteParameters(parameters);
 
@@ -33,7 +36,7 @@ public class DeletePdfPageHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Deleted page {p.PageIndex} (remaining: {doc.Pages.Count}).");
+        return new SuccessResult { Message = $"Deleted page {p.PageIndex} (remaining: {doc.Pages.Count})." };
     }
 
     /// <summary>

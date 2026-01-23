@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.FreezePanes;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Excel.FreezePanes;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.FreezePanes;
 
@@ -38,9 +39,12 @@ public class GetExcelFreezePanesHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("not frozen", result.ToLower());
+        var result = Assert.IsType<GetFreezePanesResult>(res);
+
+        Assert.False(result.IsFrozen);
+        Assert.Contains("not frozen", result.Status.ToLower());
         AssertNotModified(context);
     }
 
@@ -51,24 +55,26 @@ public class GetExcelFreezePanesHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("frozen", result.ToLower());
-        Assert.Contains("isFrozen", result);
+        var result = Assert.IsType<GetFreezePanesResult>(res);
+
+        Assert.True(result.IsFrozen);
+        Assert.Contains("frozen", result.Status.ToLower());
     }
 
     [Fact]
-    public void Execute_ReturnsJsonFormat()
+    public void Execute_ReturnsWorksheetName()
     {
         var workbook = CreateEmptyWorkbook();
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("{", result);
-        Assert.Contains("}", result);
-        Assert.Contains("worksheetName", result);
+        var result = Assert.IsType<GetFreezePanesResult>(res);
+
+        Assert.NotNull(result.WorksheetName);
     }
 
     #endregion

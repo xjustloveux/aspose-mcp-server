@@ -1,6 +1,7 @@
-using Aspose.Pdf;
+﻿using Aspose.Pdf;
 using Aspose.Pdf.Text;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Pdf;
 
 namespace AsposeMcpServer.Tests.Tools.Pdf;
@@ -40,8 +41,8 @@ public class PdfFileToolTests : PdfTestBase
     {
         var outputPath = CreateTestFilePath("test_create.pdf");
         var result = _tool.Execute("create", outputPath: outputPath);
-
-        Assert.StartsWith("PDF document created", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("PDF document created", data.Message);
         Assert.True(File.Exists(outputPath));
 
         using var doc = new Document(outputPath);
@@ -57,8 +58,8 @@ public class PdfFileToolTests : PdfTestBase
 
         var result = _tool.Execute("merge", outputPath: outputPath,
             inputPaths: [pdf1Path, pdf2Path]);
-
-        Assert.StartsWith("Merged 2 PDF documents", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Merged 2 PDF documents", data.Message);
         using var document = new Document(outputPath);
         Assert.Equal(2, document.Pages.Count);
     }
@@ -71,8 +72,8 @@ public class PdfFileToolTests : PdfTestBase
         Directory.CreateDirectory(outputDir);
 
         var result = _tool.Execute("split", pdfPath, outputDir: outputDir, pagesPerFile: 1);
-
-        Assert.StartsWith("PDF split into 2 files", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("PDF split into 2 files", data.Message);
         var files = Directory.GetFiles(outputDir, "*.pdf");
         Assert.Equal(2, files.Length);
 
@@ -93,7 +94,7 @@ public class PdfFileToolTests : PdfTestBase
             compressImages: true, compressFonts: true, removeUnusedObjects: true);
 
         Assert.True(File.Exists(outputPath));
-        Assert.StartsWith("PDF compressed", result);
+        Assert.StartsWith("PDF compressed", GetResultData<string>(result));
     }
 
     [Fact]
@@ -103,8 +104,8 @@ public class PdfFileToolTests : PdfTestBase
         var outputPath = CreateTestFilePath("test_encrypt_output.pdf");
         var result = _tool.Execute("encrypt", pdfPath, outputPath: outputPath,
             userPassword: "user123", ownerPassword: "owner123");
-
-        Assert.StartsWith("PDF encrypted", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("PDF encrypted", data.Message);
         Assert.True(File.Exists(outputPath));
 
         using var decryptedDoc = new Document(outputPath, "user123");
@@ -118,8 +119,7 @@ public class PdfFileToolTests : PdfTestBase
         var outputPath = CreateTestFilePath("test_linearize_output.pdf");
 
         var result = _tool.Execute("linearize", pdfPath, outputPath: outputPath);
-
-        Assert.StartsWith("PDF linearized", result);
+        Assert.StartsWith("PDF linearized", GetResultData<string>(result));
         Assert.True(File.Exists(outputPath));
     }
 
@@ -135,7 +135,8 @@ public class PdfFileToolTests : PdfTestBase
     {
         var outputPath = CreateTestFilePath($"test_case_{operation}.pdf");
         var result = _tool.Execute(operation, outputPath: outputPath);
-        Assert.StartsWith("PDF document created", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("PDF document created", data.Message);
     }
 
     [Fact]
@@ -165,9 +166,10 @@ public class PdfFileToolTests : PdfTestBase
         var sessionId = OpenSession(pdfPath);
 
         var result = _tool.Execute("compress", sessionId: sessionId, compressImages: true);
-
-        Assert.StartsWith("PDF compressed", result);
-        Assert.Contains(sessionId, result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("PDF compressed", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -177,9 +179,10 @@ public class PdfFileToolTests : PdfTestBase
         var sessionId = OpenSession(pdfPath);
 
         var result = _tool.Execute("linearize", sessionId: sessionId);
-
-        Assert.StartsWith("PDF linearized", result);
-        Assert.Contains(sessionId, result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("PDF linearized", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -190,9 +193,10 @@ public class PdfFileToolTests : PdfTestBase
 
         var result = _tool.Execute("encrypt", sessionId: sessionId,
             userPassword: "user", ownerPassword: "owner");
-
-        Assert.StartsWith("PDF encrypted", result);
-        Assert.Contains(sessionId, result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("PDF encrypted", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -205,8 +209,10 @@ public class PdfFileToolTests : PdfTestBase
 
         var result = _tool.Execute("split", sessionId: sessionId,
             outputDir: outputDir, pagesPerFile: 1);
-
-        Assert.StartsWith("PDF split into 2 files", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("PDF split into 2 files", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var files = Directory.GetFiles(outputDir, "*.pdf");
         Assert.Equal(2, files.Length);
     }
@@ -228,8 +234,8 @@ public class PdfFileToolTests : PdfTestBase
         Directory.CreateDirectory(outputDir);
 
         var result = _tool.Execute("split", pdfPath1, sessionId, outputDir: outputDir, pagesPerFile: 1);
-
-        Assert.StartsWith("PDF split into 3 files", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("PDF split into 3 files", data.Message);
     }
 
     #endregion

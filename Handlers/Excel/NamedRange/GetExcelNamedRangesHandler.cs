@@ -1,11 +1,14 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Excel.NamedRange;
 
 namespace AsposeMcpServer.Handlers.Excel.NamedRange;
 
 /// <summary>
 ///     Handler for getting named ranges from Excel workbooks.
 /// </summary>
+[ResultType(typeof(GetNamedRangesResult))]
 public class GetExcelNamedRangesHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -17,37 +20,37 @@ public class GetExcelNamedRangesHandler : OperationHandlerBase<Workbook>
     /// <param name="context">The workbook context.</param>
     /// <param name="parameters">No parameters required.</param>
     /// <returns>JSON result with named ranges information.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var workbook = context.Document;
         var names = workbook.Worksheets.Names;
 
         if (names.Count == 0)
-            return JsonResult(new
+            return new GetNamedRangesResult
             {
-                count = 0,
-                items = Array.Empty<object>(),
-                message = "No named ranges found"
-            });
+                Count = 0,
+                Items = Array.Empty<NamedRangeInfo>(),
+                Message = "No named ranges found"
+            };
 
-        List<object> nameList = [];
+        List<NamedRangeInfo> nameList = [];
         for (var i = 0; i < names.Count; i++)
         {
             var namedRange = names[i];
-            nameList.Add(new
+            nameList.Add(new NamedRangeInfo
             {
-                index = i,
-                name = namedRange.Text,
-                reference = namedRange.RefersTo,
-                comment = namedRange.Comment,
-                isVisible = namedRange.IsVisible
+                Index = i,
+                Name = namedRange.Text,
+                Reference = namedRange.RefersTo,
+                Comment = namedRange.Comment,
+                IsVisible = namedRange.IsVisible
             });
         }
 
-        return JsonResult(new
+        return new GetNamedRangesResult
         {
-            count = names.Count,
-            items = nameList
-        });
+            Count = names.Count,
+            Items = nameList
+        };
     }
 }

@@ -1,5 +1,7 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 using static Aspose.Words.ConvertUtil;
 using WordParagraph = Aspose.Words.Paragraph;
 
@@ -8,6 +10,7 @@ namespace AsposeMcpServer.Handlers.Word.List;
 /// <summary>
 ///     Handler for setting list format in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetWordListFormatHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -22,7 +25,7 @@ public class SetWordListFormatHandler : OperationHandlerBase<Document>
     ///     Optional: numberStyle, indentLevel, leftIndent, firstLineIndent
     /// </param>
     /// <returns>Success message with format changes.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractSetListFormatParameters(parameters);
 
@@ -89,7 +92,7 @@ public class SetWordListFormatHandler : OperationHandlerBase<Document>
         else
             result += "No change parameters provided";
 
-        return Success(result);
+        return new SuccessResult { Message = result };
     }
 
     private static SetListFormatParameters ExtractSetListFormatParameters(OperationParameters parameters)

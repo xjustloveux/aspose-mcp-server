@@ -1,6 +1,7 @@
-using System.Text.Json;
-using Aspose.Cells;
-using AsposeMcpServer.Tests.Helpers;
+﻿using Aspose.Cells;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Excel.FreezePanes;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Excel;
 
 namespace AsposeMcpServer.Tests.Tools.Excel;
@@ -37,7 +38,8 @@ public class ExcelFreezePanesToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbookWithData("test_freeze.xlsx", 10, 5);
         var outputPath = CreateTestFilePath("test_freeze_output.xlsx");
         var result = _tool.Execute("freeze", workbookPath, row: 2, column: 1, outputPath: outputPath);
-        Assert.StartsWith("Frozen panes", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Frozen panes", data.Message);
         using var workbook = new Workbook(outputPath);
         Assert.Equal(PaneStateType.Frozen, workbook.Worksheets[0].PaneState);
     }
@@ -48,7 +50,8 @@ public class ExcelFreezePanesToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithFrozenPanes("test_unfreeze.xlsx");
         var outputPath = CreateTestFilePath("test_unfreeze_output.xlsx");
         var result = _tool.Execute("unfreeze", workbookPath, outputPath: outputPath);
-        Assert.StartsWith("Unfrozen panes", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Unfrozen panes", data.Message);
         using var workbook = new Workbook(outputPath);
         Assert.NotEqual(PaneStateType.Frozen, workbook.Worksheets[0].PaneState);
     }
@@ -58,8 +61,8 @@ public class ExcelFreezePanesToolTests : ExcelTestBase
     {
         var workbookPath = CreateWorkbookWithFrozenPanes("test_get_frozen.xlsx");
         var result = _tool.Execute("get", workbookPath);
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.GetProperty("isFrozen").GetBoolean());
+        var data = GetResultData<GetFreezePanesResult>(result);
+        Assert.True(data.IsFrozen);
     }
 
     [Fact]
@@ -67,8 +70,8 @@ public class ExcelFreezePanesToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbookWithData("test_get_not_frozen.xlsx", 10, 5);
         var result = _tool.Execute("get", workbookPath);
-        var json = JsonDocument.Parse(result);
-        Assert.False(json.RootElement.GetProperty("isFrozen").GetBoolean());
+        var data = GetResultData<GetFreezePanesResult>(result);
+        Assert.False(data.IsFrozen);
     }
 
     #endregion
@@ -84,7 +87,8 @@ public class ExcelFreezePanesToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbookWithData($"test_case_{operation}.xlsx", 10, 5);
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.xlsx");
         var result = _tool.Execute(operation, workbookPath, row: 1, column: 1, outputPath: outputPath);
-        Assert.StartsWith("Frozen panes", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Frozen panes", data.Message);
     }
 
     [Fact]
@@ -105,7 +109,10 @@ public class ExcelFreezePanesToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbookWithData("test_session_freeze.xlsx", 10, 5);
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("freeze", sessionId: sessionId, row: 2, column: 1);
-        Assert.StartsWith("Frozen panes", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Frozen panes", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.Equal(PaneStateType.Frozen, workbook.Worksheets[0].PaneState);
     }
@@ -116,7 +123,10 @@ public class ExcelFreezePanesToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithFrozenPanes("test_session_unfreeze.xlsx");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("unfreeze", sessionId: sessionId);
-        Assert.StartsWith("Unfrozen panes", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Unfrozen panes", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.NotEqual(PaneStateType.Frozen, workbook.Worksheets[0].PaneState);
     }
@@ -127,8 +137,8 @@ public class ExcelFreezePanesToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithFrozenPanes("test_session_get.xlsx");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("get", sessionId: sessionId);
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.GetProperty("isFrozen").GetBoolean());
+        var data = GetResultData<GetFreezePanesResult>(result);
+        Assert.True(data.IsFrozen);
     }
 
     [Fact]
@@ -150,7 +160,8 @@ public class ExcelFreezePanesToolTests : ExcelTestBase
 
         var sessionId = OpenSession(sessionWorkbook);
         var result = _tool.Execute("get", pathWorkbook, sessionId);
-        Assert.Contains("SessionSheet", result);
+        var data = GetResultData<GetFreezePanesResult>(result);
+        Assert.Contains("SessionSheet", data.WorksheetName);
     }
 
     #endregion

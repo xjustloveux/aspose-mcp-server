@@ -1,11 +1,15 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Table;
 
 /// <summary>
 ///     Handler for deleting tables from Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeleteWordTableHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,7 +24,7 @@ public class DeleteWordTableHandler : OperationHandlerBase<Document>
     /// </param>
     /// <returns>Success message with remaining table count.</returns>
     /// <exception cref="ArgumentException">Thrown when tableIndex or sectionIndex is out of range.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractDeleteWordTableParameters(parameters);
 
@@ -34,7 +38,8 @@ public class DeleteWordTableHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Successfully deleted table #{p.TableIndex}. Remaining tables: {tables.Count - 1}.");
+        return new SuccessResult
+            { Message = $"Successfully deleted table #{p.TableIndex}. Remaining tables: {tables.Count - 1}." };
     }
 
     private static DeleteWordTableParameters ExtractDeleteWordTableParameters(OperationParameters parameters)

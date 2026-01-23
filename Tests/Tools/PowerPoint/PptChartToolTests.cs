@@ -1,7 +1,9 @@
-using Aspose.Slides;
+﻿using Aspose.Slides;
 using Aspose.Slides.Charts;
 using Aspose.Slides.Export;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.PowerPoint.Chart;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.PowerPoint;
 
 namespace AsposeMcpServer.Tests.Tools.PowerPoint;
@@ -38,8 +40,9 @@ public class PptChartToolTests : PptTestBase
         var outputPath = CreateTestFilePath("test_add_chart_output.pptx");
         var result = _tool.Execute("add", 0, pptPath, chartType: "Column", x: 100, y: 100, width: 400, height: 300,
             outputPath: outputPath);
-        Assert.StartsWith("Chart", result);
-        Assert.Contains("added to slide", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Chart", data.Message);
+        Assert.Contains("added to slide", data.Message);
         using var presentation = new Presentation(outputPath);
         var charts = presentation.Slides[0].Shapes.OfType<IChart>().ToList();
         Assert.Single(charts);
@@ -51,8 +54,9 @@ public class PptChartToolTests : PptTestBase
         var pptPath = CreatePresentationWithChart("test_delete_chart.pptx");
         var outputPath = CreateTestFilePath("test_delete_chart_output.pptx");
         var result = _tool.Execute("delete", 0, pptPath, shapeIndex: 0, outputPath: outputPath);
-        Assert.StartsWith("Chart", result);
-        Assert.Contains("deleted from slide", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Chart", data.Message);
+        Assert.Contains("deleted from slide", data.Message);
         using var presentation = new Presentation(outputPath);
         var charts = presentation.Slides[0].Shapes.OfType<IChart>().ToList();
         Assert.Empty(charts);
@@ -63,9 +67,10 @@ public class PptChartToolTests : PptTestBase
     {
         var pptPath = CreatePresentationWithChart("test_get_data.pptx");
         var result = _tool.Execute("get_data", 0, pptPath, shapeIndex: 0);
-        Assert.Contains("chartType", result);
-        Assert.Contains("categories", result);
-        Assert.Contains("series", result);
+        var data = GetResultData<GetChartDataPptResult>(result);
+        Assert.NotNull(data.ChartType);
+        Assert.NotNull(data.Categories);
+        Assert.NotNull(data.Series);
     }
 
     #endregion
@@ -82,8 +87,9 @@ public class PptChartToolTests : PptTestBase
         var outputPath = CreateTestFilePath($"test_case_add_{operation}_output.pptx");
         var result = _tool.Execute(operation, 0, pptPath, chartType: "Column", x: 100, y: 100, width: 400, height: 300,
             outputPath: outputPath);
-        Assert.StartsWith("Chart", result);
-        Assert.Contains("added to slide", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Chart", data.Message);
+        Assert.Contains("added to slide", data.Message);
     }
 
     [Fact]
@@ -107,10 +113,12 @@ public class PptChartToolTests : PptTestBase
         var initialCount = ppt.Slides[0].Shapes.OfType<IChart>().Count();
         var result = _tool.Execute("add", 0, sessionId: sessionId, chartType: "Column", x: 100, y: 100, width: 400,
             height: 300);
-        Assert.StartsWith("Chart", result);
-        Assert.Contains("added to slide", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Chart", data.Message);
+        Assert.Contains("added to slide", data.Message);
         Assert.True(ppt.Slides[0].Shapes.OfType<IChart>().Count() > initialCount);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -121,9 +129,12 @@ public class PptChartToolTests : PptTestBase
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var initialCount = ppt.Slides[0].Shapes.OfType<IChart>().Count();
         var result = _tool.Execute("delete", 0, sessionId: sessionId, shapeIndex: 0);
-        Assert.StartsWith("Chart", result);
-        Assert.Contains("deleted from slide", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Chart", data.Message);
+        Assert.Contains("deleted from slide", data.Message);
         Assert.True(ppt.Slides[0].Shapes.OfType<IChart>().Count() < initialCount);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -132,8 +143,11 @@ public class PptChartToolTests : PptTestBase
         var pptPath = CreatePresentationWithChart("test_session_getdata.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("get_data", 0, sessionId: sessionId, shapeIndex: 0);
-        Assert.Contains("chartType", result);
-        Assert.Contains("categories", result);
+        var data = GetResultData<GetChartDataPptResult>(result);
+        Assert.NotNull(data.ChartType);
+        Assert.NotNull(data.Categories);
+        var output = GetResultOutput<GetChartDataPptResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -150,7 +164,8 @@ public class PptChartToolTests : PptTestBase
         var pptPath2 = CreatePresentationWithChart("test_session_chart.pptx", ChartType.Pie);
         var sessionId = OpenSession(pptPath2);
         var result = _tool.Execute("get_data", 0, pptPath1, sessionId, shapeIndex: 0);
-        Assert.Contains("Pie", result);
+        var data = GetResultData<GetChartDataPptResult>(result);
+        Assert.Contains("Pie", data.ChartType);
     }
 
     #endregion

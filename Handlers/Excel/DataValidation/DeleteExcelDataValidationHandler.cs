@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.DataValidation;
 
 /// <summary>
 ///     Handler for deleting data validation from Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeleteExcelDataValidationHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class DeleteExcelDataValidationHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0)
     /// </param>
     /// <returns>Success message with deletion details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var deleteParams = ExtractDeleteParameters(parameters);
 
@@ -36,7 +39,8 @@ public class DeleteExcelDataValidationHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Deleted data validation #{deleteParams.ValidationIndex} (remaining: {validations.Count}).");
+        return new SuccessResult
+            { Message = $"Deleted data validation #{deleteParams.ValidationIndex} (remaining: {validations.Count})." };
     }
 
     private static DeleteParameters ExtractDeleteParameters(OperationParameters parameters)

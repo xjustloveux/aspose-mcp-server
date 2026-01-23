@@ -1,12 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Animation;
 
 /// <summary>
 ///     Handler for adding animations to PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddPptAnimationHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class AddPptAnimationHandler : OperationHandlerBase<Presentation>
     ///     Optional: effectType, effectSubtype, triggerType
     /// </param>
     /// <returns>Success message with animation details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractAddAnimationParameters(parameters);
 
@@ -38,7 +41,10 @@ public class AddPptAnimationHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Animation '{p.EffectType ?? "Fade"}' added to shape {p.ShapeIndex} on slide {p.SlideIndex}.");
+        return new SuccessResult
+        {
+            Message = $"Animation '{p.EffectType ?? "Fade"}' added to shape {p.ShapeIndex} on slide {p.SlideIndex}."
+        };
     }
 
     /// <summary>

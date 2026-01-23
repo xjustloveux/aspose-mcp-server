@@ -1,13 +1,17 @@
 using System.Drawing.Imaging;
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Image;
 
 /// <summary>
 ///     Handler for extracting embedded images from PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class ExtractPptImageHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -22,7 +26,7 @@ public class ExtractPptImageHandler : OperationHandlerBase<Presentation>
     ///     Optional: outputDir, format, skipDuplicates
     /// </param>
     /// <returns>Success message with extraction details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var path = ValidateSourcePath(context.SourcePath);
         var extractParams = ExtractImageParameters(parameters, path);
@@ -31,7 +35,7 @@ public class ExtractPptImageHandler : OperationHandlerBase<Presentation>
 
         var (count, skippedCount) = ExtractAllImages(context.Document, extractParams);
 
-        return Success(BuildResultMessage(count, skippedCount, extractParams));
+        return new SuccessResult { Message = BuildResultMessage(count, skippedCount, extractParams) };
     }
 
     /// <summary>

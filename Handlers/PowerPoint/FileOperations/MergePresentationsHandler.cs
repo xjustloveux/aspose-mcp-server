@@ -1,13 +1,16 @@
 using Aspose.Slides;
 using Aspose.Slides.Export;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.FileOperations;
 
 /// <summary>
 ///     Handler for merging multiple PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class MergePresentationsHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -22,7 +25,7 @@ public class MergePresentationsHandler : OperationHandlerBase<Presentation>
     ///     Optional: keepSourceFormatting
     /// </param>
     /// <returns>Success message with output path and slide count.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractMergeParameters(parameters);
 
@@ -59,8 +62,11 @@ public class MergePresentationsHandler : OperationHandlerBase<Presentation>
 
         masterPresentation.Save(savePath, SaveFormat.Pptx);
 
-        return Success(
-            $"Merged {validPaths.Count} presentations (Total slides: {masterPresentation.Slides.Count}). Output: {savePath}");
+        return new SuccessResult
+        {
+            Message =
+                $"Merged {validPaths.Count} presentations (Total slides: {masterPresentation.Slides.Count}). Output: {savePath}"
+        };
     }
 
     /// <summary>

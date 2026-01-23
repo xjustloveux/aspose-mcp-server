@@ -1,7 +1,8 @@
 using Aspose.Words;
 using Aspose.Words.Tables;
 using AsposeMcpServer.Handlers.Word.Table;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Table;
 
@@ -54,9 +55,11 @@ public class InsertRowWordTableHandlerTests : WordHandlerTestBase
             { "insertBefore", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("index 1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("index 1", result.Message);
         Assert.Equal(4, GetFirstTable(doc).Rows.Count);
     }
 
@@ -71,9 +74,11 @@ public class InsertRowWordTableHandlerTests : WordHandlerTestBase
             { "insertBefore", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("index 2", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("index 2", result.Message);
         Assert.Equal(4, GetFirstTable(doc).Rows.Count);
     }
 

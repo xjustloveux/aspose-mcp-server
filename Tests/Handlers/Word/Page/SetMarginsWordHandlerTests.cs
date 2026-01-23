@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Page;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Page;
 
@@ -47,9 +48,11 @@ public class SetMarginsWordHandlerTests : WordHandlerTestBase
             { "right", 54.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("margins updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("margins updated", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(72.0, doc.Sections[0].PageSetup.TopMargin);
         Assert.Equal(72.0, doc.Sections[0].PageSetup.BottomMargin);
         Assert.Equal(54.0, doc.Sections[0].PageSetup.LeftMargin);
@@ -67,9 +70,11 @@ public class SetMarginsWordHandlerTests : WordHandlerTestBase
             { "top", 100.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("margins updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("margins updated", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(100.0, doc.Sections[0].PageSetup.TopMargin);
     }
 
@@ -84,9 +89,11 @@ public class SetMarginsWordHandlerTests : WordHandlerTestBase
             { "top", 50.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("1 section", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("1 section", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -106,9 +113,11 @@ public class SetMarginsWordHandlerTests : WordHandlerTestBase
             { "right", 0.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("margins updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("margins updated", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(0.0, doc.Sections[0].PageSetup.TopMargin);
     }
 
@@ -122,9 +131,11 @@ public class SetMarginsWordHandlerTests : WordHandlerTestBase
             { "top", -10.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("margins updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("margins updated", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -164,9 +175,11 @@ public class SetMarginsWordHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("margins updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("margins updated", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

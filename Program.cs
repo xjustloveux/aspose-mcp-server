@@ -5,6 +5,7 @@ using System.Text;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Security;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Core.Tasks;
 using AsposeMcpServer.Core.Tracking;
 using AsposeMcpServer.Core.Transport;
 
@@ -16,6 +17,8 @@ var transportConfig = TransportConfig.LoadFromArgs(args);
 var sessionConfig = SessionConfig.LoadFromArgs(args);
 var authConfig = AuthConfig.LoadFromArgs(args);
 var trackingConfig = TrackingConfig.LoadFromArgs(args);
+var originConfig = OriginValidationConfig.LoadFromArgs(args);
+var taskConfig = TaskConfig.LoadFromArgs(args);
 
 try
 {
@@ -24,6 +27,7 @@ try
     sessionConfig.Validate();
     authConfig.Validate();
     trackingConfig.Validate();
+    taskConfig.Validate();
 }
 catch (InvalidOperationException ex)
 {
@@ -36,6 +40,8 @@ Console.Error.WriteLine($"[INFO] Aspose MCP Server - Enabled categories: {toolFi
 Console.Error.WriteLine($"[INFO] Transport mode: {transportConfig.Mode}");
 if (sessionConfig.Enabled)
     Console.Error.WriteLine($"[INFO] Session isolation mode: {sessionConfig.IsolationMode}");
+if (taskConfig.Enabled)
+    Console.Error.WriteLine($"[INFO] Async tasks enabled (max concurrent: {taskConfig.MaxConcurrentTasks})");
 await Console.Error.FlushAsync();
 
 LicenseManager.SetLicense(config);
@@ -77,10 +83,12 @@ IHost CreateStdioHost()
     builder.Services.AddSingleton(authConfig.ApiKey);
     builder.Services.AddSingleton(authConfig.Jwt);
     builder.Services.AddSingleton(trackingConfig);
+    builder.Services.AddSingleton(taskConfig);
     builder.Services.AddSingleton<DocumentSessionManager>();
     builder.Services.AddSingleton<TempFileManager>();
     builder.Services.AddHostedService(sp => sp.GetRequiredService<TempFileManager>());
     builder.Services.AddSingleton<ISessionIdentityAccessor, StdioSessionIdentityAccessor>();
+    RegisterTaskServices(builder.Services);
 
     builder.Services.AddMcpServer()
         .WithStdioServerTransport()
@@ -96,6 +104,7 @@ IHost CreateSseHost(TransportConfig transport)
     var app = builder.Build();
 
     LogServerStartup($"SSE server listening on http://{transport.Host}:{transport.Port}");
+    ConfigureOriginMiddleware(app);
     ConfigureAuthMiddleware(app);
     ConfigureTrackingMiddleware(app);
     MapHealthEndpoints(app);
@@ -110,6 +119,7 @@ IHost CreateWebSocketHost(TransportConfig transport)
     var app = builder.Build();
 
     LogServerStartup($"WebSocket server listening on ws://{transport.Host}:{transport.Port}");
+    ConfigureOriginMiddleware(app);
     ConfigureAuthMiddleware(app);
     ConfigureTrackingMiddleware(app);
 
@@ -157,12 +167,23 @@ void RegisterCoreServices(WebApplicationBuilder builder)
     builder.Services.AddSingleton(authConfig.ApiKey);
     builder.Services.AddSingleton(authConfig.Jwt);
     builder.Services.AddSingleton(trackingConfig);
+    builder.Services.AddSingleton(taskConfig);
     builder.Services.AddSingleton<DocumentSessionManager>();
     builder.Services.AddSingleton<TempFileManager>();
     builder.Services.AddHostedService(sp => sp.GetRequiredService<TempFileManager>());
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddSingleton<ISessionIdentityAccessor, HttpContextSessionIdentityAccessor>();
     builder.Services.AddHttpClient();
+    RegisterTaskServices(builder.Services);
+}
+
+void RegisterTaskServices(IServiceCollection services)
+{
+    if (!taskConfig.Enabled) return;
+
+    services.AddSingleton<TaskStore>();
+    services.AddSingleton<TaskExecutor>();
+    services.AddHostedService<TaskCleanupService>();
 }
 
 void RegisterAuthServices(WebApplicationBuilder builder)
@@ -176,6 +197,15 @@ void RegisterAuthServices(WebApplicationBuilder builder)
 void LogServerStartup(string message)
 {
     Console.Error.WriteLine($"[INFO] {message}");
+}
+
+void ConfigureOriginMiddleware(WebApplication app)
+{
+    if (originConfig.Enabled)
+    {
+        Console.Error.WriteLine($"[INFO] Origin validation enabled (localhost: {originConfig.AllowLocalhost})");
+        app.UseMiddleware<OriginValidationMiddleware>(originConfig);
+    }
 }
 
 void ConfigureAuthMiddleware(WebApplication app)

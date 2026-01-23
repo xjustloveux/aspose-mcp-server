@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.DataValidation;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.DataValidation;
 
@@ -54,9 +55,11 @@ public class DeleteExcelDataValidationHandlerTests : ExcelHandlerTestBase
             { "validationIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("remaining: 2", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("remaining: 2", result.Message);
     }
 
     #endregion
@@ -73,9 +76,11 @@ public class DeleteExcelDataValidationHandlerTests : ExcelHandlerTestBase
             { "validationIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Deleted", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Deleted", result.Message);
         Assert.Single(workbook.Worksheets[0].Validations);
         AssertModified(context);
     }

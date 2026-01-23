@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.File;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.File;
 
@@ -47,10 +48,12 @@ public class SplitWordDocumentHandlerTests : WordHandlerTestBase
             { "outputDir", outputDir }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("split", result.ToLower());
-        Assert.Contains("3", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("split", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("3", result.Message);
         Assert.True(Directory.Exists(outputDir));
 
         var splitFiles = Directory.GetFiles(outputDir, "*.docx");
@@ -78,10 +81,12 @@ public class SplitWordDocumentHandlerTests : WordHandlerTestBase
             { "splitBy", "section" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("split", result.ToLower());
-        Assert.Contains("section", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("split", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("section", result.Message, StringComparison.OrdinalIgnoreCase);
 
         var splitFiles = Directory.GetFiles(outputDir, "*.docx");
         Assert.True(splitFiles.Length > 0, "Split files should be created");
@@ -105,10 +110,12 @@ public class SplitWordDocumentHandlerTests : WordHandlerTestBase
             { "splitBy", "page" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("split", result.ToLower());
-        Assert.Contains("page", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("split", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("page", result.Message, StringComparison.OrdinalIgnoreCase);
 
         var splitFiles = Directory.GetFiles(outputDir, "*.docx");
         Assert.True(splitFiles.Length > 0, "Split files should be created");

@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.PowerPoint.Layout;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Layout;
 
@@ -30,9 +31,11 @@ public class ApplyMasterHandlerTests : PptHandlerTestBase
             { "layoutIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("applied", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("applied", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -48,10 +51,12 @@ public class ApplyMasterHandlerTests : PptHandlerTestBase
             { "slideIndices", "[0, 1]" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("2", result);
-        Assert.Contains("applied", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("2", result.Message);
+        Assert.Contains("applied", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 

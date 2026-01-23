@@ -1,11 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.PowerPoint.Text;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Text;
 
 /// <summary>
 ///     Handler for replacing text in PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(TextReplaceResult))]
 public class ReplacePptTextHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -21,7 +25,7 @@ public class ReplacePptTextHandler : OperationHandlerBase<Presentation>
     ///     Optional: matchCase (default: false).
     /// </param>
     /// <returns>Success message with replacement count.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var replaceParams = ExtractReplaceParameters(parameters);
 
@@ -35,8 +39,12 @@ public class ReplacePptTextHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success(
-            $"Replaced '{replaceParams.FindText}' with '{replaceParams.ReplaceText}' ({replacements} occurrences).");
+        return new TextReplaceResult
+        {
+            FindText = replaceParams.FindText,
+            ReplaceText = replaceParams.ReplaceText,
+            ReplacementCount = replacements
+        };
     }
 
     /// <summary>

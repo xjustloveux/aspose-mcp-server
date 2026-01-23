@@ -1,6 +1,7 @@
-using System.Text.Json;
-using Aspose.Cells;
-using AsposeMcpServer.Tests.Helpers;
+﻿using Aspose.Cells;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Excel.MergeCells;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Excel;
 
 namespace AsposeMcpServer.Tests.Tools.Excel;
@@ -46,7 +47,8 @@ public class ExcelMergeCellsToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbookWithData("test_merge.xlsx", 3);
         var outputPath = CreateTestFilePath("test_merge_output.xlsx");
         var result = _tool.Execute("merge", workbookPath, range: "A1:C1", outputPath: outputPath);
-        Assert.StartsWith("Range A1:C1 merged", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Range A1:C1 merged", data.Message);
         using var workbook = new Workbook(outputPath);
         Assert.True(workbook.Worksheets[0].Cells.MergedCells.Count > 0);
     }
@@ -57,7 +59,8 @@ public class ExcelMergeCellsToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithMergedCells("test_unmerge.xlsx");
         var outputPath = CreateTestFilePath("test_unmerge_output.xlsx");
         var result = _tool.Execute("unmerge", workbookPath, range: "A1:C1", outputPath: outputPath);
-        Assert.StartsWith("Range A1:C1 unmerged", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Range A1:C1 unmerged", data.Message);
         using var workbook = new Workbook(outputPath);
         Assert.Empty(workbook.Worksheets[0].Cells.MergedCells);
     }
@@ -67,8 +70,8 @@ public class ExcelMergeCellsToolTests : ExcelTestBase
     {
         var workbookPath = CreateWorkbookWithMergedCells("test_get.xlsx");
         var result = _tool.Execute("get", workbookPath);
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(1, json.RootElement.GetProperty("count").GetInt32());
+        var data = GetResultData<GetMergedCellsResult>(result);
+        Assert.Equal(1, data.Count);
     }
 
     [Fact]
@@ -76,8 +79,8 @@ public class ExcelMergeCellsToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbook("test_get_empty.xlsx");
         var result = _tool.Execute("get", workbookPath);
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(0, json.RootElement.GetProperty("count").GetInt32());
+        var data = GetResultData<GetMergedCellsResult>(result);
+        Assert.Equal(0, data.Count);
     }
 
     #endregion
@@ -93,7 +96,8 @@ public class ExcelMergeCellsToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbookWithData($"test_case_{operation}.xlsx", 3);
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.xlsx");
         var result = _tool.Execute(operation, workbookPath, range: "A1:B1", outputPath: outputPath);
-        Assert.StartsWith("Range A1:B1 merged", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Range A1:B1 merged", data.Message);
     }
 
     [Fact]
@@ -114,7 +118,8 @@ public class ExcelMergeCellsToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbookWithData("test_session_merge.xlsx");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("merge", sessionId: sessionId, range: "A1:C1");
-        Assert.StartsWith("Range A1:C1 merged", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Range A1:C1 merged", data.Message);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.True(workbook.Worksheets[0].Cells.MergedCells.Count > 0);
     }
@@ -125,7 +130,8 @@ public class ExcelMergeCellsToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithMergedCells("test_session_unmerge.xlsx");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("unmerge", sessionId: sessionId, range: "A1:C1");
-        Assert.StartsWith("Range A1:C1 unmerged", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Range A1:C1 unmerged", data.Message);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.Empty(workbook.Worksheets[0].Cells.MergedCells);
     }
@@ -136,8 +142,8 @@ public class ExcelMergeCellsToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithMergedCells("test_session_get.xlsx");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("get", sessionId: sessionId);
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(1, json.RootElement.GetProperty("count").GetInt32());
+        var data = GetResultData<GetMergedCellsResult>(result);
+        Assert.Equal(1, data.Count);
     }
 
     [Fact]
@@ -153,7 +159,8 @@ public class ExcelMergeCellsToolTests : ExcelTestBase
         var workbookPath2 = CreateWorkbookWithMergedCells("test_session_file.xlsx", "A1:D1", "SessionMerged");
         var sessionId = OpenSession(workbookPath2);
         var result = _tool.Execute("get", workbookPath1, sessionId);
-        Assert.Contains("SessionMerged", result);
+        var data = GetResultData<GetMergedCellsResult>(result);
+        Assert.Contains(data.Items, item => item.Value == "SessionMerged");
     }
 
     #endregion

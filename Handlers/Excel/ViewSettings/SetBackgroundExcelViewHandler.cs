@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.ViewSettings;
 
 /// <summary>
 ///     Handler for setting or removing background image in Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetBackgroundExcelViewHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -22,7 +25,7 @@ public class SetBackgroundExcelViewHandler : OperationHandlerBase<Workbook>
     /// <returns>Success message.</returns>
     /// <exception cref="ArgumentException">Thrown when neither imagePath nor removeBackground is provided.</exception>
     /// <exception cref="FileNotFoundException">Thrown when the image file is not found.</exception>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractSetBackgroundParameters(parameters);
 
@@ -45,9 +48,12 @@ public class SetBackgroundExcelViewHandler : OperationHandlerBase<Workbook>
         }
 
         MarkModified(context);
-        return p.RemoveBackground
-            ? Success($"Background image removed from sheet {p.SheetIndex}.")
-            : Success($"Background image set for sheet {p.SheetIndex}.");
+        return new SuccessResult
+        {
+            Message = p.RemoveBackground
+                ? $"Background image removed from sheet {p.SheetIndex}."
+                : $"Background image set for sheet {p.SheetIndex}."
+        };
     }
 
     /// <summary>

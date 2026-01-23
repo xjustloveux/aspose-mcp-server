@@ -1,12 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Chart;
 
 /// <summary>
 ///     Handler for deleting charts from PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeletePptChartHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class DeletePptChartHandler : OperationHandlerBase<Presentation>
     ///     Required: slideIndex, shapeIndex
     /// </param>
     /// <returns>Success message with deletion details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractDeleteChartParameters(parameters);
 
@@ -32,7 +35,7 @@ public class DeletePptChartHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Chart {p.ChartIndex} deleted from slide {p.SlideIndex}.");
+        return new SuccessResult { Message = $"Chart {p.ChartIndex} deleted from slide {p.SlideIndex}." };
     }
 
     /// <summary>

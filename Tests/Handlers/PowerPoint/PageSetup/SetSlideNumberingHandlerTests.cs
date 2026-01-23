@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.PowerPoint.PageSetup;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.PageSetup;
 
@@ -29,9 +30,11 @@ public class SetSlideNumberingHandlerTests : PptHandlerTestBase
             { "showSlideNumber", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("shown", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("shown", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -45,9 +48,11 @@ public class SetSlideNumberingHandlerTests : PptHandlerTestBase
             { "showSlideNumber", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("hidden", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("hidden", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -60,9 +65,11 @@ public class SetSlideNumberingHandlerTests : PptHandlerTestBase
             { "firstNumber", 5 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("5", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("5", result.Message);
         Assert.Equal(5, presentation.FirstSlideNumber);
     }
 
@@ -73,9 +80,11 @@ public class SetSlideNumberingHandlerTests : PptHandlerTestBase
         var context = CreateContext(presentation);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("1", result.Message);
     }
 
     #endregion

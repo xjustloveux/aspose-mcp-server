@@ -1,5 +1,7 @@
-using Aspose.Words;
-using AsposeMcpServer.Tests.Helpers;
+﻿using Aspose.Words;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Word.Paragraph;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Word;
 
 namespace AsposeMcpServer.Tests.Tools.Word;
@@ -36,9 +38,10 @@ public class WordParagraphToolTests : WordTestBase
     {
         var docPath = CreateWordDocumentWithParagraphs("test_get.docx", "First", "Second", "Third");
         var result = _tool.Execute("get", docPath);
-        Assert.Contains("First", result);
-        Assert.Contains("Second", result);
-        Assert.Contains("Third", result);
+        var data = GetResultData<GetParagraphsWordResult>(result);
+        Assert.Contains(data.Paragraphs, p => p.Text.Contains("First"));
+        Assert.Contains(data.Paragraphs, p => p.Text.Contains("Second"));
+        Assert.Contains(data.Paragraphs, p => p.Text.Contains("Third"));
     }
 
     [Fact]
@@ -66,7 +69,8 @@ public class WordParagraphToolTests : WordTestBase
     {
         var docPath = CreateWordDocumentWithContent("test_get_format.docx", "Formatted text");
         var result = _tool.Execute("get_format", docPath, paragraphIndex: 0);
-        Assert.Contains("alignment", result);
+        var data = GetResultData<GetParagraphFormatWordResult>(result);
+        Assert.NotNull(data.ParagraphFormat.Alignment);
     }
 
     [Fact]
@@ -76,7 +80,8 @@ public class WordParagraphToolTests : WordTestBase
         var outputPath = CreateTestFilePath("test_merge_output.docx");
         var result = _tool.Execute("merge", docPath, outputPath: outputPath, startParagraphIndex: 0,
             endParagraphIndex: 2);
-        Assert.StartsWith("Paragraphs merged", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Paragraphs merged", data.Message);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -121,7 +126,10 @@ public class WordParagraphToolTests : WordTestBase
         var docPath = CreateWordDocumentWithContent("test_session_insert.docx", "Existing content");
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("insert", sessionId: sessionId, text: "New paragraph", paragraphIndex: 0);
-        Assert.StartsWith("Paragraph inserted successfully", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Paragraph inserted successfully", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var doc = SessionManager.GetDocument<Document>(sessionId);
         var paragraphs = GetParagraphs(doc);
         Assert.Contains(paragraphs, p => p.GetText().Contains("New paragraph"));
@@ -133,9 +141,12 @@ public class WordParagraphToolTests : WordTestBase
         var docPath = CreateWordDocumentWithParagraphs("test_session_get.docx", "First", "Second", "Third");
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("get", sessionId: sessionId);
-        Assert.Contains("First", result);
-        Assert.Contains("Second", result);
-        Assert.Contains("Third", result);
+        var data = GetResultData<GetParagraphsWordResult>(result);
+        Assert.Contains(data.Paragraphs, p => p.Text.Contains("First"));
+        Assert.Contains(data.Paragraphs, p => p.Text.Contains("Second"));
+        Assert.Contains(data.Paragraphs, p => p.Text.Contains("Third"));
+        var output = GetResultOutput<GetParagraphsWordResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -144,8 +155,10 @@ public class WordParagraphToolTests : WordTestBase
         var docPath = CreateWordDocumentWithParagraphs("test_session_delete.docx", "First", "Second", "Third");
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("delete", sessionId: sessionId, paragraphIndex: 1);
-        Assert.StartsWith("Paragraph #1 deleted", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Paragraph #1 deleted", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -154,7 +167,10 @@ public class WordParagraphToolTests : WordTestBase
         var docPath = CreateWordDocumentWithContent("test_session_edit.docx", "Test content");
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("edit", sessionId: sessionId, paragraphIndex: 0, bold: true, fontSize: 16);
-        Assert.Contains("format edited successfully", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("format edited successfully", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -163,7 +179,10 @@ public class WordParagraphToolTests : WordTestBase
         var docPath = CreateWordDocumentWithContent("test_session_get_format.docx", "Formatted text");
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("get_format", sessionId: sessionId, paragraphIndex: 0);
-        Assert.Contains("alignment", result);
+        var data = GetResultData<GetParagraphFormatWordResult>(result);
+        Assert.NotNull(data.ParagraphFormat.Alignment);
+        var output = GetResultOutput<GetParagraphFormatWordResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -175,9 +194,12 @@ public class WordParagraphToolTests : WordTestBase
 
         var paragraphs = GetParagraphs(doc);
         paragraphs[0].ParagraphFormat.LeftIndent = 72;
-        _tool.Execute("copy_format", sessionId: sessionId, sourceParagraphIndex: 0, targetParagraphIndex: 1);
+        var result = _tool.Execute("copy_format", sessionId: sessionId, sourceParagraphIndex: 0,
+            targetParagraphIndex: 1);
         var resultParagraphs = GetParagraphs(doc);
         Assert.Equal(72, resultParagraphs[1].ParagraphFormat.LeftIndent);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -186,8 +208,10 @@ public class WordParagraphToolTests : WordTestBase
         var docPath = CreateWordDocumentWithParagraphs("test_session_merge.docx", "First", "Second", "Third");
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("merge", sessionId: sessionId, startParagraphIndex: 0, endParagraphIndex: 2);
-        Assert.StartsWith("Paragraphs merged", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Paragraphs merged", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -206,7 +230,8 @@ public class WordParagraphToolTests : WordTestBase
 
         var result = _tool.Execute("get", docPath1, sessionId);
 
-        Assert.Contains("Session content", result);
+        var data = GetResultData<GetParagraphsWordResult>(result);
+        Assert.Contains(data.Paragraphs, p => p.Text.Contains("Session content"));
     }
 
     #endregion

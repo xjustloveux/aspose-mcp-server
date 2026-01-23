@@ -1,5 +1,7 @@
-using Aspose.Slides;
-using AsposeMcpServer.Tests.Helpers;
+﻿using Aspose.Slides;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.PowerPoint.Slide;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.PowerPoint;
 
 namespace AsposeMcpServer.Tests.Tools.PowerPoint;
@@ -26,7 +28,8 @@ public class PptSlideToolTests : PptTestBase
         var pptPath = CreatePresentation("test_add.pptx", 2);
         var outputPath = CreateTestFilePath("test_add_output.pptx");
         var result = _tool.Execute("add", pptPath, outputPath: outputPath);
-        Assert.StartsWith("Slide added", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Slide added", data.Message);
         using var presentation = new Presentation(outputPath);
         Assert.Equal(3, presentation.Slides.Count);
     }
@@ -37,7 +40,8 @@ public class PptSlideToolTests : PptTestBase
         var pptPath = CreatePresentation("test_delete.pptx", 3);
         var outputPath = CreateTestFilePath("test_delete_output.pptx");
         var result = _tool.Execute("delete", pptPath, slideIndex: 1, outputPath: outputPath);
-        Assert.StartsWith("Slide 1 deleted", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Slide 1 deleted", data.Message);
         using var presentation = new Presentation(outputPath);
         Assert.Equal(2, presentation.Slides.Count);
     }
@@ -47,8 +51,9 @@ public class PptSlideToolTests : PptTestBase
     {
         var pptPath = CreatePresentation("test_get_info.pptx", 3);
         var result = _tool.Execute("get_info", pptPath);
-        Assert.Contains("\"count\": 3", result);
-        Assert.Contains("\"layoutType\":", result);
+        var data = GetResultData<GetSlidesInfoResult>(result);
+        Assert.Equal(3, data.Count);
+        Assert.NotNull(data.Slides);
     }
 
     [Fact]
@@ -57,7 +62,8 @@ public class PptSlideToolTests : PptTestBase
         var pptPath = CreatePresentation("test_move.pptx", 3);
         var outputPath = CreateTestFilePath("test_move_output.pptx");
         var result = _tool.Execute("move", pptPath, fromIndex: 2, toIndex: 0, outputPath: outputPath);
-        Assert.StartsWith("Slide moved", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Slide moved", data.Message);
         using var presentation = new Presentation(outputPath);
         Assert.Equal(3, presentation.Slides.Count);
     }
@@ -68,7 +74,8 @@ public class PptSlideToolTests : PptTestBase
         var pptPath = CreatePresentation("test_duplicate.pptx", 2);
         var outputPath = CreateTestFilePath("test_duplicate_output.pptx");
         var result = _tool.Execute("duplicate", pptPath, slideIndex: 0, outputPath: outputPath);
-        Assert.StartsWith("Slide 0 duplicated", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Slide 0 duplicated", data.Message);
         using var presentation = new Presentation(outputPath);
         Assert.Equal(3, presentation.Slides.Count);
     }
@@ -79,8 +86,9 @@ public class PptSlideToolTests : PptTestBase
         var pptPath = CreatePresentation("test_hide.pptx");
         var outputPath = CreateTestFilePath("test_hide_output.pptx");
         var result = _tool.Execute("hide", pptPath, slideIndex: 0, hidden: true, outputPath: outputPath);
-        Assert.StartsWith("Set", result);
-        Assert.Contains("hidden=True", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Set", data.Message);
+        Assert.Contains("hidden=True", data.Message);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -91,7 +99,8 @@ public class PptSlideToolTests : PptTestBase
         var pptPath = CreatePresentationWithShape("test_clear.pptx");
         var outputPath = CreateTestFilePath("test_clear_output.pptx");
         var result = _tool.Execute("clear", pptPath, slideIndex: 0, outputPath: outputPath);
-        Assert.StartsWith("Cleared all shapes", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Cleared all shapes", data.Message);
         using var presentation = new Presentation(outputPath);
         Assert.Empty(presentation.Slides[0].Shapes);
     }
@@ -102,7 +111,8 @@ public class PptSlideToolTests : PptTestBase
         var pptPath = CreatePresentation("test_edit.pptx");
         var outputPath = CreateTestFilePath("test_edit_output.pptx");
         var result = _tool.Execute("edit", pptPath, slideIndex: 0, outputPath: outputPath);
-        Assert.StartsWith("Slide 0 updated", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Slide 0 updated", data.Message);
     }
 
     #endregion
@@ -118,7 +128,8 @@ public class PptSlideToolTests : PptTestBase
         var pptPath = CreatePresentation($"test_case_add_{operation}.pptx");
         var outputPath = CreateTestFilePath($"test_case_add_{operation}_output.pptx");
         var result = _tool.Execute(operation, pptPath, outputPath: outputPath);
-        Assert.StartsWith("Slide added", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Slide added", data.Message);
     }
 
     [Fact]
@@ -141,8 +152,10 @@ public class PptSlideToolTests : PptTestBase
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var initialCount = ppt.Slides.Count;
         var result = _tool.Execute("add", sessionId: sessionId);
-        Assert.StartsWith("Slide added", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Slide added", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         Assert.Equal(initialCount + 1, ppt.Slides.Count);
     }
 
@@ -153,7 +166,10 @@ public class PptSlideToolTests : PptTestBase
         var sessionId = OpenSession(pptPath);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var result = _tool.Execute("delete", sessionId: sessionId, slideIndex: 1);
-        Assert.StartsWith("Slide 1 deleted", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Slide 1 deleted", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         Assert.Equal(2, ppt.Slides.Count);
     }
 
@@ -163,7 +179,10 @@ public class PptSlideToolTests : PptTestBase
         var pptPath = CreatePresentation("test_session_info.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("get_info", sessionId: sessionId);
-        Assert.Contains("\"count\":", result);
+        var data = GetResultData<GetSlidesInfoResult>(result);
+        Assert.True(data.Count >= 0);
+        var output = GetResultOutput<GetSlidesInfoResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -172,7 +191,10 @@ public class PptSlideToolTests : PptTestBase
         var pptPath = CreatePresentation("test_session_move.pptx", 3);
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("move", sessionId: sessionId, fromIndex: 2, toIndex: 0);
-        Assert.StartsWith("Slide moved", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Slide moved", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -183,7 +205,10 @@ public class PptSlideToolTests : PptTestBase
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var initialCount = ppt.Slides.Count;
         var result = _tool.Execute("duplicate", sessionId: sessionId, slideIndex: 0);
-        Assert.StartsWith("Slide 0 duplicated", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Slide 0 duplicated", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         Assert.Equal(initialCount + 1, ppt.Slides.Count);
     }
 
@@ -193,9 +218,11 @@ public class PptSlideToolTests : PptTestBase
         var pptPath = CreatePresentation("test_session_hide.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("hide", sessionId: sessionId, slideIndex: 0, hidden: true);
-        Assert.StartsWith("Set", result);
-        Assert.Contains("hidden=True", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Set", data.Message);
+        Assert.Contains("hidden=True", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -205,7 +232,10 @@ public class PptSlideToolTests : PptTestBase
         var sessionId = OpenSession(pptPath);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var result = _tool.Execute("clear", sessionId: sessionId, slideIndex: 0);
-        Assert.StartsWith("Cleared", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Cleared", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         Assert.Empty(ppt.Slides[0].Shapes);
     }
 
@@ -215,8 +245,10 @@ public class PptSlideToolTests : PptTestBase
         var pptPath = CreatePresentation("test_session_edit.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("edit", sessionId: sessionId, slideIndex: 0);
-        Assert.StartsWith("Slide 0 updated", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Slide 0 updated", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -241,7 +273,8 @@ public class PptSlideToolTests : PptTestBase
         var pptPath2 = CreatePresentation("test_session_ppt.pptx", 5);
         var sessionId = OpenSession(pptPath2);
         var result = _tool.Execute("get_info", pptPath1, sessionId);
-        Assert.Contains("\"count\": 5", result);
+        var data = GetResultData<GetSlidesInfoResult>(result);
+        Assert.Equal(5, data.Count);
     }
 
     #endregion

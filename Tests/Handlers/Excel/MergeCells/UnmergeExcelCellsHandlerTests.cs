@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.MergeCells;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.MergeCells;
 
@@ -69,9 +70,11 @@ public class UnmergeExcelCellsHandlerTests : ExcelHandlerTestBase
             { "range", "A1:C3" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("unmerged", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("unmerged", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(workbook.Worksheets[0].Cells.MergedCells);
         AssertModified(context);
     }
@@ -105,9 +108,11 @@ public class UnmergeExcelCellsHandlerTests : ExcelHandlerTestBase
             { "range", "A1:B2" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("unmerged", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("unmerged", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 

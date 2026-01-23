@@ -1,11 +1,14 @@
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Pdf.Page;
 
 namespace AsposeMcpServer.Handlers.Pdf.Page;
 
 /// <summary>
 ///     Handler for getting detailed information about a specific page in PDF documents.
 /// </summary>
+[ResultType(typeof(GetPdfPageDetailsResult))]
 public class GetPdfPageDetailsHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class GetPdfPageDetailsHandler : OperationHandlerBase<Document>
     /// </param>
     /// <returns>JSON string containing detailed page information.</returns>
     /// <exception cref="ArgumentException">Thrown when pageIndex is out of range.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractGetDetailsParameters(parameters);
 
@@ -30,32 +33,31 @@ public class GetPdfPageDetailsHandler : OperationHandlerBase<Document>
             throw new ArgumentException($"pageIndex must be between 1 and {doc.Pages.Count}");
 
         var page = doc.Pages[p.PageIndex];
-        var result = new
-        {
-            pageIndex = p.PageIndex,
-            width = page.Rect.Width,
-            height = page.Rect.Height,
-            rotation = page.Rotate.ToString(),
-            mediaBox = new
-            {
-                llx = page.MediaBox.LLX,
-                lly = page.MediaBox.LLY,
-                urx = page.MediaBox.URX,
-                ury = page.MediaBox.URY
-            },
-            cropBox = new
-            {
-                llx = page.CropBox.LLX,
-                lly = page.CropBox.LLY,
-                urx = page.CropBox.URX,
-                ury = page.CropBox.URY
-            },
-            annotations = page.Annotations.Count,
-            paragraphs = page.Paragraphs.Count,
-            images = page.Resources?.Images?.Count ?? 0
-        };
 
-        return JsonResult(result);
+        return new GetPdfPageDetailsResult
+        {
+            PageIndex = p.PageIndex,
+            Width = page.Rect.Width,
+            Height = page.Rect.Height,
+            Rotation = page.Rotate.ToString(),
+            MediaBox = new PdfPageBox
+            {
+                Llx = page.MediaBox.LLX,
+                Lly = page.MediaBox.LLY,
+                Urx = page.MediaBox.URX,
+                Ury = page.MediaBox.URY
+            },
+            CropBox = new PdfPageBox
+            {
+                Llx = page.CropBox.LLX,
+                Lly = page.CropBox.LLY,
+                Urx = page.CropBox.URX,
+                Ury = page.CropBox.URY
+            },
+            Annotations = page.Annotations.Count,
+            Paragraphs = page.Paragraphs.Count,
+            Images = page.Resources?.Images?.Count ?? 0
+        };
     }
 
     /// <summary>

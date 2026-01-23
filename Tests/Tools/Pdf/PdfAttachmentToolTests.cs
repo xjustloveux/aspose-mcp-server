@@ -1,5 +1,7 @@
-using Aspose.Pdf;
-using AsposeMcpServer.Tests.Helpers;
+﻿using Aspose.Pdf;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Pdf.Attachment;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Pdf;
 
 namespace AsposeMcpServer.Tests.Tools.Pdf;
@@ -55,7 +57,8 @@ public class PdfAttachmentToolTests : PdfTestBase
         var outputPath = CreateTestFilePath("test_add_output.pdf");
         var result = _tool.Execute("add", pdfPath, outputPath: outputPath,
             attachmentPath: attachmentPath, attachmentName: "test_attachment.txt");
-        Assert.StartsWith("Added attachment", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Added attachment", data.Message);
         using var document = new Document(outputPath);
         Assert.True(document.EmbeddedFiles.Count > 0);
     }
@@ -65,8 +68,9 @@ public class PdfAttachmentToolTests : PdfTestBase
     {
         var pdfPath = CreatePdfWithAttachment("test_get.pdf", "test_attachment.txt");
         var result = _tool.Execute("get", pdfPath);
-        Assert.Contains("\"count\": 1", result);
-        Assert.Contains("test_attachment.txt", result);
+        var data = GetResultData<GetAttachmentsResult>(result);
+        Assert.Equal(1, data.Count);
+        Assert.Contains(data.Items, a => a.Name.Contains("test_attachment.txt"));
     }
 
     [Fact]
@@ -76,7 +80,8 @@ public class PdfAttachmentToolTests : PdfTestBase
         var outputPath = CreateTestFilePath("test_delete_output.pdf");
         var result = _tool.Execute("delete", pdfPath, outputPath: outputPath,
             attachmentName: "to_delete.txt");
-        Assert.StartsWith("Deleted attachment", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Deleted attachment", data.Message);
         using var document = new Document(outputPath);
         Assert.Empty(document.EmbeddedFiles);
     }
@@ -96,7 +101,8 @@ public class PdfAttachmentToolTests : PdfTestBase
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.pdf");
         var result = _tool.Execute(operation, pdfPath, outputPath: outputPath,
             attachmentPath: attachmentPath, attachmentName: $"attachment_{operation}.txt");
-        Assert.StartsWith("Added attachment", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Added attachment", data.Message);
     }
 
     [Fact]
@@ -117,7 +123,10 @@ public class PdfAttachmentToolTests : PdfTestBase
         var pdfPath = CreatePdfWithAttachment("test_session_get.pdf", "session_attachment.txt");
         var sessionId = OpenSession(pdfPath);
         var result = _tool.Execute("get", sessionId: sessionId);
-        Assert.Contains("session_attachment.txt", result);
+        var data = GetResultData<GetAttachmentsResult>(result);
+        Assert.Contains(data.Items, a => a.Name.Contains("session_attachment.txt"));
+        var output = GetResultOutput<GetAttachmentsResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -128,8 +137,10 @@ public class PdfAttachmentToolTests : PdfTestBase
         var sessionId = OpenSession(pdfPath);
         var result = _tool.Execute("add", sessionId: sessionId,
             attachmentPath: attachmentPath, attachmentName: "session_attachment.txt");
-        Assert.StartsWith("Added attachment", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Added attachment", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -138,8 +149,10 @@ public class PdfAttachmentToolTests : PdfTestBase
         var pdfPath = CreatePdfWithAttachment("test_session_delete.pdf", "to_delete.txt");
         var sessionId = OpenSession(pdfPath);
         var result = _tool.Execute("delete", sessionId: sessionId, attachmentName: "to_delete.txt");
-        Assert.StartsWith("Deleted attachment", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Deleted attachment", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var docAfter = SessionManager.GetDocument<Document>(sessionId);
         Assert.Empty(docAfter.EmbeddedFiles);
     }
@@ -158,7 +171,8 @@ public class PdfAttachmentToolTests : PdfTestBase
         var pdfPath2 = CreatePdfWithAttachment("test_session_file.pdf", "session_file.txt");
         var sessionId = OpenSession(pdfPath2);
         var result = _tool.Execute("get", pdfPath1, sessionId);
-        Assert.Contains("session_file.txt", result);
+        var data = GetResultData<GetAttachmentsResult>(result);
+        Assert.Contains(data.Items, a => a.Name.Contains("session_file.txt"));
     }
 
     #endregion

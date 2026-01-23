@@ -1,11 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.PowerPoint.Hyperlink;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Hyperlink;
 
 /// <summary>
 ///     Handler for getting hyperlink information from PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(GetHyperlinksPptResult))]
 public class GetPptHyperlinksHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -19,7 +23,7 @@ public class GetPptHyperlinksHandler : OperationHandlerBase<Presentation>
     ///     Optional: slideIndex
     /// </param>
     /// <returns>JSON string containing the hyperlink information.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractGetParameters(parameters);
 
@@ -32,18 +36,18 @@ public class GetPptHyperlinksHandler : OperationHandlerBase<Presentation>
             var slide = presentation.Slides[p.SlideIndex.Value];
             var hyperlinksList = PptHyperlinkHelper.GetHyperlinksFromSlide(presentation, slide);
 
-            var result = new
+            var result = new GetHyperlinksPptResult
             {
-                slideIndex = p.SlideIndex.Value,
-                count = hyperlinksList.Count,
-                hyperlinks = hyperlinksList
+                SlideIndex = p.SlideIndex.Value,
+                Count = hyperlinksList.Count,
+                Hyperlinks = hyperlinksList
             };
 
-            return JsonResult(result);
+            return result;
         }
         else
         {
-            List<object> slidesList = [];
+            List<SlideHyperlinksInfo> slidesList = [];
             var totalCount = 0;
 
             for (var i = 0; i < presentation.Slides.Count; i++)
@@ -52,21 +56,21 @@ public class GetPptHyperlinksHandler : OperationHandlerBase<Presentation>
                 var hyperlinksList = PptHyperlinkHelper.GetHyperlinksFromSlide(presentation, slide);
                 totalCount += hyperlinksList.Count;
 
-                slidesList.Add(new
+                slidesList.Add(new SlideHyperlinksInfo
                 {
-                    slideIndex = i,
-                    count = hyperlinksList.Count,
-                    hyperlinks = hyperlinksList
+                    SlideIndex = i,
+                    Count = hyperlinksList.Count,
+                    Hyperlinks = hyperlinksList
                 });
             }
 
-            var result = new
+            var result = new GetHyperlinksPptResult
             {
-                totalCount,
-                slides = slidesList
+                TotalCount = totalCount,
+                Slides = slidesList
             };
 
-            return JsonResult(result);
+            return result;
         }
     }
 

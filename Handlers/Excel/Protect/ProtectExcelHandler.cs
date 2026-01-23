@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Protect;
 
 /// <summary>
 ///     Handler for protecting Excel workbook or worksheet with password.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class ProtectExcelHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -22,7 +25,7 @@ public class ProtectExcelHandler : OperationHandlerBase<Workbook>
     /// </param>
     /// <returns>Success message with protection details.</returns>
     /// <exception cref="ArgumentException">Thrown when password is empty or null.</exception>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractProtectExcelParameters(parameters);
 
@@ -53,7 +56,7 @@ public class ProtectExcelHandler : OperationHandlerBase<Workbook>
         MarkModified(context);
 
         var target = GetProtectionTarget(p.ProtectWorkbook, p.SheetIndex);
-        return Success($"Excel {target} protected with password successfully.");
+        return new SuccessResult { Message = $"Excel {target} protected with password successfully." };
     }
 
     /// <summary>

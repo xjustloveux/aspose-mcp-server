@@ -1,12 +1,16 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Properties;
 
 /// <summary>
 ///     Handler for editing worksheet properties in Excel files.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class EditSheetPropertiesHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +25,7 @@ public class EditSheetPropertiesHandler : OperationHandlerBase<Workbook>
     ///     Optional: name, isVisible, tabColor, isSelected
     /// </param>
     /// <returns>Success message.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var editParams = ExtractEditSheetPropertiesParameters(parameters);
 
@@ -42,7 +46,7 @@ public class EditSheetPropertiesHandler : OperationHandlerBase<Workbook>
             workbook.Worksheets.ActiveSheetIndex = editParams.SheetIndex;
 
         MarkModified(context);
-        return Success($"Sheet {editParams.SheetIndex} properties updated successfully.");
+        return new SuccessResult { Message = $"Sheet {editParams.SheetIndex} properties updated successfully." };
     }
 
     /// <summary>

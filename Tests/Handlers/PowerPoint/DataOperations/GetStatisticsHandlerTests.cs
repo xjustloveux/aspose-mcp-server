@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.PowerPoint.DataOperations;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.PowerPoint.DataOperations;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.DataOperations;
 
@@ -26,9 +27,11 @@ public class GetStatisticsHandlerTests : PptHandlerTestBase
         var context = CreateContext(presentation);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"totalSlides\": 3", result);
+        var result = Assert.IsType<GetStatisticsResult>(res);
+
+        Assert.Equal(3, result.TotalSlides);
     }
 
     [Fact]
@@ -38,9 +41,11 @@ public class GetStatisticsHandlerTests : PptHandlerTestBase
         var context = CreateContext(presentation);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("totalShapes", result);
+        var result = Assert.IsType<GetStatisticsResult>(res);
+
+        Assert.True(result.TotalShapes >= 0);
     }
 
     [Fact]
@@ -50,11 +55,13 @@ public class GetStatisticsHandlerTests : PptHandlerTestBase
         var context = CreateContext(presentation);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("slideSize", result);
-        Assert.Contains("width", result);
-        Assert.Contains("height", result);
+        var result = Assert.IsType<GetStatisticsResult>(res);
+
+        Assert.NotNull(result.SlideSize);
+        Assert.True(result.SlideSize.Width > 0);
+        Assert.True(result.SlideSize.Height > 0);
     }
 
     [Fact]
@@ -64,11 +71,13 @@ public class GetStatisticsHandlerTests : PptHandlerTestBase
         var context = CreateContext(presentation);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("totalImages", result);
-        Assert.Contains("totalAudio", result);
-        Assert.Contains("totalVideo", result);
+        var result = Assert.IsType<GetStatisticsResult>(res);
+
+        Assert.True(result.TotalImages >= 0);
+        Assert.True(result.TotalAudio >= 0);
+        Assert.True(result.TotalVideo >= 0);
     }
 
     [Fact]
@@ -78,10 +87,12 @@ public class GetStatisticsHandlerTests : PptHandlerTestBase
         var context = CreateContext(presentation);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("totalLayouts", result);
-        Assert.Contains("totalMasters", result);
+        var result = Assert.IsType<GetStatisticsResult>(res);
+
+        Assert.True(result.TotalLayouts >= 0);
+        Assert.True(result.TotalMasters >= 0);
     }
 
     #endregion

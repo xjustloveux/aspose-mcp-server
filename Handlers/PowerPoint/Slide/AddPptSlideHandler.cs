@@ -1,11 +1,14 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Slide;
 
 /// <summary>
 ///     Handler for adding slides to PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddPptSlideHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -19,7 +22,7 @@ public class AddPptSlideHandler : OperationHandlerBase<Presentation>
     ///     Optional: layoutType (Blank, Title, TitleOnly, TwoColumn, SectionHeader)
     /// </param>
     /// <returns>Success message with slide count.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractAddPptSlideParameters(parameters);
 
@@ -44,7 +47,7 @@ public class AddPptSlideHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Slide added (total: {presentation.Slides.Count}).");
+        return new SuccessResult { Message = $"Slide added (total: {presentation.Slides.Count})." };
     }
 
     /// <summary>

@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.PowerPoint.Notes;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Notes;
 
@@ -29,9 +30,11 @@ public class SetNotesHeaderFooterHandlerTests : PptHandlerTestBase
             { "headerText", "Test Header" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("header", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("header", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -45,9 +48,11 @@ public class SetNotesHeaderFooterHandlerTests : PptHandlerTestBase
             { "footerText", "Test Footer" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("footer", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("footer", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -60,9 +65,11 @@ public class SetNotesHeaderFooterHandlerTests : PptHandlerTestBase
             { "dateText", "2026-01-11" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("date", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("date", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -75,9 +82,11 @@ public class SetNotesHeaderFooterHandlerTests : PptHandlerTestBase
             { "showPageNumber", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("page number hidden", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("page number hidden", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -93,11 +102,13 @@ public class SetNotesHeaderFooterHandlerTests : PptHandlerTestBase
             { "showPageNumber", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("header", result.ToLower());
-        Assert.Contains("footer", result.ToLower());
-        Assert.Contains("date", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("header", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("footer", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("date", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

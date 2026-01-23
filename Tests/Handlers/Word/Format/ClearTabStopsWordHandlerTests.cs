@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Format;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Format;
 
@@ -44,9 +45,11 @@ public class ClearTabStopsWordHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("cleared", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("cleared", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -60,10 +63,12 @@ public class ClearTabStopsWordHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("cleared", result.ToLower());
-        Assert.Contains("0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("cleared", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("0", result.Message);
     }
 
     #endregion

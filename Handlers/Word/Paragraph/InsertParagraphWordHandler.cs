@@ -1,5 +1,8 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.Paragraph;
@@ -7,6 +10,7 @@ namespace AsposeMcpServer.Handlers.Word.Paragraph;
 /// <summary>
 ///     Handler for inserting paragraphs in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class InsertParagraphWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -21,7 +25,7 @@ public class InsertParagraphWordHandler : OperationHandlerBase<Document>
     ///     Optional: paragraphIndex, styleName, alignment, indentLeft, indentRight, firstLineIndent, spaceBefore, spaceAfter
     /// </param>
     /// <returns>Success message with insertion details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var insertParams = ExtractInsertParameters(parameters);
         if (string.IsNullOrEmpty(insertParams.Text))
@@ -162,14 +166,14 @@ public class InsertParagraphWordHandler : OperationHandlerBase<Document>
     /// <param name="p">The insert parameters.</param>
     /// <param name="newParagraphCount">The new paragraph count.</param>
     /// <returns>The result message.</returns>
-    private static string BuildResultMessage(string insertPosition, InsertParameters p, int newParagraphCount)
+    private static SuccessResult BuildResultMessage(string insertPosition, InsertParameters p, int newParagraphCount)
     {
-        var result = "Paragraph inserted successfully\n";
-        result += $"Insert position: {insertPosition}\n";
-        if (!string.IsNullOrEmpty(p.StyleName)) result += $"Applied style: {p.StyleName}\n";
-        if (!string.IsNullOrEmpty(p.Alignment)) result += $"Alignment: {p.Alignment}\n";
-        result += $"Document paragraph count: {newParagraphCount}";
-        return result;
+        var message = "Paragraph inserted successfully\n";
+        message += $"Insert position: {insertPosition}\n";
+        if (!string.IsNullOrEmpty(p.StyleName)) message += $"Applied style: {p.StyleName}\n";
+        if (!string.IsNullOrEmpty(p.Alignment)) message += $"Alignment: {p.Alignment}\n";
+        message += $"Document paragraph count: {newParagraphCount}";
+        return new SuccessResult { Message = message };
     }
 
     /// <summary>

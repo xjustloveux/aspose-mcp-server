@@ -1,6 +1,8 @@
-using Aspose.Slides;
+﻿using Aspose.Slides;
 using Aspose.Slides.Export;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.PowerPoint.Shape;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.PowerPoint;
 
 namespace AsposeMcpServer.Tests.Tools.PowerPoint;
@@ -55,8 +57,9 @@ public class PptShapeToolTests : PptTestBase
     {
         var pptPath = CreatePresentationWithShape("test_get.pptx");
         var result = _tool.Execute("get", pptPath, slideIndex: 0);
-        Assert.Contains("\"count\":", result);
-        Assert.Contains("\"shapes\":", result);
+        var data = GetResultData<GetShapesResult>(result);
+        Assert.True(data.Count >= 0);
+        Assert.NotNull(data.Shapes);
     }
 
     [Fact]
@@ -65,8 +68,9 @@ public class PptShapeToolTests : PptTestBase
         var pptPath = CreatePresentationWithShape("test_get_details.pptx");
         var shapeIndex = FindNonPlaceholderShapeIndex(pptPath);
         var result = _tool.Execute("get_details", pptPath, slideIndex: 0, shapeIndex: shapeIndex);
-        Assert.Contains("\"index\":", result);
-        Assert.Contains("\"x\":", result);
+        var data = GetResultData<GetShapeDetailsResult>(result);
+        Assert.Equal(shapeIndex, data.Index);
+        Assert.True(data.X >= 0);
     }
 
     [Fact]
@@ -76,8 +80,9 @@ public class PptShapeToolTests : PptTestBase
         var shapeIndex = FindNonPlaceholderShapeIndex(pptPath);
         var outputPath = CreateTestFilePath("test_delete_output.pptx");
         var result = _tool.Execute("delete", pptPath, slideIndex: 0, shapeIndex: shapeIndex, outputPath: outputPath);
-        Assert.StartsWith("Shape", result);
-        Assert.Contains("deleted from slide", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Shape", data.Message);
+        Assert.Contains("deleted from slide", data.Message);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -89,8 +94,9 @@ public class PptShapeToolTests : PptTestBase
         var outputPath = CreateTestFilePath("test_edit_pos_output.pptx");
         var result = _tool.Execute("edit", pptPath, slideIndex: 0, shapeIndex: shapeIndex, x: 200, y: 200,
             outputPath: outputPath);
-        Assert.StartsWith("Shape", result);
-        Assert.Contains("updated", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Shape", data.Message);
+        Assert.Contains("updated", data.Message);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -102,7 +108,8 @@ public class PptShapeToolTests : PptTestBase
         var outputPath = CreateTestFilePath("test_set_format_output.pptx");
         var result = _tool.Execute("set_format", pptPath, slideIndex: 0, shapeIndex: shapeIndex, fillColor: "#FF0000",
             outputPath: outputPath);
-        Assert.StartsWith("Format applied to shape", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Format applied to shape", data.Message);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -114,7 +121,8 @@ public class PptShapeToolTests : PptTestBase
         var outputPath = CreateTestFilePath("test_clear_format_output.pptx");
         var result = _tool.Execute("clear_format", pptPath, slideIndex: 0, shapeIndex: shapeIndex, clearFill: true,
             outputPath: outputPath);
-        Assert.StartsWith("Format cleared from shape", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Format cleared from shape", data.Message);
     }
 
     [Fact]
@@ -132,7 +140,8 @@ public class PptShapeToolTests : PptTestBase
 
         var outputPath = CreateTestFilePath("test_group_output.pptx");
         var result = _tool.Execute("group", pptPath, slideIndex: 0, shapeIndices: [idx0, idx1], outputPath: outputPath);
-        Assert.StartsWith("Grouped", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Grouped", data.Message);
     }
 
     [Fact]
@@ -143,8 +152,9 @@ public class PptShapeToolTests : PptTestBase
         var outputPath = CreateTestFilePath("test_flip_output.pptx");
         var result = _tool.Execute("flip", pptPath, slideIndex: 0, shapeIndex: shapeIndex, flipHorizontal: true,
             outputPath: outputPath);
-        Assert.StartsWith("Shape", result);
-        Assert.Contains("flipped", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Shape", data.Message);
+        Assert.Contains("flipped", data.Message);
     }
 
     #endregion
@@ -159,7 +169,8 @@ public class PptShapeToolTests : PptTestBase
     {
         var pptPath = CreatePresentationWithShape($"test_case_{operation}.pptx");
         var result = _tool.Execute(operation, pptPath, slideIndex: 0);
-        Assert.Contains("\"count\":", result);
+        var data = GetResultData<GetShapesResult>(result);
+        Assert.True(data.Count >= 0);
     }
 
     [Fact]
@@ -186,8 +197,9 @@ public class PptShapeToolTests : PptTestBase
         var pptPath = CreatePresentationWithShape("test_session_get.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("get", sessionId: sessionId, slideIndex: 0);
-        Assert.Contains("\"count\":", result);
-        Assert.Contains("\"shapes\":", result);
+        var data = GetResultData<GetShapesResult>(result);
+        Assert.True(data.Count >= 0);
+        Assert.NotNull(data.Shapes);
     }
 
     [Fact]
@@ -198,8 +210,9 @@ public class PptShapeToolTests : PptTestBase
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var shapeIndex = FindNonPlaceholderShapeIndex(ppt.Slides[0]);
         var result = _tool.Execute("get_details", sessionId: sessionId, slideIndex: 0, shapeIndex: shapeIndex);
-        Assert.Contains("\"index\":", result);
-        Assert.Contains("\"x\":", result);
+        var data = GetResultData<GetShapeDetailsResult>(result);
+        Assert.Equal(shapeIndex, data.Index);
+        Assert.True(data.X >= 0);
     }
 
     [Fact]
@@ -210,8 +223,9 @@ public class PptShapeToolTests : PptTestBase
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var shapeIndex = FindNonPlaceholderShapeIndex(ppt.Slides[0]);
         var result = _tool.Execute("edit", sessionId: sessionId, slideIndex: 0, shapeIndex: shapeIndex, x: 300, y: 300);
-        Assert.StartsWith("Shape", result);
-        Assert.Contains("updated", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Shape", data.Message);
+        Assert.Contains("updated", data.Message);
     }
 
     [Fact]
@@ -222,8 +236,9 @@ public class PptShapeToolTests : PptTestBase
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var shapeIndex = FindNonPlaceholderShapeIndex(ppt.Slides[0]);
         var result = _tool.Execute("delete", sessionId: sessionId, slideIndex: 0, shapeIndex: shapeIndex);
-        Assert.StartsWith("Shape", result);
-        Assert.Contains("deleted from slide", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Shape", data.Message);
+        Assert.Contains("deleted from slide", data.Message);
     }
 
     [Fact]
@@ -235,7 +250,8 @@ public class PptShapeToolTests : PptTestBase
         var shapeIndex = FindNonPlaceholderShapeIndex(ppt.Slides[0]);
         var result = _tool.Execute("set_format", sessionId: sessionId, slideIndex: 0, shapeIndex: shapeIndex,
             fillColor: "#00FF00");
-        Assert.StartsWith("Format applied to shape", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Format applied to shape", data.Message);
     }
 
     [Fact]
@@ -252,8 +268,9 @@ public class PptShapeToolTests : PptTestBase
         var pptPath2 = CreatePresentationWithTwoShapes("test_session_shape.pptx");
         var sessionId = OpenSession(pptPath2);
         var result = _tool.Execute("get", pptPath1, sessionId, slideIndex: 0);
-        Assert.Contains("\"count\":", result);
-        Assert.Contains("\"shapes\":", result);
+        var data = GetResultData<GetShapesResult>(result);
+        Assert.True(data.Count >= 0);
+        Assert.NotNull(data.Shapes);
     }
 
     #endregion

@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Word.Shape;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Shape;
 
@@ -29,9 +30,11 @@ public class AddTextBoxWordHandlerTests : WordHandlerTestBase
             { "text", "Hello World" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("successfully added textbox", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("successfully added textbox", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -47,9 +50,11 @@ public class AddTextBoxWordHandlerTests : WordHandlerTestBase
             { "textboxHeight", 150.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("successfully added textbox", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("successfully added textbox", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -64,9 +69,11 @@ public class AddTextBoxWordHandlerTests : WordHandlerTestBase
             { "positionY", 300.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("successfully added textbox", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("successfully added textbox", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -80,9 +87,11 @@ public class AddTextBoxWordHandlerTests : WordHandlerTestBase
             { "backgroundColor", "#FF0000" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("successfully added textbox", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("successfully added textbox", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -97,9 +106,11 @@ public class AddTextBoxWordHandlerTests : WordHandlerTestBase
             { "bold", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("successfully added textbox", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("successfully added textbox", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

@@ -1,11 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.PowerPoint.Layout;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Layout;
 
 /// <summary>
 ///     Handler for getting master slides information from a PowerPoint presentation.
 /// </summary>
+[ResultType(typeof(GetMastersResult))]
 public class GetMastersHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -17,41 +21,41 @@ public class GetMastersHandler : OperationHandlerBase<Presentation>
     /// <param name="context">The presentation context.</param>
     /// <param name="parameters">No parameters required.</param>
     /// <returns>JSON string containing master slide information.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var presentation = context.Document;
 
         if (presentation.Masters.Count == 0)
         {
-            var emptyResult = new
+            var emptyResult = new GetMastersResult
             {
-                count = 0,
-                masters = Array.Empty<object>(),
-                message = "No master slides found"
+                Count = 0,
+                Masters = [],
+                Message = "No master slides found"
             };
-            return JsonResult(emptyResult);
+            return emptyResult;
         }
 
-        List<object> mastersList = [];
+        List<GetMasterInfo> mastersList = [];
 
         for (var i = 0; i < presentation.Masters.Count; i++)
         {
             var master = presentation.Masters[i];
-            mastersList.Add(new
+            mastersList.Add(new GetMasterInfo
             {
-                index = i,
-                name = master.Name,
-                layoutCount = master.LayoutSlides.Count,
-                layouts = PptLayoutHelper.BuildLayoutsList(master.LayoutSlides)
+                Index = i,
+                Name = master.Name,
+                LayoutCount = master.LayoutSlides.Count,
+                Layouts = PptLayoutHelper.BuildLayoutsList(master.LayoutSlides)
             });
         }
 
-        var result = new
+        var result = new GetMastersResult
         {
-            count = presentation.Masters.Count,
-            masters = mastersList
+            Count = presentation.Masters.Count,
+            Masters = mastersList
         };
 
-        return JsonResult(result);
+        return result;
     }
 }

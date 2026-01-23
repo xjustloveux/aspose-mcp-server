@@ -1,12 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Layout;
 
 /// <summary>
 ///     Handler for applying a master slide layout to specified slides.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class ApplyMasterHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class ApplyMasterHandler : OperationHandlerBase<Presentation>
     ///     Optional: slideIndices (JSON array)
     /// </param>
     /// <returns>Success message with operation details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractApplyMasterParameters(parameters);
 
@@ -44,7 +47,8 @@ public class ApplyMasterHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Master {p.MasterIndex} / Layout {p.LayoutIndex} applied to {targets.Length} slides.");
+        return new SuccessResult
+            { Message = $"Master {p.MasterIndex} / Layout {p.LayoutIndex} applied to {targets.Length} slides." };
     }
 
     /// <summary>

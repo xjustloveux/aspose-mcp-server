@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Table;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Table;
 
@@ -55,9 +56,11 @@ public class SetColumnWidthWordTableHandlerTests : WordHandlerTestBase
             { "columnWidth", 100.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("width", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("width", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -75,9 +78,11 @@ public class SetColumnWidthWordTableHandlerTests : WordHandlerTestBase
             { "columnWidth", 150.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("width", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("width", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]
@@ -94,9 +99,11 @@ public class SetColumnWidthWordTableHandlerTests : WordHandlerTestBase
             { "columnWidth", width }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains($"{width}", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains($"{width}", result.Message);
     }
 
     #endregion

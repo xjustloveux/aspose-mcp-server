@@ -1,12 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.PowerPoint.DataOperations;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.DataOperations;
 
 /// <summary>
 ///     Handler for getting presentation content including text from all shape types.
 /// </summary>
+[ResultType(typeof(GetContentPptResult))]
 public class GetContentHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -18,10 +21,10 @@ public class GetContentHandler : OperationHandlerBase<Presentation>
     /// <param name="context">The presentation context.</param>
     /// <param name="parameters">No parameters required.</param>
     /// <returns>JSON string containing text content extracted from all slides.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var presentation = context.Document;
-        List<object> slides = [];
+        List<GetContentSlideInfo> slides = [];
 
         var slideIndex = 0;
         foreach (var slide in presentation.Slides)
@@ -30,21 +33,21 @@ public class GetContentHandler : OperationHandlerBase<Presentation>
             foreach (var shape in slide.Shapes)
                 PowerPointHelper.ExtractTextFromShape(shape, textContent);
 
-            slides.Add(new
+            slides.Add(new GetContentSlideInfo
             {
-                index = slideIndex,
-                hidden = slide.Hidden,
-                textContent
+                Index = slideIndex,
+                Hidden = slide.Hidden,
+                TextContent = textContent
             });
             slideIndex++;
         }
 
-        var result = new
+        var result = new GetContentPptResult
         {
-            totalSlides = presentation.Slides.Count,
-            slides
+            TotalSlides = presentation.Slides.Count,
+            Slides = slides
         };
 
-        return JsonResult(result);
+        return result;
     }
 }

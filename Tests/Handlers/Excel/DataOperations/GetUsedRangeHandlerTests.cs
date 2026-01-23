@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.DataOperations;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Excel.DataOperations;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.DataOperations;
 
@@ -28,14 +29,16 @@ public class GetUsedRangeHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("worksheetName", result);
-        Assert.Contains("firstRow", result);
-        Assert.Contains("lastRow", result);
-        Assert.Contains("firstColumn", result);
-        Assert.Contains("lastColumn", result);
-        Assert.Contains("range", result);
+        var result = Assert.IsType<GetUsedRangeResult>(res);
+
+        Assert.NotNull(result.WorksheetName);
+        Assert.True(result.FirstRow >= 0);
+        Assert.True(result.LastRow >= 0);
+        Assert.True(result.FirstColumn >= 0);
+        Assert.True(result.LastColumn >= 0);
+        Assert.NotNull(result.Range);
     }
 
     [Fact]
@@ -49,9 +52,11 @@ public class GetUsedRangeHandlerTests : ExcelHandlerTestBase
             { "sheetIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"sheetIndex\": 1", result);
+        var result = Assert.IsType<GetUsedRangeResult>(res);
+
+        Assert.Equal(1, result.SheetIndex);
     }
 
     [Fact]
@@ -62,10 +67,12 @@ public class GetUsedRangeHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("worksheetName", result);
-        Assert.Contains("sheetIndex", result);
+        var result = Assert.IsType<GetUsedRangeResult>(res);
+
+        Assert.NotNull(result.WorksheetName);
+        Assert.Equal(0, result.SheetIndex);
     }
 
     [Fact]
@@ -76,9 +83,11 @@ public class GetUsedRangeHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("B2:B2", result);
+        var result = Assert.IsType<GetUsedRangeResult>(res);
+
+        Assert.Equal("B2:B2", result.Range);
     }
 
     #endregion

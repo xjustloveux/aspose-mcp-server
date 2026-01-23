@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Excel;
 /// <summary>
 ///     Unified tool for managing Excel styles (format, get_format, copy_sheet_format)
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Excel.Style")]
 [McpServerToolType]
 public class ExcelStyleTool
 {
@@ -71,7 +74,14 @@ public class ExcelStyleTool
     /// <param name="copyRowHeights">Copy row heights (default: true).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get_format operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "excel_style")]
+    [McpServerTool(
+        Name = "excel_style",
+        Title = "Excel Style Operations",
+        Destructive = false,
+        Idempotent = true,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage Excel styles. Supports 3 operations: format, get_format, copy_sheet_format.
 
 Usage examples:
@@ -80,7 +90,7 @@ Usage examples:
 - Get format (full): excel_style(operation='get_format', path='book.xlsx', range='A1')
 - Get format (simple): excel_style(operation='get_format', path='book.xlsx', range='A1', fields='font,color')
 - Copy sheet format: excel_style(operation='copy_sheet_format', path='book.xlsx', sourceSheetIndex=0, targetSheetIndex=1)")]
-    public string Execute(
+    public object Execute(
         [Description("Operation to perform: format, get_format, copy_sheet_format")]
         string operation,
         [Description("Excel file path (required if no sessionId)")]
@@ -152,12 +162,12 @@ Usage examples:
         var result = handler.Execute(operationContext, parameters);
 
         if (string.Equals(operation, "get_format", StringComparison.OrdinalIgnoreCase))
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

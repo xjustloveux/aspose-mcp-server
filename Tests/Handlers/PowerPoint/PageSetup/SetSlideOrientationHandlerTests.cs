@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.PowerPoint.PageSetup;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.PageSetup;
 
@@ -29,9 +30,11 @@ public class SetSlideOrientationHandlerTests : PptHandlerTestBase
             { "orientation", "Portrait" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("portrait", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("portrait", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -45,9 +48,11 @@ public class SetSlideOrientationHandlerTests : PptHandlerTestBase
             { "orientation", "Landscape" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("landscape", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("landscape", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -60,9 +65,11 @@ public class SetSlideOrientationHandlerTests : PptHandlerTestBase
             { "orientation", "Portrait" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("x", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("x", result.Message);
     }
 
     #endregion

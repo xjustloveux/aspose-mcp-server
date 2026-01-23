@@ -1,6 +1,9 @@
 using System.Text.Json.Nodes;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 using Section = Aspose.Words.Section;
 
@@ -9,6 +12,7 @@ namespace AsposeMcpServer.Handlers.Word.HeaderFooter;
 /// <summary>
 ///     Handler for setting footer tab stops in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetFooterTabsHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -22,7 +26,7 @@ public class SetFooterTabsHandler : OperationHandlerBase<Document>
     ///     Optional: tabStops (array), sectionIndex, headerFooterType
     /// </param>
     /// <returns>Success message.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractSetFooterTabsParameters(parameters);
 
@@ -38,7 +42,7 @@ public class SetFooterTabsHandler : OperationHandlerBase<Document>
         }
 
         MarkModified(context);
-        return Success("Footer tab stops set");
+        return new SuccessResult { Message = "Footer tab stops set" };
     }
 
     /// <summary>

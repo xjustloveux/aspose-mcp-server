@@ -1,7 +1,8 @@
 using Aspose.Words;
 using Aspose.Words.Fields;
 using AsposeMcpServer.Handlers.Word.Field;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Field;
 
@@ -32,9 +33,11 @@ public class EditFormFieldWordHandlerTests : WordHandlerTestBase
             { "value", "New Value" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("New Value", doc.Range.FormFields["TestField"].Result);
         AssertModified(context);
     }
@@ -50,9 +53,11 @@ public class EditFormFieldWordHandlerTests : WordHandlerTestBase
             { "checkedValue", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(doc.Range.FormFields["CheckField"].Checked);
     }
 
@@ -67,9 +72,11 @@ public class EditFormFieldWordHandlerTests : WordHandlerTestBase
             { "selectedIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(1, doc.Range.FormFields["DropField"].DropDownSelectedIndex);
     }
 

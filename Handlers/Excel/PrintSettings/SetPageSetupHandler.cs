@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.PrintSettings;
 
 /// <summary>
 ///     Handler for setting page setup options in Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetPageSetupHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class SetPageSetupHandler : OperationHandlerBase<Workbook>
     ///     topMargin, bottomMargin, header, footer, fitToPage, fitToPagesWide, fitToPagesTall
     /// </param>
     /// <returns>Success message with page setup details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var setParams = ExtractSetPageSetupParameters(parameters);
 
@@ -38,7 +41,7 @@ public class SetPageSetupHandler : OperationHandlerBase<Workbook>
         MarkModified(context);
 
         var changesStr = changes.Count > 0 ? string.Join(", ", changes) : "no changes";
-        return Success($"Page setup updated ({changesStr}).");
+        return new SuccessResult { Message = $"Page setup updated ({changesStr})." };
     }
 
     /// <summary>

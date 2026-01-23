@@ -1,13 +1,16 @@
 using Aspose.Slides;
 using Aspose.Slides.SlideShow;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.PowerPoint.Transition;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Transition;
 
 /// <summary>
 ///     Handler for getting slide transition information from PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(GetTransitionResult))]
 public class GetPptTransitionHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class GetPptTransitionHandler : OperationHandlerBase<Presentation>
     ///     Optional: slideIndex (default: 0).
     /// </param>
     /// <returns>JSON result with transition information.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var getParams = ExtractGetTransitionParameters(parameters);
 
@@ -31,18 +34,18 @@ public class GetPptTransitionHandler : OperationHandlerBase<Presentation>
         var transition = slide.SlideShowTransition;
         var hasTransition = transition.Type != TransitionType.None;
 
-        var result = new
+        var result = new GetTransitionResult
         {
-            slideIndex = getParams.SlideIndex,
-            type = transition.Type.ToString(),
-            hasTransition,
-            speed = transition.Speed.ToString(),
-            advanceOnClick = transition.AdvanceOnClick,
-            advanceAfter = transition.AdvanceAfter,
-            advanceAfterSeconds = transition.AdvanceAfterTime / 1000.0
+            SlideIndex = getParams.SlideIndex,
+            Type = transition.Type.ToString(),
+            HasTransition = hasTransition,
+            Speed = transition.Speed.ToString(),
+            AdvanceOnClick = transition.AdvanceOnClick,
+            AdvanceAfter = transition.AdvanceAfter,
+            AdvanceAfterSeconds = transition.AdvanceAfterTime / 1000.0
         };
 
-        return JsonResult(result);
+        return result;
     }
 
     /// <summary>

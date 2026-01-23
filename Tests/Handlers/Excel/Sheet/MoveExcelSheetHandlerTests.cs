@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.Sheet;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Sheet;
 
@@ -80,9 +81,11 @@ public class MoveExcelSheetHandlerTests : ExcelHandlerTestBase
             { "targetIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("no move needed", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("no move needed", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -102,10 +105,12 @@ public class MoveExcelSheetHandlerTests : ExcelHandlerTestBase
             { "targetIndex", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("0", result);
-        Assert.Contains("2", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("0", result.Message);
+        Assert.Contains("2", result.Message);
     }
 
     #endregion

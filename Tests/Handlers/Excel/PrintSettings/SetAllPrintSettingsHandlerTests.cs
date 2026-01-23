@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.PrintSettings;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.PrintSettings;
 
@@ -33,9 +34,11 @@ public class SetAllPrintSettingsHandlerTests : ExcelHandlerTestBase
             { "orientation", "landscape" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("print settings updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("print settings updated", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("A1:D10", workbook.Worksheets[0].PageSetup.PrintArea);
         Assert.Equal("$1:$1", workbook.Worksheets[0].PageSetup.PrintTitleRows);
         Assert.Equal("$A:$A", workbook.Worksheets[0].PageSetup.PrintTitleColumns);
@@ -53,9 +56,11 @@ public class SetAllPrintSettingsHandlerTests : ExcelHandlerTestBase
             { "range", "B2:E5" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("printArea=B2:E5", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("printArea=B2:E5", result.Message);
         Assert.Equal("B2:E5", workbook.Worksheets[0].PageSetup.PrintArea);
     }
 
@@ -73,9 +78,11 @@ public class SetAllPrintSettingsHandlerTests : ExcelHandlerTestBase
             { "orientation", "portrait" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("print settings updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("print settings updated", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(PageOrientationType.Portrait, workbook.Worksheets[0].PageSetup.Orientation);
     }
 
@@ -90,9 +97,11 @@ public class SetAllPrintSettingsHandlerTests : ExcelHandlerTestBase
             { "range", "A1:C5" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("sheet 1", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("sheet 1", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("A1:C5", workbook.Worksheets[1].PageSetup.PrintArea);
     }
 
@@ -103,9 +112,11 @@ public class SetAllPrintSettingsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("no changes", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("no changes", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

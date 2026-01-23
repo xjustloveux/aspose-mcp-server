@@ -1,6 +1,6 @@
-using System.Text.Json;
 using AsposeMcpServer.Handlers.Word.Paragraph;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Word.Paragraph;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Paragraph;
 
@@ -27,15 +27,15 @@ public class GetParagraphsWordHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var paragraphs = json.RootElement.GetProperty("paragraphs");
-        Assert.True(paragraphs.GetArrayLength() > 0);
-        var firstPara = paragraphs[0];
-        Assert.True(firstPara.TryGetProperty("index", out _));
-        Assert.True(firstPara.TryGetProperty("location", out _));
-        Assert.True(firstPara.TryGetProperty("text", out _));
+        var result = Assert.IsType<GetParagraphsWordResult>(res);
+
+        Assert.True(result.Paragraphs.Count > 0);
+        var firstPara = result.Paragraphs[0];
+        Assert.Equal(0, firstPara.Index);
+        Assert.NotNull(firstPara.Location);
+        Assert.NotNull(firstPara.Text);
     }
 
     #endregion
@@ -70,11 +70,12 @@ public class GetParagraphsWordHandlerTests : WordHandlerTestBase
             { "includeCommentParagraphs", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("filters", out var filters));
-        Assert.False(filters.GetProperty("includeCommentParagraphs").GetBoolean());
+        var result = Assert.IsType<GetParagraphsWordResult>(res);
+
+        Assert.NotNull(result.Filters);
+        Assert.False(result.Filters.IncludeCommentParagraphs);
     }
 
     #endregion
@@ -91,11 +92,12 @@ public class GetParagraphsWordHandlerTests : WordHandlerTestBase
             { "includeTextboxParagraphs", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("filters", out var filters));
-        Assert.False(filters.GetProperty("includeTextboxParagraphs").GetBoolean());
+        var result = Assert.IsType<GetParagraphsWordResult>(res);
+
+        Assert.NotNull(result.Filters);
+        Assert.False(result.Filters.IncludeTextboxParagraphs);
     }
 
     #endregion
@@ -110,15 +112,15 @@ public class GetParagraphsWordHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var paragraphs = json.RootElement.GetProperty("paragraphs");
+        var result = Assert.IsType<GetParagraphsWordResult>(res);
+
         var found = false;
-        foreach (var para in paragraphs.EnumerateArray())
+        foreach (var para in result.Paragraphs)
         {
-            var text = para.GetProperty("text").GetString();
-            if (text != null && text.Contains("..."))
+            var text = para.Text;
+            if (text is { Length: > 0 } && text.Contains("..."))
             {
                 found = true;
                 Assert.True(text.Length <= 103);
@@ -144,10 +146,11 @@ public class GetParagraphsWordHandlerTests : WordHandlerTestBase
             { "includeTextboxParagraphs", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("count", out _));
+        var result = Assert.IsType<GetParagraphsWordResult>(res);
+
+        Assert.True(result.Count >= 0);
     }
 
     #endregion
@@ -161,11 +164,12 @@ public class GetParagraphsWordHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("count", out _));
-        Assert.True(json.RootElement.TryGetProperty("paragraphs", out _));
+        var result = Assert.IsType<GetParagraphsWordResult>(res);
+
+        Assert.True(result.Count >= 0);
+        Assert.NotNull(result.Paragraphs);
         AssertNotModified(context);
     }
 
@@ -176,10 +180,11 @@ public class GetParagraphsWordHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.GetProperty("count").GetInt32() >= 3);
+        var result = Assert.IsType<GetParagraphsWordResult>(res);
+
+        Assert.True(result.Count >= 3);
     }
 
     #endregion
@@ -196,11 +201,12 @@ public class GetParagraphsWordHandlerTests : WordHandlerTestBase
             { "includeEmpty", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("filters", out var filters));
-        Assert.False(filters.GetProperty("includeEmpty").GetBoolean());
+        var result = Assert.IsType<GetParagraphsWordResult>(res);
+
+        Assert.NotNull(result.Filters);
+        Assert.False(result.Filters.IncludeEmpty);
     }
 
     [Fact]
@@ -213,11 +219,12 @@ public class GetParagraphsWordHandlerTests : WordHandlerTestBase
             { "styleFilter", "Normal" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("filters", out var filters));
-        Assert.Equal("Normal", filters.GetProperty("styleFilter").GetString());
+        var result = Assert.IsType<GetParagraphsWordResult>(res);
+
+        Assert.NotNull(result.Filters);
+        Assert.Equal("Normal", result.Filters.StyleFilter);
     }
 
     #endregion
@@ -234,11 +241,12 @@ public class GetParagraphsWordHandlerTests : WordHandlerTestBase
             { "sectionIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("filters", out var filters));
-        Assert.Equal(0, filters.GetProperty("sectionIndex").GetInt32());
+        var result = Assert.IsType<GetParagraphsWordResult>(res);
+
+        Assert.NotNull(result.Filters);
+        Assert.Equal(0, result.Filters.SectionIndex);
     }
 
     [Theory]

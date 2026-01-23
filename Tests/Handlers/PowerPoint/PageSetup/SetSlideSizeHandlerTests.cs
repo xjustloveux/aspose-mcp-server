@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.PowerPoint.PageSetup;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.PageSetup;
 
@@ -26,9 +27,11 @@ public class SetSlideSizeHandlerTests : PptHandlerTestBase
         var context = CreateContext(presentation);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("slide size set", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("slide size set", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -42,9 +45,11 @@ public class SetSlideSizeHandlerTests : PptHandlerTestBase
             { "preset", "OnScreen16x10" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("slide size set", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("slide size set", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -57,9 +62,11 @@ public class SetSlideSizeHandlerTests : PptHandlerTestBase
             { "preset", "A4" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("slide size set", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("slide size set", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -74,9 +81,11 @@ public class SetSlideSizeHandlerTests : PptHandlerTestBase
             { "height", 600.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("custom", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("custom", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

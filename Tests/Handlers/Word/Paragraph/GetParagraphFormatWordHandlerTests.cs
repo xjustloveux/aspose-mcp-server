@@ -1,9 +1,9 @@
 using System.Drawing;
-using System.Text.Json;
 using Aspose.Words;
 using Aspose.Words.Lists;
 using AsposeMcpServer.Handlers.Word.Paragraph;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Word.Paragraph;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Paragraph;
 
@@ -34,10 +34,11 @@ public class GetParagraphFormatWordHandlerTests : WordHandlerTestBase
             { "includeRunDetails", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("runCount", out _));
+        var result = Assert.IsType<GetParagraphFormatWordResult>(res);
+
+        Assert.True(result.RunCount >= 0);
     }
 
     #endregion
@@ -57,10 +58,11 @@ public class GetParagraphFormatWordHandlerTests : WordHandlerTestBase
             { "paragraphIndex", index }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(index, json.RootElement.GetProperty("paragraphIndex").GetInt32());
+        var result = Assert.IsType<GetParagraphFormatWordResult>(res);
+
+        Assert.Equal(index, result.ParagraphIndex);
     }
 
     #endregion
@@ -99,10 +101,11 @@ public class GetParagraphFormatWordHandlerTests : WordHandlerTestBase
             { "includeRunDetails", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("paragraphFormat", out _));
+        var result = Assert.IsType<GetParagraphFormatWordResult>(res);
+
+        Assert.NotNull(result.ParagraphFormat);
     }
 
     #endregion
@@ -126,11 +129,12 @@ public class GetParagraphFormatWordHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("listFormat", out var listFormat));
-        Assert.True(listFormat.GetProperty("isListItem").GetBoolean());
+        var result = Assert.IsType<GetParagraphFormatWordResult>(res);
+
+        Assert.NotNull(result.ListFormat);
+        Assert.True(result.ListFormat.IsListItem);
     }
 
     #endregion
@@ -156,11 +160,12 @@ public class GetParagraphFormatWordHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("backgroundColor", out var bgColor));
-        Assert.Contains("FF", bgColor.GetString());
+        var result = Assert.IsType<GetParagraphFormatWordResult>(res);
+
+        Assert.NotNull(result.BackgroundColor);
+        Assert.Contains("FF", result.BackgroundColor);
     }
 
     #endregion
@@ -187,11 +192,12 @@ public class GetParagraphFormatWordHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("tabStops", out var tabStops));
-        Assert.Equal(2, tabStops.GetArrayLength());
+        var result = Assert.IsType<GetParagraphFormatWordResult>(res);
+
+        Assert.NotNull(result.TabStops);
+        Assert.Equal(2, result.TabStops.Count);
     }
 
     #endregion
@@ -218,12 +224,13 @@ public class GetParagraphFormatWordHandlerTests : WordHandlerTestBase
             { "includeRunDetails", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("runs", out var runs));
-        Assert.Equal(10, runs.GetProperty("displayed").GetInt32());
-        Assert.Equal(15, runs.GetProperty("total").GetInt32());
+        var result = Assert.IsType<GetParagraphFormatWordResult>(res);
+
+        Assert.NotNull(result.Runs);
+        Assert.Equal(10, result.Runs.Displayed);
+        Assert.Equal(15, result.Runs.Total);
     }
 
     #endregion
@@ -240,12 +247,13 @@ public class GetParagraphFormatWordHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("paragraphIndex", out _));
-        Assert.True(json.RootElement.TryGetProperty("text", out _));
-        Assert.True(json.RootElement.TryGetProperty("paragraphFormat", out _));
+        var result = Assert.IsType<GetParagraphFormatWordResult>(res);
+
+        Assert.Equal(0, result.ParagraphIndex);
+        Assert.NotNull(result.Text);
+        Assert.NotNull(result.ParagraphFormat);
         AssertNotModified(context);
     }
 
@@ -259,14 +267,15 @@ public class GetParagraphFormatWordHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var format = json.RootElement.GetProperty("paragraphFormat");
-        Assert.True(format.TryGetProperty("alignment", out _));
-        Assert.True(format.TryGetProperty("leftIndent", out _));
-        Assert.True(format.TryGetProperty("spaceBefore", out _));
-        Assert.True(format.TryGetProperty("spaceAfter", out _));
+        var result = Assert.IsType<GetParagraphFormatWordResult>(res);
+
+        var format = result.ParagraphFormat;
+        Assert.NotNull(format.Alignment);
+        Assert.True(format.LeftIndent >= 0);
+        Assert.True(format.SpaceBefore >= 0);
+        Assert.True(format.SpaceAfter >= 0);
     }
 
     #endregion
@@ -319,11 +328,12 @@ public class GetParagraphFormatWordHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("fontFormat", out var fontFormat));
-        Assert.Equal(14, fontFormat.GetProperty("fontSize").GetDouble());
+        var result = Assert.IsType<GetParagraphFormatWordResult>(res);
+
+        Assert.NotNull(result.FontFormat);
+        Assert.Equal(14, result.FontFormat.FontSize);
     }
 
     [SkippableFact]
@@ -345,10 +355,11 @@ public class GetParagraphFormatWordHandlerTests : WordHandlerTestBase
             { "includeRunDetails", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("runs", out _));
+        var result = Assert.IsType<GetParagraphFormatWordResult>(res);
+
+        Assert.NotNull(result.Runs);
     }
 
     #endregion
@@ -376,12 +387,13 @@ public class GetParagraphFormatWordHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("borders", out var borders));
-        Assert.True(borders.TryGetProperty("top", out _));
-        Assert.True(borders.TryGetProperty("bottom", out _));
+        var result = Assert.IsType<GetParagraphFormatWordResult>(res);
+
+        Assert.NotNull(result.Borders);
+        Assert.True(result.Borders.ContainsKey("top"));
+        Assert.True(result.Borders.ContainsKey("bottom"));
     }
 
     [SkippableFact]
@@ -404,12 +416,13 @@ public class GetParagraphFormatWordHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("borders", out var borders));
-        Assert.True(borders.TryGetProperty("left", out _));
-        Assert.True(borders.TryGetProperty("right", out _));
+        var result = Assert.IsType<GetParagraphFormatWordResult>(res);
+
+        Assert.NotNull(result.Borders);
+        Assert.True(result.Borders.ContainsKey("left"));
+        Assert.True(result.Borders.ContainsKey("right"));
     }
 
     #endregion
@@ -434,13 +447,14 @@ public class GetParagraphFormatWordHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("fontFormat", out var fontFormat));
-        Assert.True(fontFormat.TryGetProperty("underline", out _));
-        Assert.True(fontFormat.TryGetProperty("strikethrough", out _));
-        Assert.True(fontFormat.TryGetProperty("color", out _));
+        var result = Assert.IsType<GetParagraphFormatWordResult>(res);
+
+        Assert.NotNull(result.FontFormat);
+        Assert.NotNull(result.FontFormat.Underline);
+        Assert.True(result.FontFormat.Strikethrough);
+        Assert.NotNull(result.FontFormat.Color);
     }
 
     [SkippableFact]
@@ -458,11 +472,12 @@ public class GetParagraphFormatWordHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("fontFormat", out var fontFormat));
-        Assert.True(fontFormat.TryGetProperty("superscript", out _));
+        var result = Assert.IsType<GetParagraphFormatWordResult>(res);
+
+        Assert.NotNull(result.FontFormat);
+        Assert.True(result.FontFormat.Superscript);
     }
 
     [SkippableFact]
@@ -480,11 +495,12 @@ public class GetParagraphFormatWordHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("fontFormat", out var fontFormat));
-        Assert.True(fontFormat.TryGetProperty("highlightColor", out _));
+        var result = Assert.IsType<GetParagraphFormatWordResult>(res);
+
+        Assert.NotNull(result.FontFormat);
+        Assert.NotNull(result.FontFormat.HighlightColor);
     }
 
     #endregion

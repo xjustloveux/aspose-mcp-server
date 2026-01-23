@@ -1,12 +1,15 @@
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.FileOperations;
 
 /// <summary>
 ///     Handler for splitting a PDF document into multiple files.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SplitPdfFileHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class SplitPdfFileHandler : OperationHandlerBase<Document>
     ///     Optional: pagesPerFile (default: 1), startPage, endPage, fileBaseName
     /// </param>
     /// <returns>Success message with split result.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var splitParams = ExtractSplitParameters(parameters);
 
@@ -58,8 +61,11 @@ public class SplitPdfFileHandler : OperationHandlerBase<Document>
             var splitOutputPath = Path.Combine(splitParams.OutputDir, safeFileName);
             newDocument.Save(splitOutputPath);
 
-            return Success(
-                $"PDF extracted pages {actualStartPage}-{actualEndPage} ({actualEndPage - actualStartPage + 1} pages). Output: {splitOutputPath}");
+            return new SuccessResult
+            {
+                Message =
+                    $"PDF extracted pages {actualStartPage}-{actualEndPage} ({actualEndPage - actualStartPage + 1} pages). Output: {splitOutputPath}"
+            };
         }
 
         var fileCount = 0;
@@ -74,7 +80,7 @@ public class SplitPdfFileHandler : OperationHandlerBase<Document>
             newDocument.Save(splitOutputPath);
         }
 
-        return Success($"PDF split into {fileCount} files. Output: {splitParams.OutputDir}");
+        return new SuccessResult { Message = $"PDF split into {fileCount} files. Output: {splitParams.OutputDir}" };
     }
 
     /// <summary>

@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.File;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.File;
 
@@ -44,9 +45,11 @@ public class ConvertWordDocumentHandlerTests : WordHandlerTestBase
             { "format", "pdf" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("converted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("converted", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(System.IO.File.Exists(outputPath));
         var fileInfo = new FileInfo(outputPath);
         Assert.True(fileInfo.Length > 0, "Converted PDF file should have content");
@@ -65,9 +68,11 @@ public class ConvertWordDocumentHandlerTests : WordHandlerTestBase
             { "format", "html" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("converted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("converted", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(System.IO.File.Exists(outputPath));
         var fileInfo = new FileInfo(outputPath);
         Assert.True(fileInfo.Length > 0, "Converted HTML file should have content");
@@ -89,9 +94,11 @@ public class ConvertWordDocumentHandlerTests : WordHandlerTestBase
             { "format", "rtf" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("converted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("converted", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(System.IO.File.Exists(outputPath));
         var fileInfo = new FileInfo(outputPath);
         Assert.True(fileInfo.Length > 0, "Converted RTF file should have content");
@@ -109,9 +116,11 @@ public class ConvertWordDocumentHandlerTests : WordHandlerTestBase
             { "outputPath", outputPath }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("converted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("converted", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(System.IO.File.Exists(outputPath));
         var fileInfo = new FileInfo(outputPath);
         Assert.True(fileInfo.Length > 0, "Converted TXT file should have content");
@@ -202,9 +211,11 @@ public class ConvertWordDocumentHandlerTests : WordHandlerTestBase
             { "format", format }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("converted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("converted", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(System.IO.File.Exists(outputPath));
     }
 
@@ -221,9 +232,11 @@ public class ConvertWordDocumentHandlerTests : WordHandlerTestBase
             { "format", "epub" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("converted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("converted", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(System.IO.File.Exists(outputPath));
     }
 
@@ -240,9 +253,11 @@ public class ConvertWordDocumentHandlerTests : WordHandlerTestBase
             { "format", "xps" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("converted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("converted", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(System.IO.File.Exists(outputPath));
     }
 
@@ -258,10 +273,12 @@ public class ConvertWordDocumentHandlerTests : WordHandlerTestBase
             { "outputPath", outputPath }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("converted", result.ToLower());
-        Assert.Contains("pdf", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("converted", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("pdf", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -276,10 +293,12 @@ public class ConvertWordDocumentHandlerTests : WordHandlerTestBase
             { "outputPath", outputPath }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("converted", result.ToLower());
-        Assert.Contains("html", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("converted", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("html", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

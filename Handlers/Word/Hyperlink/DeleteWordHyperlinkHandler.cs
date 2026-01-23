@@ -1,11 +1,15 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Hyperlink;
 
 /// <summary>
 ///     Handler for deleting hyperlinks from Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeleteWordHyperlinkHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,7 +24,7 @@ public class DeleteWordHyperlinkHandler : OperationHandlerBase<Document>
     ///     Optional: keepText (default: false)
     /// </param>
     /// <returns>Success message with deletion details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractDeleteHyperlinkParameters(parameters);
 
@@ -49,13 +53,13 @@ public class DeleteWordHyperlinkHandler : OperationHandlerBase<Document>
 
         var remainingCount = WordHyperlinkHelper.GetAllHyperlinks(doc).Count;
 
-        var result = $"Hyperlink #{p.HyperlinkIndex} deleted successfully\n";
-        result += $"Display text: {displayTextValue}\n";
-        result += $"Address: {address}\n";
-        result += $"Keep text: {(p.KeepText ? "Yes (unlinked)" : "No (removed)")}\n";
-        result += $"Remaining hyperlinks in document: {remainingCount}";
+        var message = $"Hyperlink #{p.HyperlinkIndex} deleted successfully\n";
+        message += $"Display text: {displayTextValue}\n";
+        message += $"Address: {address}\n";
+        message += $"Keep text: {(p.KeepText ? "Yes (unlinked)" : "No (removed)")}\n";
+        message += $"Remaining hyperlinks in document: {remainingCount}";
 
-        return result;
+        return new SuccessResult { Message = message };
     }
 
     /// <summary>

@@ -1,12 +1,15 @@
 using Aspose.Words;
 using Aspose.Words.Fields;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Field;
 
 /// <summary>
 ///     Handler for adding form fields to Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddFormFieldWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class AddFormFieldWordHandler : OperationHandlerBase<Document>
     ///     Optional: defaultValue, options, checkedValue
     /// </param>
     /// <returns>Success message with form field details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractAddFormFieldParameters(parameters);
 
@@ -48,7 +51,7 @@ public class AddFormFieldWordHandler : OperationHandlerBase<Document>
         }
 
         MarkModified(context);
-        return Success($"{p.FormFieldType} field '{p.FieldName}' added");
+        return new SuccessResult { Message = $"{p.FormFieldType} field '{p.FieldName}' added" };
     }
 
     /// <summary>

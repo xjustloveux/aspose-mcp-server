@@ -1,7 +1,9 @@
 using Aspose.Words;
 using Aspose.Words.Drawing;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 using Section = Aspose.Words.Section;
 using WordShape = Aspose.Words.Drawing.Shape;
@@ -39,7 +41,7 @@ public abstract class HeaderFooterImageHandlerBase : OperationHandlerBase<Docume
     ///     Optional: alignment, imageWidth, imageHeight, sectionIndex, headerFooterType, isFloating, removeExisting
     /// </param>
     /// <returns>Success message.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractImageParameters(parameters);
         ValidateImagePath(p.ImagePath);
@@ -52,7 +54,7 @@ public abstract class HeaderFooterImageHandlerBase : OperationHandlerBase<Docume
             InsertImage(section, doc, hfType, p);
 
         MarkModified(context);
-        return Success($"{TargetName} image set{(p.IsFloating ? " (floating)" : "")}");
+        return new SuccessResult { Message = $"{TargetName} image set{(p.IsFloating ? " (floating)" : "")}" };
     }
 
     /// <summary>

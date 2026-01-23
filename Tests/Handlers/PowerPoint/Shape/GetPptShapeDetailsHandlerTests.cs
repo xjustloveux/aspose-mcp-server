@@ -1,7 +1,7 @@
-using System.Text.Json;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Shape;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.PowerPoint.Shape;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Shape;
 
@@ -54,16 +54,15 @@ public class GetPptShapeDetailsHandlerTests : PptHandlerTestBase
             { "shapeIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
+        var result = Assert.IsType<GetShapeDetailsResult>(res);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("index", out _));
-        Assert.True(json.RootElement.TryGetProperty("name", out _));
-        Assert.True(json.RootElement.TryGetProperty("type", out _));
-        Assert.True(json.RootElement.TryGetProperty("x", out _));
-        Assert.True(json.RootElement.TryGetProperty("y", out _));
-        Assert.True(json.RootElement.TryGetProperty("width", out _));
-        Assert.True(json.RootElement.TryGetProperty("height", out _));
+        Assert.True(result.Index >= 0);
+        Assert.NotNull(result.Type);
+        Assert.True(result.X >= 0);
+        Assert.True(result.Y >= 0);
+        Assert.True(result.Width >= 0);
+        Assert.True(result.Height >= 0);
         AssertNotModified(context);
     }
 
@@ -78,11 +77,11 @@ public class GetPptShapeDetailsHandlerTests : PptHandlerTestBase
             { "shapeIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
+        var result = Assert.IsType<GetShapeDetailsResult>(res);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(150, json.RootElement.GetProperty("x").GetSingle());
-        Assert.Equal(250, json.RootElement.GetProperty("y").GetSingle());
+        Assert.Equal(150f, result.X);
+        Assert.Equal(250f, result.Y);
     }
 
     [Fact]
@@ -96,11 +95,11 @@ public class GetPptShapeDetailsHandlerTests : PptHandlerTestBase
             { "shapeIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
+        var result = Assert.IsType<GetShapeDetailsResult>(res);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(350, json.RootElement.GetProperty("width").GetSingle());
-        Assert.Equal(450, json.RootElement.GetProperty("height").GetSingle());
+        Assert.Equal(350f, result.Width);
+        Assert.Equal(450f, result.Height);
     }
 
     #endregion
@@ -118,11 +117,11 @@ public class GetPptShapeDetailsHandlerTests : PptHandlerTestBase
             { "shapeIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
+        var result = Assert.IsType<GetShapeDetailsResult>(res);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("shapeType", out var shapeType));
-        Assert.Equal("Ellipse", shapeType.GetString());
+        Assert.NotNull(result.ShapeType);
+        Assert.Equal("Ellipse", result.ShapeType);
     }
 
     [Fact]
@@ -137,11 +136,11 @@ public class GetPptShapeDetailsHandlerTests : PptHandlerTestBase
             { "shapeIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
+        var result = Assert.IsType<GetShapeDetailsResult>(res);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("fillType", out var fillType));
-        Assert.Equal("Solid", fillType.GetString());
+        Assert.NotNull(result.FillType);
+        Assert.Equal("Solid", result.FillType);
     }
 
     #endregion
@@ -160,10 +159,10 @@ public class GetPptShapeDetailsHandlerTests : PptHandlerTestBase
             { "shapeIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
+        var result = Assert.IsType<GetShapeDetailsResult>(res);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(45, json.RootElement.GetProperty("rotation").GetSingle());
+        Assert.Equal(45f, result.Rotation);
     }
 
     [Fact]
@@ -178,10 +177,10 @@ public class GetPptShapeDetailsHandlerTests : PptHandlerTestBase
             { "shapeIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
+        var result = Assert.IsType<GetShapeDetailsResult>(res);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.GetProperty("hidden").GetBoolean());
+        Assert.True(result.Hidden);
     }
 
     #endregion
@@ -200,10 +199,10 @@ public class GetPptShapeDetailsHandlerTests : PptHandlerTestBase
             { "shapeIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
+        var result = Assert.IsType<GetShapeDetailsResult>(res);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(0, json.RootElement.GetProperty("index").GetInt32());
+        Assert.Equal(0, result.Index);
     }
 
     [Fact]
@@ -217,10 +216,10 @@ public class GetPptShapeDetailsHandlerTests : PptHandlerTestBase
             { "shapeIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
+        var result = Assert.IsType<GetShapeDetailsResult>(res);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(0, json.RootElement.GetProperty("index").GetInt32());
+        Assert.Equal(0, result.Index);
     }
 
     #endregion

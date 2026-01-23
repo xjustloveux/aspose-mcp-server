@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.DataValidation;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.DataValidation;
 
@@ -56,9 +57,11 @@ public class EditExcelDataValidationHandlerTests : ExcelHandlerTestBase
             { "validationType", "WholeNumber" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Edited", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Edited", result.Message);
         Assert.Equal(ValidationType.WholeNumber, workbook.Worksheets[0].Validations[0].Type);
         AssertModified(context);
     }
@@ -74,9 +77,11 @@ public class EditExcelDataValidationHandlerTests : ExcelHandlerTestBase
             { "formula1", "NewA,NewB,NewC" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Formula1=NewA,NewB,NewC", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Formula1=NewA,NewB,NewC", result.Message);
         Assert.Equal("NewA,NewB,NewC", workbook.Worksheets[0].Validations[0].Formula1);
         AssertModified(context);
     }
@@ -92,9 +97,11 @@ public class EditExcelDataValidationHandlerTests : ExcelHandlerTestBase
             { "formula2", "200" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Formula2=200", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Formula2=200", result.Message);
         AssertModified(context);
     }
 
@@ -164,11 +171,13 @@ public class EditExcelDataValidationHandlerTests : ExcelHandlerTestBase
             { "inCellDropDown", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Formula1", result);
-        Assert.Contains("ErrorMessage", result);
-        Assert.Contains("InCellDropDown", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Formula1", result.Message);
+        Assert.Contains("ErrorMessage", result.Message);
+        Assert.Contains("InCellDropDown", result.Message);
         Assert.Equal("X,Y,Z", workbook.Worksheets[0].Validations[0].Formula1);
         Assert.Equal("Error!", workbook.Worksheets[0].Validations[0].ErrorMessage);
         Assert.True(workbook.Worksheets[0].Validations[0].InCellDropDown);
@@ -232,9 +241,11 @@ public class EditExcelDataValidationHandlerTests : ExcelHandlerTestBase
             { "validationIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("No changes", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("No changes", result.Message);
     }
 
     [Fact]
@@ -248,9 +259,11 @@ public class EditExcelDataValidationHandlerTests : ExcelHandlerTestBase
             { "formula1", "A,B" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("#0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("#0", result.Message);
     }
 
     #endregion

@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Excel.DataValidation;
 
 namespace AsposeMcpServer.Handlers.Excel.DataValidation;
 
 /// <summary>
 ///     Handler for getting data validation from Excel worksheets.
 /// </summary>
+[ResultType(typeof(GetDataValidationsResult))]
 public class GetExcelDataValidationsHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class GetExcelDataValidationsHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0)
     /// </param>
     /// <returns>JSON result with data validation information.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var getParams = ExtractGetParameters(parameters);
 
@@ -28,31 +31,31 @@ public class GetExcelDataValidationsHandler : OperationHandlerBase<Workbook>
         var worksheet = ExcelHelper.GetWorksheet(workbook, getParams.SheetIndex);
         var validations = worksheet.Validations;
 
-        List<object> validationList = [];
+        List<DataValidationInfo> validationList = [];
         for (var i = 0; i < validations.Count; i++)
         {
             var validation = validations[i];
-            validationList.Add(new
+            validationList.Add(new DataValidationInfo
             {
-                index = i,
-                type = validation.Type.ToString(),
-                operatorType = validation.Operator.ToString(),
-                formula1 = validation.Formula1,
-                formula2 = validation.Formula2,
-                errorMessage = validation.ErrorMessage,
-                inputMessage = validation.InputMessage,
-                showError = validation.ShowError,
-                showInput = validation.ShowInput,
-                inCellDropDown = validation.InCellDropDown
+                Index = i,
+                Type = validation.Type.ToString(),
+                OperatorType = validation.Operator.ToString(),
+                Formula1 = validation.Formula1,
+                Formula2 = validation.Formula2,
+                ErrorMessage = validation.ErrorMessage,
+                InputMessage = validation.InputMessage,
+                ShowError = validation.ShowError,
+                ShowInput = validation.ShowInput,
+                InCellDropDown = validation.InCellDropDown
             });
         }
 
-        return JsonResult(new
+        return new GetDataValidationsResult
         {
-            count = validations.Count,
-            worksheetName = worksheet.Name,
-            items = validationList
-        });
+            Count = validations.Count,
+            WorksheetName = worksheet.Name,
+            Items = validationList
+        };
     }
 
     private static GetParameters ExtractGetParameters(OperationParameters parameters)

@@ -1,7 +1,9 @@
 ﻿using System.ComponentModel;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Word;
 /// <summary>
 ///     Tool for managing watermarks in Word documents
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Word.Watermark")]
 [McpServerToolType]
 public class WordWatermarkTool
 {
@@ -57,7 +60,14 @@ public class WordWatermarkTool
     /// <param name="isWashout">Apply washout effect to image (for add_image, default: true).</param>
     /// <returns>A message indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "word_watermark")]
+    [McpServerTool(
+        Name = "word_watermark",
+        Title = "Word Watermark Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage watermarks in Word documents. Supports 3 operations: add, add_image, remove.
 
 Usage examples:
@@ -66,7 +76,7 @@ Usage examples:
 - Remove watermark: word_watermark(operation='remove', path='doc.docx')
 
 Note: On Linux/Docker environments, ensure the specified font (default: Arial) is installed. Missing fonts may cause rendering issues.")]
-    public string Execute(
+    public object Execute(
         [Description("Operation to perform: 'add' (text watermark), 'add_image' (image watermark), 'remove'")]
         string operation,
         [Description("Document file path (required if no sessionId)")]
@@ -116,7 +126,7 @@ Note: On Linux/Docker environments, ensure the specified font (default: Arial) i
         if (operationContext.IsModified)
             ctx.Save(effectiveOutputPath);
 
-        return ctx.IsSession ? result : $"{result}\n{ctx.GetOutputMessage(effectiveOutputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, effectiveOutputPath);
     }
 
     /// <summary>

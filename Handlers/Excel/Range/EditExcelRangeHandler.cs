@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Range;
 
 /// <summary>
 ///     Handler for editing data in Excel ranges.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class EditExcelRangeHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class EditExcelRangeHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex, clearRange
     /// </param>
     /// <returns>Success message with edit details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractEditExcelRangeParameters(parameters);
 
@@ -54,7 +57,7 @@ public class EditExcelRangeHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Range {p.Range} edited.");
+        return new SuccessResult { Message = $"Range {p.Range} edited." };
     }
 
     /// <summary>

@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Paragraph;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Paragraph;
 
@@ -51,10 +52,12 @@ public class CopyParagraphFormatWordHandlerTests : WordHandlerTestBase
             { "targetParagraphIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("#0", result);
-        Assert.Contains("#1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("#0", result.Message);
+        Assert.Contains("#1", result.Message);
     }
 
     #endregion
@@ -72,9 +75,11 @@ public class CopyParagraphFormatWordHandlerTests : WordHandlerTestBase
             { "targetParagraphIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("copied", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("copied", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 

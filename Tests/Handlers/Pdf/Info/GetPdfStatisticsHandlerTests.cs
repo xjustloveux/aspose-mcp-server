@@ -1,8 +1,8 @@
-using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Handlers.Pdf.Info;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Pdf.Info;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Info;
 
@@ -29,11 +29,10 @@ public class GetPdfStatisticsHandlerTests : PdfHandlerTestBase
         var context = CreateContextWithSession(doc, "test-session");
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonNode.Parse(result);
-        Assert.NotNull(json);
-        Assert.Equal(3, json["totalPages"]?.GetValue<int>());
+        var result = Assert.IsType<GetPdfStatisticsResult>(res);
+        Assert.Equal(3, result.TotalPages);
     }
 
     [Fact]
@@ -43,11 +42,10 @@ public class GetPdfStatisticsHandlerTests : PdfHandlerTestBase
         var context = CreateContextWithSession(doc, "test-session");
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonNode.Parse(result);
-        Assert.NotNull(json);
-        Assert.NotNull(json["isEncrypted"]);
+        var result = Assert.IsType<GetPdfStatisticsResult>(res);
+        Assert.False(result.IsEncrypted);
     }
 
     [Fact]
@@ -57,11 +55,10 @@ public class GetPdfStatisticsHandlerTests : PdfHandlerTestBase
         var context = CreateContextWithSession(doc, "test-session");
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonNode.Parse(result);
-        Assert.NotNull(json);
-        Assert.NotNull(json["isLinearized"]);
+        var result = Assert.IsType<GetPdfStatisticsResult>(res);
+        Assert.False(result.IsLinearized);
     }
 
     [Fact]
@@ -71,11 +68,10 @@ public class GetPdfStatisticsHandlerTests : PdfHandlerTestBase
         var context = CreateContextWithSession(doc, "test-session");
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonNode.Parse(result);
-        Assert.NotNull(json);
-        Assert.NotNull(json["totalAnnotations"]);
+        var result = Assert.IsType<GetPdfStatisticsResult>(res);
+        Assert.True(result.TotalAnnotations >= 0);
     }
 
     [Fact]
@@ -85,11 +81,10 @@ public class GetPdfStatisticsHandlerTests : PdfHandlerTestBase
         var context = CreateContextWithSession(doc, "test-session");
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonNode.Parse(result);
-        Assert.NotNull(json);
-        Assert.NotNull(json["totalParagraphs"]);
+        var result = Assert.IsType<GetPdfStatisticsResult>(res);
+        Assert.True(result.TotalParagraphs >= 0);
     }
 
     [Fact]
@@ -99,11 +94,10 @@ public class GetPdfStatisticsHandlerTests : PdfHandlerTestBase
         var context = CreateContextWithSession(doc, "test-session");
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonNode.Parse(result);
-        Assert.NotNull(json);
-        Assert.NotNull(json["bookmarks"]);
+        var result = Assert.IsType<GetPdfStatisticsResult>(res);
+        Assert.True(result.Bookmarks >= 0);
     }
 
     [Fact]
@@ -113,11 +107,10 @@ public class GetPdfStatisticsHandlerTests : PdfHandlerTestBase
         var context = CreateContextWithSession(doc, "test-session");
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonNode.Parse(result);
-        Assert.NotNull(json);
-        Assert.NotNull(json["formFields"]);
+        var result = Assert.IsType<GetPdfStatisticsResult>(res);
+        Assert.True(result.FormFields >= 0);
     }
 
     #endregion
@@ -132,12 +125,11 @@ public class GetPdfStatisticsHandlerTests : PdfHandlerTestBase
         var context = CreateContextWithSourcePath(doc, pdfPath);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonNode.Parse(result);
-        Assert.NotNull(json);
-        Assert.NotNull(json["fileSizeBytes"]);
-        Assert.NotNull(json["fileSizeKb"]);
+        var result = Assert.IsType<GetPdfStatisticsResult>(res);
+        Assert.NotNull(result.FileSizeBytes);
+        Assert.NotNull(result.FileSizeKb);
     }
 
     [Fact]

@@ -1,6 +1,8 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using Aspose.Words;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Word.List;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Word;
 
 namespace AsposeMcpServer.Tests.Tools.Word;
@@ -57,7 +59,9 @@ public class WordListToolTests : WordTestBase
         _tool.Execute("add_list", docPath, outputPath: docPath, items: items);
         var result = _tool.Execute("get_format", docPath, paragraphIndex: 0);
         Assert.NotNull(result);
-        Assert.NotEmpty(result);
+        var data = GetResultData<GetWordListFormatSingleResult>(result);
+        Assert.Equal(0, data.ParagraphIndex);
+        Assert.NotEmpty(data.ContentPreview);
     }
 
     [Fact]
@@ -67,7 +71,8 @@ public class WordListToolTests : WordTestBase
         var outputPath = CreateTestFilePath("test_add_item_output.docx");
         var result = _tool.Execute("add_item", docPath, outputPath: outputPath,
             text: "New list item", styleName: "List Paragraph");
-        Assert.StartsWith("List item added", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("List item added", data.Message);
         var doc = new Document(outputPath);
         Assert.Contains("New list item", doc.GetText());
     }
@@ -85,7 +90,8 @@ public class WordListToolTests : WordTestBase
 
         var outputPath = CreateTestFilePath("test_delete_item_output.docx");
         var result = _tool.Execute("delete_item", docPath, outputPath: outputPath, paragraphIndex: 0);
-        Assert.StartsWith("List item #0 deleted", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("List item #0 deleted", data.Message);
         var resultDoc = new Document(outputPath);
         Assert.DoesNotContain("Paragraph 0", resultDoc.GetText());
         Assert.Contains("Paragraph 1", resultDoc.GetText());
@@ -104,7 +110,8 @@ public class WordListToolTests : WordTestBase
         var outputPath = CreateTestFilePath("test_edit_item_output.docx");
         var result = _tool.Execute("edit_item", docPath, outputPath: outputPath,
             paragraphIndex: 0, text: "Updated text");
-        Assert.StartsWith("List item edited", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("List item edited", data.Message);
         var resultDoc = new Document(outputPath);
         Assert.Contains("Updated text", resultDoc.GetText());
     }
@@ -119,7 +126,8 @@ public class WordListToolTests : WordTestBase
         var outputPath = CreateTestFilePath("test_set_format_output.docx");
         var result = _tool.Execute("set_format", docPath, outputPath: outputPath,
             paragraphIndex: 0, leftIndent: 72.0);
-        Assert.StartsWith("List format set", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("List format set", data.Message);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -137,7 +145,8 @@ public class WordListToolTests : WordTestBase
 
         var result = _tool.Execute("convert_to_list", docPath, outputPath: outputPath,
             startParagraphIndex: 0, endParagraphIndex: 1, listType: "bullet");
-        Assert.StartsWith("Paragraphs converted to list", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Paragraphs converted to list", data.Message);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -153,7 +162,8 @@ public class WordListToolTests : WordTestBase
 
         var result = _tool.Execute("restart_numbering", docPath, outputPath: outputPath,
             paragraphIndex: 2, startAt: 1);
-        Assert.StartsWith("List numbering restarted", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("List numbering restarted", data.Message);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -171,7 +181,8 @@ public class WordListToolTests : WordTestBase
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.docx");
         var items = new JsonArray { "Item 1" };
         var result = _tool.Execute(operation, docPath, outputPath: outputPath, items: items);
-        Assert.StartsWith("List added", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("List added", data.Message);
     }
 
     [Fact]
@@ -204,7 +215,11 @@ public class WordListToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("get_format", sessionId: sessionId, paragraphIndex: 0);
         Assert.NotNull(result);
-        Assert.NotEmpty(result);
+        var data = GetResultData<GetWordListFormatSingleResult>(result);
+        Assert.Equal(0, data.ParagraphIndex);
+        Assert.NotEmpty(data.ContentPreview);
+        var output = GetResultOutput<GetWordListFormatSingleResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -214,7 +229,10 @@ public class WordListToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         var items = new JsonArray { "Session Item A", "Session Item B" };
         var result = _tool.Execute("add_list", sessionId: sessionId, items: items);
-        Assert.StartsWith("List added", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("List added", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
 
         var doc = SessionManager.GetDocument<Document>(sessionId);
         var text = doc.GetText();
@@ -234,7 +252,9 @@ public class WordListToolTests : WordTestBase
         doc.Save(docPath);
 
         var sessionId = OpenSession(docPath);
-        _tool.Execute("edit_item", sessionId: sessionId, paragraphIndex: 0, text: "Updated session text");
+        var result = _tool.Execute("edit_item", sessionId: sessionId, paragraphIndex: 0, text: "Updated session text");
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
 
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         var text = sessionDoc.GetText();
@@ -254,7 +274,9 @@ public class WordListToolTests : WordTestBase
         doc.Save(docPath);
 
         var sessionId = OpenSession(docPath);
-        _tool.Execute("delete_item", sessionId: sessionId, paragraphIndex: 0);
+        var result = _tool.Execute("delete_item", sessionId: sessionId, paragraphIndex: 0);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
 
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         Assert.DoesNotContain("Paragraph to delete", sessionDoc.GetText());
@@ -275,7 +297,10 @@ public class WordListToolTests : WordTestBase
         var result = _tool.Execute("convert_to_list", sessionId: sessionId,
             startParagraphIndex: 0, endParagraphIndex: 1);
 
-        Assert.StartsWith("Paragraphs converted to list", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Paragraphs converted to list", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
 
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         var paragraphs = sessionDoc.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
@@ -293,7 +318,10 @@ public class WordListToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("set_format", sessionId: sessionId, paragraphIndex: 0, leftIndent: 50.0);
 
-        Assert.StartsWith("List format set", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("List format set", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]

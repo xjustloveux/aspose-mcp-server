@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.DataOperations;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Excel.DataOperations;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.DataOperations;
 
@@ -27,11 +28,13 @@ public class GetStatisticsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("totalWorksheets", result);
-        Assert.Contains("fileFormat", result);
-        Assert.Contains("worksheets", result);
+        var result = Assert.IsType<GetStatisticsResult>(res);
+
+        Assert.True(result.TotalWorksheets > 0);
+        Assert.NotNull(result.FileFormat);
+        Assert.NotNull(result.Worksheets);
     }
 
     [Fact]
@@ -46,9 +49,11 @@ public class GetStatisticsHandlerTests : ExcelHandlerTestBase
             { "sheetIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Sheet2", result);
+        var result = Assert.IsType<GetStatisticsResult>(res);
+
+        Assert.Contains(result.Worksheets, w => w.Name == "Sheet2");
     }
 
     [Fact]
@@ -64,13 +69,16 @@ public class GetStatisticsHandlerTests : ExcelHandlerTestBase
             { "range", "A1:A3" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("rangeStatistics", result);
-        Assert.Contains("sum", result);
-        Assert.Contains("average", result);
-        Assert.Contains("min", result);
-        Assert.Contains("max", result);
+        var result = Assert.IsType<GetStatisticsResult>(res);
+
+        var worksheet = result.Worksheets[0];
+        Assert.NotNull(worksheet.RangeStatistics);
+        Assert.NotNull(worksheet.RangeStatistics!.Sum);
+        Assert.NotNull(worksheet.RangeStatistics!.Average);
+        Assert.NotNull(worksheet.RangeStatistics!.Min);
+        Assert.NotNull(worksheet.RangeStatistics!.Max);
     }
 
     [Fact]
@@ -81,12 +89,15 @@ public class GetStatisticsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("chartsCount", result);
-        Assert.Contains("picturesCount", result);
-        Assert.Contains("hyperlinksCount", result);
-        Assert.Contains("commentsCount", result);
+        var result = Assert.IsType<GetStatisticsResult>(res);
+
+        var worksheet = result.Worksheets[0];
+        Assert.True(worksheet.ChartsCount >= 0);
+        Assert.True(worksheet.PicturesCount >= 0);
+        Assert.True(worksheet.HyperlinksCount >= 0);
+        Assert.True(worksheet.CommentsCount >= 0);
     }
 
     [Fact]
@@ -102,11 +113,15 @@ public class GetStatisticsHandlerTests : ExcelHandlerTestBase
             { "range", "A1:A4" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("numericCells", result);
-        Assert.Contains("nonNumericCells", result);
-        Assert.Contains("emptyCells", result);
+        var result = Assert.IsType<GetStatisticsResult>(res);
+
+        var rangeStats = result.Worksheets[0].RangeStatistics;
+        Assert.NotNull(rangeStats);
+        Assert.True(rangeStats.NumericCells >= 0);
+        Assert.True(rangeStats.NonNumericCells >= 0);
+        Assert.True(rangeStats.EmptyCells >= 0);
     }
 
     #endregion

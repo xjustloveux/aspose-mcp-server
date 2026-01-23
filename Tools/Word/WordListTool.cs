@@ -1,8 +1,10 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Text.Json.Nodes;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
@@ -12,6 +14,7 @@ namespace AsposeMcpServer.Tools.Word;
 ///     Merges: WordAddListTool, WordAddListItemTool, WordDeleteListItemTool, WordEditListItemTool,
 ///     WordSetListFormatTool, WordGetListFormatTool
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Word.List")]
 [McpServerToolType]
 public class WordListTool
 {
@@ -74,7 +77,14 @@ public class WordListTool
     /// <param name="endParagraphIndex">Ending paragraph index (for convert_to_list).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get_format operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "word_list")]
+    [McpServerTool(
+        Name = "word_list",
+        Title = "Word List Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(
         @"Manage lists in Word documents. Supports 8 operations: add_list, add_item, delete_item, edit_item, set_format, get_format, restart_numbering, convert_to_list.
 
@@ -87,7 +97,7 @@ Usage examples:
 - Get list format: word_list(operation='get_format', path='doc.docx', paragraphIndex=0)
 - Restart numbering: word_list(operation='restart_numbering', path='doc.docx', paragraphIndex=2, startAt=1)
 - Convert to list: word_list(operation='convert_to_list', path='doc.docx', startParagraphIndex=0, endParagraphIndex=5)")]
-    public string Execute(
+    public object Execute(
         [Description(
             "Operation: add_list, add_item, delete_item, edit_item, set_format, get_format, restart_numbering, convert_to_list")]
         string operation,
@@ -102,7 +112,7 @@ Usage examples:
         [Description("List type: bullet, number, custom (default: bullet)")]
         string listType = "bullet",
         [Description("Custom bullet character (for custom type)")]
-        string bulletChar = "�E",
+        string bulletChar = "?E",
         [Description("Number format: arabic, roman, letter (default: arabic)")]
         string numberFormat = "arabic",
         [Description("Continue numbering from last list (default: false)")]
@@ -157,7 +167,7 @@ Usage examples:
         if (operationContext.IsModified)
             ctx.Save(effectiveOutputPath);
 
-        return ctx.IsSession ? result : $"{result}\n{ctx.GetOutputMessage(effectiveOutputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, effectiveOutputPath);
     }
 
     /// <summary>

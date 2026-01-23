@@ -1,5 +1,7 @@
-using Aspose.Cells;
-using AsposeMcpServer.Tests.Helpers;
+﻿using Aspose.Cells;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Excel.Sheet;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Excel;
 
 namespace AsposeMcpServer.Tests.Tools.Excel;
@@ -59,8 +61,9 @@ public class ExcelSheetToolTests : ExcelTestBase
         workbook.Save(workbookPath);
 
         var result = _tool.Execute("get", workbookPath);
-        Assert.Contains("count", result);
-        Assert.Contains("items", result);
+        var data = GetResultData<GetSheetsResult>(result);
+        Assert.True(data.Count >= 2);
+        Assert.NotEmpty(data.Items);
     }
 
     [Fact]
@@ -120,7 +123,8 @@ public class ExcelSheetToolTests : ExcelTestBase
 
         var outputPath = CreateTestFilePath("test_hide_output.xlsx");
         var result = _tool.Execute("hide", workbookPath, sheetIndex: 1, outputPath: outputPath);
-        Assert.Contains("hidden", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("hidden", data.Message);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -168,9 +172,11 @@ public class ExcelSheetToolTests : ExcelTestBase
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         var initialCount = workbook.Worksheets.Count;
         var result = _tool.Execute("add", sessionId: sessionId, sheetName: "SessionSheet");
-        Assert.Contains("added", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("added", data.Message);
         Assert.True(workbook.Worksheets.Count > initialCount);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -179,7 +185,10 @@ public class ExcelSheetToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbook("test_session_get.xlsx");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("get", sessionId: sessionId);
-        Assert.Contains("count", result);
+        var data = GetResultData<GetSheetsResult>(result);
+        Assert.True(data.Count >= 1);
+        var output = GetResultOutput<GetSheetsResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -188,10 +197,12 @@ public class ExcelSheetToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbook("test_session_rename.xlsx");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("rename", sessionId: sessionId, sheetIndex: 0, newName: "RenamedSheet");
-        Assert.Contains("renamed", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("renamed", data.Message);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.Equal("RenamedSheet", workbook.Worksheets[0].Name);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -202,9 +213,11 @@ public class ExcelSheetToolTests : ExcelTestBase
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         var initialCount = workbook.Worksheets.Count;
         var result = _tool.Execute("copy", sessionId: sessionId, sheetIndex: 0);
-        Assert.Contains("copied", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("copied", data.Message);
         Assert.True(workbook.Worksheets.Count > initialCount);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [SkippableFact]
@@ -220,9 +233,11 @@ public class ExcelSheetToolTests : ExcelTestBase
         var wb = SessionManager.GetDocument<Workbook>(sessionId);
         var initialCount = wb.Worksheets.Count;
         var result = _tool.Execute("delete", sessionId: sessionId, sheetIndex: 1);
-        Assert.Contains("deleted", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("deleted", data.Message);
         Assert.True(wb.Worksheets.Count < initialCount);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -243,7 +258,8 @@ public class ExcelSheetToolTests : ExcelTestBase
 
         var sessionId = OpenSession(workbookPath2);
         var result = _tool.Execute("get", workbookPath1, sessionId);
-        Assert.Contains("SessionSheet", result);
+        var data = GetResultData<GetSheetsResult>(result);
+        Assert.Contains(data.Items, item => item.Name == "SessionSheet");
     }
 
     #endregion

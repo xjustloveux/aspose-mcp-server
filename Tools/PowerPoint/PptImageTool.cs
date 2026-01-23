@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
@@ -10,6 +12,7 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 ///     Unified tool for managing PowerPoint images.
 ///     Supports: add, edit, delete, get, export_slides, extract
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.PowerPoint.Image")]
 [McpServerToolType]
 public class PptImageTool
 {
@@ -66,7 +69,14 @@ public class PptImageTool
     /// <param name="skipDuplicates">Skip duplicate images based on content hash (optional for extract, default: false).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "ppt_image")]
+    [McpServerTool(
+        Name = "ppt_image",
+        Title = "PowerPoint Image Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage PowerPoint images. Supports 6 operations: add, edit, delete, get, export_slides, extract.
 
 Usage examples:
@@ -77,7 +87,7 @@ Usage examples:
 - Get image info: ppt_image(operation='get', path='presentation.pptx', slideIndex=0)
 - Export slides as images: ppt_image(operation='export_slides', path='presentation.pptx', outputDir='images/', slideIndexes='0,2,4')
 - Extract embedded images: ppt_image(operation='extract', path='presentation.pptx', outputDir='images/', skipDuplicates=true)")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: add, edit, delete, get, export_slides, extract")]
         string operation,
         [Description("Presentation file path (required if no sessionId)")]
@@ -138,12 +148,12 @@ Usage examples:
 
         var lowerOp = operation.ToLowerInvariant();
         if (lowerOp == "get" || lowerOp == "export_slides" || lowerOp == "extract")
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputDir ?? outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

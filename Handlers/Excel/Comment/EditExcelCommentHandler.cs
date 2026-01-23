@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Comment;
 
 /// <summary>
 ///     Handler for editing existing comments in Excel cells.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class EditExcelCommentHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class EditExcelCommentHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex, author
     /// </param>
     /// <returns>Success message with operation details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var editParams = ExtractEditParameters(parameters);
 
@@ -43,7 +46,8 @@ public class EditExcelCommentHandler : OperationHandlerBase<Workbook>
 
             MarkModified(context);
 
-            return Success($"Comment edited on cell {editParams.Cell} in sheet {editParams.SheetIndex}.");
+            return new SuccessResult
+                { Message = $"Comment edited on cell {editParams.Cell} in sheet {editParams.SheetIndex}." };
         }
         catch (CellsException ex)
         {

@@ -1,6 +1,7 @@
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Slide;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Slide;
 
@@ -35,9 +36,11 @@ public class MovePptSlideHandlerTests : PptHandlerTestBase
             { "toIndex", toIndex }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("moved", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("moved", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(totalSlides, pres.Slides.Count);
         AssertModified(context);
     }
@@ -57,9 +60,11 @@ public class MovePptSlideHandlerTests : PptHandlerTestBase
             { "toIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("moved", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("moved", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -80,10 +85,12 @@ public class MovePptSlideHandlerTests : PptHandlerTestBase
             { "toIndex", toIndex }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains(fromIndex.ToString(), result);
-        Assert.Contains(toIndex.ToString(), result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains(fromIndex.ToString(), result.Message);
+        Assert.Contains(toIndex.ToString(), result.Message);
     }
 
     #endregion

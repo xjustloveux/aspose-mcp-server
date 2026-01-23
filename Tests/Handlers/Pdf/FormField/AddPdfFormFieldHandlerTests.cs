@@ -1,7 +1,8 @@
 using Aspose.Pdf;
 using Aspose.Pdf.Forms;
 using AsposeMcpServer.Handlers.Pdf.FormField;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.FormField;
 
@@ -53,10 +54,12 @@ public class AddPdfFormFieldHandlerTests : PdfHandlerTestBase
             { "height", 20.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Added", result);
-        Assert.Contains("textbox", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Added", result.Message);
+        Assert.Contains("textbox", result.Message);
         AssertModified(context);
     }
 
@@ -76,9 +79,11 @@ public class AddPdfFormFieldHandlerTests : PdfHandlerTestBase
             { "height", 20.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("MyField", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("MyField", result.Message);
     }
 
     [Fact]
@@ -122,9 +127,11 @@ public class AddPdfFormFieldHandlerTests : PdfHandlerTestBase
             { "height", 20.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("checkbox", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("checkbox", result.Message);
     }
 
     [Fact]
@@ -143,9 +150,11 @@ public class AddPdfFormFieldHandlerTests : PdfHandlerTestBase
             { "height", 20.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("radiobutton", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("radiobutton", result.Message);
     }
 
     [Fact]

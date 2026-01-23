@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.NamedRange;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.NamedRange;
 
@@ -31,9 +32,11 @@ public class AddExcelNamedRangeHandlerTests : ExcelHandlerTestBase
             { "range", "DataSheet!A1:D10" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("DataSheet", workbook.Worksheets.Names["CrossSheetRange"].RefersTo);
         AssertModified(context);
     }
@@ -57,9 +60,11 @@ public class AddExcelNamedRangeHandlerTests : ExcelHandlerTestBase
             { "range", range }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -78,9 +83,11 @@ public class AddExcelNamedRangeHandlerTests : ExcelHandlerTestBase
             { "range", "A1:B5" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.NotNull(workbook.Worksheets.Names["TestRange"]);
         AssertModified(context);
     }
@@ -97,9 +104,11 @@ public class AddExcelNamedRangeHandlerTests : ExcelHandlerTestBase
             { "comment", "Test comment" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("Test comment", workbook.Worksheets.Names["TestRange"].Comment);
     }
 
@@ -165,9 +174,11 @@ public class AddExcelNamedRangeHandlerTests : ExcelHandlerTestBase
             { "sheetIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Sheet2", workbook.Worksheets.Names["RangeOnSheet2"].RefersTo);
         AssertModified(context);
     }

@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
@@ -10,6 +12,7 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 ///     Unified tool for managing PowerPoint SmartArt (add, manage nodes)
 ///     Supports: add, manage_nodes
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.PowerPoint.SmartArt")]
 [McpServerToolType]
 public class PptSmartArtTool
 {
@@ -68,13 +71,20 @@ public class PptSmartArtTool
     /// <param name="position">Insert position for new node (0-based, optional for add action, defaults to append at end).</param>
     /// <returns>A message indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "ppt_smart_art")]
+    [McpServerTool(
+        Name = "ppt_smart_art",
+        Title = "PowerPoint SmartArt Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage PowerPoint SmartArt. Supports 2 operations: add, manage_nodes.
 
 Usage examples:
 - Add SmartArt: ppt_smart_art(operation='add', path='presentation.pptx', slideIndex=0, layout='BasicProcess', x=100, y=100, width=400, height=300)
 - Manage nodes: ppt_smart_art(operation='manage_nodes', path='presentation.pptx', slideIndex=0, shapeIndex=0, action='add', targetPath='[0]', text='New Node')")]
-    public string Execute(
+    public object Execute(
         [Description(@"Operation to perform.
 - 'add': Add a new SmartArt shape (required params: path, slideIndex, layout)
 - 'manage_nodes': Manage SmartArt nodes (add, edit, delete) (required params: path, slideIndex, shapeIndex, action)")]
@@ -132,7 +142,7 @@ Usage examples:
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

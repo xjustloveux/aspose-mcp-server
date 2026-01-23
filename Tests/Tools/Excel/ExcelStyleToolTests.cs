@@ -1,5 +1,7 @@
-using Aspose.Cells;
-using AsposeMcpServer.Tests.Helpers;
+﻿using Aspose.Cells;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Excel.Style;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Excel;
 
 namespace AsposeMcpServer.Tests.Tools.Excel;
@@ -54,8 +56,9 @@ public class ExcelStyleToolTests : ExcelTestBase
         workbook.Save(workbookPath);
 
         var result = _tool.Execute("get_format", workbookPath, range: "A1");
-        Assert.Contains("A1", result);
-        Assert.Contains("fontName", result);
+        var data = GetResultData<GetCellFormatResult>(result);
+        Assert.Equal("A1", data.Range);
+        Assert.NotNull(data.Items[0].Format?.FontName);
     }
 
     [Fact]
@@ -72,7 +75,8 @@ public class ExcelStyleToolTests : ExcelTestBase
         var outputPath = CreateTestFilePath("test_copy_format_output.xlsx");
         var result = _tool.Execute("copy_sheet_format", workbookPath, sourceSheetIndex: 0,
             targetSheetIndex: 1, copyColumnWidths: true, copyRowHeights: true, outputPath: outputPath);
-        Assert.Contains("Sheet format copied", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Sheet format copied", data.Message);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -129,7 +133,10 @@ public class ExcelStyleToolTests : ExcelTestBase
 
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("get_format", sessionId: sessionId, range: "A1");
-        Assert.Contains("A1", result);
+        var data = GetResultData<GetCellFormatResult>(result);
+        Assert.Equal("A1", data.Range);
+        var output = GetResultOutput<GetCellFormatResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -165,7 +172,8 @@ public class ExcelStyleToolTests : ExcelTestBase
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("copy_sheet_format", sessionId: sessionId, sourceSheetIndex: 0,
             targetSheetIndex: 1, copyColumnWidths: true);
-        Assert.Contains("Sheet format copied", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Sheet format copied", data.Message);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.Equal(2, workbook.Worksheets.Count);
     }
@@ -194,7 +202,8 @@ public class ExcelStyleToolTests : ExcelTestBase
 
         var sessionId = OpenSession(workbookPath2);
         var result = _tool.Execute("get_format", workbookPath1, sessionId, range: "A1");
-        Assert.Contains("A1", result);
+        var data = GetResultData<GetCellFormatResult>(result);
+        Assert.Equal("A1", data.Range);
 
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.True(workbook.Worksheets[0].Cells["A1"].GetStyle().Font.IsBold);

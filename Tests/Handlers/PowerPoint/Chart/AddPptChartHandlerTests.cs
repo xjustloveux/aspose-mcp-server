@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.PowerPoint.Chart;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Chart;
 
@@ -30,10 +31,12 @@ public class AddPptChartHandlerTests : PptHandlerTestBase
             { "chartType", "Column" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result.ToLower());
-        Assert.Contains("column", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("column", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -49,10 +52,12 @@ public class AddPptChartHandlerTests : PptHandlerTestBase
             { "title", "My Chart" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("pie", result.ToLower());
-        Assert.Contains("added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("pie", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -71,9 +76,11 @@ public class AddPptChartHandlerTests : PptHandlerTestBase
             { "height", 300f }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("line", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("line", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 

@@ -1,6 +1,7 @@
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Table;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Table;
 
@@ -73,9 +74,11 @@ public class InsertPptTableRowHandlerTests : PptHandlerTestBase
             { "shapeIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Row inserted", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Row inserted", result.Message);
         AssertModified(context);
     }
 
@@ -107,9 +110,11 @@ public class InsertPptTableRowHandlerTests : PptHandlerTestBase
             { "rowIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("index 1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("index 1", result.Message);
     }
 
     #endregion
@@ -126,9 +131,11 @@ public class InsertPptTableRowHandlerTests : PptHandlerTestBase
             { "shapeIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("index 3", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("index 3", result.Message);
     }
 
     [Theory]
@@ -145,9 +152,11 @@ public class InsertPptTableRowHandlerTests : PptHandlerTestBase
             { "rowIndex", rowIndex }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains($"index {rowIndex}", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains($"index {rowIndex}", result.Message);
     }
 
     [Fact]

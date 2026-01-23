@@ -1,11 +1,14 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.PageSetup;
 
 /// <summary>
 ///     Handler for setting slide numbering in PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetSlideNumberingHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -19,7 +22,7 @@ public class SetSlideNumberingHandler : OperationHandlerBase<Presentation>
     ///     Optional: showSlideNumber (default: true), firstNumber (default: 1)
     /// </param>
     /// <returns>Success message with numbering information.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractSetSlideNumberingParameters(parameters);
         var presentation = context.Document;
@@ -33,7 +36,7 @@ public class SetSlideNumberingHandler : OperationHandlerBase<Presentation>
         MarkModified(context);
 
         var visibilityText = p.ShowSlideNumber ? "shown" : "hidden";
-        return Success($"Slide numbers {visibilityText}, starting from {p.FirstNumber}.");
+        return new SuccessResult { Message = $"Slide numbers {visibilityText}, starting from {p.FirstNumber}." };
     }
 
     private static SetSlideNumberingParameters ExtractSetSlideNumberingParameters(OperationParameters parameters)

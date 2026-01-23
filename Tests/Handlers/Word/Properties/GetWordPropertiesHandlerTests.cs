@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Word.Properties;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Word.Properties;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Properties;
 
@@ -28,11 +29,14 @@ public class GetWordPropertiesHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("builtInProperties", result);
-        Assert.Contains("Test Title", result);
-        Assert.Contains("Test Author", result);
+        var result = Assert.IsType<GetWordPropertiesResult>(res);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.BuiltInProperties);
+        Assert.Equal("Test Title", result.BuiltInProperties.Title);
+        Assert.Equal("Test Author", result.BuiltInProperties.Author);
     }
 
     [Fact]
@@ -42,12 +46,15 @@ public class GetWordPropertiesHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("statistics", result);
-        Assert.Contains("wordCount", result);
-        Assert.Contains("characterCount", result);
-        Assert.Contains("pageCount", result);
+        var result = Assert.IsType<GetWordPropertiesResult>(res);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.Statistics);
+        Assert.True(result.Statistics.WordCount >= 0);
+        Assert.True(result.Statistics.CharacterCount >= 0);
+        Assert.True(result.Statistics.PageCount >= 0);
     }
 
     [Fact]
@@ -58,11 +65,14 @@ public class GetWordPropertiesHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("customProperties", result);
-        Assert.Contains("CustomProp", result);
-        Assert.Contains("CustomValue", result);
+        var result = Assert.IsType<GetWordPropertiesResult>(res);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.CustomProperties);
+        Assert.True(result.CustomProperties.ContainsKey("CustomProp"));
+        Assert.Equal("CustomValue", result.CustomProperties["CustomProp"].Value);
     }
 
     [Fact]
@@ -72,10 +82,13 @@ public class GetWordPropertiesHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("builtInProperties", result);
-        Assert.DoesNotContain("customProperties", result);
+        var result = Assert.IsType<GetWordPropertiesResult>(res);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.BuiltInProperties);
+        Assert.Null(result.CustomProperties);
     }
 
     [Fact]
@@ -89,13 +102,17 @@ public class GetWordPropertiesHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("subject", result);
-        Assert.Contains("keywords", result);
-        Assert.Contains("category", result);
-        Assert.Contains("company", result);
-        Assert.Contains("createdTime", result);
+        var result = Assert.IsType<GetWordPropertiesResult>(res);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.BuiltInProperties);
+        Assert.Equal("Test Subject", result.BuiltInProperties.Subject);
+        Assert.Equal("test, keywords", result.BuiltInProperties.Keywords);
+        Assert.Equal("Test Category", result.BuiltInProperties.Category);
+        Assert.Equal("Test Company", result.BuiltInProperties.Company);
+        Assert.NotNull(result.BuiltInProperties.CreatedTime);
     }
 
     #endregion

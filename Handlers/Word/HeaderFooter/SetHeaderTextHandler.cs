@@ -1,5 +1,8 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 using Section = Aspose.Words.Section;
 
@@ -8,6 +11,7 @@ namespace AsposeMcpServer.Handlers.Word.HeaderFooter;
 /// <summary>
 ///     Handler for setting header text in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetHeaderTextHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -22,7 +26,7 @@ public class SetHeaderTextHandler : OperationHandlerBase<Document>
     ///     fontSize, sectionIndex, headerFooterType, autoTabStops, clearExisting, clearTextOnly
     /// </param>
     /// <returns>Success message.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractSetHeaderTextParameters(parameters);
 
@@ -31,7 +35,7 @@ public class SetHeaderTextHandler : OperationHandlerBase<Document>
         var hasContent = !string.IsNullOrEmpty(p.HeaderLeft) || !string.IsNullOrEmpty(p.HeaderCenter) ||
                          !string.IsNullOrEmpty(p.HeaderRight);
         if (!hasContent)
-            return "Warning: No header text content provided";
+            return new SuccessResult { Message = "Warning: No header text content provided" };
 
         var hfType = WordHeaderFooterHelper.GetHeaderFooterType(p.HeaderFooterType, true);
         var sections = p.SectionIndex == -1 ? doc.Sections.Cast<Section>() : [doc.Sections[p.SectionIndex]];
@@ -41,7 +45,8 @@ public class SetHeaderTextHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success(BuildResultMessage("Header", p.HeaderLeft, p.HeaderCenter, p.HeaderRight, p.SectionIndex));
+        return new SuccessResult
+            { Message = BuildResultMessage("Header", p.HeaderLeft, p.HeaderCenter, p.HeaderRight, p.SectionIndex) };
     }
 
     /// <summary>

@@ -1,8 +1,8 @@
-using System.Text.Json;
 using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
 using AsposeMcpServer.Handlers.Pdf.Annotation;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Pdf.Annotation;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Annotation;
 
@@ -67,11 +67,12 @@ public class GetPdfAnnotationsHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("count", out _));
-        Assert.True(json.RootElement.TryGetProperty("annotations", out _));
+        var result = Assert.IsType<GetAnnotationsResult>(res);
+
+        Assert.True(result.Count >= 0);
+        Assert.NotNull(result.Annotations);
         AssertNotModified(context);
     }
 
@@ -82,10 +83,11 @@ public class GetPdfAnnotationsHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(3, json.RootElement.GetProperty("count").GetInt32());
+        var result = Assert.IsType<GetAnnotationsResult>(res);
+
+        Assert.Equal(3, result.Count);
     }
 
     [Fact]
@@ -95,10 +97,11 @@ public class GetPdfAnnotationsHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(0, json.RootElement.GetProperty("count").GetInt32());
+        var result = Assert.IsType<GetAnnotationsResult>(res);
+
+        Assert.Equal(0, result.Count);
     }
 
     #endregion
@@ -112,10 +115,11 @@ public class GetPdfAnnotationsHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(1, json.RootElement.GetProperty("count").GetInt32());
+        var result = Assert.IsType<GetAnnotationsResult>(res);
+
+        Assert.Equal(1, result.Count);
     }
 
     [Fact]
@@ -129,10 +133,11 @@ public class GetPdfAnnotationsHandlerTests : PdfHandlerTestBase
             { "pageIndex", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(1, json.RootElement.GetProperty("count").GetInt32());
+        var result = Assert.IsType<GetAnnotationsResult>(res);
+
+        Assert.Equal(1, result.Count);
     }
 
     [Fact]
@@ -147,10 +152,11 @@ public class GetPdfAnnotationsHandlerTests : PdfHandlerTestBase
             { "pageIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(2, json.RootElement.GetProperty("count").GetInt32());
+        var result = Assert.IsType<GetAnnotationsResult>(res);
+
+        Assert.Equal(2, result.Count);
     }
 
     #endregion
@@ -164,16 +170,16 @@ public class GetPdfAnnotationsHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var annotations = json.RootElement.GetProperty("annotations");
-        Assert.True(annotations.GetArrayLength() > 0);
-        var firstItem = annotations[0];
-        Assert.True(firstItem.TryGetProperty("pageIndex", out _));
-        Assert.True(firstItem.TryGetProperty("index", out _));
-        Assert.True(firstItem.TryGetProperty("type", out _));
-        Assert.True(firstItem.TryGetProperty("contents", out _));
+        var result = Assert.IsType<GetAnnotationsResult>(res);
+
+        Assert.True(result.Annotations.Count > 0);
+        var firstItem = result.Annotations[0];
+        Assert.True(firstItem.PageIndex > 0);
+        Assert.True(firstItem.Index >= 0);
+        Assert.NotNull(firstItem.Type);
+        Assert.Equal("Test note", firstItem.Contents);
     }
 
     [Fact]
@@ -183,15 +189,16 @@ public class GetPdfAnnotationsHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var firstAnnotation = json.RootElement.GetProperty("annotations")[0];
-        var rect = firstAnnotation.GetProperty("rect");
-        Assert.True(rect.TryGetProperty("x", out _));
-        Assert.True(rect.TryGetProperty("y", out _));
-        Assert.True(rect.TryGetProperty("width", out _));
-        Assert.True(rect.TryGetProperty("height", out _));
+        var result = Assert.IsType<GetAnnotationsResult>(res);
+
+        var firstAnnotation = result.Annotations[0];
+        var rect = firstAnnotation.Rect;
+        Assert.True(rect.X >= 0);
+        Assert.True(rect.Y >= 0);
+        Assert.True(rect.Width >= 0);
+        Assert.True(rect.Height >= 0);
     }
 
     #endregion

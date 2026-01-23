@@ -1,11 +1,14 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Paragraph;
 
 /// <summary>
 ///     Handler for copying paragraph format in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class CopyParagraphFormatWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -19,7 +22,7 @@ public class CopyParagraphFormatWordHandler : OperationHandlerBase<Document>
     ///     Required: sourceParagraphIndex, targetParagraphIndex
     /// </param>
     /// <returns>Success message.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var copyParams = ExtractCopyParagraphFormatParameters(parameters);
 
@@ -64,11 +67,11 @@ public class CopyParagraphFormatWordHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        var result = "Paragraph format copied successfully\n";
-        result += $"Source paragraph: #{copyParams.SourceParagraphIndex.Value}\n";
-        result += $"Target paragraph: #{copyParams.TargetParagraphIndex.Value}";
+        var message = "Paragraph format copied successfully\n";
+        message += $"Source paragraph: #{copyParams.SourceParagraphIndex.Value}\n";
+        message += $"Target paragraph: #{copyParams.TargetParagraphIndex.Value}";
 
-        return result;
+        return new SuccessResult { Message = message };
     }
 
     /// <summary>

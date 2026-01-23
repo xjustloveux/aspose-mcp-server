@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Pdf;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Pdf;
 /// <summary>
 ///     Tool for managing text in PDF documents (add, edit, extract)
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Pdf.Text")]
 [McpServerToolType]
 public class PdfTextTool
 {
@@ -59,7 +62,14 @@ public class PdfTextTool
     /// <param name="extractionMode">Text extraction mode (for extract).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for extract operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "pdf_text")]
+    [McpServerTool(
+        Name = "pdf_text",
+        Title = "PDF Text Operations",
+        Destructive = false,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage text in PDF documents. Supports 3 operations: add, edit, extract.
 
 Usage examples:
@@ -70,7 +80,7 @@ Usage examples:
 - Extract text: pdf_text(operation='extract', path='doc.pdf', pageIndex=1)
 - Extract with font info: pdf_text(operation='extract', path='doc.pdf', pageIndex=1, includeFontInfo=true)
 - Extract raw text: pdf_text(operation='extract', path='doc.pdf', pageIndex=1, extractionMode='raw')")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: add, edit, extract")]
         string operation,
         [Description("PDF file path (required if no sessionId)")]
@@ -121,12 +131,12 @@ Usage examples:
         var result = handler.Execute(operationContext, parameters);
 
         if (string.Equals(operation, "extract", StringComparison.OrdinalIgnoreCase))
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

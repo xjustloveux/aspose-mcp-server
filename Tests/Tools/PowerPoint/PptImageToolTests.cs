@@ -1,10 +1,11 @@
-using System.Drawing;
+﻿using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.Versioning;
-using System.Text.Json;
 using Aspose.Slides;
 using Aspose.Slides.Export;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.PowerPoint.Image;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.PowerPoint;
 
 namespace AsposeMcpServer.Tests.Tools.PowerPoint;
@@ -68,7 +69,8 @@ public class PptImageToolTests : PptTestBase
         var outputPath = CreateTestFilePath("test_add_image_output.pptx");
         var result = _tool.Execute("add", pptPath, slideIndex: 0, imagePath: imagePath, x: 100, y: 100, width: 200,
             height: 150, outputPath: outputPath);
-        Assert.StartsWith("Image added to slide", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Image added to slide", data.Message);
         using var presentation = new Presentation(outputPath);
         Assert.NotEmpty(presentation.Slides[0].Shapes.OfType<IPictureFrame>());
     }
@@ -80,8 +82,9 @@ public class PptImageToolTests : PptTestBase
         var outputPath = CreateTestFilePath("test_edit_image_output.pptx");
         var result = _tool.Execute("edit", pptPath, slideIndex: 0, imageIndex: 0, width: 300, height: 200,
             outputPath: outputPath);
-        Assert.StartsWith("Image", result);
-        Assert.Contains("updated", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Image", data.Message);
+        Assert.Contains("updated", data.Message);
         using var presentation = new Presentation(outputPath);
         var images = presentation.Slides[0].Shapes.OfType<IPictureFrame>().ToList();
         Assert.Equal(300, images[0].Width);
@@ -93,8 +96,9 @@ public class PptImageToolTests : PptTestBase
         var pptPath = CreateTestPresentation("test_delete.pptx", addImages: true);
         var outputPath = CreateTestFilePath("test_delete_output.pptx");
         var result = _tool.Execute("delete", pptPath, slideIndex: 0, imageIndex: 0, outputPath: outputPath);
-        Assert.StartsWith("Image", result);
-        Assert.Contains("deleted from slide", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Image", data.Message);
+        Assert.Contains("deleted from slide", data.Message);
         using var presentation = new Presentation(outputPath);
         Assert.Empty(presentation.Slides[0].Shapes.OfType<IPictureFrame>());
     }
@@ -104,8 +108,8 @@ public class PptImageToolTests : PptTestBase
     {
         var pptPath = CreateTestPresentation("test_get.pptx", addImages: true);
         var result = _tool.Execute("get", pptPath, slideIndex: 0);
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(1, json.RootElement.GetProperty("imageCount").GetInt32());
+        var data = GetResultData<GetImagesPptResult>(result);
+        Assert.Equal(1, data.ImageCount);
     }
 
     [Fact]
@@ -117,7 +121,8 @@ public class PptImageToolTests : PptTestBase
         var result = _tool.Execute("export_slides", pptPath, outputDir: outputDir, format: "png");
         var files = Directory.GetFiles(outputDir, "*.png");
         Assert.Equal(3, files.Length);
-        Assert.StartsWith("Exported 3 slides", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Exported 3 slides", data.Message);
     }
 
     [Fact]
@@ -129,7 +134,8 @@ public class PptImageToolTests : PptTestBase
         var result = _tool.Execute("extract", pptPath, outputDir: outputDir);
         var files = Directory.GetFiles(outputDir);
         Assert.NotEmpty(files);
-        Assert.StartsWith("Extracted", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Extracted", data.Message);
     }
 
     #endregion
@@ -146,7 +152,8 @@ public class PptImageToolTests : PptTestBase
         var imagePath = CreateTestImage($"test_case_{operation}.png");
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.pptx");
         var result = _tool.Execute(operation, pptPath, slideIndex: 0, imagePath: imagePath, outputPath: outputPath);
-        Assert.StartsWith("Image added to slide", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Image added to slide", data.Message);
     }
 
     [Fact]
@@ -173,8 +180,8 @@ public class PptImageToolTests : PptTestBase
         var pptPath = CreateTestPresentation("test_session_get.pptx", addImages: true);
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("get", sessionId: sessionId, slideIndex: 0);
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(1, json.RootElement.GetProperty("imageCount").GetInt32());
+        var data = GetResultData<GetImagesPptResult>(result);
+        Assert.Equal(1, data.ImageCount);
     }
 
     [Fact]
@@ -187,7 +194,8 @@ public class PptImageToolTests : PptTestBase
         var initialCount = ppt.Slides[0].Shapes.OfType<IPictureFrame>().Count();
         var result = _tool.Execute("add", sessionId: sessionId, slideIndex: 0, imagePath: imagePath, x: 100, y: 100,
             width: 200, height: 150);
-        Assert.StartsWith("Image added to slide", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Image added to slide", data.Message);
         Assert.True(ppt.Slides[0].Shapes.OfType<IPictureFrame>().Count() > initialCount);
     }
 
@@ -198,8 +206,9 @@ public class PptImageToolTests : PptTestBase
         var sessionId = OpenSession(pptPath);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var result = _tool.Execute("edit", sessionId: sessionId, slideIndex: 0, imageIndex: 0, width: 400, height: 300);
-        Assert.StartsWith("Image", result);
-        Assert.Contains("updated", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Image", data.Message);
+        Assert.Contains("updated", data.Message);
         var image = ppt.Slides[0].Shapes.OfType<IPictureFrame>().First();
         Assert.Equal(400, image.Width);
     }
@@ -212,8 +221,9 @@ public class PptImageToolTests : PptTestBase
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var initialCount = ppt.Slides[0].Shapes.OfType<IPictureFrame>().Count();
         var result = _tool.Execute("delete", sessionId: sessionId, slideIndex: 0, imageIndex: 0);
-        Assert.StartsWith("Image", result);
-        Assert.Contains("deleted from slide", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Image", data.Message);
+        Assert.Contains("deleted from slide", data.Message);
         Assert.True(ppt.Slides[0].Shapes.OfType<IPictureFrame>().Count() < initialCount);
     }
 
@@ -230,8 +240,8 @@ public class PptImageToolTests : PptTestBase
         var pptPath2 = CreateTestPresentation("test_session_image.pptx", addImages: true);
         var sessionId = OpenSession(pptPath2);
         var result = _tool.Execute("get", pptPath1, sessionId, slideIndex: 0);
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(1, json.RootElement.GetProperty("imageCount").GetInt32());
+        var data = GetResultData<GetImagesPptResult>(result);
+        Assert.Equal(1, data.ImageCount);
     }
 
     #endregion

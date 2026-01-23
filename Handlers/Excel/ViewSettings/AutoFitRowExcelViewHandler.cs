@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.ViewSettings;
 
 /// <summary>
 ///     Handler for auto-fitting row height in Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AutoFitRowExcelViewHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class AutoFitRowExcelViewHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0), rowIndex (default: 0), startColumn, endColumn
     /// </param>
     /// <returns>Success message.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractAutoFitRowParameters(parameters);
 
@@ -32,7 +35,7 @@ public class AutoFitRowExcelViewHandler : OperationHandlerBase<Workbook>
             worksheet.AutoFitRow(p.RowIndex);
 
         MarkModified(context);
-        return Success($"Row {p.RowIndex} auto-fitted.");
+        return new SuccessResult { Message = $"Row {p.RowIndex} auto-fitted." };
     }
 
     /// <summary>

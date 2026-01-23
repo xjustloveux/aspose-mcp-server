@@ -1,12 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Section;
 
 /// <summary>
 ///     Handler for deleting sections from PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeletePptSectionHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class DeletePptSectionHandler : OperationHandlerBase<Presentation>
     ///     Optional: keepSlides (default: true)
     /// </param>
     /// <returns>Success message with deletion details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractDeletePptSectionParameters(parameters);
         var presentation = context.Document;
@@ -35,7 +38,7 @@ public class DeletePptSectionHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Section {p.SectionIndex} removed (keep slides: {p.KeepSlides}).");
+        return new SuccessResult { Message = $"Section {p.SectionIndex} removed (keep slides: {p.KeepSlides})." };
     }
 
     private static DeletePptSectionParameters ExtractDeletePptSectionParameters(OperationParameters parameters)

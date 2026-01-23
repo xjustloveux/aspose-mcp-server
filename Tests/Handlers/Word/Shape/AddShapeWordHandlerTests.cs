@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Word.Shape;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Shape;
 
@@ -31,9 +32,11 @@ public class AddShapeWordHandlerTests : WordHandlerTestBase
             { "height", 50.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("successfully added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("successfully added", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -49,9 +52,11 @@ public class AddShapeWordHandlerTests : WordHandlerTestBase
             { "height", 60.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("successfully added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("successfully added", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -68,9 +73,11 @@ public class AddShapeWordHandlerTests : WordHandlerTestBase
             { "y", 200.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("successfully added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("successfully added", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

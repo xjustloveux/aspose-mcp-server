@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.ViewSettings;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.ViewSettings;
 
@@ -30,9 +31,11 @@ public class SetHeadersExcelViewHandlerTests : ExcelHandlerTestBase
             { "visible", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("visible", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("visible", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(workbook.Worksheets[0].IsRowColumnHeadersVisible);
         AssertModified(context);
     }
@@ -47,9 +50,11 @@ public class SetHeadersExcelViewHandlerTests : ExcelHandlerTestBase
             { "visible", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("hidden", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("hidden", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.False(workbook.Worksheets[0].IsRowColumnHeadersVisible);
     }
 

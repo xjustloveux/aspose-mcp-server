@@ -1,6 +1,8 @@
 ﻿using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.Text;
@@ -8,6 +10,7 @@ namespace AsposeMcpServer.Handlers.Word.Text;
 /// <summary>
 ///     Handler for formatting existing text in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class FormatWordTextHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -25,7 +28,7 @@ public class FormatWordTextHandler : OperationHandlerBase<Document>
     /// <returns>Success message with formatting details.</returns>
     /// <exception cref="ArgumentException">Thrown when paragraphIndex is missing or indices are out of range.</exception>
     /// <exception cref="InvalidOperationException">Thrown when the paragraph has no runs.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractFormatParameters(parameters);
 
@@ -45,7 +48,10 @@ public class FormatWordTextHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return BuildResultMessage(p.ParagraphIndex, p.RunIndex, runsToFormat.Count, changes);
+        return new SuccessResult
+        {
+            Message = BuildResultMessage(p.ParagraphIndex, p.RunIndex, runsToFormat.Count, changes)
+        };
     }
 
     /// <summary>
@@ -260,7 +266,7 @@ public class FormatWordTextHandler : OperationHandlerBase<Document>
             ? $" Changes: {string.Join(", ", changes.Distinct())}."
             : " No change parameters provided.";
 
-        return Success(result);
+        return result;
     }
 
     /// <summary>

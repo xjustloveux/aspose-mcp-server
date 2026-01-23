@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.FreezePanes;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.FreezePanes;
 
@@ -30,9 +31,11 @@ public class FreezeExcelPanesHandlerTests : ExcelHandlerTestBase
             { "column", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("frozen", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("frozen", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -49,9 +52,11 @@ public class FreezeExcelPanesHandlerTests : ExcelHandlerTestBase
             { "column", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("frozen", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("frozen", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

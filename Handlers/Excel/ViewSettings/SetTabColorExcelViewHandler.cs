@@ -1,12 +1,16 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.ViewSettings;
 
 /// <summary>
 ///     Handler for setting worksheet tab color in Excel workbooks.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetTabColorExcelViewHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +25,7 @@ public class SetTabColorExcelViewHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0)
     /// </param>
     /// <returns>Success message.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractSetTabColorParameters(parameters);
 
@@ -30,7 +34,7 @@ public class SetTabColorExcelViewHandler : OperationHandlerBase<Workbook>
         worksheet.TabColor = parsedColor;
 
         MarkModified(context);
-        return Success($"Sheet tab color set to {p.Color}.");
+        return new SuccessResult { Message = $"Sheet tab color set to {p.Color}." };
     }
 
     /// <summary>

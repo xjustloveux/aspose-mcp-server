@@ -1,7 +1,7 @@
-using System.Text.Json;
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Field;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Word.Field;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Field;
 
@@ -50,12 +50,13 @@ public class GetFieldDetailWordHandlerTests : WordHandlerTestBase
             { "fieldIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("index", out _));
-        Assert.True(json.RootElement.TryGetProperty("type", out _));
-        Assert.True(json.RootElement.TryGetProperty("code", out _));
+        var result = Assert.IsType<GetFieldDetailWordResult>(res);
+
+        Assert.Equal(0, result.Index);
+        Assert.NotNull(result.Type);
+        Assert.NotNull(result.Code);
     }
 
     [Fact]
@@ -68,11 +69,13 @@ public class GetFieldDetailWordHandlerTests : WordHandlerTestBase
             { "fieldIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("isLocked", out _));
-        Assert.True(json.RootElement.TryGetProperty("isDirty", out _));
+        var result = Assert.IsType<GetFieldDetailWordResult>(res);
+
+        Assert.False(result.IsLocked);
+        // IsDirty can be true or false, just checking it exists
+        _ = result.IsDirty;
     }
 
     [Fact]
@@ -85,10 +88,11 @@ public class GetFieldDetailWordHandlerTests : WordHandlerTestBase
             { "fieldIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Contains("hyperlink", json.RootElement.GetProperty("type").GetString()!.ToLower());
+        var result = Assert.IsType<GetFieldDetailWordResult>(res);
+
+        Assert.Contains("hyperlink", result.Type.ToLower());
     }
 
     #endregion

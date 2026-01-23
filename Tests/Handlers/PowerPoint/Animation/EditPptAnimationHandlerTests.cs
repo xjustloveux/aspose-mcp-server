@@ -1,7 +1,8 @@
 using Aspose.Slides;
 using Aspose.Slides.Animation;
 using AsposeMcpServer.Handlers.PowerPoint.Animation;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Animation;
 
@@ -33,9 +34,11 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
             { "effectType", "Fly" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message);
     }
 
     #endregion
@@ -67,9 +70,11 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
             { "shapeIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message);
     }
 
     #endregion
@@ -89,9 +94,11 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
             { "duration", 2.0f }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message);
         AssertModified(context);
     }
 
@@ -108,9 +115,11 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
             { "duration", 2.0f }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("slide 0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("slide 0", result.Message);
     }
 
     [Fact]
@@ -126,9 +135,11 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
             { "duration", 2.0f }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("shape 0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("shape 0", result.Message);
     }
 
     #endregion
@@ -151,9 +162,11 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
             { "duration", duration }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message);
     }
 
     [Fact]
@@ -169,9 +182,11 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
             { "delay", 1.5f }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message);
     }
 
     #endregion
@@ -194,9 +209,11 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
             { "duration", duration }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message);
     }
 
     [Theory]
@@ -214,9 +231,11 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
             { "duration", duration }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message);
     }
 
     [Theory]
@@ -235,9 +254,11 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
             { "delay", delay }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message);
     }
 
     [Theory]
@@ -255,9 +276,11 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
             { "delay", delay }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message);
     }
 
     [Fact]
@@ -401,9 +424,11 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
             { "effectType", "Fly" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message);
         AssertModified(context);
     }
 
@@ -421,9 +446,11 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
             { "effectSubtype", "FromLeft" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message);
     }
 
     [Fact]
@@ -439,9 +466,11 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
             { "triggerType", "WithPrevious" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message);
     }
 
     [Fact]
@@ -461,9 +490,11 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
             { "delay", 0.5f }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message);
     }
 
     #endregion

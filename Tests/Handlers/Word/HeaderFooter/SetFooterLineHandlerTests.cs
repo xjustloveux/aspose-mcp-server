@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Word.HeaderFooter;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.HeaderFooter;
 
@@ -29,9 +30,11 @@ public class SetFooterLineHandlerTests : WordHandlerTestBase
             { "showLine", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("line", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("line", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -46,9 +49,11 @@ public class SetFooterLineHandlerTests : WordHandlerTestBase
             { "lineWidth", 1.5 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("line", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("line", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

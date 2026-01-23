@@ -1,6 +1,6 @@
-using System.Text.Json;
 using AsposeMcpServer.Handlers.Pdf.Page;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Pdf.Page;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Page;
 
@@ -66,10 +66,11 @@ public class GetPdfPageDetailsHandlerTests : PdfHandlerTestBase
             { "pageIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(1, json.RootElement.GetProperty("pageIndex").GetInt32());
+        var result = Assert.IsType<GetPdfPageDetailsResult>(res);
+
+        Assert.Equal(1, result.PageIndex);
         AssertNotModified(context);
     }
 
@@ -86,10 +87,11 @@ public class GetPdfPageDetailsHandlerTests : PdfHandlerTestBase
             { "pageIndex", pageIndex }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(pageIndex, json.RootElement.GetProperty("pageIndex").GetInt32());
+        var result = Assert.IsType<GetPdfPageDetailsResult>(res);
+
+        Assert.Equal(pageIndex, result.PageIndex);
         AssertNotModified(context);
     }
 
@@ -107,11 +109,12 @@ public class GetPdfPageDetailsHandlerTests : PdfHandlerTestBase
             { "pageIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("width", out _));
-        Assert.True(json.RootElement.TryGetProperty("height", out _));
+        var result = Assert.IsType<GetPdfPageDetailsResult>(res);
+
+        Assert.True(result.Width >= 0);
+        Assert.True(result.Height >= 0);
     }
 
     [Fact]
@@ -124,10 +127,11 @@ public class GetPdfPageDetailsHandlerTests : PdfHandlerTestBase
             { "pageIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("rotation", out _));
+        var result = Assert.IsType<GetPdfPageDetailsResult>(res);
+
+        Assert.NotNull(result.Rotation);
     }
 
     [Fact]
@@ -140,14 +144,15 @@ public class GetPdfPageDetailsHandlerTests : PdfHandlerTestBase
             { "pageIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("mediaBox", out var mediaBox));
-        Assert.True(mediaBox.TryGetProperty("llx", out _));
-        Assert.True(mediaBox.TryGetProperty("lly", out _));
-        Assert.True(mediaBox.TryGetProperty("urx", out _));
-        Assert.True(mediaBox.TryGetProperty("ury", out _));
+        var result = Assert.IsType<GetPdfPageDetailsResult>(res);
+
+        Assert.NotNull(result.MediaBox);
+        Assert.True(result.MediaBox.Llx >= 0 || result.MediaBox.Llx < 0);
+        Assert.True(result.MediaBox.Lly >= 0 || result.MediaBox.Lly < 0);
+        Assert.True(result.MediaBox.Urx >= 0 || result.MediaBox.Urx < 0);
+        Assert.True(result.MediaBox.Ury >= 0 || result.MediaBox.Ury < 0);
     }
 
     [Fact]
@@ -160,14 +165,15 @@ public class GetPdfPageDetailsHandlerTests : PdfHandlerTestBase
             { "pageIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("cropBox", out var cropBox));
-        Assert.True(cropBox.TryGetProperty("llx", out _));
-        Assert.True(cropBox.TryGetProperty("lly", out _));
-        Assert.True(cropBox.TryGetProperty("urx", out _));
-        Assert.True(cropBox.TryGetProperty("ury", out _));
+        var result = Assert.IsType<GetPdfPageDetailsResult>(res);
+
+        Assert.NotNull(result.CropBox);
+        Assert.True(result.CropBox.Llx >= 0 || result.CropBox.Llx < 0);
+        Assert.True(result.CropBox.Lly >= 0 || result.CropBox.Lly < 0);
+        Assert.True(result.CropBox.Urx >= 0 || result.CropBox.Urx < 0);
+        Assert.True(result.CropBox.Ury >= 0 || result.CropBox.Ury < 0);
     }
 
     [Fact]
@@ -180,11 +186,11 @@ public class GetPdfPageDetailsHandlerTests : PdfHandlerTestBase
             { "pageIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("annotations", out var annotations));
-        Assert.True(annotations.TryGetInt32(out _));
+        var result = Assert.IsType<GetPdfPageDetailsResult>(res);
+
+        Assert.True(result.Annotations >= 0);
     }
 
     [Fact]
@@ -197,11 +203,11 @@ public class GetPdfPageDetailsHandlerTests : PdfHandlerTestBase
             { "pageIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("paragraphs", out var paragraphs));
-        Assert.True(paragraphs.TryGetInt32(out _));
+        var result = Assert.IsType<GetPdfPageDetailsResult>(res);
+
+        Assert.True(result.Paragraphs >= 0);
     }
 
     [Fact]
@@ -214,11 +220,11 @@ public class GetPdfPageDetailsHandlerTests : PdfHandlerTestBase
             { "pageIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("images", out var images));
-        Assert.True(images.TryGetInt32(out _));
+        var result = Assert.IsType<GetPdfPageDetailsResult>(res);
+
+        Assert.True(result.Images >= 0);
     }
 
     #endregion

@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Chart;
 
 /// <summary>
 ///     Handler for deleting charts from Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeleteExcelChartHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class DeleteExcelChartHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex, chartIndex
     /// </param>
     /// <returns>Success message with deletion details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var deleteParams = ExtractDeleteParameters(parameters);
 
@@ -33,7 +36,8 @@ public class DeleteExcelChartHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Chart #{deleteParams.ChartIndex} ({chartName}) deleted, {worksheet.Charts.Count} remaining");
+        return new SuccessResult
+            { Message = $"Chart #{deleteParams.ChartIndex} ({chartName}) deleted, {worksheet.Charts.Count} remaining" };
     }
 
     /// <summary>

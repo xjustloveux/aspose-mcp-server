@@ -1,7 +1,8 @@
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.HeaderFooter;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.HeaderFooter;
 
@@ -39,9 +40,11 @@ public class SetHeaderTabsHandlerTests : WordHandlerTestBase
             { "headerFooterType", headerFooterType }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("tab", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("tab", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -55,9 +58,11 @@ public class SetHeaderTabsHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("tab", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("tab", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -76,9 +81,11 @@ public class SetHeaderTabsHandlerTests : WordHandlerTestBase
             { "tabStops", tabStops }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("tab", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("tab", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -100,9 +107,11 @@ public class SetHeaderTabsHandlerTests : WordHandlerTestBase
             { "tabStops", tabStops }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("tab", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("tab", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -122,9 +131,11 @@ public class SetHeaderTabsHandlerTests : WordHandlerTestBase
             { "tabStops", tabStops }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("tab", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("tab", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -146,9 +157,11 @@ public class SetHeaderTabsHandlerTests : WordHandlerTestBase
             { "sectionIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("tab", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("tab", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [SkippableFact]
@@ -169,9 +182,11 @@ public class SetHeaderTabsHandlerTests : WordHandlerTestBase
             { "sectionIndex", -1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("tab", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("tab", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -188,9 +203,11 @@ public class SetHeaderTabsHandlerTests : WordHandlerTestBase
             { "tabStops", new JsonArray() }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("tab", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("tab", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -207,9 +224,11 @@ public class SetHeaderTabsHandlerTests : WordHandlerTestBase
             { "tabStops", tabStops }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("tab", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("tab", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

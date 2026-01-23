@@ -1,6 +1,7 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using Aspose.Words;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Word.MailMerge;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Word;
 
 namespace AsposeMcpServer.Tests.Tools.Word;
@@ -61,8 +62,8 @@ public class WordMailMergeToolTests : WordTestBase
         };
         var result = _tool.Execute(templatePath: templatePath, outputPath: outputPath,
             dataArray: dataArray.ToJsonString());
-        Assert.StartsWith("Mail merge completed successfully", result);
-        Assert.Contains("Records processed: 2", result);
+        var data = GetResultData<MailMergeResult>(result);
+        Assert.Equal(2, data.RecordsProcessed);
 
         var dir = Path.GetDirectoryName(outputPath)!;
         var baseName = Path.GetFileNameWithoutExtension(outputPath);
@@ -88,10 +89,11 @@ public class WordMailMergeToolTests : WordTestBase
         doc.Save(templatePath);
 
         var outputPath = CreateTestFilePath("test_mail_merge_cleanup_output.docx");
-        var data = new JsonObject { ["name"] = "TestUser" };
-        var result = _tool.Execute(templatePath: templatePath, outputPath: outputPath, data: data.ToJsonString(),
+        var mergeData = new JsonObject { ["name"] = "TestUser" };
+        var result = _tool.Execute(templatePath: templatePath, outputPath: outputPath, data: mergeData.ToJsonString(),
             cleanupOptions: "removeUnusedFields,removeEmptyParagraphs");
-        Assert.StartsWith("Mail merge completed successfully", result);
+        var data = GetResultData<MailMergeResult>(result);
+        Assert.Equal(1, data.RecordsProcessed);
         Assert.True(File.Exists(outputPath));
         var resultDoc = new Document(outputPath);
         var text = resultDoc.GetText();
@@ -116,7 +118,8 @@ public class WordMailMergeToolTests : WordTestBase
         };
         var result = _tool.Execute(templatePath: templatePath, outputPath: outputPath,
             dataArray: dataArray.ToJsonString());
-        Assert.StartsWith("Mail merge completed successfully", result);
+        var data = GetResultData<MailMergeResult>(result);
+        Assert.Equal(1, data.RecordsProcessed);
         Assert.True(File.Exists(outputPath));
         var resultDoc = new Document(outputPath);
         Assert.Contains("SingleUser", resultDoc.GetText());
@@ -142,10 +145,11 @@ public class WordMailMergeToolTests : WordTestBase
         doc.Save(templatePath);
 
         var outputPath = CreateTestFilePath($"test_cleanup_case_{option}_output.docx");
-        var data = new JsonObject { ["name"] = "Test" };
-        var result = _tool.Execute(templatePath: templatePath, outputPath: outputPath, data: data.ToJsonString(),
+        var mergeData = new JsonObject { ["name"] = "Test" };
+        var result = _tool.Execute(templatePath: templatePath, outputPath: outputPath, data: mergeData.ToJsonString(),
             cleanupOptions: option);
-        Assert.StartsWith("Mail merge completed successfully", result);
+        var data = GetResultData<MailMergeResult>(result);
+        Assert.Equal(1, data.RecordsProcessed);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -211,11 +215,12 @@ public class WordMailMergeToolTests : WordTestBase
 
         var sessionId = SessionManager.OpenDocument(templatePath);
         var outputPath = CreateTestFilePath("test_session_mail_merge_output.docx");
-        var data = new JsonObject { ["name"] = "SessionUser" };
+        var mergeData = new JsonObject { ["name"] = "SessionUser" };
 
-        var result = tool.Execute(sessionId: sessionId, outputPath: outputPath, data: data.ToJsonString());
+        var result = tool.Execute(sessionId: sessionId, outputPath: outputPath, data: mergeData.ToJsonString());
 
-        Assert.StartsWith("Mail merge completed successfully", result);
+        var data = GetResultData<MailMergeResult>(result);
+        Assert.Equal(1, data.RecordsProcessed);
         Assert.True(File.Exists(outputPath));
         var resultDoc = new Document(outputPath);
         Assert.Contains("SessionUser", resultDoc.GetText());
@@ -268,7 +273,8 @@ public class WordMailMergeToolTests : WordTestBase
 
         var result = tool.Execute(sessionId: sessionId, outputPath: outputPath, dataArray: dataArray.ToJsonString());
 
-        Assert.StartsWith("Mail merge completed successfully", result);
+        var data = GetResultData<MailMergeResult>(result);
+        Assert.Equal(2, data.RecordsProcessed);
 
         var dir = Path.GetDirectoryName(outputPath)!;
         var baseName = Path.GetFileNameWithoutExtension(outputPath);

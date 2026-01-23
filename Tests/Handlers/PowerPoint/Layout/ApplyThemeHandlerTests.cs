@@ -1,7 +1,8 @@
 using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Handlers.PowerPoint.Layout;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Layout;
 
@@ -68,10 +69,12 @@ public class ApplyThemeHandlerTests : PptHandlerTestBase
                 { "themePath", themePath }
             });
 
-            var result = _handler.Execute(context, parameters);
+            var res = _handler.Execute(context, parameters);
 
-            Assert.Contains("Theme applied", result);
-            Assert.Contains("master", result.ToLower());
+            var result = Assert.IsType<SuccessResult>(res);
+
+            Assert.Contains("Theme applied", result.Message);
+            Assert.Contains("master", result.Message, StringComparison.OrdinalIgnoreCase);
             AssertModified(context);
         }
         finally
@@ -102,10 +105,12 @@ public class ApplyThemeHandlerTests : PptHandlerTestBase
                 { "themePath", themePath }
             });
 
-            var result = _handler.Execute(context, parameters);
+            var res = _handler.Execute(context, parameters);
 
-            Assert.Contains("Theme applied", result);
-            Assert.Contains("layout applied to all slides", result);
+            var result = Assert.IsType<SuccessResult>(res);
+
+            Assert.Contains("Theme applied", result.Message);
+            Assert.Contains("layout applied to all slides", result.Message);
         }
         finally
         {

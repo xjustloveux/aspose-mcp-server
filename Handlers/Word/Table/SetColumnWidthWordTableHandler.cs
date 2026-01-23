@@ -1,6 +1,8 @@
 using Aspose.Words;
 using Aspose.Words.Tables;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 using WordTable = Aspose.Words.Tables.Table;
 
 namespace AsposeMcpServer.Handlers.Word.Table;
@@ -8,6 +10,7 @@ namespace AsposeMcpServer.Handlers.Word.Table;
 /// <summary>
 ///     Handler for setting column width in Word document tables.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetColumnWidthWordTableHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -24,7 +27,7 @@ public class SetColumnWidthWordTableHandler : OperationHandlerBase<Document>
     /// <returns>Success message with updated cell count.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or indices are out of range.</exception>
     /// <exception cref="InvalidOperationException">Thrown when the table has no rows.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractSetColumnWidthParameters(parameters);
 
@@ -56,8 +59,11 @@ public class SetColumnWidthWordTableHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success(
-            $"Successfully set column {p.ColumnIndex} width to {p.ColumnWidth} pt ({cellsUpdated} cells updated).");
+        return new SuccessResult
+        {
+            Message =
+                $"Successfully set column {p.ColumnIndex} width to {p.ColumnWidth} pt ({cellsUpdated} cells updated)."
+        };
     }
 
     private static SetColumnWidthParameters ExtractSetColumnWidthParameters(OperationParameters parameters)

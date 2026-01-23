@@ -1,13 +1,17 @@
 using System.Drawing;
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Shape;
 
 /// <summary>
 ///     Handler for setting shape format properties in PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetPptShapeFormatHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -22,7 +26,7 @@ public class SetPptShapeFormatHandler : OperationHandlerBase<Presentation>
     ///     Optional: slideIndex (default: 0), fillColor, lineColor, lineWidth, transparency.
     /// </param>
     /// <returns>Success message with format details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractSetPptShapeFormatParameters(parameters);
 
@@ -57,7 +61,7 @@ public class SetPptShapeFormatHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Format applied to shape {p.ShapeIndex} on slide {p.SlideIndex}.");
+        return new SuccessResult { Message = $"Format applied to shape {p.ShapeIndex} on slide {p.SlideIndex}." };
     }
 
     /// <summary>

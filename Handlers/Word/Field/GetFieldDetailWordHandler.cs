@@ -1,14 +1,15 @@
-using System.Text.Json;
 using Aspose.Words;
 using Aspose.Words.Fields;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Results.Word.Field;
 
 namespace AsposeMcpServer.Handlers.Word.Field;
 
 /// <summary>
 ///     Handler for getting detailed information about a specific field in Word documents.
 /// </summary>
+[ResultType(typeof(GetFieldDetailWordResult))]
 public class GetFieldDetailWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -22,7 +23,7 @@ public class GetFieldDetailWordHandler : OperationHandlerBase<Document>
     ///     Required: fieldIndex
     /// </param>
     /// <returns>A JSON string containing the field details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractGetFieldDetailParameters(parameters);
 
@@ -46,21 +47,19 @@ public class GetFieldDetailWordHandler : OperationHandlerBase<Document>
             bookmarkName = refField.BookmarkName;
         }
 
-        var result = new
+        return new GetFieldDetailWordResult
         {
-            index = p.FieldIndex,
-            type = field.Type.ToString(),
-            typeCode = (int)field.Type,
-            code = field.GetFieldCode(),
-            result = field.Result,
-            isLocked = field.IsLocked,
-            isDirty = field.IsDirty,
-            hyperlinkAddress = address,
-            hyperlinkScreenTip = screenTip,
-            bookmarkName
+            Index = p.FieldIndex,
+            Type = field.Type.ToString(),
+            TypeCode = (int)field.Type,
+            Code = field.GetFieldCode(),
+            Result = field.Result,
+            IsLocked = field.IsLocked,
+            IsDirty = field.IsDirty,
+            HyperlinkAddress = address,
+            HyperlinkScreenTip = screenTip,
+            BookmarkName = bookmarkName
         };
-
-        return JsonSerializer.Serialize(result, JsonDefaults.Indented);
     }
 
     /// <summary>

@@ -1,7 +1,7 @@
-using System.Text.Json.Nodes;
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.Hyperlink;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Excel.Hyperlink;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Hyperlink;
 
@@ -45,10 +45,12 @@ public class GetExcelHyperlinksHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("count", result);
-        Assert.Contains("\"count\": 0", result);
+        var result = Assert.IsType<GetHyperlinksExcelResult>(res);
+
+        Assert.Equal(0, result.Count);
+        Assert.Empty(result.Items);
     }
 
     [Fact]
@@ -58,9 +60,11 @@ public class GetExcelHyperlinksHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("No hyperlinks found", result);
+        var result = Assert.IsType<GetHyperlinksExcelResult>(res);
+
+        Assert.Equal("No hyperlinks found", result.Message);
     }
 
     [Fact]
@@ -70,22 +74,26 @@ public class GetExcelHyperlinksHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"count\": 3", result);
+        var result = Assert.IsType<GetHyperlinksExcelResult>(res);
+
+        Assert.Equal(3, result.Count);
     }
 
     [Fact]
-    public void Execute_WithHyperlinks_ReturnsJsonFormat()
+    public void Execute_WithHyperlinks_ReturnsItems()
     {
         var workbook = CreateWorkbookWithHyperlinks(2);
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonNode.Parse(result);
-        Assert.NotNull(json);
+        var result = Assert.IsType<GetHyperlinksExcelResult>(res);
+
+        Assert.NotNull(result.Items);
+        Assert.Equal(2, result.Items.Count);
     }
 
     [Fact]
@@ -95,9 +103,11 @@ public class GetExcelHyperlinksHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("worksheetName", result);
+        var result = Assert.IsType<GetHyperlinksExcelResult>(res);
+
+        Assert.NotNull(result.WorksheetName);
     }
 
     #endregion
@@ -111,10 +121,12 @@ public class GetExcelHyperlinksHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"index\": 0", result);
-        Assert.Contains("\"index\": 1", result);
+        var result = Assert.IsType<GetHyperlinksExcelResult>(res);
+
+        Assert.Equal(0, result.Items[0].Index);
+        Assert.Equal(1, result.Items[1].Index);
     }
 
     [Fact]
@@ -124,9 +136,11 @@ public class GetExcelHyperlinksHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"cell\": \"B2\"", result);
+        var result = Assert.IsType<GetHyperlinksExcelResult>(res);
+
+        Assert.Equal("B2", result.Items[0].Cell);
     }
 
     [Fact]
@@ -136,9 +150,11 @@ public class GetExcelHyperlinksHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("https://test.example.com", result);
+        var result = Assert.IsType<GetHyperlinksExcelResult>(res);
+
+        Assert.Equal("https://test.example.com", result.Items[0].Url);
     }
 
     [Fact]
@@ -148,9 +164,11 @@ public class GetExcelHyperlinksHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Click Here", result);
+        var result = Assert.IsType<GetHyperlinksExcelResult>(res);
+
+        Assert.Equal("Click Here", result.Items[0].DisplayText);
     }
 
     [Fact]
@@ -160,11 +178,13 @@ public class GetExcelHyperlinksHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("area", result);
-        Assert.Contains("startCell", result);
-        Assert.Contains("endCell", result);
+        var result = Assert.IsType<GetHyperlinksExcelResult>(res);
+
+        Assert.NotNull(result.Items[0].Area);
+        Assert.NotNull(result.Items[0].Area.StartCell);
+        Assert.NotNull(result.Items[0].Area.EndCell);
     }
 
     #endregion
@@ -183,10 +203,12 @@ public class GetExcelHyperlinksHandlerTests : ExcelHandlerTestBase
             { "sheetIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"count\": 1", result);
-        Assert.Contains("Sheet2", result);
+        var result = Assert.IsType<GetHyperlinksExcelResult>(res);
+
+        Assert.Equal(1, result.Count);
+        Assert.Equal("Sheet2", result.WorksheetName);
     }
 
     [Fact]
@@ -197,9 +219,11 @@ public class GetExcelHyperlinksHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"count\": 2", result);
+        var result = Assert.IsType<GetHyperlinksExcelResult>(res);
+
+        Assert.Equal(2, result.Count);
     }
 
     #endregion

@@ -1,11 +1,14 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Excel.Sheet;
 
 namespace AsposeMcpServer.Handlers.Excel.Sheet;
 
 /// <summary>
 ///     Handler for getting worksheet information from Excel workbooks.
 /// </summary>
+[ResultType(typeof(GetSheetsResult))]
 public class GetExcelSheetsHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -19,43 +22,40 @@ public class GetExcelSheetsHandler : OperationHandlerBase<Workbook>
     ///     Optional: sourcePath (for display in result)
     /// </param>
     /// <returns>JSON string containing information about all worksheets.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         _ = parameters;
 
         var workbook = context.Document;
 
-        if (workbook.Worksheets.Count == 0)
-        {
-            var emptyResult = new
-            {
-                count = 0,
-                workbookName = context.SourcePath != null ? Path.GetFileName(context.SourcePath) : "session",
-                items = Array.Empty<object>(),
-                message = "No worksheets found"
-            };
-            return JsonResult(emptyResult);
-        }
+        var workbookName = context.SourcePath != null ? Path.GetFileName(context.SourcePath) : "session";
 
-        List<object> sheetList = [];
+        if (workbook.Worksheets.Count == 0)
+            return new GetSheetsResult
+            {
+                Count = 0,
+                WorkbookName = workbookName,
+                Items = [],
+                Message = "No worksheets found"
+            };
+
+        List<ExcelSheetInfo> sheetList = [];
         for (var i = 0; i < workbook.Worksheets.Count; i++)
         {
             var worksheet = workbook.Worksheets[i];
-            sheetList.Add(new
+            sheetList.Add(new ExcelSheetInfo
             {
-                index = i,
-                name = worksheet.Name,
-                visibility = worksheet.IsVisible ? "Visible" : "Hidden"
+                Index = i,
+                Name = worksheet.Name,
+                Visibility = worksheet.IsVisible ? "Visible" : "Hidden"
             });
         }
 
-        var result = new
+        return new GetSheetsResult
         {
-            count = workbook.Worksheets.Count,
-            workbookName = context.SourcePath != null ? Path.GetFileName(context.SourcePath) : "session",
-            items = sheetList
+            Count = workbook.Worksheets.Count,
+            WorkbookName = workbookName,
+            Items = sheetList
         };
-
-        return JsonResult(result);
     }
 }

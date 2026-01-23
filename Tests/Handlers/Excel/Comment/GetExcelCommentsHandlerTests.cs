@@ -1,6 +1,6 @@
-using System.Text.Json;
 using AsposeMcpServer.Handlers.Excel.Comment;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Excel.Comment;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Comment;
 
@@ -31,15 +31,15 @@ public class GetExcelCommentsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var items = json.RootElement.GetProperty("items");
-        Assert.True(items.GetArrayLength() > 0);
-        var firstItem = items[0];
-        Assert.True(firstItem.TryGetProperty("cell", out _));
-        Assert.True(firstItem.TryGetProperty("note", out _));
-        Assert.True(firstItem.TryGetProperty("author", out _));
+        var result = Assert.IsType<GetCommentsExcelResult>(res);
+
+        Assert.True(result.Items.Count > 0);
+        var firstItem = result.Items[0];
+        Assert.NotNull(firstItem.Cell);
+        Assert.NotNull(firstItem.Note);
+        Assert.NotNull(firstItem.Author);
     }
 
     #endregion
@@ -76,11 +76,12 @@ public class GetExcelCommentsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("count", out _));
-        Assert.True(json.RootElement.TryGetProperty("items", out _));
+        var result = Assert.IsType<GetCommentsExcelResult>(res);
+
+        Assert.True(result.Count >= 0);
+        Assert.NotNull(result.Items);
         AssertNotModified(context);
     }
 
@@ -96,10 +97,11 @@ public class GetExcelCommentsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(2, json.RootElement.GetProperty("count").GetInt32());
+        var result = Assert.IsType<GetCommentsExcelResult>(res);
+
+        Assert.Equal(2, result.Count);
     }
 
     [Fact]
@@ -109,10 +111,11 @@ public class GetExcelCommentsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(0, json.RootElement.GetProperty("count").GetInt32());
+        var result = Assert.IsType<GetCommentsExcelResult>(res);
+
+        Assert.Equal(0, result.Count);
     }
 
     #endregion
@@ -132,11 +135,12 @@ public class GetExcelCommentsHandlerTests : ExcelHandlerTestBase
             { "cell", "A1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(1, json.RootElement.GetProperty("count").GetInt32());
-        Assert.Equal("A1", json.RootElement.GetProperty("cell").GetString());
+        var result = Assert.IsType<GetCommentsExcelResult>(res);
+
+        Assert.Equal(1, result.Count);
+        Assert.Equal("A1", result.Cell);
     }
 
     [Fact]
@@ -149,10 +153,11 @@ public class GetExcelCommentsHandlerTests : ExcelHandlerTestBase
             { "cell", "A1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(0, json.RootElement.GetProperty("count").GetInt32());
+        var result = Assert.IsType<GetCommentsExcelResult>(res);
+
+        Assert.Equal(0, result.Count);
     }
 
     #endregion
@@ -172,11 +177,12 @@ public class GetExcelCommentsHandlerTests : ExcelHandlerTestBase
             { "sheetIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(1, json.RootElement.GetProperty("sheetIndex").GetInt32());
-        Assert.Equal(1, json.RootElement.GetProperty("count").GetInt32());
+        var result = Assert.IsType<GetCommentsExcelResult>(res);
+
+        Assert.Equal(1, result.SheetIndex);
+        Assert.Equal(1, result.Count);
     }
 
     [Fact]
@@ -188,10 +194,11 @@ public class GetExcelCommentsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(0, json.RootElement.GetProperty("sheetIndex").GetInt32());
+        var result = Assert.IsType<GetCommentsExcelResult>(res);
+
+        Assert.Equal(0, result.SheetIndex);
     }
 
     #endregion

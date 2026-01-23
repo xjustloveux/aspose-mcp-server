@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Excel.Range;
 
 namespace AsposeMcpServer.Handlers.Excel.Range;
 
 /// <summary>
 ///     Handler for getting data from Excel ranges.
 /// </summary>
+[ResultType(typeof(GetRangeResult))]
 public class GetExcelRangeHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -20,8 +23,8 @@ public class GetExcelRangeHandler : OperationHandlerBase<Workbook>
     ///     Required: range
     ///     Optional: sheetIndex, includeFormulas, calculateFormulas, includeFormat
     /// </param>
-    /// <returns>JSON result with range data.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    /// <returns>A GetRangeResult with range data.</returns>
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractGetExcelRangeParameters(parameters);
 
@@ -34,14 +37,14 @@ public class GetExcelRangeHandler : OperationHandlerBase<Workbook>
         var cellRange = ExcelHelper.CreateRange(worksheet.Cells, p.Range);
         var cellList = CollectCellData(worksheet.Cells, cellRange, p.IncludeFormulas, p.IncludeFormat);
 
-        return JsonResult(new
+        return new GetRangeResult
         {
-            range = p.Range,
-            rowCount = cellRange.RowCount,
-            columnCount = cellRange.ColumnCount,
-            count = cellList.Count,
-            items = cellList
-        });
+            Range = p.Range,
+            RowCount = cellRange.RowCount,
+            ColumnCount = cellRange.ColumnCount,
+            Count = cellList.Count,
+            Items = cellList
+        };
     }
 
     /// <summary>
@@ -51,11 +54,11 @@ public class GetExcelRangeHandler : OperationHandlerBase<Workbook>
     /// <param name="cellRange">The range to collect data from.</param>
     /// <param name="includeFormulas">Whether to include formulas in the output.</param>
     /// <param name="includeFormat">Whether to include format information.</param>
-    /// <returns>A list of cell data objects.</returns>
-    private static List<object> CollectCellData(Cells cells, Aspose.Cells.Range cellRange, bool includeFormulas,
+    /// <returns>A list of RangeCellInfo objects.</returns>
+    private static List<RangeCellInfo> CollectCellData(Cells cells, Aspose.Cells.Range cellRange, bool includeFormulas,
         bool includeFormat)
     {
-        List<object> cellList = [];
+        List<RangeCellInfo> cellList = [];
         for (var i = 0; i < cellRange.RowCount; i++)
         for (var j = 0; j < cellRange.ColumnCount; j++)
         {
@@ -76,8 +79,8 @@ public class GetExcelRangeHandler : OperationHandlerBase<Workbook>
     /// <param name="col">The column index.</param>
     /// <param name="includeFormulas">Whether to include formula information.</param>
     /// <param name="includeFormat">Whether to include format information.</param>
-    /// <returns>An anonymous object containing cell data.</returns>
-    private static object BuildCellObject(Aspose.Cells.Cell cell, int row, int col, bool includeFormulas,
+    /// <returns>A RangeCellInfo object containing cell data.</returns>
+    private static RangeCellInfo BuildCellObject(Aspose.Cells.Cell cell, int row, int col, bool includeFormulas,
         bool includeFormat)
     {
         var cellRef = CellsHelper.CellIndexToName(row, col);
@@ -85,19 +88,24 @@ public class GetExcelRangeHandler : OperationHandlerBase<Workbook>
         var displayValue = GetDisplayValue(cell);
         var valueStr = displayValue?.ToString() ?? "(empty)";
 
+        RangeCellFormatInfo? format = null;
         if (includeFormat)
         {
             var style = cell.GetStyle();
-            return new
+            format = new RangeCellFormatInfo
             {
-                cell = cellRef,
-                value = valueStr,
-                formula,
-                format = new { fontName = style.Font.Name, fontSize = style.Font.Size }
+                FontName = style.Font.Name,
+                FontSize = style.Font.Size
             };
         }
 
-        return new { cell = cellRef, value = valueStr, formula };
+        return new RangeCellInfo
+        {
+            Cell = cellRef,
+            Value = valueStr,
+            Formula = formula,
+            Format = format
+        };
     }
 
     /// <summary>

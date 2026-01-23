@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.PowerPoint.Notes;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Notes;
 
@@ -30,9 +31,11 @@ public class SetNotesHandlerTests : PptHandlerTestBase
             { "notes", "Test speaker notes" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("notes set", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("notes set", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 

@@ -1,12 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Hyperlink;
 
 /// <summary>
 ///     Handler for deleting hyperlinks from PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeletePptHyperlinkHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class DeletePptHyperlinkHandler : OperationHandlerBase<Presentation>
     ///     Required: slideIndex, shapeIndex
     /// </param>
     /// <returns>Success message with deletion details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractDeleteParameters(parameters);
 
@@ -36,7 +39,7 @@ public class DeletePptHyperlinkHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Hyperlink deleted from slide {p.SlideIndex}, shape {p.ShapeIndex}.");
+        return new SuccessResult { Message = $"Hyperlink deleted from slide {p.SlideIndex}, shape {p.ShapeIndex}." };
     }
 
     /// <summary>

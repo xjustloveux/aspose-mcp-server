@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Comment;
 
 /// <summary>
 ///     Handler for adding comments to Excel cells.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddExcelCommentHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class AddExcelCommentHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex, author
     /// </param>
     /// <returns>Success message with operation details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var addParams = ExtractAddParameters(parameters);
 
@@ -45,7 +48,8 @@ public class AddExcelCommentHandler : OperationHandlerBase<Workbook>
 
             MarkModified(context);
 
-            return Success($"Comment added to cell {addParams.Cell} in sheet {addParams.SheetIndex}.");
+            return new SuccessResult
+                { Message = $"Comment added to cell {addParams.Cell} in sheet {addParams.SheetIndex}." };
         }
         catch (CellsException ex)
         {

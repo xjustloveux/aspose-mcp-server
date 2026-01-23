@@ -1,12 +1,15 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Styles;
 
 /// <summary>
 ///     Handler for creating styles in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class CreateWordStyleHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -22,7 +25,7 @@ public class CreateWordStyleHandler : OperationHandlerBase<Document>
     ///     bold, italic, underline, color, alignment, spaceBefore, spaceAfter, lineSpacing
     /// </param>
     /// <returns>Success message with style creation details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractCreateWordStyleParameters(parameters);
 
@@ -47,7 +50,7 @@ public class CreateWordStyleHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Style '{p.StyleName}' created successfully");
+        return new SuccessResult { Message = $"Style '{p.StyleName}' created successfully" };
     }
 
     private static StyleType ParseStyleType(string styleTypeStr)

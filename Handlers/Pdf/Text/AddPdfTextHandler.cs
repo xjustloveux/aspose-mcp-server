@@ -1,13 +1,16 @@
 using Aspose.Pdf;
 using Aspose.Pdf.Text;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.Text;
 
 /// <summary>
 ///     Handler for adding text to PDF documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddPdfTextHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -22,7 +25,7 @@ public class AddPdfTextHandler : OperationHandlerBase<Document>
     ///     Optional: pageIndex (default: 1), x, y, fontName, fontSize, color.
     /// </param>
     /// <returns>Success message with text addition details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractAddParameters(parameters);
 
@@ -47,7 +50,7 @@ public class AddPdfTextHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Text added to page {p.PageIndex}.");
+        return new SuccessResult { Message = $"Text added to page {p.PageIndex}." };
     }
 
     /// <summary>

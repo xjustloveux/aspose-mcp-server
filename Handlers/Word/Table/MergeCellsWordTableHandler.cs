@@ -1,12 +1,15 @@
 ﻿using Aspose.Words;
 using Aspose.Words.Tables;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Table;
 
 /// <summary>
 ///     Handler for merging cells in Word document tables.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class MergeCellsWordTableHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -22,7 +25,7 @@ public class MergeCellsWordTableHandler : OperationHandlerBase<Document>
     /// </param>
     /// <returns>Success message with merged cell range.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or indices are out of range.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractMergeCellsParameters(parameters);
 
@@ -44,8 +47,11 @@ public class MergeCellsWordTableHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success(
-            $"Successfully merged cells from [{p.StartRow}, {p.StartCol}] to [{p.EndRow}, {p.EndCol}].");
+        return new SuccessResult
+        {
+            Message =
+                $"Successfully merged cells from [{p.StartRow}, {p.StartCol}] to [{p.EndRow}, {p.EndCol}]."
+        };
     }
 
     /// <summary>

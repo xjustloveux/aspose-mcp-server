@@ -1,13 +1,16 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.File;
 
 /// <summary>
 ///     Handler for splitting Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SplitWordDocumentHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -24,7 +27,7 @@ public class SplitWordDocumentHandler : OperationHandlerBase<Document>
     /// <returns>Success message with split details.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing.</exception>
     /// <exception cref="InvalidOperationException">Thrown when session management is not enabled.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractSplitParameters(parameters);
 
@@ -67,7 +70,8 @@ public class SplitWordDocumentHandler : OperationHandlerBase<Document>
                 sectionDoc.Save(output);
             }
 
-            return $"Document split into {doc.Sections.Count} sections in: {p.OutputDir}";
+            return new SuccessResult
+                { Message = $"Document split into {doc.Sections.Count} sections in: {p.OutputDir}" };
         }
 
         doc.UpdatePageLayout();
@@ -80,7 +84,7 @@ public class SplitWordDocumentHandler : OperationHandlerBase<Document>
             pageDoc.Save(output);
         }
 
-        return $"Document split into {pageCount} pages in: {p.OutputDir}";
+        return new SuccessResult { Message = $"Document split into {pageCount} pages in: {p.OutputDir}" };
     }
 
     private static SplitParameters ExtractSplitParameters(OperationParameters parameters)

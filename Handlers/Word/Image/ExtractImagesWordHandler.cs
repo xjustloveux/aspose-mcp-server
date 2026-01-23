@@ -1,6 +1,8 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.Common;
 using IOFile = System.IO.File;
 using WordShape = Aspose.Words.Drawing.Shape;
 
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Handlers.Word.Image;
 /// <summary>
 ///     Handler for extracting images from Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class ExtractImagesWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -23,7 +26,7 @@ public class ExtractImagesWordHandler : OperationHandlerBase<Document>
     ///     Optional: prefix, extractImageIndex
     /// </param>
     /// <returns>Success message with extraction details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractExtractImagesParameters(parameters);
 
@@ -34,7 +37,7 @@ public class ExtractImagesWordHandler : OperationHandlerBase<Document>
         var doc = context.Document;
         var shapes = doc.GetChildNodes(NodeType.Shape, true).Cast<WordShape>().Where(s => s.HasImage).ToList();
 
-        if (shapes.Count == 0) return "No images found in document";
+        if (shapes.Count == 0) return new SuccessResult { Message = "No images found in document" };
 
         if (p.ExtractImageIndex.HasValue &&
             (p.ExtractImageIndex.Value < 0 || p.ExtractImageIndex.Value >= shapes.Count))
@@ -70,12 +73,18 @@ public class ExtractImagesWordHandler : OperationHandlerBase<Document>
         }
 
         if (p.ExtractImageIndex.HasValue)
-            return $"Successfully extracted image #{p.ExtractImageIndex.Value} to: {p.OutputDir}\n" +
-                   $"File: {Path.GetFileName(extractedFiles[0])}";
+            return new SuccessResult
+            {
+                Message = $"Successfully extracted image #{p.ExtractImageIndex.Value} to: {p.OutputDir}\n" +
+                          $"File: {Path.GetFileName(extractedFiles[0])}"
+            };
 
-        return $"Successfully extracted {shapes.Count} images to: {p.OutputDir}\n" +
-               $"File list:\n" + string.Join("\n",
-                   extractedFiles.Select(f => $"  - {Path.GetFileName(f)}"));
+        return new SuccessResult
+        {
+            Message = $"Successfully extracted {shapes.Count} images to: {p.OutputDir}\n" +
+                      $"File list:\n" + string.Join("\n",
+                          extractedFiles.Select(f => $"  - {Path.GetFileName(f)}"))
+        };
     }
 
     private static ExtractImagesParameters ExtractExtractImagesParameters(OperationParameters parameters)

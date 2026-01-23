@@ -1,11 +1,15 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Shape;
 
 /// <summary>
 ///     Handler for deleting shapes from Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeleteShapeWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,7 +24,7 @@ public class DeleteShapeWordHandler : OperationHandlerBase<Document>
     /// </param>
     /// <returns>Success message.</returns>
     /// <exception cref="ArgumentException">Thrown when shapeIndex is missing or out of range.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractDeleteShapeParameters(parameters);
 
@@ -35,7 +39,7 @@ public class DeleteShapeWordHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return $"Successfully deleted shape at index {p.ShapeIndex}.";
+        return new SuccessResult { Message = $"Successfully deleted shape at index {p.ShapeIndex}." };
     }
 
     private static DeleteShapeParameters ExtractDeleteShapeParameters(OperationParameters parameters)

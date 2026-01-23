@@ -1,13 +1,16 @@
 using System.Text.RegularExpressions;
 using Aspose.Words;
 using Aspose.Words.Replacing;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Text;
 
 /// <summary>
 ///     Handler for replacing text in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class ReplaceWordTextHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -23,7 +26,7 @@ public class ReplaceWordTextHandler : OperationHandlerBase<Document>
     /// </param>
     /// <returns>Success message.</returns>
     /// <exception cref="ArgumentException">Thrown when find or replace parameters are missing.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractReplaceParameters(parameters);
 
@@ -44,7 +47,7 @@ public class ReplaceWordTextHandler : OperationHandlerBase<Document>
         if (!p.ReplaceInFields)
             result += " Note: Fields (such as hyperlinks) were excluded from replacement.";
 
-        return Success(result);
+        return new SuccessResult { Message = result };
     }
 
     private static ReplaceParameters ExtractReplaceParameters(OperationParameters parameters)

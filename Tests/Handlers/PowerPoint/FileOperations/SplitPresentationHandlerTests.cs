@@ -1,7 +1,8 @@
 using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Handlers.PowerPoint.FileOperations;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.FileOperations;
 
@@ -47,10 +48,12 @@ public class SplitPresentationHandlerTests : PptHandlerTestBase
             { "outputDirectory", outputDir }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("split", result.ToLower());
-        Assert.Contains("3", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("split", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("3", result.Message);
         Assert.True(Directory.Exists(outputDir));
         var files = Directory.GetFiles(outputDir, "*.pptx");
         Assert.Equal(3, files.Length);
@@ -75,9 +78,11 @@ public class SplitPresentationHandlerTests : PptHandlerTestBase
             { "outputDirectory", outputDir }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("split", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("split", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(Directory.Exists(outputDir));
         var files = Directory.GetFiles(outputDir, "*.pptx");
         Assert.NotEmpty(files);
@@ -98,10 +103,12 @@ public class SplitPresentationHandlerTests : PptHandlerTestBase
             { "slidesPerFile", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("split", result.ToLower());
-        Assert.Contains("2", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("split", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2", result.Message);
     }
 
     [SkippableFact]
@@ -119,9 +126,11 @@ public class SplitPresentationHandlerTests : PptHandlerTestBase
             { "outputFileNamePattern", "presentation_{index}.pptx" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("split", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("split", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(File.Exists(Path.Combine(outputDir, "presentation_0.pptx")));
     }
 

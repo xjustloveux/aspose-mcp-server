@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Group;
 
 /// <summary>
 ///     Handler for grouping rows in Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class GroupExcelRowsHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class GroupExcelRowsHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0), isCollapsed (default: false)
     /// </param>
     /// <returns>Success message with group details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         ExcelGroupHelper.ValidateRequiredParams(Operation, parameters, "startRow", "endRow");
 
@@ -35,7 +38,7 @@ public class GroupExcelRowsHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Rows {p.StartRow}-{p.EndRow} grouped in sheet {p.SheetIndex}.");
+        return new SuccessResult { Message = $"Rows {p.StartRow}-{p.EndRow} grouped in sheet {p.SheetIndex}." };
     }
 
     private static GroupRowsParameters ExtractGroupRowsParameters(OperationParameters parameters)

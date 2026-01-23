@@ -1,5 +1,7 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.List;
@@ -7,6 +9,7 @@ namespace AsposeMcpServer.Handlers.Word.List;
 /// <summary>
 ///     Handler for restarting list numbering in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class RestartWordListNumberingHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class RestartWordListNumberingHandler : OperationHandlerBase<Document>
     ///     Optional: startAt (default: 1)
     /// </param>
     /// <returns>Success message with restart details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractRestartNumberingParameters(parameters);
 
@@ -70,7 +73,7 @@ public class RestartWordListNumberingHandler : OperationHandlerBase<Document>
         result += $"Paragraphs affected: {applyCount}\n";
         result += $"New list ID: {newList.ListId}";
 
-        return Success(result);
+        return new SuccessResult { Message = result };
     }
 
     private static RestartNumberingParameters ExtractRestartNumberingParameters(OperationParameters parameters)

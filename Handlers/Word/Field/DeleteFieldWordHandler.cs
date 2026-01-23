@@ -1,11 +1,14 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Field;
 
 /// <summary>
 ///     Handler for deleting fields from Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeleteFieldWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class DeleteFieldWordHandler : OperationHandlerBase<Document>
     ///     Optional: keepResult (default: false)
     /// </param>
     /// <returns>Success message with deletion details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractDeleteFieldParameters(parameters);
 
@@ -43,11 +46,11 @@ public class DeleteFieldWordHandler : OperationHandlerBase<Document>
         MarkModified(context);
 
         var remainingFields = document.Range.Fields.Count;
-        var result = $"Field #{p.FieldIndex} deleted successfully\n";
-        result += $"Type: {fieldType}\nCode: {fieldCodeStr}\n";
-        result += $"Keep result text: {(p.KeepResult ? "Yes" : "No")}\n";
-        result += $"Remaining fields: {remainingFields}";
-        return result;
+        var message = $"Field #{p.FieldIndex} deleted successfully\n";
+        message += $"Type: {fieldType}\nCode: {fieldCodeStr}\n";
+        message += $"Keep result text: {(p.KeepResult ? "Yes" : "No")}\n";
+        message += $"Remaining fields: {remainingFields}";
+        return new SuccessResult { Message = message };
     }
 
     /// <summary>

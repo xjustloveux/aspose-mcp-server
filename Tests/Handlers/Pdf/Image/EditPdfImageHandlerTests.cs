@@ -1,6 +1,7 @@
 using Aspose.Pdf;
 using AsposeMcpServer.Handlers.Pdf.Image;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Image;
 
@@ -99,9 +100,11 @@ public class EditPdfImageHandlerTests : PdfHandlerTestBase
             { "imageIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Moved", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Moved", result.Message);
         AssertModified(context);
     }
 
@@ -124,9 +127,11 @@ public class EditPdfImageHandlerTests : PdfHandlerTestBase
             { "y", 400.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Moved", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Moved", result.Message);
         AssertModified(context);
     }
 
@@ -145,9 +150,11 @@ public class EditPdfImageHandlerTests : PdfHandlerTestBase
             { "height", 100.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Moved", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Moved", result.Message);
         AssertModified(context);
     }
 
@@ -170,9 +177,11 @@ public class EditPdfImageHandlerTests : PdfHandlerTestBase
             { "imagePath", imagePath }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Replaced", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Replaced", result.Message);
         AssertModified(context);
     }
 

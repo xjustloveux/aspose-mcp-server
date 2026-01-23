@@ -1,8 +1,10 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Text.Json.Nodes;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
@@ -12,6 +14,7 @@ namespace AsposeMcpServer.Tools.Word;
 ///     Merges: WordInsertParagraphTool, WordDeleteParagraphTool, WordEditParagraphTool,
 ///     WordGetParagraphsTool, WordGetParagraphFormatTool, WordCopyParagraphFormatTool, WordMergeParagraphsTool
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Word.Paragraph")]
 [McpServerToolType]
 public class WordParagraphTool
 {
@@ -82,7 +85,14 @@ public class WordParagraphTool
     /// <param name="endParagraphIndex">End paragraph index (for merge).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "word_paragraph")]
+    [McpServerTool(
+        Name = "word_paragraph",
+        Title = "Word Paragraph Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(
         @"Manage paragraphs in Word documents. Supports 7 operations: insert, delete, edit, get, get_format, copy_format, merge.
 
@@ -103,7 +113,7 @@ Important notes for 'get' operation:
 - Paragraphs inside table cells are marked with '[Cell]' in the location field
 - Paragraphs inside TextBoxes are marked with '[TextBox]' in the location field
 - To check paragraph styles in table cells, use includeCommentParagraphs=true")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: insert, delete, edit, get, get_format, copy_format, merge")]
         string operation,
         [Description("Document file path (required if no sessionId)")]
@@ -187,14 +197,10 @@ Important notes for 'get' operation:
 
         var result = handler.Execute(operationContext, parameters);
 
-        // Read-only operations don't need to save
-        if (operation.ToLower() is "get" or "get_format")
-            return result;
-
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

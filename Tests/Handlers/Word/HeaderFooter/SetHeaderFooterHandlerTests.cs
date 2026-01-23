@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Word.HeaderFooter;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.HeaderFooter;
 
@@ -31,9 +32,11 @@ public class SetHeaderFooterHandlerTests : WordHandlerTestBase
             { "fontSize", 12.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("set", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("set", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -51,9 +54,11 @@ public class SetHeaderFooterHandlerTests : WordHandlerTestBase
             { "sectionIndex", -1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("set", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("set", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -71,9 +76,11 @@ public class SetHeaderFooterHandlerTests : WordHandlerTestBase
             { "footerLeft", "Footer Text" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("header and footer set", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("header and footer set", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -87,9 +94,11 @@ public class SetHeaderFooterHandlerTests : WordHandlerTestBase
             { "headerCenter", "Header Only" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("set", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("set", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -103,9 +112,11 @@ public class SetHeaderFooterHandlerTests : WordHandlerTestBase
             { "footerCenter", "Footer Only" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("set", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("set", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -124,9 +135,11 @@ public class SetHeaderFooterHandlerTests : WordHandlerTestBase
             { "footerRight", "F-Right" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("set", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("set", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 

@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Pdf;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Pdf;
 /// <summary>
 ///     Tool for managing watermarks in PDF documents
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Pdf.Watermark")]
 [McpServerToolType]
 public class PdfWatermarkTool
 {
@@ -59,7 +62,14 @@ public class PdfWatermarkTool
     /// <param name="verticalAlignment">Vertical alignment.</param>
     /// <returns>A message indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "pdf_watermark")]
+    [McpServerTool(
+        Name = "pdf_watermark",
+        Title = "PDF Watermark Operations",
+        Destructive = false,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage watermarks in PDF documents. Supports 1 operation: add.
 
 Usage examples:
@@ -67,7 +77,7 @@ Usage examples:
 - Add colored watermark: pdf_watermark(operation='add', path='doc.pdf', text='URGENT', color='Red')
 - Add watermark to specific pages: pdf_watermark(operation='add', path='doc.pdf', text='DRAFT', pageRange='1,3,5-10')
 - Add background watermark: pdf_watermark(operation='add', path='doc.pdf', text='SAMPLE', isBackground=true)")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: add")] string operation,
         [Description("PDF file path (required if no sessionId)")]
         string? path = null,
@@ -119,7 +129,7 @@ Usage examples:
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

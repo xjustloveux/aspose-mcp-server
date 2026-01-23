@@ -1,7 +1,8 @@
 using Aspose.Pdf;
 using Aspose.Pdf.Text;
 using AsposeMcpServer.Handlers.Pdf.Table;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Table;
 
@@ -79,9 +80,11 @@ public class EditPdfTableHandlerTests : PdfHandlerTestBase
             { "cellValue", "Updated Second Table" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Edited table 1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Edited table 1", result.Message);
         AssertModified(context);
     }
 
@@ -102,9 +105,11 @@ public class EditPdfTableHandlerTests : PdfHandlerTestBase
             { "cellValue", "Updated First Cell" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Edited table 0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Edited table 0", result.Message);
     }
 
     #endregion
@@ -125,9 +130,11 @@ public class EditPdfTableHandlerTests : PdfHandlerTestBase
             { "cellValue", "Updated Value" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("edited", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("edited", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -209,9 +216,11 @@ public class EditPdfTableHandlerTests : PdfHandlerTestBase
             { "cellColumn", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("edited", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("edited", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [SkippableFact]
@@ -228,9 +237,11 @@ public class EditPdfTableHandlerTests : PdfHandlerTestBase
             { "cellValue", "" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("edited", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("edited", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [SkippableFact]
@@ -246,9 +257,11 @@ public class EditPdfTableHandlerTests : PdfHandlerTestBase
             { "cellValue", "Test" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("edited", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("edited", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [SkippableFact]
@@ -264,9 +277,11 @@ public class EditPdfTableHandlerTests : PdfHandlerTestBase
             { "cellValue", "Test" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("edited", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("edited", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -315,9 +330,11 @@ public class EditPdfTableHandlerTests : PdfHandlerTestBase
             { "cellValue", "Updated Last Table" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Edited table 1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Edited table 1", result.Message);
     }
 
     #endregion

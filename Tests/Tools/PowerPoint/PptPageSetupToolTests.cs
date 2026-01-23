@@ -1,5 +1,6 @@
-using Aspose.Slides;
-using AsposeMcpServer.Tests.Helpers;
+﻿using Aspose.Slides;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.PowerPoint;
 
 namespace AsposeMcpServer.Tests.Tools.PowerPoint;
@@ -26,7 +27,8 @@ public class PptPageSetupToolTests : PptTestBase
         var pptPath = CreatePresentation("test_set_size.pptx");
         var outputPath = CreateTestFilePath("test_set_size_output.pptx");
         var result = _tool.Execute("set_size", pptPath, preset: "OnScreen16x9", outputPath: outputPath);
-        Assert.StartsWith("Slide size set to", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Slide size set to", data.Message);
         using var presentation = new Presentation(outputPath);
         Assert.Equal(SlideSizeType.OnScreen, presentation.SlideSize.Type);
     }
@@ -37,7 +39,8 @@ public class PptPageSetupToolTests : PptTestBase
         var pptPath = CreatePresentation("test_set_portrait.pptx");
         var outputPath = CreateTestFilePath("test_set_portrait_output.pptx");
         var result = _tool.Execute("set_orientation", pptPath, orientation: "Portrait", outputPath: outputPath);
-        Assert.StartsWith("Slide orientation set to", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Slide orientation set to", data.Message);
         using var presentation = new Presentation(outputPath);
         Assert.True(presentation.SlideSize.Size.Height > presentation.SlideSize.Size.Width);
     }
@@ -48,7 +51,8 @@ public class PptPageSetupToolTests : PptTestBase
         var pptPath = CreatePresentation("test_set_footer.pptx");
         var outputPath = CreateTestFilePath("test_set_footer_output.pptx");
         var result = _tool.Execute("set_footer", pptPath, footerText: "Footer Text", outputPath: outputPath);
-        Assert.StartsWith("Footer settings updated for", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Footer settings updated for", data.Message);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -58,7 +62,8 @@ public class PptPageSetupToolTests : PptTestBase
         var pptPath = CreatePresentation("test_numbering_show.pptx");
         var outputPath = CreateTestFilePath("test_numbering_show_output.pptx");
         var result = _tool.Execute("set_slide_numbering", pptPath, showSlideNumber: true, outputPath: outputPath);
-        Assert.StartsWith("Slide numbers", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Slide numbers", data.Message);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -75,7 +80,8 @@ public class PptPageSetupToolTests : PptTestBase
         var pptPath = CreatePresentation($"test_case_size_{operation.Replace("_", "")}.pptx");
         var outputPath = CreateTestFilePath($"test_case_size_{operation.Replace("_", "")}_output.pptx");
         var result = _tool.Execute(operation, pptPath, preset: "OnScreen16x9", outputPath: outputPath);
-        Assert.StartsWith("Slide size set to", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Slide size set to", data.Message);
     }
 
     [Fact]
@@ -96,7 +102,8 @@ public class PptPageSetupToolTests : PptTestBase
         var pptPath = CreatePresentation("test_session_size.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("set_size", sessionId: sessionId, preset: "OnScreen16x9");
-        Assert.StartsWith("Slide size set to", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Slide size set to", data.Message);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         Assert.Equal(SlideSizeType.OnScreen, ppt.SlideSize.Type);
     }
@@ -107,7 +114,8 @@ public class PptPageSetupToolTests : PptTestBase
         var pptPath = CreatePresentation("test_session_orientation.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("set_orientation", sessionId: sessionId, orientation: "Portrait");
-        Assert.StartsWith("Slide orientation set to", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Slide orientation set to", data.Message);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         Assert.True(ppt.SlideSize.Size.Height > ppt.SlideSize.Size.Width);
     }
@@ -118,7 +126,8 @@ public class PptPageSetupToolTests : PptTestBase
         var pptPath = CreatePresentation("test_session_footer.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("set_footer", sessionId: sessionId, footerText: "Session Footer");
-        Assert.StartsWith("Footer settings updated for", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Footer settings updated for", data.Message);
     }
 
     [Fact]
@@ -127,7 +136,8 @@ public class PptPageSetupToolTests : PptTestBase
         var pptPath = CreatePresentation("test_session_numbering.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("set_slide_numbering", sessionId: sessionId, showSlideNumber: true, firstNumber: 10);
-        Assert.StartsWith("Slide numbers", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Slide numbers", data.Message);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         Assert.Equal(10, ppt.FirstSlideNumber);
     }

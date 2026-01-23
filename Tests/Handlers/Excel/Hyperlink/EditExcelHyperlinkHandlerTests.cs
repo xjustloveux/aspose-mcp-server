@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.Hyperlink;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Hyperlink;
 
@@ -32,10 +33,12 @@ public class EditExcelHyperlinkHandlerTests : ExcelHandlerTestBase
             { "displayText", "New Text" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("url=", result);
-        Assert.Contains("displayText=", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("url=", result.Message);
+        Assert.Contains("displayText=", result.Message);
     }
 
     #endregion
@@ -52,9 +55,11 @@ public class EditExcelHyperlinkHandlerTests : ExcelHandlerTestBase
             { "cell", "A1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("unchanged", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("unchanged", result.Message);
     }
 
     #endregion
@@ -107,9 +112,11 @@ public class EditExcelHyperlinkHandlerTests : ExcelHandlerTestBase
             { "url", "https://new.com" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("edited", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("edited", result.Message);
         AssertModified(context);
     }
 
@@ -124,9 +131,11 @@ public class EditExcelHyperlinkHandlerTests : ExcelHandlerTestBase
             { "url", "https://new.com" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("edited", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("edited", result.Message);
     }
 
     [Fact]
@@ -157,9 +166,11 @@ public class EditExcelHyperlinkHandlerTests : ExcelHandlerTestBase
             { "url", "https://new.com" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("url=https://new.com", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("url=https://new.com", result.Message);
     }
 
     #endregion
@@ -194,9 +205,11 @@ public class EditExcelHyperlinkHandlerTests : ExcelHandlerTestBase
             { "displayText", "Click Me" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("displayText=Click Me", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("displayText=Click Me", result.Message);
     }
 
     #endregion

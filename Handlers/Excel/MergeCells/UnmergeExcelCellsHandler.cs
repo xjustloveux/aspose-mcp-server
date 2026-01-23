@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.MergeCells;
 
 /// <summary>
 ///     Handler for unmerging cells in Excel workbooks.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class UnmergeExcelCellsHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class UnmergeExcelCellsHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (0-based, default: 0)
     /// </param>
     /// <returns>Success message with unmerge details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractUnmergeCellsParameters(parameters);
 
@@ -35,7 +38,7 @@ public class UnmergeExcelCellsHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Range {p.Range} unmerged.");
+        return new SuccessResult { Message = $"Range {p.Range} unmerged." };
     }
 
     private static UnmergeCellsParameters ExtractUnmergeCellsParameters(OperationParameters parameters)

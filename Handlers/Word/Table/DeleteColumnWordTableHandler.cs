@@ -1,12 +1,16 @@
 using Aspose.Words;
 using Aspose.Words.Tables;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Table;
 
 /// <summary>
 ///     Handler for deleting columns from Word document tables.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeleteColumnWordTableHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -23,7 +27,7 @@ public class DeleteColumnWordTableHandler : OperationHandlerBase<Document>
     /// <returns>Success message with deleted cell count.</returns>
     /// <exception cref="ArgumentException">Thrown when columnIndex is missing or indices are out of range.</exception>
     /// <exception cref="InvalidOperationException">Thrown when the table has no rows.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractDeleteColumnParameters(parameters);
 
@@ -51,7 +55,8 @@ public class DeleteColumnWordTableHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Successfully deleted column #{p.ColumnIndex} ({deletedCount} cells removed).");
+        return new SuccessResult
+            { Message = $"Successfully deleted column #{p.ColumnIndex} ({deletedCount} cells removed)." };
     }
 
     private static DeleteColumnParameters ExtractDeleteColumnParameters(OperationParameters parameters)

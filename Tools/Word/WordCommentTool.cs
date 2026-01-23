@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Word;
 /// <summary>
 ///     Unified tool for managing Word comments (add, delete, get, reply)
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Word.Comment")]
 [McpServerToolType]
 public class WordCommentTool
 {
@@ -57,7 +60,14 @@ public class WordCommentTool
     /// <param name="replyText">Reply text content.</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "word_comment")]
+    [McpServerTool(
+        Name = "word_comment",
+        Title = "Word Comment Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage Word comments. Supports 4 operations: add, delete, get, reply.
 
 Usage examples:
@@ -65,7 +75,7 @@ Usage examples:
 - Delete comment: word_comment(operation='delete', path='doc.docx', commentIndex=0)
 - Get all comments: word_comment(operation='get', path='doc.docx')
 - Reply to comment: word_comment(operation='reply', path='doc.docx', commentIndex=0, text='This is a reply')")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: add, delete, get, reply")]
         string operation,
         [Description("Document file path (required if no sessionId)")]
@@ -109,9 +119,7 @@ Usage examples:
         if (operationContext.IsModified)
             ctx.Save(effectiveOutputPath);
 
-        if (ctx.IsSession || !operationContext.IsModified)
-            return result;
-        return $"{result}\n{ctx.GetOutputMessage(effectiveOutputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, effectiveOutputPath);
     }
 
     /// <summary>

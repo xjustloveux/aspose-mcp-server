@@ -1,6 +1,8 @@
 ﻿using Aspose.Words;
 using Aspose.Words.Lists;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.List;
@@ -8,6 +10,7 @@ namespace AsposeMcpServer.Handlers.Word.List;
 /// <summary>
 ///     Handler for converting paragraphs to lists in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class ConvertToWordListHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -22,7 +25,7 @@ public class ConvertToWordListHandler : OperationHandlerBase<Document>
     ///     Optional: listType, numberFormat
     /// </param>
     /// <returns>Success message with conversion details.</returns>
-    public override string
+    public override object
         Execute(OperationContext<Document> context,
             OperationParameters parameters)
     {
@@ -85,14 +88,14 @@ public class ConvertToWordListHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        var result = "Paragraphs converted to list successfully\n";
-        result += $"Range: paragraph {p.StartIndex} to {p.EndIndex}\n";
-        result += $"List type: {p.ListType}\n";
-        if (p.ListType == "number") result += $"Number format: {p.NumberFormat}\n";
-        result += $"Converted: {convertedCount} paragraphs";
-        if (skippedCount > 0) result += $"\nSkipped: {skippedCount} paragraphs (already list items or empty)";
+        var message = "Paragraphs converted to list successfully\n";
+        message += $"Range: paragraph {p.StartIndex} to {p.EndIndex}\n";
+        message += $"List type: {p.ListType}\n";
+        if (p.ListType == "number") message += $"Number format: {p.NumberFormat}\n";
+        message += $"Converted: {convertedCount} paragraphs";
+        if (skippedCount > 0) message += $"\nSkipped: {skippedCount} paragraphs (already list items or empty)";
 
-        return Success(result);
+        return new SuccessResult { Message = message };
     }
 
     private static ConvertToListParameters ExtractConvertToListParameters(OperationParameters parameters)

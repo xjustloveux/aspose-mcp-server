@@ -1,7 +1,7 @@
-using System.Text.Json;
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.Formula;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Excel.Formula;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Formula;
 
@@ -33,10 +33,11 @@ public class GetFormulasHandlerTests : ExcelHandlerTestBase
             { "sheetIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(1, json.RootElement.GetProperty("count").GetInt32());
+        var result = Assert.IsType<GetFormulasResult>(res);
+
+        Assert.Equal(1, result.Count);
     }
 
     #endregion
@@ -53,11 +54,12 @@ public class GetFormulasHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(0, json.RootElement.GetProperty("count").GetInt32());
-        Assert.Contains("No formulas found", json.RootElement.GetProperty("message").GetString());
+        var result = Assert.IsType<GetFormulasResult>(res);
+
+        Assert.Equal(0, result.Count);
+        Assert.Contains("No formulas found", result.Message);
     }
 
     #endregion
@@ -108,10 +110,11 @@ public class GetFormulasHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.True(json.RootElement.GetProperty("count").GetInt32() > 0);
+        var result = Assert.IsType<GetFormulasResult>(res);
+
+        Assert.True(result.Count > 0);
     }
 
     [Fact]
@@ -121,10 +124,11 @@ public class GetFormulasHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(3, json.RootElement.GetProperty("count").GetInt32());
+        var result = Assert.IsType<GetFormulasResult>(res);
+
+        Assert.Equal(3, result.Count);
     }
 
     [Fact]
@@ -134,10 +138,11 @@ public class GetFormulasHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(3, json.RootElement.GetProperty("items").GetArrayLength());
+        var result = Assert.IsType<GetFormulasResult>(res);
+
+        Assert.Equal(3, result.Items.Count);
     }
 
     [Fact]
@@ -147,10 +152,11 @@ public class GetFormulasHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.NotNull(json.RootElement.GetProperty("worksheetName").GetString());
+        var result = Assert.IsType<GetFormulasResult>(res);
+
+        Assert.NotNull(result.WorksheetName);
     }
 
     #endregion
@@ -167,10 +173,11 @@ public class GetFormulasHandlerTests : ExcelHandlerTestBase
             { "range", "C1:C2" }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(2, json.RootElement.GetProperty("count").GetInt32());
+        var result = Assert.IsType<GetFormulasResult>(res);
+
+        Assert.Equal(2, result.Count);
     }
 
     [Fact]
@@ -183,11 +190,12 @@ public class GetFormulasHandlerTests : ExcelHandlerTestBase
             { "range", "D1:D10" }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(0, json.RootElement.GetProperty("count").GetInt32());
-        Assert.Contains("No formulas found", json.RootElement.GetProperty("message").GetString());
+        var result = Assert.IsType<GetFormulasResult>(res);
+
+        Assert.Equal(0, result.Count);
+        Assert.Contains("No formulas found", result.Message);
     }
 
     #endregion

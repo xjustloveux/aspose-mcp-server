@@ -1,12 +1,16 @@
 using System.Text.Json.Nodes;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Page;
 
 /// <summary>
 ///     Handler for setting page size in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetSizeWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -22,7 +26,7 @@ public class SetSizeWordHandler : OperationHandlerBase<Document>
     ///     Optional: sectionIndex, sectionIndices
     /// </param>
     /// <returns>Success message with size details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var setParams = ExtractSetSizeParameters(parameters);
 
@@ -58,7 +62,7 @@ public class SetSizeWordHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Page size updated for {sectionsToUpdate.Count} section(s)");
+        return new SuccessResult { Message = $"Page size updated for {sectionsToUpdate.Count} section(s)" };
     }
 
     /// <summary>

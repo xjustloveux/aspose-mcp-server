@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Excel.Protect;
 
 namespace AsposeMcpServer.Handlers.Excel.Protect;
 
 /// <summary>
 ///     Handler for getting protection status of Excel workbook or worksheet.
 /// </summary>
+[ResultType(typeof(GetProtectionResult))]
 public class GetExcelProtectionHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -20,12 +23,12 @@ public class GetExcelProtectionHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (if not specified, returns all worksheets' protection status)
     /// </param>
     /// <returns>JSON string containing protection status information.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractGetExcelProtectionParameters(parameters);
 
         var workbook = context.Document;
-        List<object> worksheets = [];
+        List<WorksheetProtectionInfo> worksheets = [];
 
         if (p.SheetIndex.HasValue)
         {
@@ -38,14 +41,12 @@ public class GetExcelProtectionHandler : OperationHandlerBase<Workbook>
                 worksheets.Add(CreateSheetProtectionInfo(workbook.Worksheets[i], i));
         }
 
-        var result = new
+        return new GetProtectionResult
         {
-            count = worksheets.Count,
-            totalWorksheets = workbook.Worksheets.Count,
-            worksheets
+            Count = worksheets.Count,
+            TotalWorksheets = workbook.Worksheets.Count,
+            Worksheets = worksheets
         };
-
-        return JsonResult(result);
     }
 
     /// <summary>
@@ -53,30 +54,30 @@ public class GetExcelProtectionHandler : OperationHandlerBase<Workbook>
     /// </summary>
     /// <param name="worksheet">The worksheet to get protection information from.</param>
     /// <param name="index">The index of the worksheet.</param>
-    /// <returns>An anonymous object containing the worksheet's protection details.</returns>
-    private static object CreateSheetProtectionInfo(Worksheet worksheet, int index)
+    /// <returns>WorksheetProtectionInfo containing the worksheet's protection details.</returns>
+    private static WorksheetProtectionInfo CreateSheetProtectionInfo(Worksheet worksheet, int index)
     {
         var protection = worksheet.Protection;
-        return new
+        return new WorksheetProtectionInfo
         {
-            index,
-            name = worksheet.Name,
-            isProtected = protection.IsProtectedWithPassword,
-            allowSelectingLockedCell = protection.AllowSelectingLockedCell,
-            allowSelectingUnlockedCell = protection.AllowSelectingUnlockedCell,
-            allowFormattingCell = protection.AllowFormattingCell,
-            allowFormattingColumn = protection.AllowFormattingColumn,
-            allowFormattingRow = protection.AllowFormattingRow,
-            allowInsertingColumn = protection.AllowInsertingColumn,
-            allowInsertingRow = protection.AllowInsertingRow,
-            allowInsertingHyperlink = protection.AllowInsertingHyperlink,
-            allowDeletingColumn = protection.AllowDeletingColumn,
-            allowDeletingRow = protection.AllowDeletingRow,
-            allowSorting = protection.AllowSorting,
-            allowFiltering = protection.AllowFiltering,
-            allowUsingPivotTable = protection.AllowUsingPivotTable,
-            allowEditingObject = protection.AllowEditingObject,
-            allowEditingScenario = protection.AllowEditingScenario
+            Index = index,
+            Name = worksheet.Name,
+            IsProtected = protection.IsProtectedWithPassword,
+            AllowSelectingLockedCell = protection.AllowSelectingLockedCell,
+            AllowSelectingUnlockedCell = protection.AllowSelectingUnlockedCell,
+            AllowFormattingCell = protection.AllowFormattingCell,
+            AllowFormattingColumn = protection.AllowFormattingColumn,
+            AllowFormattingRow = protection.AllowFormattingRow,
+            AllowInsertingColumn = protection.AllowInsertingColumn,
+            AllowInsertingRow = protection.AllowInsertingRow,
+            AllowInsertingHyperlink = protection.AllowInsertingHyperlink,
+            AllowDeletingColumn = protection.AllowDeletingColumn,
+            AllowDeletingRow = protection.AllowDeletingRow,
+            AllowSorting = protection.AllowSorting,
+            AllowFiltering = protection.AllowFiltering,
+            AllowUsingPivotTable = protection.AllowUsingPivotTable,
+            AllowEditingObject = protection.AllowEditingObject,
+            AllowEditingScenario = protection.AllowEditingScenario
         };
     }
 

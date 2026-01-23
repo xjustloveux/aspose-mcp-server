@@ -1,6 +1,8 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.Common;
 using SkiaSharp;
 
 namespace AsposeMcpServer.Handlers.Word.Watermark;
@@ -8,6 +10,7 @@ namespace AsposeMcpServer.Handlers.Word.Watermark;
 /// <summary>
 ///     Handler for adding image watermarks to Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddImageWatermarkWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -24,7 +27,7 @@ public class AddImageWatermarkWordHandler : OperationHandlerBase<Document>
     /// <returns>Success message with watermark details.</returns>
     /// <exception cref="ArgumentException">Thrown when imagePath is missing or image cannot be decoded.</exception>
     /// <exception cref="FileNotFoundException">Thrown when the image file is not found.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractAddImageWatermarkParameters(parameters);
 
@@ -53,8 +56,11 @@ public class AddImageWatermarkWordHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success(
-            $"Image watermark added to document. Image: {Path.GetFileName(p.ImagePath)}, Scale: {p.Scale}, Washout: {p.IsWashout}");
+        return new SuccessResult
+        {
+            Message =
+                $"Image watermark added to document. Image: {Path.GetFileName(p.ImagePath)}, Scale: {p.Scale}, Washout: {p.IsWashout}"
+        };
     }
 
     private static AddImageWatermarkParameters ExtractAddImageWatermarkParameters(OperationParameters parameters)

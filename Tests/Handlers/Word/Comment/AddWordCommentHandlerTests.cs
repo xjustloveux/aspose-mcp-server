@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Comment;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Comment;
 
@@ -42,9 +43,11 @@ public class AddWordCommentHandlerTests : WordHandlerTestBase
             { "text", "Comment at end" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Comment added successfully", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Comment added successfully", result.Message);
     }
 
     #endregion
@@ -61,9 +64,11 @@ public class AddWordCommentHandlerTests : WordHandlerTestBase
             { "text", "This is a comment" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Comment added successfully", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Comment added successfully", result.Message);
         AssertModified(context);
     }
 
@@ -77,9 +82,11 @@ public class AddWordCommentHandlerTests : WordHandlerTestBase
             { "text", "My comment content" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("My comment content", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("My comment content", result.Message);
     }
 
     [Fact]
@@ -93,9 +100,11 @@ public class AddWordCommentHandlerTests : WordHandlerTestBase
             { "author", "John Doe" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("John Doe", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("John Doe", result.Message);
     }
 
     [Fact]
@@ -108,9 +117,11 @@ public class AddWordCommentHandlerTests : WordHandlerTestBase
             { "text", "Comment text" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Author:", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Author:", result.Message);
     }
 
     #endregion
@@ -128,9 +139,11 @@ public class AddWordCommentHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Comment added successfully", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Comment added successfully", result.Message);
     }
 
     [Fact]
@@ -144,9 +157,11 @@ public class AddWordCommentHandlerTests : WordHandlerTestBase
             { "paragraphIndex", -1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Comment added successfully", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Comment added successfully", result.Message);
     }
 
     #endregion
@@ -209,9 +224,11 @@ public class AddWordCommentHandlerTests : WordHandlerTestBase
             { "authorInitial", "JD" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Comment added successfully", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Comment added successfully", result.Message);
     }
 
     [Fact]
@@ -225,9 +242,11 @@ public class AddWordCommentHandlerTests : WordHandlerTestBase
             { "author", "A" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Comment added successfully", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Comment added successfully", result.Message);
     }
 
     #endregion
@@ -246,9 +265,11 @@ public class AddWordCommentHandlerTests : WordHandlerTestBase
             { "startRunIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Comment added successfully", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Comment added successfully", result.Message);
     }
 
     [Fact]
@@ -264,9 +285,11 @@ public class AddWordCommentHandlerTests : WordHandlerTestBase
             { "endRunIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Comment added successfully", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Comment added successfully", result.Message);
     }
 
     [Fact]

@@ -1,12 +1,15 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.File;
 
 /// <summary>
 ///     Handler for merging multiple Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class MergeWordDocumentsHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -22,7 +25,7 @@ public class MergeWordDocumentsHandler : OperationHandlerBase<Document>
     /// </param>
     /// <returns>Success message with merge details.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractMergeParameters(parameters);
 
@@ -60,7 +63,11 @@ public class MergeWordDocumentsHandler : OperationHandlerBase<Document>
                 section.HeadersFooters.LinkToPrevious(false);
 
         mergedDoc.Save(p.OutputPath);
-        return $"Merged {p.InputPaths.Length} documents into: {p.OutputPath} (format mode: {p.ImportFormatModeStr})";
+        return new SuccessResult
+        {
+            Message =
+                $"Merged {p.InputPaths.Length} documents into: {p.OutputPath} (format mode: {p.ImportFormatModeStr})"
+        };
     }
 
     private static MergeParameters ExtractMergeParameters(OperationParameters parameters)

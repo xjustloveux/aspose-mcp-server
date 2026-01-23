@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Word.Text;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Text;
 
@@ -32,9 +33,11 @@ public class DeleteRangeWordTextHandlerTests : WordHandlerTestBase
             { "endCharIndex", 5 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertContainsText(doc, "First");
         AssertContainsText(doc, "Third paragraph");
         AssertModified(context);
@@ -58,9 +61,11 @@ public class DeleteRangeWordTextHandlerTests : WordHandlerTestBase
             { "sectionIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertContainsText(doc, "World");
         AssertModified(context);
     }
@@ -106,9 +111,11 @@ public class DeleteRangeWordTextHandlerTests : WordHandlerTestBase
             { "endCharIndex", 5 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertContainsText(doc, "World");
         AssertModified(context);
     }
@@ -129,9 +136,11 @@ public class DeleteRangeWordTextHandlerTests : WordHandlerTestBase
             { "endCharIndex", endChar }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 

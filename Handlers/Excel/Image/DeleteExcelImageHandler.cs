@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Image;
 
 /// <summary>
 ///     Handler for deleting images from Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeleteExcelImageHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class DeleteExcelImageHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0)
     /// </param>
     /// <returns>Success message with deletion details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var deleteParams = ExtractDeleteParameters(parameters);
 
@@ -38,7 +41,8 @@ public class DeleteExcelImageHandler : OperationHandlerBase<Workbook>
         var warning = pictures.Count > 0
             ? " Note: remaining image indices have been re-ordered."
             : "";
-        return Success($"Image #{deleteParams.ImageIndex} deleted. {pictures.Count} images remaining.{warning}");
+        return new SuccessResult
+            { Message = $"Image #{deleteParams.ImageIndex} deleted. {pictures.Count} images remaining.{warning}" };
     }
 
     private static DeleteParameters ExtractDeleteParameters(OperationParameters parameters)

@@ -1,6 +1,7 @@
-using System.Text.Json;
-using Aspose.Cells;
-using AsposeMcpServer.Tests.Helpers;
+﻿using Aspose.Cells;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Excel.Cell;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Excel;
 
 namespace AsposeMcpServer.Tests.Tools.Excel;
@@ -36,7 +37,8 @@ public class ExcelCellToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbook("test_write.xlsx");
         var outputPath = CreateTestFilePath("test_write_output.xlsx");
         var result = _tool.Execute("write", workbookPath, cell: "A1", value: "Test Value", outputPath: outputPath);
-        Assert.Contains("written", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("written", data.Message);
         using var workbook = new Workbook(outputPath);
         Assert.Equal("Test Value", workbook.Worksheets[0].Cells["A1"].Value);
     }
@@ -46,8 +48,8 @@ public class ExcelCellToolTests : ExcelTestBase
     {
         var workbookPath = CreateWorkbookWithCellValue("test_get.xlsx", "A1", "TestData");
         var result = _tool.Execute("get", workbookPath, cell: "A1");
-        var json = JsonDocument.Parse(result);
-        Assert.Equal("TestData", json.RootElement.GetProperty("value").GetString());
+        var data = GetResultData<GetCellResult>(result);
+        Assert.Equal("TestData", data.Value);
     }
 
     [Fact]
@@ -56,7 +58,8 @@ public class ExcelCellToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithCellValue("test_edit.xlsx", "A1", "Original");
         var outputPath = CreateTestFilePath("test_edit_output.xlsx");
         var result = _tool.Execute("edit", workbookPath, cell: "A1", value: "Updated", outputPath: outputPath);
-        Assert.StartsWith("Cell A1 edited", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Cell A1 edited", data.Message);
         using var workbook = new Workbook(outputPath);
         Assert.Equal("Updated", workbook.Worksheets[0].Cells["A1"].Value);
     }
@@ -67,7 +70,8 @@ public class ExcelCellToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithCellValue("test_clear_content.xlsx");
         var outputPath = CreateTestFilePath("test_clear_content_output.xlsx");
         var result = _tool.Execute("clear", workbookPath, cell: "A1", clearContent: true, outputPath: outputPath);
-        Assert.StartsWith("Cell A1 cleared", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Cell A1 cleared", data.Message);
         using var workbook = new Workbook(outputPath);
         var value = workbook.Worksheets[0].Cells["A1"].Value;
         Assert.True(value == null || value.ToString() == "");
@@ -86,7 +90,8 @@ public class ExcelCellToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbook($"test_case_{operation}.xlsx");
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.xlsx");
         var result = _tool.Execute(operation, workbookPath, cell: "A1", value: "Test", outputPath: outputPath);
-        Assert.Contains("written", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("written", data.Message);
     }
 
     [Fact]
@@ -119,10 +124,12 @@ public class ExcelCellToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbook("test_session_write.xlsx");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("write", sessionId: sessionId, cell: "A1", value: "Session Value");
-        Assert.Contains("written", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("written", data.Message);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.Equal("Session Value", workbook.Worksheets[0].Cells["A1"].Value?.ToString());
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -131,7 +138,10 @@ public class ExcelCellToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithCellValue("test_session_get.xlsx", "A1", "Session Data");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("get", sessionId: sessionId, cell: "A1");
-        Assert.Contains("Session Data", result);
+        var data = GetResultData<GetCellResult>(result);
+        Assert.Contains("Session Data", data.Value);
+        var output = GetResultOutput<GetCellResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -139,9 +149,11 @@ public class ExcelCellToolTests : ExcelTestBase
     {
         var workbookPath = CreateWorkbookWithCellValue("test_session_edit.xlsx", "A1", "Original");
         var sessionId = OpenSession(workbookPath);
-        _tool.Execute("edit", sessionId: sessionId, cell: "A1", value: "Updated");
+        var result = _tool.Execute("edit", sessionId: sessionId, cell: "A1", value: "Updated");
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.Equal("Updated", workbook.Worksheets[0].Cells["A1"].Value?.ToString());
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -149,10 +161,12 @@ public class ExcelCellToolTests : ExcelTestBase
     {
         var workbookPath = CreateWorkbookWithCellValue("test_session_clear.xlsx");
         var sessionId = OpenSession(workbookPath);
-        _tool.Execute("clear", sessionId: sessionId, cell: "A1", clearContent: true);
+        var result = _tool.Execute("clear", sessionId: sessionId, cell: "A1", clearContent: true);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         var value = workbook.Worksheets[0].Cells["A1"].Value;
         Assert.True(value == null || value.ToString() == "");
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -168,7 +182,8 @@ public class ExcelCellToolTests : ExcelTestBase
         var sessionWorkbook = CreateWorkbookWithCellValue("test_session_file.xlsx", "A1", "SessionData");
         var sessionId = OpenSession(sessionWorkbook);
         var result = _tool.Execute("get", pathWorkbook, sessionId, cell: "A1");
-        Assert.Contains("SessionData", result);
+        var data = GetResultData<GetCellResult>(result);
+        Assert.Contains("SessionData", data.Value);
     }
 
     #endregion

@@ -3,7 +3,8 @@ using System.Drawing.Imaging;
 using System.Runtime.Versioning;
 using Aspose.Pdf;
 using AsposeMcpServer.Handlers.Pdf.Image;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 using DrawingColor = System.Drawing.Color;
 using Rectangle = Aspose.Pdf.Rectangle;
 
@@ -41,10 +42,12 @@ public class DeletePdfImageHandlerTests : PdfHandlerTestBase
             { "imageIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Deleted image", result);
-        Assert.Contains("from page 1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Deleted image", result.Message);
+        Assert.Contains("from page 1", result.Message);
         AssertModified(context);
     }
 
@@ -56,10 +59,12 @@ public class DeletePdfImageHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Deleted image 1", result);
-        Assert.Contains("page 1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Deleted image 1", result.Message);
+        Assert.Contains("page 1", result.Message);
         AssertModified(context);
     }
 

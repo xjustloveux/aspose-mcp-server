@@ -1,11 +1,14 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Page;
 
 /// <summary>
 ///     Handler for setting page number format and starting number in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetPageNumberWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class SetPageNumberWordHandler : OperationHandlerBase<Document>
     ///     Optional: sectionIndex
     /// </param>
     /// <returns>Success message with page number details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var setParams = ExtractSetPageNumberParameters(parameters);
 
@@ -63,7 +66,7 @@ public class SetPageNumberWordHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Page number settings updated for {sectionsToUpdate.Count} section(s)");
+        return new SuccessResult { Message = $"Page number settings updated for {sectionsToUpdate.Count} section(s)" };
     }
 
     /// <summary>

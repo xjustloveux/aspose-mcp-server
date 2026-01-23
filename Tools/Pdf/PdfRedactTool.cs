@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Pdf;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Pdf;
 /// <summary>
 ///     Tool for redacting (blacking out) text or areas on PDF pages
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Pdf.Redact")]
 [McpServerToolType]
 public class PdfRedactTool
 {
@@ -57,7 +60,14 @@ public class PdfRedactTool
     /// <param name="overlayText">Text to display over the redacted area (optional).</param>
     /// <returns>A message indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing.</exception>
-    [McpServerTool(Name = "pdf_redact")]
+    [McpServerTool(
+        Name = "pdf_redact",
+        Title = "PDF Redaction Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Redact (black out) text or area on PDF page. This permanently removes the underlying content.
 Auto-detects mode: if textToRedact is provided, uses text search mode; otherwise uses area redaction mode.
 
@@ -67,7 +77,7 @@ Usage examples:
 - Redact with overlay: pdf_redact(path='doc.pdf', pageIndex=1, x=100, y=100, width=200, height=50, overlayText='[REDACTED]')
 - Redact by text search: pdf_redact(path='doc.pdf', textToRedact='confidential')
 - Redact by text on page: pdf_redact(path='doc.pdf', pageIndex=1, textToRedact='secret', caseSensitive=false)")]
-    public string Execute(
+    public object Execute(
         [Description("PDF file path (required if no sessionId)")]
         string? path = null,
         [Description("Session ID for in-memory editing")]
@@ -120,7 +130,7 @@ Usage examples:
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

@@ -1,7 +1,8 @@
 using Aspose.Cells;
 using Aspose.Cells.Charts;
 using AsposeMcpServer.Handlers.Excel.Chart;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Chart;
 
@@ -28,9 +29,11 @@ public class EditExcelChartHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("no changes", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("no changes", result.Message);
     }
 
     #endregion
@@ -63,9 +66,11 @@ public class EditExcelChartHandlerTests : ExcelHandlerTestBase
             { "title", "New Title" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("edited", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("edited", result.Message);
         AssertModified(context);
     }
 
@@ -80,9 +85,11 @@ public class EditExcelChartHandlerTests : ExcelHandlerTestBase
             { "title", "Updated" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("#0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("#0", result.Message);
     }
 
     #endregion
@@ -116,9 +123,11 @@ public class EditExcelChartHandlerTests : ExcelHandlerTestBase
             { "title", "My Chart" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Title: My Chart", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Title: My Chart", result.Message);
     }
 
     #endregion
@@ -136,9 +145,11 @@ public class EditExcelChartHandlerTests : ExcelHandlerTestBase
             { "showLegend", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Legend: hide", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Legend: hide", result.Message);
     }
 
     [Fact]
@@ -152,9 +163,11 @@ public class EditExcelChartHandlerTests : ExcelHandlerTestBase
             { "showLegend", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Legend: show", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Legend: show", result.Message);
     }
 
     #endregion

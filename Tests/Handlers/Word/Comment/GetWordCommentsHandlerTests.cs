@@ -1,7 +1,7 @@
-using System.Text.Json;
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Comment;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Word.Comment;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Comment;
 
@@ -28,11 +28,13 @@ public class GetWordCommentsHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(0, json.RootElement.GetProperty("count").GetInt32());
-        Assert.Contains("No comments found", json.RootElement.GetProperty("message").GetString());
+        var result = Assert.IsType<GetCommentsResult>(res);
+
+        Assert.Equal(0, result.Count);
+        Assert.NotNull(result.Message);
+        Assert.Contains("No comments found", result.Message);
     }
 
     #endregion
@@ -66,10 +68,11 @@ public class GetWordCommentsHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.True(json.RootElement.TryGetProperty("count", out _));
+        var result = Assert.IsType<GetCommentsResult>(res);
+
+        Assert.True(result.Count >= 0);
     }
 
     [Fact]
@@ -79,10 +82,11 @@ public class GetWordCommentsHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(3, json.RootElement.GetProperty("count").GetInt32());
+        var result = Assert.IsType<GetCommentsResult>(res);
+
+        Assert.Equal(3, result.Count);
     }
 
     [Fact]
@@ -92,10 +96,11 @@ public class GetWordCommentsHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(2, json.RootElement.GetProperty("comments").GetArrayLength());
+        var result = Assert.IsType<GetCommentsResult>(res);
+
+        Assert.Equal(2, result.Comments.Count);
     }
 
     #endregion

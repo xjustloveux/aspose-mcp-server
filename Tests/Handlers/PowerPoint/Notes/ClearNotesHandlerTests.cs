@@ -1,6 +1,7 @@
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Notes;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Notes;
 
@@ -48,9 +49,11 @@ public class ClearNotesHandlerTests : PptHandlerTestBase
         var context = CreateContext(presentation);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("cleared", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("cleared", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -64,9 +67,11 @@ public class ClearNotesHandlerTests : PptHandlerTestBase
             { "slideIndices", SlideIndicesZeroTwo }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("2 targeted", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("2 targeted", result.Message);
     }
 
     [Fact]
@@ -89,9 +94,11 @@ public class ClearNotesHandlerTests : PptHandlerTestBase
         var context = CreateContext(presentation);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("0 slides", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("0 slides", result.Message);
     }
 
     #endregion

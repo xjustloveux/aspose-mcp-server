@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Sheet;
 
 /// <summary>
 ///     Handler for hiding/showing worksheets in Excel workbooks.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class HideExcelSheetHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class HideExcelSheetHandler : OperationHandlerBase<Workbook>
     ///     Required: sheetIndex (0-based index of sheet to hide/show)
     /// </param>
     /// <returns>Success message indicating whether the sheet was hidden or shown.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractHideExcelSheetParameters(parameters);
 
@@ -32,12 +35,12 @@ public class HideExcelSheetHandler : OperationHandlerBase<Workbook>
         {
             worksheet.IsVisible = false;
             MarkModified(context);
-            return Success($"Worksheet '{sheetName}' hidden.");
+            return new SuccessResult { Message = $"Worksheet '{sheetName}' hidden." };
         }
 
         worksheet.IsVisible = true;
         MarkModified(context);
-        return Success($"Worksheet '{sheetName}' shown.");
+        return new SuccessResult { Message = $"Worksheet '{sheetName}' shown." };
     }
 
     private static HideExcelSheetParameters ExtractHideExcelSheetParameters(OperationParameters parameters)

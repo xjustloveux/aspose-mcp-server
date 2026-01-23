@@ -1,7 +1,8 @@
 using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
 using AsposeMcpServer.Handlers.Pdf.Link;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Link;
 
@@ -78,9 +79,11 @@ public class EditPdfLinkHandlerTests : PdfHandlerTestBase
             { "url", "https://newurl.com" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Edited link", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Edited link", result.Message);
         AssertModified(context);
     }
 
@@ -96,9 +99,11 @@ public class EditPdfLinkHandlerTests : PdfHandlerTestBase
             { "url", "https://newurl.com" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("link 1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("link 1", result.Message);
     }
 
     [Fact]
@@ -113,9 +118,11 @@ public class EditPdfLinkHandlerTests : PdfHandlerTestBase
             { "url", "https://newurl.com" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("page 1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("page 1", result.Message);
     }
 
     #endregion
@@ -155,9 +162,11 @@ public class EditPdfLinkHandlerTests : PdfHandlerTestBase
             { "url", "https://newurl.com" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Edited link", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Edited link", result.Message);
     }
 
     #endregion

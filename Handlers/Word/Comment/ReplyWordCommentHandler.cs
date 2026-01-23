@@ -1,11 +1,15 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Comment;
 
 /// <summary>
 ///     Handler for replying to comments in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class ReplyWordCommentHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,7 +24,7 @@ public class ReplyWordCommentHandler : OperationHandlerBase<Document>
     ///     Optional: author, authorInitial
     /// </param>
     /// <returns>Success message with reply details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractReplyParameters(parameters);
 
@@ -38,8 +42,11 @@ public class ReplyWordCommentHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return
-            $"Reply added to comment #{p.CommentIndex}\nOriginal author: {parentComment.Author}\nReply author: {p.Author}\nReply: {p.ReplyText}";
+        return new SuccessResult
+        {
+            Message =
+                $"Reply added to comment #{p.CommentIndex}\nOriginal author: {parentComment.Author}\nReply author: {p.Author}\nReply: {p.ReplyText}"
+        };
     }
 
     /// <summary>

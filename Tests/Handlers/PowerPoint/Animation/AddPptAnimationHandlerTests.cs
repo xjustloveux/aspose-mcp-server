@@ -1,7 +1,8 @@
 using Aspose.Slides;
 using Aspose.Slides.Animation;
 using AsposeMcpServer.Handlers.PowerPoint.Animation;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Animation;
 
@@ -44,10 +45,12 @@ public class AddPptAnimationHandlerTests : PptHandlerTestBase
             { "shapeIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Animation", result);
-        Assert.Contains("added", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Animation", result.Message);
+        Assert.Contains("added", result.Message);
         AssertModified(context);
     }
 
@@ -62,9 +65,11 @@ public class AddPptAnimationHandlerTests : PptHandlerTestBase
             { "shapeIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("slide 0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("slide 0", result.Message);
     }
 
     [Fact]
@@ -78,9 +83,11 @@ public class AddPptAnimationHandlerTests : PptHandlerTestBase
             { "shapeIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("shape 0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("shape 0", result.Message);
     }
 
     [Fact]
@@ -144,9 +151,11 @@ public class AddPptAnimationHandlerTests : PptHandlerTestBase
             { "effectSubtype", "FromBottom" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message);
     }
 
     [Fact]
@@ -161,9 +170,11 @@ public class AddPptAnimationHandlerTests : PptHandlerTestBase
             { "triggerType", "OnClick" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message);
     }
 
     #endregion
@@ -270,9 +281,11 @@ public class AddPptAnimationHandlerTests : PptHandlerTestBase
             { "effectType", "InvalidEffect" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message);
         var animations = pres.Slides[0].Timeline.MainSequence;
         Assert.True(animations.Count > 0, "Animation should be added with default effect type");
     }

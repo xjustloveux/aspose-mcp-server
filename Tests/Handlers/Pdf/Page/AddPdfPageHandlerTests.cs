@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Pdf.Page;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Page;
 
@@ -36,9 +37,11 @@ public class AddPdfPageHandlerTests : PdfHandlerTestBase
             { "insertAt", insertAt }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains(count.ToString(), result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains(count.ToString(), result.Message);
         Assert.Equal(3 + count, doc.Pages.Count);
         AssertModified(context);
     }
@@ -55,9 +58,11 @@ public class AddPdfPageHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Added", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Added", result.Message);
         Assert.Equal(initialCount + 1, doc.Pages.Count);
         AssertModified(context);
     }
@@ -112,9 +117,11 @@ public class AddPdfPageHandlerTests : PdfHandlerTestBase
             { "count", count }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains(count.ToString(), result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains(count.ToString(), result.Message);
         Assert.Equal(initialCount + count, doc.Pages.Count);
         AssertModified(context);
     }
@@ -152,9 +159,11 @@ public class AddPdfPageHandlerTests : PdfHandlerTestBase
             { "insertAt", insertAt }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Added", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Added", result.Message);
         Assert.Equal(4, doc.Pages.Count);
         AssertModified(context);
     }
@@ -169,9 +178,11 @@ public class AddPdfPageHandlerTests : PdfHandlerTestBase
             { "insertAt", 100 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Added", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Added", result.Message);
         Assert.Equal(4, doc.Pages.Count);
         AssertModified(context);
     }
@@ -186,9 +197,11 @@ public class AddPdfPageHandlerTests : PdfHandlerTestBase
             { "insertAt", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Added", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Added", result.Message);
         Assert.Equal(4, doc.Pages.Count);
         AssertModified(context);
     }
@@ -211,9 +224,11 @@ public class AddPdfPageHandlerTests : PdfHandlerTestBase
             { "height", height }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Added", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Added", result.Message);
         AssertModified(context);
     }
 
@@ -227,9 +242,11 @@ public class AddPdfPageHandlerTests : PdfHandlerTestBase
             { "width", 612.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Added", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Added", result.Message);
         AssertModified(context);
     }
 
@@ -243,9 +260,11 @@ public class AddPdfPageHandlerTests : PdfHandlerTestBase
             { "height", 792.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Added", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Added", result.Message);
         AssertModified(context);
     }
 
@@ -268,10 +287,12 @@ public class AddPdfPageHandlerTests : PdfHandlerTestBase
             { "count", addedPages }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<SuccessResult>(res);
 
         var expectedTotal = initialPages + addedPages;
-        Assert.Contains(expectedTotal.ToString(), result);
+        Assert.Contains(expectedTotal.ToString(), result.Message);
     }
 
     [Fact]
@@ -284,10 +305,12 @@ public class AddPdfPageHandlerTests : PdfHandlerTestBase
             { "count", 3 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("3", result);
-        Assert.Contains("Added", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("3", result.Message);
+        Assert.Contains("Added", result.Message);
     }
 
     #endregion

@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Revision;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Revision;
 
@@ -47,9 +48,11 @@ public class ManageRevisionHandlerTests : WordHandlerTestBase
             { "action", "accept" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("accepted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("accepted", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(doc.Revisions.Count < initialCount);
         AssertModified(context);
     }
@@ -66,9 +69,11 @@ public class ManageRevisionHandlerTests : WordHandlerTestBase
             { "action", "reject" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("rejected", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("rejected", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(doc.Revisions.Count < initialCount);
         AssertModified(context);
     }
@@ -83,9 +88,11 @@ public class ManageRevisionHandlerTests : WordHandlerTestBase
             { "revisionIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("no revisions", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("no revisions", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -138,9 +145,11 @@ public class ManageRevisionHandlerTests : WordHandlerTestBase
             { "revisionIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("accepted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("accepted", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

@@ -1,13 +1,16 @@
 using System.Globalization;
 using System.Text.Json;
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Properties;
 
 /// <summary>
 ///     Handler for setting PowerPoint presentation properties.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetPptPropertiesHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class SetPptPropertiesHandler : OperationHandlerBase<Presentation>
     ///     Optional: title, subject, author, keywords, comments, category, company, manager, customProperties
     /// </param>
     /// <returns>Success message with updated properties list.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractSetPptPropertiesParameters(parameters);
         var presentation = context.Document;
@@ -85,7 +88,7 @@ public class SetPptPropertiesHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Document properties updated: {string.Join(", ", changes)}.");
+        return new SuccessResult { Message = $"Document properties updated: {string.Join(", ", changes)}." };
     }
 
     /// <summary>

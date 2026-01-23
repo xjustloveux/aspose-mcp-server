@@ -1,12 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.PowerPoint.Chart;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Chart;
 
 /// <summary>
 ///     Handler for getting chart data from PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(GetChartDataPptResult))]
 public class GetPptChartDataHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class GetPptChartDataHandler : OperationHandlerBase<Presentation>
     ///     Required: slideIndex, shapeIndex
     /// </param>
     /// <returns>JSON string containing the chart data.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractGetChartDataParameters(parameters);
 
@@ -29,63 +32,63 @@ public class GetPptChartDataHandler : OperationHandlerBase<Presentation>
         var chart = PptChartHelper.GetChartByIndex(slide, p.ChartIndex, p.SlideIndex);
         var chartData = chart.ChartData;
 
-        List<object> categoriesList = [];
+        List<GetChartCategoryItem> categoriesList = [];
         for (var i = 0; i < chartData.Categories.Count; i++)
         {
             var cat = chartData.Categories[i];
-            categoriesList.Add(new
+            categoriesList.Add(new GetChartCategoryItem
             {
-                index = i,
-                value = cat.Value?.ToString()
+                Index = i,
+                Value = cat.Value?.ToString()
             });
         }
 
-        List<object> seriesList = [];
+        List<GetChartSeriesItem> seriesList = [];
         for (var i = 0; i < chartData.Series.Count; i++)
         {
             var series = chartData.Series[i];
-            List<object> dataPointsList = [];
+            List<GetChartDataPoint> dataPointsList = [];
             for (var j = 0; j < series.DataPoints.Count; j++)
             {
                 var point = series.DataPoints[j];
-                dataPointsList.Add(new
+                dataPointsList.Add(new GetChartDataPoint
                 {
-                    index = j,
-                    value = point.Value?.ToString()
+                    Index = j,
+                    Value = point.Value?.ToString()
                 });
             }
 
-            seriesList.Add(new
+            seriesList.Add(new GetChartSeriesItem
             {
-                index = i,
-                name = series.Name?.ToString(),
-                dataPointsCount = series.DataPoints.Count,
-                dataPoints = dataPointsList
+                Index = i,
+                Name = series.Name?.ToString(),
+                DataPointsCount = series.DataPoints.Count,
+                DataPoints = dataPointsList
             });
         }
 
-        var result = new
+        var result = new GetChartDataPptResult
         {
-            slideIndex = p.SlideIndex,
-            chartIndex = p.ChartIndex,
-            chartType = chart.Type.ToString(),
-            hasTitle = chart.HasTitle,
-            title = chart is { HasTitle: true, ChartTitle: not null }
+            SlideIndex = p.SlideIndex,
+            ChartIndex = p.ChartIndex,
+            ChartType = chart.Type.ToString(),
+            HasTitle = chart.HasTitle,
+            Title = chart is { HasTitle: true, ChartTitle: not null }
                 ? chart.ChartTitle.TextFrameForOverriding?.Text
                 : null,
-            categories = new
+            Categories = new GetChartCategoriesInfo
             {
-                count = chartData.Categories.Count,
-                items = categoriesList
+                Count = chartData.Categories.Count,
+                Items = categoriesList
             },
-            series = new
+            Series = new GetChartSeriesInfo
             {
-                count = chartData.Series.Count,
-                items = seriesList
+                Count = chartData.Series.Count,
+                Items = seriesList
             }
         };
 
-        return JsonResult(result);
+        return result;
     }
 
     /// <summary>

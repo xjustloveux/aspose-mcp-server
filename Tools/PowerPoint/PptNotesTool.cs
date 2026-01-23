@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
@@ -11,6 +13,7 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 ///     Supports: set, get, clear, set_header_footer
 ///     Note: Notes pages have separate header and footer fields (unlike slides which only have footer).
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.PowerPoint.Notes")]
 [McpServerToolType]
 public class PptNotesTool
 {
@@ -59,7 +62,14 @@ public class PptNotesTool
     /// <param name="showPageNumber">Show page number on notes pages (optional for set_header_footer, default: true).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "ppt_notes")]
+    [McpServerTool(
+        Name = "ppt_notes",
+        Title = "PowerPoint Notes Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage PowerPoint notes. Supports 4 operations: set, get, clear, set_header_footer.
 
 Note: Notes pages have separate header and footer fields (unlike slides which only have footer).
@@ -71,7 +81,7 @@ Usage examples:
 - Get notes: ppt_notes(operation='get', path='presentation.pptx', slideIndex=0)
 - Clear notes: ppt_notes(operation='clear', path='presentation.pptx', slideIndices=[0,1,2])
 - Set header/footer: ppt_notes(operation='set_header_footer', path='presentation.pptx', headerText='Header', footerText='Footer')")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: set, get, clear, set_header_footer")]
         string operation,
         [Description("Presentation file path (required if no sessionId)")]
@@ -115,12 +125,12 @@ Usage examples:
         var result = handler.Execute(operationContext, parameters);
 
         if (string.Equals(operation, "get", StringComparison.OrdinalIgnoreCase))
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

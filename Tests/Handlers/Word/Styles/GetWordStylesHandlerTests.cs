@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Word.Styles;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Word.Styles;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Styles;
 
@@ -26,10 +27,13 @@ public class GetWordStylesHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("paragraphStyles", result);
-        Assert.Contains("count", result);
+        var result = Assert.IsType<GetWordStylesResult>(res);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.ParagraphStyles);
+        Assert.True(result.Count >= 0);
         AssertNotModified(context);
     }
 
@@ -43,10 +47,12 @@ public class GetWordStylesHandlerTests : WordHandlerTestBase
             { "includeBuiltIn", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("includeBuiltIn", result);
-        Assert.Contains("true", result);
+        var result = Assert.IsType<GetWordStylesResult>(res);
+
+        Assert.NotNull(result);
+        Assert.True(result.IncludeBuiltIn);
     }
 
     [Fact]
@@ -56,10 +62,12 @@ public class GetWordStylesHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("{", result);
-        Assert.Contains("}", result);
+        var result = Assert.IsType<GetWordStylesResult>(res);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.ParagraphStyles);
     }
 
     #endregion

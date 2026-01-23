@@ -1,13 +1,17 @@
 using System.Drawing;
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.ConditionalFormatting;
 
 /// <summary>
 ///     Handler for adding conditional formatting to Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddExcelConditionalFormattingHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -22,7 +26,7 @@ public class AddExcelConditionalFormattingHandler : OperationHandlerBase<Workboo
     ///     Optional: sheetIndex, formula2, backgroundColor
     /// </param>
     /// <returns>Success message with formatting details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var addParams = ExtractAddParameters(parameters);
 
@@ -81,8 +85,11 @@ public class AddExcelConditionalFormattingHandler : OperationHandlerBase<Workboo
 
             MarkModified(context);
 
-            return Success(
-                $"Conditional formatting added to range {addParams.Range} ({addParams.Condition}).{warningMessage ?? ""}");
+            return new SuccessResult
+            {
+                Message =
+                    $"Conditional formatting added to range {addParams.Range} ({addParams.Condition}).{warningMessage ?? ""}"
+            };
         }
         catch (CellsException ex)
         {

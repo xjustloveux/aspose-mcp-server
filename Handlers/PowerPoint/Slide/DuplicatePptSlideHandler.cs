@@ -1,11 +1,14 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Slide;
 
 /// <summary>
 ///     Handler for duplicating slides in PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DuplicatePptSlideHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class DuplicatePptSlideHandler : OperationHandlerBase<Presentation>
     ///     Optional: insertAt (0-based target index, default: append)
     /// </param>
     /// <returns>Success message with duplicate details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractDuplicatePptSlideParameters(parameters);
 
@@ -44,7 +47,7 @@ public class DuplicatePptSlideHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Slide {p.SlideIndex} duplicated (total: {presentation.Slides.Count}).");
+        return new SuccessResult { Message = $"Slide {p.SlideIndex} duplicated (total: {presentation.Slides.Count})." };
     }
 
     /// <summary>

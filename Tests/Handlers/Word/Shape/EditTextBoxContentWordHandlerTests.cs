@@ -1,7 +1,8 @@
 using Aspose.Words;
 using Aspose.Words.Drawing;
 using AsposeMcpServer.Handlers.Word.Shape;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Shape;
@@ -57,9 +58,11 @@ public class EditTextBoxContentWordHandlerTests : WordHandlerTestBase
             { "text", "New Content" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("successfully edited textbox", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("successfully edited textbox", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -75,9 +78,11 @@ public class EditTextBoxContentWordHandlerTests : WordHandlerTestBase
             { "appendText", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("successfully edited textbox", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("successfully edited textbox", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -93,9 +98,11 @@ public class EditTextBoxContentWordHandlerTests : WordHandlerTestBase
             { "bold", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("successfully edited textbox", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("successfully edited textbox", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

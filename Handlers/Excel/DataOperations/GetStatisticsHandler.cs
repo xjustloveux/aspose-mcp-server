@@ -1,14 +1,16 @@
 using System.Globalization;
-using System.Text.Json;
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Excel.DataOperations;
 
 namespace AsposeMcpServer.Handlers.Excel.DataOperations;
 
 /// <summary>
 ///     Handler for getting statistics from Excel worksheets.
 /// </summary>
+[ResultType(typeof(GetStatisticsResult))]
 public class GetStatisticsHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -22,14 +24,14 @@ public class GetStatisticsHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex, range
     /// </param>
     /// <returns>JSON string containing the statistics.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var statisticsParams = ExtractGetStatisticsParameters(parameters);
 
         try
         {
             var workbook = context.Document;
-            List<object> worksheets = [];
+            List<WorksheetStatistics> worksheets = [];
 
             if (statisticsParams.SheetIndex.HasValue)
             {
@@ -43,14 +45,12 @@ public class GetStatisticsHandler : OperationHandlerBase<Workbook>
                     worksheets.Add(GetSheetStatistics(workbook.Worksheets[i], i, statisticsParams.Range));
             }
 
-            var result = new
+            return new GetStatisticsResult
             {
-                totalWorksheets = workbook.Worksheets.Count,
-                fileFormat = workbook.FileFormat.ToString(),
-                worksheets
+                TotalWorksheets = workbook.Worksheets.Count,
+                FileFormat = workbook.FileFormat.ToString(),
+                Worksheets = worksheets
             };
-
-            return JsonSerializer.Serialize(result, JsonDefaults.Indented);
         }
         catch (CellsException ex)
         {
@@ -77,13 +77,13 @@ public class GetStatisticsHandler : OperationHandlerBase<Workbook>
     /// <param name="worksheet">The worksheet to get statistics for.</param>
     /// <param name="index">The worksheet index.</param>
     /// <param name="range">The cell range to calculate statistics for, or null for basic sheet info.</param>
-    /// <returns>A dictionary containing the worksheet statistics.</returns>
-    private static Dictionary<string, object> GetSheetStatistics(Worksheet worksheet, int index, string? range)
+    /// <returns>A WorksheetStatistics object containing the worksheet statistics.</returns>
+    private static WorksheetStatistics GetSheetStatistics(Worksheet worksheet, int index, string? range)
     {
         var baseStats = BuildBaseStats(worksheet, index);
 
         if (!string.IsNullOrEmpty(range))
-            TryAddRangeStatistics(worksheet, range, baseStats);
+            baseStats = TryAddRangeStatistics(worksheet, range, baseStats);
 
         return baseStats;
     }
@@ -93,38 +93,40 @@ public class GetStatisticsHandler : OperationHandlerBase<Workbook>
     /// </summary>
     /// <param name="worksheet">The worksheet to get statistics for.</param>
     /// <param name="index">The worksheet index.</param>
-    /// <returns>A dictionary containing basic worksheet statistics.</returns>
-    private static Dictionary<string, object> BuildBaseStats(Worksheet worksheet, int index)
+    /// <returns>A WorksheetStatistics object containing basic worksheet statistics.</returns>
+    private static WorksheetStatistics BuildBaseStats(Worksheet worksheet, int index)
     {
-        return new Dictionary<string, object>
+        return new WorksheetStatistics
         {
-            ["index"] = index,
-            ["name"] = worksheet.Name,
-            ["maxDataRow"] = worksheet.Cells.MaxDataRow + 1,
-            ["maxDataColumn"] = worksheet.Cells.MaxDataColumn + 1,
-            ["chartsCount"] = worksheet.Charts.Count,
-            ["picturesCount"] = worksheet.Pictures.Count,
-            ["hyperlinksCount"] = worksheet.Hyperlinks.Count,
-            ["commentsCount"] = worksheet.Comments.Count
+            Index = index,
+            Name = worksheet.Name,
+            MaxDataRow = worksheet.Cells.MaxDataRow + 1,
+            MaxDataColumn = worksheet.Cells.MaxDataColumn + 1,
+            ChartsCount = worksheet.Charts.Count,
+            PicturesCount = worksheet.Pictures.Count,
+            HyperlinksCount = worksheet.Hyperlinks.Count,
+            CommentsCount = worksheet.Comments.Count
         };
     }
 
     /// <summary>
-    ///     Tries to add range statistics to the base statistics dictionary.
+    ///     Tries to add range statistics to the worksheet statistics.
     /// </summary>
     /// <param name="worksheet">The worksheet containing the range.</param>
     /// <param name="range">The range to calculate statistics for.</param>
-    /// <param name="baseStats">The base statistics dictionary to add to.</param>
-    private static void TryAddRangeStatistics(Worksheet worksheet, string range, Dictionary<string, object> baseStats)
+    /// <param name="baseStats">The worksheet statistics to update.</param>
+    /// <returns>Updated WorksheetStatistics with range statistics or error.</returns>
+    private static WorksheetStatistics TryAddRangeStatistics(
+        Worksheet worksheet, string range, WorksheetStatistics baseStats)
     {
         try
         {
             var rangeStats = CalculateRangeStatistics(worksheet, range);
-            baseStats["rangeStatistics"] = rangeStats;
+            return baseStats with { RangeStatistics = rangeStats };
         }
         catch (Exception ex)
         {
-            baseStats["rangeStatisticsError"] = ex.Message;
+            return baseStats with { RangeStatisticsError = ex.Message };
         }
     }
 
@@ -133,23 +135,23 @@ public class GetStatisticsHandler : OperationHandlerBase<Workbook>
     /// </summary>
     /// <param name="worksheet">The worksheet containing the range.</param>
     /// <param name="range">The range to calculate statistics for.</param>
-    /// <returns>A dictionary containing range statistics.</returns>
-    private static Dictionary<string, object> CalculateRangeStatistics(Worksheet worksheet, string range)
+    /// <returns>A RangeStatistics object containing range statistics.</returns>
+    private static RangeStatistics CalculateRangeStatistics(Worksheet worksheet, string range)
     {
         var cellRange = ExcelHelper.CreateRange(worksheet.Cells, range);
         var (numericValues, nonNumericCount, emptyCount) = CollectCellValues(worksheet, cellRange);
 
-        var rangeStats = new Dictionary<string, object>
+        var rangeStats = new RangeStatistics
         {
-            ["range"] = range,
-            ["totalCells"] = cellRange.RowCount * cellRange.ColumnCount,
-            ["numericCells"] = numericValues.Count,
-            ["nonNumericCells"] = nonNumericCount,
-            ["emptyCells"] = emptyCount
+            Range = range,
+            TotalCells = cellRange.RowCount * cellRange.ColumnCount,
+            NumericCells = numericValues.Count,
+            NonNumericCells = nonNumericCount,
+            EmptyCells = emptyCount
         };
 
         if (numericValues.Count > 0)
-            AddNumericStatistics(numericValues, rangeStats);
+            rangeStats = AddNumericStatistics(numericValues, rangeStats);
 
         return rangeStats;
     }
@@ -206,18 +208,22 @@ public class GetStatisticsHandler : OperationHandlerBase<Workbook>
     }
 
     /// <summary>
-    ///     Adds numeric statistics to the range statistics dictionary.
+    ///     Adds numeric statistics to the range statistics.
     /// </summary>
     /// <param name="numericValues">The list of numeric values.</param>
-    /// <param name="rangeStats">The range statistics dictionary to add to.</param>
-    private static void AddNumericStatistics(List<double> numericValues, Dictionary<string, object> rangeStats)
+    /// <param name="rangeStats">The range statistics to update.</param>
+    /// <returns>Updated RangeStatistics with numeric statistics.</returns>
+    private static RangeStatistics AddNumericStatistics(List<double> numericValues, RangeStatistics rangeStats)
     {
         numericValues.Sort();
-        rangeStats["sum"] = Math.Round(numericValues.Sum(), 2);
-        rangeStats["average"] = Math.Round(numericValues.Sum() / numericValues.Count, 2);
-        rangeStats["min"] = Math.Round(numericValues[0], 2);
-        rangeStats["max"] = Math.Round(numericValues[^1], 2);
-        rangeStats["count"] = numericValues.Count;
+        return rangeStats with
+        {
+            Sum = Math.Round(numericValues.Sum(), 2),
+            Average = Math.Round(numericValues.Sum() / numericValues.Count, 2),
+            Min = Math.Round(numericValues[0], 2),
+            Max = Math.Round(numericValues[^1], 2),
+            Count = numericValues.Count
+        };
     }
 
     /// <summary>

@@ -1,11 +1,15 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Format;
 
 /// <summary>
 ///     Handler for adding tab stops in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddTabStopWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,7 +24,7 @@ public class AddTabStopWordHandler : OperationHandlerBase<Document>
     ///     Optional: tabAlignment, tabLeader
     /// </param>
     /// <returns>Success message.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractAddTabStopParameters(parameters);
 
@@ -49,7 +53,7 @@ public class AddTabStopWordHandler : OperationHandlerBase<Document>
         para.ParagraphFormat.TabStops.Add(new TabStop(p.TabPosition, tabAlignment, tabLeader));
 
         MarkModified(context);
-        return Success($"Tab stop added at {p.TabPosition}pt ({p.TabAlignment}, {p.TabLeader})");
+        return new SuccessResult { Message = $"Tab stop added at {p.TabPosition}pt ({p.TabAlignment}, {p.TabLeader})" };
     }
 
     private static AddTabStopParameters ExtractAddTabStopParameters(OperationParameters parameters)

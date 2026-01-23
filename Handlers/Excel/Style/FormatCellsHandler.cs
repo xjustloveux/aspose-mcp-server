@@ -1,14 +1,18 @@
 using System.Drawing;
 using System.Text.Json;
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Style;
 
 /// <summary>
 ///     Handler for formatting cells in Excel workbooks.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class FormatCellsHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -25,7 +29,7 @@ public class FormatCellsHandler : OperationHandlerBase<Workbook>
     ///     borderStyle, borderColor, horizontalAlignment, verticalAlignment
     /// </param>
     /// <returns>Success message.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var formatParams = ExtractFormatParameters(parameters);
         var workbook = context.Document;
@@ -42,7 +46,7 @@ public class FormatCellsHandler : OperationHandlerBase<Workbook>
         ApplyStyleToRanges(worksheet, formatParams.Range, formatParams.RangesJson, style, styleFlag);
 
         MarkModified(context);
-        return Success($"Cells formatted in sheet {formatParams.SheetIndex}.");
+        return new SuccessResult { Message = $"Cells formatted in sheet {formatParams.SheetIndex}." };
     }
 
     /// <summary>

@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Chart;
 
 /// <summary>
 ///     Handler for editing Excel chart properties.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class EditExcelChartHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class EditExcelChartHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex, chartIndex, title, dataRange, categoryAxisDataRange, chartType, showLegend, legendPosition
     /// </param>
     /// <returns>Success message with edit details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var editParams = ExtractEditParameters(parameters);
 
@@ -69,9 +72,12 @@ public class EditExcelChartHandler : OperationHandlerBase<Workbook>
         if (changes.Count > 0)
             MarkModified(context);
 
-        return changes.Count > 0
-            ? Success($"Chart #{editParams.ChartIndex} edited: {string.Join(", ", changes)}")
-            : Success($"Chart #{editParams.ChartIndex} no changes");
+        return new SuccessResult
+        {
+            Message = changes.Count > 0
+                ? $"Chart #{editParams.ChartIndex} edited: {string.Join(", ", changes)}"
+                : $"Chart #{editParams.ChartIndex} no changes"
+        };
     }
 
     /// <summary>

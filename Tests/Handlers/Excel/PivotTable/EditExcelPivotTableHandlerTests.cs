@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.PivotTable;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.PivotTable;
 
@@ -52,10 +53,12 @@ public class EditExcelPivotTableHandlerTests : ExcelHandlerTestBase
             { "name", "NewPivotName" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("edited", result.ToLower());
-        Assert.Contains("name=NewPivotName", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("edited", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("name=NewPivotName", result.Message);
         AssertModified(context);
     }
 
@@ -70,9 +73,11 @@ public class EditExcelPivotTableHandlerTests : ExcelHandlerTestBase
             { "showRowGrand", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("showRowGrand=False", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("showRowGrand=False", result.Message);
     }
 
     [Fact]
@@ -86,9 +91,11 @@ public class EditExcelPivotTableHandlerTests : ExcelHandlerTestBase
             { "refreshData", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("refreshed", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("refreshed", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -101,9 +108,11 @@ public class EditExcelPivotTableHandlerTests : ExcelHandlerTestBase
             { "pivotTableIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("no changes", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("no changes", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

@@ -1,5 +1,6 @@
-using Aspose.Cells;
-using AsposeMcpServer.Tests.Helpers;
+﻿using Aspose.Cells;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Excel;
 
 namespace AsposeMcpServer.Tests.Tools.Excel;
@@ -58,7 +59,8 @@ public class ExcelViewSettingsToolTests : ExcelTestBase
         var outputPath = CreateTestFilePath("test_freeze_output.xlsx");
         var result = _tool.Execute("freeze_panes", workbookPath, outputPath: outputPath,
             freezeRow: 2, freezeColumn: 1);
-        Assert.StartsWith("Panes frozen", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Panes frozen", data.Message);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -96,9 +98,11 @@ public class ExcelViewSettingsToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbookWithData("test_session_zoom.xlsx", 5, 5);
         var sessionId = OpenSession(workbookPath);
-        _tool.Execute("set_zoom", sessionId: sessionId, zoom: 150);
+        var result = _tool.Execute("set_zoom", sessionId: sessionId, zoom: 150);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.Equal(150, workbook.Worksheets[0].Zoom);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -106,9 +110,11 @@ public class ExcelViewSettingsToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbook("test_session_gridlines.xlsx");
         var sessionId = OpenSession(workbookPath);
-        _tool.Execute("set_gridlines", sessionId: sessionId, visible: false);
+        var result = _tool.Execute("set_gridlines", sessionId: sessionId, visible: false);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.False(workbook.Worksheets[0].IsGridlinesVisible);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -117,8 +123,10 @@ public class ExcelViewSettingsToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbookWithData("test_session_freeze.xlsx", 10, 5);
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("freeze_panes", sessionId: sessionId, freezeRow: 2, freezeColumn: 1);
-        Assert.StartsWith("Panes frozen", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Panes frozen", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -191,7 +199,8 @@ public class ExcelViewSettingsToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbookWithData("test_autofit_col.xlsx", 5, 5);
         var outputPath = CreateTestFilePath("test_autofit_col_output.xlsx");
         var result = _tool.Execute("auto_fit_column", workbookPath, outputPath: outputPath, columnIndex: 0);
-        Assert.Contains("auto-fit", result.ToLower());
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("auto-fit", data.Message.ToLower());
         Assert.True(File.Exists(outputPath));
     }
 
@@ -201,7 +210,8 @@ public class ExcelViewSettingsToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbookWithData("test_autofit_row.xlsx", 5, 5);
         var outputPath = CreateTestFilePath("test_autofit_row_output.xlsx");
         var result = _tool.Execute("auto_fit_row", workbookPath, outputPath: outputPath, rowIndex: 0);
-        Assert.Contains("auto-fit", result.ToLower());
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("auto-fit", data.Message.ToLower());
         Assert.True(File.Exists(outputPath));
     }
 
@@ -211,7 +221,8 @@ public class ExcelViewSettingsToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbookWithData("test_split.xlsx", 10, 5);
         var outputPath = CreateTestFilePath("test_split_output.xlsx");
         var result = _tool.Execute("split_window", workbookPath, outputPath: outputPath, splitRow: 5, splitColumn: 2);
-        Assert.Contains("split", result.ToLower());
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("split", data.Message.ToLower());
         Assert.True(File.Exists(outputPath));
     }
 
@@ -221,7 +232,8 @@ public class ExcelViewSettingsToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbook("test_formulas.xlsx");
         var outputPath = CreateTestFilePath("test_formulas_output.xlsx");
         var result = _tool.Execute("show_formulas", workbookPath, outputPath: outputPath, visible: true);
-        Assert.Contains("formula", result.ToLower());
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("formula", data.Message.ToLower());
         Assert.True(File.Exists(outputPath));
     }
 
@@ -232,7 +244,8 @@ public class ExcelViewSettingsToolTests : ExcelTestBase
         var outputPath = CreateTestFilePath("test_set_all_output.xlsx");
         var result = _tool.Execute("set_all", workbookPath, outputPath: outputPath,
             zoom: 125, showGridlines: false, showRowColumnHeaders: false, showZeroValues: false);
-        Assert.Contains("view settings", result.ToLower());
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("view settings", data.Message.ToLower());
         var workbook = new Workbook(outputPath);
         Assert.Equal(125, workbook.Worksheets[0].Zoom);
     }
@@ -244,7 +257,8 @@ public class ExcelViewSettingsToolTests : ExcelTestBase
         var outputPath = CreateTestFilePath("test_unfreeze_output.xlsx");
         _tool.Execute("freeze_panes", workbookPath, outputPath: outputPath, freezeRow: 2, freezeColumn: 1);
         var result = _tool.Execute("freeze_panes", outputPath, outputPath: outputPath, unfreeze: true);
-        Assert.Contains("unfrozen", result.ToLower());
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("unfrozen", data.Message.ToLower());
     }
 
     #endregion

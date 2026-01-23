@@ -1,11 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Table;
 
 /// <summary>
 ///     Handler for inserting rows into PowerPoint tables.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class InsertPptTableRowHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -20,7 +24,7 @@ public class InsertPptTableRowHandler : OperationHandlerBase<Presentation>
     ///     Optional: slideIndex (default: 0), rowIndex (default: end), copyFromRow.
     /// </param>
     /// <returns>Success message with insertion details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var insertParams = ExtractInsertRowParameters(parameters);
 
@@ -41,7 +45,7 @@ public class InsertPptTableRowHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Row inserted at index {insertIndex}.");
+        return new SuccessResult { Message = $"Row inserted at index {insertIndex}." };
     }
 
     /// <summary>

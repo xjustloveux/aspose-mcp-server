@@ -1,13 +1,16 @@
 using Aspose.Slides;
 using Aspose.Slides.SlideShow;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Transition;
 
 /// <summary>
 ///     Handler for setting slide transitions in PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetPptTransitionHandler : OperationHandlerBase<Presentation>
 {
     /// <summary>
@@ -32,7 +35,7 @@ public class SetPptTransitionHandler : OperationHandlerBase<Presentation>
     ///     Optional: slideIndex (default: 0), advanceAfterSeconds.
     /// </param>
     /// <returns>Success message with transition details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var setParams = ExtractSetTransitionParameters(parameters);
 
@@ -83,7 +86,8 @@ public class SetPptTransitionHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Transition '{setParams.TransitionType}' set for slide {setParams.SlideIndex}.");
+        return new SuccessResult
+            { Message = $"Transition '{setParams.TransitionType}' set for slide {setParams.SlideIndex}." };
     }
 
     /// <summary>

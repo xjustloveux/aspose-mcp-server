@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Chart;
 
 /// <summary>
 ///     Handler for setting Excel chart properties (title, legend).
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetExcelChartPropertiesHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class SetExcelChartPropertiesHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex, chartIndex, title, removeTitle, legendVisible, legendPosition
     /// </param>
     /// <returns>Success message with property update details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var setParams = ExtractSetPropertiesParameters(parameters);
 
@@ -57,9 +60,12 @@ public class SetExcelChartPropertiesHandler : OperationHandlerBase<Workbook>
         if (changes.Count > 0)
             MarkModified(context);
 
-        return changes.Count > 0
-            ? Success($"Chart #{setParams.ChartIndex} properties updated: {string.Join(", ", changes)}")
-            : Success($"Chart #{setParams.ChartIndex} no changes");
+        return new SuccessResult
+        {
+            Message = changes.Count > 0
+                ? $"Chart #{setParams.ChartIndex} properties updated: {string.Join(", ", changes)}"
+                : $"Chart #{setParams.ChartIndex} no changes"
+        };
     }
 
     /// <summary>

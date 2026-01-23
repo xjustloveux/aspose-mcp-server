@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.PivotTable;
 
 /// <summary>
 ///     Handler for refreshing pivot table data.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class RefreshExcelPivotTableHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class RefreshExcelPivotTableHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex, pivotTableIndex (if not provided, refreshes all)
     /// </param>
     /// <returns>Success message with refresh details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractRefreshPivotTableParameters(parameters);
 
@@ -53,7 +56,8 @@ public class RefreshExcelPivotTableHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Refreshed {refreshedCount} pivot table(s) in worksheet '{worksheet.Name}'.");
+        return new SuccessResult
+            { Message = $"Refreshed {refreshedCount} pivot table(s) in worksheet '{worksheet.Name}'." };
     }
 
     private static RefreshPivotTableParameters ExtractRefreshPivotTableParameters(OperationParameters parameters)

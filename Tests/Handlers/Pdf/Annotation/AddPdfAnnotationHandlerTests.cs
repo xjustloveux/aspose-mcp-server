@@ -1,6 +1,7 @@
 using Aspose.Pdf.Annotations;
 using AsposeMcpServer.Handlers.Pdf.Annotation;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Annotation;
 
@@ -31,10 +32,12 @@ public class AddPdfAnnotationHandlerTests : PdfHandlerTestBase
             { "text", "Test" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Added", result);
-        Assert.Contains("page 1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Added", result.Message);
+        Assert.Contains("page 1", result.Message);
     }
 
     #endregion
@@ -52,9 +55,11 @@ public class AddPdfAnnotationHandlerTests : PdfHandlerTestBase
             { "text", "Test annotation" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Added", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Added", result.Message);
         Assert.Single(doc.Pages[1].Annotations);
         AssertModified(context);
     }
@@ -139,9 +144,11 @@ public class AddPdfAnnotationHandlerTests : PdfHandlerTestBase
             { "text", "Annotation" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains($"page {pageIndex}", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains($"page {pageIndex}", result.Message);
         Assert.Single(doc.Pages[pageIndex].Annotations);
     }
 

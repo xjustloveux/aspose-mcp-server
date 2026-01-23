@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.RowColumn;
 
 /// <summary>
 ///     Handler for deleting cells in a range and shifting remaining cells.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeleteCellsHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class DeleteCellsHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0)
     /// </param>
     /// <returns>Success message with deletion details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractDeleteCellsParameters(parameters);
 
@@ -42,7 +45,7 @@ public class DeleteCellsHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Cells deleted in range {p.Range}, shifted {p.ShiftDirection}.");
+        return new SuccessResult { Message = $"Cells deleted in range {p.Range}, shifted {p.ShiftDirection}." };
     }
 
     private static DeleteCellsParameters ExtractDeleteCellsParameters(OperationParameters parameters)

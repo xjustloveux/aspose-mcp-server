@@ -1,13 +1,14 @@
-using System.Text.Json.Nodes;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Results.Word.Properties;
 
 namespace AsposeMcpServer.Handlers.Word.Properties;
 
 /// <summary>
 ///     Handler for getting Word document properties.
 /// </summary>
+[ResultType(typeof(GetWordPropertiesResult))]
 public class GetWordPropertiesHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -19,7 +20,7 @@ public class GetWordPropertiesHandler : OperationHandlerBase<Document>
     /// <param name="context">The document context.</param>
     /// <param name="parameters">No parameters required.</param>
     /// <returns>A JSON string containing built-in properties, statistics, and custom properties.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var doc = context.Document;
 
@@ -28,61 +29,59 @@ public class GetWordPropertiesHandler : OperationHandlerBase<Document>
         var props = doc.BuiltInDocumentProperties;
         var customProps = doc.CustomDocumentProperties;
 
-        var result = new JsonObject
-        {
-            ["builtInProperties"] = new JsonObject
-            {
-                ["title"] = props.Title,
-                ["subject"] = props.Subject,
-                ["author"] = props.Author,
-                ["keywords"] = props.Keywords,
-                ["comments"] = props.Comments,
-                ["category"] = props.Category,
-                ["company"] = props.Company,
-                ["manager"] = props.Manager,
-                ["createdTime"] = props.CreatedTime.ToString("O"),
-                ["lastSavedTime"] = props.LastSavedTime.ToString("O"),
-                ["lastSavedBy"] = props.LastSavedBy,
-                ["revisionNumber"] = props.RevisionNumber
-            },
-            ["statistics"] = new JsonObject
-            {
-                ["wordCount"] = props.Words,
-                ["characterCount"] = props.Characters,
-                ["pageCount"] = props.Pages,
-                ["paragraphCount"] = props.Paragraphs,
-                ["lineCount"] = props.Lines
-            }
-        };
-
+        Dictionary<string, CustomPropertyInfo>? customPropsDict = null;
         if (customProps.Count > 0)
         {
-            var customPropsJson = new JsonObject();
+            customPropsDict = new Dictionary<string, CustomPropertyInfo>();
             foreach (var prop in customProps)
-                customPropsJson[prop.Name] = new JsonObject
+                customPropsDict[prop.Name] = new CustomPropertyInfo
                 {
-                    ["value"] = ConvertPropertyValueToJsonNode(prop.Value),
-                    ["type"] = prop.Type.ToString()
+                    Value = ConvertPropertyValue(prop.Value),
+                    Type = prop.Type.ToString()
                 };
-            result["customProperties"] = customPropsJson;
         }
 
-        return result.ToJsonString(JsonDefaults.Indented);
+        return new GetWordPropertiesResult
+        {
+            BuiltInProperties = new BuiltInPropertiesInfo
+            {
+                Title = props.Title,
+                Subject = props.Subject,
+                Author = props.Author,
+                Keywords = props.Keywords,
+                Comments = props.Comments,
+                Category = props.Category,
+                Company = props.Company,
+                Manager = props.Manager,
+                CreatedTime = props.CreatedTime.ToString("O"),
+                LastSavedTime = props.LastSavedTime.ToString("O"),
+                LastSavedBy = props.LastSavedBy,
+                RevisionNumber = props.RevisionNumber
+            },
+            Statistics = new StatisticsInfo
+            {
+                WordCount = props.Words,
+                CharacterCount = props.Characters,
+                PageCount = props.Pages,
+                ParagraphCount = props.Paragraphs,
+                LineCount = props.Lines
+            },
+            CustomProperties = customPropsDict
+        };
     }
 
     /// <summary>
-    ///     Converts a property value to JsonNode for safe serialization.
+    ///     Converts a property value for serialization.
     /// </summary>
-    private static JsonNode? ConvertPropertyValueToJsonNode(object? value)
+    /// <param name="value">The value to convert.</param>
+    /// <returns>The converted value.</returns>
+    private static object? ConvertPropertyValue(object? value)
     {
         return value switch
         {
             null => null,
-            bool b => JsonValue.Create(b),
-            int i => JsonValue.Create(i),
-            double d => JsonValue.Create(d),
-            DateTime dt => JsonValue.Create(dt.ToString("O")),
-            _ => JsonValue.Create(value.ToString())
+            DateTime dt => dt.ToString("O"),
+            _ => value
         };
     }
 }

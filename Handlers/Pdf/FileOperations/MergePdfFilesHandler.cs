@@ -1,12 +1,15 @@
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.FileOperations;
 
 /// <summary>
 ///     Handler for merging multiple PDF documents into a single document.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class MergePdfFilesHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class MergePdfFilesHandler : OperationHandlerBase<Document>
     ///     Required: outputPath, inputPaths (string array)
     /// </param>
     /// <returns>Success message with merge count and output path.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var mergeParams = ExtractMergeParameters(parameters);
 
@@ -46,7 +49,8 @@ public class MergePdfFilesHandler : OperationHandlerBase<Document>
 
         mergedDocument.Save(mergeParams.OutputPath);
 
-        return Success($"Merged {validPaths.Count} PDF documents. Output: {mergeParams.OutputPath}");
+        return new SuccessResult
+            { Message = $"Merged {validPaths.Count} PDF documents. Output: {mergeParams.OutputPath}" };
     }
 
     /// <summary>

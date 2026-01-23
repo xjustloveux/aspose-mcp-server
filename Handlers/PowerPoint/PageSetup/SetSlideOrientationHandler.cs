@@ -1,11 +1,14 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.PageSetup;
 
 /// <summary>
 ///     Handler for setting slide orientation in PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetSlideOrientationHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -19,7 +22,7 @@ public class SetSlideOrientationHandler : OperationHandlerBase<Presentation>
     ///     Required: orientation (Portrait or Landscape)
     /// </param>
     /// <returns>Success message with orientation information.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractSetSlideOrientationParameters(parameters);
         var isPortrait = p.Orientation.Equals("Portrait", StringComparison.OrdinalIgnoreCase);
@@ -36,7 +39,8 @@ public class SetSlideOrientationHandler : OperationHandlerBase<Presentation>
         MarkModified(context);
 
         var finalSize = presentation.SlideSize.Size;
-        return Success($"Slide orientation set to {p.Orientation} ({finalSize.Width}x{finalSize.Height}).");
+        return new SuccessResult
+            { Message = $"Slide orientation set to {p.Orientation} ({finalSize.Width}x{finalSize.Height})." };
     }
 
     private static SetSlideOrientationParameters ExtractSetSlideOrientationParameters(OperationParameters parameters)

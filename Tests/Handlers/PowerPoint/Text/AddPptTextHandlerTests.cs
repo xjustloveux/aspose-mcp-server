@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.PowerPoint.Text;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Text;
 
@@ -30,9 +31,11 @@ public class AddPptTextHandlerTests : PptHandlerTestBase
             { "shapeIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Text added", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Text added", result.Message);
     }
 
     #endregion
@@ -49,9 +52,11 @@ public class AddPptTextHandlerTests : PptHandlerTestBase
             { "text", "Hello World" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Text added", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Text added", result.Message);
         AssertModified(context);
     }
 
@@ -66,9 +71,11 @@ public class AddPptTextHandlerTests : PptHandlerTestBase
             { "slideIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("slide 1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("slide 1", result.Message);
     }
 
     [Fact]
@@ -103,9 +110,11 @@ public class AddPptTextHandlerTests : PptHandlerTestBase
             { "y", 300f }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Text added", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Text added", result.Message);
     }
 
     [Fact]
@@ -120,9 +129,11 @@ public class AddPptTextHandlerTests : PptHandlerTestBase
             { "height", 200f }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Text added", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Text added", result.Message);
     }
 
     #endregion
@@ -140,9 +151,11 @@ public class AddPptTextHandlerTests : PptHandlerTestBase
             { "fontName", "Arial" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Text added", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Text added", result.Message);
     }
 
     [Fact]
@@ -156,9 +169,11 @@ public class AddPptTextHandlerTests : PptHandlerTestBase
             { "fontSize", 24f }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Text added", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Text added", result.Message);
     }
 
     [Fact]
@@ -172,9 +187,11 @@ public class AddPptTextHandlerTests : PptHandlerTestBase
             { "bold", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Text added", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Text added", result.Message);
     }
 
     [Fact]
@@ -188,9 +205,11 @@ public class AddPptTextHandlerTests : PptHandlerTestBase
             { "italic", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Text added", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Text added", result.Message);
     }
 
     [Fact]
@@ -204,9 +223,11 @@ public class AddPptTextHandlerTests : PptHandlerTestBase
             { "color", "#FF0000" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Text added", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Text added", result.Message);
     }
 
     #endregion

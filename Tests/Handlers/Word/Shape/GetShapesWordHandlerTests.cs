@@ -1,7 +1,8 @@
 using Aspose.Words;
 using Aspose.Words.Drawing;
 using AsposeMcpServer.Handlers.Word.Shape;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Word.Shape;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Shape;
 
@@ -40,9 +41,11 @@ public class GetShapesWordHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("no shapes found", result.ToLower());
+        var result = Assert.IsType<GetShapesWordResult>(res);
+
+        Assert.Contains("no shapes found", result.Content.ToLower());
     }
 
     [Fact]
@@ -52,10 +55,12 @@ public class GetShapesWordHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("total shapes:", result.ToLower());
-        Assert.Contains("type:", result.ToLower());
+        var result = Assert.IsType<GetShapesWordResult>(res);
+
+        Assert.Contains("total shapes:", result.Content.ToLower());
+        Assert.Contains("type:", result.Content.ToLower());
     }
 
     [Fact]
@@ -65,10 +70,12 @@ public class GetShapesWordHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("size:", result.ToLower());
-        Assert.Contains("position:", result.ToLower());
+        var result = Assert.IsType<GetShapesWordResult>(res);
+
+        Assert.Contains("size:", result.Content.ToLower());
+        Assert.Contains("position:", result.Content.ToLower());
     }
 
     #endregion

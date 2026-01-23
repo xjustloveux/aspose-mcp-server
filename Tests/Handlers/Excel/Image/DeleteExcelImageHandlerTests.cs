@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.Image;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Image;
 
@@ -77,9 +78,11 @@ public class DeleteExcelImageHandlerTests : ExcelHandlerTestBase
             { "imageIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted", result.Message);
         Assert.Empty(workbook.Worksheets[0].Pictures);
         AssertModified(context);
     }
@@ -95,9 +98,11 @@ public class DeleteExcelImageHandlerTests : ExcelHandlerTestBase
             { "imageIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("2 images remaining", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("2 images remaining", result.Message);
     }
 
     #endregion

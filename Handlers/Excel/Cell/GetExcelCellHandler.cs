@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Excel.Cell;
 
 namespace AsposeMcpServer.Handlers.Excel.Cell;
 
 /// <summary>
 ///     Handler for getting cell values in Excel workbooks.
 /// </summary>
+[ResultType(typeof(GetCellResult))]
 public class GetExcelCellHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class GetExcelCellHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex, calculateFormula, includeFormula, includeFormat
     /// </param>
     /// <returns>JSON result with cell information.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var getParams = ExtractGetParameters(parameters);
 
@@ -35,40 +38,31 @@ public class GetExcelCellHandler : OperationHandlerBase<Workbook>
         var worksheet = ExcelHelper.GetWorksheet(workbook, getParams.SheetIndex);
         var cellObj = worksheet.Cells[getParams.Cell];
 
-        object resultObj;
+        var formula = getParams.IncludeFormula && !string.IsNullOrEmpty(cellObj.Formula) ? cellObj.Formula : null;
+        GetCellFormatInfo? formatInfo = null;
 
         if (getParams.IncludeFormat)
         {
             var style = cellObj.GetStyle();
-            resultObj = new
+            formatInfo = new GetCellFormatInfo
             {
-                cell = getParams.Cell,
-                value = cellObj.Value?.ToString() ?? "(empty)",
-                valueType = cellObj.Type.ToString(),
-                formula = getParams.IncludeFormula && !string.IsNullOrEmpty(cellObj.Formula) ? cellObj.Formula : null,
-                format = new
-                {
-                    fontName = style.Font.Name,
-                    fontSize = style.Font.Size,
-                    bold = style.Font.IsBold,
-                    italic = style.Font.IsItalic,
-                    backgroundColor = style.ForegroundColor.ToString(),
-                    numberFormat = style.Number
-                }
-            };
-        }
-        else
-        {
-            resultObj = new
-            {
-                cell = getParams.Cell,
-                value = cellObj.Value?.ToString() ?? "(empty)",
-                valueType = cellObj.Type.ToString(),
-                formula = getParams.IncludeFormula && !string.IsNullOrEmpty(cellObj.Formula) ? cellObj.Formula : null
+                FontName = style.Font.Name,
+                FontSize = style.Font.Size,
+                Bold = style.Font.IsBold,
+                Italic = style.Font.IsItalic,
+                BackgroundColor = style.ForegroundColor.ToString(),
+                NumberFormat = style.Number
             };
         }
 
-        return JsonResult(resultObj);
+        return new GetCellResult
+        {
+            Cell = getParams.Cell,
+            Value = cellObj.Value?.ToString() ?? "(empty)",
+            ValueType = cellObj.Type.ToString(),
+            Formula = formula,
+            Format = formatInfo
+        };
     }
 
     /// <summary>

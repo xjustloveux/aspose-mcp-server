@@ -1,5 +1,7 @@
-using Aspose.Words;
-using AsposeMcpServer.Tests.Helpers;
+﻿using Aspose.Words;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Word.Text;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Word;
 
 namespace AsposeMcpServer.Tests.Tools.Word;
@@ -28,7 +30,8 @@ public class WordTextToolTests : WordTestBase
 
         var result = _tool.Execute("add", docPath, outputPath: outputPath, text: "Hello World");
 
-        Assert.StartsWith("Text added to document successfully", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Text added to document successfully", data.Message);
         var doc = new Document(outputPath);
         var paragraphs = GetParagraphs(doc);
         Assert.True(paragraphs.Count > 0);
@@ -58,8 +61,10 @@ public class WordTextToolTests : WordTestBase
 
         var result = _tool.Execute("search", docPath, searchText: "test");
 
-        Assert.Contains("Found", result, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("1 matches", result);
+        var data = GetResultData<TextSearchResult>(result);
+        Assert.Equal(1, data.MatchCount);
+        Assert.Single(data.Matches);
+        Assert.Equal("test", data.SearchText);
     }
 
     [Fact]
@@ -155,7 +160,8 @@ public class WordTextToolTests : WordTestBase
 
         var result = _tool.Execute(operation, docPath, text: "Test");
 
-        Assert.StartsWith("Text added to document successfully", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Text added to document successfully", data.Message);
     }
 
     [Theory]
@@ -182,7 +188,8 @@ public class WordTextToolTests : WordTestBase
 
         var result = _tool.Execute("add", sessionId: sessionId, text: "Session Text");
 
-        Assert.StartsWith("Text added to document successfully", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Text added to document successfully", data.Message);
 
         var doc = SessionManager.GetDocument<Document>(sessionId);
         var text = doc.GetText();
@@ -197,8 +204,9 @@ public class WordTextToolTests : WordTestBase
 
         var result = _tool.Execute("search", sessionId: sessionId, searchText: "Searchable");
 
-        Assert.Contains("Found", result);
-        Assert.Contains("Searchable", result);
+        var data = GetResultData<TextSearchResult>(result);
+        Assert.Equal(1, data.MatchCount);
+        Assert.Equal("Searchable", data.SearchText);
     }
 
     [Fact]
@@ -295,8 +303,9 @@ public class WordTextToolTests : WordTestBase
 
         var result = _tool.Execute("search", docPath1, sessionId, searchText: "Content");
 
-        Assert.Contains("Session", result);
-        Assert.DoesNotContain("Path", result);
+        var data = GetResultData<TextSearchResult>(result);
+        Assert.Equal(1, data.MatchCount);
+        Assert.Contains("Session", data.Matches[0].Context);
     }
 
     #endregion

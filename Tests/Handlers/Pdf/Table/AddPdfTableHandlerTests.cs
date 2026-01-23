@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Pdf.Table;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Table;
 
@@ -31,11 +32,13 @@ public class AddPdfTableHandlerTests : PdfHandlerTestBase
             { "columns", 4 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result.ToLower());
-        Assert.Contains("3 rows", result);
-        Assert.Contains("4 columns", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("3 rows", result.Message);
+        Assert.Contains("4 columns", result.Message);
         AssertModified(context);
     }
 
@@ -57,9 +60,11 @@ public class AddPdfTableHandlerTests : PdfHandlerTestBase
             { "data", data }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [SkippableFact]
@@ -76,9 +81,11 @@ public class AddPdfTableHandlerTests : PdfHandlerTestBase
             { "y", 500.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [SkippableFact]
@@ -94,9 +101,11 @@ public class AddPdfTableHandlerTests : PdfHandlerTestBase
             { "columnWidths", "100 150 200" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

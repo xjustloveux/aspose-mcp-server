@@ -1,11 +1,14 @@
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.Properties;
 
 /// <summary>
 ///     Handler for setting document properties in PDF files.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetPdfPropertiesHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -19,7 +22,7 @@ public class SetPdfPropertiesHandler : OperationHandlerBase<Document>
     ///     Optional: title, author, subject, keywords, creator, producer
     /// </param>
     /// <returns>Success message indicating properties were updated.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractSetParameters(parameters);
 
@@ -47,7 +50,7 @@ public class SetPdfPropertiesHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success("Document properties updated.");
+        return new SuccessResult { Message = "Document properties updated." };
     }
 
     /// <summary>

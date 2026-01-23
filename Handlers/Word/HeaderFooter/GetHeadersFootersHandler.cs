@@ -1,5 +1,7 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Word.HeaderFooter;
 using Section = Aspose.Words.Section;
 
 namespace AsposeMcpServer.Handlers.Word.HeaderFooter;
@@ -7,6 +9,7 @@ namespace AsposeMcpServer.Handlers.Word.HeaderFooter;
 /// <summary>
 ///     Handler for getting headers and footers from Word documents.
 /// </summary>
+[ResultType(typeof(GetHeadersFootersResult))]
 public class GetHeadersFootersHandler : OperationHandlerBase<Document>
 {
     private static readonly (HeaderFooterType type, string name)[] HeaderTypes =
@@ -34,7 +37,7 @@ public class GetHeadersFootersHandler : OperationHandlerBase<Document>
     ///     Optional: sectionIndex (specific section or -1 for all)
     /// </param>
     /// <returns>A JSON string containing headers and footers information.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractGetHeadersFootersParameters(parameters);
         var doc = context.Document;
@@ -46,12 +49,12 @@ public class GetHeadersFootersHandler : OperationHandlerBase<Document>
         var sectionsList = sections.Select((section, i) =>
             BuildSectionInfo(section, GetActualIndex(p.SectionIndex, i))).ToList();
 
-        return JsonResult(new
+        return new GetHeadersFootersResult
         {
-            totalSections = doc.Sections.Count,
-            queriedSectionIndex = p.SectionIndex,
-            sections = sectionsList
-        });
+            TotalSections = doc.Sections.Count,
+            QueriedSectionIndex = p.SectionIndex,
+            Sections = sectionsList
+        };
     }
 
     /// <summary>
@@ -98,16 +101,16 @@ public class GetHeadersFootersHandler : OperationHandlerBase<Document>
     /// <param name="section">The document section.</param>
     /// <param name="actualIndex">The actual section index.</param>
     /// <returns>An object containing the section information.</returns>
-    private static object BuildSectionInfo(Section section, int actualIndex)
+    private static SectionHeaderFooterInfo BuildSectionInfo(Section section, int actualIndex)
     {
         var headers = ExtractHeaderFooterText(section, HeaderTypes);
         var footers = ExtractHeaderFooterText(section, FooterTypes);
 
-        return new
+        return new SectionHeaderFooterInfo
         {
-            sectionIndex = actualIndex,
-            headers = headers.Count > 0 ? headers : null,
-            footers = footers.Count > 0 ? footers : null
+            SectionIndex = actualIndex,
+            Headers = headers.Count > 0 ? headers : null,
+            Footers = footers.Count > 0 ? footers : null
         };
     }
 

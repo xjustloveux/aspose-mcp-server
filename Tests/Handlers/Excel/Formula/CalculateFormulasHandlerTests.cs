@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.Formula;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Formula;
 
@@ -27,9 +28,11 @@ public class CalculateFormulasHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Formulas calculated", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Formulas calculated", result.Message);
     }
 
     #endregion
@@ -57,9 +60,11 @@ public class CalculateFormulasHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Formulas calculated", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Formulas calculated", result.Message);
         AssertModified(context);
     }
 

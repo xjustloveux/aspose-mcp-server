@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Table;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Table;
 
@@ -35,9 +36,11 @@ public class SetBorderWordTableHandlerTests : WordHandlerTestBase
             { "borderStyle", style }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("border", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("border", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -78,9 +81,11 @@ public class SetBorderWordTableHandlerTests : WordHandlerTestBase
             { "borderTop", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("border", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("border", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -101,9 +106,11 @@ public class SetBorderWordTableHandlerTests : WordHandlerTestBase
             { "borderRight", right }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("border", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("border", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -121,9 +128,11 @@ public class SetBorderWordTableHandlerTests : WordHandlerTestBase
             { "width", 2.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("border", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("border", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -137,9 +146,11 @@ public class SetBorderWordTableHandlerTests : WordHandlerTestBase
             { "color", "#FF0000" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("border", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("border", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

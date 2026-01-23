@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.Cell;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Cell;
 
@@ -30,9 +31,11 @@ public class EditExcelCellHandlerTests : ExcelHandlerTestBase
             { "clearValue", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("edited", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("edited", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("", workbook.Worksheets[0].Cells["A1"].StringValue);
         AssertModified(context);
     }
@@ -106,9 +109,11 @@ public class EditExcelCellHandlerTests : ExcelHandlerTestBase
             { "value", "New Value" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("edited", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("edited", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("New Value", workbook.Worksheets[0].Cells["A1"].StringValue);
         AssertModified(context);
     }
@@ -128,9 +133,11 @@ public class EditExcelCellHandlerTests : ExcelHandlerTestBase
             { "value", value }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("edited", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("edited", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(value, workbook.Worksheets[0].Cells[cell].StringValue);
         AssertModified(context);
     }
@@ -172,9 +179,11 @@ public class EditExcelCellHandlerTests : ExcelHandlerTestBase
             { "formula", "=A1+B1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("edited", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("edited", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("=A1+B1", workbook.Worksheets[0].Cells["C1"].Formula);
         AssertModified(context);
     }

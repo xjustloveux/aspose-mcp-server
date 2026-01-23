@@ -1,12 +1,16 @@
 using System.Text.Json.Nodes;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Page;
 
 /// <summary>
 ///     Handler for setting page margins in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetMarginsWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -21,7 +25,7 @@ public class SetMarginsWordHandler : OperationHandlerBase<Document>
     ///     Optional: sectionIndex, sectionIndices
     /// </param>
     /// <returns>Success message with margin details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var setParams = ExtractSetMarginsParameters(parameters);
 
@@ -39,7 +43,7 @@ public class SetMarginsWordHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Page margins updated for {sectionsToUpdate.Count} section(s)");
+        return new SuccessResult { Message = $"Page margins updated for {sectionsToUpdate.Count} section(s)" };
     }
 
     /// <summary>

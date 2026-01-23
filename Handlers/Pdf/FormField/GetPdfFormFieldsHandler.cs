@@ -1,14 +1,15 @@
-using System.Text.Json;
 using Aspose.Pdf;
 using Aspose.Pdf.Forms;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Results.Pdf.FormField;
 
 namespace AsposeMcpServer.Handlers.Pdf.FormField;
 
 /// <summary>
 ///     Handler for retrieving form fields from PDF documents.
 /// </summary>
+[ResultType(typeof(GetFormFieldsResult))]
 public class GetPdfFormFieldsHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -22,7 +23,7 @@ public class GetPdfFormFieldsHandler : OperationHandlerBase<Document>
     ///     Optional: limit (maximum number of fields to return, default: 100)
     /// </param>
     /// <returns>JSON string containing form field information.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractGetParameters(parameters);
 
@@ -30,41 +31,50 @@ public class GetPdfFormFieldsHandler : OperationHandlerBase<Document>
 
         if (document.Form.Count == 0)
         {
-            var emptyResult = new
+            var emptyResult = new GetFormFieldsResult
             {
-                count = 0,
-                items = Array.Empty<object>(),
-                message = "No form fields found"
+                Count = 0,
+                TotalCount = 0,
+                Truncated = false,
+                Items = Array.Empty<PdfFormFieldInfo>(),
+                Message = "No form fields found"
             };
-            return JsonSerializer.Serialize(emptyResult, JsonDefaults.Indented);
+            return emptyResult;
         }
 
-        List<object> fieldList = [];
+        List<PdfFormFieldInfo> fieldList = [];
         foreach (var field in document.Form.Cast<Field>().Take(p.Limit))
         {
-            var fieldInfo = new Dictionary<string, object?>
-            {
-                ["name"] = field.PartialName,
-                ["type"] = field.GetType().Name
-            };
+            string? value = null;
+            bool? isChecked = null;
+            int? selected = null;
+
             if (field is TextBoxField textBox)
-                fieldInfo["value"] = textBox.Value;
+                value = textBox.Value;
             else if (field is CheckboxField checkBox)
-                fieldInfo["checked"] = checkBox.Checked;
+                isChecked = checkBox.Checked;
             else if (field is RadioButtonField radioButton)
-                fieldInfo["selected"] = radioButton.Selected;
-            fieldList.Add(fieldInfo);
+                selected = radioButton.Selected;
+
+            fieldList.Add(new PdfFormFieldInfo
+            {
+                Name = field.PartialName ?? string.Empty,
+                Type = field.GetType().Name,
+                Value = value,
+                Checked = isChecked,
+                Selected = selected
+            });
         }
 
         var totalCount = document.Form.Count;
-        var result = new
+        var result = new GetFormFieldsResult
         {
-            count = fieldList.Count,
-            totalCount,
-            truncated = totalCount > p.Limit,
-            items = fieldList
+            Count = fieldList.Count,
+            TotalCount = totalCount,
+            Truncated = totalCount > p.Limit,
+            Items = fieldList
         };
-        return JsonSerializer.Serialize(result, JsonDefaults.Indented);
+        return result;
     }
 
     /// <summary>

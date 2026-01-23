@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.PivotTable;
 
 /// <summary>
 ///     Handler for removing a field from a pivot table.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeleteFieldExcelPivotTableHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class DeleteFieldExcelPivotTableHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex
     /// </param>
     /// <returns>Success message with delete field details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractDeleteFieldParameters(parameters);
 
@@ -70,16 +73,22 @@ public class DeleteFieldExcelPivotTableHandler : OperationHandlerBase<Workbook>
 
                 MarkModified(context);
 
-                return Success(
-                    $"Field '{p.FieldName}' removed from {p.FieldType} area of pivot table #{p.PivotTableIndex}.");
+                return new SuccessResult
+                {
+                    Message =
+                        $"Field '{p.FieldName}' removed from {p.FieldType} area of pivot table #{p.PivotTableIndex}."
+                };
             }
             catch (Exception ex)
             {
                 if (ex.Message.Contains("not found") || ex.Message.Contains("does not exist"))
                 {
                     MarkModified(context);
-                    return Success(
-                        $"Field '{p.FieldName}' may already be removed from {p.FieldType} area of pivot table #{p.PivotTableIndex}.");
+                    return new SuccessResult
+                    {
+                        Message =
+                            $"Field '{p.FieldName}' may already be removed from {p.FieldType} area of pivot table #{p.PivotTableIndex}."
+                    };
                 }
 
                 throw new ArgumentException(

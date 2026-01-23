@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.PrintSettings;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.PrintSettings;
 
@@ -43,10 +44,12 @@ public class SetPrintAreaHandlerTests : ExcelHandlerTestBase
             { "range", "A1:D10" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("print area set", result.ToLower());
-        Assert.Contains("A1:D10", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("print area set", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("A1:D10", result.Message);
         Assert.Equal("A1:D10", workbook.Worksheets[0].PageSetup.PrintArea);
         AssertModified(context);
     }
@@ -62,9 +65,11 @@ public class SetPrintAreaHandlerTests : ExcelHandlerTestBase
             { "range", "B2:E5" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("sheet 1", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("sheet 1", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("B2:E5", workbook.Worksheets[1].PageSetup.PrintArea);
     }
 
@@ -79,9 +84,11 @@ public class SetPrintAreaHandlerTests : ExcelHandlerTestBase
             { "clearPrintArea", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("cleared", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("cleared", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(string.IsNullOrEmpty(workbook.Worksheets[0].PageSetup.PrintArea));
     }
 

@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Pdf;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Pdf;
 /// <summary>
 ///     Tool for managing form fields in PDF documents (add, delete, edit, get)
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Pdf.FormField")]
 [McpServerToolType]
 public class PdfFormFieldTool
 {
@@ -60,7 +63,14 @@ public class PdfFormFieldTool
     /// <param name="limit">Maximum number of fields to return (for get, default: 100).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "pdf_form_field")]
+    [McpServerTool(
+        Name = "pdf_form_field",
+        Title = "PDF Form Field Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage form fields in PDF documents. Supports 4 operations: add, delete, edit, get.
 
 Usage examples:
@@ -69,7 +79,7 @@ Usage examples:
 - Edit form field: pdf_form_field(operation='edit', path='doc.pdf', fieldName='name', value='New Value')
 - Get form fields: pdf_form_field(operation='get', path='doc.pdf')
 - Get form fields with limit: pdf_form_field(operation='get', path='doc.pdf', limit=50)")]
-    public string Execute(
+    public object Execute(
         [Description(@"Operation to perform.
 - 'add': Add a form field (required params: path, pageIndex, fieldType, fieldName, x, y, width, height)
 - 'delete': Delete a form field (required params: path, fieldName)
@@ -125,12 +135,12 @@ Usage examples:
         var result = handler.Execute(operationContext, parameters);
 
         if (string.Equals(operation, "get", StringComparison.OrdinalIgnoreCase))
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

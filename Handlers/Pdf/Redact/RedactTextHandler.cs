@@ -2,8 +2,10 @@ using System.Text.RegularExpressions;
 using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
 using Aspose.Pdf.Text;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.Common;
 using Color = System.Drawing.Color;
 
 namespace AsposeMcpServer.Handlers.Pdf.Redact;
@@ -11,6 +13,7 @@ namespace AsposeMcpServer.Handlers.Pdf.Redact;
 /// <summary>
 ///     Handler for redacting text by searching for occurrences in a PDF document.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class RedactTextHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -25,7 +28,7 @@ public class RedactTextHandler : OperationHandlerBase<Document>
     ///     Optional: pageIndex (1-based), caseSensitive (default: true), fillColor, overlayText
     /// </param>
     /// <returns>Success message with redaction details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractTextParameters(parameters);
 
@@ -70,14 +73,16 @@ public class RedactTextHandler : OperationHandlerBase<Document>
         }
 
         if (redactionCount == 0)
-            return Success($"No occurrences of '{p.TextToRedact}' found. No redactions applied.");
+            return new SuccessResult
+                { Message = $"No occurrences of '{p.TextToRedact}' found. No redactions applied." };
 
         MarkModified(context);
 
         var pageInfo = pagesAffected.Count == 1
             ? $"page {pagesAffected.First()}"
             : $"{pagesAffected.Count} pages";
-        return Success($"Redacted {redactionCount} occurrence(s) of '{p.TextToRedact}' on {pageInfo}.");
+        return new SuccessResult
+            { Message = $"Redacted {redactionCount} occurrence(s) of '{p.TextToRedact}' on {pageInfo}." };
     }
 
     /// <summary>

@@ -91,7 +91,7 @@ namespace AsposeMcpServer.Tests.Core.Handlers
 
             var result = handler.Execute(context, parameters);
 
-            Assert.Contains("discovery_add", result);
+            Assert.Contains("discovery_add", result.ToString()!);
         }
 
         [Fact]

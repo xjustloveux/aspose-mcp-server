@@ -1,6 +1,7 @@
-using System.Runtime.Versioning;
+﻿using System.Runtime.Versioning;
 using Aspose.Slides;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.PowerPoint;
 
 namespace AsposeMcpServer.Tests.Tools.PowerPoint;
@@ -27,7 +28,8 @@ public class PptFileOperationsToolTests : PptTestBase
     {
         var outputPath = CreateTestFilePath("test_create.pptx");
         var result = _tool.Execute("create", path: outputPath);
-        Assert.StartsWith("PowerPoint presentation created successfully", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("PowerPoint presentation created successfully", data.Message);
         Assert.True(File.Exists(outputPath));
         using var presentation = new Presentation(outputPath);
         Assert.True(presentation.Slides.Count > 0);
@@ -39,8 +41,9 @@ public class PptFileOperationsToolTests : PptTestBase
         var pptPath = CreatePresentation("test_convert_pdf.pptx");
         var outputPath = CreateTestFilePath("test_convert_output.pdf");
         var result = _tool.Execute("convert", inputPath: pptPath, outputPath: outputPath, format: "pdf");
-        Assert.StartsWith("Presentation from", result);
-        Assert.Contains("converted to PDF format", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Presentation from", data.Message);
+        Assert.Contains("converted to PDF format", data.Message);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -52,7 +55,8 @@ public class PptFileOperationsToolTests : PptTestBase
         var outputPath = CreateTestFilePath("test_merge_output.pptx");
         var result = _tool.Execute("merge", outputPath: outputPath, inputPaths: [ppt1Path, ppt2Path],
             keepSourceFormatting: true);
-        Assert.StartsWith("Merged 2 presentations", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Merged 2 presentations", data.Message);
         Assert.True(File.Exists(outputPath));
         using var presentation = new Presentation(outputPath);
         Assert.Equal(4, presentation.Slides.Count);
@@ -65,7 +69,8 @@ public class PptFileOperationsToolTests : PptTestBase
         var outputDir = Path.Combine(TestDir, "split_output");
         Directory.CreateDirectory(outputDir);
         var result = _tool.Execute("split", inputPath: pptPath, outputDirectory: outputDir);
-        Assert.StartsWith("Split presentation into 3 file(s)", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Split presentation into 3 file(s)", data.Message);
         var files = Directory.GetFiles(outputDir, "*.pptx");
         Assert.Equal(3, files.Length);
     }
@@ -82,7 +87,8 @@ public class PptFileOperationsToolTests : PptTestBase
     {
         var outputPath = CreateTestFilePath($"test_case_create_{operation}.pptx");
         var result = _tool.Execute(operation, path: outputPath);
-        Assert.StartsWith("PowerPoint presentation created successfully", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("PowerPoint presentation created successfully", data.Message);
     }
 
     [Fact]
@@ -103,10 +109,12 @@ public class PptFileOperationsToolTests : PptTestBase
         var sessionId = OpenSession(pptPath);
         var outputPath = CreateTestFilePath("test_session_convert_output.pdf");
         var result = _tool.Execute("convert", sessionId, outputPath: outputPath, format: "pdf");
-        Assert.StartsWith("Presentation from", result);
-        Assert.Contains("converted to PDF format", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Presentation from", data.Message);
+        Assert.Contains("converted to PDF format", data.Message);
         Assert.True(File.Exists(outputPath));
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -117,7 +125,10 @@ public class PptFileOperationsToolTests : PptTestBase
         var outputDir = Path.Combine(TestDir, "session_split_output");
         Directory.CreateDirectory(outputDir);
         var result = _tool.Execute("split", sessionId, outputDirectory: outputDir);
-        Assert.StartsWith("Split presentation into 3 file(s)", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Split presentation into 3 file(s)", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -137,7 +148,8 @@ public class PptFileOperationsToolTests : PptTestBase
         var outputDir = Path.Combine(TestDir, "prefer_session_split");
         Directory.CreateDirectory(outputDir);
         var result = _tool.Execute("split", sessionId, inputPath: pptPath1, outputDirectory: outputDir);
-        Assert.Contains("3 file(s)", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("3 file(s)", data.Message);
     }
 
     #endregion

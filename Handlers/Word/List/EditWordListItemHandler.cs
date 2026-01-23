@@ -1,5 +1,7 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 using static Aspose.Words.ConvertUtil;
 using WordParagraph = Aspose.Words.Paragraph;
 using WordRun = Aspose.Words.Run;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Handlers.Word.List;
 /// <summary>
 ///     Handler for editing list items in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class EditWordListItemHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -23,7 +26,7 @@ public class EditWordListItemHandler : OperationHandlerBase<Document>
     ///     Optional: level
     /// </param>
     /// <returns>Success message with edit details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractEditListItemParameters(parameters);
 
@@ -53,7 +56,7 @@ public class EditWordListItemHandler : OperationHandlerBase<Document>
         result += $"New text: {p.Text}";
         if (p.Level.HasValue) result += $"\nLevel: {p.Level.Value}";
 
-        return Success(result);
+        return new SuccessResult { Message = result };
     }
 
     private static EditListItemParameters ExtractEditListItemParameters(OperationParameters parameters)

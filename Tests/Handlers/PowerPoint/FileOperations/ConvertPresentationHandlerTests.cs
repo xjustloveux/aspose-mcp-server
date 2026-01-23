@@ -1,7 +1,8 @@
 using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Handlers.PowerPoint.FileOperations;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.FileOperations;
 
@@ -44,9 +45,11 @@ public class ConvertPresentationHandlerTests : PptHandlerTestBase
             { "format", "pdf" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("converted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("converted", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(File.Exists(outputPath));
         var fileInfo = new FileInfo(outputPath);
         Assert.True(fileInfo.Length > 0, "Converted PDF file should have content");
@@ -65,9 +68,11 @@ public class ConvertPresentationHandlerTests : PptHandlerTestBase
             { "format", "html" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("converted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("converted", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(File.Exists(outputPath));
         var fileInfo = new FileInfo(outputPath);
         Assert.True(fileInfo.Length > 0, "Converted HTML file should have content");
@@ -86,9 +91,11 @@ public class ConvertPresentationHandlerTests : PptHandlerTestBase
             { "format", "ppt" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("converted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("converted", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(File.Exists(outputPath));
         var fileInfo = new FileInfo(outputPath);
         Assert.True(fileInfo.Length > 0, "Converted PPT file should have content");
@@ -179,9 +186,11 @@ public class ConvertPresentationHandlerTests : PptHandlerTestBase
             { "format", format }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("converted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("converted", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -201,10 +210,12 @@ public class ConvertPresentationHandlerTests : PptHandlerTestBase
             { "slideIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Slide 0", result);
-        Assert.Contains("JPEG", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Slide 0", result.Message);
+        Assert.Contains("JPEG", result.Message);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -224,10 +235,12 @@ public class ConvertPresentationHandlerTests : PptHandlerTestBase
             { "slideIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Slide 0", result);
-        Assert.Contains("PNG", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Slide 0", result.Message);
+        Assert.Contains("PNG", result.Message);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -247,9 +260,11 @@ public class ConvertPresentationHandlerTests : PptHandlerTestBase
             { "slideIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("JPEG", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("JPEG", result.Message);
         Assert.True(File.Exists(outputPath));
     }
 

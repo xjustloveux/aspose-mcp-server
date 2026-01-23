@@ -1,11 +1,14 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Reference;
 
 /// <summary>
 ///     Handler for adding cross-references to Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddCrossReferenceWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class AddCrossReferenceWordHandler : OperationHandlerBase<Document>
     ///     Optional: referenceText, insertAsHyperlink (default: true), includeAboveBelow (default: false)
     /// </param>
     /// <returns>Success message indicating cross-reference was added.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractAddCrossReferenceParameters(parameters);
 
@@ -44,7 +47,7 @@ public class AddCrossReferenceWordHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Cross-reference added (Type: {p.ReferenceType})");
+        return new SuccessResult { Message = $"Cross-reference added (Type: {p.ReferenceType})" };
     }
 
     private static AddCrossReferenceParameters ExtractAddCrossReferenceParameters(OperationParameters parameters)

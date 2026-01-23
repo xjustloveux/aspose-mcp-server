@@ -1,8 +1,10 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Text.Json.Nodes;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
@@ -12,6 +14,7 @@ namespace AsposeMcpServer.Tools.Word;
 ///     Merges: WordSetPageMarginsTool, WordSetPageOrientationTool, WordSetPageSizeTool,
 ///     WordSetPageNumberTool, WordSetPageSetupTool, WordDeletePageTool, WordInsertBlankPageTool, WordAddPageBreakTool
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Word.Page")]
 [McpServerToolType]
 public class WordPageTool
 {
@@ -71,7 +74,14 @@ public class WordPageTool
     /// <param name="paragraphIndex">Paragraph index to insert page break after (0-based).</param>
     /// <returns>A message indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "word_page")]
+    [McpServerTool(
+        Name = "word_page",
+        Title = "Word Page Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(
         @"Manage page settings in Word documents. Supports 8 operations: set_margins, set_orientation, set_size, set_page_number, set_page_setup, delete_page, insert_blank_page, add_page_break.
 
@@ -83,7 +93,7 @@ Usage examples:
 - Delete page: word_page(operation='delete_page', path='doc.docx', pageIndex=1)
 - Insert blank page: word_page(operation='insert_blank_page', path='doc.docx', insertAtPageIndex=2)
 - Add page break: word_page(operation='add_page_break', path='doc.docx', paragraphIndex=10)")]
-    public string Execute(
+    public object Execute(
         [Description(
             "Operation: set_margins, set_orientation, set_size, set_page_number, set_page_setup, delete_page, insert_blank_page, add_page_break")]
         string operation,
@@ -149,7 +159,7 @@ Usage examples:
             {
                 var savePath = outputPath ?? throw new InvalidOperationException("Output path required for file mode");
                 operationContext.ResultDocument.Save(savePath);
-                return $"{result}\nOutput: {savePath}";
+                return ResultHelper.FinalizeResult((dynamic)$"{result}\nOutput: {savePath}", savePath, sessionId);
             }
 
             // For session mode, update the session document
@@ -163,7 +173,7 @@ Usage examples:
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

@@ -2,30 +2,9 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
 
 namespace AsposeMcpServer.Core.Security;
-
-/// <summary>
-///     Authentication result from API Key validation
-/// </summary>
-public class ApiKeyAuthResult
-{
-    /// <summary>
-    ///     Indicates whether the API key is valid
-    /// </summary>
-    public bool IsValid { get; set; }
-
-    /// <summary>
-    ///     Group identifier extracted from the API key
-    /// </summary>
-    public string? GroupId { get; set; }
-
-    /// <summary>
-    ///     Error message if validation failed
-    /// </summary>
-    public string? ErrorMessage { get; set; }
-}
 
 /// <summary>
 ///     Middleware for API Key authentication supporting multiple verification modes

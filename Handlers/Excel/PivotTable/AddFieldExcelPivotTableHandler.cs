@@ -1,13 +1,16 @@
 using Aspose.Cells;
 using Aspose.Cells.Pivot;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.PivotTable;
 
 /// <summary>
 ///     Handler for adding a field to a pivot table.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddFieldExcelPivotTableHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -22,7 +25,7 @@ public class AddFieldExcelPivotTableHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex, function
     /// </param>
     /// <returns>Success message with add field details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractAddFieldParameters(parameters);
 
@@ -76,16 +79,22 @@ public class AddFieldExcelPivotTableHandler : OperationHandlerBase<Workbook>
 
                 MarkModified(context);
 
-                return Success(
-                    $"Field '{p.FieldName}' added as {p.FieldType} field to pivot table #{p.PivotTableIndex}.");
+                return new SuccessResult
+                {
+                    Message =
+                        $"Field '{p.FieldName}' added as {p.FieldType} field to pivot table #{p.PivotTableIndex}."
+                };
             }
             catch (Exception ex)
             {
                 if (ex.Message.Contains("already exists") || ex.Message.Contains("duplicate"))
                 {
                     MarkModified(context);
-                    return Success(
-                        $"Field '{p.FieldName}' may already exist in {p.FieldType} area of pivot table #{p.PivotTableIndex}.");
+                    return new SuccessResult
+                    {
+                        Message =
+                            $"Field '{p.FieldName}' may already exist in {p.FieldType} area of pivot table #{p.PivotTableIndex}."
+                    };
                 }
 
                 throw new ArgumentException(

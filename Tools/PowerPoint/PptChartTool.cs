@@ -1,8 +1,10 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Text.Json.Nodes;
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
@@ -11,6 +13,7 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 ///     Unified tool for managing PowerPoint charts (add, edit, delete, get data, update data)
 ///     Merges: PptAddChartTool, PptEditChartTool, PptDeleteChartTool, PptGetChartDataTool, PptUpdateChartDataTool
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.PowerPoint.Chart")]
 [McpServerToolType]
 public class PptChartTool
 {
@@ -62,7 +65,14 @@ public class PptChartTool
     /// <param name="clearExisting">Clear existing data before adding new (optional, for update_data, default: false).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "ppt_chart")]
+    [McpServerTool(
+        Name = "ppt_chart",
+        Title = "PowerPoint Chart Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage PowerPoint charts. Supports 5 operations: add, edit, delete, get_data, update_data.
 
 Usage examples:
@@ -73,7 +83,7 @@ Usage examples:
 - Update data: ppt_chart(operation='update_data', path='presentation.pptx', slideIndex=0, shapeIndex=0, data={categories:['A','B'],series:[{name:'Sales',values:[1,2]}]})
 
 Note: shapeIndex refers to the chart index (0-based) among all charts on the slide, not the absolute shape index.")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: add, edit, delete, get_data, update_data")]
         string operation,
         [Description("Slide index (0-based)")] int slideIndex,
@@ -122,12 +132,12 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
         var result = handler.Execute(operationContext, parameters);
 
         if (string.Equals(operation, "get_data", StringComparison.OrdinalIgnoreCase))
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

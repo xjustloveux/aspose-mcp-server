@@ -1,12 +1,16 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Text;
 
 /// <summary>
 ///     Handler for adding text to PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddPptTextHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -21,7 +25,7 @@ public class AddPptTextHandler : OperationHandlerBase<Presentation>
     ///     Optional: slideIndex (default: 0), shapeIndex, x, y, width, height, fontName, fontSize, bold, italic, color.
     /// </param>
     /// <returns>Success message with text addition details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var text = parameters.GetRequired<string>("text");
         var slideIndex = parameters.GetOptional("slideIndex", 0);
@@ -42,7 +46,7 @@ public class AddPptTextHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Text added to slide {slideIndex}.");
+        return new SuccessResult { Message = $"Text added to slide {slideIndex}." };
     }
 
     /// <summary>

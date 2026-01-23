@@ -2,8 +2,11 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Words.Tables;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.Table;
@@ -11,6 +14,7 @@ namespace AsposeMcpServer.Handlers.Word.Table;
 /// <summary>
 ///     Handler for creating tables in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class CreateWordTableHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -27,7 +31,7 @@ public class CreateWordTableHandler : OperationHandlerBase<Document>
     /// </param>
     /// <returns>Success message with table details.</returns>
     /// <exception cref="ArgumentException">Thrown when sectionIndex is out of range or tableData JSON is invalid.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var tableParams = ExtractTableParameters(parameters);
         var doc = context.Document;
@@ -42,7 +46,7 @@ public class CreateWordTableHandler : OperationHandlerBase<Document>
         FinalizeTable(table, tableParams);
 
         MarkModified(context);
-        return Success($"Successfully created table with {numRows} rows and {numCols} columns.");
+        return new SuccessResult { Message = $"Successfully created table with {numRows} rows and {numCols} columns." };
     }
 
     /// <summary>

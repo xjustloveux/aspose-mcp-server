@@ -1,7 +1,7 @@
-using System.Text.Json;
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Field;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Word.Field;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Field;
 
@@ -56,10 +56,11 @@ public class GetFieldsWordHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(0, json.RootElement.GetProperty("count").GetInt32());
+        var result = Assert.IsType<GetFieldsWordResult>(res);
+
+        Assert.Equal(0, result.Count);
     }
 
     [Fact]
@@ -69,12 +70,13 @@ public class GetFieldsWordHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.GetProperty("count").GetInt32() > 0);
-        Assert.True(json.RootElement.TryGetProperty("fields", out _));
-        Assert.True(json.RootElement.TryGetProperty("statisticsByType", out _));
+        var result = Assert.IsType<GetFieldsWordResult>(res);
+
+        Assert.True(result.Count > 0);
+        Assert.NotNull(result.Fields);
+        Assert.NotNull(result.StatisticsByType);
     }
 
     [Fact]
@@ -87,11 +89,11 @@ public class GetFieldsWordHandlerTests : WordHandlerTestBase
             { "includeCode", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var fields = json.RootElement.GetProperty("fields");
-        Assert.True(fields.GetArrayLength() > 0);
+        var result = Assert.IsType<GetFieldsWordResult>(res);
+
+        Assert.True(result.Fields.Count > 0);
     }
 
     [Fact]
@@ -104,10 +106,11 @@ public class GetFieldsWordHandlerTests : WordHandlerTestBase
             { "includeResult", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("fields", out _));
+        var result = Assert.IsType<GetFieldsWordResult>(res);
+
+        Assert.NotNull(result.Fields);
     }
 
     #endregion

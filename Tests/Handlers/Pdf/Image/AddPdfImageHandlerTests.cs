@@ -2,7 +2,8 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.Versioning;
 using AsposeMcpServer.Handlers.Pdf.Image;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 using DrawingColor = System.Drawing.Color;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Image;
@@ -52,10 +53,12 @@ public class AddPdfImageHandlerTests : PdfHandlerTestBase
             { "imagePath", imagePath }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Added image", result);
-        Assert.Contains("page 1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Added image", result.Message);
+        Assert.Contains("page 1", result.Message);
         AssertModified(context);
     }
 
@@ -71,10 +74,12 @@ public class AddPdfImageHandlerTests : PdfHandlerTestBase
             { "pageIndex", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Added image", result);
-        Assert.Contains("page 2", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Added image", result.Message);
+        Assert.Contains("page 2", result.Message);
         AssertModified(context);
     }
 
@@ -91,9 +96,11 @@ public class AddPdfImageHandlerTests : PdfHandlerTestBase
             { "y", 400.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Added image", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Added image", result.Message);
         AssertModified(context);
     }
 
@@ -110,9 +117,11 @@ public class AddPdfImageHandlerTests : PdfHandlerTestBase
             { "height", 100.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Added image", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Added image", result.Message);
         AssertModified(context);
     }
 
@@ -172,9 +181,11 @@ public class AddPdfImageHandlerTests : PdfHandlerTestBase
             { "pageIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("page 1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("page 1", result.Message);
         AssertModified(context);
     }
 
@@ -190,9 +201,11 @@ public class AddPdfImageHandlerTests : PdfHandlerTestBase
             { "pageIndex", -1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("page 1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("page 1", result.Message);
         AssertModified(context);
     }
 

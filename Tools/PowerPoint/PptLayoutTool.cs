@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
@@ -10,6 +12,7 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 ///     Unified tool for managing PowerPoint layouts.
 ///     Supports: set, get_layouts, get_masters, apply_master, apply_layout_range, apply_theme
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.PowerPoint.Layout")]
 [McpServerToolType]
 public class PptLayoutTool
 {
@@ -64,7 +67,14 @@ public class PptLayoutTool
     /// <param name="themePath">Theme template file path (.potx/.pptx, required for apply_theme).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "ppt_layout")]
+    [McpServerTool(
+        Name = "ppt_layout",
+        Title = "PowerPoint Layout Operations",
+        Destructive = false,
+        Idempotent = true,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(
         @"Manage PowerPoint layouts. Supports 6 operations: set, get_layouts, get_masters, apply_master, apply_layout_range, apply_theme.
 
@@ -75,7 +85,7 @@ Usage examples:
 - Apply master: ppt_layout(operation='apply_master', path='presentation.pptx', slideIndices=[0,1,2], masterIndex=0, layoutIndex=0)
 - Apply layout range: ppt_layout(operation='apply_layout_range', path='presentation.pptx', slideIndices=[0,1,2], layout='Title')
 - Apply theme: ppt_layout(operation='apply_theme', path='presentation.pptx', themePath='theme.potx')")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: set, get_layouts, get_masters, apply_master, apply_layout_range, apply_theme")]
         string operation,
         [Description("Presentation file path (required if no sessionId)")]
@@ -119,12 +129,12 @@ Usage examples:
 
         var opLower = operation.ToLowerInvariant();
         if (opLower == "get_layouts" || opLower == "get_masters")
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

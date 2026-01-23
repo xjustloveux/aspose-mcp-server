@@ -1,13 +1,15 @@
-using System.Text.Json;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Word.Table;
 
 namespace AsposeMcpServer.Handlers.Word.Table;
 
 /// <summary>
 ///     Handler for getting tables from Word documents.
 /// </summary>
+[ResultType(typeof(GetTablesWordResult))]
 public class GetWordTablesHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -22,14 +24,14 @@ public class GetWordTablesHandler : OperationHandlerBase<Document>
     /// </param>
     /// <returns>JSON string containing table information.</returns>
     /// <exception cref="ArgumentException">Thrown when sectionIndex is out of range.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractGetWordTablesParameters(parameters);
 
         var doc = context.Document;
         var tables = WordTableHelper.GetTables(doc, p.SectionIndex);
 
-        List<object> tableList = [];
+        List<WordTableInfo> tableList = [];
         for (var i = 0; i < tables.Count; i++)
         {
             var table = tables[i];
@@ -37,23 +39,23 @@ public class GetWordTablesHandler : OperationHandlerBase<Document>
             var colCount = rowCount > 0 ? table.Rows[0].Cells.Count : 0;
             var precedingText = WordTableHelper.GetPrecedingText(table, 50);
 
-            tableList.Add(new
+            tableList.Add(new WordTableInfo
             {
-                index = i,
-                rows = rowCount,
-                columns = colCount,
-                precedingText = !string.IsNullOrEmpty(precedingText) ? precedingText : null
+                Index = i,
+                Rows = rowCount,
+                Columns = colCount,
+                PrecedingText = !string.IsNullOrEmpty(precedingText) ? precedingText : null
             });
         }
 
-        var result = new
+        var result = new GetTablesWordResult
         {
-            count = tables.Count,
-            sectionIndex = p.SectionIndex,
-            tables = tableList
+            Count = tables.Count,
+            SectionIndex = p.SectionIndex,
+            Tables = tableList
         };
 
-        return JsonSerializer.Serialize(result, JsonDefaults.Indented);
+        return result;
     }
 
     private static GetWordTablesParameters ExtractGetWordTablesParameters(OperationParameters parameters)

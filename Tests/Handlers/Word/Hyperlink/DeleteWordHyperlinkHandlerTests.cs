@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Hyperlink;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Hyperlink;
 
@@ -27,10 +28,12 @@ public class DeleteWordHyperlinkHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("#0", result);
-        Assert.Contains("deleted successfully", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("#0", result.Message);
+        Assert.Contains("deleted successfully", result.Message);
     }
 
     #endregion
@@ -64,9 +67,11 @@ public class DeleteWordHyperlinkHandlerTests : WordHandlerTestBase
             { "hyperlinkIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted successfully", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted successfully", result.Message);
         AssertModified(context);
     }
 
@@ -80,9 +85,11 @@ public class DeleteWordHyperlinkHandlerTests : WordHandlerTestBase
             { "hyperlinkIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("#1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("#1", result.Message);
     }
 
     [Fact]
@@ -95,9 +102,11 @@ public class DeleteWordHyperlinkHandlerTests : WordHandlerTestBase
             { "hyperlinkIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Remaining hyperlinks", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Remaining hyperlinks", result.Message);
     }
 
     [Theory]
@@ -113,9 +122,11 @@ public class DeleteWordHyperlinkHandlerTests : WordHandlerTestBase
             { "hyperlinkIndex", index }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted successfully", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted successfully", result.Message);
     }
 
     #endregion
@@ -133,9 +144,11 @@ public class DeleteWordHyperlinkHandlerTests : WordHandlerTestBase
             { "keepText", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("unlinked", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("unlinked", result.Message);
     }
 
     [Fact]
@@ -149,9 +162,11 @@ public class DeleteWordHyperlinkHandlerTests : WordHandlerTestBase
             { "keepText", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("removed", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("removed", result.Message);
     }
 
     [Fact]
@@ -164,9 +179,11 @@ public class DeleteWordHyperlinkHandlerTests : WordHandlerTestBase
             { "hyperlinkIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("No (removed)", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("No (removed)", result.Message);
     }
 
     #endregion

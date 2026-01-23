@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.GetCellAddress;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Excel.CellAddress;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.GetCellAddress;
 
@@ -30,11 +31,13 @@ public class FromIndexHandlerTests : ExcelHandlerTestBase
             { "column", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("A1", result);
-        Assert.Contains("Row 0", result);
-        Assert.Contains("Column 0", result);
+        var result = Assert.IsType<CellAddressResult>(res);
+
+        Assert.Equal("A1", result.A1Notation);
+        Assert.Equal(0, result.Row);
+        Assert.Equal(0, result.Column);
     }
 
     [Fact]
@@ -48,11 +51,13 @@ public class FromIndexHandlerTests : ExcelHandlerTestBase
             { "column", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("B2", result);
-        Assert.Contains("Row 1", result);
-        Assert.Contains("Column 1", result);
+        var result = Assert.IsType<CellAddressResult>(res);
+
+        Assert.Equal("B2", result.A1Notation);
+        Assert.Equal(1, result.Row);
+        Assert.Equal(1, result.Column);
     }
 
     [Fact]
@@ -66,11 +71,13 @@ public class FromIndexHandlerTests : ExcelHandlerTestBase
             { "column", 26 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("AA100", result);
-        Assert.Contains("Row 99", result);
-        Assert.Contains("Column 26", result);
+        var result = Assert.IsType<CellAddressResult>(res);
+
+        Assert.Equal("AA100", result.A1Notation);
+        Assert.Equal(99, result.Row);
+        Assert.Equal(26, result.Column);
     }
 
     [Fact]
@@ -84,11 +91,13 @@ public class FromIndexHandlerTests : ExcelHandlerTestBase
             { "column", 25 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Z1", result);
-        Assert.Contains("Row 0", result);
-        Assert.Contains("Column 25", result);
+        var result = Assert.IsType<CellAddressResult>(res);
+
+        Assert.Equal("Z1", result.A1Notation);
+        Assert.Equal(0, result.Row);
+        Assert.Equal(25, result.Column);
     }
 
     #endregion
@@ -106,11 +115,13 @@ public class FromIndexHandlerTests : ExcelHandlerTestBase
             { "column", 16383 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("XFD1", result);
-        Assert.Contains("Row 0", result);
-        Assert.Contains("Column 16383", result);
+        var result = Assert.IsType<CellAddressResult>(res);
+
+        Assert.Equal("XFD1", result.A1Notation);
+        Assert.Equal(0, result.Row);
+        Assert.Equal(16383, result.Column);
     }
 
     [Fact]
@@ -124,11 +135,13 @@ public class FromIndexHandlerTests : ExcelHandlerTestBase
             { "column", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("A1048576", result);
-        Assert.Contains("Row 1048575", result);
-        Assert.Contains("Column 0", result);
+        var result = Assert.IsType<CellAddressResult>(res);
+
+        Assert.Equal("A1048576", result.A1Notation);
+        Assert.Equal(1048575, result.Row);
+        Assert.Equal(0, result.Column);
     }
 
     [Fact]

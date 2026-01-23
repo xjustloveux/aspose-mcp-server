@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Table;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Table;
 
@@ -30,9 +31,11 @@ public class DeleteColumnWordTableHandlerTests : WordHandlerTestBase
             { "columnIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("cells removed", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("cells removed", result.Message);
     }
 
     #endregion
@@ -49,9 +52,11 @@ public class DeleteColumnWordTableHandlerTests : WordHandlerTestBase
             { "columnIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(2, GetFirstTable(doc).Rows[0].Cells.Count);
         AssertModified(context);
     }

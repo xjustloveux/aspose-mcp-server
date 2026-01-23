@@ -1,11 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Table;
 
 /// <summary>
 ///     Handler for inserting columns into PowerPoint tables.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class InsertPptTableColumnHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -20,7 +24,7 @@ public class InsertPptTableColumnHandler : OperationHandlerBase<Presentation>
     ///     Optional: slideIndex (default: 0), columnIndex (default: end), copyFromColumn.
     /// </param>
     /// <returns>Success message with insertion details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var insertParams = ExtractInsertColumnParameters(parameters);
 
@@ -41,7 +45,7 @@ public class InsertPptTableColumnHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Column inserted at index {insertIndex}.");
+        return new SuccessResult { Message = $"Column inserted at index {insertIndex}." };
     }
 
     /// <summary>

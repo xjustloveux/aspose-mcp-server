@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Pdf.FileOperations;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.FileOperations;
 
@@ -30,10 +31,12 @@ public class SplitPdfFileHandlerTests : PdfHandlerTestBase
             { "outputDir", outputDir }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("split", result.ToLower());
-        Assert.Contains("3", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("split", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("3", result.Message);
         Assert.True(Directory.Exists(outputDir));
         var files = Directory.GetFiles(outputDir, "*.pdf");
         Assert.Equal(3, files.Length);
@@ -56,10 +59,12 @@ public class SplitPdfFileHandlerTests : PdfHandlerTestBase
             { "pagesPerFile", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("split", result.ToLower());
-        Assert.Contains("2", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("split", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2", result.Message);
         Assert.True(Directory.Exists(outputDir));
         var files = Directory.GetFiles(outputDir, "*.pdf");
         Assert.Equal(2, files.Length);
@@ -80,10 +85,12 @@ public class SplitPdfFileHandlerTests : PdfHandlerTestBase
             { "endPage", 4 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("extracted", result.ToLower());
-        Assert.Contains("3", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("extracted", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("3", result.Message);
     }
 
     #endregion

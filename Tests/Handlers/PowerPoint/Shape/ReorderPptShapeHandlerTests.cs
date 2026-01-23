@@ -1,6 +1,7 @@
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Shape;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Shape;
 
@@ -58,10 +59,12 @@ public class ReorderPptShapeHandlerTests : PptHandlerTestBase
             { "toIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("0", result);
-        Assert.Contains("1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("0", result.Message);
+        Assert.Contains("1", result.Message);
         AssertModified(context);
     }
 
@@ -83,10 +86,12 @@ public class ReorderPptShapeHandlerTests : PptHandlerTestBase
             { "toIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("0", result);
-        Assert.Contains("1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("0", result.Message);
+        Assert.Contains("1", result.Message);
     }
 
     #endregion
@@ -108,9 +113,11 @@ public class ReorderPptShapeHandlerTests : PptHandlerTestBase
             { "toIndex", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Z-order", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Z-order", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -133,10 +140,12 @@ public class ReorderPptShapeHandlerTests : PptHandlerTestBase
             { "toIndex", to }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains(from.ToString(), result);
-        Assert.Contains(to.ToString(), result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains(from.ToString(), result.Message);
+        Assert.Contains(to.ToString(), result.Message);
         AssertModified(context);
     }
 

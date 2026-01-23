@@ -1,11 +1,14 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.PowerPoint.Properties;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Properties;
 
 /// <summary>
 ///     Handler for getting PowerPoint presentation properties.
 /// </summary>
+[ResultType(typeof(GetPropertiesPptResult))]
 public class GetPptPropertiesHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -17,26 +20,26 @@ public class GetPptPropertiesHandler : OperationHandlerBase<Presentation>
     /// <param name="context">The presentation context.</param>
     /// <param name="parameters">No required parameters.</param>
     /// <returns>JSON string containing the document properties.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var presentation = context.Document;
         var props = presentation.DocumentProperties;
 
-        var result = new
+        var result = new GetPropertiesPptResult
         {
-            title = props.Title,
-            subject = props.Subject,
-            author = props.Author,
-            keywords = props.Keywords,
-            comments = props.Comments,
-            category = props.Category,
-            company = props.Company,
-            manager = props.Manager,
-            createdTime = props.CreatedTime,
-            lastSavedTime = props.LastSavedTime,
-            revisionNumber = props.RevisionNumber
+            Title = props.Title,
+            Subject = props.Subject,
+            Author = props.Author,
+            Keywords = props.Keywords,
+            Comments = props.Comments,
+            Category = props.Category,
+            Company = props.Company,
+            Manager = props.Manager,
+            CreatedTime = props.CreatedTime,
+            LastSavedTime = props.LastSavedTime,
+            RevisionNumber = props.RevisionNumber
         };
 
-        return JsonResult(result);
+        return result;
     }
 }

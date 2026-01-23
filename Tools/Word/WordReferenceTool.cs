@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Word;
 /// <summary>
 ///     Tool for managing cross-references in Word documents
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Word.Reference")]
 [McpServerToolType]
 public class WordReferenceTool
 {
@@ -68,7 +71,14 @@ public class WordReferenceTool
     /// <param name="includeAboveBelow">Include 'above' or 'below' text (for add_cross_reference, default: false).</param>
     /// <returns>A message indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "word_reference")]
+    [McpServerTool(
+        Name = "word_reference",
+        Title = "Word Reference Operations",
+        Destructive = false,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(
         @"Manage references in Word documents. Supports 4 operations: add_table_of_contents, update_table_of_contents, add_index, add_cross_reference.
 
@@ -82,7 +92,7 @@ Notes:
 - TOC is automatically updated after insertion using UpdateFields()
 - For cross-references, targetName must be an existing bookmark name in the document
 - If headingStyle doesn't exist in the document, it falls back to 'Heading 1'")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: add_table_of_contents, update_table_of_contents, add_index, add_cross_reference")]
         string operation,
         [Description("Document file path (required if no sessionId)")]
@@ -147,7 +157,7 @@ Notes:
         if (operationContext.IsModified)
             ctx.Save(effectiveOutputPath);
 
-        return ctx.IsSession ? result : $"{result}\n{ctx.GetOutputMessage(effectiveOutputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, effectiveOutputPath);
     }
 
     /// <summary>

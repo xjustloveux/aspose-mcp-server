@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.MergeCells;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.MergeCells;
 
@@ -51,10 +52,12 @@ public class MergeExcelCellsHandlerTests : ExcelHandlerTestBase
             { "range", "A1:C3" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("merged", result.ToLower());
-        Assert.Contains("A1:C3", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("merged", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("A1:C3", result.Message);
         Assert.True(workbook.Worksheets[0].Cells.MergedCells.Count > 0);
         AssertModified(context);
     }
@@ -69,10 +72,12 @@ public class MergeExcelCellsHandlerTests : ExcelHandlerTestBase
             { "range", "A1:B4" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("4 rows", result);
-        Assert.Contains("2 columns", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("4 rows", result.Message);
+        Assert.Contains("2 columns", result.Message);
     }
 
     [Fact]
@@ -85,9 +90,11 @@ public class MergeExcelCellsHandlerTests : ExcelHandlerTestBase
             { "range", "A1:B1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("merged", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("merged", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Single(workbook.Worksheets[0].Cells.MergedCells);
     }
 
@@ -101,9 +108,11 @@ public class MergeExcelCellsHandlerTests : ExcelHandlerTestBase
             { "range", "A1:A2" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("merged", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("merged", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Single(workbook.Worksheets[0].Cells.MergedCells);
     }
 
@@ -132,7 +141,7 @@ public class MergeExcelCellsHandlerTests : ExcelHandlerTestBase
         });
 
         var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
-        Assert.Contains("single cell", ex.Message.ToLower());
+        Assert.Contains("single cell", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

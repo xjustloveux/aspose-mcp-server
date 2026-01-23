@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Pdf;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Pdf;
 /// <summary>
 ///     Tool for performing file operations on PDF documents (create, merge, split, compress, encrypt, linearize)
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Pdf.FileOperations")]
 [McpServerToolType]
 public class PdfFileTool
 {
@@ -58,7 +61,14 @@ public class PdfFileTool
     /// <param name="ownerPassword">Owner password for permissions control (required for encrypt).</param>
     /// <returns>A message indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "pdf_file")]
+    [McpServerTool(
+        Name = "pdf_file",
+        Title = "PDF File Operations",
+        Destructive = false,
+        Idempotent = true,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(
         @"Perform file operations on PDF documents. Supports 6 operations: create, merge, split, compress, encrypt, linearize.
 
@@ -70,7 +80,7 @@ Usage examples:
 - Compress PDF: pdf_file(operation='compress', path='doc.pdf', outputPath='compressed.pdf', compressImages=true)
 - Encrypt PDF: pdf_file(operation='encrypt', path='doc.pdf', outputPath='encrypted.pdf', userPassword='user', ownerPassword='owner')
 - Linearize PDF: pdf_file(operation='linearize', path='doc.pdf', outputPath='linearized.pdf')")]
-    public string Execute(
+    public object Execute(
         [Description(@"Operation to perform.
 - 'create': Create a new PDF (required params: outputPath)
 - 'merge': Merge multiple PDFs (required params: inputPaths, outputPath)
@@ -109,16 +119,20 @@ Usage examples:
         var lowerOperation = operation.ToLowerInvariant();
 
         if (lowerOperation is "create" or "merge")
-            return ExecuteWithoutContext(lowerOperation, outputPath, inputPaths);
+        {
+            var message = ExecuteWithoutContext(lowerOperation, outputPath, inputPaths);
+            return ResultHelper.FinalizeResult((dynamic)message, outputPath, sessionId);
+        }
 
-        return ExecuteWithContext(lowerOperation, path, sessionId, outputPath, outputDir, pagesPerFile, startPage,
+        var result = ExecuteWithContext(lowerOperation, path, sessionId, outputPath, outputDir, pagesPerFile, startPage,
             endPage, compressImages, compressFonts, removeUnusedObjects, userPassword, ownerPassword);
+        return ResultHelper.FinalizeResult((dynamic)result, outputPath, sessionId);
     }
 
     /// <summary>
     ///     Executes operations that don't require an existing document context.
     /// </summary>
-    private string ExecuteWithoutContext(string operation, string? outputPath, string[]? inputPaths)
+    private object ExecuteWithoutContext(string operation, string? outputPath, string[]? inputPaths)
     {
         var parameters = operation switch
         {
@@ -169,7 +183,7 @@ Usage examples:
     /// <summary>
     ///     Executes operations that require an existing document context.
     /// </summary>
-    private string ExecuteWithContext(string operation, string? path, string? sessionId, string? outputPath,
+    private object ExecuteWithContext(string operation, string? path, string? sessionId, string? outputPath,
         string? outputDir, int pagesPerFile, int? startPage, int? endPage, bool compressImages, bool compressFonts,
         bool removeUnusedObjects, string? userPassword, string? ownerPassword)
     {
@@ -196,13 +210,13 @@ Usage examples:
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
+        // For compress/linearize file operations, return detailed size info
         if (operation == "compress" && !ctx.IsSession && path != null && outputPath != null)
         {
             var originalSize = new FileInfo(path).Length;
             var compressedSize = new FileInfo(outputPath).Length;
             var reduction = (double)(originalSize - compressedSize) / originalSize * 100;
-            return
-                $"PDF compressed ({reduction:F2}% reduction, {originalSize} -> {compressedSize} bytes). {ctx.GetOutputMessage(outputPath)}";
+            return $"PDF compressed ({reduction:F2}% reduction, {originalSize} -> {compressedSize} bytes)";
         }
 
         if (operation == "linearize" && !ctx.IsSession && path != null && outputPath != null)
@@ -210,10 +224,10 @@ Usage examples:
             var originalSize = new FileInfo(path).Length;
             var optimizedSize = new FileInfo(outputPath).Length;
             return
-                $"PDF linearized for fast web view. Original: {originalSize} bytes, Optimized: {optimizedSize} bytes. {ctx.GetOutputMessage(outputPath)}";
+                $"PDF linearized for fast web view. Original: {originalSize} bytes, Optimized: {optimizedSize} bytes";
         }
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return result;
     }
 
     /// <summary>

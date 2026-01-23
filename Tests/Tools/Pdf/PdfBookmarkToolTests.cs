@@ -1,6 +1,8 @@
-using Aspose.Pdf;
+﻿using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Pdf.Bookmark;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Pdf;
 
 namespace AsposeMcpServer.Tests.Tools.Pdf;
@@ -54,7 +56,8 @@ public class PdfBookmarkToolTests : PdfTestBase
         var outputPath = CreateTestFilePath("test_add_output.pdf");
         var result = _tool.Execute("add", pdfPath, outputPath: outputPath,
             title: "Chapter 1", pageIndex: 1);
-        Assert.StartsWith("Added bookmark", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Added bookmark", data.Message);
         using var document = new Document(outputPath);
         Assert.True(document.Outlines.Count > 0);
         Assert.Equal("Chapter 1", document.Outlines[1].Title);
@@ -65,8 +68,9 @@ public class PdfBookmarkToolTests : PdfTestBase
     {
         var pdfPath = CreatePdfWithBookmark("test_get.pdf");
         var result = _tool.Execute("get", pdfPath);
-        Assert.Contains("\"count\": 1", result);
-        Assert.Contains("Test Bookmark", result);
+        var data = GetResultData<GetBookmarksPdfResult>(result);
+        Assert.Equal(1, data.Count);
+        Assert.Contains(data.Items, b => b.Title == "Test Bookmark");
     }
 
     [Fact]
@@ -75,7 +79,8 @@ public class PdfBookmarkToolTests : PdfTestBase
         var pdfPath = CreatePdfWithBookmark("test_delete.pdf", "Bookmark to Delete");
         var outputPath = CreateTestFilePath("test_delete_output.pdf");
         var result = _tool.Execute("delete", pdfPath, outputPath: outputPath, bookmarkIndex: 1);
-        Assert.StartsWith("Deleted bookmark", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Deleted bookmark", data.Message);
         using var document = new Document(outputPath);
         Assert.Empty(document.Outlines);
     }
@@ -87,7 +92,8 @@ public class PdfBookmarkToolTests : PdfTestBase
         var outputPath = CreateTestFilePath("test_edit_title_output.pdf");
         var result = _tool.Execute("edit", pdfPath, outputPath: outputPath,
             bookmarkIndex: 1, title: "Updated Title");
-        Assert.StartsWith("Edited bookmark", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Edited bookmark", data.Message);
         using var document = new Document(outputPath);
         Assert.Equal("Updated Title", document.Outlines[1].Title);
     }
@@ -106,7 +112,8 @@ public class PdfBookmarkToolTests : PdfTestBase
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.pdf");
         var result = _tool.Execute(operation, pdfPath, outputPath: outputPath,
             title: "Bookmark", pageIndex: 1);
-        Assert.StartsWith("Added bookmark", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Added bookmark", data.Message);
     }
 
     [Fact]
@@ -127,7 +134,10 @@ public class PdfBookmarkToolTests : PdfTestBase
         var pdfPath = CreatePdfWithBookmark("test_session_get.pdf", "Session Bookmark");
         var sessionId = OpenSession(pdfPath);
         var result = _tool.Execute("get", sessionId: sessionId);
-        Assert.Contains("Session Bookmark", result);
+        var data = GetResultData<GetBookmarksPdfResult>(result);
+        Assert.Contains(data.Items, b => b.Title == "Session Bookmark");
+        var output = GetResultOutput<GetBookmarksPdfResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -137,8 +147,10 @@ public class PdfBookmarkToolTests : PdfTestBase
         var sessionId = OpenSession(pdfPath);
         var result = _tool.Execute("add", sessionId: sessionId,
             title: "Session Bookmark", pageIndex: 1);
-        Assert.StartsWith("Added bookmark", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Added bookmark", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -147,8 +159,10 @@ public class PdfBookmarkToolTests : PdfTestBase
         var pdfPath = CreatePdfWithBookmark("test_session_delete.pdf", "To Delete");
         var sessionId = OpenSession(pdfPath);
         var result = _tool.Execute("delete", sessionId: sessionId, bookmarkIndex: 1);
-        Assert.StartsWith("Deleted bookmark", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Deleted bookmark", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var docAfter = SessionManager.GetDocument<Document>(sessionId);
         Assert.Empty(docAfter.Outlines);
     }
@@ -160,8 +174,10 @@ public class PdfBookmarkToolTests : PdfTestBase
         var sessionId = OpenSession(pdfPath);
         var result = _tool.Execute("edit", sessionId: sessionId,
             bookmarkIndex: 1, title: "Edited");
-        Assert.StartsWith("Edited bookmark", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Edited bookmark", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var document = SessionManager.GetDocument<Document>(sessionId);
         Assert.Equal("Edited", document.Outlines[1].Title);
     }
@@ -180,7 +196,8 @@ public class PdfBookmarkToolTests : PdfTestBase
         var pdfPath2 = CreatePdfWithBookmark("test_session_file.pdf", "Session Bookmark");
         var sessionId = OpenSession(pdfPath2);
         var result = _tool.Execute("get", pdfPath1, sessionId);
-        Assert.Contains("Session Bookmark", result);
+        var data = GetResultData<GetBookmarksPdfResult>(result);
+        Assert.Contains(data.Items, b => b.Title == "Session Bookmark");
     }
 
     #endregion

@@ -2,7 +2,8 @@ using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Charts;
 using AsposeMcpServer.Handlers.PowerPoint.Chart;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Chart;
 
@@ -57,9 +58,11 @@ public class UpdatePptChartDataHandlerTests : PptHandlerTestBase
             { "data", data }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -91,9 +94,11 @@ public class UpdatePptChartDataHandlerTests : PptHandlerTestBase
             { "shapeIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("no changes", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("no changes", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

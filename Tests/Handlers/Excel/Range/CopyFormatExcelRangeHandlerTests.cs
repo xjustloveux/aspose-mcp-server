@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.Range;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Range;
 
@@ -85,9 +86,11 @@ public class CopyFormatExcelRangeHandlerTests : ExcelHandlerTestBase
             { "destTarget", "B1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("copied", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("copied", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(workbook.Worksheets[0].Cells["B1"].GetStyle().Font.IsBold);
         Assert.Equal(14, workbook.Worksheets[0].Cells["B1"].GetStyle().Font.Size);
         AssertModified(context);
@@ -115,9 +118,11 @@ public class CopyFormatExcelRangeHandlerTests : ExcelHandlerTestBase
             { "destTarget", destTarget }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("copied", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("copied", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -237,9 +242,11 @@ public class CopyFormatExcelRangeHandlerTests : ExcelHandlerTestBase
             { "copyValue", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Format copied", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Format copied", result.Message);
     }
 
     [Fact]
@@ -254,9 +261,11 @@ public class CopyFormatExcelRangeHandlerTests : ExcelHandlerTestBase
             { "copyValue", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Format with values copied", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Format with values copied", result.Message);
     }
 
     #endregion

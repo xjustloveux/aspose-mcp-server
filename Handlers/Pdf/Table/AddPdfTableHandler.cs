@@ -1,12 +1,15 @@
 using Aspose.Pdf;
 using Aspose.Pdf.Text;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.Table;
 
 /// <summary>
 ///     Handler for adding tables to PDF documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddPdfTableHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class AddPdfTableHandler : OperationHandlerBase<Document>
     ///     Optional: data, x, y, columnWidths
     /// </param>
     /// <returns>Success message with table creation details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractAddParameters(parameters);
 
@@ -65,7 +68,8 @@ public class AddPdfTableHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Added table ({p.Rows} rows x {p.Columns} columns) to page {p.PageIndex}.");
+        return new SuccessResult
+            { Message = $"Added table ({p.Rows} rows x {p.Columns} columns) to page {p.PageIndex}." };
     }
 
     /// <summary>

@@ -1,12 +1,15 @@
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.Pdf.Info;
 
 namespace AsposeMcpServer.Handlers.Pdf.Info;
 
 /// <summary>
 ///     Handler for retrieving statistics from PDF documents.
 /// </summary>
+[ResultType(typeof(GetPdfStatisticsResult))]
 public class GetPdfStatisticsHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -18,7 +21,7 @@ public class GetPdfStatisticsHandler : OperationHandlerBase<Document>
     /// <param name="context">The document context.</param>
     /// <param name="parameters">No parameters required.</param>
     /// <returns>JSON string containing document statistics.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var document = context.Document;
 
@@ -32,17 +35,17 @@ public class GetPdfStatisticsHandler : OperationHandlerBase<Document>
         }
 
         if (context.SessionId != null)
-            return JsonResult(new
+            return new GetPdfStatisticsResult
             {
-                totalPages = document.Pages.Count,
-                isEncrypted = document.IsEncrypted,
-                isLinearized = document.IsLinearized,
-                bookmarks = document.Outlines.Count,
-                formFields = document.Form?.Count ?? 0,
-                totalAnnotations,
-                totalParagraphs,
-                note = "File size info not available in session mode"
-            });
+                TotalPages = document.Pages.Count,
+                IsEncrypted = document.IsEncrypted,
+                IsLinearized = document.IsLinearized,
+                Bookmarks = document.Outlines.Count,
+                FormFields = document.Form?.Count ?? 0,
+                TotalAnnotations = totalAnnotations,
+                TotalParagraphs = totalParagraphs,
+                Note = "File size info not available in session mode"
+            };
 
         if (string.IsNullOrEmpty(context.SourcePath))
             throw new ArgumentException("path is required for get_statistics operation");
@@ -51,17 +54,17 @@ public class GetPdfStatisticsHandler : OperationHandlerBase<Document>
 
         var fileInfo = new FileInfo(context.SourcePath);
 
-        return JsonResult(new
+        return new GetPdfStatisticsResult
         {
-            fileSizeBytes = fileInfo.Length,
-            fileSizeKb = Math.Round(fileInfo.Length / 1024.0, 2),
-            totalPages = document.Pages.Count,
-            isEncrypted = document.IsEncrypted,
-            isLinearized = document.IsLinearized,
-            bookmarks = document.Outlines.Count,
-            formFields = document.Form?.Count ?? 0,
-            totalAnnotations,
-            totalParagraphs
-        });
+            FileSizeBytes = fileInfo.Length,
+            FileSizeKb = Math.Round(fileInfo.Length / 1024.0, 2),
+            TotalPages = document.Pages.Count,
+            IsEncrypted = document.IsEncrypted,
+            IsLinearized = document.IsLinearized,
+            Bookmarks = document.Outlines.Count,
+            FormFields = document.Form?.Count ?? 0,
+            TotalAnnotations = totalAnnotations,
+            TotalParagraphs = totalParagraphs
+        };
     }
 }

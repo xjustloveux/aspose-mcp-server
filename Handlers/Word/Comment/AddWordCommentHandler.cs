@@ -1,5 +1,7 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.Comment;
@@ -7,6 +9,7 @@ namespace AsposeMcpServer.Handlers.Word.Comment;
 /// <summary>
 ///     Handler for adding comments to Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddWordCommentHandler : OperationHandlerBase<Document>
 {
     private const string UnableToDetermineCommentRange = "UnableToDetermineCommentRange";
@@ -24,7 +27,7 @@ public class AddWordCommentHandler : OperationHandlerBase<Document>
     /// </param>
     /// <returns>Success message with comment details.</returns>
     /// <exception cref="ArgumentException">Thrown when text is not provided.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractAddParameters(parameters);
 
@@ -41,7 +44,7 @@ public class AddWordCommentHandler : OperationHandlerBase<Document>
         doc.EnsureMinimum();
         MarkModified(context);
 
-        return $"Comment added successfully\nAuthor: {p.Author}\nContent: {p.Text}";
+        return new SuccessResult { Message = $"Comment added successfully\nAuthor: {p.Author}\nContent: {p.Text}" };
     }
 
     /// <summary>

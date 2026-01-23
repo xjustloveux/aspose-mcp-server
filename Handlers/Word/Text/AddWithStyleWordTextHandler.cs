@@ -1,7 +1,9 @@
 ﻿using System.Text.Json.Nodes;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.Text;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Handlers.Word.Text;
 /// <summary>
 ///     Handler for adding text with style to Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddWithStyleWordTextHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -26,7 +29,7 @@ public class AddWithStyleWordTextHandler : OperationHandlerBase<Document>
     /// <returns>Success message with details.</returns>
     /// <exception cref="ArgumentException">Thrown when text is missing or style is not found.</exception>
     /// <exception cref="InvalidOperationException">Thrown when style cannot be applied.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractAddWithStyleParameters(parameters);
 
@@ -342,22 +345,22 @@ public class AddWithStyleWordTextHandler : OperationHandlerBase<Document>
     /// <param name="p">The parameters containing formatting settings.</param>
     /// <param name="warningMessage">Any warning message to append.</param>
     /// <returns>The formatted result message.</returns>
-    private static string
+    private static SuccessResult
         BuildResultMessage(AddWithStyleParameters p,
             string warningMessage)
     {
-        var result = "Text added successfully.";
+        var message = "Text added successfully.";
 
         if (p.ParagraphIndex.HasValue)
-            result += p.ParagraphIndex.Value == -1
+            message += p.ParagraphIndex.Value == -1
                 ? " Insert position: beginning of document."
                 : $" Insert position: after paragraph #{p.ParagraphIndex.Value}.";
         else
-            result += " Insert position: end of document.";
+            message += " Insert position: end of document.";
 
         if (!string.IsNullOrEmpty(p.StyleName))
         {
-            result += $" Applied style: {p.StyleName}.";
+            message += $" Applied style: {p.StyleName}.";
         }
         else
         {
@@ -375,21 +378,21 @@ public class AddWithStyleWordTextHandler : OperationHandlerBase<Document>
             if (!string.IsNullOrEmpty(p.Alignment)) customFormatting.Add($"Alignment: {p.Alignment}");
 
             if (customFormatting.Count > 0)
-                result += $" Custom formatting: {string.Join(", ", customFormatting)}.";
+                message += $" Custom formatting: {string.Join(", ", customFormatting)}.";
         }
 
         if (p.IndentLevel.HasValue)
-            result += $" Indent level: {p.IndentLevel.Value} ({p.IndentLevel.Value * 36} pt).";
+            message += $" Indent level: {p.IndentLevel.Value} ({p.IndentLevel.Value * 36} pt).";
         else if (p.LeftIndent.HasValue)
-            result += $" Left indent: {p.LeftIndent.Value} pt.";
+            message += $" Left indent: {p.LeftIndent.Value} pt.";
 
         if (p.FirstLineIndent.HasValue)
-            result += $" First line indent: {p.FirstLineIndent.Value} pt.";
+            message += $" First line indent: {p.FirstLineIndent.Value} pt.";
 
         if (!string.IsNullOrEmpty(warningMessage))
-            result += warningMessage;
+            message += warningMessage;
 
-        return Success(result);
+        return new SuccessResult { Message = message };
     }
 
     /// <summary>

@@ -1,5 +1,5 @@
 using AsposeMcpServer.Handlers.PowerPoint.Handout;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Handout;
 

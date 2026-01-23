@@ -1,6 +1,7 @@
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Section;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Section;
 
@@ -34,9 +35,11 @@ public class RenamePptSectionHandlerTests : PptHandlerTestBase
             { "newName", $"Renamed {sectionIndex}" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("renamed", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("renamed", result.Message);
         Assert.Equal($"Renamed {sectionIndex}", pres.Sections[sectionIndex].Name);
     }
 
@@ -71,9 +74,11 @@ public class RenamePptSectionHandlerTests : PptHandlerTestBase
             { "newName", "Updated Section" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("renamed", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("renamed", result.Message);
         AssertModified(context);
     }
 
@@ -88,9 +93,11 @@ public class RenamePptSectionHandlerTests : PptHandlerTestBase
             { "newName", "New Name" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Section 1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Section 1", result.Message);
     }
 
     [Fact]
@@ -104,9 +111,11 @@ public class RenamePptSectionHandlerTests : PptHandlerTestBase
             { "newName", "Introduction" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Introduction", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Introduction", result.Message);
     }
 
     [Fact]

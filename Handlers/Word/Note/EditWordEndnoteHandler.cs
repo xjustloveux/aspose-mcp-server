@@ -1,13 +1,17 @@
 using System.Text;
 using Aspose.Words;
 using Aspose.Words.Notes;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Note;
 
 /// <summary>
 ///     Handler for editing endnotes in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class EditWordEndnoteHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -22,7 +26,7 @@ public class EditWordEndnoteHandler : OperationHandlerBase<Document>
     ///     Optional: referenceMark, noteIndex (if neither provided, edits first endnote)
     /// </param>
     /// <returns>Success message with edit details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractEditEndnoteParameters(parameters);
 
@@ -45,11 +49,22 @@ public class EditWordEndnoteHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
+        return BuildSuccessResult(oldText, p.NewText);
+    }
+
+    /// <summary>
+    ///     Builds the success result for editing an endnote.
+    /// </summary>
+    /// <param name="oldText">The old endnote text.</param>
+    /// <param name="newText">The new endnote text.</param>
+    /// <returns>The success result.</returns>
+    private static SuccessResult BuildSuccessResult(string oldText, string newText)
+    {
         var result = new StringBuilder();
         result.AppendLine("Endnote edited successfully");
         result.AppendLine($"Old text: {oldText}");
-        result.AppendLine($"New text: {p.NewText}");
-        return result.ToString().TrimEnd();
+        result.AppendLine($"New text: {newText}");
+        return new SuccessResult { Message = result.ToString().TrimEnd() };
     }
 
     /// <summary>

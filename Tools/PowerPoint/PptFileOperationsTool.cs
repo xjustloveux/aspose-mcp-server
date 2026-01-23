@@ -1,7 +1,9 @@
 ﻿using System.ComponentModel;
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
@@ -10,6 +12,7 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 ///     Unified tool for PowerPoint file operations (create, convert, merge, split).
 ///     Merges: PptCreateTool, PptConvertTool, PptMergeTool, PptSplitTool.
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.PowerPoint.FileOperations")]
 [McpServerToolType]
 public class PptFileOperationsTool
 {
@@ -62,7 +65,14 @@ public class PptFileOperationsTool
     /// <returns>A message indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">Thrown when the operation is unknown or required parameters are missing.</exception>
     /// <exception cref="InvalidOperationException">Thrown when session management is not enabled but sessionId is provided.</exception>
-    [McpServerTool(Name = "ppt_file_operations")]
+    [McpServerTool(
+        Name = "ppt_file_operations",
+        Title = "PowerPoint File Operations",
+        Destructive = false,
+        Idempotent = true,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"PowerPoint file operations. Supports 4 operations: create, convert, merge, split.
 
 Usage examples:
@@ -73,7 +83,7 @@ Usage examples:
 - Merge presentations: ppt_file_operations(operation='merge', inputPath='presentation1.pptx', outputPath='merged.pptx', inputPaths=['presentation2.pptx'])
 - Split presentation: ppt_file_operations(operation='split', inputPath='presentation.pptx', outputDirectory='output/')
 - Split from session: ppt_file_operations(operation='split', sessionId='sess_xxx', outputDirectory='output/')")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: create, convert, merge, split")]
         string operation,
         [Description("Session ID to read presentation from session (for convert, split)")]
@@ -120,7 +130,9 @@ Usage examples:
             OutputPath = outputPath
         };
 
-        return handler.Execute(operationContext, parameters);
+        var result = handler.Execute(operationContext, parameters);
+        var effectiveOutputPath = outputPath ?? outputDirectory ?? path;
+        return ResultHelper.FinalizeResult((dynamic)result, effectiveOutputPath, sessionId);
     }
 
     /// <summary>

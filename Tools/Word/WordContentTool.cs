@@ -1,7 +1,9 @@
 ﻿using System.ComponentModel;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Word;
 /// <summary>
 ///     Tool for getting Word document content, statistics, and document info
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Word.Content")]
 [McpServerToolType]
 public class WordContentTool
 {
@@ -54,7 +57,14 @@ public class WordContentTool
     /// <param name="offset">Character offset to start reading from (for get_content/get_content_detailed, default: 0).</param>
     /// <returns>Document content, detailed content, statistics, or document info as string or JSON.</returns>
     /// <exception cref="ArgumentException">Thrown when the operation is unknown.</exception>
-    [McpServerTool(Name = "word_content")]
+    [McpServerTool(
+        Name = "word_content",
+        Title = "Word Content Operations",
+        Destructive = false,
+        Idempotent = true,
+        OpenWorld = false,
+        ReadOnly = true,
+        UseStructuredContent = true)]
     [Description(
         @"Get Word document content, statistics, and document information. Supports 4 operations: get_content, get_content_detailed, get_statistics, get_document_info.
 
@@ -63,7 +73,7 @@ Usage examples:
 - Get detailed content: word_content(operation='get_content_detailed', path='doc.docx', includeHeaders=true, includeFooters=true)
 - Get statistics: word_content(operation='get_statistics', path='doc.docx', includeFootnotes=true)
 - Get document info: word_content(operation='get_document_info', path='doc.docx', includeTabStops=true)")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: get_content, get_content_detailed, get_statistics, get_document_info")]
         string operation,
         [Description("Word document file path (required if no sessionId)")]
@@ -101,7 +111,8 @@ Usage examples:
             OutputPath = path
         };
 
-        return handler.Execute(operationContext, parameters);
+        var message = handler.Execute(operationContext, parameters);
+        return ResultHelper.FinalizeResult((dynamic)message, ctx, path);
     }
 
     /// <summary>

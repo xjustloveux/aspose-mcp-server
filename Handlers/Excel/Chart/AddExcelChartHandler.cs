@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Chart;
 
 /// <summary>
 ///     Handler for adding charts to Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddExcelChartHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -22,7 +25,7 @@ public class AddExcelChartHandler : OperationHandlerBase<Workbook>
     /// </param>
     /// <returns>Success message with chart creation details.</returns>
     /// <exception cref="ArgumentException">Thrown when dataRange is not provided.</exception>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var addParams = ExtractAddParameters(parameters);
 
@@ -62,7 +65,7 @@ public class AddExcelChartHandler : OperationHandlerBase<Workbook>
         var result = $"Chart added with data range: {addParams.DataRange}";
         if (!string.IsNullOrEmpty(addParams.CategoryAxisDataRange))
             result += $", X-axis: {addParams.CategoryAxisDataRange}";
-        return Success(result);
+        return new SuccessResult { Message = result };
     }
 
     /// <summary>

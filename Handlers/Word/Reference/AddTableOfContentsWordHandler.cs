@@ -1,11 +1,14 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Reference;
 
 /// <summary>
 ///     Handler for adding table of contents to Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddTableOfContentsWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class AddTableOfContentsWordHandler : OperationHandlerBase<Document>
     ///     pageNumbers (default: true), rightAlignPageNumbers (default: true)
     /// </param>
     /// <returns>Success message indicating TOC was added.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractAddTableOfContentsParameters(parameters);
 
@@ -55,7 +58,7 @@ public class AddTableOfContentsWordHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success("Table of contents added");
+        return new SuccessResult { Message = "Table of contents added" };
     }
 
     private static AddTableOfContentsParameters ExtractAddTableOfContentsParameters(OperationParameters parameters)

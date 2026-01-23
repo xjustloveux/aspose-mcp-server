@@ -1,7 +1,8 @@
 using Aspose.Cells;
 using Aspose.Cells.Charts;
 using AsposeMcpServer.Handlers.Excel.Chart;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Chart;
 
@@ -72,9 +73,11 @@ public class AddExcelChartHandlerTests : ExcelHandlerTestBase
             { "dataRange", "A1:B3" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Chart added", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Chart added", result.Message);
         AssertModified(context);
     }
 
@@ -88,9 +91,11 @@ public class AddExcelChartHandlerTests : ExcelHandlerTestBase
             { "dataRange", "A1:B3" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("A1:B3", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("A1:B3", result.Message);
     }
 
     [Fact]
@@ -161,9 +166,11 @@ public class AddExcelChartHandlerTests : ExcelHandlerTestBase
             { "categoryAxisDataRange", "A1:A3" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("X-axis: A1:A3", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("X-axis: A1:A3", result.Message);
     }
 
     [Fact]

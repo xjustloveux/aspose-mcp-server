@@ -1,6 +1,7 @@
 using Aspose.Pdf;
 using AsposeMcpServer.Handlers.Pdf.Watermark;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Watermark;
 
@@ -42,10 +43,12 @@ public class AddPdfWatermarkHandlerTests : PdfHandlerTestBase
             { "text", "CONFIDENTIAL" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("watermark added", result.ToLower());
-        Assert.Contains("1 page", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("watermark added", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("1 page", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -64,9 +67,11 @@ public class AddPdfWatermarkHandlerTests : PdfHandlerTestBase
             { "color", "Red" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("watermark added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("watermark added", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [SkippableFact]
@@ -82,9 +87,11 @@ public class AddPdfWatermarkHandlerTests : PdfHandlerTestBase
             { "verticalAlignment", "Top" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("watermark added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("watermark added", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [SkippableFact]
@@ -99,9 +106,11 @@ public class AddPdfWatermarkHandlerTests : PdfHandlerTestBase
             { "isBackground", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("watermark added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("watermark added", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [SkippableFact]
@@ -115,9 +124,11 @@ public class AddPdfWatermarkHandlerTests : PdfHandlerTestBase
             { "text", "WATERMARK" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("3 page", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("3 page", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [SkippableFact]
@@ -132,9 +143,11 @@ public class AddPdfWatermarkHandlerTests : PdfHandlerTestBase
             { "pageRange", "1-3" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("3 page", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("3 page", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Protect;
 
 /// <summary>
 ///     Handler for setting cell locked status in Excel worksheet.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetExcelCellLockedHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -22,7 +25,7 @@ public class SetExcelCellLockedHandler : OperationHandlerBase<Workbook>
     /// </param>
     /// <returns>Success message with cell lock status details.</returns>
     /// <exception cref="ArgumentException">Thrown when range is empty or null.</exception>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractSetExcelCellLockedParameters(parameters);
 
@@ -43,8 +46,11 @@ public class SetExcelCellLockedHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success(
-            $"Cell lock status set to {(p.Locked ? "locked" : "unlocked")} for range {p.Range} in sheet {p.SheetIndex}.");
+        return new SuccessResult
+        {
+            Message =
+                $"Cell lock status set to {(p.Locked ? "locked" : "unlocked")} for range {p.Range} in sheet {p.SheetIndex}."
+        };
     }
 
     /// <summary>

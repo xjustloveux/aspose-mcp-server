@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Excel;
 /// <summary>
 ///     Unified tool for managing Excel images (add, delete, get, extract).
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Excel.Image")]
 [McpServerToolType]
 public class ExcelImageTool
 {
@@ -60,7 +63,14 @@ public class ExcelImageTool
     /// <param name="exportPath">Path to export the extracted image (required for extract).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "excel_image")]
+    [McpServerTool(
+        Name = "excel_image",
+        Title = "Excel Image Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage Excel images. Supports 4 operations: add, delete, get, extract.
 
 Usage examples:
@@ -71,7 +81,7 @@ Usage examples:
 - Extract image: excel_image(operation='extract', path='book.xlsx', imageIndex=0, exportPath='extracted.png')
 
 Note: When deleting images, the indices of remaining images will be re-ordered.")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: add, delete, get, extract")]
         string operation,
         [Description("Excel file path (required if no sessionId)")]
@@ -120,12 +130,12 @@ Note: When deleting images, the indices of remaining images will be re-ordered."
         var result = handler.Execute(operationContext, parameters);
 
         if (operation.ToLowerInvariant() is "get" or "extract")
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

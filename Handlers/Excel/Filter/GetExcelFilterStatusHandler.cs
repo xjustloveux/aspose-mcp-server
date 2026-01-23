@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Excel.Filter;
 
 namespace AsposeMcpServer.Handlers.Excel.Filter;
 
 /// <summary>
 ///     Handler for getting filter status from Excel worksheets.
 /// </summary>
+[ResultType(typeof(GetFilterStatusResult))]
 public class GetExcelFilterStatusHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class GetExcelFilterStatusHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0)
     /// </param>
     /// <returns>JSON result with filter status information.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var filterStatusParams = ExtractFilterStatusParameters(parameters);
 
@@ -34,29 +37,29 @@ public class GetExcelFilterStatusHandler : OperationHandlerBase<Workbook>
         var filterColumns = autoFilter.FilterColumns;
         var hasActiveFilters = filterColumns is { Count: > 0 };
 
-        List<object> filterColumnsList = [];
+        List<FilterColumnInfo> filterColumnsList = [];
         if (filterColumns != null)
             for (var i = 0; i < filterColumns.Count; i++)
             {
                 var filterColumn = filterColumns[i];
-                filterColumnsList.Add(new
+                filterColumnsList.Add(new FilterColumnInfo
                 {
-                    columnIndex = i,
-                    filterType = filterColumn.FilterType.ToString(),
-                    isDropdownVisible = filterColumn.IsDropdownVisible
+                    ColumnIndex = i,
+                    FilterType = filterColumn.FilterType.ToString(),
+                    IsDropdownVisible = filterColumn.IsDropdownVisible
                 });
             }
 
-        return JsonResult(new
+        return new GetFilterStatusResult
         {
-            worksheetName = worksheet.Name,
-            isFilterEnabled,
-            hasActiveFilters,
-            status = GetFilterStatusDescription(isFilterEnabled, hasActiveFilters),
-            filterRange = isFilterEnabled ? rangeProperty : null,
-            filterColumnsCount = filterColumns?.Count ?? 0,
-            filterColumns = filterColumnsList
-        });
+            WorksheetName = worksheet.Name,
+            IsFilterEnabled = isFilterEnabled,
+            HasActiveFilters = hasActiveFilters,
+            Status = GetFilterStatusDescription(isFilterEnabled, hasActiveFilters),
+            FilterRange = isFilterEnabled ? rangeProperty : null,
+            FilterColumnsCount = filterColumns?.Count ?? 0,
+            FilterColumns = filterColumnsList
+        };
     }
 
     /// <summary>

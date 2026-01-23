@@ -1,12 +1,16 @@
 using Aspose.Words;
 using Aspose.Words.Notes;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Word.Note;
 
 namespace AsposeMcpServer.Handlers.Word.Note;
 
 /// <summary>
 ///     Handler for getting endnotes from Word documents.
 /// </summary>
+[ResultType(typeof(GetWordNotesResult))]
 public class GetWordEndnotesHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -18,30 +22,28 @@ public class GetWordEndnotesHandler : OperationHandlerBase<Document>
     /// <param name="context">The document context.</param>
     /// <param name="parameters">No parameters required.</param>
     /// <returns>JSON string containing the list of endnotes.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var doc = context.Document;
         var notes = WordNoteHelper.GetNotesFromDoc(doc, FootnoteType.Endnote);
 
-        List<object> noteList = [];
+        List<NoteInfo> noteList = [];
         for (var i = 0; i < notes.Count; i++)
         {
             var note = notes[i];
-            noteList.Add(new
+            noteList.Add(new NoteInfo
             {
-                noteIndex = i,
-                referenceMark = note.ReferenceMark,
-                text = note.ToString(SaveFormat.Text).Trim()
+                NoteIndex = i,
+                ReferenceMark = note.ReferenceMark,
+                Text = note.ToString(SaveFormat.Text).Trim()
             });
         }
 
-        var result = new
+        return new GetWordNotesResult
         {
-            noteType = "endnote",
-            count = notes.Count,
-            notes = noteList
+            NoteType = "endnote",
+            Count = notes.Count,
+            Notes = noteList
         };
-
-        return JsonResult(result);
     }
 }

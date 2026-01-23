@@ -1,7 +1,7 @@
-using System.Text.Json;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Slide;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.PowerPoint.Slide;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Slide;
 
@@ -46,11 +46,11 @@ public class GetPptSlidesInfoHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("count", out var count));
-        Assert.Equal(3, count.GetInt32());
+        var result = Assert.IsType<GetSlidesInfoResult>(res);
+
+        Assert.Equal(3, result.Count);
         AssertNotModified(context);
     }
 
@@ -65,10 +65,11 @@ public class GetPptSlidesInfoHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(slideCount, json.RootElement.GetProperty("count").GetInt32());
+        var result = Assert.IsType<GetSlidesInfoResult>(res);
+
+        Assert.Equal(slideCount, result.Count);
         AssertNotModified(context);
     }
 
@@ -83,12 +84,12 @@ public class GetPptSlidesInfoHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("slides", out var slides));
-        Assert.Equal(JsonValueKind.Array, slides.ValueKind);
-        Assert.Equal(3, slides.GetArrayLength());
+        var result = Assert.IsType<GetSlidesInfoResult>(res);
+
+        Assert.NotNull(result.Slides);
+        Assert.Equal(3, result.Slides.Count);
     }
 
     [Fact]
@@ -98,13 +99,12 @@ public class GetPptSlidesInfoHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var slides = json.RootElement.GetProperty("slides");
-        var firstSlide = slides[0];
-        Assert.True(firstSlide.TryGetProperty("index", out var index));
-        Assert.Equal(0, index.GetInt32());
+        var result = Assert.IsType<GetSlidesInfoResult>(res);
+
+        var firstSlide = result.Slides[0];
+        Assert.Equal(0, firstSlide.Index);
     }
 
     [Fact]
@@ -114,13 +114,12 @@ public class GetPptSlidesInfoHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var slides = json.RootElement.GetProperty("slides");
-        var firstSlide = slides[0];
-        Assert.True(firstSlide.TryGetProperty("layoutType", out _));
-        Assert.True(firstSlide.TryGetProperty("layoutName", out _));
+        var result = Assert.IsType<GetSlidesInfoResult>(res);
+
+        var firstSlide = result.Slides[0];
+        Assert.NotNull(firstSlide.LayoutType);
     }
 
     [Fact]
@@ -131,13 +130,12 @@ public class GetPptSlidesInfoHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var slides = json.RootElement.GetProperty("slides");
-        var firstSlide = slides[0];
-        Assert.True(firstSlide.TryGetProperty("shapesCount", out var shapesCount));
-        Assert.True(shapesCount.GetInt32() >= 1);
+        var result = Assert.IsType<GetSlidesInfoResult>(res);
+
+        var firstSlide = result.Slides[0];
+        Assert.True(firstSlide.ShapesCount >= 1);
     }
 
     [Fact]
@@ -147,12 +145,12 @@ public class GetPptSlidesInfoHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var slides = json.RootElement.GetProperty("slides");
-        var firstSlide = slides[0];
-        Assert.True(firstSlide.TryGetProperty("hidden", out _));
+        var result = Assert.IsType<GetSlidesInfoResult>(res);
+
+        var firstSlide = result.Slides[0];
+        Assert.False(firstSlide.Hidden);
     }
 
     #endregion
@@ -166,12 +164,12 @@ public class GetPptSlidesInfoHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("availableLayouts", out var layouts));
-        Assert.Equal(JsonValueKind.Array, layouts.ValueKind);
-        Assert.True(layouts.GetArrayLength() > 0);
+        var result = Assert.IsType<GetSlidesInfoResult>(res);
+
+        Assert.NotNull(result.AvailableLayouts);
+        Assert.True(result.AvailableLayouts.Count > 0);
     }
 
     [Fact]
@@ -181,14 +179,13 @@ public class GetPptSlidesInfoHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var layouts = json.RootElement.GetProperty("availableLayouts");
-        var firstLayout = layouts[0];
-        Assert.True(firstLayout.TryGetProperty("index", out _));
-        Assert.True(firstLayout.TryGetProperty("name", out _));
-        Assert.True(firstLayout.TryGetProperty("type", out _));
+        var result = Assert.IsType<GetSlidesInfoResult>(res);
+
+        var firstLayout = result.AvailableLayouts[0];
+        Assert.True(firstLayout.Index >= 0);
+        Assert.NotNull(firstLayout.Type);
     }
 
     #endregion

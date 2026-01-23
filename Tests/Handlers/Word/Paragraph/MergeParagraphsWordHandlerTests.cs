@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Word.Paragraph;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Paragraph;
 
@@ -30,9 +31,11 @@ public class MergeParagraphsWordHandlerTests : WordHandlerTestBase
             { "endParagraphIndex", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("3", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("3", result.Message);
         AssertModified(context);
     }
 
@@ -51,9 +54,11 @@ public class MergeParagraphsWordHandlerTests : WordHandlerTestBase
             { "endParagraphIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("merged", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("merged", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -89,10 +94,12 @@ public class MergeParagraphsWordHandlerTests : WordHandlerTestBase
             { "endParagraphIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("#0", result);
-        Assert.Contains("#1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("#0", result.Message);
+        Assert.Contains("#1", result.Message);
     }
 
     [Fact]
@@ -106,9 +113,11 @@ public class MergeParagraphsWordHandlerTests : WordHandlerTestBase
             { "endParagraphIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Remaining", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Remaining", result.Message);
     }
 
     #endregion

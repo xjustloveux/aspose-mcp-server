@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
@@ -10,6 +12,7 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 ///     Unified tool for managing PowerPoint transitions (set, get, delete)
 ///     Merges: PptSetTransitionTool, PptGetTransitionTool, PptDeleteTransitionTool
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.PowerPoint.Transition")]
 [McpServerToolType]
 public class PptTransitionTool
 {
@@ -60,7 +63,14 @@ public class PptTransitionTool
     /// </param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "ppt_transition")]
+    [McpServerTool(
+        Name = "ppt_transition",
+        Title = "PowerPoint Transition Operations",
+        Destructive = true,
+        Idempotent = true,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage PowerPoint transitions. Supports 3 operations: set, get, delete.
 
 Transition types: Fade, Push, Wipe, Split, Random, Circle, Plus, Diamond, Comb, Cover, Cut, Dissolve, Zoom, and more (all TransitionType enum values supported).
@@ -69,7 +79,7 @@ Usage examples:
 - Set transition: ppt_transition(operation='set', path='presentation.pptx', slideIndex=0, transitionType='Fade', advanceAfterSeconds=1.5)
 - Get transition: ppt_transition(operation='get', path='presentation.pptx', slideIndex=0)
 - Delete transition: ppt_transition(operation='delete', path='presentation.pptx', slideIndex=0)")]
-    public string Execute(
+    public object Execute(
         [Description(@"Operation to perform.
 - 'set': Set slide transition (required params: path, slideIndex, transitionType)
 - 'get': Get slide transition (required params: path, slideIndex)
@@ -107,12 +117,12 @@ Usage examples:
         var result = handler.Execute(operationContext, parameters);
 
         if (string.Equals(operation, "get", StringComparison.OrdinalIgnoreCase))
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

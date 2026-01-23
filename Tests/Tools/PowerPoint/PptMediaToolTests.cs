@@ -1,6 +1,7 @@
-using Aspose.Slides;
+﻿using Aspose.Slides;
 using Aspose.Slides.Export;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.PowerPoint;
 
 namespace AsposeMcpServer.Tests.Tools.PowerPoint;
@@ -70,7 +71,8 @@ public class PptMediaToolTests : PptTestBase
         var outputPath = CreateTestFilePath("test_add_audio_output.pptx");
         var result = _tool.Execute("add_audio", pptPath, slideIndex: 0, audioPath: audioPath, x: 100, y: 100,
             outputPath: outputPath);
-        Assert.StartsWith("Audio embedded into slide", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Audio embedded into slide", data.Message);
         using var presentation = new Presentation(outputPath);
         Assert.NotEmpty(presentation.Slides[0].Shapes.OfType<IAudioFrame>());
     }
@@ -81,7 +83,8 @@ public class PptMediaToolTests : PptTestBase
         var pptPath = CreatePresentationWithAudio("test_delete_audio.pptx");
         var outputPath = CreateTestFilePath("test_delete_audio_output.pptx");
         var result = _tool.Execute("delete_audio", pptPath, slideIndex: 0, shapeIndex: 0, outputPath: outputPath);
-        Assert.StartsWith("Audio deleted from slide", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Audio deleted from slide", data.Message);
         using var presentation = new Presentation(outputPath);
         Assert.Empty(presentation.Slides[0].Shapes.OfType<IAudioFrame>());
     }
@@ -94,7 +97,8 @@ public class PptMediaToolTests : PptTestBase
         var outputPath = CreateTestFilePath("test_add_video_output.pptx");
         var result = _tool.Execute("add_video", pptPath, slideIndex: 0, videoPath: videoPath, x: 100, y: 100,
             width: 320, height: 240, outputPath: outputPath);
-        Assert.StartsWith("Video embedded into slide", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Video embedded into slide", data.Message);
         using var presentation = new Presentation(outputPath);
         Assert.NotEmpty(presentation.Slides[0].Shapes.OfType<IVideoFrame>());
     }
@@ -105,7 +109,8 @@ public class PptMediaToolTests : PptTestBase
         var pptPath = CreatePresentationWithVideo("test_delete_video.pptx");
         var outputPath = CreateTestFilePath("test_delete_video_output.pptx");
         var result = _tool.Execute("delete_video", pptPath, slideIndex: 0, shapeIndex: 0, outputPath: outputPath);
-        Assert.StartsWith("Video deleted from slide", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Video deleted from slide", data.Message);
         using var presentation = new Presentation(outputPath);
         Assert.Empty(presentation.Slides[0].Shapes.OfType<IVideoFrame>());
     }
@@ -117,7 +122,8 @@ public class PptMediaToolTests : PptTestBase
         var outputPath = CreateTestFilePath("test_playback_audio_output.pptx");
         var result = _tool.Execute("set_playback", pptPath, slideIndex: 0, shapeIndex: 0, playMode: "onclick",
             loop: true, volume: "loud", outputPath: outputPath);
-        Assert.StartsWith("Playback settings updated", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Playback settings updated", data.Message);
     }
 
     #endregion
@@ -134,7 +140,8 @@ public class PptMediaToolTests : PptTestBase
         var audioPath = CreateFakeAudioFile($"test_case_audio_{operation.Replace("_", "")}.mp3");
         var outputPath = CreateTestFilePath($"test_case_add_audio_{operation.Replace("_", "")}_output.pptx");
         var result = _tool.Execute(operation, pptPath, slideIndex: 0, audioPath: audioPath, outputPath: outputPath);
-        Assert.StartsWith("Audio embedded into slide", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Audio embedded into slide", data.Message);
     }
 
     [Fact]
@@ -159,9 +166,11 @@ public class PptMediaToolTests : PptTestBase
         var initialCount = ppt.Slides[0].Shapes.OfType<IAudioFrame>().Count();
         var result = _tool.Execute("add_audio", sessionId: sessionId, slideIndex: 0, audioPath: audioPath, x: 100,
             y: 100);
-        Assert.StartsWith("Audio embedded into slide", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Audio embedded into slide", data.Message);
         Assert.True(ppt.Slides[0].Shapes.OfType<IAudioFrame>().Count() > initialCount);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -174,9 +183,11 @@ public class PptMediaToolTests : PptTestBase
         var initialCount = ppt.Slides[0].Shapes.OfType<IVideoFrame>().Count();
         var result = _tool.Execute("add_video", sessionId: sessionId, slideIndex: 0, videoPath: videoPath, x: 100,
             y: 100, width: 320, height: 240);
-        Assert.StartsWith("Video embedded into slide", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Video embedded into slide", data.Message);
         Assert.True(ppt.Slides[0].Shapes.OfType<IVideoFrame>().Count() > initialCount);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -187,9 +198,11 @@ public class PptMediaToolTests : PptTestBase
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         Assert.NotEmpty(ppt.Slides[0].Shapes.OfType<IAudioFrame>());
         var result = _tool.Execute("delete_audio", sessionId: sessionId, slideIndex: 0, shapeIndex: 0);
-        Assert.StartsWith("Audio deleted from slide", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Audio deleted from slide", data.Message);
         Assert.Empty(ppt.Slides[0].Shapes.OfType<IAudioFrame>());
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -209,8 +222,9 @@ public class PptMediaToolTests : PptTestBase
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var result = _tool.Execute("add_audio", pptPath1, sessionId, slideIndex: 0, audioPath: audioPath, x: 100,
             y: 100);
-        Assert.Contains("session", result);
         Assert.NotEmpty(ppt.Slides[0].Shapes.OfType<IAudioFrame>());
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     #endregion

@@ -1,25 +1,26 @@
-using System.Text.Json;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Results.Word.Bookmark;
 
 namespace AsposeMcpServer.Handlers.Word.Bookmark;
 
 /// <summary>
 ///     Handler for getting bookmarks from Word documents.
 /// </summary>
+[ResultType(typeof(GetBookmarksResult))]
 public class GetWordBookmarksHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
     public override string Operation => "get";
 
     /// <summary>
-    ///     Gets all bookmarks from the document as JSON.
+    ///     Gets all bookmarks from the document.
     /// </summary>
     /// <param name="context">The document context.</param>
     /// <param name="parameters">No parameters required.</param>
-    /// <returns>A JSON string containing all bookmarks information.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    /// <returns>Result containing all bookmarks information.</returns>
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         _ = parameters;
 
@@ -27,29 +28,31 @@ public class GetWordBookmarksHandler : OperationHandlerBase<Document>
         var bookmarks = doc.Range.Bookmarks;
 
         if (bookmarks.Count == 0)
-            return JsonSerializer.Serialize(new
-                { count = 0, bookmarks = Array.Empty<object>(), message = "No bookmarks found in document" });
+            return new GetBookmarksResult
+            {
+                Count = 0,
+                Bookmarks = [],
+                Message = "No bookmarks found in document"
+            };
 
-        List<object> bookmarkList = [];
+        var bookmarkList = new List<BookmarkInfo>();
         var index = 0;
         foreach (var bookmark in bookmarks)
         {
-            bookmarkList.Add(new
+            bookmarkList.Add(new BookmarkInfo
             {
-                index,
-                name = bookmark.Name,
-                text = bookmark.Text,
-                length = bookmark.Text.Length
+                Index = index,
+                Name = bookmark.Name,
+                Text = bookmark.Text,
+                Length = bookmark.Text.Length
             });
             index++;
         }
 
-        var result = new
+        return new GetBookmarksResult
         {
-            count = bookmarks.Count,
-            bookmarks = bookmarkList
+            Count = bookmarks.Count,
+            Bookmarks = bookmarkList
         };
-
-        return JsonSerializer.Serialize(result, JsonDefaults.Indented);
     }
 }

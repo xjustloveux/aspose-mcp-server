@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Cell;
 
 /// <summary>
 ///     Handler for clearing Excel cell content and/or format.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class ClearExcelCellHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class ClearExcelCellHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex, clearContent, clearFormat
     /// </param>
     /// <returns>Success message.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var clearParams = ExtractClearParameters(parameters);
 
@@ -49,7 +52,7 @@ public class ClearExcelCellHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Cell {clearParams.Cell} cleared in sheet {clearParams.SheetIndex}.");
+        return new SuccessResult { Message = $"Cell {clearParams.Cell} cleared in sheet {clearParams.SheetIndex}." };
     }
 
     /// <summary>

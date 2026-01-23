@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Word;
 /// <summary>
 ///     Tool for managing fields and form fields in Word documents
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Word.Field")]
 [McpServerToolType]
 public class WordFieldTool
 {
@@ -74,7 +77,14 @@ public class WordFieldTool
     /// <param name="fieldNames">Array of form field names to delete (for delete_form_field).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "word_field")]
+    [McpServerTool(
+        Name = "word_field",
+        Title = "Word Field Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(
         @"Manage fields and form fields in Word documents. Supports 11 operations: insert_field, edit_field, delete_field, update_field, update_all, get_fields, get_field_detail, add_form_field, edit_form_field, delete_form_field, get_form_fields.
 
@@ -86,7 +96,7 @@ Usage examples:
 - Update all fields: word_field(operation='update_all', path='doc.docx')
 - Get fields: word_field(operation='get_fields', path='doc.docx')
 - Add form field: word_field(operation='add_form_field', path='doc.docx', formFieldType='TextInput', fieldName='name')")]
-    public string Execute(
+    public object Execute(
         [Description(
             "Operation: insert_field, edit_field, delete_field, update_field, update_all, get_fields, get_field_detail, add_form_field, edit_form_field, delete_form_field, get_form_fields")]
         string operation,
@@ -168,12 +178,12 @@ Usage examples:
 
         // Read-only operations don't need to save
         if (op is "get_fields" or "get_field_detail" or "get_form_fields")
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Word.HeaderFooter;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.HeaderFooter;
 
@@ -34,9 +35,11 @@ public class SetFooterImageHandlerTests : WordHandlerTestBase
             { "alignment", alignment }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("footer image set", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("footer image set", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -59,9 +62,11 @@ public class SetFooterImageHandlerTests : WordHandlerTestBase
             { "headerFooterType", headerFooterType }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("footer image set", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("footer image set", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -81,9 +86,11 @@ public class SetFooterImageHandlerTests : WordHandlerTestBase
             { "removeExisting", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("footer image set", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("footer image set", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -102,9 +109,11 @@ public class SetFooterImageHandlerTests : WordHandlerTestBase
             { "imagePath", tempFile }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("footer image set", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("footer image set", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -120,9 +129,11 @@ public class SetFooterImageHandlerTests : WordHandlerTestBase
             { "alignment", "right" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("footer image set", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("footer image set", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -169,9 +180,11 @@ public class SetFooterImageHandlerTests : WordHandlerTestBase
             { "imageWidth", 100.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("footer image set", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("footer image set", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -187,9 +200,11 @@ public class SetFooterImageHandlerTests : WordHandlerTestBase
             { "imageHeight", 50.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("footer image set", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("footer image set", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -206,9 +221,11 @@ public class SetFooterImageHandlerTests : WordHandlerTestBase
             { "imageHeight", 75.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("footer image set", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("footer image set", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -228,9 +245,11 @@ public class SetFooterImageHandlerTests : WordHandlerTestBase
             { "isFloating", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("floating", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("floating", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -250,9 +269,11 @@ public class SetFooterImageHandlerTests : WordHandlerTestBase
             { "alignment", alignment }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("floating", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("floating", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 

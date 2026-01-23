@@ -1,6 +1,7 @@
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Slide;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Slide;
 
@@ -69,9 +70,11 @@ public class DeletePptSlideHandlerTests : PptHandlerTestBase
             { "slideIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(initialCount - 1, pres.Slides.Count);
         AssertModified(context);
     }
@@ -91,9 +94,11 @@ public class DeletePptSlideHandlerTests : PptHandlerTestBase
             { "slideIndex", deleteIndex }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(totalSlides - 1, pres.Slides.Count);
         AssertModified(context);
     }
@@ -130,10 +135,12 @@ public class DeletePptSlideHandlerTests : PptHandlerTestBase
             { "slideIndex", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("4", result);
-        Assert.Contains("remaining", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("4", result.Message);
+        Assert.Contains("remaining", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -146,9 +153,11 @@ public class DeletePptSlideHandlerTests : PptHandlerTestBase
             { "slideIndex", 3 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("3", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("3", result.Message);
     }
 
     #endregion

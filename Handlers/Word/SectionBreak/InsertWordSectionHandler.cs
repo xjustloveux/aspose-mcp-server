@@ -1,5 +1,8 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.SectionBreak;
@@ -7,6 +10,7 @@ namespace AsposeMcpServer.Handlers.Word.SectionBreak;
 /// <summary>
 ///     Handler for inserting section breaks in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class InsertWordSectionHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -21,7 +25,7 @@ public class InsertWordSectionHandler : OperationHandlerBase<Document>
     ///     Optional: insertAtParagraphIndex, sectionIndex
     /// </param>
     /// <returns>Success message with section insertion details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractInsertWordSectionParameters(parameters);
 
@@ -62,7 +66,7 @@ public class InsertWordSectionHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Section break inserted ({p.SectionBreakType})");
+        return new SuccessResult { Message = $"Section break inserted ({p.SectionBreakType})" };
     }
 
     private static InsertWordSectionParameters ExtractInsertWordSectionParameters(OperationParameters parameters)

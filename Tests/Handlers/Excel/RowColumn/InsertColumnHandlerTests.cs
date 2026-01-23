@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.RowColumn;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.RowColumn;
 
@@ -34,9 +35,11 @@ public class InsertColumnHandlerTests : ExcelHandlerTestBase
             { "count", count }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains($"{count} column(s)", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains($"{count} column(s)", result.Message);
     }
 
     #endregion
@@ -53,9 +56,11 @@ public class InsertColumnHandlerTests : ExcelHandlerTestBase
             { "columnIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Inserted", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Inserted", result.Message);
         AssertModified(context);
     }
 
@@ -69,9 +74,11 @@ public class InsertColumnHandlerTests : ExcelHandlerTestBase
             { "columnIndex", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("column 2", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("column 2", result.Message);
     }
 
     [Fact]
@@ -85,9 +92,11 @@ public class InsertColumnHandlerTests : ExcelHandlerTestBase
             { "count", 3 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("3 column(s)", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("3 column(s)", result.Message);
     }
 
     [Fact]
@@ -100,9 +109,11 @@ public class InsertColumnHandlerTests : ExcelHandlerTestBase
             { "columnIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("1 column(s)", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("1 column(s)", result.Message);
     }
 
     #endregion
@@ -120,9 +131,11 @@ public class InsertColumnHandlerTests : ExcelHandlerTestBase
             { "columnIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Inserted", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Inserted", result.Message);
     }
 
     [Fact]
@@ -135,9 +148,11 @@ public class InsertColumnHandlerTests : ExcelHandlerTestBase
             { "columnIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Inserted", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Inserted", result.Message);
     }
 
     #endregion
@@ -212,9 +227,11 @@ public class InsertColumnHandlerTests : ExcelHandlerTestBase
             { "count", count }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains($"{count} column(s)", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains($"{count} column(s)", result.Message);
     }
 
     [Fact]
@@ -227,10 +244,12 @@ public class InsertColumnHandlerTests : ExcelHandlerTestBase
             { "columnIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Inserted", result);
-        Assert.Contains("column 0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Inserted", result.Message);
+        Assert.Contains("column 0", result.Message);
     }
 
     [Fact]
@@ -244,9 +263,11 @@ public class InsertColumnHandlerTests : ExcelHandlerTestBase
             { "count", 100 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("100 column(s)", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("100 column(s)", result.Message);
     }
 
     #endregion

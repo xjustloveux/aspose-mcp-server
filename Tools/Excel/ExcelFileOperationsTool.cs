@@ -1,7 +1,9 @@
 ﻿using System.ComponentModel;
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Excel;
 /// <summary>
 ///     Unified tool for Excel file operations (create, convert, merge workbooks, split workbook).
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Excel.FileOperations")]
 [McpServerToolType]
 public class ExcelFileOperationsTool
 {
@@ -58,7 +61,14 @@ public class ExcelFileOperationsTool
     /// <param name="outputFileNamePattern">Output file name pattern with {index} and {name} placeholders.</param>
     /// <returns>A message indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">Thrown when the operation is unknown or required parameters are missing.</exception>
-    [McpServerTool(Name = "excel_file_operations")]
+    [McpServerTool(
+        Name = "excel_file_operations",
+        Title = "Excel File Operations",
+        Destructive = false,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Excel file operations. Supports 4 operations: create, convert, merge, split.
 
 Usage examples:
@@ -68,7 +78,7 @@ Usage examples:
 - Merge workbooks: excel_file_operations(operation='merge', path='merged.xlsx', inputPaths=['book1.xlsx', 'book2.xlsx'])
 - Split workbook: excel_file_operations(operation='split', inputPath='book.xlsx', outputDirectory='output/')
 - Split from session: excel_file_operations(operation='split', sessionId='sess_xxx', outputDirectory='output/')")]
-    public string Execute(
+    public object Execute(
         [Description(@"Operation to perform.
 - 'create': Create a new workbook (required params: path or outputPath)
 - 'convert': Convert workbook format (required params: inputPath or sessionId, outputPath, format)
@@ -115,7 +125,8 @@ Usage examples:
             OutputPath = outputPath ?? path
         };
 
-        return handler.Execute(operationContext, parameters);
+        var result = handler.Execute(operationContext, parameters);
+        return ResultHelper.FinalizeResult((dynamic)result, outputPath ?? path, sessionId);
     }
 
     /// <summary>

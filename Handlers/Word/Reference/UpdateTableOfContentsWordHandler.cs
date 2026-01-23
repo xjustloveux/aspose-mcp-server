@@ -1,12 +1,15 @@
 using Aspose.Words;
 using Aspose.Words.Fields;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Reference;
 
 /// <summary>
 ///     Handler for updating table of contents in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class UpdateTableOfContentsWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class UpdateTableOfContentsWordHandler : OperationHandlerBase<Document>
     ///     Optional: tocIndex (0-based index of specific TOC to update)
     /// </param>
     /// <returns>Success message or info message if no TOC found.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractUpdateTableOfContentsParameters(parameters);
 
@@ -37,7 +40,7 @@ public class UpdateTableOfContentsWordHandler : OperationHandlerBase<Document>
             if (allFields.Count > 0)
                 message += $" Found {allFields.Count} field(s) of other types: {string.Join(", ", fieldTypes)}.";
             message += " Use 'add_table_of_contents' operation to add a table of contents first.";
-            return message;
+            return new SuccessResult { Message = message };
         }
 
         if (p.TocIndex.HasValue)
@@ -57,7 +60,7 @@ public class UpdateTableOfContentsWordHandler : OperationHandlerBase<Document>
         MarkModified(context);
 
         var updatedCount = p.TocIndex.HasValue ? 1 : tocFields.Count;
-        return Success($"Updated {updatedCount} table of contents field(s)");
+        return new SuccessResult { Message = $"Updated {updatedCount} table of contents field(s)" };
     }
 
     private static UpdateTableOfContentsParameters ExtractUpdateTableOfContentsParameters(

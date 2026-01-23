@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Excel;
 /// <summary>
 ///     Unified tool for managing Excel data validation (add, edit, delete, get, set messages)
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Excel.DataValidation")]
 [McpServerToolType]
 public class ExcelDataValidationTool
 {
@@ -60,7 +63,14 @@ public class ExcelDataValidationTool
     /// <param name="inputMessage">Input message to show when cell is selected.</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operation.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "excel_data_validation")]
+    [McpServerTool(
+        Name = "excel_data_validation",
+        Title = "Excel Data Validation Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage Excel data validation. Supports 5 operations: add, edit, delete, get, set_messages.
 
 Usage examples:
@@ -71,7 +81,7 @@ Usage examples:
 - Delete validation: excel_data_validation(operation='delete', path='book.xlsx', validationIndex=0)
 - Get validation: excel_data_validation(operation='get', path='book.xlsx')
 - Set messages: excel_data_validation(operation='set_messages', path='book.xlsx', validationIndex=0, inputMessage='Enter value', errorMessage='Invalid value')")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: add, edit, delete, get, set_messages")]
         string operation,
         [Description("Excel file path (required if no sessionId)")]
@@ -121,12 +131,12 @@ Usage examples:
         var result = handler.Execute(operationContext, parameters);
 
         if (string.Equals(operation, "get", StringComparison.OrdinalIgnoreCase))
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

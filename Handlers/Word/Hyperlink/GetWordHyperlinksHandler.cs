@@ -1,7 +1,8 @@
-using System.Text.Json;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Word.Hyperlink;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.Hyperlink;
@@ -9,6 +10,7 @@ namespace AsposeMcpServer.Handlers.Word.Hyperlink;
 /// <summary>
 ///     Handler for getting hyperlinks from Word documents.
 /// </summary>
+[ResultType(typeof(GetHyperlinksResult))]
 public class GetWordHyperlinksHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -19,19 +21,23 @@ public class GetWordHyperlinksHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="context">The document context.</param>
     /// <param name="parameters">No parameters required.</param>
-    /// <returns>A JSON string containing hyperlink information.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    /// <returns>A GetHyperlinksResult containing hyperlink information.</returns>
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var doc = context.Document;
         var hyperlinkFields = WordHyperlinkHelper.GetAllHyperlinks(doc);
 
         if (hyperlinkFields.Count == 0)
-            return JsonSerializer.Serialize(new
-                { count = 0, hyperlinks = Array.Empty<object>(), message = "No hyperlinks found in document" });
+            return new GetHyperlinksResult
+            {
+                Count = 0,
+                Hyperlinks = [],
+                Message = "No hyperlinks found in document"
+            };
 
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
 
-        List<object> hyperlinkList = [];
+        List<HyperlinkInfo> hyperlinkList = [];
         for (var index = 0; index < hyperlinkFields.Count; index++)
         {
             var hyperlinkField = hyperlinkFields[index];
@@ -60,23 +66,21 @@ public class GetWordHyperlinksHandler : OperationHandlerBase<Document>
                 Console.Error.WriteLine($"[WARN] Error reading hyperlink properties: {ex.Message}");
             }
 
-            hyperlinkList.Add(new
+            hyperlinkList.Add(new HyperlinkInfo
             {
-                index,
-                displayText,
-                address,
-                subAddress = string.IsNullOrEmpty(subAddress) ? null : subAddress,
-                tooltip = string.IsNullOrEmpty(tooltip) ? null : tooltip,
-                paragraphIndex = paragraphIndexValue
+                Index = index,
+                DisplayText = displayText,
+                Address = address,
+                SubAddress = string.IsNullOrEmpty(subAddress) ? null : subAddress,
+                Tooltip = string.IsNullOrEmpty(tooltip) ? null : tooltip,
+                ParagraphIndex = paragraphIndexValue
             });
         }
 
-        var result = new
+        return new GetHyperlinksResult
         {
-            count = hyperlinkFields.Count,
-            hyperlinks = hyperlinkList
+            Count = hyperlinkFields.Count,
+            Hyperlinks = hyperlinkList
         };
-
-        return JsonSerializer.Serialize(result, JsonDefaults.Indented);
     }
 }

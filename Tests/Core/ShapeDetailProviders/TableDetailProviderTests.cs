@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Aspose.Slides;
 using AsposeMcpServer.Core.ShapeDetailProviders;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Core.ShapeDetailProviders;
 

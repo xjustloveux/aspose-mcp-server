@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using AsposeMcpServer.Handlers.Excel.DataOperations;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.DataOperations;
 
@@ -35,10 +36,12 @@ public class BatchWriteHandlerTests : ExcelHandlerTestBase
             { "data", data }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("batch write", result.ToLower());
-        Assert.Contains("2", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("batch write", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2", result.Message);
         Assert.Equal("Hello", workbook.Worksheets[0].Cells["A1"].StringValue);
         Assert.Equal("World", workbook.Worksheets[0].Cells["B1"].StringValue);
         AssertModified(context);
@@ -60,10 +63,12 @@ public class BatchWriteHandlerTests : ExcelHandlerTestBase
             { "data", data }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("batch write", result.ToLower());
-        Assert.Contains("3", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("batch write", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("3", result.Message);
         Assert.Equal("Value1", workbook.Worksheets[0].Cells["A1"].StringValue);
         Assert.Equal("Value2", workbook.Worksheets[0].Cells["B2"].StringValue);
         Assert.Equal("Value3", workbook.Worksheets[0].Cells["C3"].StringValue);
@@ -82,9 +87,11 @@ public class BatchWriteHandlerTests : ExcelHandlerTestBase
             { "data", data }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("sheet 1", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("sheet 1", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("Sheet2Data", workbook.Worksheets[1].Cells["A1"].StringValue);
     }
 
@@ -95,9 +102,11 @@ public class BatchWriteHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("0 cells", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("0 cells", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

@@ -1,12 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Hyperlink;
 
 /// <summary>
 ///     Handler for editing hyperlinks in PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class EditPptHyperlinkHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class EditPptHyperlinkHandler : OperationHandlerBase<Presentation>
     ///     Optional: url, slideTargetIndex, removeHyperlink
     /// </param>
     /// <returns>Success message with update details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractEditParameters(parameters);
 
@@ -33,7 +36,7 @@ public class EditPptHyperlinkHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Hyperlink updated on slide {p.SlideIndex}, shape {p.ShapeIndex}.");
+        return new SuccessResult { Message = $"Hyperlink updated on slide {p.SlideIndex}, shape {p.ShapeIndex}." };
     }
 
     /// <summary>

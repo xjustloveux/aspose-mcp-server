@@ -1,7 +1,8 @@
-using System.Text.Json;
-using Aspose.Slides;
+﻿using Aspose.Slides;
 using Aspose.Slides.Export;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.PowerPoint.Notes;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.PowerPoint;
 
 namespace AsposeMcpServer.Tests.Tools.PowerPoint;
@@ -40,7 +41,8 @@ public class PptNotesToolTests : PptTestBase
         var outputPath = CreateTestFilePath("test_set_output.pptx");
         var result = _tool.Execute("set", pptPath, slideIndex: 0, notes: "Speaker notes for this slide",
             outputPath: outputPath);
-        Assert.StartsWith("Notes set for slide", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Notes set for slide", data.Message);
         using var presentation = new Presentation(outputPath);
         var notesSlide = presentation.Slides[0].NotesSlideManager.NotesSlide;
         Assert.NotNull(notesSlide);
@@ -51,9 +53,9 @@ public class PptNotesToolTests : PptTestBase
     {
         var pptPath = CreatePresentationWithNotes("test_get.pptx", "Test notes content");
         var result = _tool.Execute("get", pptPath, slideIndex: 0);
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(0, json.RootElement.GetProperty("slideIndex").GetInt32());
-        Assert.True(json.RootElement.GetProperty("hasNotes").GetBoolean());
+        var data = GetResultData<GetNotesResult>(result);
+        Assert.Equal(0, data.SlideIndex);
+        Assert.True(data.HasNotes);
     }
 
     [Fact]
@@ -62,7 +64,8 @@ public class PptNotesToolTests : PptTestBase
         var pptPath = CreatePresentationWithNotes("test_clear.pptx", "Notes to clear");
         var outputPath = CreateTestFilePath("test_clear_output.pptx");
         var result = _tool.Execute("clear", pptPath, slideIndices: [0], outputPath: outputPath);
-        Assert.StartsWith("Cleared speaker notes for", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Cleared speaker notes for", data.Message);
     }
 
     [Fact]
@@ -72,7 +75,8 @@ public class PptNotesToolTests : PptTestBase
         var outputPath = CreateTestFilePath("test_hf_output.pptx");
         var result = _tool.Execute("set_header_footer", pptPath, headerText: "Notes Header", footerText: "Notes Footer",
             outputPath: outputPath);
-        Assert.StartsWith("Notes master header/footer updated", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Notes master header/footer updated", data.Message);
     }
 
     #endregion
@@ -88,7 +92,8 @@ public class PptNotesToolTests : PptTestBase
         var pptPath = CreatePresentation($"test_case_set_{operation}.pptx");
         var outputPath = CreateTestFilePath($"test_case_set_{operation}_output.pptx");
         var result = _tool.Execute(operation, pptPath, slideIndex: 0, notes: "Test", outputPath: outputPath);
-        Assert.StartsWith("Notes set for slide", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Notes set for slide", data.Message);
     }
 
     [Fact]
@@ -109,9 +114,11 @@ public class PptNotesToolTests : PptTestBase
         var pptPath = CreatePresentationWithNotes("test_session_get.pptx", "Session test notes");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("get", sessionId: sessionId, slideIndex: 0);
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(0, json.RootElement.GetProperty("slideIndex").GetInt32());
-        Assert.True(json.RootElement.GetProperty("hasNotes").GetBoolean());
+        var data = GetResultData<GetNotesResult>(result);
+        Assert.Equal(0, data.SlideIndex);
+        Assert.True(data.HasNotes);
+        var output = GetResultOutput<GetNotesResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -121,7 +128,10 @@ public class PptNotesToolTests : PptTestBase
         var sessionId = OpenSession(pptPath);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var result = _tool.Execute("set", sessionId: sessionId, slideIndex: 0, notes: "Session speaker notes");
-        Assert.StartsWith("Notes set for slide", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Notes set for slide", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var notesSlide = ppt.Slides[0].NotesSlideManager.NotesSlide;
         Assert.NotNull(notesSlide);
     }
@@ -132,7 +142,10 @@ public class PptNotesToolTests : PptTestBase
         var pptPath = CreatePresentationWithNotes("test_session_clear.pptx", "Notes to clear in session");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("clear", sessionId: sessionId, slideIndices: [0]);
-        Assert.StartsWith("Cleared speaker notes for", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Cleared speaker notes for", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -148,7 +161,10 @@ public class PptNotesToolTests : PptTestBase
         var pptPath2 = CreatePresentationWithNotes("test_session_notes.pptx", "SessionNotes");
         var sessionId = OpenSession(pptPath2);
         var result = _tool.Execute("get", pptPath1, sessionId, slideIndex: 0);
-        Assert.Contains("slideIndex", result);
+        var data = GetResultData<GetNotesResult>(result);
+        Assert.Equal(0, data.SlideIndex);
+        var output = GetResultOutput<GetNotesResult>(result);
+        Assert.True(output.IsSession);
     }
 
     #endregion

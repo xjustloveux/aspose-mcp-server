@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Table;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Table;
 
@@ -35,9 +36,11 @@ public class SetRowHeightWordTableHandlerTests : WordHandlerTestBase
             { "heightRule", rule }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("height", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("height", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -79,9 +82,11 @@ public class SetRowHeightWordTableHandlerTests : WordHandlerTestBase
             { "rowHeight", 30.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("height", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("height", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -99,9 +104,11 @@ public class SetRowHeightWordTableHandlerTests : WordHandlerTestBase
             { "rowHeight", 40.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("height", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("height", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]
@@ -118,9 +125,11 @@ public class SetRowHeightWordTableHandlerTests : WordHandlerTestBase
             { "rowHeight", height }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains($"{height}", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains($"{height}", result.Message);
     }
 
     #endregion

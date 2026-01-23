@@ -1,7 +1,8 @@
 using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
 using AsposeMcpServer.Handlers.Pdf.Annotation;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Annotation;
 
@@ -35,10 +36,12 @@ public class DeletePdfAnnotationHandlerTests : PdfHandlerTestBase
             { "annotationIndex", annotationIndex }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Deleted", result);
-        Assert.Contains($"annotation {annotationIndex}", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Deleted", result.Message);
+        Assert.Contains($"annotation {annotationIndex}", result.Message);
         AssertModified(context);
     }
 
@@ -57,11 +60,13 @@ public class DeletePdfAnnotationHandlerTests : PdfHandlerTestBase
             { "annotationIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Deleted", result);
-        Assert.Contains("annotation 1", result);
-        Assert.Contains("page 1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Deleted", result.Message);
+        Assert.Contains("annotation 1", result.Message);
+        Assert.Contains("page 1", result.Message);
         AssertModified(context);
     }
 
@@ -75,11 +80,13 @@ public class DeletePdfAnnotationHandlerTests : PdfHandlerTestBase
             { "pageIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Deleted", result);
-        Assert.Contains("3", result);
-        Assert.Contains("all", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Deleted", result.Message);
+        Assert.Contains("3", result.Message);
+        Assert.Contains("all", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -100,10 +107,12 @@ public class DeletePdfAnnotationHandlerTests : PdfHandlerTestBase
             { "annotationIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Deleted", result);
-        Assert.Contains("page 2", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Deleted", result.Message);
+        Assert.Contains("page 2", result.Message);
         AssertModified(context);
     }
 
@@ -120,11 +129,13 @@ public class DeletePdfAnnotationHandlerTests : PdfHandlerTestBase
             { "pageIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Deleted", result);
-        Assert.Contains("all", result, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Deleted", result.Message);
+        Assert.Contains("all", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2", result.Message);
         AssertModified(context);
     }
 
@@ -207,11 +218,13 @@ public class DeletePdfAnnotationHandlerTests : PdfHandlerTestBase
             { "annotationIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Deleted", result);
-        Assert.Contains("annotation 1", result);
-        Assert.Contains("page 1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Deleted", result.Message);
+        Assert.Contains("annotation 1", result.Message);
+        Assert.Contains("page 1", result.Message);
     }
 
     [Fact]
@@ -224,11 +237,13 @@ public class DeletePdfAnnotationHandlerTests : PdfHandlerTestBase
             { "pageIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Deleted", result);
-        Assert.Contains("5", result);
-        Assert.Contains("page 1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Deleted", result.Message);
+        Assert.Contains("5", result.Message);
+        Assert.Contains("page 1", result.Message);
     }
 
     #endregion

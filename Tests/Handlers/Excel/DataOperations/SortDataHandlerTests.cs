@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.DataOperations;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.DataOperations;
 
@@ -46,10 +47,12 @@ public class SortDataHandlerTests : ExcelHandlerTestBase
             { "range", "A1:A3" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("sorted", result.ToLower());
-        Assert.Contains("ascending", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("sorted", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ascending", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(1, workbook.Worksheets[0].Cells["A1"].IntValue);
         Assert.Equal(2, workbook.Worksheets[0].Cells["A2"].IntValue);
         Assert.Equal(3, workbook.Worksheets[0].Cells["A3"].IntValue);
@@ -70,9 +73,11 @@ public class SortDataHandlerTests : ExcelHandlerTestBase
             { "ascending", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("descending", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("descending", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(3, workbook.Worksheets[0].Cells["A1"].IntValue);
         Assert.Equal(2, workbook.Worksheets[0].Cells["A2"].IntValue);
         Assert.Equal(1, workbook.Worksheets[0].Cells["A3"].IntValue);
@@ -95,9 +100,11 @@ public class SortDataHandlerTests : ExcelHandlerTestBase
             { "sortColumn", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("column 1", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("column 1", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(1, workbook.Worksheets[0].Cells["B1"].IntValue);
         Assert.Equal(2, workbook.Worksheets[0].Cells["B2"].IntValue);
         Assert.Equal(3, workbook.Worksheets[0].Cells["B3"].IntValue);

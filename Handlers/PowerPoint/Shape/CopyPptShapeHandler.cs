@@ -1,12 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Shape;
 
 /// <summary>
 ///     Handler for copying a shape to another slide.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class CopyPptShapeHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class CopyPptShapeHandler : OperationHandlerBase<Presentation>
     ///     Required: fromSlide, toSlide, shapeIndex
     /// </param>
     /// <returns>Success message with copy details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractCopyPptShapeParameters(parameters);
         var presentation = context.Document;
@@ -36,7 +39,8 @@ public class CopyPptShapeHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Shape {p.ShapeIndex} copied from slide {p.FromSlide} to slide {p.ToSlide}.");
+        return new SuccessResult
+            { Message = $"Shape {p.ShapeIndex} copied from slide {p.FromSlide} to slide {p.ToSlide}." };
     }
 
     private static CopyPptShapeParameters ExtractCopyPptShapeParameters(OperationParameters parameters)

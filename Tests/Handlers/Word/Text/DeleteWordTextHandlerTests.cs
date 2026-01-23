@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Word.Text;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Text;
 
@@ -30,9 +31,11 @@ public class DeleteWordTextHandlerTests : WordHandlerTestBase
             { "endParagraphIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertDoesNotContainText(doc, "Second paragraph");
         AssertContainsText(doc, "First paragraph");
         AssertContainsText(doc, "Third paragraph");
@@ -77,9 +80,11 @@ public class DeleteWordTextHandlerTests : WordHandlerTestBase
             { "searchText", searchText }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertDoesNotContainText(doc, searchText);
         AssertModified(context);
     }

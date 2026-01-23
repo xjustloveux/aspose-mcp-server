@@ -1,13 +1,17 @@
 using System.Drawing;
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.ConditionalFormatting;
 
 /// <summary>
 ///     Handler for editing existing conditional formatting in Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class EditExcelConditionalFormattingHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -22,7 +26,7 @@ public class EditExcelConditionalFormattingHandler : OperationHandlerBase<Workbo
     ///     Optional: sheetIndex, conditionIndex, condition, value, formula2, backgroundColor
     /// </param>
     /// <returns>Success message with edit details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var editParams = ExtractEditParameters(parameters);
 
@@ -38,7 +42,8 @@ public class EditExcelConditionalFormattingHandler : OperationHandlerBase<Workbo
             MarkModified(context);
 
             var changesStr = changes.Count > 0 ? string.Join(", ", changes) : "No changes";
-            return Success($"Edited conditional formatting #{editParams.ConditionalFormattingIndex} ({changesStr}).");
+            return new SuccessResult
+                { Message = $"Edited conditional formatting #{editParams.ConditionalFormattingIndex} ({changesStr})." };
         }
         catch (CellsException ex)
         {

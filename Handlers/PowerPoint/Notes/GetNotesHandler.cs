@@ -1,12 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.PowerPoint.Notes;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Notes;
 
 /// <summary>
 ///     Handler for getting notes from PowerPoint slides.
 /// </summary>
+[ResultType(typeof(GetNotesResult))]
 public class GetNotesHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class GetNotesHandler : OperationHandlerBase<Presentation>
     ///     Optional: slideIndex (if not provided, returns all slides' notes)
     /// </param>
     /// <returns>JSON string containing notes information.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractGetNotesParameters(parameters);
 
@@ -33,33 +36,33 @@ public class GetNotesHandler : OperationHandlerBase<Presentation>
             var notesSlide = presentation.Slides[p.SlideIndex.Value].NotesSlideManager.NotesSlide;
             var notesText = notesSlide?.NotesTextFrame?.Text;
 
-            return JsonResult(new
+            return new GetNotesResult
             {
-                slideIndex = p.SlideIndex.Value,
-                hasNotes = !string.IsNullOrWhiteSpace(notesText),
-                notes = notesText
-            });
+                SlideIndex = p.SlideIndex.Value,
+                HasNotes = !string.IsNullOrWhiteSpace(notesText),
+                Notes = notesText
+            };
         }
 
-        List<object> notesList = [];
+        List<SlideNotesInfo> notesList = [];
         for (var i = 0; i < presentation.Slides.Count; i++)
         {
             var notesSlide = presentation.Slides[i].NotesSlideManager.NotesSlide;
             var notesText = notesSlide?.NotesTextFrame?.Text;
 
-            notesList.Add(new
+            notesList.Add(new SlideNotesInfo
             {
-                slideIndex = i,
-                hasNotes = !string.IsNullOrWhiteSpace(notesText),
-                notes = notesText
+                SlideIndex = i,
+                HasNotes = !string.IsNullOrWhiteSpace(notesText),
+                Notes = notesText
             });
         }
 
-        return JsonResult(new
+        return new GetNotesResult
         {
-            count = presentation.Slides.Count,
-            slides = notesList
-        });
+            Count = presentation.Slides.Count,
+            Slides = notesList
+        };
     }
 
     /// <summary>

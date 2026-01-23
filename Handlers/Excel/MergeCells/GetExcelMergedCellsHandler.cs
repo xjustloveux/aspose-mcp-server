@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Excel.MergeCells;
 
 namespace AsposeMcpServer.Handlers.Excel.MergeCells;
 
 /// <summary>
 ///     Handler for getting merged cells information in Excel workbooks.
 /// </summary>
+[ResultType(typeof(GetMergedCellsResult))]
 public class GetExcelMergedCellsHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class GetExcelMergedCellsHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (0-based, default: 0)
     /// </param>
     /// <returns>JSON string containing the merged cells information.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractGetMergedCellsParameters(parameters);
 
@@ -29,18 +32,15 @@ public class GetExcelMergedCellsHandler : OperationHandlerBase<Workbook>
         var mergedCells = worksheet.Cells.MergedCells;
 
         if (mergedCells == null || mergedCells.Count == 0)
-        {
-            var emptyResult = new
+            return new GetMergedCellsResult
             {
-                count = 0,
-                worksheetName = worksheet.Name,
-                items = Array.Empty<object>(),
-                message = "No merged cells found"
+                Count = 0,
+                WorksheetName = worksheet.Name,
+                Items = [],
+                Message = "No merged cells found"
             };
-            return JsonResult(emptyResult);
-        }
 
-        List<object> mergedList = [];
+        List<MergedCellInfo> mergedList = [];
         for (var i = 0; i < mergedCells.Count; i++)
         {
             var mergedCellObj = mergedCells[i];
@@ -54,27 +54,25 @@ public class GetExcelMergedCellsHandler : OperationHandlerBase<Workbook>
                 var cell = worksheet.Cells[cellArea.StartRow, cellArea.StartColumn];
                 var cellValue = cell.Value?.ToString() ?? "(empty)";
 
-                mergedList.Add(new
+                mergedList.Add(new MergedCellInfo
                 {
-                    index = i,
-                    range = rangeName,
-                    startCell = startCellName,
-                    endCell = endCellName,
-                    rowCount = cellArea.EndRow - cellArea.StartRow + 1,
-                    columnCount = cellArea.EndColumn - cellArea.StartColumn + 1,
-                    value = cellValue
+                    Index = i,
+                    Range = rangeName,
+                    StartCell = startCellName,
+                    EndCell = endCellName,
+                    RowCount = cellArea.EndRow - cellArea.StartRow + 1,
+                    ColumnCount = cellArea.EndColumn - cellArea.StartColumn + 1,
+                    Value = cellValue
                 });
             }
         }
 
-        var result = new
+        return new GetMergedCellsResult
         {
-            count = mergedList.Count,
-            worksheetName = worksheet.Name,
-            items = mergedList
+            Count = mergedList.Count,
+            WorksheetName = worksheet.Name,
+            Items = mergedList
         };
-
-        return JsonResult(result);
     }
 
     private static GetMergedCellsParameters ExtractGetMergedCellsParameters(OperationParameters parameters)

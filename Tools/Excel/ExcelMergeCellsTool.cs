@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Excel;
 /// <summary>
 ///     Unified tool for managing Excel merged cells (merge, unmerge, get).
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Excel.MergeCells")]
 [McpServerToolType]
 public class ExcelMergeCellsTool
 {
@@ -54,7 +57,14 @@ public class ExcelMergeCellsTool
     /// </param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "excel_merge_cells")]
+    [McpServerTool(
+        Name = "excel_merge_cells",
+        Title = "Excel Merge Cells Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage Excel merged cells. Supports 3 operations: merge, unmerge, get.
 
 Usage examples:
@@ -63,7 +73,7 @@ Usage examples:
 - Get merged cells: excel_merge_cells(operation='get', path='book.xlsx')
 
 WARNING: Merging cells will only keep the value of the top-left cell. All other cell values will be lost.")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: merge, unmerge, get")]
         string operation,
         [Description("Excel file path (required if no sessionId)")]
@@ -97,12 +107,12 @@ WARNING: Merging cells will only keep the value of the top-left cell. All other 
         var result = handler.Execute(operationContext, parameters);
 
         if (string.Equals(operation, "get", StringComparison.OrdinalIgnoreCase))
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.Properties;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Properties;
 
@@ -29,9 +30,11 @@ public class SetWorkbookPropertiesHandlerTests : ExcelHandlerTestBase
             { "title", "New Title" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated successfully", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated successfully", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("New Title", workbook.BuiltInDocumentProperties.Title);
         AssertModified(context);
     }
@@ -69,9 +72,11 @@ public class SetWorkbookPropertiesHandlerTests : ExcelHandlerTestBase
             { "customProperties", "{\"MyProp\": \"MyValue\"}" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated successfully", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated successfully", result.Message, StringComparison.OrdinalIgnoreCase);
         var customProp = workbook.CustomDocumentProperties["MyProp"];
         Assert.NotNull(customProp);
     }

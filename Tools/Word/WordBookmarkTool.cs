@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Word;
 /// <summary>
 ///     Unified tool for managing Word bookmarks (add, edit, delete, get, goto)
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Word.Bookmark")]
 [McpServerToolType]
 public class WordBookmarkTool
 {
@@ -55,7 +58,14 @@ public class WordBookmarkTool
     /// <param name="keepText">Keep text when deleting (default: true).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "word_bookmark")]
+    [McpServerTool(
+        Name = "word_bookmark",
+        Title = "Word Bookmark Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage Word bookmarks. Supports 5 operations: add, edit, delete, get, goto.
 
 Usage examples:
@@ -64,7 +74,7 @@ Usage examples:
 - Delete bookmark: word_bookmark(operation='delete', path='doc.docx', name='bookmark1')
 - Get bookmarks: word_bookmark(operation='get', path='doc.docx')
 - Goto bookmark: word_bookmark(operation='goto', path='doc.docx', name='bookmark1')")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: add, edit, delete, get, goto")]
         string operation,
         [Description("Document file path (required if no sessionId)")]
@@ -108,9 +118,7 @@ Usage examples:
         if (operationContext.IsModified)
             ctx.Save(effectiveOutputPath);
 
-        if (ctx.IsSession || !operationContext.IsModified)
-            return result;
-        return $"{result}\n{ctx.GetOutputMessage(effectiveOutputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, effectiveOutputPath);
     }
 
     /// <summary>

@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.DataValidation;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.DataValidation;
 
@@ -56,9 +57,11 @@ public class AddExcelDataValidationHandlerTests : ExcelHandlerTestBase
             { "formula1", "Option1,Option2,Option3" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Data validation added", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Data validation added", result.Message);
         Assert.Single(workbook.Worksheets[0].Validations);
         var validation = workbook.Worksheets[0].Validations[0];
         Assert.Equal(ValidationType.List, validation.Type);
@@ -79,9 +82,11 @@ public class AddExcelDataValidationHandlerTests : ExcelHandlerTestBase
             { "operatorType", "Between" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Data validation added", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Data validation added", result.Message);
         var validation = workbook.Worksheets[0].Validations[0];
         Assert.Equal(ValidationType.WholeNumber, validation.Type);
         Assert.Contains("1", validation.Formula1);
@@ -256,9 +261,11 @@ public class AddExcelDataValidationHandlerTests : ExcelHandlerTestBase
             { "formula1", "Yes,No" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("C5:C20", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("C5:C20", result.Message);
     }
 
     [Fact]
@@ -273,9 +280,11 @@ public class AddExcelDataValidationHandlerTests : ExcelHandlerTestBase
             { "formula1", "1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("WholeNumber", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("WholeNumber", result.Message);
     }
 
     #endregion

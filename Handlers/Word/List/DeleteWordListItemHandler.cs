@@ -1,5 +1,7 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.List;
@@ -7,6 +9,7 @@ namespace AsposeMcpServer.Handlers.Word.List;
 /// <summary>
 ///     Handler for deleting list items from Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeleteWordListItemHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class DeleteWordListItemHandler : OperationHandlerBase<Document>
     ///     Required: paragraphIndex
     /// </param>
     /// <returns>Success message with deletion details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractDeleteListItemParameters(parameters);
 
@@ -46,7 +49,7 @@ public class DeleteWordListItemHandler : OperationHandlerBase<Document>
         if (!string.IsNullOrEmpty(itemPreview)) result += $"Content preview: {itemPreview}\n";
         result += $"Remaining paragraphs: {doc.GetChildNodes(NodeType.Paragraph, true).Count}";
 
-        return Success(result);
+        return new SuccessResult { Message = result };
     }
 
     private static DeleteListItemParameters ExtractDeleteListItemParameters(OperationParameters parameters)

@@ -1,11 +1,14 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Revision;
 
 /// <summary>
 ///     Handler for managing a specific revision in Word documents (accept or reject).
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class ManageRevisionHandler : OperationHandlerBase<Document>
 {
     private const int MaxRevisionTextLength = 50;
@@ -25,7 +28,7 @@ public class ManageRevisionHandler : OperationHandlerBase<Document>
     /// <exception cref="ArgumentException">
     ///     Thrown when revisionIndex is not provided, is out of range, or action is invalid.
     /// </exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractManageRevisionParameters(parameters);
 
@@ -33,7 +36,7 @@ public class ManageRevisionHandler : OperationHandlerBase<Document>
         var revisionsCount = doc.Revisions.Count;
 
         if (revisionsCount == 0)
-            return Success("Document has no revisions");
+            return new SuccessResult { Message = "Document has no revisions" };
 
         if (p.RevisionIndex < 0 || p.RevisionIndex >= revisionsCount)
             throw new ArgumentException(
@@ -61,7 +64,7 @@ public class ManageRevisionHandler : OperationHandlerBase<Document>
         var result = $"Revision [{p.RevisionIndex}] {p.Action}ed\n";
         result += $"Type: {revisionType}\n";
         result += $"Text: {revisionText}";
-        return Success(result);
+        return new SuccessResult { Message = result };
     }
 
     private static ManageRevisionParameters ExtractManageRevisionParameters(OperationParameters parameters)

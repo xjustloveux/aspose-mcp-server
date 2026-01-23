@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Word.Text;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Text;
 
@@ -34,9 +35,11 @@ public class InsertAtPositionWordTextHandlerTests : WordHandlerTestBase
             { "insertBefore", insertBefore }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("inserted", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("inserted", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertContainsText(doc, "Test");
         AssertModified(context);
     }
@@ -58,9 +61,11 @@ public class InsertAtPositionWordTextHandlerTests : WordHandlerTestBase
             { "sectionIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("inserted", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("inserted", result.Message, StringComparison.OrdinalIgnoreCase);
         var text = GetDocumentText(doc);
         Assert.StartsWith("Test Hello", text);
         AssertModified(context);
@@ -109,9 +114,11 @@ public class InsertAtPositionWordTextHandlerTests : WordHandlerTestBase
             { "text", textToInsert }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("inserted", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("inserted", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertContainsText(doc, textToInsert);
         AssertModified(context);
     }

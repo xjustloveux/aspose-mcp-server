@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Excel;
 /// <summary>
 ///     Unified tool for managing Excel named ranges (add, delete, get).
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Excel.NamedRange")]
 [McpServerToolType]
 public class ExcelNamedRangeTool
 {
@@ -53,7 +56,14 @@ public class ExcelNamedRangeTool
     /// <param name="comment">Comment for the named range (optional for add).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "excel_named_range")]
+    [McpServerTool(
+        Name = "excel_named_range",
+        Title = "Excel Named Range Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage Excel named ranges. Supports 3 operations: add, delete, get.
 
 Usage examples:
@@ -61,7 +71,7 @@ Usage examples:
 - Add with sheet reference: excel_named_range(operation='add', path='book.xlsx', name='MyRange', range='Sheet1!A1:C10')
 - Delete named range: excel_named_range(operation='delete', path='book.xlsx', name='MyRange')
 - Get named ranges: excel_named_range(operation='get', path='book.xlsx')")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: add, delete, get")]
         string operation,
         [Description("Excel file path (required if no sessionId)")]
@@ -98,12 +108,12 @@ Usage examples:
         var result = handler.Execute(operationContext, parameters);
 
         if (string.Equals(operation, "get", StringComparison.OrdinalIgnoreCase))
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

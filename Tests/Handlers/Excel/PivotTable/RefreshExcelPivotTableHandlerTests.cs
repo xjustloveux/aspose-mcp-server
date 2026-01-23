@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.PivotTable;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.PivotTable;
 
@@ -51,10 +52,12 @@ public class RefreshExcelPivotTableHandlerTests : ExcelHandlerTestBase
             { "pivotTableIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("refreshed", result.ToLower());
-        Assert.Contains("1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("refreshed", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("1", result.Message);
         AssertModified(context);
     }
 
@@ -65,9 +68,11 @@ public class RefreshExcelPivotTableHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("refreshed", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("refreshed", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

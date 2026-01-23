@@ -2,7 +2,8 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Image;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 #pragma warning disable CA1416
 
@@ -37,9 +38,11 @@ public class EditPptImageHandlerTests : PptHandlerTestBase
             { "y", 300f }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message, StringComparison.OrdinalIgnoreCase);
         var pictureFrame = GetPictureFrames(pres.Slides[0])[0];
         Assert.Equal(200f, pictureFrame.X);
         Assert.Equal(300f, pictureFrame.Y);
@@ -59,9 +62,11 @@ public class EditPptImageHandlerTests : PptHandlerTestBase
             { "height", 150f }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message, StringComparison.OrdinalIgnoreCase);
         var pictureFrame = GetPictureFrames(pres.Slides[0])[0];
         Assert.Equal(250f, pictureFrame.Width);
         Assert.Equal(150f, pictureFrame.Height);
@@ -80,9 +85,11 @@ public class EditPptImageHandlerTests : PptHandlerTestBase
             { "imagePath", tempImagePath }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

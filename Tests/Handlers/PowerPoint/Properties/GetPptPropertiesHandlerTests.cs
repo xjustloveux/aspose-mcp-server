@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.PowerPoint.Properties;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.PowerPoint.Properties;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Properties;
 
@@ -28,10 +29,12 @@ public class GetPptPropertiesHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Test Title", result);
-        Assert.Contains("Test Author", result);
+        var result = Assert.IsType<GetPropertiesPptResult>(res);
+
+        Assert.Equal("Test Title", result.Title);
+        Assert.Equal("Test Author", result.Author);
         AssertNotModified(context);
     }
 
@@ -50,16 +53,18 @@ public class GetPptPropertiesHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("My Title", result);
-        Assert.Contains("My Subject", result);
-        Assert.Contains("My Author", result);
-        Assert.Contains("key1, key2", result);
-        Assert.Contains("My Comments", result);
-        Assert.Contains("My Category", result);
-        Assert.Contains("My Company", result);
-        Assert.Contains("My Manager", result);
+        var result = Assert.IsType<GetPropertiesPptResult>(res);
+
+        Assert.Equal("My Title", result.Title);
+        Assert.Equal("My Subject", result.Subject);
+        Assert.Equal("My Author", result.Author);
+        Assert.Equal("key1, key2", result.Keywords);
+        Assert.Equal("My Comments", result.Comments);
+        Assert.Equal("My Category", result.Category);
+        Assert.Equal("My Company", result.Company);
+        Assert.Equal("My Manager", result.Manager);
     }
 
     [Fact]
@@ -69,10 +74,12 @@ public class GetPptPropertiesHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("title", result.ToLower());
-        Assert.Contains("author", result.ToLower());
+        var result = Assert.IsType<GetPropertiesPptResult>(res);
+
+        Assert.NotNull(result);
+        Assert.IsType<GetPropertiesPptResult>(result);
     }
 
     [Fact]
@@ -82,9 +89,11 @@ public class GetPptPropertiesHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("createdTime", result);
+        var result = Assert.IsType<GetPropertiesPptResult>(res);
+
+        Assert.IsType<DateTime>(result.CreatedTime);
     }
 
     [Fact]
@@ -94,24 +103,28 @@ public class GetPptPropertiesHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("revisionNumber", result);
+        var result = Assert.IsType<GetPropertiesPptResult>(res);
+
+        Assert.IsType<int>(result.RevisionNumber);
     }
 
     [Fact]
-    public void Execute_ReturnsJsonFormat()
+    public void Execute_ReturnsResultType()
     {
         var pres = CreateEmptyPresentation();
         pres.DocumentProperties.Title = "JSON Test";
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("{", result);
-        Assert.Contains("}", result);
-        Assert.Contains("\"title\"", result);
+        var result = Assert.IsType<GetPropertiesPptResult>(res);
+
+        Assert.NotNull(result);
+        Assert.IsType<GetPropertiesPptResult>(result);
+        Assert.Equal("JSON Test", result.Title);
     }
 
     #endregion

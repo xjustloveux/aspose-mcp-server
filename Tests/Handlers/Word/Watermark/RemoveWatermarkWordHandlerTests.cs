@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Watermark;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 using SkiaSharp;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Watermark;
@@ -30,9 +31,11 @@ public class RemoveWatermarkWordHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("no watermark", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("no watermark", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertNotModified(context);
     }
 
@@ -60,9 +63,11 @@ public class RemoveWatermarkWordHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("removed", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("removed", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(WatermarkType.None, doc.Watermark.Type);
         AssertModified(context);
     }
@@ -78,9 +83,11 @@ public class RemoveWatermarkWordHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("removed", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("removed", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(WatermarkType.None, doc.Watermark.Type);
         AssertModified(context);
     }

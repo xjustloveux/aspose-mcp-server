@@ -1,11 +1,14 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.NamedRange;
 
 /// <summary>
 ///     Handler for deleting named ranges from Excel workbooks.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeleteExcelNamedRangeHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -19,7 +22,7 @@ public class DeleteExcelNamedRangeHandler : OperationHandlerBase<Workbook>
     ///     Required: name
     /// </param>
     /// <returns>Success message with deletion details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractDeleteNamedRangeParameters(parameters);
 
@@ -33,7 +36,7 @@ public class DeleteExcelNamedRangeHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Named range '{p.Name}' deleted.");
+        return new SuccessResult { Message = $"Named range '{p.Name}' deleted." };
     }
 
     private static DeleteNamedRangeParameters ExtractDeleteNamedRangeParameters(OperationParameters parameters)

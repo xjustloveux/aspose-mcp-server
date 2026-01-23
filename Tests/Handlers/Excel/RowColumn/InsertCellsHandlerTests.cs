@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.RowColumn;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.RowColumn;
 
@@ -34,9 +35,11 @@ public class InsertCellsHandlerTests : ExcelHandlerTestBase
             { "shiftDirection", "down" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains(range, result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains(range, result.Message);
     }
 
     #endregion
@@ -54,9 +57,11 @@ public class InsertCellsHandlerTests : ExcelHandlerTestBase
             { "shiftDirection", "down" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("inserted", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("inserted", result.Message);
         AssertModified(context);
     }
 
@@ -71,9 +76,11 @@ public class InsertCellsHandlerTests : ExcelHandlerTestBase
             { "shiftDirection", "right" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("C3:D4", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("C3:D4", result.Message);
     }
 
     [Fact]
@@ -87,9 +94,11 @@ public class InsertCellsHandlerTests : ExcelHandlerTestBase
             { "shiftDirection", "right" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("right", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("right", result.Message);
     }
 
     #endregion
@@ -107,9 +116,11 @@ public class InsertCellsHandlerTests : ExcelHandlerTestBase
             { "shiftDirection", "down" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("down", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("down", result.Message);
     }
 
     [Fact]
@@ -123,9 +134,11 @@ public class InsertCellsHandlerTests : ExcelHandlerTestBase
             { "shiftDirection", "right" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("right", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("right", result.Message);
     }
 
     [Fact]
@@ -139,9 +152,11 @@ public class InsertCellsHandlerTests : ExcelHandlerTestBase
             { "shiftDirection", "RIGHT" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("inserted", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("inserted", result.Message);
     }
 
     #endregion
@@ -161,9 +176,11 @@ public class InsertCellsHandlerTests : ExcelHandlerTestBase
             { "shiftDirection", "down" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("inserted", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("inserted", result.Message);
     }
 
     [Fact]
@@ -177,9 +194,11 @@ public class InsertCellsHandlerTests : ExcelHandlerTestBase
             { "shiftDirection", "down" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("inserted", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("inserted", result.Message);
     }
 
     #endregion
@@ -271,9 +290,11 @@ public class InsertCellsHandlerTests : ExcelHandlerTestBase
             { "shiftDirection", "invalid" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("invalid", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("invalid", result.Message);
     }
 
     #endregion

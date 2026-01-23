@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.FileOperations;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.FileOperations;
 
@@ -43,9 +44,11 @@ public class ConvertWorkbookHandlerTests : ExcelHandlerTestBase
             { "format", "pdf" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("converted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("converted", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(File.Exists(outputPath));
         var fileInfo = new FileInfo(outputPath);
         Assert.True(fileInfo.Length > 0, "Converted file should have content");
@@ -66,9 +69,11 @@ public class ConvertWorkbookHandlerTests : ExcelHandlerTestBase
             { "format", "html" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("converted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("converted", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(File.Exists(outputPath));
         var fileInfo = new FileInfo(outputPath);
         Assert.True(fileInfo.Length > 0, "Converted file should have content");
@@ -90,9 +95,11 @@ public class ConvertWorkbookHandlerTests : ExcelHandlerTestBase
             { "format", "csv" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("converted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("converted", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(File.Exists(outputPath));
         var fileInfo = new FileInfo(outputPath);
         Assert.True(fileInfo.Length > 0, "Converted file should have content");
@@ -114,9 +121,11 @@ public class ConvertWorkbookHandlerTests : ExcelHandlerTestBase
             { "format", "xls" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("converted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("converted", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(File.Exists(outputPath));
         var fileInfo = new FileInfo(outputPath);
         Assert.True(fileInfo.Length > 0, "Converted file should have content");

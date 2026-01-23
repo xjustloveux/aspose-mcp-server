@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Word.Format;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Format;
 
@@ -50,9 +51,11 @@ public class SetRunFormatWordHandlerTests : WordHandlerTestBase
             { "italic", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("run format updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("run format updated", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -69,9 +72,11 @@ public class SetRunFormatWordHandlerTests : WordHandlerTestBase
             { "fontName", "Arial" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -85,9 +90,11 @@ public class SetRunFormatWordHandlerTests : WordHandlerTestBase
             { "color", "auto" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("auto", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("auto", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -101,9 +108,11 @@ public class SetRunFormatWordHandlerTests : WordHandlerTestBase
             { "underline", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

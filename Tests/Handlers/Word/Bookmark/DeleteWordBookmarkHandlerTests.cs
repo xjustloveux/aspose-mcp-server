@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Bookmark;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Bookmark;
 
@@ -49,9 +50,11 @@ public class DeleteWordBookmarkHandlerTests : WordHandlerTestBase
             { "name", "Bookmark0" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted successfully", result);
+        var result = Assert.IsType<SuccessResult>(res).Message;
+
+        Assert.Contains("deleted successfully", result, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -65,9 +68,11 @@ public class DeleteWordBookmarkHandlerTests : WordHandlerTestBase
             { "name", "Bookmark0" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Bookmark0", result);
+        var result = Assert.IsType<SuccessResult>(res).Message;
+
+        Assert.Contains("Bookmark0", result, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -80,9 +85,11 @@ public class DeleteWordBookmarkHandlerTests : WordHandlerTestBase
             { "name", "Bookmark0" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Remaining bookmarks", result);
+        var result = Assert.IsType<SuccessResult>(res).Message;
+
+        Assert.Contains("Remaining bookmarks", result, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -100,9 +107,11 @@ public class DeleteWordBookmarkHandlerTests : WordHandlerTestBase
             { "keepText", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Keep text: Yes", result);
+        var result = Assert.IsType<SuccessResult>(res).Message;
+
+        Assert.Contains("Keep text: Yes", result, StringComparison.OrdinalIgnoreCase);
         Assert.Null(doc.Range.Bookmarks["Bookmark0"]);
     }
 
@@ -117,9 +126,11 @@ public class DeleteWordBookmarkHandlerTests : WordHandlerTestBase
             { "keepText", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Keep text: No", result);
+        var result = Assert.IsType<SuccessResult>(res).Message;
+
+        Assert.Contains("Keep text: No", result, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -132,9 +143,11 @@ public class DeleteWordBookmarkHandlerTests : WordHandlerTestBase
             { "name", "Bookmark0" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Keep text: Yes", result);
+        var result = Assert.IsType<SuccessResult>(res).Message;
+
+        Assert.Contains("Keep text: Yes", result, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

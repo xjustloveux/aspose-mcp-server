@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.PowerPoint.Notes;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.PowerPoint.Notes;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Notes;
 
@@ -26,10 +27,12 @@ public class GetNotesHandlerTests : PptHandlerTestBase
         var context = CreateContext(presentation);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"count\": 3", result);
-        Assert.Contains("slides", result);
+        var result = Assert.IsType<GetNotesResult>(res);
+
+        Assert.Equal(3, result.Count);
+        Assert.NotNull(result.Slides);
     }
 
     [Fact]
@@ -42,10 +45,12 @@ public class GetNotesHandlerTests : PptHandlerTestBase
             { "slideIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"slideIndex\": 0", result);
-        Assert.Contains("hasNotes", result);
+        var result = Assert.IsType<GetNotesResult>(res);
+
+        Assert.Equal(0, result.SlideIndex);
+        Assert.NotNull(result.HasNotes);
     }
 
     [Fact]
@@ -71,9 +76,12 @@ public class GetNotesHandlerTests : PptHandlerTestBase
             { "slideIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("hasNotes", result);
+        var result = Assert.IsType<GetNotesResult>(res);
+
+        Assert.NotNull(result.HasNotes);
+        Assert.IsType<bool>(result.HasNotes);
     }
 
     #endregion

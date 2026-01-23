@@ -1,8 +1,8 @@
-using System.Text.Json;
 using Aspose.Words;
 using Aspose.Words.Drawing;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Results.Word.Paragraph;
 using WordComment = Aspose.Words.Comment;
 using WordShape = Aspose.Words.Drawing.Shape;
 
@@ -11,6 +11,7 @@ namespace AsposeMcpServer.Handlers.Word.Paragraph;
 /// <summary>
 ///     Handler for getting paragraphs from Word documents.
 /// </summary>
+[ResultType(typeof(GetParagraphsWordResult))]
 public class GetParagraphsWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -24,7 +25,7 @@ public class GetParagraphsWordHandler : OperationHandlerBase<Document>
     ///     Optional: sectionIndex, includeEmpty, styleFilter, includeCommentParagraphs, includeTextboxParagraphs
     /// </param>
     /// <returns>JSON string containing paragraph information.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var getParams = ExtractGetParagraphsParameters(parameters);
 
@@ -36,21 +37,21 @@ public class GetParagraphsWordHandler : OperationHandlerBase<Document>
 
         var paragraphList = BuildParagraphList(paragraphs);
 
-        var result = new
+        var result = new GetParagraphsWordResult
         {
-            count = paragraphs.Count,
-            filters = new
+            Count = paragraphs.Count,
+            Filters = new ParagraphFilters
             {
-                sectionIndex = getParams.SectionIndex,
-                includeEmpty = getParams.IncludeEmpty,
-                styleFilter = getParams.StyleFilter,
-                includeCommentParagraphs = getParams.IncludeCommentParagraphs,
-                includeTextboxParagraphs = getParams.IncludeTextboxParagraphs
+                SectionIndex = getParams.SectionIndex,
+                IncludeEmpty = getParams.IncludeEmpty,
+                StyleFilter = getParams.StyleFilter,
+                IncludeCommentParagraphs = getParams.IncludeCommentParagraphs,
+                IncludeTextboxParagraphs = getParams.IncludeTextboxParagraphs
             },
-            paragraphs = paragraphList
+            Paragraphs = paragraphList
         };
 
-        return JsonSerializer.Serialize(result, JsonDefaults.Indented);
+        return result;
     }
 
     private static List<Aspose.Words.Paragraph> GetBaseParagraphs(Document doc, int? sectionIndex,
@@ -111,9 +112,9 @@ public class GetParagraphsWordHandler : OperationHandlerBase<Document>
         return false;
     }
 
-    private static List<object> BuildParagraphList(List<Aspose.Words.Paragraph> paragraphs)
+    private static List<ParagraphInfo> BuildParagraphList(List<Aspose.Words.Paragraph> paragraphs)
     {
-        List<object> paragraphList = [];
+        List<ParagraphInfo> paragraphList = [];
 
         for (var i = 0; i < paragraphs.Count; i++)
         {
@@ -121,17 +122,15 @@ public class GetParagraphsWordHandler : OperationHandlerBase<Document>
             var text = para.GetText().Trim();
             var (location, commentInfo) = DetermineLocation(para);
 
-            var paraInfo = new Dictionary<string, object?>
+            var paraInfo = new ParagraphInfo
             {
-                ["index"] = i,
-                ["location"] = location,
-                ["style"] = para.ParagraphFormat.Style?.Name,
-                ["text"] = text.Length > 100 ? text[..100] + "..." : text,
-                ["textLength"] = text.Length
+                Index = i,
+                Location = location,
+                Style = para.ParagraphFormat.Style?.Name,
+                Text = text.Length > 100 ? text[..100] + "..." : text,
+                TextLength = text.Length,
+                CommentInfo = commentInfo
             };
-
-            if (commentInfo != null)
-                paraInfo["commentInfo"] = commentInfo;
 
             paragraphList.Add(paraInfo);
         }

@@ -2,7 +2,9 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Words.Tables;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.Table;
@@ -10,6 +12,7 @@ namespace AsposeMcpServer.Handlers.Word.Table;
 /// <summary>
 ///     Handler for inserting columns into Word document tables.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class InsertColumnWordTableHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -26,7 +29,7 @@ public class InsertColumnWordTableHandler : OperationHandlerBase<Document>
     /// <returns>Success message with inserted column index.</returns>
     /// <exception cref="ArgumentException">Thrown when columnIndex is missing or indices are out of range.</exception>
     /// <exception cref="InvalidOperationException">Thrown when the table has no rows.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractInsertColumnParameters(parameters);
 
@@ -82,7 +85,7 @@ public class InsertColumnWordTableHandler : OperationHandlerBase<Document>
         MarkModified(context);
 
         var insertedIndex = p.InsertBefore ? p.ColumnIndex : p.ColumnIndex + 1;
-        return Success($"Successfully inserted column at index {insertedIndex}.");
+        return new SuccessResult { Message = $"Successfully inserted column at index {insertedIndex}." };
     }
 
     /// <summary>

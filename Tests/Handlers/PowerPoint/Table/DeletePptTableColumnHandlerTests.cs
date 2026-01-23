@@ -1,6 +1,7 @@
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Table;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Table;
 
@@ -55,9 +56,11 @@ public class DeletePptTableColumnHandlerTests : PptHandlerTestBase
             { "columnIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted", result.Message);
         AssertModified(context);
     }
 
@@ -90,9 +93,11 @@ public class DeletePptTableColumnHandlerTests : PptHandlerTestBase
             { "columnIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Column 1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Column 1", result.Message);
     }
 
     #endregion
@@ -131,9 +136,11 @@ public class DeletePptTableColumnHandlerTests : PptHandlerTestBase
             { "columnIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Column 0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Column 0", result.Message);
     }
 
     [Fact]
@@ -147,9 +154,11 @@ public class DeletePptTableColumnHandlerTests : PptHandlerTestBase
             { "columnIndex", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Column 2", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Column 2", result.Message);
     }
 
     #endregion

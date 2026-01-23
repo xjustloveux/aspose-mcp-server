@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 /// <summary>
 ///     Unified tool for managing PowerPoint animations (add, edit, delete, get).
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.PowerPoint.Animation")]
 [McpServerToolType]
 public class PptAnimationTool
 {
@@ -58,7 +61,14 @@ public class PptAnimationTool
     /// <param name="delay">Animation delay in seconds.</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "ppt_animation")]
+    [McpServerTool(
+        Name = "ppt_animation",
+        Title = "PowerPoint Animation Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage PowerPoint animations. Supports 4 operations: add, edit, delete, get.
 
 Usage examples:
@@ -66,7 +76,7 @@ Usage examples:
 - Edit animation: ppt_animation(operation='edit', path='presentation.pptx', slideIndex=0, shapeIndex=0, animationIndex=0, effectType='Fly')
 - Delete animation: ppt_animation(operation='delete', path='presentation.pptx', slideIndex=0, shapeIndex=0)
 - Get animations: ppt_animation(operation='get', path='presentation.pptx', slideIndex=0)")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: add, edit, delete, get")]
         string operation,
         [Description("Slide index (0-based)")] int slideIndex,
@@ -112,12 +122,12 @@ Usage examples:
         var result = handler.Execute(operationContext, parameters);
 
         if (string.Equals(operation, "get", StringComparison.OrdinalIgnoreCase))
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

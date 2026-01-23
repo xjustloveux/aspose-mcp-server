@@ -1,6 +1,8 @@
-using Aspose.Slides;
+﻿using Aspose.Slides;
 using Aspose.Slides.Export;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.PowerPoint.Section;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.PowerPoint;
 
 namespace AsposeMcpServer.Tests.Tools.PowerPoint;
@@ -37,7 +39,8 @@ public class PptSectionToolTests : PptTestBase
         var pptPath = CreatePresentation("test_add.pptx");
         var outputPath = CreateTestFilePath("test_add_output.pptx");
         var result = _tool.Execute("add", pptPath, name: "Section 1", slideIndex: 0, outputPath: outputPath);
-        Assert.StartsWith("Section 'Section 1' added", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Section 'Section 1' added", data.Message);
         using var presentation = new Presentation(outputPath);
         Assert.True(presentation.Sections.Count > 0);
         Assert.Equal("Section 1", presentation.Sections[0].Name);
@@ -48,8 +51,10 @@ public class PptSectionToolTests : PptTestBase
     {
         var pptPath = CreatePresentationWithSection("test_get.pptx");
         var result = _tool.Execute("get", pptPath);
-        Assert.Contains("Test Section", result);
-        Assert.Contains("\"count\": 1", result);
+        var data = GetResultData<GetSectionsResult>(result);
+        Assert.Equal(1, data.Count);
+        Assert.Single(data.Sections);
+        Assert.Equal("Test Section", data.Sections[0].Name);
     }
 
     [Fact]
@@ -58,7 +63,8 @@ public class PptSectionToolTests : PptTestBase
         var pptPath = CreatePresentationWithSection("test_rename.pptx", "Old Name");
         var outputPath = CreateTestFilePath("test_rename_output.pptx");
         var result = _tool.Execute("rename", pptPath, sectionIndex: 0, newName: "New Name", outputPath: outputPath);
-        Assert.StartsWith("Section 0 renamed to", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Section 0 renamed to", data.Message);
         using var presentation = new Presentation(outputPath);
         Assert.Equal("New Name", presentation.Sections[0].Name);
     }
@@ -69,7 +75,8 @@ public class PptSectionToolTests : PptTestBase
         var pptPath = CreatePresentationWithSection("test_delete_keep.pptx");
         var outputPath = CreateTestFilePath("test_delete_keep_output.pptx");
         var result = _tool.Execute("delete", pptPath, sectionIndex: 0, keepSlides: true, outputPath: outputPath);
-        Assert.StartsWith("Section 0 removed", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Section 0 removed", data.Message);
         using var presentation = new Presentation(outputPath);
         Assert.Empty(presentation.Sections);
     }
@@ -87,7 +94,8 @@ public class PptSectionToolTests : PptTestBase
         var pptPath = CreatePresentation($"test_case_add_{operation}.pptx");
         var outputPath = CreateTestFilePath($"test_case_add_{operation}_output.pptx");
         var result = _tool.Execute(operation, pptPath, name: "Section", slideIndex: 0, outputPath: outputPath);
-        Assert.StartsWith("Section 'Section' added", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Section 'Section' added", data.Message);
     }
 
     [Fact]
@@ -108,8 +116,12 @@ public class PptSectionToolTests : PptTestBase
         var pptPath = CreatePresentationWithSection("test_session_get.pptx", "Session Section");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("get", sessionId: sessionId);
-        Assert.Contains("Session Section", result);
-        Assert.Contains("\"count\": 1", result);
+        var data = GetResultData<GetSectionsResult>(result);
+        Assert.Equal(1, data.Count);
+        Assert.Single(data.Sections);
+        Assert.Equal("Session Section", data.Sections[0].Name);
+        var output = GetResultOutput<GetSectionsResult>(result);
+        Assert.Equal(sessionId, output.SessionId);
     }
 
     [Fact]
@@ -120,8 +132,11 @@ public class PptSectionToolTests : PptTestBase
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var initialCount = ppt.Sections.Count;
         var result = _tool.Execute("add", sessionId: sessionId, name: "New Section", slideIndex: 0);
-        Assert.StartsWith("Section 'New Section' added", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Section 'New Section' added", data.Message);
         Assert.True(ppt.Sections.Count > initialCount);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.Equal(sessionId, output.SessionId);
     }
 
     [Fact]
@@ -130,9 +145,12 @@ public class PptSectionToolTests : PptTestBase
         var pptPath = CreatePresentationWithSection("test_session_rename.pptx", "Old Name");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("rename", sessionId: sessionId, sectionIndex: 0, newName: "Renamed Section");
-        Assert.StartsWith("Section 0 renamed to", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Section 0 renamed to", data.Message);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         Assert.Equal("Renamed Section", ppt.Sections[0].Name);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.Equal(sessionId, output.SessionId);
     }
 
     [Fact]
@@ -143,8 +161,11 @@ public class PptSectionToolTests : PptTestBase
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var initialCount = ppt.Sections.Count;
         var result = _tool.Execute("delete", sessionId: sessionId, sectionIndex: 0, keepSlides: true);
-        Assert.StartsWith("Section 0 removed", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Section 0 removed", data.Message);
         Assert.True(ppt.Sections.Count < initialCount);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.Equal(sessionId, output.SessionId);
     }
 
     [Fact]
@@ -160,8 +181,9 @@ public class PptSectionToolTests : PptTestBase
         var pptPath2 = CreatePresentationWithSection("test_session_section.pptx", "SessionSection");
         var sessionId = OpenSession(pptPath2);
         var result = _tool.Execute("get", pptPath1, sessionId);
-        Assert.Contains("SessionSection", result);
-        Assert.DoesNotContain("PathSection", result);
+        var data = GetResultData<GetSectionsResult>(result);
+        Assert.Single(data.Sections);
+        Assert.Equal("SessionSection", data.Sections[0].Name);
     }
 
     #endregion

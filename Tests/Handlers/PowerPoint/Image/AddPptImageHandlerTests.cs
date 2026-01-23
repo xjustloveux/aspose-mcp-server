@@ -1,6 +1,7 @@
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Image;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Image;
 
@@ -41,9 +42,11 @@ public class AddPptImageHandlerTests : PptHandlerTestBase
             { "imagePath", tempImagePath }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         var pictureFrames = GetPictureFrames(pres.Slides[0]);
         Assert.True(pictureFrames.Count > 0);
         AssertModified(context);
@@ -63,9 +66,11 @@ public class AddPptImageHandlerTests : PptHandlerTestBase
             { "y", 200f }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         var pictureFrames = GetPictureFrames(pres.Slides[0]);
         Assert.True(pictureFrames.Count > 0);
         Assert.Equal(150f, pictureFrames[0].X);
@@ -86,9 +91,11 @@ public class AddPptImageHandlerTests : PptHandlerTestBase
             { "height", 200f }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         var pictureFrames = GetPictureFrames(pres.Slides[0]);
         Assert.True(pictureFrames.Count > 0);
         Assert.Equal(300f, pictureFrames[0].Width);

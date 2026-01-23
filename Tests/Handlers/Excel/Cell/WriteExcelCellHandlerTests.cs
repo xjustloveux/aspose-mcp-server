@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.Cell;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Cell;
 
@@ -31,11 +32,13 @@ public class WriteExcelCellHandlerTests : ExcelHandlerTestBase
             { "sheetIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("B5", result);
-        Assert.Contains("TestValue", result);
-        Assert.Contains("sheet", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("B5", result.Message);
+        Assert.Contains("TestValue", result.Message);
+        Assert.Contains("sheet", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -53,10 +56,12 @@ public class WriteExcelCellHandlerTests : ExcelHandlerTestBase
             { "value", "Hello World" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("A1", result);
-        Assert.Contains("Hello World", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("A1", result.Message);
+        Assert.Contains("Hello World", result.Message);
         AssertCellValue(workbook, 0, 0, "Hello World");
         AssertModified(context);
     }
@@ -77,9 +82,11 @@ public class WriteExcelCellHandlerTests : ExcelHandlerTestBase
             { "value", value }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains(cell, result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains(cell, result.Message);
         Assert.Equal(value, workbook.Worksheets[0].Cells[cell].Value);
         AssertModified(context);
     }
@@ -154,7 +161,7 @@ public class WriteExcelCellHandlerTests : ExcelHandlerTestBase
     [InlineData("Simple text")]
     [InlineData("Text with numbers 12345")]
     [InlineData("Special chars: !@#$%^&*()")]
-    [InlineData("Unicode: 中文測試")]
+    [InlineData("Unicode: 中�?測試")]
     public void Execute_WritesVariousStringFormats(string value)
     {
         var workbook = CreateEmptyWorkbook();

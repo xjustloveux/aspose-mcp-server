@@ -1,6 +1,6 @@
-using System.Text.Json;
 using AsposeMcpServer.Handlers.Pdf.Text;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Pdf.Text;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Text;
 
@@ -27,10 +27,11 @@ public class ExtractPdfTextHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("text", out _));
+        var result = Assert.IsType<ExtractPdfTextResult>(res);
+
+        Assert.NotNull(result.Text);
     }
 
     #endregion
@@ -49,10 +50,11 @@ public class ExtractPdfTextHandlerTests : PdfHandlerTestBase
             { "extractionMode", mode }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("text", out _));
+        var result = Assert.IsType<ExtractPdfTextResult>(res);
+
+        Assert.NotNull(result.Text);
     }
 
     #endregion
@@ -105,11 +107,12 @@ public class ExtractPdfTextHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("pageIndex", out _));
-        Assert.True(json.RootElement.TryGetProperty("totalPages", out _));
+        var result = Assert.IsType<ExtractPdfTextResult>(res);
+
+        Assert.True(result.PageIndex >= 0);
+        Assert.True(result.TotalPages >= 0);
         AssertNotModified(context);
     }
 
@@ -123,10 +126,11 @@ public class ExtractPdfTextHandlerTests : PdfHandlerTestBase
             { "pageIndex", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(2, json.RootElement.GetProperty("pageIndex").GetInt32());
+        var result = Assert.IsType<ExtractPdfTextResult>(res);
+
+        Assert.Equal(2, result.PageIndex);
     }
 
     [Fact]
@@ -136,10 +140,11 @@ public class ExtractPdfTextHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(3, json.RootElement.GetProperty("totalPages").GetInt32());
+        var result = Assert.IsType<ExtractPdfTextResult>(res);
+
+        Assert.Equal(3, result.TotalPages);
     }
 
     #endregion
@@ -159,10 +164,11 @@ public class ExtractPdfTextHandlerTests : PdfHandlerTestBase
             { "pageIndex", pageIndex }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(pageIndex, json.RootElement.GetProperty("pageIndex").GetInt32());
+        var result = Assert.IsType<ExtractPdfTextResult>(res);
+
+        Assert.Equal(pageIndex, result.PageIndex);
     }
 
     [Fact]
@@ -172,10 +178,11 @@ public class ExtractPdfTextHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(1, json.RootElement.GetProperty("pageIndex").GetInt32());
+        var result = Assert.IsType<ExtractPdfTextResult>(res);
+
+        Assert.Equal(1, result.PageIndex);
     }
 
     #endregion
@@ -192,11 +199,12 @@ public class ExtractPdfTextHandlerTests : PdfHandlerTestBase
             { "includeFontInfo", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("fragments", out _));
-        Assert.True(json.RootElement.TryGetProperty("fragmentCount", out _));
+        var result = Assert.IsType<ExtractPdfTextResult>(res);
+
+        Assert.NotNull(result.Fragments);
+        Assert.NotNull(result.FragmentCount);
     }
 
     [Fact]
@@ -209,11 +217,12 @@ public class ExtractPdfTextHandlerTests : PdfHandlerTestBase
             { "includeFontInfo", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("text", out _));
-        Assert.False(json.RootElement.TryGetProperty("fragments", out _));
+        var result = Assert.IsType<ExtractPdfTextResult>(res);
+
+        Assert.NotNull(result.Text);
+        Assert.Null(result.Fragments);
     }
 
     #endregion

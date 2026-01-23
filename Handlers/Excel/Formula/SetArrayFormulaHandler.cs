@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Formula;
 
 /// <summary>
 ///     Handler for setting array formulas in Excel.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetArrayFormulaHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class SetArrayFormulaHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0), autoCalculate (default: true)
     /// </param>
     /// <returns>Success message with range details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var setParams = ExtractSetArrayParameters(parameters);
 
@@ -40,7 +43,7 @@ public class SetArrayFormulaHandler : OperationHandlerBase<Workbook>
         {
             if (setParams.AutoCalculate) workbook.CalculateFormula();
             MarkModified(context);
-            return Success(result.Message);
+            return new SuccessResult { Message = result.Message };
         }
 
         throw new ArgumentException(

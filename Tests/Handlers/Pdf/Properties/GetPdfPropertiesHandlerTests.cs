@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Pdf.Properties;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Pdf.Properties;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Properties;
 
@@ -20,7 +21,7 @@ public class GetPdfPropertiesHandlerTests : PdfHandlerTestBase
     #region Basic Properties Retrieval
 
     [Fact]
-    public void Execute_ReturnsJsonResult()
+    public void Execute_ReturnsTypedResult()
     {
         var doc = CreateDocumentWithPages(1);
         var context = CreateContext(doc);
@@ -28,8 +29,7 @@ public class GetPdfPropertiesHandlerTests : PdfHandlerTestBase
 
         var result = _handler.Execute(context, parameters);
 
-        Assert.Contains("{", result);
-        Assert.Contains("}", result);
+        Assert.IsType<GetPropertiesPdfResult>(result);
     }
 
     [Fact]
@@ -39,9 +39,10 @@ public class GetPdfPropertiesHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"totalPages\": 3", result);
+        var result = Assert.IsType<GetPropertiesPdfResult>(res);
+        Assert.Equal(3, result.TotalPages);
     }
 
     [Fact]
@@ -51,9 +52,10 @@ public class GetPdfPropertiesHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"isEncrypted\":", result);
+        var result = Assert.IsType<GetPropertiesPdfResult>(res);
+        Assert.False(result.IsEncrypted);
     }
 
     [Fact]
@@ -63,9 +65,10 @@ public class GetPdfPropertiesHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"isLinearized\":", result);
+        var result = Assert.IsType<GetPropertiesPdfResult>(res);
+        Assert.False(result.IsLinearized);
     }
 
     [Fact]
@@ -85,7 +88,7 @@ public class GetPdfPropertiesHandlerTests : PdfHandlerTestBase
     #region Metadata Properties
 
     [Fact]
-    public void Execute_ReturnsTitleProperty()
+    public void Execute_ReturnsCorrectType()
     {
         var doc = CreateDocumentWithPages(1);
         var context = CreateContext(doc);
@@ -93,91 +96,119 @@ public class GetPdfPropertiesHandlerTests : PdfHandlerTestBase
 
         var result = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"title\":", result);
+        Assert.IsType<GetPropertiesPdfResult>(result);
+    }
+
+    [Fact]
+    public void Execute_ReturnsTitleProperty()
+    {
+        var doc = CreateDocumentWithPages(1);
+        doc.Info.Title = "Test Title";
+        var context = CreateContext(doc);
+        var parameters = CreateEmptyParameters();
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<GetPropertiesPdfResult>(res);
+        Assert.Equal("Test Title", result.Title);
     }
 
     [Fact]
     public void Execute_ReturnsAuthorProperty()
     {
         var doc = CreateDocumentWithPages(1);
+        doc.Info.Author = "Test Author";
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"author\":", result);
+        var result = Assert.IsType<GetPropertiesPdfResult>(res);
+        Assert.Equal("Test Author", result.Author);
     }
 
     [Fact]
     public void Execute_ReturnsSubjectProperty()
     {
         var doc = CreateDocumentWithPages(1);
+        doc.Info.Subject = "Test Subject";
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"subject\":", result);
+        var result = Assert.IsType<GetPropertiesPdfResult>(res);
+        Assert.Equal("Test Subject", result.Subject);
     }
 
     [Fact]
     public void Execute_ReturnsKeywordsProperty()
     {
         var doc = CreateDocumentWithPages(1);
+        doc.Info.Keywords = "test, keywords";
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"keywords\":", result);
+        var result = Assert.IsType<GetPropertiesPdfResult>(res);
+        Assert.Equal("test, keywords", result.Keywords);
     }
 
     [Fact]
     public void Execute_ReturnsCreatorProperty()
     {
         var doc = CreateDocumentWithPages(1);
+        doc.Info.Creator = "Test Creator";
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"creator\":", result);
+        var result = Assert.IsType<GetPropertiesPdfResult>(res);
+        Assert.Equal("Test Creator", result.Creator);
     }
 
     [Fact]
     public void Execute_ReturnsProducerProperty()
     {
         var doc = CreateDocumentWithPages(1);
+        doc.Info.Producer = "Test Producer";
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"producer\":", result);
+        var result = Assert.IsType<GetPropertiesPdfResult>(res);
+        Assert.Equal("Test Producer", result.Producer);
     }
 
     [Fact]
     public void Execute_ReturnsCreationDateProperty()
     {
         var doc = CreateDocumentWithPages(1);
+        doc.Info.CreationDate = DateTime.Now;
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"creationDate\":", result);
+        var result = Assert.IsType<GetPropertiesPdfResult>(res);
+        Assert.NotNull(result.CreationDate);
     }
 
     [Fact]
     public void Execute_ReturnsModificationDateProperty()
     {
         var doc = CreateDocumentWithPages(1);
+        doc.Info.ModDate = DateTime.Now;
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"modificationDate\":", result);
+        var result = Assert.IsType<GetPropertiesPdfResult>(res);
+        Assert.NotNull(result.ModificationDate);
     }
 
     #endregion
@@ -191,9 +222,10 @@ public class GetPdfPropertiesHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"totalPages\": 1", result);
+        var result = Assert.IsType<GetPropertiesPdfResult>(res);
+        Assert.Equal(1, result.TotalPages);
     }
 
     [SkippableTheory]
@@ -207,9 +239,10 @@ public class GetPdfPropertiesHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains($"\"totalPages\": {pageCount}", result);
+        var result = Assert.IsType<GetPropertiesPdfResult>(res);
+        Assert.Equal(pageCount, result.TotalPages);
     }
 
     #endregion

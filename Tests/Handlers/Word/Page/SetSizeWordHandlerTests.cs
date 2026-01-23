@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Page;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Page;
 
@@ -30,9 +31,11 @@ public class SetSizeWordHandlerTests : WordHandlerTestBase
             { "paperSize", "A4" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("size updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("size updated", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(PaperSize.A4, doc.Sections[0].PageSetup.PaperSize);
         AssertModified(context);
     }
@@ -63,9 +66,11 @@ public class SetSizeWordHandlerTests : WordHandlerTestBase
             { "height", 792.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("size updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("size updated", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(612.0, doc.Sections[0].PageSetup.PageWidth);
         Assert.Equal(792.0, doc.Sections[0].PageSetup.PageHeight);
     }

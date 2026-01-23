@@ -1,6 +1,7 @@
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.TextFormat;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.TextFormat;
 
@@ -44,9 +45,11 @@ public class FormatPptTextHandlerTests : PptHandlerTestBase
             { "fontSize", 14.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("1 slides", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("1 slides", result.Message);
         AssertModified(context);
     }
 
@@ -62,9 +65,11 @@ public class FormatPptTextHandlerTests : PptHandlerTestBase
             { "bold", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("2 slides", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("2 slides", result.Message);
     }
 
     [Fact]
@@ -91,9 +96,11 @@ public class FormatPptTextHandlerTests : PptHandlerTestBase
             { "bold", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("applied", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("applied", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -106,9 +113,11 @@ public class FormatPptTextHandlerTests : PptHandlerTestBase
             { "italic", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("applied", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("applied", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -121,9 +130,11 @@ public class FormatPptTextHandlerTests : PptHandlerTestBase
             { "color", "#FF0000" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("applied", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("applied", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -140,9 +151,11 @@ public class FormatPptTextHandlerTests : PptHandlerTestBase
             { "color", "#0000FF" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("applied", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("applied", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

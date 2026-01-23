@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.DataOperations;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Excel.DataOperations;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.DataOperations;
 
@@ -30,12 +31,18 @@ public class GetContentHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Name", result);
-        Assert.Contains("Value", result);
-        Assert.Contains("Test", result);
-        Assert.Contains("100", result);
+        var result = Assert.IsType<GetContentResult>(res);
+
+        Assert.NotNull(result.Rows);
+        Assert.Equal(2, result.Rows.Count);
+        Assert.Contains(result.Rows[0].Values, v => v?.ToString() == "Name");
+        Assert.Contains(result.Rows[0].Values, v => v?.ToString() == "Value");
+        Assert.Contains(result.Rows[1].Values, v => v?.ToString() == "Test");
+        // ReSharper disable once CompareOfFloatsByEqualityOperator - Exact integer value 100 comparison is safe
+        Assert.Contains(result.Rows[1].Values,
+            v => v?.ToString() == "100" || v is (int or double) and 100);
     }
 
     [Fact]
@@ -53,11 +60,15 @@ public class GetContentHandlerTests : ExcelHandlerTestBase
             { "range", "A1:B2" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("A1", result);
-        Assert.Contains("B2", result);
-        Assert.DoesNotContain("Outside", result);
+        var result = Assert.IsType<GetContentResult>(res);
+
+        Assert.NotNull(result.Rows);
+        Assert.Equal(2, result.Rows.Count);
+        Assert.Contains(result.Rows[0].Values, v => v?.ToString() == "A1");
+        Assert.Contains(result.Rows[1].Values, v => v?.ToString() == "B2");
+        Assert.DoesNotContain(result.Rows, r => r.Values.Any(v => v?.ToString() == "Outside"));
     }
 
     [Fact]
@@ -72,10 +83,13 @@ public class GetContentHandlerTests : ExcelHandlerTestBase
             { "sheetIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Sheet2Data", result);
-        Assert.DoesNotContain("Sheet1Data", result);
+        var result = Assert.IsType<GetContentResult>(res);
+
+        Assert.NotNull(result.Rows);
+        Assert.Contains(result.Rows, r => r.Values.Any(v => v?.ToString() == "Sheet2Data"));
+        Assert.DoesNotContain(result.Rows, r => r.Values.Any(v => v?.ToString() == "Sheet1Data"));
     }
 
     [Fact]
@@ -86,9 +100,12 @@ public class GetContentHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("OnlyCell", result);
+        var result = Assert.IsType<GetContentResult>(res);
+
+        Assert.NotNull(result.Rows);
+        Assert.Contains(result.Rows, r => r.Values.Any(v => v?.ToString() == "OnlyCell"));
     }
 
     #endregion

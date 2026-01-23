@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Excel.Hyperlink;
 
 namespace AsposeMcpServer.Handlers.Excel.Hyperlink;
 
 /// <summary>
 ///     Handler for getting hyperlinks from Excel worksheets.
 /// </summary>
+[ResultType(typeof(GetHyperlinksExcelResult))]
 public class GetExcelHyperlinksHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class GetExcelHyperlinksHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0)
     /// </param>
     /// <returns>JSON result with hyperlink information.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var getParams = ExtractGetParameters(parameters);
 
@@ -29,41 +32,41 @@ public class GetExcelHyperlinksHandler : OperationHandlerBase<Workbook>
         var hyperlinks = worksheet.Hyperlinks;
 
         if (hyperlinks.Count == 0)
-            return JsonResult(new
+            return new GetHyperlinksExcelResult
             {
-                count = 0,
-                worksheetName = worksheet.Name,
-                items = Array.Empty<object>(),
-                message = "No hyperlinks found"
-            });
+                Count = 0,
+                WorksheetName = worksheet.Name,
+                Items = Array.Empty<ExcelHyperlinkInfo>(),
+                Message = "No hyperlinks found"
+            };
 
-        List<object> hyperlinkList = [];
+        List<ExcelHyperlinkInfo> hyperlinkList = [];
         for (var i = 0; i < hyperlinks.Count; i++)
         {
             var hyperlink = hyperlinks[i];
             var area = hyperlink.Area;
             var cellRef = CellsHelper.CellIndexToName(area.StartRow, area.StartColumn);
 
-            hyperlinkList.Add(new
+            hyperlinkList.Add(new ExcelHyperlinkInfo
             {
-                index = i,
-                cell = cellRef,
-                url = hyperlink.Address,
-                displayText = hyperlink.TextToDisplay,
-                area = new
+                Index = i,
+                Cell = cellRef,
+                Url = hyperlink.Address,
+                DisplayText = hyperlink.TextToDisplay,
+                Area = new HyperlinkArea
                 {
-                    startCell = cellRef,
-                    endCell = CellsHelper.CellIndexToName(area.EndRow, area.EndColumn)
+                    StartCell = cellRef,
+                    EndCell = CellsHelper.CellIndexToName(area.EndRow, area.EndColumn)
                 }
             });
         }
 
-        return JsonResult(new
+        return new GetHyperlinksExcelResult
         {
-            count = hyperlinks.Count,
-            worksheetName = worksheet.Name,
-            items = hyperlinkList
-        });
+            Count = hyperlinks.Count,
+            WorksheetName = worksheet.Name,
+            Items = hyperlinkList
+        };
     }
 
     private static GetParameters ExtractGetParameters(OperationParameters parameters)

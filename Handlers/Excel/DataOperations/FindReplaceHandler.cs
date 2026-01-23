@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Excel.DataOperations;
 
 namespace AsposeMcpServer.Handlers.Excel.DataOperations;
 
 /// <summary>
 ///     Handler for finding and replacing text in Excel worksheets.
 /// </summary>
+[ResultType(typeof(FindReplaceResult))]
 public class FindReplaceHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class FindReplaceHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex, matchCase, matchEntireCell
     /// </param>
     /// <returns>Success message with replacement count.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var findReplaceParams = ExtractFindReplaceParameters(parameters);
 
@@ -51,8 +54,12 @@ public class FindReplaceHandler : OperationHandlerBase<Workbook>
 
             MarkModified(context);
 
-            return Success(
-                $"Replaced '{findReplaceParams.FindText}' with '{findReplaceParams.ReplaceText}' ({totalReplacements} replacements).");
+            return new FindReplaceResult
+            {
+                FindText = findReplaceParams.FindText,
+                ReplaceText = findReplaceParams.ReplaceText,
+                ReplacementCount = totalReplacements
+            };
         }
         catch (CellsException ex)
         {

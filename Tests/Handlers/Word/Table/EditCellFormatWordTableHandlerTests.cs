@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Table;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Table;
 
@@ -55,10 +56,12 @@ public class EditCellFormatWordTableHandlerTests : WordHandlerTestBase
             { "backgroundColor", "#FF00FF" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("entire table", result);
-        Assert.Contains("9 cells", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("entire table", result.Message);
+        Assert.Contains("9 cells", result.Message);
     }
 
     #endregion
@@ -80,9 +83,11 @@ public class EditCellFormatWordTableHandlerTests : WordHandlerTestBase
             { "paddingRight", 5.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("format", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("format", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -101,9 +106,11 @@ public class EditCellFormatWordTableHandlerTests : WordHandlerTestBase
             { "backgroundColor", "#FF0000" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("format", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("format", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -122,9 +129,11 @@ public class EditCellFormatWordTableHandlerTests : WordHandlerTestBase
             { "backgroundColor", "#00FF00" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("format", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("format", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -143,9 +152,11 @@ public class EditCellFormatWordTableHandlerTests : WordHandlerTestBase
             { "backgroundColor", "#0000FF" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("format", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("format", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -160,9 +171,11 @@ public class EditCellFormatWordTableHandlerTests : WordHandlerTestBase
             { "verticalAlignment", "center" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("format", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("format", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -180,9 +193,11 @@ public class EditCellFormatWordTableHandlerTests : WordHandlerTestBase
             { "rightPadding", 5.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("format", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("format", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -304,10 +319,12 @@ public class EditCellFormatWordTableHandlerTests : WordHandlerTestBase
             { "backgroundColor", "#FFFF00" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("row 1", result);
-        Assert.Contains("3 cells", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("row 1", result.Message);
+        Assert.Contains("3 cells", result.Message);
     }
 
     [Fact]
@@ -357,10 +374,12 @@ public class EditCellFormatWordTableHandlerTests : WordHandlerTestBase
             { "backgroundColor", "#00FFFF" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("column 1", result);
-        Assert.Contains("3 cells", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("column 1", result.Message);
+        Assert.Contains("3 cells", result.Message);
     }
 
     [Fact]
@@ -394,9 +413,11 @@ public class EditCellFormatWordTableHandlerTests : WordHandlerTestBase
             { "fontName", "Arial" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("format", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("format", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -411,9 +432,11 @@ public class EditCellFormatWordTableHandlerTests : WordHandlerTestBase
             { "cellFontSize", 14.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("format", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("format", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -429,9 +452,11 @@ public class EditCellFormatWordTableHandlerTests : WordHandlerTestBase
             { "italic", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("format", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("format", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -446,9 +471,11 @@ public class EditCellFormatWordTableHandlerTests : WordHandlerTestBase
             { "color", "#FF0000" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("format", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("format", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -464,9 +491,11 @@ public class EditCellFormatWordTableHandlerTests : WordHandlerTestBase
             { "fontNameFarEast", "MS Gothic" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("format", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("format", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -489,9 +518,11 @@ public class EditCellFormatWordTableHandlerTests : WordHandlerTestBase
             { "alignment", alignment }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("format", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("format", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]
@@ -509,9 +540,11 @@ public class EditCellFormatWordTableHandlerTests : WordHandlerTestBase
             { "verticalAlignmentFormat", alignment }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("format", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("format", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

@@ -1,12 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.PowerPoint.DataOperations;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.DataOperations;
 
 /// <summary>
 ///     Handler for getting presentation statistics.
 /// </summary>
+[ResultType(typeof(GetStatisticsResult))]
 public class GetStatisticsHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -18,7 +21,7 @@ public class GetStatisticsHandler : OperationHandlerBase<Presentation>
     /// <param name="context">The presentation context.</param>
     /// <param name="parameters">No parameters required.</param>
     /// <returns>JSON string containing the presentation statistics.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var presentation = context.Document;
 
@@ -50,29 +53,29 @@ public class GetStatisticsHandler : OperationHandlerBase<Presentation>
             }
         }
 
-        var result = new
+        var result = new GetStatisticsResult
         {
-            totalSlides = presentation.Slides.Count,
-            totalHiddenSlides,
-            totalLayouts = presentation.LayoutSlides.Count,
-            totalMasters = presentation.Masters.Count,
-            slideSize = new
+            TotalSlides = presentation.Slides.Count,
+            TotalHiddenSlides = totalHiddenSlides,
+            TotalLayouts = presentation.LayoutSlides.Count,
+            TotalMasters = presentation.Masters.Count,
+            SlideSize = new GetStatisticsSizeInfo
             {
-                width = presentation.SlideSize.Size.Width,
-                height = presentation.SlideSize.Size.Height
+                Width = presentation.SlideSize.Size.Width,
+                Height = presentation.SlideSize.Size.Height
             },
-            totalShapes,
-            totalTextCharacters,
-            totalImages,
-            totalTables,
-            totalCharts,
-            totalSmartArt,
-            totalAudio,
-            totalVideo,
-            totalAnimations,
-            totalHyperlinks
+            TotalShapes = totalShapes,
+            TotalTextCharacters = totalTextCharacters,
+            TotalImages = totalImages,
+            TotalTables = totalTables,
+            TotalCharts = totalCharts,
+            TotalSmartArt = totalSmartArt,
+            TotalAudio = totalAudio,
+            TotalVideo = totalVideo,
+            TotalAnimations = totalAnimations,
+            TotalHyperlinks = totalHyperlinks
         };
 
-        return JsonResult(result);
+        return result;
     }
 }

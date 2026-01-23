@@ -1,7 +1,7 @@
-using System.Text.Json;
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.ConditionalFormatting;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Excel.ConditionalFormatting;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.ConditionalFormatting;
 
@@ -33,11 +33,12 @@ public class GetExcelConditionalFormattingsHandlerTests : ExcelHandlerTestBase
             { "sheetIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(1, json.RootElement.GetProperty("sheetIndex").GetInt32());
-        Assert.Equal(1, json.RootElement.GetProperty("count").GetInt32());
+        var result = Assert.IsType<GetConditionalFormattingsResult>(res);
+
+        Assert.Equal(1, result.SheetIndex);
+        Assert.Equal(1, result.Count);
     }
 
     #endregion
@@ -84,13 +85,14 @@ public class GetExcelConditionalFormattingsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("count", out _));
-        Assert.True(json.RootElement.TryGetProperty("sheetIndex", out _));
-        Assert.True(json.RootElement.TryGetProperty("worksheetName", out _));
-        Assert.True(json.RootElement.TryGetProperty("items", out _));
+        var result = Assert.IsType<GetConditionalFormattingsResult>(res);
+
+        Assert.True(result.Count >= 0);
+        Assert.True(result.SheetIndex >= 0);
+        Assert.NotNull(result.WorksheetName);
+        Assert.NotNull(result.Items);
     }
 
     [Fact]
@@ -100,12 +102,13 @@ public class GetExcelConditionalFormattingsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(0, json.RootElement.GetProperty("count").GetInt32());
-        Assert.True(json.RootElement.TryGetProperty("message", out var message));
-        Assert.Contains("no conditional", message.GetString()?.ToLower());
+        var result = Assert.IsType<GetConditionalFormattingsResult>(res);
+
+        Assert.Equal(0, result.Count);
+        Assert.NotNull(result.Message);
+        Assert.Contains("no conditional", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -115,11 +118,12 @@ public class GetExcelConditionalFormattingsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(3, json.RootElement.GetProperty("count").GetInt32());
-        Assert.Equal(3, json.RootElement.GetProperty("items").GetArrayLength());
+        var result = Assert.IsType<GetConditionalFormattingsResult>(res);
+
+        Assert.Equal(3, result.Count);
+        Assert.Equal(3, result.Items.Count);
     }
 
     [Fact]
@@ -129,14 +133,15 @@ public class GetExcelConditionalFormattingsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var item = json.RootElement.GetProperty("items")[0];
-        Assert.True(item.TryGetProperty("index", out _));
-        Assert.True(item.TryGetProperty("areas", out _));
-        Assert.True(item.TryGetProperty("conditionsCount", out _));
-        Assert.True(item.TryGetProperty("conditions", out _));
+        var result = Assert.IsType<GetConditionalFormattingsResult>(res);
+
+        var item = result.Items[0];
+        Assert.True(item.Index >= 0);
+        Assert.NotNull(item.Areas);
+        Assert.True(item.ConditionsCount >= 0);
+        Assert.NotNull(item.Conditions);
     }
 
     [Fact]
@@ -146,12 +151,13 @@ public class GetExcelConditionalFormattingsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var condition = json.RootElement.GetProperty("items")[0].GetProperty("conditions")[0];
-        Assert.True(condition.TryGetProperty("operatorType", out _));
-        Assert.True(condition.TryGetProperty("formula1", out _));
+        var result = Assert.IsType<GetConditionalFormattingsResult>(res);
+
+        var condition = result.Items[0].Conditions[0];
+        Assert.NotNull(condition.OperatorType);
+        Assert.NotNull(condition.Formula1);
     }
 
     #endregion

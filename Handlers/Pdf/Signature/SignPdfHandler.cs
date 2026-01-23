@@ -1,13 +1,16 @@
 using Aspose.Pdf;
 using Aspose.Pdf.Forms;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.Signature;
 
 /// <summary>
 ///     Handler for signing PDF documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SignPdfHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -22,7 +25,7 @@ public class SignPdfHandler : OperationHandlerBase<Document>
     ///     Optional: pageIndex (default: 1), reason, location, x, y, width, height.
     /// </param>
     /// <returns>Success message with signature details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractSignParameters(parameters);
 
@@ -55,7 +58,7 @@ public class SignPdfHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Document signed on page {p.PageIndex}.");
+        return new SuccessResult { Message = $"Document signed on page {p.PageIndex}." };
     }
 
     /// <summary>

@@ -1,6 +1,7 @@
-using System.Text.Json;
-using Aspose.Cells;
-using AsposeMcpServer.Tests.Helpers;
+﻿using Aspose.Cells;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Excel.Filter;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Excel;
 
 namespace AsposeMcpServer.Tests.Tools.Excel;
@@ -50,7 +51,8 @@ public class ExcelFilterToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbookWithData("test_apply.xlsx");
         var outputPath = CreateTestFilePath("test_apply_output.xlsx");
         var result = _tool.Execute("apply", workbookPath, range: "A1:C5", outputPath: outputPath);
-        Assert.Contains("Auto filter applied to range A1:C5", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Auto filter applied to range A1:C5", data.Message);
         using var workbook = new Workbook(outputPath);
         Assert.False(string.IsNullOrEmpty(workbook.Worksheets[0].AutoFilter.Range));
     }
@@ -61,7 +63,8 @@ public class ExcelFilterToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithFilter("test_remove.xlsx");
         var outputPath = CreateTestFilePath("test_remove_output.xlsx");
         var result = _tool.Execute("remove", workbookPath, outputPath: outputPath);
-        Assert.Contains("Auto filter removed", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Auto filter removed", data.Message);
         using var workbook = new Workbook(outputPath);
         Assert.True(string.IsNullOrEmpty(workbook.Worksheets[0].AutoFilter.Range));
     }
@@ -73,7 +76,8 @@ public class ExcelFilterToolTests : ExcelTestBase
         var outputPath = CreateTestFilePath("test_filter_value_output.xlsx");
         var result = _tool.Execute("filter", workbookPath, range: "A1:A5", columnIndex: 0, criteria: "Active",
             outputPath: outputPath);
-        Assert.Contains("Filter applied to column 0", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Filter applied to column 0", data.Message);
         using var resultWorkbook = new Workbook(outputPath);
         var ws = resultWorkbook.Worksheets[0];
         Assert.False(ws.Cells.Rows[0].IsHidden);
@@ -86,9 +90,10 @@ public class ExcelFilterToolTests : ExcelTestBase
     {
         var workbookPath = CreateWorkbookWithFilter("test_get_status_enabled.xlsx");
         var result = _tool.Execute("get_status", workbookPath);
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.GetProperty("isFilterEnabled").GetBoolean());
-        Assert.Contains("A1:C5", json.RootElement.GetProperty("filterRange").GetString());
+        var data = GetResultData<GetFilterStatusResult>(result);
+        Assert.True(data.IsFilterEnabled);
+        Assert.NotNull(data.FilterRange);
+        Assert.Contains("A1:C5", data.FilterRange);
     }
 
     [Fact]
@@ -96,8 +101,8 @@ public class ExcelFilterToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbookWithData("test_get_status_disabled.xlsx", 3);
         var result = _tool.Execute("get_status", workbookPath);
-        var json = JsonDocument.Parse(result);
-        Assert.False(json.RootElement.GetProperty("isFilterEnabled").GetBoolean());
+        var data = GetResultData<GetFilterStatusResult>(result);
+        Assert.False(data.IsFilterEnabled);
     }
 
     #endregion
@@ -113,7 +118,8 @@ public class ExcelFilterToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbookWithData($"test_case_{operation}.xlsx");
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.xlsx");
         var result = _tool.Execute(operation, workbookPath, range: "A1:C5", outputPath: outputPath);
-        Assert.Contains("Auto filter applied to range A1:C5", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Auto filter applied to range A1:C5", data.Message);
     }
 
     [Fact]
@@ -140,7 +146,8 @@ public class ExcelFilterToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbookWithData("test_session_apply.xlsx");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("apply", sessionId: sessionId, range: "A1:C5");
-        Assert.Contains("Auto filter applied to range A1:C5", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Auto filter applied to range A1:C5", data.Message);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.False(string.IsNullOrEmpty(workbook.Worksheets[0].AutoFilter.Range));
     }
@@ -151,7 +158,8 @@ public class ExcelFilterToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithFilter("test_session_remove.xlsx");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("remove", sessionId: sessionId);
-        Assert.Contains("Auto filter removed", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Auto filter removed", data.Message);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.True(string.IsNullOrEmpty(workbook.Worksheets[0].AutoFilter.Range));
     }
@@ -162,7 +170,8 @@ public class ExcelFilterToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithFilterData("test_session_filter.xlsx");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("filter", sessionId: sessionId, range: "A1:A5", columnIndex: 0, criteria: "Active");
-        Assert.Contains("Filter applied to column 0", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Filter applied to column 0", data.Message);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.False(string.IsNullOrEmpty(workbook.Worksheets[0].AutoFilter.Range));
     }
@@ -173,8 +182,8 @@ public class ExcelFilterToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithFilter("test_session_get_status.xlsx");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("get_status", sessionId: sessionId);
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.GetProperty("isFilterEnabled").GetBoolean());
+        var data = GetResultData<GetFilterStatusResult>(result);
+        Assert.True(data.IsFilterEnabled);
     }
 
     [Fact]
@@ -196,7 +205,8 @@ public class ExcelFilterToolTests : ExcelTestBase
 
         var sessionId = OpenSession(sessionWorkbook);
         var result = _tool.Execute("get_status", pathWorkbook, sessionId);
-        Assert.Contains("SessionSheet", result);
+        var data = GetResultData<GetFilterStatusResult>(result);
+        Assert.Equal("SessionSheet", data.WorksheetName);
     }
 
     #endregion

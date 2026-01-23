@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.Properties;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Excel.Properties;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Properties;
 
@@ -26,11 +27,13 @@ public class GetSheetInfoHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"count\": 3", result);
-        Assert.Contains("\"totalWorksheets\": 3", result);
-        Assert.Contains("items", result);
+        var result = Assert.IsType<GetSheetInfoResult>(res);
+        Assert.Equal(3, result.Count);
+        Assert.Equal(3, result.TotalWorksheets);
+        Assert.NotNull(result.Items);
+        Assert.Equal(3, result.Items.Count);
     }
 
     [Fact]
@@ -44,10 +47,12 @@ public class GetSheetInfoHandlerTests : ExcelHandlerTestBase
             { "targetSheetIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"count\": 1", result);
-        Assert.Contains("TargetSheet", result);
+        var result = Assert.IsType<GetSheetInfoResult>(res);
+        Assert.Equal(1, result.Count);
+        Assert.Single(result.Items);
+        Assert.Equal("TargetSheet", result.Items[0].Name);
     }
 
     [Fact]
@@ -58,11 +63,13 @@ public class GetSheetInfoHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("dataRowCount", result);
-        Assert.Contains("dataColumnCount", result);
-        Assert.Contains("usedRange", result);
+        var result = Assert.IsType<GetSheetInfoResult>(res);
+        var sheetDetail = Assert.Single(result.Items);
+        Assert.True(sheetDetail.DataRowCount >= 0);
+        Assert.True(sheetDetail.DataColumnCount >= 0);
+        Assert.NotNull(sheetDetail.UsedRange);
     }
 
     [Fact]
@@ -72,10 +79,12 @@ public class GetSheetInfoHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("pageOrientation", result);
-        Assert.Contains("paperSize", result);
+        var result = Assert.IsType<GetSheetInfoResult>(res);
+        var sheetDetail = Assert.Single(result.Items);
+        Assert.NotNull(sheetDetail.PageOrientation);
+        Assert.NotNull(sheetDetail.PaperSize);
     }
 
     [Fact]
@@ -85,9 +94,11 @@ public class GetSheetInfoHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("freezePanes", result);
+        var result = Assert.IsType<GetSheetInfoResult>(res);
+        var sheetDetail = Assert.Single(result.Items);
+        Assert.NotNull(sheetDetail.FreezePanes);
     }
 
     #endregion

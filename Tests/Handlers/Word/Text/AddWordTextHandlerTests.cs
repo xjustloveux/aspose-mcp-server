@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Text;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Text;
 
@@ -66,9 +67,11 @@ public class AddWordTextHandlerTests : WordHandlerTestBase
             { paramName, paramValue }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains(paramName, result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains(paramName, result.Message, StringComparison.OrdinalIgnoreCase);
 
         var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
         var run = runs.FirstOrDefault(r => r.Text.Contains("Special Text"));
@@ -128,10 +131,12 @@ public class AddWordTextHandlerTests : WordHandlerTestBase
             { "fontSize", 16.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("bold", result, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("italic", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("bold", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("italic", result.Message, StringComparison.OrdinalIgnoreCase);
 
         var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
         var run = runs.FirstOrDefault(r => r.Text.Contains("Fully Formatted"));
@@ -172,9 +177,11 @@ public class AddWordTextHandlerTests : WordHandlerTestBase
             { "text", "Hello World" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertContainsText(doc, "Hello World");
         AssertModified(context);
     }
@@ -194,9 +201,11 @@ public class AddWordTextHandlerTests : WordHandlerTestBase
             { "text", text }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         if (!string.IsNullOrEmpty(text))
             AssertContainsText(doc, text);
         AssertModified(context);
@@ -212,9 +221,11 @@ public class AddWordTextHandlerTests : WordHandlerTestBase
             { "text", "Line 1\nLine 2\nLine 3" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertContainsText(doc, "Line 1");
         AssertContainsText(doc, "Line 2");
         AssertContainsText(doc, "Line 3");
@@ -237,9 +248,11 @@ public class AddWordTextHandlerTests : WordHandlerTestBase
             { "text", $"Line1{lineEnding}Line2" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertContainsText(doc, "Line1");
         AssertContainsText(doc, "Line2");
         AssertModified(context);
@@ -264,9 +277,11 @@ public class AddWordTextHandlerTests : WordHandlerTestBase
             { "underline", underlineStyle }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("underline", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("underline", result.Message, StringComparison.OrdinalIgnoreCase);
 
         var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
         var run = runs.FirstOrDefault(r => r.Text.Contains($"Underline {underlineStyle}"));

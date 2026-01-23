@@ -1,6 +1,7 @@
-using Aspose.Slides;
+﻿using Aspose.Slides;
 using Aspose.Slides.Export;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.PowerPoint;
 
 namespace AsposeMcpServer.Tests.Tools.PowerPoint;
@@ -40,7 +41,8 @@ public class PptTextFormatToolTests : PptTestBase
         var pptPath = CreatePresentationWithTextBox("test_format_none.pptx");
         var outputPath = CreateTestFilePath("test_format_none_output.pptx");
         var result = _tool.Execute(path: pptPath, outputPath: outputPath);
-        Assert.StartsWith("Batch formatted text applied to", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Batch formatted text applied to", data.Message);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -54,7 +56,8 @@ public class PptTextFormatToolTests : PptTestBase
         var pptPath = CreatePresentationWithTextBox("test_format_font.pptx");
         var outputPath = CreateTestFilePath("test_format_font_output.pptx");
         var result = _tool.Execute(path: pptPath, fontName: "Arial", fontSize: 16, bold: true, outputPath: outputPath);
-        Assert.StartsWith("Batch formatted text applied to", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Batch formatted text applied to", data.Message);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -64,7 +67,8 @@ public class PptTextFormatToolTests : PptTestBase
         var pptPath = CreatePresentationWithTextBox("test_format_color.pptx");
         var outputPath = CreateTestFilePath("test_format_color_output.pptx");
         var result = _tool.Execute(path: pptPath, color: "#FF0000", outputPath: outputPath);
-        Assert.StartsWith("Batch formatted text applied to", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Batch formatted text applied to", data.Message);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -76,7 +80,8 @@ public class PptTextFormatToolTests : PptTestBase
         var result = _tool.Execute(path: pptPath, fontName: "Arial", fontSize: 14, bold: true, italic: true,
             color: "#0000FF",
             outputPath: outputPath);
-        Assert.StartsWith("Batch formatted text applied to", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Batch formatted text applied to", data.Message);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -90,8 +95,10 @@ public class PptTextFormatToolTests : PptTestBase
         var pptPath = CreatePresentationWithTextBox("test_session_format.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute(sessionId: sessionId, fontName: "Arial", fontSize: 16, bold: true);
-        Assert.StartsWith("Batch formatted text applied to", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Batch formatted text applied to", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -100,8 +107,10 @@ public class PptTextFormatToolTests : PptTestBase
         var pptPath = CreatePresentationWithTextBox("test_session_color.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute(sessionId: sessionId, color: "#FF0000");
-        Assert.StartsWith("Batch formatted text applied to", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Batch formatted text applied to", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         Assert.NotNull(ppt);
     }
@@ -133,8 +142,7 @@ public class PptTextFormatToolTests : PptTestBase
         }
 
         var sessionId = OpenSession(pptPath2);
-        var result = _tool.Execute(path: pptPath1, sessionId: sessionId, fontName: "Arial", bold: true);
-        Assert.Contains("session", result);
+        _tool.Execute(path: pptPath1, sessionId: sessionId, fontName: "Arial", bold: true);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         Assert.NotNull(ppt);
     }

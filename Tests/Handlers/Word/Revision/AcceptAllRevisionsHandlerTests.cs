@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Revision;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Revision;
 
@@ -43,9 +44,11 @@ public class AcceptAllRevisionsHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("accepted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("accepted", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(0, doc.Revisions.Count);
         AssertModified(context);
     }
@@ -57,9 +60,11 @@ public class AcceptAllRevisionsHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("0", result.Message);
     }
 
     #endregion

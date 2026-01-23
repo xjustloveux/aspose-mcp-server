@@ -1,11 +1,14 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.PageSetup;
 
 /// <summary>
 ///     Handler for setting slide size in PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetSlideSizeHandler : OperationHandlerBase<Presentation>
 {
     private const float MinSizePoints = 1f;
@@ -23,7 +26,7 @@ public class SetSlideSizeHandler : OperationHandlerBase<Presentation>
     ///     width, height (required when preset=Custom)
     /// </param>
     /// <returns>Success message with slide size information.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractSetSlideSizeParameters(parameters);
         var presentation = context.Document;
@@ -57,7 +60,7 @@ public class SetSlideSizeHandler : OperationHandlerBase<Presentation>
             ? $" ({slideSize.Size.Width}x{slideSize.Size.Height})"
             : "";
 
-        return Success($"Slide size set to {slideSize.Type}{sizeInfo}.");
+        return new SuccessResult { Message = $"Slide size set to {slideSize.Type}{sizeInfo}." };
     }
 
     /// <summary>

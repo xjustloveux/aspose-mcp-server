@@ -1,7 +1,7 @@
-using System.Text.Json;
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.HeaderFooter;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Word.HeaderFooter;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.HeaderFooter;
 
@@ -61,11 +61,12 @@ public class GetHeadersFootersHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("totalSections", out _));
-        Assert.True(json.RootElement.TryGetProperty("sections", out _));
+        var result = Assert.IsType<GetHeadersFootersResult>(res);
+
+        Assert.True(result.TotalSections >= 0);
+        Assert.NotNull(result.Sections);
     }
 
     [Fact]
@@ -75,11 +76,11 @@ public class GetHeadersFootersHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var sections = json.RootElement.GetProperty("sections");
-        Assert.True(sections.GetArrayLength() > 0);
+        var result = Assert.IsType<GetHeadersFootersResult>(res);
+
+        Assert.True(result.Sections.Count > 0);
     }
 
     [Fact]
@@ -89,10 +90,11 @@ public class GetHeadersFootersHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("sections", out _));
+        var result = Assert.IsType<GetHeadersFootersResult>(res);
+
+        Assert.NotNull(result.Sections);
     }
 
     [Fact]
@@ -105,10 +107,11 @@ public class GetHeadersFootersHandlerTests : WordHandlerTestBase
             { "sectionIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(0, json.RootElement.GetProperty("queriedSectionIndex").GetInt32());
+        var result = Assert.IsType<GetHeadersFootersResult>(res);
+
+        Assert.Equal(0, result.QueriedSectionIndex);
     }
 
     #endregion

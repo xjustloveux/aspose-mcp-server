@@ -1,7 +1,8 @@
 using Aspose.Pdf;
 using Aspose.Pdf.Forms;
 using AsposeMcpServer.Handlers.Pdf.FormField;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.FormField;
 
@@ -53,9 +54,11 @@ public class EditPdfFormFieldHandlerTests : PdfHandlerTestBase
             { "value", "New Value" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Edited", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Edited", result.Message);
         AssertModified(context);
     }
 
@@ -70,9 +73,11 @@ public class EditPdfFormFieldHandlerTests : PdfHandlerTestBase
             { "value", "New Value" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("testField", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("testField", result.Message);
     }
 
     #endregion

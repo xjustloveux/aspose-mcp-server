@@ -1,11 +1,14 @@
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.FileOperations;
 
 /// <summary>
 ///     Handler for encrypting a PDF document with passwords.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class EncryptPdfFileHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -19,7 +22,7 @@ public class EncryptPdfFileHandler : OperationHandlerBase<Document>
     ///     Required: userPassword, ownerPassword
     /// </param>
     /// <returns>Success message.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var encryptParams = ExtractEncryptParameters(parameters);
 
@@ -30,7 +33,7 @@ public class EncryptPdfFileHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success("PDF encrypted with password.");
+        return new SuccessResult { Message = "PDF encrypted with password." };
     }
 
     /// <summary>

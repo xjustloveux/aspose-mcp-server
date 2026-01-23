@@ -1,11 +1,14 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Slide;
 
 /// <summary>
 ///     Handler for moving slides in PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class MovePptSlideHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -19,7 +22,7 @@ public class MovePptSlideHandler : OperationHandlerBase<Presentation>
     ///     Required: fromIndex (0-based source index), toIndex (0-based target index)
     /// </param>
     /// <returns>Success message with move details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractMovePptSlideParameters(parameters);
 
@@ -36,7 +39,7 @@ public class MovePptSlideHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Slide moved from {p.FromIndex} to {p.ToIndex} (total: {count}).");
+        return new SuccessResult { Message = $"Slide moved from {p.FromIndex} to {p.ToIndex} (total: {count})." };
     }
 
     /// <summary>

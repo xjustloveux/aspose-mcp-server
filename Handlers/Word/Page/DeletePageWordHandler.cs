@@ -1,11 +1,14 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Page;
 
 /// <summary>
 ///     Handler for deleting a specific page from Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeletePageWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -19,7 +22,7 @@ public class DeletePageWordHandler : OperationHandlerBase<Document>
     ///     Required: pageIndex (0-based page index to delete)
     /// </param>
     /// <returns>Success message with page deletion details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var deleteParams = ExtractDeletePageParameters(parameters);
 
@@ -54,8 +57,11 @@ public class DeletePageWordHandler : OperationHandlerBase<Document>
         context.ResultDocument = resultDoc;
         MarkModified(context);
 
-        return Success(
-            $"Page {deleteParams.PageIndex.Value} deleted successfully (document now has {resultDoc.PageCount} pages)");
+        return new SuccessResult
+        {
+            Message =
+                $"Page {deleteParams.PageIndex.Value} deleted successfully (document now has {resultDoc.PageCount} pages)"
+        };
     }
 
     /// <summary>

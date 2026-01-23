@@ -1,6 +1,7 @@
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Table;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Table;
 
@@ -89,9 +90,11 @@ public class EditPptTableCellHandlerTests : PptHandlerTestBase
             { "text", "New Text" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message);
         AssertModified(context);
     }
 
@@ -108,9 +111,11 @@ public class EditPptTableCellHandlerTests : PptHandlerTestBase
             { "text", "Test" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("[1,2]", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("[1,2]", result.Message);
     }
 
     [SkippableFact]

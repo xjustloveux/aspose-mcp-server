@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.ViewSettings;
 
 /// <summary>
 ///     Handler for showing or hiding formulas in Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class ShowFormulasExcelViewHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class ShowFormulasExcelViewHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0), visible (default: true)
     /// </param>
     /// <returns>Success message.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractShowFormulasParameters(parameters);
 
@@ -28,7 +31,7 @@ public class ShowFormulasExcelViewHandler : OperationHandlerBase<Workbook>
         worksheet.ShowFormulas = p.Visible;
 
         MarkModified(context);
-        return Success($"Formulas {(p.Visible ? "shown" : "hidden")} for sheet {p.SheetIndex}.");
+        return new SuccessResult { Message = $"Formulas {(p.Visible ? "shown" : "hidden")} for sheet {p.SheetIndex}." };
     }
 
     /// <summary>

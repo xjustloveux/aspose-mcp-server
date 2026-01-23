@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
@@ -11,6 +13,7 @@ namespace AsposeMcpServer.Tools.Word;
 ///     Merges: WordAddImageTool, WordEditImageTool, WordDeleteImageTool, WordGetImagesTool, WordReplaceImageTool,
 ///     WordExtractImagesTool
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Word.Image")]
 [McpServerToolType]
 public class WordImageTool
 {
@@ -73,7 +76,14 @@ public class WordImageTool
     /// <param name="extractImageIndex">Specific image index to extract.</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "word_image")]
+    [McpServerTool(
+        Name = "word_image",
+        Title = "Word Image Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage Word document images. Supports 6 operations: add, edit, delete, get, replace, extract.
 
 Usage examples:
@@ -83,7 +93,7 @@ Usage examples:
 - Get all images: word_image(operation='get', path='doc.docx')
 - Replace image: word_image(operation='replace', path='doc.docx', imageIndex=0, imagePath='new_image.png')
 - Extract images: word_image(operation='extract', path='doc.docx', outputDir='images/')")]
-    public string Execute(
+    public object Execute(
         [Description(@"Operation to perform.
 - 'add': Add a new image (required params: path, imagePath)
 - 'edit': Edit existing image (required params: path, imageIndex)
@@ -171,12 +181,12 @@ Usage examples:
 
         // Read-only operations don't need to save
         if (operation.ToLower() is "get" or "extract")
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

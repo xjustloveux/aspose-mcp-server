@@ -1,7 +1,7 @@
-using System.Text.Json;
-using Aspose.Pdf;
+﻿using Aspose.Pdf;
 using Aspose.Pdf.Text;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Pdf.Info;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Pdf;
 
 namespace AsposeMcpServer.Tests.Tools.Pdf;
@@ -41,10 +41,10 @@ public class PdfInfoToolTests : PdfTestBase
     {
         var pdfPath = CreateTestPdf("test_get_content.pdf");
         var result = _tool.Execute("get_content", pdfPath);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
-        Assert.True(json.TryGetProperty("totalPages", out _));
-        Assert.True(json.TryGetProperty("extractedPages", out _));
-        Assert.True(json.TryGetProperty("content", out _));
+        var data = GetResultData<GetPdfContentResult>(result);
+        Assert.True(data.TotalPages > 0);
+        Assert.NotNull(data.ExtractedPages);
+        Assert.NotNull(data.Content);
     }
 
     [Fact]
@@ -52,9 +52,9 @@ public class PdfInfoToolTests : PdfTestBase
     {
         var pdfPath = CreateTestPdf("test_get_content_page.pdf", 2);
         var result = _tool.Execute("get_content", pdfPath, pageIndex: 1);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
-        Assert.Equal(1, json.GetProperty("pageIndex").GetInt32());
-        Assert.Equal(2, json.GetProperty("totalPages").GetInt32());
+        var data = GetResultData<GetPdfContentResult>(result);
+        Assert.Equal(1, data.PageIndex);
+        Assert.Equal(2, data.TotalPages);
     }
 
     [Fact]
@@ -62,10 +62,10 @@ public class PdfInfoToolTests : PdfTestBase
     {
         var pdfPath = CreateTestPdf("test_statistics.pdf");
         var result = _tool.Execute("get_statistics", pdfPath);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
-        Assert.True(json.TryGetProperty("fileSizeBytes", out _));
-        Assert.True(json.TryGetProperty("totalPages", out _));
-        Assert.True(json.TryGetProperty("isEncrypted", out _));
+        var data = GetResultData<GetPdfStatisticsResult>(result);
+        Assert.NotNull(data.FileSizeBytes);
+        Assert.True(data.TotalPages > 0);
+        Assert.False(data.IsEncrypted);
     }
 
     #endregion
@@ -80,7 +80,9 @@ public class PdfInfoToolTests : PdfTestBase
     {
         var pdfPath = CreateTestPdf($"test_case_{operation.Replace("_", "")}.pdf");
         var result = _tool.Execute(operation, pdfPath);
-        Assert.Contains("content", result);
+        var data = GetResultData<GetPdfContentResult>(result);
+        Assert.NotNull(data.Content);
+        Assert.True(data.TotalPages > 0);
     }
 
     [Fact]
@@ -101,8 +103,10 @@ public class PdfInfoToolTests : PdfTestBase
         var pdfPath = CreateTestPdf("test_session_content.pdf");
         var sessionId = OpenSession(pdfPath);
         var result = _tool.Execute("get_content", sessionId: sessionId, pageIndex: 1);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
-        Assert.True(json.TryGetProperty("content", out _));
+        var data = GetResultData<GetPdfContentResult>(result);
+        Assert.NotNull(data.Content);
+        var output = GetResultOutput<GetPdfContentResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -111,8 +115,10 @@ public class PdfInfoToolTests : PdfTestBase
         var pdfPath = CreateTestPdf("test_session_stats.pdf");
         var sessionId = OpenSession(pdfPath);
         var result = _tool.Execute("get_statistics", sessionId: sessionId);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
-        Assert.True(json.TryGetProperty("totalPages", out _));
+        var data = GetResultData<GetPdfStatisticsResult>(result);
+        Assert.True(data.TotalPages > 0);
+        var output = GetResultOutput<GetPdfStatisticsResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -129,8 +135,10 @@ public class PdfInfoToolTests : PdfTestBase
         var pdfPath2 = CreateTestPdf("test_session_info.pdf", 3);
         var sessionId = OpenSession(pdfPath2);
         var result = _tool.Execute("get_content", pdfPath1, sessionId);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
-        Assert.Equal(3, json.GetProperty("totalPages").GetInt32());
+        var data = GetResultData<GetPdfContentResult>(result);
+        Assert.Equal(3, data.TotalPages);
+        var output = GetResultOutput<GetPdfContentResult>(result);
+        Assert.True(output.IsSession);
     }
 
     #endregion

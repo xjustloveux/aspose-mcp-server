@@ -1,7 +1,7 @@
-using System.Text.Json;
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.Formula;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Excel.Formula;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Formula;
 
@@ -34,10 +34,11 @@ public class GetArrayFormulaHandlerTests : ExcelHandlerTestBase
             { "sheetIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal("A1", json.RootElement.GetProperty("cell").GetString());
+        var result = Assert.IsType<GetArrayFormulaResult>(res);
+
+        Assert.Equal("A1", result.Cell);
     }
 
     #endregion
@@ -90,11 +91,12 @@ public class GetArrayFormulaHandlerTests : ExcelHandlerTestBase
             { "cell", "A1" }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.False(json.RootElement.GetProperty("isArrayFormula").GetBoolean());
-        Assert.Contains("No array formula", json.RootElement.GetProperty("message").GetString());
+        var result = Assert.IsType<GetArrayFormulaResult>(res);
+
+        Assert.False(result.IsArrayFormula);
+        Assert.Contains("No array formula", result.Message);
     }
 
     [Fact]
@@ -109,10 +111,11 @@ public class GetArrayFormulaHandlerTests : ExcelHandlerTestBase
             { "cell", "B1" }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.False(json.RootElement.GetProperty("isArrayFormula").GetBoolean());
+        var result = Assert.IsType<GetArrayFormulaResult>(res);
+
+        Assert.False(result.IsArrayFormula);
     }
 
     #endregion
@@ -129,10 +132,11 @@ public class GetArrayFormulaHandlerTests : ExcelHandlerTestBase
             { "cell", "C1" }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.True(json.RootElement.GetProperty("isArrayFormula").GetBoolean());
+        var result = Assert.IsType<GetArrayFormulaResult>(res);
+
+        Assert.True(result.IsArrayFormula);
     }
 
     [Fact]
@@ -145,10 +149,11 @@ public class GetArrayFormulaHandlerTests : ExcelHandlerTestBase
             { "cell", "C1" }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.NotEmpty(json.RootElement.GetProperty("formula").GetString() ?? "");
+        var result = Assert.IsType<GetArrayFormulaResult>(res);
+
+        Assert.NotEmpty(result.Formula ?? "");
     }
 
     [Fact]
@@ -161,10 +166,11 @@ public class GetArrayFormulaHandlerTests : ExcelHandlerTestBase
             { "cell", "C1" }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.True(json.RootElement.TryGetProperty("arrayRange", out _));
+        var result = Assert.IsType<GetArrayFormulaResult>(res);
+
+        Assert.NotNull(result.ArrayRange);
     }
 
     #endregion

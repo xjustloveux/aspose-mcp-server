@@ -1,12 +1,16 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Shape;
 
 /// <summary>
 ///     Handler for setting textbox border properties in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetTextBoxBorderWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -22,7 +26,7 @@ public class SetTextBoxBorderWordHandler : OperationHandlerBase<Document>
     /// </param>
     /// <returns>Success message with border details.</returns>
     /// <exception cref="ArgumentException">Thrown when textboxIndex is missing or out of range.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractSetTextBoxBorderParameters(parameters);
 
@@ -51,7 +55,7 @@ public class SetTextBoxBorderWordHandler : OperationHandlerBase<Document>
             ? $"Border: {p.BorderWidth}pt, Color: {p.BorderColor ?? "000000"}, Style: {p.BorderStyle}"
             : "No border";
 
-        return $"Successfully set textbox {p.TextboxIndex} {borderDesc}.";
+        return new SuccessResult { Message = $"Successfully set textbox {p.TextboxIndex} {borderDesc}." };
     }
 
     private static SetTextBoxBorderParameters ExtractSetTextBoxBorderParameters(OperationParameters parameters)

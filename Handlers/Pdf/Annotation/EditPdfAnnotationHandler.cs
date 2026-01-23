@@ -1,12 +1,15 @@
 using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.Annotation;
 
 /// <summary>
 ///     Handler for editing annotations in PDF documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class EditPdfAnnotationHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class EditPdfAnnotationHandler : OperationHandlerBase<Document>
     ///     Optional: text, title, subject.
     /// </param>
     /// <returns>Success message with edit details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var editParams = ExtractEditParameters(parameters);
 
@@ -52,7 +55,8 @@ public class EditPdfAnnotationHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Annotation {editParams.AnnotationIndex} on page {editParams.PageIndex} updated.");
+        return new SuccessResult
+            { Message = $"Annotation {editParams.AnnotationIndex} on page {editParams.PageIndex} updated." };
     }
 
     /// <summary>

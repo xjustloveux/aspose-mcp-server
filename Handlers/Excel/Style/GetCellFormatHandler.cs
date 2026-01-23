@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Excel.Style;
 
 namespace AsposeMcpServer.Handlers.Excel.Style;
 
 /// <summary>
 ///     Handler for getting cell format information from Excel workbooks.
 /// </summary>
+[ResultType(typeof(GetCellFormatResult))]
 public class GetCellFormatHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -20,9 +23,9 @@ public class GetCellFormatHandler : OperationHandlerBase<Workbook>
     ///     Required: cell or range
     ///     Optional: sheetIndex, fields
     /// </param>
-    /// <returns>JSON string containing format information.</returns>
+    /// <returns>A GetCellFormatResult containing format information.</returns>
     /// <exception cref="ArgumentException">Thrown when neither cell nor range is provided, or when the cell range is invalid.</exception>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractGetCellFormatParameters(parameters);
 
@@ -38,15 +41,14 @@ public class GetCellFormatHandler : OperationHandlerBase<Workbook>
         try
         {
             var cellList = CollectCellFormats(worksheet, cellOrRange, requestedFields);
-            var result = new
+            return new GetCellFormatResult
             {
-                count = cellList.Count,
-                worksheetName = worksheet.Name,
-                range = cellOrRange,
-                fields = p.Fields ?? "all",
-                items = cellList
+                Count = cellList.Count,
+                WorksheetName = worksheet.Name,
+                Range = cellOrRange,
+                Fields = p.Fields ?? "all",
+                Items = cellList
             };
-            return JsonResult(result);
         }
         catch (Exception ex)
         {
@@ -61,8 +63,8 @@ public class GetCellFormatHandler : OperationHandlerBase<Workbook>
     /// <param name="worksheet">The worksheet containing the cells.</param>
     /// <param name="cellOrRange">The cell reference or range string.</param>
     /// <param name="requestedFields">The set of fields to include in the output.</param>
-    /// <returns>A list of dictionaries containing cell format data.</returns>
-    private static List<Dictionary<string, object?>> CollectCellFormats(Worksheet worksheet, string cellOrRange,
+    /// <returns>A list of CellFormatInfo objects containing cell format data.</returns>
+    private static List<CellFormatInfo> CollectCellFormats(Worksheet worksheet, string cellOrRange,
         HashSet<string> requestedFields)
     {
         var cells = worksheet.Cells;
@@ -70,7 +72,7 @@ public class GetCellFormatHandler : OperationHandlerBase<Workbook>
         var endRow = cellRange.FirstRow + cellRange.RowCount - 1;
         var endCol = cellRange.FirstColumn + cellRange.ColumnCount - 1;
 
-        List<Dictionary<string, object?>> cellList = [];
+        List<CellFormatInfo> cellList = [];
         for (var row = cellRange.FirstRow; row <= endRow; row++)
         for (var col = cellRange.FirstColumn; col <= endCol; col++)
             cellList.Add(BuildCellData(cells[row, col], row, col, requestedFields));
@@ -79,49 +81,94 @@ public class GetCellFormatHandler : OperationHandlerBase<Workbook>
     }
 
     /// <summary>
-    ///     Builds cell data dictionary for a single cell.
+    ///     Builds cell data for a single cell.
     /// </summary>
     /// <param name="cellObj">The cell object.</param>
     /// <param name="row">The row index.</param>
     /// <param name="col">The column index.</param>
     /// <param name="requestedFields">The set of fields to include.</param>
-    /// <returns>A dictionary containing the cell data.</returns>
-    private static Dictionary<string, object?> BuildCellData(Aspose.Cells.Cell cellObj, int row, int col,
+    /// <returns>A CellFormatInfo object containing the cell data.</returns>
+    private static CellFormatInfo BuildCellData(Aspose.Cells.Cell cellObj, int row, int col,
         HashSet<string> requestedFields)
     {
         var style = cellObj.GetStyle();
-        var cellData = new Dictionary<string, object?> { ["cell"] = CellsHelper.CellIndexToName(row, col) };
+        var cellRef = CellsHelper.CellIndexToName(row, col);
+
+        string? value = null;
+        string? formula = null;
+        string? dataType = null;
 
         if (ShouldInclude(requestedFields, "value"))
         {
-            cellData["value"] = cellObj.Value?.ToString() ?? "(empty)";
-            cellData["formula"] = cellObj.Formula;
-            cellData["dataType"] = cellObj.Type.ToString();
+            value = cellObj.Value?.ToString() ?? "(empty)";
+            formula = cellObj.Formula;
+            dataType = cellObj.Type.ToString();
         }
 
-        var formatData = BuildFormatData(style, requestedFields);
-        if (formatData.Count > 0)
-            cellData["format"] = formatData;
+        var formatDetails = BuildFormatData(style, requestedFields);
 
-        return cellData;
+        return new CellFormatInfo
+        {
+            Cell = cellRef,
+            Value = value,
+            Formula = formula,
+            DataType = dataType,
+            Format = formatDetails
+        };
     }
 
     /// <summary>
-    ///     Builds format data dictionary based on requested fields.
+    ///     Builds format data based on requested fields.
     /// </summary>
     /// <param name="style">The cell style.</param>
     /// <param name="requestedFields">The set of fields to include.</param>
-    /// <returns>A dictionary containing the format data.</returns>
-    private static Dictionary<string, object?> BuildFormatData(Aspose.Cells.Style style,
+    /// <returns>A CellFormatDetails object containing the format data, or null if no format fields requested.</returns>
+    private static CellFormatDetails? BuildFormatData(Aspose.Cells.Style style,
         HashSet<string> requestedFields)
     {
-        var formatData = new Dictionary<string, object?>();
-        AddFontData(formatData, style, requestedFields);
-        AddColorData(formatData, style, requestedFields);
-        AddAlignmentData(formatData, style, requestedFields);
-        AddNumberData(formatData, style, requestedFields);
-        AddBorderData(formatData, style, requestedFields);
-        return formatData;
+        var hasFont = ShouldInclude(requestedFields, "font");
+        var hasColor = ShouldInclude(requestedFields, "color");
+        var hasAlignment = ShouldInclude(requestedFields, "alignment");
+        var hasNumber = ShouldInclude(requestedFields, "number");
+        var hasBorder = ShouldInclude(requestedFields, "border");
+
+        if (!hasFont && !hasColor && !hasAlignment && !hasNumber && !hasBorder)
+            return null;
+
+        return new CellFormatDetails
+        {
+            FontName = hasFont ? style.Font.Name : null,
+            FontSize = hasFont ? style.Font.Size : null,
+            Bold = hasFont ? style.Font.IsBold : null,
+            Italic = hasFont ? style.Font.IsItalic : null,
+            Underline = hasFont ? style.Font.Underline.ToString() : null,
+            Strikethrough = hasFont ? style.Font.IsStrikeout : null,
+            FontColor = hasColor ? style.Font.Color.ToString() : null,
+            ForegroundColor = hasColor ? style.ForegroundColor.ToString() : null,
+            BackgroundColor = hasColor ? style.BackgroundColor.ToString() : null,
+            PatternType = hasColor ? style.Pattern.ToString() : null,
+            HorizontalAlignment = hasAlignment ? style.HorizontalAlignment.ToString() : null,
+            VerticalAlignment = hasAlignment ? style.VerticalAlignment.ToString() : null,
+            NumberFormat = hasNumber ? style.Number : null,
+            CustomFormat = hasNumber ? style.Custom : null,
+            Borders = hasBorder ? BuildBordersInfo(style) : null
+        };
+    }
+
+    /// <summary>
+    ///     Builds borders information from the cell style.
+    /// </summary>
+    /// <param name="style">The cell style.</param>
+    /// <returns>A BordersInfo object containing all border information.</returns>
+    private static BordersInfo BuildBordersInfo(Aspose.Cells.Style style)
+    {
+        return new BordersInfo
+        {
+            Top = BuildBorderInfo(style.Borders[BorderType.TopBorder]),
+            Bottom = BuildBorderInfo(style.Borders[BorderType.BottomBorder]),
+            Left = BuildBorderInfo(style.Borders[BorderType.LeftBorder]),
+            Right = BuildBorderInfo(style.Borders[BorderType.RightBorder])
+        };
     }
 
     /// <summary>
@@ -136,94 +183,17 @@ public class GetCellFormatHandler : OperationHandlerBase<Workbook>
     }
 
     /// <summary>
-    ///     Adds font data to the format data dictionary.
-    /// </summary>
-    /// <param name="formatData">The format data dictionary to add to.</param>
-    /// <param name="style">The cell style.</param>
-    /// <param name="requestedFields">The set of requested fields.</param>
-    private static void AddFontData(Dictionary<string, object?> formatData, Aspose.Cells.Style style,
-        HashSet<string> requestedFields)
-    {
-        if (!ShouldInclude(requestedFields, "font")) return;
-        formatData["fontName"] = style.Font.Name;
-        formatData["fontSize"] = style.Font.Size;
-        formatData["bold"] = style.Font.IsBold;
-        formatData["italic"] = style.Font.IsItalic;
-        formatData["underline"] = style.Font.Underline.ToString();
-        formatData["strikethrough"] = style.Font.IsStrikeout;
-    }
-
-    /// <summary>
-    ///     Adds color data to the format data dictionary.
-    /// </summary>
-    /// <param name="formatData">The format data dictionary to add to.</param>
-    /// <param name="style">The cell style.</param>
-    /// <param name="requestedFields">The set of requested fields.</param>
-    private static void AddColorData(Dictionary<string, object?> formatData, Aspose.Cells.Style style,
-        HashSet<string> requestedFields)
-    {
-        if (!ShouldInclude(requestedFields, "color")) return;
-        formatData["fontColor"] = style.Font.Color.ToString();
-        formatData["foregroundColor"] = style.ForegroundColor.ToString();
-        formatData["backgroundColor"] = style.BackgroundColor.ToString();
-        formatData["patternType"] = style.Pattern.ToString();
-    }
-
-    /// <summary>
-    ///     Adds alignment data to the format data dictionary.
-    /// </summary>
-    /// <param name="formatData">The format data dictionary to add to.</param>
-    /// <param name="style">The cell style.</param>
-    /// <param name="requestedFields">The set of requested fields.</param>
-    private static void AddAlignmentData(Dictionary<string, object?> formatData, Aspose.Cells.Style style,
-        HashSet<string> requestedFields)
-    {
-        if (!ShouldInclude(requestedFields, "alignment")) return;
-        formatData["horizontalAlignment"] = style.HorizontalAlignment.ToString();
-        formatData["verticalAlignment"] = style.VerticalAlignment.ToString();
-    }
-
-    /// <summary>
-    ///     Adds number format data to the format data dictionary.
-    /// </summary>
-    /// <param name="formatData">The format data dictionary to add to.</param>
-    /// <param name="style">The cell style.</param>
-    /// <param name="requestedFields">The set of requested fields.</param>
-    private static void AddNumberData(Dictionary<string, object?> formatData, Aspose.Cells.Style style,
-        HashSet<string> requestedFields)
-    {
-        if (!ShouldInclude(requestedFields, "number")) return;
-        formatData["numberFormat"] = style.Number;
-        formatData["customFormat"] = style.Custom;
-    }
-
-    /// <summary>
-    ///     Adds border data to the format data dictionary.
-    /// </summary>
-    /// <param name="formatData">The format data dictionary to add to.</param>
-    /// <param name="style">The cell style.</param>
-    /// <param name="requestedFields">The set of requested fields.</param>
-    private static void AddBorderData(Dictionary<string, object?> formatData, Aspose.Cells.Style style,
-        HashSet<string> requestedFields)
-    {
-        if (!ShouldInclude(requestedFields, "border")) return;
-        formatData["borders"] = new
-        {
-            top = BuildBorderInfo(style.Borders[BorderType.TopBorder]),
-            bottom = BuildBorderInfo(style.Borders[BorderType.BottomBorder]),
-            left = BuildBorderInfo(style.Borders[BorderType.LeftBorder]),
-            right = BuildBorderInfo(style.Borders[BorderType.RightBorder])
-        };
-    }
-
-    /// <summary>
-    ///     Builds border information object from a border.
+    ///     Builds border information from a border.
     /// </summary>
     /// <param name="border">The border to get information from.</param>
-    /// <returns>An anonymous object containing border line style and color.</returns>
-    private static object BuildBorderInfo(Border border)
+    /// <returns>A BorderInfo object containing border line style and color.</returns>
+    private static BorderInfo BuildBorderInfo(Border border)
     {
-        return new { lineStyle = border.LineStyle.ToString(), color = border.Color.ToString() };
+        return new BorderInfo
+        {
+            LineStyle = border.LineStyle.ToString(),
+            Color = border.Color.ToString()
+        };
     }
 
     /// <summary>

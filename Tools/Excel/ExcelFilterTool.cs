@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -10,6 +12,7 @@ namespace AsposeMcpServer.Tools.Excel;
 ///     Unified tool for managing Excel filters (auto filter, custom filter, get filter status).
 ///     Merges: ExcelAutoFilterTool, ExcelGetFilterStatusTool.
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Excel.Filter")]
 [McpServerToolType]
 public class ExcelFilterTool
 {
@@ -55,7 +58,14 @@ public class ExcelFilterTool
     /// <param name="filterOperator">Filter operator for custom filter.</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get_status operation.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "excel_filter")]
+    [McpServerTool(
+        Name = "excel_filter",
+        Title = "Excel Filter Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage Excel filters. Supports 4 operations: apply, remove, filter, get_status.
 
 Usage examples:
@@ -64,7 +74,7 @@ Usage examples:
 - Filter by value: excel_filter(operation='filter', path='book.xlsx', range='A1:C10', columnIndex=0, criteria='Completed')
 - Filter by custom: excel_filter(operation='filter', path='book.xlsx', range='A1:C10', columnIndex=1, filterOperator='GreaterThan', criteria='100')
 - Get filter status: excel_filter(operation='get_status', path='book.xlsx')")]
-    public string Execute(
+    public object Execute(
         [Description(@"Operation to perform.
 - 'apply': Apply auto filter dropdown buttons (required params: path, range)
 - 'remove': Remove auto filter completely (required params: path)
@@ -107,12 +117,12 @@ Usage examples:
         var result = handler.Execute(operationContext, parameters);
 
         if (string.Equals(operation, "get_status", StringComparison.OrdinalIgnoreCase))
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

@@ -1,6 +1,8 @@
-using Aspose.Pdf;
+﻿using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Pdf.Annotation;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Pdf;
 
 namespace AsposeMcpServer.Tests.Tools.Pdf;
@@ -70,7 +72,8 @@ public class PdfAnnotationToolTests : PdfTestBase
         var outputPath = CreateTestFilePath("test_add_output.pdf");
         var result = _tool.Execute("add", pdfPath, outputPath: outputPath,
             pageIndex: 1, text: "Test Note", x: 100, y: 100);
-        Assert.StartsWith("Added annotation", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Added annotation", data.Message);
         using var document = new Document(outputPath);
         Assert.True(document.Pages[1].Annotations.Count > 0);
     }
@@ -80,8 +83,9 @@ public class PdfAnnotationToolTests : PdfTestBase
     {
         var pdfPath = CreatePdfWithAnnotation("test_get.pdf");
         var result = _tool.Execute("get", pdfPath, pageIndex: 1);
-        Assert.Contains("\"type\": \"Text\"", result);
-        Assert.Contains("\"pageIndex\": 1", result);
+        var data = GetResultData<GetAnnotationsResult>(result);
+        Assert.True(data.Count > 0);
+        Assert.Contains(data.Annotations, a => a is { Type: "Text", PageIndex: 1 });
     }
 
     [Fact]
@@ -91,7 +95,8 @@ public class PdfAnnotationToolTests : PdfTestBase
         var outputPath = CreateTestFilePath("test_delete_single_output.pdf");
         var result = _tool.Execute("delete", pdfPath, outputPath: outputPath,
             pageIndex: 1, annotationIndex: 1);
-        Assert.StartsWith("Deleted annotation 1", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Deleted annotation 1", data.Message);
         using var document = new Document(outputPath);
         Assert.Empty(document.Pages[1].Annotations);
     }
@@ -103,7 +108,8 @@ public class PdfAnnotationToolTests : PdfTestBase
         var outputPath = CreateTestFilePath("test_edit_output.pdf");
         var result = _tool.Execute("edit", pdfPath, outputPath: outputPath,
             pageIndex: 1, annotationIndex: 1, text: "Updated Note");
-        Assert.StartsWith("Annotation 1 on page 1 updated", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Annotation 1 on page 1 updated", data.Message);
         using var document = new Document(outputPath);
         var annotation = document.Pages[1].Annotations[1] as TextAnnotation;
         Assert.NotNull(annotation);
@@ -124,7 +130,8 @@ public class PdfAnnotationToolTests : PdfTestBase
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.pdf");
         var result = _tool.Execute(operation, pdfPath, outputPath: outputPath,
             pageIndex: 1, text: "Test", x: 100, y: 100);
-        Assert.StartsWith("Added annotation", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Added annotation", data.Message);
     }
 
     [Fact]
@@ -151,7 +158,11 @@ public class PdfAnnotationToolTests : PdfTestBase
         var pdfPath = CreatePdfWithAnnotation("test_session_get.pdf", "Session Note");
         var sessionId = OpenSession(pdfPath);
         var result = _tool.Execute("get", sessionId: sessionId, pageIndex: 1);
-        Assert.Contains("\"type\": \"Text\"", result);
+        var data = GetResultData<GetAnnotationsResult>(result);
+        Assert.True(data.Count > 0);
+        Assert.Contains(data.Annotations, a => a.Type == "Text");
+        var output = GetResultOutput<GetAnnotationsResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -161,7 +172,10 @@ public class PdfAnnotationToolTests : PdfTestBase
         var sessionId = OpenSession(pdfPath);
         var result = _tool.Execute("add", sessionId: sessionId,
             pageIndex: 1, text: "Session Annotation", x: 150, y: 150);
-        Assert.StartsWith("Added annotation", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Added annotation", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var document = SessionManager.GetDocument<Document>(sessionId);
         Assert.True(document.Pages[1].Annotations.Count > 0);
     }
@@ -172,7 +186,10 @@ public class PdfAnnotationToolTests : PdfTestBase
         var pdfPath = CreatePdfWithMultipleAnnotations("test_session_delete.pdf");
         var sessionId = OpenSession(pdfPath);
         var result = _tool.Execute("delete", sessionId: sessionId, pageIndex: 1);
-        Assert.StartsWith("Deleted all 2 annotation(s)", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Deleted all 2 annotation(s)", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -182,7 +199,10 @@ public class PdfAnnotationToolTests : PdfTestBase
         var sessionId = OpenSession(pdfPath);
         var result = _tool.Execute("edit", sessionId: sessionId,
             pageIndex: 1, annotationIndex: 1, text: "Edited");
-        Assert.StartsWith("Annotation 1 on page 1 updated", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Annotation 1 on page 1 updated", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var document = SessionManager.GetDocument<Document>(sessionId);
         var annotation = document.Pages[1].Annotations[1] as TextAnnotation;
         Assert.NotNull(annotation);
@@ -203,7 +223,8 @@ public class PdfAnnotationToolTests : PdfTestBase
         var pdfPath2 = CreatePdfWithAnnotation("test_session_file.pdf", "Session Annotation");
         var sessionId = OpenSession(pdfPath2);
         var result = _tool.Execute("get", pdfPath1, sessionId, pageIndex: 1);
-        Assert.Contains("Session Annotation", result);
+        var data = GetResultData<GetAnnotationsResult>(result);
+        Assert.Contains(data.Annotations, a => a.Contents == "Session Annotation");
     }
 
     #endregion

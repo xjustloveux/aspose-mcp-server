@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
@@ -10,6 +12,7 @@ namespace AsposeMcpServer.Tools.Word;
 ///     Unified tool for managing Word sections (insert, delete, get info)
 ///     Merges: WordInsertSectionTool, WordDeleteSectionTool, WordGetSectionsTool, WordGetSectionsInfoTool
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Word.SectionBreak")]
 [McpServerToolType]
 public class WordSectionTool
 {
@@ -54,7 +57,14 @@ public class WordSectionTool
     /// <param name="sectionIndices">Array of section indices to delete (0-based, for delete).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "word_section")]
+    [McpServerTool(
+        Name = "word_section",
+        Title = "Word Section Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage Word document sections. Supports 3 operations: insert, delete, get.
 
 Usage examples:
@@ -66,7 +76,7 @@ Notes:
 - Section break types: NextPage (new page), Continuous (same page), EvenPage, OddPage
 - IMPORTANT: Deleting a section will also delete all content within that section (paragraphs, tables, images)
 - Use 'get' operation first to see section indices and their content statistics before deleting")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: insert, delete, get")]
         string operation,
         [Description("Document file path (required if no sessionId)")]
@@ -108,7 +118,7 @@ Notes:
         if (operationContext.IsModified)
             ctx.Save(effectiveOutputPath);
 
-        return ctx.IsSession ? result : $"{result}\n{ctx.GetOutputMessage(effectiveOutputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, effectiveOutputPath);
     }
 
     /// <summary>

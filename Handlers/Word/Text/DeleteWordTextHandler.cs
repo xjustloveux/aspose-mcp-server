@@ -1,6 +1,8 @@
 using System.Text;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.Text;
@@ -8,6 +10,7 @@ namespace AsposeMcpServer.Handlers.Word.Text;
 /// <summary>
 ///     Handler for deleting text from Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeleteWordTextHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -23,7 +26,7 @@ public class DeleteWordTextHandler : OperationHandlerBase<Document>
     /// </param>
     /// <returns>Success message with deletion details.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or indices are invalid.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractDeleteParameters(parameters);
 
@@ -291,19 +294,19 @@ public class DeleteWordTextHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Builds the result message.
     /// </summary>
-    private static string BuildResultMessage(string? searchText, int startPara, int startRun,
+    private static SuccessResult BuildResultMessage(string? searchText, int startPara, int startRun,
         int endPara, int? endRun, string deletedText)
     {
         var preview = deletedText.Length > 50 ? deletedText.Substring(0, 50) + "..." : deletedText;
 
-        var result = "Text deleted successfully.";
+        var message = "Text deleted successfully.";
         if (!string.IsNullOrEmpty(searchText))
-            result += $" Deleted text: {searchText}.";
-        result += $" Range: Paragraph {startPara} Run {startRun} to Paragraph {endPara} Run {endRun ?? -1}.";
+            message += $" Deleted text: {searchText}.";
+        message += $" Range: Paragraph {startPara} Run {startRun} to Paragraph {endPara} Run {endRun ?? -1}.";
         if (!string.IsNullOrEmpty(preview))
-            result += $" Preview: {preview}";
+            message += $" Preview: {preview}";
 
-        return Success(result);
+        return new SuccessResult { Message = message };
     }
 
     private sealed record DeleteParameters(

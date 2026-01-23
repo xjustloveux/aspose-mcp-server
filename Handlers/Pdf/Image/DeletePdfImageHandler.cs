@@ -1,11 +1,14 @@
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.Image;
 
 /// <summary>
 ///     Handler for deleting images from PDF documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeletePdfImageHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -19,7 +22,7 @@ public class DeletePdfImageHandler : OperationHandlerBase<Document>
     ///     Optional: pageIndex (default: 1), imageIndex (default: 1)
     /// </param>
     /// <returns>Success message with delete details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractDeleteParameters(parameters);
 
@@ -41,7 +44,7 @@ public class DeletePdfImageHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Deleted image {actualImageIndex} from page {actualPageIndex}.");
+        return new SuccessResult { Message = $"Deleted image {actualImageIndex} from page {actualPageIndex}." };
     }
 
     /// <summary>

@@ -1,6 +1,8 @@
-using Aspose.Words;
+﻿using Aspose.Words;
 using Aspose.Words.Fields;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Word.Hyperlink;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Word;
 
 namespace AsposeMcpServer.Tests.Tools.Word;
@@ -42,7 +44,9 @@ public class WordHyperlinkToolTests : WordTestBase
         builder.InsertHyperlink("Test Link", "https://test.com", false);
         doc.Save(docPath);
         var result = _tool.Execute("get", docPath);
-        Assert.Contains("test.com", result);
+        var data = GetResultData<GetHyperlinksResult>(result);
+        Assert.True(data.Count > 0);
+        Assert.Contains(data.Hyperlinks, h => h.Address.Contains("test.com"));
     }
 
     [Fact]
@@ -92,7 +96,8 @@ public class WordHyperlinkToolTests : WordTestBase
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.docx");
         var result = _tool.Execute(operation, docPath, outputPath: outputPath,
             text: "Link", url: "https://example.com", paragraphIndex: 0);
-        Assert.StartsWith("Hyperlink added", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Hyperlink added", data.Message);
     }
 
     [Fact]
@@ -125,7 +130,9 @@ public class WordHyperlinkToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("get", sessionId: sessionId);
-        Assert.Contains("session.com", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<GetHyperlinksResult>(result);
+        Assert.True(data.Count > 0);
+        Assert.Contains(data.Hyperlinks, h => h.Address.Contains("session.com", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -135,7 +142,8 @@ public class WordHyperlinkToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("add", sessionId: sessionId,
             text: "Session Hyperlink", url: "https://session-link.com", paragraphIndex: 0);
-        Assert.Contains("Session Hyperlink", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Session Hyperlink", data.Message);
 
         var doc = SessionManager.GetDocument<Document>(sessionId);
         var hyperlinks = doc.Range.Fields.Where(f => f.Type == FieldType.FieldHyperlink).ToList();
@@ -201,9 +209,10 @@ public class WordHyperlinkToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath2);
         var result = _tool.Execute("get", docPath1, sessionId);
+        var data = GetResultData<GetHyperlinksResult>(result);
 
-        Assert.Contains("session-unique.com", result);
-        Assert.DoesNotContain("path-unique.com", result);
+        Assert.Contains(data.Hyperlinks, h => h.Address.Contains("session-unique.com"));
+        Assert.DoesNotContain(data.Hyperlinks, h => h.Address.Contains("path-unique.com"));
     }
 
     #endregion

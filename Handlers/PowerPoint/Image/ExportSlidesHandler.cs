@@ -1,13 +1,17 @@
 using System.Drawing.Imaging;
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Image;
 
 /// <summary>
 ///     Handler for exporting PowerPoint slides as images.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class ExportSlidesHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -22,7 +26,7 @@ public class ExportSlidesHandler : OperationHandlerBase<Presentation>
     ///     Optional: outputDir, slideIndexes, format, scale
     /// </param>
     /// <returns>Success message with export details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var path = context.SourcePath;
         if (string.IsNullOrEmpty(path))
@@ -48,7 +52,8 @@ public class ExportSlidesHandler : OperationHandlerBase<Presentation>
             exportedCount++;
         }
 
-        return Success($"Exported {exportedCount} slides. Output: {Path.GetFullPath(p.OutputDir)}");
+        return new SuccessResult
+            { Message = $"Exported {exportedCount} slides. Output: {Path.GetFullPath(p.OutputDir)}" };
     }
 
     /// <summary>

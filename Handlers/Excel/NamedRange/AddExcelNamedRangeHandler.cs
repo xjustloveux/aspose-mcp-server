@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.NamedRange;
 
 /// <summary>
 ///     Handler for adding named ranges to Excel workbooks.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddExcelNamedRangeHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class AddExcelNamedRangeHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0), comment
     /// </param>
     /// <returns>Success message with named range details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractAddNamedRangeParameters(parameters);
 
@@ -53,7 +56,7 @@ public class AddExcelNamedRangeHandler : OperationHandlerBase<Workbook>
 
             MarkModified(context);
 
-            return Success($"Named range '{p.Name}' added (reference: {namedRange.RefersTo}).");
+            return new SuccessResult { Message = $"Named range '{p.Name}' added (reference: {namedRange.RefersTo})." };
         }
         catch (ArgumentException)
         {

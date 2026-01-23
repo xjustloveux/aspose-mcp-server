@@ -1,13 +1,15 @@
-using System.Text.Json;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Word.Comment;
 
 namespace AsposeMcpServer.Handlers.Word.Comment;
 
 /// <summary>
 ///     Handler for getting comments from Word documents.
 /// </summary>
+[ResultType(typeof(GetCommentsResult))]
 public class GetWordCommentsHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -18,8 +20,8 @@ public class GetWordCommentsHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="context">The document context.</param>
     /// <param name="parameters">No parameters required.</param>
-    /// <returns>A JSON string containing all comments with their replies.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    /// <returns>A GetCommentsResult containing all comments with their replies.</returns>
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         _ = parameters;
 
@@ -27,10 +29,14 @@ public class GetWordCommentsHandler : OperationHandlerBase<Document>
         var topLevelComments = WordCommentHelper.GetTopLevelComments(doc);
 
         if (topLevelComments.Count == 0)
-            return JsonSerializer.Serialize(new
-                { count = 0, comments = Array.Empty<object>(), message = "No comments found" });
+            return new GetCommentsResult
+            {
+                Count = 0,
+                Comments = [],
+                Message = "No comments found"
+            };
 
-        List<object> commentList = [];
+        List<CommentInfo> commentList = [];
         var index = 0;
         foreach (var comment in topLevelComments)
         {
@@ -38,7 +44,10 @@ public class GetWordCommentsHandler : OperationHandlerBase<Document>
             index++;
         }
 
-        return JsonSerializer.Serialize(new { count = topLevelComments.Count, comments = commentList },
-            JsonDefaults.Indented);
+        return new GetCommentsResult
+        {
+            Count = topLevelComments.Count,
+            Comments = commentList
+        };
     }
 }

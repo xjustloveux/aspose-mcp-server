@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Word;
 /// <summary>
 ///     Tool for formatting text and paragraphs in Word documents
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Word.Format")]
 [McpServerToolType]
 public class WordFormatTool
 {
@@ -79,7 +82,14 @@ public class WordFormatTool
     /// <param name="includeStyle">Include tab stops from paragraph style (for get_tab_stops).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "word_format")]
+    [McpServerTool(
+        Name = "word_format",
+        Title = "Word Format Operations",
+        Destructive = false,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(
         @"Manage formatting in Word documents. Supports 6 operations: get_run_format, set_run_format, get_tab_stops, add_tab_stop, clear_tab_stops, set_paragraph_border.
 
@@ -92,7 +102,7 @@ Usage examples:
 - Add tab stop: word_format(operation='add_tab_stop', path='doc.docx', paragraphIndex=0, tabPosition=72, tabAlignment='center')
 - Clear tab stops: word_format(operation='clear_tab_stops', path='doc.docx', paragraphIndex=0)
 - Set paragraph border: word_format(operation='set_paragraph_border', path='doc.docx', paragraphIndex=0, borderPosition='all', lineStyle='single', lineWidth=1.0)")]
-    public string Execute(
+    public object Execute(
         [Description(@"Operation to perform.
 - 'get_run_format': Get run formatting (required params: path, paragraphIndex, runIndex)
 - 'set_run_format': Set run formatting (required params: path, paragraphIndex, runIndex)
@@ -185,12 +195,12 @@ Usage examples:
 
         // Read-only operations don't need to save
         if (operation.ToLower() is "get_run_format" or "get_tab_stops")
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

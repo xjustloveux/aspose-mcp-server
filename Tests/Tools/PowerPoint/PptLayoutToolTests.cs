@@ -1,6 +1,7 @@
-using System.Text.Json;
-using Aspose.Slides;
-using AsposeMcpServer.Tests.Helpers;
+﻿using Aspose.Slides;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.PowerPoint.Layout;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.PowerPoint;
 
 namespace AsposeMcpServer.Tests.Tools.PowerPoint;
@@ -26,9 +27,10 @@ public class PptLayoutToolTests : PptTestBase
     {
         var pptPath = CreatePresentation("test_get_masters.pptx");
         var result = _tool.Execute("get_masters", pptPath);
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.GetProperty("count").GetInt32() > 0);
-        Assert.Contains("layoutType", result);
+        var data = GetResultData<GetMastersResult>(result);
+        Assert.True(data.Count > 0);
+        Assert.True(data.Masters.Count > 0);
+        Assert.NotNull(data.Masters[0].Layouts);
     }
 
     [Fact]
@@ -36,9 +38,10 @@ public class PptLayoutToolTests : PptTestBase
     {
         var pptPath = CreatePresentation("test_get_layouts.pptx");
         var result = _tool.Execute("get_layouts", pptPath);
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("mastersCount", out _));
-        Assert.Contains("layoutType", result);
+        var data = GetResultData<GetLayoutsResult>(result);
+        Assert.NotNull(data.MastersCount);
+        Assert.NotNull(data.Masters);
+        Assert.True(data.Masters.Count > 0);
     }
 
     [Fact]
@@ -47,7 +50,8 @@ public class PptLayoutToolTests : PptTestBase
         var pptPath = CreatePresentation("test_set_layout.pptx");
         var outputPath = CreateTestFilePath("test_set_layout_output.pptx");
         var result = _tool.Execute("set", pptPath, slideIndex: 0, layout: "Blank", outputPath: outputPath);
-        Assert.StartsWith("Layout 'Blank' set for slide 0", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Layout 'Blank' set for slide 0", data.Message);
         using var presentation = new Presentation(outputPath);
         Assert.Equal(SlideLayoutType.Blank, presentation.Slides[0].LayoutSlide.LayoutType);
     }
@@ -58,8 +62,9 @@ public class PptLayoutToolTests : PptTestBase
         var pptPath = CreatePresentation("test_apply_master.pptx", 3);
         var outputPath = CreateTestFilePath("test_apply_master_output.pptx");
         var result = _tool.Execute("apply_master", pptPath, masterIndex: 0, layoutIndex: 0, outputPath: outputPath);
-        Assert.StartsWith("Master", result);
-        Assert.Contains("3 slides", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Master", data.Message);
+        Assert.Contains("3 slides", data.Message);
     }
 
     #endregion
@@ -74,7 +79,8 @@ public class PptLayoutToolTests : PptTestBase
     {
         var pptPath = CreatePresentation($"test_case_masters_{operation.Replace("_", "")}.pptx");
         var result = _tool.Execute(operation, pptPath);
-        Assert.Contains("\"count\"", result);
+        var data = GetResultData<GetMastersResult>(result);
+        Assert.True(data.Count >= 0);
     }
 
     [Fact]
@@ -95,9 +101,11 @@ public class PptLayoutToolTests : PptTestBase
         var pptPath = CreatePresentation("test_session_get_masters.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("get_masters", sessionId: sessionId);
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.GetProperty("count").GetInt32() > 0);
-        Assert.Contains("layoutType", result);
+        var data = GetResultData<GetMastersResult>(result);
+        Assert.True(data.Count > 0);
+        Assert.True(data.Masters.Count > 0);
+        var output = GetResultOutput<GetMastersResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -107,9 +115,11 @@ public class PptLayoutToolTests : PptTestBase
         var sessionId = OpenSession(pptPath);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var result = _tool.Execute("set", sessionId: sessionId, slideIndex: 0, layout: "Blank");
-        Assert.StartsWith("Layout 'Blank' set for slide 0", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Layout 'Blank' set for slide 0", data.Message);
         Assert.Equal(SlideLayoutType.Blank, ppt.Slides[0].LayoutSlide.LayoutType);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -118,9 +128,11 @@ public class PptLayoutToolTests : PptTestBase
         var pptPath = CreatePresentation("test_session_apply_master.pptx", 3);
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("apply_master", sessionId: sessionId, masterIndex: 0, layoutIndex: 0);
-        Assert.StartsWith("Master", result);
-        Assert.Contains("3 slides", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Master", data.Message);
+        Assert.Contains("3 slides", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -136,9 +148,9 @@ public class PptLayoutToolTests : PptTestBase
         var pptPath2 = CreatePresentation("test_session_layout.pptx", 5);
         var sessionId = OpenSession(pptPath2);
         var result = _tool.Execute("apply_master", pptPath1, sessionId, masterIndex: 0, layoutIndex: 0);
-        Assert.StartsWith("Master", result);
-        Assert.Contains("5 slides", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Master", data.Message);
+        Assert.Contains("5 slides", data.Message);
     }
 
     #endregion

@@ -1,7 +1,10 @@
 using Aspose.Words;
 using Aspose.Words.Tables;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 using WordTable = Aspose.Words.Tables.Table;
 
 namespace AsposeMcpServer.Handlers.Word.Table;
@@ -9,6 +12,7 @@ namespace AsposeMcpServer.Handlers.Word.Table;
 /// <summary>
 ///     Handler for setting table borders in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetBorderWordTableHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -25,7 +29,7 @@ public class SetBorderWordTableHandler : OperationHandlerBase<Document>
     /// </param>
     /// <returns>Success message.</returns>
     /// <exception cref="ArgumentException">Thrown when indices are out of range.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractSetBorderParameters(parameters);
 
@@ -79,7 +83,7 @@ public class SetBorderWordTableHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Successfully set table {p.TableIndex} borders.");
+        return new SuccessResult { Message = $"Successfully set table {p.TableIndex} borders." };
     }
 
     /// <summary>

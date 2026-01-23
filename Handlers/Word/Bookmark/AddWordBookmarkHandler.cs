@@ -1,5 +1,7 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.Bookmark;
@@ -7,6 +9,7 @@ namespace AsposeMcpServer.Handlers.Word.Bookmark;
 /// <summary>
 ///     Handler for adding bookmarks to Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddWordBookmarkHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -22,7 +25,7 @@ public class AddWordBookmarkHandler : OperationHandlerBase<Document>
     /// </param>
     /// <returns>Success message with bookmark details.</returns>
     /// <exception cref="ArgumentException">Thrown when bookmark name is not provided.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractAddParameters(parameters);
 
@@ -114,13 +117,13 @@ public class AddWordBookmarkHandler : OperationHandlerBase<Document>
     /// <param name="text">The bookmark text content.</param>
     /// <param name="paragraphIndex">The paragraph index where the bookmark was inserted.</param>
     /// <returns>A formatted result message.</returns>
-    private static string BuildResultMessage(string name, string? text, int? paragraphIndex)
+    private static SuccessResult BuildResultMessage(string name, string? text, int? paragraphIndex)
     {
-        var result = "Bookmark added successfully\n";
-        result += $"Bookmark name: {name}\n";
-        if (!string.IsNullOrEmpty(text)) result += $"Bookmark text: {text}\n";
-        result += GetInsertPositionMessage(paragraphIndex);
-        return result;
+        var message = "Bookmark added successfully\n";
+        message += $"Bookmark name: {name}\n";
+        if (!string.IsNullOrEmpty(text)) message += $"Bookmark text: {text}\n";
+        message += GetInsertPositionMessage(paragraphIndex);
+        return new SuccessResult { Message = message };
     }
 
     /// <summary>

@@ -1,5 +1,8 @@
 ﻿using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 using WordTable = Aspose.Words.Tables.Table;
 
@@ -8,6 +11,7 @@ namespace AsposeMcpServer.Handlers.Word.Styles;
 /// <summary>
 ///     Handler for applying styles to paragraphs or tables in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class ApplyWordStyleHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -22,9 +26,7 @@ public class ApplyWordStyleHandler : OperationHandlerBase<Document>
     ///     Optional: paragraphIndex, paragraphIndices, sectionIndex, tableIndex, applyToAllParagraphs
     /// </param>
     /// <returns>Success message with application details.</returns>
-    public override string
-        Execute(OperationContext<Document> context,
-            OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractApplyWordStyleParameters(parameters);
 
@@ -93,7 +95,7 @@ public class ApplyWordStyleHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Applied style '{p.StyleName}' to {appliedCount} element(s)");
+        return new SuccessResult { Message = $"Applied style '{p.StyleName}' to {appliedCount} element(s)" };
     }
 
     private static ApplyWordStyleParameters ExtractApplyWordStyleParameters(OperationParameters parameters)

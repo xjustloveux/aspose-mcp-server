@@ -1,6 +1,8 @@
-using Aspose.Slides;
+﻿using Aspose.Slides;
 using Aspose.Slides.Export;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.PowerPoint.Text;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.PowerPoint;
 
 namespace AsposeMcpServer.Tests.Tools.PowerPoint;
@@ -125,7 +127,8 @@ public class PptTextToolTests : PptTestBase
         var outputPath = CreateTestFilePath($"test_case_add_{operation}_output.pptx");
         var result = _tool.Execute(operation, pptPath, slideIndex: 0, text: "Test", x: 100, y: 100,
             outputPath: outputPath);
-        Assert.StartsWith("Text added to slide", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Text added to slide", data.Message);
     }
 
     [Fact]
@@ -160,7 +163,8 @@ public class PptTextToolTests : PptTestBase
         var initialShapeCount = slide.Shapes.Count;
 
         var result = _tool.Execute("add", sessionId: sessionId, slideIndex: 0, text: "Session Text", x: 100, y: 100);
-        Assert.StartsWith("Text added to slide", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Text added to slide", data.Message);
         Assert.True(slide.Shapes.Count > initialShapeCount);
         var textFrames = slide.Shapes.OfType<IAutoShape>().Where(s => s.TextFrame != null).ToList();
         Assert.Contains(textFrames, tf => tf.TextFrame.Text.Contains("Session Text"));
@@ -192,7 +196,8 @@ public class PptTextToolTests : PptTestBase
 
         var result = _tool.Execute("edit", sessionId: sessionId, slideIndex: 0, shapeIndex: shapeIndex,
             text: "Session Edited Text");
-        Assert.StartsWith("Text edited in shape", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Text edited in shape", data.Message);
 
         var editedShape = ppt.Slides[0].Shapes[shapeIndex] as IAutoShape;
         Assert.NotNull(editedShape);
@@ -215,7 +220,8 @@ public class PptTextToolTests : PptTestBase
 
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("replace", sessionId: sessionId, findText: "Old", replaceText: "New");
-        Assert.Contains("1 occurrences", result);
+        var data = GetResultData<TextReplaceResult>(result);
+        Assert.Equal(1, data.ReplacementCount);
 
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var autoShapes = ppt.Slides[0].Shapes.OfType<IAutoShape>().Where(s => s.TextFrame != null).ToList();
@@ -252,7 +258,8 @@ public class PptTextToolTests : PptTestBase
 
         var sessionId = OpenSession(pptPath2);
         var result = _tool.Execute("replace", pptPath1, sessionId, findText: "SessionText", replaceText: "Modified");
-        Assert.Contains("1 occurrences", result);
+        var data = GetResultData<TextReplaceResult>(result);
+        Assert.Equal(1, data.ReplacementCount);
 
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var autoShapes = ppt.Slides[0].Shapes.OfType<IAutoShape>().Where(s => s.TextFrame != null).ToList();

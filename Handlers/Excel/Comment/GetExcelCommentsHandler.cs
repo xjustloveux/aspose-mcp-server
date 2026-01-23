@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Excel.Comment;
 
 namespace AsposeMcpServer.Handlers.Excel.Comment;
 
 /// <summary>
 ///     Handler for getting comments from Excel worksheets.
 /// </summary>
+[ResultType(typeof(GetCommentsExcelResult))]
 public class GetExcelCommentsHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class GetExcelCommentsHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex, cell
     /// </param>
     /// <returns>JSON string containing the comment information.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var getParams = ExtractGetParameters(parameters);
 
@@ -36,69 +39,59 @@ public class GetExcelCommentsHandler : OperationHandlerBase<Workbook>
             {
                 var comment = worksheet.Comments[getParams.Cell];
                 if (comment != null)
-                {
-                    var result = new
+                    return new GetCommentsExcelResult
                     {
-                        count = 1,
-                        sheetIndex = getParams.SheetIndex,
-                        cell = getParams.Cell,
-                        items = new[]
-                        {
-                            new
+                        Count = 1,
+                        SheetIndex = getParams.SheetIndex,
+                        Cell = getParams.Cell,
+                        Items =
+                        [
+                            new ExcelCommentInfo
                             {
-                                cell = getParams.Cell,
-                                author = comment.Author,
-                                note = comment.Note
+                                Cell = getParams.Cell,
+                                Author = comment.Author,
+                                Note = comment.Note
                             }
-                        }
+                        ]
                     };
-                    return JsonResult(result);
-                }
-                else
+
+                return new GetCommentsExcelResult
                 {
-                    var result = new
-                    {
-                        count = 0,
-                        sheetIndex = getParams.SheetIndex,
-                        cell = getParams.Cell,
-                        items = Array.Empty<object>(),
-                        message = $"No comment found on cell {getParams.Cell}"
-                    };
-                    return JsonResult(result);
-                }
+                    Count = 0,
+                    SheetIndex = getParams.SheetIndex,
+                    Cell = getParams.Cell,
+                    Items = [],
+                    Message = $"No comment found on cell {getParams.Cell}"
+                };
             }
 
             if (worksheet.Comments.Count == 0)
-            {
-                var emptyResult = new
+                return new GetCommentsExcelResult
                 {
-                    count = 0,
-                    sheetIndex = getParams.SheetIndex,
-                    items = Array.Empty<object>(),
-                    message = "No comments found"
+                    Count = 0,
+                    SheetIndex = getParams.SheetIndex,
+                    Items = [],
+                    Message = "No comments found"
                 };
-                return JsonResult(emptyResult);
-            }
 
-            List<object> commentList = [];
+            List<ExcelCommentInfo> commentList = [];
             foreach (var comment in worksheet.Comments)
             {
                 var cellName = CellsHelper.CellIndexToName(comment.Row, comment.Column);
-                commentList.Add(new
+                commentList.Add(new ExcelCommentInfo
                 {
-                    cell = cellName,
-                    author = comment.Author,
-                    note = comment.Note
+                    Cell = cellName,
+                    Author = comment.Author,
+                    Note = comment.Note
                 });
             }
 
-            var allResult = new
+            return new GetCommentsExcelResult
             {
-                count = worksheet.Comments.Count,
-                sheetIndex = getParams.SheetIndex,
-                items = commentList
+                Count = worksheet.Comments.Count,
+                SheetIndex = getParams.SheetIndex,
+                Items = commentList
             };
-            return JsonResult(allResult);
         }
         catch (CellsException ex)
         {

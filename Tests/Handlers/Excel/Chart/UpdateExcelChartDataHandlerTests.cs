@@ -1,7 +1,8 @@
 using Aspose.Cells;
 using Aspose.Cells.Charts;
 using AsposeMcpServer.Handlers.Excel.Chart;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Chart;
 
@@ -32,9 +33,11 @@ public class UpdateExcelChartDataHandlerTests : ExcelHandlerTestBase
             { "categoryAxisDataRange", "A1:A3" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("X-axis: A1:A3", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("X-axis: A1:A3", result.Message);
     }
 
     #endregion
@@ -52,9 +55,11 @@ public class UpdateExcelChartDataHandlerTests : ExcelHandlerTestBase
             { "dataRange", "B1:B3" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("#1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("#1", result.Message);
     }
 
     #endregion
@@ -73,9 +78,11 @@ public class UpdateExcelChartDataHandlerTests : ExcelHandlerTestBase
             { "dataRange", "B1:B3" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("data updated", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("data updated", result.Message);
         Assert.True(chart.NSeries.Count >= initialSeriesCount, "Chart should have data series");
         AssertModified(context);
     }
@@ -90,9 +97,11 @@ public class UpdateExcelChartDataHandlerTests : ExcelHandlerTestBase
             { "dataRange", "B1:B3" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("#0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("#0", result.Message);
     }
 
     [Fact]
@@ -105,9 +114,11 @@ public class UpdateExcelChartDataHandlerTests : ExcelHandlerTestBase
             { "dataRange", "C1:C5" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("C1:C5", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("C1:C5", result.Message);
     }
 
     #endregion

@@ -1,7 +1,8 @@
 using Aspose.Words;
 using Aspose.Words.Lists;
 using AsposeMcpServer.Handlers.Word.List;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.List;
 
@@ -35,9 +36,11 @@ public class SetWordListFormatHandlerTests : WordHandlerTestBase
             { "indentLevel", level }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains($"Indent level: {level}", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains($"Indent level: {level}", result.Message);
     }
 
     #endregion
@@ -58,9 +61,11 @@ public class SetWordListFormatHandlerTests : WordHandlerTestBase
             { "leftIndent", indent }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains($"Left indent: {indent}", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains($"Left indent: {indent}", result.Message);
     }
 
     #endregion
@@ -81,9 +86,11 @@ public class SetWordListFormatHandlerTests : WordHandlerTestBase
             { "firstLineIndent", indent }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains($"First line indent: {indent}", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains($"First line indent: {indent}", result.Message);
     }
 
     #endregion
@@ -102,10 +109,12 @@ public class SetWordListFormatHandlerTests : WordHandlerTestBase
             { "firstLineIndent", 18.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Left indent:", result);
-        Assert.Contains("First line indent:", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Left indent:", result.Message);
+        Assert.Contains("First line indent:", result.Message);
     }
 
     #endregion
@@ -140,9 +149,11 @@ public class SetWordListFormatHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("List format set successfully", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("List format set successfully", result.Message);
         AssertModified(context);
     }
 
@@ -156,9 +167,11 @@ public class SetWordListFormatHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Paragraph index: 0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Paragraph index: 0", result.Message);
     }
 
     [Fact]
@@ -171,9 +184,11 @@ public class SetWordListFormatHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("No change parameters provided", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("No change parameters provided", result.Message);
     }
 
     #endregion
@@ -191,9 +206,11 @@ public class SetWordListFormatHandlerTests : WordHandlerTestBase
             { "numberStyle", "roman" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Number style: roman", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Number style: roman", result.Message);
     }
 
     [Theory]
@@ -211,9 +228,11 @@ public class SetWordListFormatHandlerTests : WordHandlerTestBase
             { "numberStyle", style }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains($"Number style: {style}", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains($"Number style: {style}", result.Message);
     }
 
     #endregion

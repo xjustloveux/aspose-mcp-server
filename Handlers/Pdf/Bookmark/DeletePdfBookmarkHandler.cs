@@ -1,11 +1,14 @@
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.Bookmark;
 
 /// <summary>
 ///     Handler for deleting bookmarks from PDF documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeletePdfBookmarkHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -19,7 +22,7 @@ public class DeletePdfBookmarkHandler : OperationHandlerBase<Document>
     ///     Required: bookmarkIndex
     /// </param>
     /// <returns>Success message with deletion details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var deleteParams = ExtractDeleteParameters(parameters);
 
@@ -38,10 +41,12 @@ public class DeletePdfBookmarkHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return deletedCount > 1
-            ? Success(
-                $"Deleted {deletedCount} bookmark(s) with title '{title}' (requested index {deleteParams.BookmarkIndex}).")
-            : Success($"Deleted bookmark '{title}' (index {deleteParams.BookmarkIndex}).");
+        return new SuccessResult
+        {
+            Message = deletedCount > 1
+                ? $"Deleted {deletedCount} bookmark(s) with title '{title}' (requested index {deleteParams.BookmarkIndex})."
+                : $"Deleted bookmark '{title}' (index {deleteParams.BookmarkIndex})."
+        };
     }
 
     /// <summary>

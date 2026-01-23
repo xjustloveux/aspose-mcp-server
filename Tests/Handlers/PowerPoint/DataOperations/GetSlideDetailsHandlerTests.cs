@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.PowerPoint.DataOperations;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.PowerPoint.DataOperations;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.DataOperations;
 
@@ -29,10 +30,12 @@ public class GetSlideDetailsHandlerTests : PptHandlerTestBase
             { "slideIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("slideIndex", result);
-        Assert.Contains("shapesCount", result);
+        var result = Assert.IsType<GetSlideDetailsResult>(res);
+
+        Assert.Equal(0, result.SlideIndex);
+        Assert.True(result.ShapesCount >= 0);
     }
 
     [Fact]
@@ -45,9 +48,11 @@ public class GetSlideDetailsHandlerTests : PptHandlerTestBase
             { "slideIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("layout", result);
+        var result = Assert.IsType<GetSlideDetailsResult>(res);
+
+        Assert.NotNull(result);
     }
 
     [Fact]
@@ -60,9 +65,11 @@ public class GetSlideDetailsHandlerTests : PptHandlerTestBase
             { "slideIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("transition", result);
+        var result = Assert.IsType<GetSlideDetailsResult>(res);
+
+        Assert.NotNull(result);
     }
 
     [Fact]
@@ -75,9 +82,11 @@ public class GetSlideDetailsHandlerTests : PptHandlerTestBase
             { "slideIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("animationsCount", result);
+        var result = Assert.IsType<GetSlideDetailsResult>(res);
+
+        Assert.True(result.AnimationsCount >= 0);
     }
 
     [Fact]

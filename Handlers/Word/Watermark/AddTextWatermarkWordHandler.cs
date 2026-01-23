@@ -1,11 +1,14 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Watermark;
 
 /// <summary>
 ///     Handler for adding text watermarks to Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddTextWatermarkWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -22,7 +25,7 @@ public class AddTextWatermarkWordHandler : OperationHandlerBase<Document>
     /// </param>
     /// <returns>Success message with watermark details.</returns>
     /// <exception cref="ArgumentException">Thrown when text is missing.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractAddTextWatermarkParameters(parameters);
 
@@ -45,7 +48,7 @@ public class AddTextWatermarkWordHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success("Text watermark added to document");
+        return new SuccessResult { Message = "Text watermark added to document" };
     }
 
     private static AddTextWatermarkParameters ExtractAddTextWatermarkParameters(OperationParameters parameters)

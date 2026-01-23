@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Hyperlink;
 
 /// <summary>
 ///     Handler for editing hyperlinks in Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class EditExcelHyperlinkHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class EditExcelHyperlinkHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0), url, displayText
     /// </param>
     /// <returns>Success message with edit details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var editParams = ExtractEditParameters(parameters);
 
@@ -50,10 +53,10 @@ public class EditExcelHyperlinkHandler : OperationHandlerBase<Workbook>
         if (changes.Count > 0)
         {
             MarkModified(context);
-            return Success($"Hyperlink at {cellRef} edited: {string.Join(", ", changes)}.");
+            return new SuccessResult { Message = $"Hyperlink at {cellRef} edited: {string.Join(", ", changes)}." };
         }
 
-        return Success($"Hyperlink at {cellRef} unchanged.");
+        return new SuccessResult { Message = $"Hyperlink at {cellRef} unchanged." };
     }
 
     private static EditParameters ExtractEditParameters(OperationParameters parameters)

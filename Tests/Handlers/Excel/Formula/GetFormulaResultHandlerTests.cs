@@ -1,7 +1,7 @@
-using System.Text.Json;
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.Formula;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Excel.Formula;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Formula;
 
@@ -36,10 +36,11 @@ public class GetFormulaResultHandlerTests : ExcelHandlerTestBase
             { "calculateBeforeRead", false }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal("=A1+B1", json.RootElement.GetProperty("formula").GetString());
+        var result = Assert.IsType<GetFormulaResultResult>(res);
+
+        Assert.Equal("=A1+B1", result.Formula);
     }
 
     #endregion
@@ -62,10 +63,11 @@ public class GetFormulaResultHandlerTests : ExcelHandlerTestBase
             { "sheetIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal("300", json.RootElement.GetProperty("calculatedValue").GetString());
+        var result = Assert.IsType<GetFormulaResultResult>(res);
+
+        Assert.Equal("300", result.CalculatedValue);
     }
 
     #endregion
@@ -85,10 +87,11 @@ public class GetFormulaResultHandlerTests : ExcelHandlerTestBase
             { "cell", "A1" }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Null(json.RootElement.GetProperty("formula").GetString());
+        var result = Assert.IsType<GetFormulaResultResult>(res);
+
+        Assert.Null(result.Formula);
     }
 
     #endregion
@@ -135,10 +138,11 @@ public class GetFormulaResultHandlerTests : ExcelHandlerTestBase
             { "cell", "C1" }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal("C1", json.RootElement.GetProperty("cell").GetString());
+        var result = Assert.IsType<GetFormulaResultResult>(res);
+
+        Assert.Equal("C1", result.Cell);
     }
 
     [Fact]
@@ -151,10 +155,11 @@ public class GetFormulaResultHandlerTests : ExcelHandlerTestBase
             { "cell", "C1" }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal("=A1+B1", json.RootElement.GetProperty("formula").GetString());
+        var result = Assert.IsType<GetFormulaResultResult>(res);
+
+        Assert.Equal("=A1+B1", result.Formula);
     }
 
     [Fact]
@@ -167,10 +172,11 @@ public class GetFormulaResultHandlerTests : ExcelHandlerTestBase
             { "cell", "C1" }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal("30", json.RootElement.GetProperty("calculatedValue").GetString());
+        var result = Assert.IsType<GetFormulaResultResult>(res);
+
+        Assert.Equal("30", result.CalculatedValue);
     }
 
     [Fact]
@@ -183,10 +189,11 @@ public class GetFormulaResultHandlerTests : ExcelHandlerTestBase
             { "cell", "C1" }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.NotNull(json.RootElement.GetProperty("valueType").GetString());
+        var result = Assert.IsType<GetFormulaResultResult>(res);
+
+        Assert.NotNull(result.ValueType);
     }
 
     #endregion

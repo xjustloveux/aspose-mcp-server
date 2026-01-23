@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Word.Text;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Word.Text;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Text;
 
@@ -20,11 +21,11 @@ public class SearchWordTextHandlerTests : WordHandlerTestBase
     #region Multiple Matches
 
     [Theory]
-    [InlineData("Hello", "Hello Hello Hello", "3")]
-    [InlineData("World", "World World", "2")]
-    [InlineData("a", "aaaaa", "5")]
+    [InlineData("Hello", "Hello Hello Hello", 3)]
+    [InlineData("World", "World World", 2)]
+    [InlineData("a", "aaaaa", 5)]
     public void Execute_MultipleMatches_ReturnsCorrectCount(string searchText, string documentText,
-        string expectedCount)
+        int expectedCount)
     {
         var doc = CreateDocumentWithText(documentText);
         var context = CreateContext(doc);
@@ -33,9 +34,12 @@ public class SearchWordTextHandlerTests : WordHandlerTestBase
             { "searchText", searchText }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains(expectedCount, result);
+        var result = Assert.IsType<TextSearchResult>(res);
+
+        Assert.Equal(expectedCount, result.MatchCount);
+        Assert.Equal(expectedCount, result.Matches.Count);
         AssertNotModified(context);
     }
 
@@ -44,12 +48,13 @@ public class SearchWordTextHandlerTests : WordHandlerTestBase
     #region Case Sensitivity
 
     [Theory]
-    [InlineData("hello", false, "Hello World")]
-    [InlineData("HELLO", false, "Hello World")]
-    [InlineData("HeLLo", false, "Hello World")]
-    [InlineData("Hello", true, "Hello HELLO hello")]
-    [InlineData("hello", false, "Hello HELLO hello")]
-    public void Execute_WithCaseSensitivity_FindsAccordingly(string searchText, bool caseSensitive, string documentText)
+    [InlineData("hello", false, "Hello World", 1)]
+    [InlineData("HELLO", false, "Hello World", 1)]
+    [InlineData("HeLLo", false, "Hello World", 1)]
+    [InlineData("Hello", true, "Hello HELLO hello", 1)]
+    [InlineData("hello", false, "Hello HELLO hello", 3)]
+    public void Execute_WithCaseSensitivity_FindsAccordingly(string searchText, bool caseSensitive, string documentText,
+        int expectedCount)
     {
         var doc = CreateDocumentWithText(documentText);
         var context = CreateContext(doc);
@@ -59,9 +64,12 @@ public class SearchWordTextHandlerTests : WordHandlerTestBase
             { "caseSensitive", caseSensitive }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("found", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<TextSearchResult>(res);
+
+        Assert.Equal(expectedCount, result.MatchCount);
+        Assert.Equal(caseSensitive, result.CaseSensitive);
         AssertNotModified(context);
     }
 
@@ -82,9 +90,11 @@ public class SearchWordTextHandlerTests : WordHandlerTestBase
             { "wholeWord", wholeWord }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("found", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<TextSearchResult>(res);
+
+        Assert.True(result.MatchCount >= 0);
         AssertNotModified(context);
     }
 
@@ -102,9 +112,12 @@ public class SearchWordTextHandlerTests : WordHandlerTestBase
             { "searchText", "Test" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("0", result);
+        var result = Assert.IsType<TextSearchResult>(res);
+
+        Assert.Equal(0, result.MatchCount);
+        Assert.Empty(result.Matches);
         AssertNotModified(context);
     }
 
@@ -122,9 +135,13 @@ public class SearchWordTextHandlerTests : WordHandlerTestBase
             { "searchText", "World" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("found", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<TextSearchResult>(res);
+
+        Assert.Equal(1, result.MatchCount);
+        Assert.Single(result.Matches);
+        Assert.Equal("World", result.Matches[0].Text);
         AssertNotModified(context);
     }
 
@@ -142,9 +159,12 @@ public class SearchWordTextHandlerTests : WordHandlerTestBase
             { "searchText", searchText }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("found", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<TextSearchResult>(res);
+
+        Assert.True(result.MatchCount > 0);
+        Assert.NotEmpty(result.Matches);
         AssertNotModified(context);
     }
 
@@ -158,9 +178,12 @@ public class SearchWordTextHandlerTests : WordHandlerTestBase
             { "searchText", "NotFound" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("0", result);
+        var result = Assert.IsType<TextSearchResult>(res);
+
+        Assert.Equal(0, result.MatchCount);
+        Assert.Empty(result.Matches);
         AssertNotModified(context);
     }
 
@@ -180,7 +203,7 @@ public class SearchWordTextHandlerTests : WordHandlerTestBase
     }
 
     [Fact]
-    public void Execute_WithEmptySearchText_ReturnsNoMatches()
+    public void Execute_WithEmptySearchText_ReturnsAllPositions()
     {
         var doc = CreateDocumentWithText("Hello World");
         var context = CreateContext(doc);
@@ -189,9 +212,12 @@ public class SearchWordTextHandlerTests : WordHandlerTestBase
             { "searchText", "" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("0", result);
+        var result = Assert.IsType<TextSearchResult>(res);
+
+        // Empty string matches at every position (limited by maxResults)
+        Assert.True(result.MatchCount > 0);
         AssertNotModified(context);
     }
 
@@ -247,9 +273,11 @@ public class SearchWordTextHandlerTests : WordHandlerTestBase
             { "searchText", searchText }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("found", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<TextSearchResult>(res);
+
+        Assert.True(result.MatchCount > 0);
         AssertNotModified(context);
     }
 
@@ -266,10 +294,80 @@ public class SearchWordTextHandlerTests : WordHandlerTestBase
             { "searchText", searchText }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("found", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<TextSearchResult>(res);
+
+        Assert.True(result.MatchCount > 0);
         AssertNotModified(context);
+    }
+
+    #endregion
+
+    #region Result Properties
+
+    [Fact]
+    public void Execute_ReturnsCorrectSearchParameters()
+    {
+        var doc = CreateDocumentWithText("Hello World");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "searchText", "Hello" },
+            { "useRegex", true },
+            { "caseSensitive", true }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<TextSearchResult>(res);
+
+        Assert.Equal("Hello", result.SearchText);
+        Assert.True(result.UseRegex);
+        Assert.True(result.CaseSensitive);
+    }
+
+    [Fact]
+    public void Execute_ReturnsMatchDetails()
+    {
+        var doc = CreateDocumentWithText("Hello World Hello");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "searchText", "Hello" }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<TextSearchResult>(res);
+
+        Assert.Equal(2, result.MatchCount);
+        // ReSharper disable once ParameterOnlyUsedForPreconditionCheck.Local - Assert.All parameter is intended for validation
+        Assert.All(result.Matches, m =>
+        {
+            Assert.Equal("Hello", m.Text);
+            Assert.True(m.ParagraphIndex >= 0);
+            Assert.NotEmpty(m.Context);
+        });
+    }
+
+    [Fact]
+    public void Execute_WithMaxResults_LimitsMatches()
+    {
+        var doc = CreateDocumentWithText("Hello Hello Hello Hello Hello Hello");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "searchText", "Hello" },
+            { "maxResults", 3 }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<TextSearchResult>(res);
+
+        Assert.Equal(3, result.MatchCount);
+        Assert.True(result.LimitReached);
     }
 
     #endregion

@@ -1,6 +1,7 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using Aspose.Words;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Word;
 
 namespace AsposeMcpServer.Tests.Tools.Word;
@@ -104,7 +105,8 @@ public class WordFileToolTests : WordTestBase
         var outputPath = CreateTestFilePath($"test_case_{operation}.docx");
         var result = _tool.Execute(operation, outputPath: outputPath);
         Assert.True(File.Exists(outputPath));
-        Assert.Contains("created", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("created", data.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -127,7 +129,8 @@ public class WordFileToolTests : WordTestBase
         var outputPath = CreateTestFilePath("test_session_convert_output.pdf");
         var result = _tool.Execute("convert", sessionId, outputPath: outputPath, format: "pdf");
         Assert.True(File.Exists(outputPath));
-        Assert.Contains("session", result);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -147,7 +150,8 @@ public class WordFileToolTests : WordTestBase
         var result = _tool.Execute("split", sessionId, outputDir: outputDir, splitBy: "section");
         var files = Directory.GetFiles(outputDir, "*.docx");
         Assert.True(files.Length >= 2);
-        Assert.Contains("session", result);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -165,10 +169,11 @@ public class WordFileToolTests : WordTestBase
         var result = _tool.Execute("create_from_template", sessionId, outputPath: outputPath,
             dataJson: data.ToJsonString());
         Assert.True(File.Exists(outputPath));
-        Assert.Contains("session", result);
         var resultDoc = new Document(outputPath);
         var text = resultDoc.GetText();
         Assert.Contains("Hello SessionWorld", text, StringComparison.OrdinalIgnoreCase);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]

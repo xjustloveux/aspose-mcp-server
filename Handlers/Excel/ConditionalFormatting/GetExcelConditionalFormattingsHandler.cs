@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Excel.ConditionalFormatting;
 
 namespace AsposeMcpServer.Handlers.Excel.ConditionalFormatting;
 
 /// <summary>
 ///     Handler for getting conditional formatting from Excel worksheets.
 /// </summary>
+[ResultType(typeof(GetConditionalFormattingsResult))]
 public class GetExcelConditionalFormattingsHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class GetExcelConditionalFormattingsHandler : OperationHandlerBase<Workbo
     ///     Optional: sheetIndex (default: 0)
     /// </param>
     /// <returns>JSON result with conditional formatting information.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var getParams = ExtractGetParameters(parameters);
 
@@ -29,16 +32,16 @@ public class GetExcelConditionalFormattingsHandler : OperationHandlerBase<Workbo
         var conditionalFormattings = worksheet.ConditionalFormattings;
 
         if (conditionalFormattings.Count == 0)
-            return JsonResult(new
+            return new GetConditionalFormattingsResult
             {
-                count = 0,
-                sheetIndex = getParams.SheetIndex,
-                worksheetName = worksheet.Name,
-                items = Array.Empty<object>(),
-                message = "No conditional formattings found"
-            });
+                Count = 0,
+                SheetIndex = getParams.SheetIndex,
+                WorksheetName = worksheet.Name,
+                Items = Array.Empty<ConditionalFormattingInfo>(),
+                Message = "No conditional formattings found"
+            };
 
-        List<object> formattingList = [];
+        List<ConditionalFormattingInfo> formattingList = [];
         for (var i = 0; i < conditionalFormattings.Count; i++)
         {
             var fcs = conditionalFormattings[i];
@@ -51,37 +54,37 @@ public class GetExcelConditionalFormattingsHandler : OperationHandlerBase<Workbo
                     $"{CellsHelper.CellIndexToName(area.StartRow, area.StartColumn)}:{CellsHelper.CellIndexToName(area.EndRow, area.EndColumn)}");
             }
 
-            List<object> conditionsList = [];
+            List<ConditionalFormattingCondition> conditionsList = [];
             for (var j = 0; j < fcs.Count; j++)
             {
                 var fc = fcs[j];
-                conditionsList.Add(new
+                conditionsList.Add(new ConditionalFormattingCondition
                 {
-                    index = j,
-                    operatorType = fc.Operator.ToString(),
-                    formula1 = fc.Formula1,
-                    formula2 = fc.Formula2,
-                    foregroundColor = fc.Style?.ForegroundColor.ToString(),
-                    backgroundColor = fc.Style?.BackgroundColor.ToString()
+                    Index = j,
+                    OperatorType = fc.Operator.ToString(),
+                    Formula1 = fc.Formula1,
+                    Formula2 = fc.Formula2,
+                    ForegroundColor = fc.Style?.ForegroundColor.ToString(),
+                    BackgroundColor = fc.Style?.BackgroundColor.ToString()
                 });
             }
 
-            formattingList.Add(new
+            formattingList.Add(new ConditionalFormattingInfo
             {
-                index = i,
-                areas = areasList,
-                conditionsCount = fcs.Count,
-                conditions = conditionsList
+                Index = i,
+                Areas = areasList,
+                ConditionsCount = fcs.Count,
+                Conditions = conditionsList
             });
         }
 
-        return JsonResult(new
+        return new GetConditionalFormattingsResult
         {
-            count = conditionalFormattings.Count,
-            sheetIndex = getParams.SheetIndex,
-            worksheetName = worksheet.Name,
-            items = formattingList
-        });
+            Count = conditionalFormattings.Count,
+            SheetIndex = getParams.SheetIndex,
+            WorksheetName = worksheet.Name,
+            Items = formattingList
+        };
     }
 
     private static GetParameters ExtractGetParameters(OperationParameters parameters)

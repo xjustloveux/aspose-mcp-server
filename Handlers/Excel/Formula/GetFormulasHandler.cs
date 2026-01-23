@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Excel.Formula;
 
 namespace AsposeMcpServer.Handlers.Excel.Formula;
 
 /// <summary>
 ///     Handler for getting formulas from Excel worksheets.
 /// </summary>
+[ResultType(typeof(GetFormulasResult))]
 public class GetFormulasHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class GetFormulasHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0), range
     /// </param>
     /// <returns>JSON string containing formula information.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var getParams = ExtractGetFormulasParameters(parameters);
 
@@ -52,40 +55,35 @@ public class GetFormulasHandler : OperationHandlerBase<Workbook>
             endCol = worksheet.Cells.MaxDataColumn;
         }
 
-        List<object> formulaList = [];
+        List<FormulaInfo> formulaList = [];
         for (var row = startRow; row <= endRow && row <= 10000; row++)
         for (var col = startCol; col <= endCol && col <= 1000; col++)
         {
             var cell = cells[row, col];
             if (!string.IsNullOrEmpty(cell.Formula))
-                formulaList.Add(new
+                formulaList.Add(new FormulaInfo
                 {
-                    cell = CellsHelper.CellIndexToName(row, col),
-                    formula = cell.Formula,
-                    value = cell.Value?.ToString() ?? "(calculating)"
+                    Cell = CellsHelper.CellIndexToName(row, col),
+                    Formula = cell.Formula,
+                    Value = cell.Value?.ToString() ?? "(calculating)"
                 });
         }
 
         if (formulaList.Count == 0)
-        {
-            var emptyResult = new
+            return new GetFormulasResult
             {
-                count = 0,
-                worksheetName = worksheet.Name,
-                items = Array.Empty<object>(),
-                message = "No formulas found"
+                Count = 0,
+                WorksheetName = worksheet.Name,
+                Items = Array.Empty<FormulaInfo>(),
+                Message = "No formulas found"
             };
-            return JsonResult(emptyResult);
-        }
 
-        var result = new
+        return new GetFormulasResult
         {
-            count = formulaList.Count,
-            worksheetName = worksheet.Name,
-            items = formulaList
+            Count = formulaList.Count,
+            WorksheetName = worksheet.Name,
+            Items = formulaList
         };
-
-        return JsonResult(result);
     }
 
     /// <summary>

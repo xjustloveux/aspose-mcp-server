@@ -1,6 +1,8 @@
-using Aspose.Words;
+﻿using Aspose.Words;
 using Aspose.Words.Drawing;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Word.Shape;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Word;
 
 namespace AsposeMcpServer.Tests.Tools.Word;
@@ -41,7 +43,8 @@ public class WordShapeToolTests : WordTestBase
         builder.InsertShape(ShapeType.Rectangle, 100, 50);
         doc.Save(docPath);
         var result = _tool.Execute("get", docPath);
-        Assert.Contains("Shape", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<GetShapesWordResult>(result);
+        Assert.Contains("Shape", data.Content, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -66,7 +69,8 @@ public class WordShapeToolTests : WordTestBase
         var docPath = CreateWordDocument("test_add_line.docx");
         var outputPath = CreateTestFilePath("test_add_line_output.docx");
         var result = _tool.Execute("add_line", docPath, outputPath: outputPath);
-        Assert.StartsWith("Successfully inserted line", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Successfully inserted line", data.Message);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -76,7 +80,8 @@ public class WordShapeToolTests : WordTestBase
         var docPath = CreateWordDocument("test_add_textbox.docx");
         var outputPath = CreateTestFilePath("test_add_textbox_output.docx");
         var result = _tool.Execute("add_textbox", docPath, outputPath: outputPath, text: "Test TextBox");
-        Assert.Contains("TextBox", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("TextBox", data.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -85,9 +90,10 @@ public class WordShapeToolTests : WordTestBase
     {
         var docPath = CreateWordDocument("test_add_chart.docx");
         var outputPath = CreateTestFilePath("test_add_chart_output.docx");
-        var data = new[] { new[] { "A", "B" }, new[] { "1", "2" } };
-        var result = _tool.Execute("add_chart", docPath, outputPath: outputPath, chartType: "column", data: data);
-        Assert.StartsWith("Successfully added chart", result);
+        var chartData = new[] { new[] { "A", "B" }, new[] { "1", "2" } };
+        var result = _tool.Execute("add_chart", docPath, outputPath: outputPath, chartType: "column", data: chartData);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Successfully added chart", data.Message);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -137,7 +143,10 @@ public class WordShapeToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("get", sessionId: sessionId);
-        Assert.Contains("Shape", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<GetShapesWordResult>(result);
+        Assert.Contains("Shape", data.Content, StringComparison.OrdinalIgnoreCase);
+        var output = GetResultOutput<GetShapesWordResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -146,7 +155,10 @@ public class WordShapeToolTests : WordTestBase
         var docPath = CreateWordDocument("test_session_add_shape.docx");
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("add", sessionId: sessionId, shapeType: "Rectangle", width: 100, height: 50);
-        Assert.Contains("Rectangle", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Rectangle", data.Message, StringComparison.OrdinalIgnoreCase);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
 
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         var shapes = sessionDoc.GetChildNodes(NodeType.Shape, true);
@@ -176,7 +188,10 @@ public class WordShapeToolTests : WordTestBase
         var docPath = CreateWordDocument("test_session_add_line.docx");
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("add_line", sessionId: sessionId);
-        Assert.StartsWith("Successfully inserted line", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Successfully inserted line", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
 
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         var shapes = sessionDoc.GetChildNodes(NodeType.Shape, true);
@@ -190,7 +205,10 @@ public class WordShapeToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("add_textbox", sessionId: sessionId, text: "Session TextBox",
             positionX: 100, positionY: 100, textboxWidth: 200, textboxHeight: 100);
-        Assert.Contains("TextBox", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("TextBox", data.Message, StringComparison.OrdinalIgnoreCase);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
 
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         var textboxes = sessionDoc.GetChildNodes(NodeType.Shape, true).Cast<Shape>()
@@ -203,11 +221,14 @@ public class WordShapeToolTests : WordTestBase
     {
         var docPath = CreateWordDocument("test_session_add_chart.docx");
         var sessionId = OpenSession(docPath);
-        var data = new[] { new[] { "A", "B" }, new[] { "1", "2" } };
+        var chartData = new[] { new[] { "A", "B" }, new[] { "1", "2" } };
 
-        var result = _tool.Execute("add_chart", sessionId: sessionId, chartType: "column", data: data);
+        var result = _tool.Execute("add_chart", sessionId: sessionId, chartType: "column", data: chartData);
 
-        Assert.StartsWith("Successfully added chart", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Successfully added chart", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         var shapes = sessionDoc.GetChildNodes(NodeType.Shape, true);
         Assert.True(shapes.Count > 0);
@@ -238,7 +259,10 @@ public class WordShapeToolTests : WordTestBase
         var sessionId = OpenSession(docPath2);
         var result = _tool.Execute("get", docPath1, sessionId);
 
-        Assert.Contains("Ellipse", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<GetShapesWordResult>(result);
+        Assert.Contains("Ellipse", data.Content, StringComparison.OrdinalIgnoreCase);
+        var output = GetResultOutput<GetShapesWordResult>(result);
+        Assert.True(output.IsSession);
     }
 
     #endregion

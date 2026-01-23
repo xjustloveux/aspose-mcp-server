@@ -58,12 +58,12 @@
     <PackageReference Include="Aspose.Slides.NET" Version="23.10.0" />
     <PackageReference Include="Aspose.Pdf" Version="23.10.0" />
     <PackageReference Include="Aspose.Email" Version="23.10.0" />
-    <PackageReference Include="System.Text.Json" Version="8.0.5" />
-    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.3.1" />
-    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.3.1" />
-    <PackageReference Include="ModelContextProtocol" Version="0.2.0-preview.1" />
-    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="0.2.0-preview.1" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
+    <PackageReference Include="System.Text.Json" Version="10.0.2" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.15.0" />
+    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.15.0" />
+    <PackageReference Include="ModelContextProtocol" Version="0.6.0-preview.1" />
+    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="0.6.0-preview.1" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.2" />
   </ItemGroup>
 
   <ItemGroup>

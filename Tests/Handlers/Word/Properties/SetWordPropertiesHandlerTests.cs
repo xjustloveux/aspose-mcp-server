@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Word.Properties;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Properties;
 
@@ -29,9 +30,11 @@ public class SetWordPropertiesHandlerTests : WordHandlerTestBase
             { "title", "New Title" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("New Title", doc.BuiltInDocumentProperties.Title);
         AssertModified(context);
     }
@@ -118,9 +121,11 @@ public class SetWordPropertiesHandlerTests : WordHandlerTestBase
             { "customProperties", "{\"MyProp\": \"MyValue\"}" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.NotNull(doc.CustomDocumentProperties["MyProp"]);
     }
 

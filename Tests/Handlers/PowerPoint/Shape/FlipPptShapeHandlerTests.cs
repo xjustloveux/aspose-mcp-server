@@ -1,6 +1,7 @@
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Shape;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Shape;
 
@@ -33,9 +34,11 @@ public class FlipPptShapeHandlerTests : PptHandlerTestBase
             { "flipHorizontal", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("0", result.Message);
     }
 
     #endregion
@@ -55,10 +58,12 @@ public class FlipPptShapeHandlerTests : PptHandlerTestBase
             { "flipHorizontal", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("flipped", result, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("H=True", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("flipped", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("H=True", result.Message);
         AssertModified(context);
     }
 
@@ -75,10 +80,12 @@ public class FlipPptShapeHandlerTests : PptHandlerTestBase
             { "flipVertical", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("flipped", result, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("V=True", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("flipped", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("V=True", result.Message);
         AssertModified(context);
     }
 
@@ -96,10 +103,12 @@ public class FlipPptShapeHandlerTests : PptHandlerTestBase
             { "flipVertical", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("H=True", result);
-        Assert.Contains("V=True", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("H=True", result.Message);
+        Assert.Contains("V=True", result.Message);
         AssertModified(context);
     }
 
@@ -120,9 +129,11 @@ public class FlipPptShapeHandlerTests : PptHandlerTestBase
             { "flipHorizontal", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("H=False", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("H=False", result.Message);
         AssertModified(context);
     }
 
@@ -139,9 +150,11 @@ public class FlipPptShapeHandlerTests : PptHandlerTestBase
             { "flipVertical", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("V=False", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("V=False", result.Message);
         AssertModified(context);
     }
 

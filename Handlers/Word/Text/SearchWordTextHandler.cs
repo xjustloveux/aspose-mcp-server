@@ -1,7 +1,8 @@
-using System.Text;
 using System.Text.RegularExpressions;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Word.Text;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.Text;
@@ -9,6 +10,7 @@ namespace AsposeMcpServer.Handlers.Word.Text;
 /// <summary>
 ///     Handler for searching text in Word documents.
 /// </summary>
+[ResultType(typeof(TextSearchResult))]
 public class SearchWordTextHandler : OperationHandlerBase<Document>
 {
     private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(5);
@@ -24,14 +26,28 @@ public class SearchWordTextHandler : OperationHandlerBase<Document>
     ///     Required: searchText.
     ///     Optional: useRegex, caseSensitive, maxResults, contextLength.
     /// </param>
-    /// <returns>Search results as formatted text.</returns>
+    /// <returns>Search results with match details.</returns>
     /// <exception cref="ArgumentException">Thrown when searchText is missing.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var searchParams = ExtractSearchParameters(parameters);
         var doc = context.Document;
         var matches = FindAllMatches(doc, searchParams);
-        return BuildSearchResults(matches, searchParams);
+
+        return new TextSearchResult
+        {
+            SearchText = searchParams.SearchText,
+            UseRegex = searchParams.UseRegex,
+            CaseSensitive = searchParams.CaseSensitive,
+            MatchCount = matches.Count,
+            LimitReached = matches.Count >= searchParams.MaxResults,
+            Matches = matches.Select(m => new TextSearchMatch
+            {
+                Text = m.text,
+                ParagraphIndex = m.paragraphIndex,
+                Context = m.context
+            }).ToList()
+        };
     }
 
     /// <summary>
@@ -117,39 +133,6 @@ public class SearchWordTextHandler : OperationHandlerBase<Document>
             matches.Add((p.SearchText, paraIndex, ctx));
             index += p.SearchText.Length;
         }
-    }
-
-    /// <summary>
-    ///     Builds the formatted search results.
-    /// </summary>
-    /// <param name="matches">The list of matches.</param>
-    /// <param name="p">The search parameters.</param>
-    /// <returns>The formatted search results.</returns>
-    private static string BuildSearchResults(List<(string text, int paragraphIndex, string context)> matches,
-        SearchParameters p)
-    {
-        var result = new StringBuilder();
-        result.AppendLine("=== Search Results ===");
-        result.AppendLine($"Search text: {p.SearchText}");
-        result.AppendLine($"Use regex: {(p.UseRegex ? "Yes" : "No")}");
-        result.AppendLine($"Case sensitive: {(p.CaseSensitive ? "Yes" : "No")}");
-        result.AppendLine(
-            $"Found {matches.Count} matches{(matches.Count >= p.MaxResults ? $" (limited to first {p.MaxResults})" : "")}\n");
-
-        if (matches.Count == 0)
-            result.AppendLine("No matching text found");
-        else
-            for (var i = 0; i < matches.Count; i++)
-            {
-                var match = matches[i];
-                result.AppendLine($"Match #{i + 1}:");
-                result.AppendLine($"  Location: Paragraph #{match.paragraphIndex}");
-                result.AppendLine($"  Matched text: {match.text}");
-                result.AppendLine($"  Context: ...{match.context}...");
-                result.AppendLine();
-            }
-
-        return result.ToString();
     }
 
     /// <summary>

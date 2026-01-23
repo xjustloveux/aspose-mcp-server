@@ -1,4 +1,5 @@
-using AsposeMcpServer.Tests.Helpers;
+﻿using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Excel;
 
 namespace AsposeMcpServer.Tests.Tools.Excel;
@@ -25,7 +26,8 @@ public class ExcelRowColumnToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbookWithData("test_insert_row.xlsx", 3);
         var outputPath = CreateTestFilePath("test_insert_row_output.xlsx");
         var result = _tool.Execute("insert_row", workbookPath, rowIndex: 1, count: 1, outputPath: outputPath);
-        Assert.Contains("Inserted 1 row(s)", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Inserted 1 row(s)", data.Message);
     }
 
     [Fact]
@@ -34,7 +36,8 @@ public class ExcelRowColumnToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbookWithData("test_delete_row.xlsx", 3);
         var outputPath = CreateTestFilePath("test_delete_row_output.xlsx");
         var result = _tool.Execute("delete_row", workbookPath, rowIndex: 1, outputPath: outputPath);
-        Assert.Contains("Deleted 1 row(s)", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Deleted 1 row(s)", data.Message);
     }
 
     [Fact]
@@ -43,7 +46,8 @@ public class ExcelRowColumnToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbookWithData("test_insert_column.xlsx", 3);
         var outputPath = CreateTestFilePath("test_insert_column_output.xlsx");
         var result = _tool.Execute("insert_column", workbookPath, columnIndex: 1, count: 1, outputPath: outputPath);
-        Assert.Contains("Inserted 1 column(s)", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Inserted 1 column(s)", data.Message);
     }
 
     [Fact]
@@ -52,7 +56,8 @@ public class ExcelRowColumnToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbookWithData("test_delete_column.xlsx", 3);
         var outputPath = CreateTestFilePath("test_delete_column_output.xlsx");
         var result = _tool.Execute("delete_column", workbookPath, columnIndex: 1, outputPath: outputPath);
-        Assert.Contains("Deleted 1 column(s)", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Deleted 1 column(s)", data.Message);
     }
 
     [Fact]
@@ -62,7 +67,8 @@ public class ExcelRowColumnToolTests : ExcelTestBase
         var outputPath = CreateTestFilePath("test_insert_cells_output.xlsx");
         var result = _tool.Execute("insert_cells", workbookPath, range: "A1:B1", shiftDirection: "Down",
             outputPath: outputPath);
-        Assert.Contains("inserted", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("inserted", data.Message);
     }
 
     [Fact]
@@ -72,7 +78,8 @@ public class ExcelRowColumnToolTests : ExcelTestBase
         var outputPath = CreateTestFilePath("test_delete_cells_output.xlsx");
         var result = _tool.Execute("delete_cells", workbookPath, range: "A1:B1", shiftDirection: "Up",
             outputPath: outputPath);
-        Assert.Contains("deleted", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("deleted", data.Message);
     }
 
     #endregion
@@ -88,7 +95,8 @@ public class ExcelRowColumnToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbookWithData($"test_case_{operation.Replace("_", "")}.xlsx", 3);
         var outputPath = CreateTestFilePath($"test_case_{operation.Replace("_", "")}_output.xlsx");
         var result = _tool.Execute(operation, workbookPath, rowIndex: 1, outputPath: outputPath);
-        Assert.Contains("Inserted 1 row(s)", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Inserted 1 row(s)", data.Message);
     }
 
     [Fact]
@@ -109,8 +117,10 @@ public class ExcelRowColumnToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbookWithData("test_session_insert_row.xlsx", 3);
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("insert_row", sessionId: sessionId, rowIndex: 1, count: 1);
-        Assert.Contains("Inserted 1 row(s)", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Inserted 1 row(s)", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -119,8 +129,10 @@ public class ExcelRowColumnToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbookWithData("test_session_delete_row.xlsx");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("delete_row", sessionId: sessionId, rowIndex: 1, count: 1);
-        Assert.Contains("Deleted 1 row(s)", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Deleted 1 row(s)", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -129,8 +141,10 @@ public class ExcelRowColumnToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbookWithData("test_session_insert_col.xlsx", 3);
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("insert_column", sessionId: sessionId, columnIndex: 1, count: 1);
-        Assert.Contains("Inserted 1 column(s)", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Inserted 1 column(s)", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -147,7 +161,8 @@ public class ExcelRowColumnToolTests : ExcelTestBase
         var workbookPath2 = CreateExcelWorkbookWithData("test_session_file.xlsx");
         var sessionId = OpenSession(workbookPath2);
         var result = _tool.Execute("insert_row", workbookPath1, sessionId, rowIndex: 0, count: 1);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Inserted 1 row(s)", data.Message);
     }
 
     #endregion

@@ -1,7 +1,8 @@
 using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
 using AsposeMcpServer.Handlers.Pdf.Bookmark;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Bookmark;
 
@@ -75,9 +76,11 @@ public class EditPdfBookmarkHandlerTests : PdfHandlerTestBase
             { "title", "New Title" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Edited bookmark", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Edited bookmark", result.Message);
         AssertModified(context);
     }
 
@@ -92,9 +95,11 @@ public class EditPdfBookmarkHandlerTests : PdfHandlerTestBase
             { "title", "Updated" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("index 1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("index 1", result.Message);
     }
 
     #endregion
@@ -112,9 +117,11 @@ public class EditPdfBookmarkHandlerTests : PdfHandlerTestBase
             { "pageIndex", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Edited bookmark", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Edited bookmark", result.Message);
     }
 
     [Theory]
@@ -131,9 +138,11 @@ public class EditPdfBookmarkHandlerTests : PdfHandlerTestBase
             { "pageIndex", pageIndex }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Edited bookmark", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Edited bookmark", result.Message);
     }
 
     #endregion

@@ -1,12 +1,16 @@
 using System.Text;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Word.Shape;
 
 namespace AsposeMcpServer.Handlers.Word.Shape;
 
 /// <summary>
 ///     Handler for getting textboxes from Word documents.
 /// </summary>
+[ResultType(typeof(GetTextboxesWordResult))]
 public class GetTextboxesWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,7 +24,7 @@ public class GetTextboxesWordHandler : OperationHandlerBase<Document>
     ///     Optional: includeContent
     /// </param>
     /// <returns>Formatted string containing textbox information.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractGetTextboxesParameters(parameters);
 
@@ -34,7 +38,7 @@ public class GetTextboxesWordHandler : OperationHandlerBase<Document>
         if (shapes.Count == 0)
         {
             result.AppendLine("No textboxes found");
-            return result.ToString();
+            return new GetTextboxesWordResult { Content = result.ToString() };
         }
 
         for (var i = 0; i < shapes.Count; i++)
@@ -63,7 +67,7 @@ public class GetTextboxesWordHandler : OperationHandlerBase<Document>
             result.AppendLine();
         }
 
-        return result.ToString();
+        return new GetTextboxesWordResult { Content = result.ToString() };
     }
 
     private static GetTextboxesParameters ExtractGetTextboxesParameters(OperationParameters parameters)

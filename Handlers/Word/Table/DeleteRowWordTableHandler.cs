@@ -1,11 +1,14 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Table;
 
 /// <summary>
 ///     Handler for deleting rows from Word document tables.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeleteRowWordTableHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class DeleteRowWordTableHandler : OperationHandlerBase<Document>
     /// </param>
     /// <returns>Success message with remaining row count.</returns>
     /// <exception cref="ArgumentException">Thrown when rowIndex is missing or indices are out of range.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractDeleteRowParameters(parameters);
 
@@ -44,7 +47,8 @@ public class DeleteRowWordTableHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Successfully deleted row #{p.RowIndex}. Remaining rows: {table.Rows.Count}.");
+        return new SuccessResult
+            { Message = $"Successfully deleted row #{p.RowIndex}. Remaining rows: {table.Rows.Count}." };
     }
 
     private static DeleteRowParameters ExtractDeleteRowParameters(OperationParameters parameters)

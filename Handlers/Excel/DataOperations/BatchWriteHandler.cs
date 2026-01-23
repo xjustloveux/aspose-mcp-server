@@ -1,13 +1,16 @@
 using System.Text.Json.Nodes;
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.DataOperations;
 
 /// <summary>
 ///     Handler for batch writing multiple values to Excel cells.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class BatchWriteHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class BatchWriteHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex, data (JSON array or object)
     /// </param>
     /// <returns>Success message with write count.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var batchWriteParams = ExtractBatchWriteParameters(parameters);
 
@@ -34,8 +37,11 @@ public class BatchWriteHandler : OperationHandlerBase<Workbook>
 
             MarkModified(context);
 
-            return Success(
-                $"Batch write completed ({writeCount} cells written to sheet {batchWriteParams.SheetIndex}).");
+            return new SuccessResult
+            {
+                Message =
+                    $"Batch write completed ({writeCount} cells written to sheet {batchWriteParams.SheetIndex})."
+            };
         }
         catch (CellsException ex)
         {

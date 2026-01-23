@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Pdf;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Pdf;
 /// <summary>
 ///     Tool for managing links in PDF documents (add, delete, edit, get)
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Pdf.Link")]
 [McpServerToolType]
 public class PdfLinkTool
 {
@@ -56,7 +59,14 @@ public class PdfLinkTool
     /// <param name="targetPage">Target page number (1-based, for add, edit).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "pdf_link")]
+    [McpServerTool(
+        Name = "pdf_link",
+        Title = "PDF Link Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage links in PDF documents. Supports 4 operations: add, delete, edit, get.
 
 Usage examples:
@@ -64,7 +74,7 @@ Usage examples:
 - Delete link: pdf_link(operation='delete', path='doc.pdf', pageIndex=1, linkIndex=0)
 - Edit link: pdf_link(operation='edit', path='doc.pdf', pageIndex=1, linkIndex=0, url='https://newurl.com')
 - Get links: pdf_link(operation='get', path='doc.pdf', pageIndex=1)")]
-    public string Execute(
+    public object Execute(
         [Description(@"Operation to perform.
 - 'add': Add a link (required params: path, pageIndex, x, y, width, height, url)
 - 'delete': Delete a link (required params: path, pageIndex, linkIndex)
@@ -113,12 +123,12 @@ Usage examples:
         var result = handler.Execute(operationContext, parameters);
 
         if (string.Equals(operation, "get", StringComparison.OrdinalIgnoreCase))
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

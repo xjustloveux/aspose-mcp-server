@@ -1,7 +1,8 @@
-using System.Text.Json;
-using Aspose.Pdf;
+﻿using Aspose.Pdf;
 using Aspose.Pdf.Text;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Pdf.Text;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Pdf;
 
 namespace AsposeMcpServer.Tests.Tools.Pdf;
@@ -37,11 +38,9 @@ public class PdfTextToolTests : PdfTestBase
     {
         var pdfPath = CreatePdfDocument("test_extract.pdf");
         var result = _tool.Execute("extract", pdfPath, pageIndex: 1);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
-        Assert.True(json.TryGetProperty("pageIndex", out var pageIndex));
-        Assert.Equal(1, pageIndex.GetInt32());
-        Assert.True(json.TryGetProperty("text", out var text));
-        Assert.False(string.IsNullOrEmpty(text.GetString()));
+        var data = GetResultData<ExtractPdfTextResult>(result);
+        Assert.Equal(1, data.PageIndex);
+        Assert.False(string.IsNullOrEmpty(data.Text));
     }
 
     [Fact]
@@ -49,9 +48,9 @@ public class PdfTextToolTests : PdfTestBase
     {
         var pdfPath = CreatePdfDocument("test_extract_font.pdf");
         var result = _tool.Execute("extract", pdfPath, pageIndex: 1, includeFontInfo: true);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
-        Assert.True(json.TryGetProperty("fragments", out var fragments));
-        Assert.True(fragments.GetArrayLength() > 0);
+        var data = GetResultData<ExtractPdfTextResult>(result);
+        Assert.NotNull(data.Fragments);
+        Assert.True(data.Fragments.Count > 0);
     }
 
     [Fact]
@@ -62,7 +61,8 @@ public class PdfTextToolTests : PdfTestBase
         var result = _tool.Execute("add", pdfPath, pageIndex: 1, outputPath: outputPath,
             text: "Added Text", x: 100, y: 700);
         Assert.True(File.Exists(outputPath));
-        Assert.StartsWith("Text added to page", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Text added to page", data.Message);
     }
 
     [SkippableFact]
@@ -74,7 +74,8 @@ public class PdfTextToolTests : PdfTestBase
         var result = _tool.Execute("edit", pdfPath, pageIndex: 1, outputPath: outputPath,
             oldText: "Sample PDF Text", newText: "Updated Text", replaceAll: true);
         Assert.True(File.Exists(outputPath));
-        Assert.StartsWith("Replaced", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Replaced", data.Message);
     }
 
     #endregion
@@ -89,7 +90,8 @@ public class PdfTextToolTests : PdfTestBase
     {
         var pdfPath = CreatePdfDocument($"test_case_{operation}.pdf");
         var result = _tool.Execute(operation, pdfPath, pageIndex: 1);
-        Assert.Contains("pageIndex", result);
+        var data = GetResultData<ExtractPdfTextResult>(result);
+        Assert.Equal(1, data.PageIndex);
     }
 
     [Fact]
@@ -116,9 +118,8 @@ public class PdfTextToolTests : PdfTestBase
         var pdfPath = CreatePdfDocument("test_session_extract.pdf");
         var sessionId = OpenSession(pdfPath);
         var result = _tool.Execute("extract", sessionId: sessionId, pageIndex: 1);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
-        Assert.True(json.TryGetProperty("text", out var text));
-        Assert.False(string.IsNullOrEmpty(text.GetString()));
+        var data = GetResultData<ExtractPdfTextResult>(result);
+        Assert.False(string.IsNullOrEmpty(data.Text));
     }
 
     [Fact]
@@ -128,7 +129,8 @@ public class PdfTextToolTests : PdfTestBase
         var sessionId = OpenSession(pdfPath);
         var result = _tool.Execute("add", sessionId: sessionId, pageIndex: 1,
             text: "Session Text", x: 100, y: 700);
-        Assert.StartsWith("Text added to page", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Text added to page", data.Message);
         var document = SessionManager.GetDocument<Document>(sessionId);
         Assert.NotNull(document);
     }
@@ -141,7 +143,8 @@ public class PdfTextToolTests : PdfTestBase
         var sessionId = OpenSession(pdfPath);
         var result = _tool.Execute("edit", sessionId: sessionId, pageIndex: 1,
             oldText: "Sample PDF Text", newText: "Updated Session Text", replaceAll: true);
-        Assert.StartsWith("Replaced", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Replaced", data.Message);
     }
 
     [Fact]
@@ -159,9 +162,9 @@ public class PdfTextToolTests : PdfTestBase
         var pdfPath2 = CreatePdfDocument("test_session_text.pdf", "Session Content");
         var sessionId = OpenSession(pdfPath2);
         var result = _tool.Execute("extract", pdfPath1, sessionId, pageIndex: 1);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
-        var text = json.GetProperty("text").GetString();
-        Assert.Contains("Session Content", text);
+        var data = GetResultData<ExtractPdfTextResult>(result);
+        Assert.NotNull(data.Text);
+        Assert.Contains("Session Content", data.Text);
     }
 
     #endregion

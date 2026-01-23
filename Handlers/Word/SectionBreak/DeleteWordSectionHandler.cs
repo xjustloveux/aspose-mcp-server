@@ -1,11 +1,14 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.SectionBreak;
 
 /// <summary>
 ///     Handler for deleting sections from Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeleteWordSectionHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -19,7 +22,7 @@ public class DeleteWordSectionHandler : OperationHandlerBase<Document>
     ///     Optional: sectionIndex or sectionIndices (at least one required)
     /// </param>
     /// <returns>Success message with deletion details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractDeleteWordSectionParameters(parameters);
 
@@ -47,8 +50,11 @@ public class DeleteWordSectionHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success(
-            $"Deleted {deletedCount} section(s) with their content. Remaining sections: {doc.Sections.Count}.");
+        return new SuccessResult
+        {
+            Message =
+                $"Deleted {deletedCount} section(s) with their content. Remaining sections: {doc.Sections.Count}."
+        };
     }
 
     private static DeleteWordSectionParameters ExtractDeleteWordSectionParameters(OperationParameters parameters)

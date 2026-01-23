@@ -1,13 +1,16 @@
 using Aspose.Cells;
 using Aspose.Cells.Pivot;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Excel.PivotTable;
 
 namespace AsposeMcpServer.Handlers.Excel.PivotTable;
 
 /// <summary>
 ///     Handler for getting information about all pivot tables.
 /// </summary>
+[ResultType(typeof(GetPivotTablesResult))]
 public class GetExcelPivotTablesHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class GetExcelPivotTablesHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex
     /// </param>
     /// <returns>JSON result with pivot table information.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractGetPivotTablesParameters(parameters);
 
@@ -30,22 +33,22 @@ public class GetExcelPivotTablesHandler : OperationHandlerBase<Workbook>
         var pivotTables = worksheet.PivotTables;
 
         if (pivotTables.Count == 0)
-            return JsonResult(new
+            return new GetPivotTablesResult
             {
-                count = 0,
-                worksheetName = worksheet.Name,
-                items = Array.Empty<object>(),
-                message = "No pivot tables found"
-            });
+                Count = 0,
+                WorksheetName = worksheet.Name,
+                Items = Array.Empty<PivotTableInfo>(),
+                Message = "No pivot tables found"
+            };
 
         var pivotTableList = BuildPivotTableList(pivotTables);
 
-        return JsonResult(new
+        return new GetPivotTablesResult
         {
-            count = pivotTables.Count,
-            worksheetName = worksheet.Name,
-            items = pivotTableList
-        });
+            Count = pivotTables.Count,
+            WorksheetName = worksheet.Name,
+            Items = pivotTableList
+        };
     }
 
     /// <summary>
@@ -53,9 +56,9 @@ public class GetExcelPivotTablesHandler : OperationHandlerBase<Workbook>
     /// </summary>
     /// <param name="pivotTables">The pivot tables collection.</param>
     /// <returns>List of pivot table information objects.</returns>
-    private static List<object> BuildPivotTableList(PivotTableCollection pivotTables)
+    private static List<PivotTableInfo> BuildPivotTableList(PivotTableCollection pivotTables)
     {
-        List<object> pivotTableList = [];
+        List<PivotTableInfo> pivotTableList = [];
         for (var i = 0; i < pivotTables.Count; i++)
             pivotTableList.Add(BuildPivotTableInfo(pivotTables[i], i));
         return pivotTableList;
@@ -67,17 +70,17 @@ public class GetExcelPivotTablesHandler : OperationHandlerBase<Workbook>
     /// <param name="pivotTable">The pivot table.</param>
     /// <param name="index">The pivot table index.</param>
     /// <returns>Pivot table information object.</returns>
-    private static object BuildPivotTableInfo(Aspose.Cells.Pivot.PivotTable pivotTable, int index)
+    private static PivotTableInfo BuildPivotTableInfo(Aspose.Cells.Pivot.PivotTable pivotTable, int index)
     {
-        return new
+        return new PivotTableInfo
         {
-            index,
-            name = pivotTable.Name ?? "(no name)",
-            dataSource = GetDataSourceInfo(pivotTable),
-            location = GetLocationInfo(pivotTable.DataBodyRange),
-            rowFields = GetRowFieldsList(pivotTable.RowFields),
-            columnFields = GetColumnFieldsList(pivotTable.ColumnFields),
-            dataFields = GetDataFieldsList(pivotTable.DataFields)
+            Index = index,
+            Name = pivotTable.Name ?? "(no name)",
+            DataSource = GetDataSourceInfo(pivotTable),
+            Location = GetLocationInfo(pivotTable.DataBodyRange),
+            RowFields = GetRowFieldsList(pivotTable.RowFields),
+            ColumnFields = GetColumnFieldsList(pivotTable.ColumnFields),
+            DataFields = GetDataFieldsList(pivotTable.DataFields)
         };
     }
 
@@ -101,27 +104,27 @@ public class GetExcelPivotTablesHandler : OperationHandlerBase<Workbook>
     /// </summary>
     /// <param name="dataBodyRange">The data body range.</param>
     /// <returns>Location information object.</returns>
-    private static object GetLocationInfo(CellArea dataBodyRange)
+    private static PivotTableLocation GetLocationInfo(CellArea dataBodyRange)
     {
         if (dataBodyRange.StartRow < 0)
-            return new
+            return new PivotTableLocation
             {
-                range = "Not calculated",
-                startRow = -1,
-                endRow = -1,
-                startColumn = -1,
-                endColumn = -1
+                Range = "Not calculated",
+                StartRow = -1,
+                EndRow = -1,
+                StartColumn = -1,
+                EndColumn = -1
             };
 
         var startCell = CellsHelper.CellIndexToName(dataBodyRange.StartRow, dataBodyRange.StartColumn);
         var endCell = CellsHelper.CellIndexToName(dataBodyRange.EndRow, dataBodyRange.EndColumn);
-        return new
+        return new PivotTableLocation
         {
-            range = $"{startCell}:{endCell}",
-            startRow = dataBodyRange.StartRow,
-            endRow = dataBodyRange.EndRow,
-            startColumn = dataBodyRange.StartColumn,
-            endColumn = dataBodyRange.EndColumn
+            Range = $"{startCell}:{endCell}",
+            StartRow = dataBodyRange.StartRow,
+            EndRow = dataBodyRange.EndRow,
+            StartColumn = dataBodyRange.StartColumn,
+            EndColumn = dataBodyRange.EndColumn
         };
     }
 
@@ -130,13 +133,13 @@ public class GetExcelPivotTablesHandler : OperationHandlerBase<Workbook>
     /// </summary>
     /// <param name="rowFields">The row fields collection.</param>
     /// <returns>List of row field objects.</returns>
-    private static List<object> GetRowFieldsList(PivotFieldCollection? rowFields)
+    private static List<PivotFieldInfo> GetRowFieldsList(PivotFieldCollection? rowFields)
     {
-        List<object> list = [];
+        List<PivotFieldInfo> list = [];
         if (rowFields is not { Count: > 0 }) return list;
 
         foreach (PivotField field in rowFields)
-            list.Add(new { name = field.Name ?? $"Field {field.Position}", position = field.Position });
+            list.Add(new PivotFieldInfo { Name = field.Name ?? $"Field {field.Position}", Position = field.Position });
         return list;
     }
 
@@ -145,13 +148,13 @@ public class GetExcelPivotTablesHandler : OperationHandlerBase<Workbook>
     /// </summary>
     /// <param name="columnFields">The column fields collection.</param>
     /// <returns>List of column field objects.</returns>
-    private static List<object> GetColumnFieldsList(PivotFieldCollection? columnFields)
+    private static List<PivotFieldInfo> GetColumnFieldsList(PivotFieldCollection? columnFields)
     {
-        List<object> list = [];
+        List<PivotFieldInfo> list = [];
         if (columnFields is not { Count: > 0 }) return list;
 
         foreach (PivotField field in columnFields)
-            list.Add(new { name = field.Name ?? $"Field {field.Position}", position = field.Position });
+            list.Add(new PivotFieldInfo { Name = field.Name ?? $"Field {field.Position}", Position = field.Position });
         return list;
     }
 
@@ -160,17 +163,17 @@ public class GetExcelPivotTablesHandler : OperationHandlerBase<Workbook>
     /// </summary>
     /// <param name="dataFields">The data fields collection.</param>
     /// <returns>List of data field objects.</returns>
-    private static List<object> GetDataFieldsList(PivotFieldCollection? dataFields)
+    private static List<PivotDataFieldInfo> GetDataFieldsList(PivotFieldCollection? dataFields)
     {
-        List<object> list = [];
+        List<PivotDataFieldInfo> list = [];
         if (dataFields is not { Count: > 0 }) return list;
 
         foreach (PivotField field in dataFields)
-            list.Add(new
+            list.Add(new PivotDataFieldInfo
             {
-                name = field.Name ?? $"Field {field.Position}",
-                position = field.Position,
-                function = field.Function.ToString()
+                Name = field.Name ?? $"Field {field.Position}",
+                Position = field.Position,
+                Function = field.Function.ToString()
             });
         return list;
     }

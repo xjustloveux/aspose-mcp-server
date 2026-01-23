@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Word.Paragraph;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Paragraph;
 
@@ -29,9 +30,11 @@ public class InsertParagraphWordHandlerTests : WordHandlerTestBase
             { "text", "New paragraph" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("paragraph count", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("paragraph count", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -48,9 +51,11 @@ public class InsertParagraphWordHandlerTests : WordHandlerTestBase
             { "text", "New paragraph" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("inserted", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("inserted", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertContainsText(doc, "New paragraph");
         AssertModified(context);
     }
@@ -88,9 +93,11 @@ public class InsertParagraphWordHandlerTests : WordHandlerTestBase
             { "paragraphIndex", -1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("beginning", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("beginning", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -105,9 +112,11 @@ public class InsertParagraphWordHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("after paragraph #0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("after paragraph #0", result.Message);
         AssertModified(context);
     }
 
@@ -121,9 +130,11 @@ public class InsertParagraphWordHandlerTests : WordHandlerTestBase
             { "text", "At end" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("end of document", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("end of document", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertContainsText(doc, "At end");
     }
 
@@ -142,9 +153,11 @@ public class InsertParagraphWordHandlerTests : WordHandlerTestBase
             { "styleName", "Heading 1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Heading 1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Heading 1", result.Message);
         AssertModified(context);
     }
 
@@ -159,9 +172,11 @@ public class InsertParagraphWordHandlerTests : WordHandlerTestBase
             { "alignment", "center" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("center", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("center", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 

@@ -1,12 +1,16 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Media;
 
 /// <summary>
 ///     Handler for adding audio to PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddAudioHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -21,7 +25,7 @@ public class AddAudioHandler : OperationHandlerBase<Presentation>
     ///     Optional: slideIndex (default: 0), x, y, width, height, hideIcon, playAcrossSlides.
     /// </param>
     /// <returns>Success message with audio details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractAddAudioParameters(parameters);
 
@@ -45,8 +49,11 @@ public class AddAudioHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success(
-            $"Audio embedded into slide {p.SlideIndex} at position ({audioFrame.X:F0}, {audioFrame.Y:F0}) with dimensions {audioFrame.Width:F0}x{audioFrame.Height:F0}.");
+        return new SuccessResult
+        {
+            Message =
+                $"Audio embedded into slide {p.SlideIndex} at position ({audioFrame.X:F0}, {audioFrame.Y:F0}) with dimensions {audioFrame.Width:F0}x{audioFrame.Height:F0}."
+        };
     }
 
     /// <summary>

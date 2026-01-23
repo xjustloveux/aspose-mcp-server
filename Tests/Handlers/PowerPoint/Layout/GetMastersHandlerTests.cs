@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.PowerPoint.Layout;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.PowerPoint.Layout;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Layout;
 
@@ -26,24 +27,28 @@ public class GetMastersHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("count", result.ToLower());
-        Assert.Contains("masters", result.ToLower());
+        var result = Assert.IsType<GetMastersResult>(res);
+
+        Assert.True(result.Count >= 0);
+        Assert.NotNull(result.Masters);
         AssertNotModified(context);
     }
 
     [Fact]
-    public void Execute_ReturnsJsonFormat()
+    public void Execute_ReturnsResultType()
     {
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("{", result);
-        Assert.Contains("}", result);
+        var result = Assert.IsType<GetMastersResult>(res);
+
+        Assert.NotNull(result);
+        Assert.IsType<GetMastersResult>(result);
     }
 
     [Fact]
@@ -53,9 +58,12 @@ public class GetMastersHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("layoutCount", result);
+        var result = Assert.IsType<GetMastersResult>(res);
+
+        Assert.NotNull(result.Masters);
+        if (result.Masters.Count > 0) Assert.True(result.Masters[0].LayoutCount >= 0);
     }
 
     [Fact]
@@ -65,9 +73,17 @@ public class GetMastersHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("name", result);
+        var result = Assert.IsType<GetMastersResult>(res);
+
+        Assert.NotNull(result.Masters);
+        if (result.Masters.Count > 0)
+        {
+            // Name property exists (may be null)
+            var master = result.Masters[0];
+            Assert.IsType<GetMasterInfo>(master);
+        }
     }
 
     [Fact]
@@ -77,9 +93,12 @@ public class GetMastersHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("layouts", result);
+        var result = Assert.IsType<GetMastersResult>(res);
+
+        Assert.NotNull(result.Masters);
+        if (result.Masters.Count > 0) Assert.NotNull(result.Masters[0].Layouts);
     }
 
     [Fact]
@@ -89,9 +108,12 @@ public class GetMastersHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("index", result);
+        var result = Assert.IsType<GetMastersResult>(res);
+
+        Assert.NotNull(result.Masters);
+        if (result.Masters.Count > 0) Assert.Equal(0, result.Masters[0].Index);
     }
 
     #endregion

@@ -1,7 +1,8 @@
 using Aspose.Words;
 using Aspose.Words.Lists;
 using AsposeMcpServer.Handlers.Word.List;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.List;
 
@@ -36,9 +37,11 @@ public class RestartWordListNumberingHandlerTests : WordHandlerTestBase
             { "startAt", startAt }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains($"Start at: {startAt}", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains($"Start at: {startAt}", result.Message);
     }
 
     #endregion
@@ -58,9 +61,11 @@ public class RestartWordListNumberingHandlerTests : WordHandlerTestBase
             { "paragraphIndex", index }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("restarted successfully", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("restarted successfully", result.Message);
     }
 
     #endregion
@@ -98,9 +103,11 @@ public class RestartWordListNumberingHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("List numbering restarted successfully", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("List numbering restarted successfully", result.Message);
         AssertModified(context);
     }
 
@@ -114,9 +121,11 @@ public class RestartWordListNumberingHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Paragraph index: 1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Paragraph index: 1", result.Message);
     }
 
     [Fact]
@@ -129,9 +138,11 @@ public class RestartWordListNumberingHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Start at: 1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Start at: 1", result.Message);
     }
 
     [Fact]
@@ -144,9 +155,11 @@ public class RestartWordListNumberingHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Paragraphs affected:", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Paragraphs affected:", result.Message);
     }
 
     [Fact]
@@ -159,9 +172,11 @@ public class RestartWordListNumberingHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("New list ID:", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("New list ID:", result.Message);
     }
 
     #endregion

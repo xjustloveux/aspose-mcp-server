@@ -1,7 +1,8 @@
 using Aspose.Cells;
 using Aspose.Cells.Charts;
 using AsposeMcpServer.Handlers.Excel.Chart;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Chart;
 
@@ -28,9 +29,11 @@ public class SetExcelChartPropertiesHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("no changes", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("no changes", result.Message);
     }
 
     #endregion
@@ -62,9 +65,11 @@ public class SetExcelChartPropertiesHandlerTests : ExcelHandlerTestBase
             { "title", "New Title" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("properties updated", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("properties updated", result.Message);
         AssertModified(context);
     }
 
@@ -78,9 +83,11 @@ public class SetExcelChartPropertiesHandlerTests : ExcelHandlerTestBase
             { "title", "Updated" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("#0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("#0", result.Message);
     }
 
     #endregion
@@ -112,9 +119,11 @@ public class SetExcelChartPropertiesHandlerTests : ExcelHandlerTestBase
             { "title", "My Chart" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Title: My Chart", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Title: My Chart", result.Message);
     }
 
     [Fact]
@@ -128,9 +137,11 @@ public class SetExcelChartPropertiesHandlerTests : ExcelHandlerTestBase
             { "removeTitle", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Title removed", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Title removed", result.Message);
         Assert.Equal("", workbook.Worksheets[0].Charts[0].Title.Text);
     }
 
@@ -148,9 +159,11 @@ public class SetExcelChartPropertiesHandlerTests : ExcelHandlerTestBase
             { "legendVisible", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Legend: hide", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Legend: hide", result.Message);
     }
 
     [Fact]
@@ -163,9 +176,11 @@ public class SetExcelChartPropertiesHandlerTests : ExcelHandlerTestBase
             { "legendVisible", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Legend: show", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Legend: show", result.Message);
     }
 
     #endregion

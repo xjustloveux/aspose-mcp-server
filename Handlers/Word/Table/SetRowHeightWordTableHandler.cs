@@ -1,5 +1,7 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 using WordTable = Aspose.Words.Tables.Table;
 
 namespace AsposeMcpServer.Handlers.Word.Table;
@@ -7,6 +9,7 @@ namespace AsposeMcpServer.Handlers.Word.Table;
 /// <summary>
 ///     Handler for setting row height in Word document tables.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetRowHeightWordTableHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -22,7 +25,7 @@ public class SetRowHeightWordTableHandler : OperationHandlerBase<Document>
     /// </param>
     /// <returns>Success message.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or indices are out of range.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractSetRowHeightParameters(parameters);
 
@@ -52,7 +55,8 @@ public class SetRowHeightWordTableHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Successfully set row {p.RowIndex} height to {p.RowHeight} pt ({p.HeightRule}).");
+        return new SuccessResult
+            { Message = $"Successfully set row {p.RowIndex} height to {p.RowHeight} pt ({p.HeightRule})." };
     }
 
     private static SetRowHeightParameters ExtractSetRowHeightParameters(OperationParameters parameters)

@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Pdf;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Pdf;
 /// <summary>
 ///     Tool for managing document properties in PDF files (get, set)
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Pdf.Properties")]
 [McpServerToolType]
 public class PdfPropertiesTool
 {
@@ -55,13 +58,20 @@ public class PdfPropertiesTool
     /// <param name="producer">Producer (for set).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "pdf_properties")]
+    [McpServerTool(
+        Name = "pdf_properties",
+        Title = "PDF Properties Operations",
+        Destructive = false,
+        Idempotent = true,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage document properties in PDF files. Supports 2 operations: get, set.
 
 Usage examples:
 - Get properties: pdf_properties(operation='get', path='doc.pdf')
 - Set properties: pdf_properties(operation='set', path='doc.pdf', title='Title', author='Author', subject='Subject')")]
-    public string Execute(
+    public object Execute(
         [Description(@"Operation to perform.
 - 'get': Get document properties (required params: path)
 - 'set': Set document properties (required params: path)")]
@@ -98,12 +108,12 @@ Usage examples:
         var result = handler.Execute(operationContext, parameters);
 
         if (string.Equals(operation, "get", StringComparison.OrdinalIgnoreCase))
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Excel.Formula;
 
 namespace AsposeMcpServer.Handlers.Excel.Formula;
 
 /// <summary>
 ///     Handler for getting array formula information from Excel cells.
 /// </summary>
+[ResultType(typeof(GetArrayFormulaResult))]
 public class GetArrayFormulaHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class GetArrayFormulaHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0)
     /// </param>
     /// <returns>JSON string containing array formula information.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var getParams = ExtractGetArrayParameters(parameters);
 
@@ -29,15 +32,12 @@ public class GetArrayFormulaHandler : OperationHandlerBase<Workbook>
         var cellObj = worksheet.Cells[getParams.Cell];
 
         if (!cellObj.IsArrayFormula)
-        {
-            var notFoundResult = new
+            return new GetArrayFormulaResult
             {
-                cell = getParams.Cell,
-                isArrayFormula = false,
-                message = "No array formula found in this cell"
+                Cell = getParams.Cell,
+                IsArrayFormula = false,
+                Message = "No array formula found in this cell"
             };
-            return JsonResult(notFoundResult);
-        }
 
         var formula = cellObj.Formula;
         string? arrayRange;
@@ -54,15 +54,13 @@ public class GetArrayFormulaHandler : OperationHandlerBase<Workbook>
             arrayRange = null;
         }
 
-        var result = new
+        return new GetArrayFormulaResult
         {
-            cell = getParams.Cell,
-            isArrayFormula = true,
-            formula = formula ?? "(empty)",
-            arrayRange = arrayRange ?? "Unable to determine"
+            Cell = getParams.Cell,
+            IsArrayFormula = true,
+            Formula = formula ?? "(empty)",
+            ArrayRange = arrayRange ?? "Unable to determine"
         };
-
-        return JsonResult(result);
     }
 
     /// <summary>

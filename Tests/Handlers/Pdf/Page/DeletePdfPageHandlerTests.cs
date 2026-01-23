@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Pdf.Page;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Page;
 
@@ -64,9 +65,11 @@ public class DeletePdfPageHandlerTests : PdfHandlerTestBase
             { "pageIndex", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Deleted", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Deleted", result.Message);
         Assert.Equal(initialCount - 1, doc.Pages.Count);
         AssertModified(context);
     }
@@ -88,9 +91,11 @@ public class DeletePdfPageHandlerTests : PdfHandlerTestBase
             { "pageIndex", deleteIndex }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Deleted", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Deleted", result.Message);
         Assert.Equal(totalPages - 1, doc.Pages.Count);
         AssertModified(context);
     }
@@ -105,9 +110,11 @@ public class DeletePdfPageHandlerTests : PdfHandlerTestBase
             { "pageIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Deleted", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Deleted", result.Message);
         Assert.Equal(2, doc.Pages.Count);
         AssertModified(context);
     }
@@ -122,9 +129,11 @@ public class DeletePdfPageHandlerTests : PdfHandlerTestBase
             { "pageIndex", 3 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Deleted", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Deleted", result.Message);
         Assert.Equal(2, doc.Pages.Count);
         AssertModified(context);
     }
@@ -140,9 +149,11 @@ public class DeletePdfPageHandlerTests : PdfHandlerTestBase
             { "pageIndex", 3 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Deleted", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Deleted", result.Message);
         Assert.Equal(4, doc.Pages.Count);
         AssertModified(context);
     }
@@ -162,9 +173,11 @@ public class DeletePdfPageHandlerTests : PdfHandlerTestBase
             { "pageIndex", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("4", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("4", result.Message);
     }
 
     [SkippableFact]
@@ -178,9 +191,11 @@ public class DeletePdfPageHandlerTests : PdfHandlerTestBase
             { "pageIndex", 3 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("3", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("3", result.Message);
     }
 
     #endregion

@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.ConditionalFormatting;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.ConditionalFormatting;
 
@@ -58,9 +59,11 @@ public class DeleteExcelConditionalFormattingHandlerTests : ExcelHandlerTestBase
             { "conditionalFormattingIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(workbook.Worksheets[0].ConditionalFormattings);
         AssertModified(context);
     }
@@ -75,9 +78,11 @@ public class DeleteExcelConditionalFormattingHandlerTests : ExcelHandlerTestBase
             { "conditionalFormattingIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("remaining: 2", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("remaining: 2", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(2, workbook.Worksheets[0].ConditionalFormattings.Count);
     }
 
@@ -106,7 +111,7 @@ public class DeleteExcelConditionalFormattingHandlerTests : ExcelHandlerTestBase
         });
 
         var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
-        Assert.Contains("out of range", ex.Message.ToLower());
+        Assert.Contains("out of range", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Range;
 
 /// <summary>
 ///     Handler for copying format (and optionally values) from source range to destination.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class CopyFormatExcelRangeHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -22,7 +25,7 @@ public class CopyFormatExcelRangeHandler : OperationHandlerBase<Workbook>
     /// </param>
     /// <returns>Success message with copy format details.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing.</exception>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractCopyFormatExcelRangeParameters(parameters);
 
@@ -50,7 +53,7 @@ public class CopyFormatExcelRangeHandler : OperationHandlerBase<Workbook>
         MarkModified(context);
 
         var result = p.CopyValue ? "Format with values copied" : "Format copied";
-        return Success($"{result} from {p.Range} to {p.DestTarget}.");
+        return new SuccessResult { Message = $"{result} from {p.Range} to {p.DestTarget}." };
     }
 
     /// <summary>

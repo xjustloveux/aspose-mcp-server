@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.ConditionalFormatting;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.ConditionalFormatting;
 
@@ -82,9 +83,11 @@ public class EditExcelConditionalFormattingHandlerTests : ExcelHandlerTestBase
             { "value", "100" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("edited", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("edited", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("100", workbook.Worksheets[0].ConditionalFormattings[0][0].Formula1);
         AssertModified(context);
     }
@@ -120,9 +123,11 @@ public class EditExcelConditionalFormattingHandlerTests : ExcelHandlerTestBase
             { "backgroundColor", "Blue" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("BackgroundColor=Blue", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("BackgroundColor=Blue", result.Message);
         AssertModified(context);
     }
 
@@ -139,10 +144,12 @@ public class EditExcelConditionalFormattingHandlerTests : ExcelHandlerTestBase
             { "value", "75" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Operator=Equal", result);
-        Assert.Contains("Value=75", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Operator=Equal", result.Message);
+        Assert.Contains("Value=75", result.Message);
     }
 
     [Fact]
@@ -155,9 +162,11 @@ public class EditExcelConditionalFormattingHandlerTests : ExcelHandlerTestBase
             { "conditionalFormattingIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("no changes", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("no changes", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -176,7 +185,7 @@ public class EditExcelConditionalFormattingHandlerTests : ExcelHandlerTestBase
         });
 
         var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
-        Assert.Contains("out of range", ex.Message.ToLower());
+        Assert.Contains("out of range", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -191,7 +200,7 @@ public class EditExcelConditionalFormattingHandlerTests : ExcelHandlerTestBase
         });
 
         var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
-        Assert.Contains("out of range", ex.Message.ToLower());
+        Assert.Contains("out of range", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

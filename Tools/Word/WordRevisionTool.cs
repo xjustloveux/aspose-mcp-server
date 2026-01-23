@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Word;
 /// <summary>
 ///     Tool for managing revision tracking in Word documents
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Word.Revision")]
 [McpServerToolType]
 public class WordRevisionTool
 {
@@ -56,7 +59,14 @@ public class WordRevisionTool
     /// <param name="ignoreComments">Ignore comments in comparison (for compare, default: false).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get_revisions.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "word_revision")]
+    [McpServerTool(
+        Name = "word_revision",
+        Title = "Word Revision Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(
         @"Manage revisions in Word documents. Supports 5 operations: get_revisions, accept_all, reject_all, manage, compare.
 
@@ -71,7 +81,7 @@ Notes:
 - The 'manage' operation accepts or rejects a specific revision by index (0-based)
 - Use 'get_revisions' first to see all revisions and their indices
 - Compare operation can optionally ignore formatting and comments changes")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: get_revisions, accept_all, reject_all, manage, compare")]
         string operation,
         [Description("Document file path (required if no sessionId for most operations)")]
@@ -121,7 +131,8 @@ Notes:
                 OutputPath = outputPath
             };
 
-            return compareHandler.Execute(dummyContext, compareParameters);
+            var compareResult = compareHandler.Execute(dummyContext, compareParameters);
+            return ResultHelper.FinalizeResult((dynamic)compareResult, outputPath, sessionId);
         }
 
         var parameters = BuildParameters(normalizedOperation, revisionIndex, action);
@@ -147,7 +158,7 @@ Notes:
         if (operationContext.IsModified)
             ctx.Save(effectiveOutputPath);
 
-        return ctx.IsSession ? result : $"{result}\n{ctx.GetOutputMessage(effectiveOutputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, effectiveOutputPath);
     }
 
     /// <summary>

@@ -1,14 +1,17 @@
 using Aspose.Slides;
 using Aspose.Slides.Export;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.FileOperations;
 
 /// <summary>
 ///     Handler for splitting a PowerPoint presentation into multiple files.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SplitPresentationHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -23,7 +26,7 @@ public class SplitPresentationHandler : OperationHandlerBase<Presentation>
     ///     Optional: inputPath, path, sessionId, slidesPerFile, startSlideIndex, endSlideIndex, outputFileNamePattern
     /// </param>
     /// <returns>Success message with output directory and file count.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractSplitParameters(parameters);
 
@@ -78,7 +81,8 @@ public class SplitPresentationHandler : OperationHandlerBase<Presentation>
             fileCount++;
         }
 
-        return Success($"Split presentation into {fileCount} file(s). Output: {p.OutputDirectory}");
+        return new SuccessResult
+            { Message = $"Split presentation into {fileCount} file(s). Output: {p.OutputDirectory}" };
     }
 
     /// <summary>

@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.PowerPoint.DataOperations;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.PowerPoint.DataOperations;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.DataOperations;
 
@@ -26,9 +27,11 @@ public class GetContentHandlerTests : PptHandlerTestBase
         var context = CreateContext(presentation);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"totalSlides\": 2", result);
+        var result = Assert.IsType<GetContentPptResult>(res);
+
+        Assert.Equal(2, result.TotalSlides);
     }
 
     [Fact]
@@ -38,10 +41,13 @@ public class GetContentHandlerTests : PptHandlerTestBase
         var context = CreateContext(presentation);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("slides", result);
-        Assert.Contains("textContent", result);
+        var result = Assert.IsType<GetContentPptResult>(res);
+
+        Assert.NotNull(result.Slides);
+        Assert.True(result.Slides.Count > 0);
+        Assert.NotNull(result.Slides[0].TextContent);
     }
 
     [Fact]
@@ -51,9 +57,13 @@ public class GetContentHandlerTests : PptHandlerTestBase
         var context = CreateContext(presentation);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"index\":", result);
+        var result = Assert.IsType<GetContentPptResult>(res);
+
+        Assert.NotNull(result.Slides);
+        Assert.True(result.Slides.Count > 0);
+        Assert.Equal(0, result.Slides[0].Index);
     }
 
     [Fact]
@@ -63,9 +73,13 @@ public class GetContentHandlerTests : PptHandlerTestBase
         var context = CreateContext(presentation);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("hidden", result);
+        var result = Assert.IsType<GetContentPptResult>(res);
+
+        Assert.NotNull(result.Slides);
+        Assert.True(result.Slides.Count > 0);
+        Assert.False(result.Slides[0].Hidden);
     }
 
     #endregion

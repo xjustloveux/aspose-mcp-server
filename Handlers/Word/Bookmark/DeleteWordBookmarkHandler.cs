@@ -1,11 +1,14 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Bookmark;
 
 /// <summary>
 ///     Handler for deleting bookmarks from Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeleteWordBookmarkHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class DeleteWordBookmarkHandler : OperationHandlerBase<Document>
     /// </param>
     /// <returns>Success message with deletion details.</returns>
     /// <exception cref="ArgumentException">Thrown when bookmark name is not provided or bookmark is not found.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractDeleteParameters(parameters);
 
@@ -48,12 +51,12 @@ public class DeleteWordBookmarkHandler : OperationHandlerBase<Document>
 
         var remainingCount = doc.Range.Bookmarks.Count;
 
-        var result = $"Bookmark '{p.Name}' deleted successfully\n";
-        result += $"Bookmark text: {bookmarkText}\n";
-        result += $"Keep text: {(p.KeepText ? "Yes" : "No")}\n";
-        result += $"Remaining bookmarks in document: {remainingCount}";
+        var message = $"Bookmark '{p.Name}' deleted successfully\n";
+        message += $"Bookmark text: {bookmarkText}\n";
+        message += $"Keep text: {(p.KeepText ? "Yes" : "No")}\n";
+        message += $"Remaining bookmarks in document: {remainingCount}";
 
-        return result;
+        return new SuccessResult { Message = message };
     }
 
     /// <summary>

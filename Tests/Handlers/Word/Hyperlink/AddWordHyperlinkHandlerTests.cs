@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Word.Hyperlink;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Hyperlink;
 
@@ -31,9 +32,11 @@ public class AddWordHyperlinkHandlerTests : WordHandlerTestBase
             { "tooltip", "This is a tooltip" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Tooltip:", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Tooltip:", result.Message);
     }
 
     #endregion
@@ -51,9 +54,11 @@ public class AddWordHyperlinkHandlerTests : WordHandlerTestBase
             { "url", "https://example.com" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added successfully", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added successfully", result.Message);
         AssertModified(context);
     }
 
@@ -68,9 +73,11 @@ public class AddWordHyperlinkHandlerTests : WordHandlerTestBase
             { "url", "https://example.com" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("My Link", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("My Link", result.Message);
     }
 
     [Fact]
@@ -84,9 +91,11 @@ public class AddWordHyperlinkHandlerTests : WordHandlerTestBase
             { "url", "https://example.com" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("https://example.com", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("https://example.com", result.Message);
     }
 
     #endregion
@@ -104,9 +113,11 @@ public class AddWordHyperlinkHandlerTests : WordHandlerTestBase
             { "url", "https://external.com" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("URL:", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("URL:", result.Message);
     }
 
     [Fact]
@@ -120,9 +131,11 @@ public class AddWordHyperlinkHandlerTests : WordHandlerTestBase
             { "subAddress", "MyBookmark" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("SubAddress", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("SubAddress", result.Message);
     }
 
     #endregion
@@ -141,9 +154,11 @@ public class AddWordHyperlinkHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("after paragraph #1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("after paragraph #1", result.Message);
     }
 
     [Fact]
@@ -158,9 +173,11 @@ public class AddWordHyperlinkHandlerTests : WordHandlerTestBase
             { "paragraphIndex", -1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("beginning of document", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("beginning of document", result.Message);
     }
 
     [Fact]
@@ -174,9 +191,11 @@ public class AddWordHyperlinkHandlerTests : WordHandlerTestBase
             { "url", "https://example.com" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("end of document", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("end of document", result.Message);
     }
 
     #endregion

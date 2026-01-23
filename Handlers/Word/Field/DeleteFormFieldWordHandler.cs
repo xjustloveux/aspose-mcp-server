@@ -1,11 +1,14 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Field;
 
 /// <summary>
 ///     Handler for deleting form fields from Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeleteFormFieldWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class DeleteFormFieldWordHandler : OperationHandlerBase<Document>
     ///     If neither provided, deletes all form fields.
     /// </param>
     /// <returns>Success message with deletion count.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractDeleteFormFieldParameters(parameters);
 
@@ -47,7 +50,7 @@ public class DeleteFormFieldWordHandler : OperationHandlerBase<Document>
         }
 
         MarkModified(context);
-        return Success($"Deleted {deletedCount} form field(s)");
+        return new SuccessResult { Message = $"Deleted {deletedCount} form field(s)" };
     }
 
     /// <summary>

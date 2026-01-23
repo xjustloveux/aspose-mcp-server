@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.SectionBreak;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Word.SectionBreak;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.SectionBreak;
 
@@ -45,10 +46,13 @@ public class GetWordSectionsHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"totalSections\": 3", result);
-        Assert.Contains("sections", result);
+        var result = Assert.IsType<GetSectionsWordResult>(res);
+
+        Assert.NotNull(result);
+        Assert.Equal(3, result.TotalSections);
+        Assert.NotNull(result.Sections);
     }
 
     [Fact]
@@ -61,10 +65,13 @@ public class GetWordSectionsHandlerTests : WordHandlerTestBase
             { "sectionIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("section", result);
-        Assert.Contains("\"index\": 1", result);
+        var result = Assert.IsType<GetSectionsWordResult>(res);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.Section);
+        Assert.Equal(1, result.Section.Index);
     }
 
     [Fact]
@@ -87,10 +94,15 @@ public class GetWordSectionsHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("sectionBreak", result);
-        Assert.Contains("type", result);
+        var result = Assert.IsType<GetSectionsWordResult>(res);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.Sections);
+        Assert.NotEmpty(result.Sections);
+        Assert.NotNull(result.Sections[0].SectionBreak);
+        Assert.NotNull(result.Sections[0].SectionBreak.Type);
     }
 
     [Fact]
@@ -100,12 +112,17 @@ public class GetWordSectionsHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("pageSetup", result);
-        Assert.Contains("paperSize", result);
-        Assert.Contains("orientation", result);
-        Assert.Contains("margins", result);
+        var result = Assert.IsType<GetSectionsWordResult>(res);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.Sections);
+        Assert.NotEmpty(result.Sections);
+        Assert.NotNull(result.Sections[0].PageSetup);
+        Assert.NotNull(result.Sections[0].PageSetup.PaperSize);
+        Assert.NotNull(result.Sections[0].PageSetup.Orientation);
+        Assert.NotNull(result.Sections[0].PageSetup.Margins);
     }
 
     [Fact]
@@ -115,11 +132,16 @@ public class GetWordSectionsHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("contentStatistics", result);
-        Assert.Contains("paragraphs", result);
-        Assert.Contains("tables", result);
+        var result = Assert.IsType<GetSectionsWordResult>(res);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.Sections);
+        Assert.NotEmpty(result.Sections);
+        Assert.NotNull(result.Sections[0].ContentStatistics);
+        Assert.True(result.Sections[0].ContentStatistics.Paragraphs >= 0);
+        Assert.True(result.Sections[0].ContentStatistics.Tables >= 0);
     }
 
     #endregion

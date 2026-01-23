@@ -1,5 +1,6 @@
-using Aspose.Cells;
-using AsposeMcpServer.Tests.Helpers;
+﻿using Aspose.Cells;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Excel;
 
 namespace AsposeMcpServer.Tests.Tools.Excel;
@@ -25,7 +26,8 @@ public class ExcelFileOperationsToolTests : ExcelTestBase
     {
         var outputPath = CreateTestFilePath("test_create.xlsx");
         var result = _tool.Execute("create", path: outputPath);
-        Assert.StartsWith("Excel workbook created successfully", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Excel workbook created successfully", data.Message);
         Assert.True(File.Exists(outputPath));
         using var workbook = new Workbook(outputPath);
         Assert.True(workbook.Worksheets.Count > 0);
@@ -37,8 +39,9 @@ public class ExcelFileOperationsToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbookWithData("test_convert_pdf.xlsx", 3);
         var outputPath = CreateTestFilePath("test_convert_output.pdf");
         var result = _tool.Execute("convert", inputPath: workbookPath, outputPath: outputPath, format: "pdf");
-        Assert.StartsWith("Workbook from", result);
-        Assert.Contains("converted to pdf format", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Workbook from", data.Message);
+        Assert.Contains("converted to pdf format", data.Message);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -55,7 +58,8 @@ public class ExcelFileOperationsToolTests : ExcelTestBase
 
         var outputPath = CreateTestFilePath("test_merge_output.xlsx");
         var result = _tool.Execute("merge", path: outputPath, inputPaths: [workbook1Path, workbook2Path]);
-        Assert.StartsWith("Merged 2 workbooks successfully", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Merged 2 workbooks successfully", data.Message);
         Assert.True(File.Exists(outputPath));
         using var workbook = new Workbook(outputPath);
         Assert.True(workbook.Worksheets.Count >= 2);
@@ -78,7 +82,8 @@ public class ExcelFileOperationsToolTests : ExcelTestBase
         var outputDir = Path.Combine(TestDir, "split_indices_output");
         Directory.CreateDirectory(outputDir);
         var result = _tool.Execute("split", inputPath: workbookPath, outputDirectory: outputDir, sheetIndices: [0, 2]);
-        Assert.StartsWith("Split workbook into 2 files", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Split workbook into 2 files", data.Message);
         var files = Directory.GetFiles(outputDir, "*.xlsx");
         Assert.Equal(2, files.Length);
     }
@@ -95,7 +100,8 @@ public class ExcelFileOperationsToolTests : ExcelTestBase
     {
         var outputPath = CreateTestFilePath($"test_case_{operation}.xlsx");
         var result = _tool.Execute(operation, path: outputPath);
-        Assert.StartsWith("Excel workbook created successfully", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Excel workbook created successfully", data.Message);
     }
 
     [Fact]
@@ -117,9 +123,10 @@ public class ExcelFileOperationsToolTests : ExcelTestBase
         var sessionId = OpenSession(workbookPath);
         var outputPath = CreateTestFilePath("test_session_convert_output.csv");
         var result = _tool.Execute("convert", sessionId, outputPath: outputPath, format: "csv");
-        Assert.StartsWith("Workbook from", result);
-        Assert.Contains("converted to csv format", result);
-        Assert.Contains($"session {sessionId}", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Workbook from", data.Message);
+        Assert.Contains("converted to csv format", data.Message);
+        Assert.Contains($"session {sessionId}", data.Message);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -138,7 +145,8 @@ public class ExcelFileOperationsToolTests : ExcelTestBase
         var outputDir = Path.Combine(TestDir, "split_session_output");
         Directory.CreateDirectory(outputDir);
         var result = _tool.Execute("split", sessionId, outputDirectory: outputDir);
-        Assert.StartsWith("Split workbook into", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Split workbook into", data.Message);
         var files = Directory.GetFiles(outputDir, "*.xlsx");
         Assert.True(files.Length >= 1);
     }

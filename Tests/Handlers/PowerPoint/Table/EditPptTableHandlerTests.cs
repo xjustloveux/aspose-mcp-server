@@ -1,6 +1,7 @@
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Table;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Table;
 
@@ -55,9 +56,11 @@ public class EditPptTableHandlerTests : PptHandlerTestBase
             { "x", 200.0f }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message);
         AssertModified(context);
     }
 
@@ -72,9 +75,11 @@ public class EditPptTableHandlerTests : PptHandlerTestBase
             { "x", 200.0f }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("slide 0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("slide 0", result.Message);
     }
 
     #endregion
@@ -152,9 +157,11 @@ public class EditPptTableHandlerTests : PptHandlerTestBase
             { "width", 400.0f }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message);
         AssertModified(context);
     }
 
@@ -169,9 +176,11 @@ public class EditPptTableHandlerTests : PptHandlerTestBase
             { "height", 200.0f }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message);
         AssertModified(context);
     }
 
@@ -187,9 +196,11 @@ public class EditPptTableHandlerTests : PptHandlerTestBase
             { "height", 180.0f }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated", result.Message);
         AssertModified(context);
     }
 

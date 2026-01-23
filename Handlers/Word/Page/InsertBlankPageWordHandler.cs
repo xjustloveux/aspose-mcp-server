@@ -1,6 +1,8 @@
 using Aspose.Words;
 using Aspose.Words.Layout;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.Page;
@@ -8,6 +10,7 @@ namespace AsposeMcpServer.Handlers.Word.Page;
 /// <summary>
 ///     Handler for inserting a blank page at a specified position in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class InsertBlankPageWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class InsertBlankPageWordHandler : OperationHandlerBase<Document>
     ///     Optional: insertAtPageIndex (0-based page index to insert at)
     /// </param>
     /// <returns>Success message with insertion details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var insertParams = ExtractInsertBlankPageParameters(parameters);
 
@@ -68,7 +71,8 @@ public class InsertBlankPageWordHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Blank page inserted at page {insertParams.InsertAtPageIndex ?? doc.PageCount}");
+        return new SuccessResult
+            { Message = $"Blank page inserted at page {insertParams.InsertAtPageIndex ?? doc.PageCount}" };
     }
 
     /// <summary>

@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Image;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 using WordShape = Aspose.Words.Drawing.Shape;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Image;
@@ -43,9 +44,11 @@ public class AddImageWordHandlerTests : WordHandlerTestBase
             { "imagePath", tempFile }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Image added", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Image added", result.Message);
         Assert.Equal(1, GetImageCount(doc));
         AssertModified(context);
     }
@@ -61,9 +64,11 @@ public class AddImageWordHandlerTests : WordHandlerTestBase
             { "imagePath", tempFile }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains(Path.GetFileName(tempFile), result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains(Path.GetFileName(tempFile), result.Message);
     }
 
     #endregion
@@ -83,11 +88,13 @@ public class AddImageWordHandlerTests : WordHandlerTestBase
             { "height", 100.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<SuccessResult>(res);
 
         var shapes = doc.GetChildNodes(NodeType.Shape, true).Cast<WordShape>().Where(s => s.HasImage).ToList();
         Assert.Single(shapes);
-        Assert.Contains("Size:", result);
+        Assert.Contains("Size:", result.Message);
     }
 
     [Fact]
@@ -162,9 +169,11 @@ public class AddImageWordHandlerTests : WordHandlerTestBase
             { "alignment", alignment }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains($"Alignment: {alignment}", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains($"Alignment: {alignment}", result.Message);
     }
 
     [Theory]
@@ -182,9 +191,11 @@ public class AddImageWordHandlerTests : WordHandlerTestBase
             { "textWrapping", textWrapping }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains($"Text wrapping: {textWrapping}", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains($"Text wrapping: {textWrapping}", result.Message);
     }
 
     #endregion

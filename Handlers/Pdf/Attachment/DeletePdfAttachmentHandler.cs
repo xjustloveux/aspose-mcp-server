@@ -1,11 +1,15 @@
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Pdf;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.Attachment;
 
 /// <summary>
 ///     Handler for deleting attachments from PDF documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeletePdfAttachmentHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -19,7 +23,7 @@ public class DeletePdfAttachmentHandler : OperationHandlerBase<Document>
     ///     Required: attachmentName
     /// </param>
     /// <returns>Success message.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var deleteParams = ExtractDeleteParameters(parameters);
 
@@ -40,7 +44,7 @@ public class DeletePdfAttachmentHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Deleted attachment '{deleteParams.AttachmentName}'.");
+        return new SuccessResult { Message = $"Deleted attachment '{deleteParams.AttachmentName}'." };
     }
 
     /// <summary>

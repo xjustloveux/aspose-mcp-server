@@ -1,6 +1,7 @@
 using Aspose.Pdf.Text;
 using AsposeMcpServer.Handlers.Pdf.Text;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Text;
 
@@ -32,10 +33,12 @@ public class EditPdfTextHandlerTests : PdfHandlerTestBase
             { "newText", "New" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Replaced", result);
-        Assert.Contains("occurrence", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Replaced", result.Message);
+        Assert.Contains("occurrence", result.Message);
     }
 
     #endregion
@@ -65,10 +68,12 @@ public class EditPdfTextHandlerTests : PdfHandlerTestBase
             { "newText", "Modified" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Replaced", result);
-        Assert.Contains("1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Replaced", result.Message);
+        Assert.Contains("1", result.Message);
         AssertModified(context);
     }
 
@@ -87,9 +92,11 @@ public class EditPdfTextHandlerTests : PdfHandlerTestBase
             { "newText", newText }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Replaced", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Replaced", result.Message);
         AssertModified(context);
     }
 
@@ -110,9 +117,11 @@ public class EditPdfTextHandlerTests : PdfHandlerTestBase
             { "pageIndex", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("2", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("2", result.Message);
         AssertModified(context);
     }
 
@@ -128,9 +137,11 @@ public class EditPdfTextHandlerTests : PdfHandlerTestBase
             { "newText", "Modified" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("1", result.Message);
     }
 
     #endregion
@@ -150,9 +161,11 @@ public class EditPdfTextHandlerTests : PdfHandlerTestBase
             { "replaceAll", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("1 occurrence", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("1 occurrence", result.Message);
     }
 
     [Fact]
@@ -170,9 +183,11 @@ public class EditPdfTextHandlerTests : PdfHandlerTestBase
             { "replaceAll", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("occurrence", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("occurrence", result.Message);
         AssertModified(context);
     }
 

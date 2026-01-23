@@ -215,7 +215,7 @@ public class HandlerRegistryTests
     {
         public override string Operation => "add";
 
-        public override string Execute(OperationContext<TestDocument> context, OperationParameters parameters)
+        public override object Execute(OperationContext<TestDocument> context, OperationParameters parameters)
         {
             var text = parameters.GetRequired<string>("text");
             context.Document.Content = text;
@@ -228,7 +228,7 @@ public class HandlerRegistryTests
     {
         public override string Operation => "delete";
 
-        public override string Execute(OperationContext<TestDocument> context, OperationParameters parameters)
+        public override object Execute(OperationContext<TestDocument> context, OperationParameters parameters)
         {
             context.Document.Content = "";
             MarkModified(context);
@@ -240,11 +240,11 @@ public class HandlerRegistryTests
     {
         public override string Operation => "search";
 
-        public override string Execute(OperationContext<TestDocument> context, OperationParameters parameters)
+        public override object Execute(OperationContext<TestDocument> context, OperationParameters parameters)
         {
             var searchText = parameters.GetRequired<string>("searchText");
             var found = context.Document.Content.Contains(searchText);
-            return JsonResult(new { found, searchText });
+            return new { found, searchText };
         }
     }
 }

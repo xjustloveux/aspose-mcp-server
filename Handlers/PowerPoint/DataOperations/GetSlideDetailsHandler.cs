@@ -1,12 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.PowerPoint.DataOperations;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.DataOperations;
 
 /// <summary>
 ///     Handler for getting detailed information about a slide.
 /// </summary>
+[ResultType(typeof(GetSlideDetailsResult))]
 public class GetSlideDetailsHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class GetSlideDetailsHandler : OperationHandlerBase<Presentation>
     ///     Optional: includeThumbnail (default false)
     /// </param>
     /// <returns>JSON string containing detailed slide information including layout, transitions, and animations.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractSlideDetailsParameters(parameters);
 
@@ -29,32 +32,32 @@ public class GetSlideDetailsHandler : OperationHandlerBase<Presentation>
         var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
 
         var transition = slide.SlideShowTransition;
-        object? transitionInfo = transition != null
-            ? new
+        var transitionInfo = transition != null
+            ? new GetSlideDetailsTransitionInfo
             {
-                type = transition.Type.ToString(),
-                speed = transition.Speed.ToString(),
-                advanceOnClick = transition.AdvanceOnClick,
-                advanceAfterTimeMs = transition.AdvanceAfterTime
+                Type = transition.Type.ToString(),
+                Speed = transition.Speed.ToString(),
+                AdvanceOnClick = transition.AdvanceOnClick,
+                AdvanceAfterTimeMs = transition.AdvanceAfterTime
             }
             : null;
 
         var animations = slide.Timeline.MainSequence;
-        List<object> animationsList = [];
+        List<GetSlideDetailsAnimationInfo> animationsList = [];
         for (var i = 0; i < animations.Count; i++)
         {
             var anim = animations[i];
-            animationsList.Add(new
+            animationsList.Add(new GetSlideDetailsAnimationInfo
             {
-                index = i,
-                type = anim.Type.ToString(),
-                targetShape = anim.TargetShape?.GetType().Name
+                Index = i,
+                Type = anim.Type.ToString(),
+                TargetShape = anim.TargetShape?.GetType().Name
             });
         }
 
         var background = slide.Background;
-        object? backgroundInfo = background != null
-            ? new { fillType = background.FillFormat.FillType.ToString() }
+        var backgroundInfo = background != null
+            ? new GetSlideDetailsBackgroundInfo { FillType = background.FillFormat.FillType.ToString() }
             : null;
 
         var notesSlide = slide.NotesSlideManager.NotesSlide;
@@ -63,26 +66,26 @@ public class GetSlideDetailsHandler : OperationHandlerBase<Presentation>
         string? thumbnailBase64 = null;
         if (p.IncludeThumbnail) thumbnailBase64 = PowerPointHelper.GenerateThumbnail(slide);
 
-        var result = new
+        var result = new GetSlideDetailsResult
         {
-            slideIndex = p.SlideIndex,
-            hidden = slide.Hidden,
-            layout = slide.LayoutSlide?.Name,
-            slideSize = new
+            SlideIndex = p.SlideIndex,
+            Hidden = slide.Hidden,
+            Layout = slide.LayoutSlide?.Name,
+            SlideSize = new GetSlideDetailsSizeInfo
             {
-                width = presentation.SlideSize.Size.Width,
-                height = presentation.SlideSize.Size.Height
+                Width = presentation.SlideSize.Size.Width,
+                Height = presentation.SlideSize.Size.Height
             },
-            shapesCount = slide.Shapes.Count,
-            transition = transitionInfo,
-            animationsCount = animations.Count,
-            animations = animationsList,
-            background = backgroundInfo,
-            notes = string.IsNullOrWhiteSpace(notesText) ? null : notesText,
-            thumbnail = thumbnailBase64
+            ShapesCount = slide.Shapes.Count,
+            Transition = transitionInfo,
+            AnimationsCount = animations.Count,
+            Animations = animationsList,
+            Background = backgroundInfo,
+            Notes = string.IsNullOrWhiteSpace(notesText) ? null : notesText,
+            Thumbnail = thumbnailBase64
         };
 
-        return JsonResult(result);
+        return result;
     }
 
     /// <summary>

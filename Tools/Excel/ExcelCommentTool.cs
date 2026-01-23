@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Excel;
 /// <summary>
 ///     Unified tool for managing Excel comments (add, edit, delete, get)
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Excel.Comment")]
 [McpServerToolType]
 public class ExcelCommentTool
 {
@@ -53,7 +56,14 @@ public class ExcelCommentTool
     /// <param name="author">Comment author (optional).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operation.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "excel_comment")]
+    [McpServerTool(
+        Name = "excel_comment",
+        Title = "Excel Comment Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage Excel comments. Supports 4 operations: add, edit, delete, get.
 
 Usage examples:
@@ -61,7 +71,7 @@ Usage examples:
 - Edit comment: excel_comment(operation='edit', path='book.xlsx', cell='A1', comment='Updated comment')
 - Delete comment: excel_comment(operation='delete', path='book.xlsx', cell='A1')
 - Get comments: excel_comment(operation='get', path='book.xlsx')")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: add, edit, delete, get")]
         string operation,
         [Description("Excel file path (required if no sessionId)")]
@@ -98,12 +108,12 @@ Usage examples:
         var result = handler.Execute(operationContext, parameters);
 
         if (string.Equals(operation, "get", StringComparison.OrdinalIgnoreCase))
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

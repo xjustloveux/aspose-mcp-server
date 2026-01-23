@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Content;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Word.Content;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Content;
 
@@ -33,9 +34,12 @@ public class GetWordDocumentInfoHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"sections\": 3", result);
+        var result = Assert.IsType<GetWordDocumentInfoResult>(res);
+
+        Assert.NotNull(result);
+        Assert.Equal(3, result.Sections);
     }
 
     #endregion
@@ -56,16 +60,17 @@ public class GetWordDocumentInfoHandlerTests : WordHandlerTestBase
     #region Basic Info Retrieval
 
     [Fact]
-    public void Execute_ReturnsJsonResult()
+    public void Execute_ReturnsResult()
     {
         var doc = CreateDocumentWithText("Test");
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("{", result);
-        Assert.Contains("}", result);
+        var result = Assert.IsType<GetWordDocumentInfoResult>(res);
+
+        Assert.NotNull(result);
     }
 
     [Fact]
@@ -75,9 +80,12 @@ public class GetWordDocumentInfoHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"sections\":", result);
+        var result = Assert.IsType<GetWordDocumentInfoResult>(res);
+
+        Assert.NotNull(result);
+        Assert.True(result.Sections >= 1);
     }
 
     [Fact]
@@ -87,9 +95,12 @@ public class GetWordDocumentInfoHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"created\":", result);
+        var result = Assert.IsType<GetWordDocumentInfoResult>(res);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.Created);
     }
 
     [Fact]
@@ -99,9 +110,12 @@ public class GetWordDocumentInfoHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"modified\":", result);
+        var result = Assert.IsType<GetWordDocumentInfoResult>(res);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.Modified);
     }
 
     [Fact]
@@ -128,9 +142,12 @@ public class GetWordDocumentInfoHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"title\":", result);
+        var result = Assert.IsType<GetWordDocumentInfoResult>(res);
+
+        Assert.NotNull(result);
+        Assert.Equal("Test Title", result.Title);
     }
 
     [Fact]
@@ -141,9 +158,12 @@ public class GetWordDocumentInfoHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"author\":", result);
+        var result = Assert.IsType<GetWordDocumentInfoResult>(res);
+
+        Assert.NotNull(result);
+        Assert.Equal("Test Author", result.Author);
     }
 
     [Fact]
@@ -154,9 +174,12 @@ public class GetWordDocumentInfoHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"subject\":", result);
+        var result = Assert.IsType<GetWordDocumentInfoResult>(res);
+
+        Assert.NotNull(result);
+        Assert.Equal("Test Subject", result.Subject);
     }
 
     [Fact]
@@ -166,9 +189,12 @@ public class GetWordDocumentInfoHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"pages\":", result);
+        var result = Assert.IsType<GetWordDocumentInfoResult>(res);
+
+        Assert.NotNull(result);
+        Assert.True(result.Pages >= 1);
     }
 
     #endregion
@@ -185,9 +211,12 @@ public class GetWordDocumentInfoHandlerTests : WordHandlerTestBase
             { "includeTabStops", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"tabStopsIncluded\": true", result);
+        var result = Assert.IsType<GetWordDocumentInfoResult>(res);
+
+        Assert.NotNull(result);
+        Assert.True(result.TabStopsIncluded);
     }
 
     [Fact]
@@ -200,9 +229,12 @@ public class GetWordDocumentInfoHandlerTests : WordHandlerTestBase
             { "includeTabStops", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"tabStopsIncluded\": false", result);
+        var result = Assert.IsType<GetWordDocumentInfoResult>(res);
+
+        Assert.NotNull(result);
+        Assert.False(result.TabStopsIncluded);
     }
 
     [Fact]
@@ -212,9 +244,12 @@ public class GetWordDocumentInfoHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"tabStopsIncluded\": false", result);
+        var result = Assert.IsType<GetWordDocumentInfoResult>(res);
+
+        Assert.NotNull(result);
+        Assert.False(result.TabStopsIncluded);
     }
 
     [Fact]
@@ -227,9 +262,12 @@ public class GetWordDocumentInfoHandlerTests : WordHandlerTestBase
             { "includeTabStops", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"tabStops\":", result);
+        var result = Assert.IsType<GetWordDocumentInfoResult>(res);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.TabStops);
     }
 
     #endregion

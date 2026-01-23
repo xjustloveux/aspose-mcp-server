@@ -1,9 +1,10 @@
-using System.Drawing;
+﻿using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.Versioning;
-using System.Text.Json;
 using Aspose.Cells;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Excel.Image;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Excel;
 
 namespace AsposeMcpServer.Tests.Tools.Excel;
@@ -51,7 +52,8 @@ public class ExcelImageToolTests : ExcelTestBase
         var imagePath = CreateTestImage("test_add_image.png");
         var outputPath = CreateTestFilePath("test_add_output.xlsx");
         var result = _tool.Execute("add", workbookPath, imagePath: imagePath, cell: "A1", outputPath: outputPath);
-        Assert.Contains("Image added to cell A1", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Image added to cell A1", data.Message);
         using var workbook = new Workbook(outputPath);
         Assert.Single(workbook.Worksheets[0].Pictures);
     }
@@ -62,7 +64,8 @@ public class ExcelImageToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithImage("test_delete.xlsx");
         var outputPath = CreateTestFilePath("test_delete_output.xlsx");
         var result = _tool.Execute("delete", workbookPath, imageIndex: 0, outputPath: outputPath);
-        Assert.Contains("Image #0 deleted", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Image #0 deleted", data.Message);
         using var workbook = new Workbook(outputPath);
         Assert.Empty(workbook.Worksheets[0].Pictures);
     }
@@ -72,8 +75,8 @@ public class ExcelImageToolTests : ExcelTestBase
     {
         var workbookPath = CreateWorkbookWithImage("test_get.xlsx");
         var result = _tool.Execute("get", workbookPath);
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(1, json.RootElement.GetProperty("count").GetInt32());
+        var data = GetResultData<GetImagesExcelResult>(result);
+        Assert.Equal(1, data.Count);
     }
 
     [Fact]
@@ -82,7 +85,8 @@ public class ExcelImageToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithImage("test_extract.xlsx");
         var exportPath = CreateTestFilePath("extracted.png");
         var result = _tool.Execute("extract", workbookPath, imageIndex: 0, exportPath: exportPath);
-        Assert.Contains("Image #0", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Image #0", data.Message);
         Assert.True(File.Exists(exportPath));
     }
 
@@ -100,7 +104,8 @@ public class ExcelImageToolTests : ExcelTestBase
         var imagePath = CreateTestImage($"test_case_{operation}_image.png");
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.xlsx");
         var result = _tool.Execute(operation, workbookPath, imagePath: imagePath, cell: "A1", outputPath: outputPath);
-        Assert.Contains("Image added", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Image added", data.Message);
     }
 
     [Fact]
@@ -122,8 +127,10 @@ public class ExcelImageToolTests : ExcelTestBase
         var imagePath = CreateTestImage("test_session_add_image.png");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("add", sessionId: sessionId, imagePath: imagePath, cell: "B2");
-        Assert.Contains("Image added to cell B2", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Image added to cell B2", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.Single(workbook.Worksheets[0].Pictures);
     }
@@ -134,8 +141,10 @@ public class ExcelImageToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithImage("test_session_delete.xlsx");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("delete", sessionId: sessionId, imageIndex: 0);
-        Assert.Contains("Image #0 deleted", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Image #0 deleted", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.Empty(workbook.Worksheets[0].Pictures);
     }
@@ -146,8 +155,8 @@ public class ExcelImageToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithImage("test_session_get.xlsx");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("get", sessionId: sessionId);
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(1, json.RootElement.GetProperty("count").GetInt32());
+        var data = GetResultData<GetImagesExcelResult>(result);
+        Assert.Equal(1, data.Count);
     }
 
     [Fact]
@@ -163,8 +172,8 @@ public class ExcelImageToolTests : ExcelTestBase
         var workbookPath2 = CreateWorkbookWithImage("test_session_file.xlsx");
         var sessionId = OpenSession(workbookPath2);
         var result = _tool.Execute("get", workbookPath1, sessionId);
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(1, json.RootElement.GetProperty("count").GetInt32());
+        var data = GetResultData<GetImagesExcelResult>(result);
+        Assert.Equal(1, data.Count);
     }
 
     #endregion

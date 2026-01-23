@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Hyperlink;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Hyperlink;
 
@@ -33,11 +34,13 @@ public class EditWordHyperlinkHandlerTests : WordHandlerTestBase
             { "tooltip", "New Tooltip" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("URL: https://new.com", result);
-        Assert.Contains("Display text: New Text", result);
-        Assert.Contains("Tooltip: New Tooltip", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("URL: https://new.com", result.Message);
+        Assert.Contains("Display text: New Text", result.Message);
+        Assert.Contains("Tooltip: New Tooltip", result.Message);
     }
 
     #endregion
@@ -67,9 +70,11 @@ public class EditWordHyperlinkHandlerTests : WordHandlerTestBase
             { "url", "https://newurl.com" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("edited successfully", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("edited successfully", result.Message);
         AssertModified(context);
     }
 
@@ -84,9 +89,11 @@ public class EditWordHyperlinkHandlerTests : WordHandlerTestBase
             { "displayText", "New Text" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("#0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("#0", result.Message);
     }
 
     #endregion
@@ -104,9 +111,11 @@ public class EditWordHyperlinkHandlerTests : WordHandlerTestBase
             { "url", "https://updated.com" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("URL: https://updated.com", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("URL: https://updated.com", result.Message);
     }
 
     [Fact]
@@ -120,9 +129,11 @@ public class EditWordHyperlinkHandlerTests : WordHandlerTestBase
             { "displayText", "Updated Link Text" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Display text: Updated Link Text", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Display text: Updated Link Text", result.Message);
     }
 
     [Fact]
@@ -136,9 +147,11 @@ public class EditWordHyperlinkHandlerTests : WordHandlerTestBase
             { "tooltip", "New tooltip" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Tooltip: New tooltip", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Tooltip: New tooltip", result.Message);
     }
 
     [Fact]
@@ -152,9 +165,11 @@ public class EditWordHyperlinkHandlerTests : WordHandlerTestBase
             { "subAddress", "Bookmark1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("SubAddress: Bookmark1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("SubAddress: Bookmark1", result.Message);
     }
 
     [Fact]
@@ -167,9 +182,11 @@ public class EditWordHyperlinkHandlerTests : WordHandlerTestBase
             { "hyperlinkIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("No change parameters provided", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("No change parameters provided", result.Message);
     }
 
     #endregion

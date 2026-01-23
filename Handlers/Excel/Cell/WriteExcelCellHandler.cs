@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Cell;
 
 /// <summary>
 ///     Handler for writing values to Excel cells.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class WriteExcelCellHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -22,7 +25,7 @@ public class WriteExcelCellHandler : OperationHandlerBase<Workbook>
     /// </param>
     /// <returns>Success message.</returns>
     /// <exception cref="ArgumentException">Thrown when value is empty.</exception>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var writeParams = ExtractWriteParameters(parameters);
 
@@ -39,8 +42,11 @@ public class WriteExcelCellHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success(
-            $"Cell {writeParams.Cell} written with value '{writeParams.Value}' in sheet {writeParams.SheetIndex}.");
+        return new SuccessResult
+        {
+            Message =
+                $"Cell {writeParams.Cell} written with value '{writeParams.Value}' in sheet {writeParams.SheetIndex}."
+        };
     }
 
     /// <summary>

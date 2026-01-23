@@ -2,8 +2,10 @@
 using Aspose.Cells;
 using Aspose.Slides;
 using Aspose.Words;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.Conversion;
 using ModelContextProtocol.Server;
 using SaveFormat = Aspose.Words.SaveFormat;
 
@@ -44,14 +46,22 @@ public class ConvertDocumentTool
     /// <param name="inputPath">Input file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID to convert document from session.</param>
     /// <param name="outputPath">Output file path (required, format determined by extension).</param>
-    /// <returns>A message indicating the conversion result with source and output information.</returns>
+    /// <returns>A ConversionResult indicating the conversion result with source and output information.</returns>
     /// <exception cref="ArgumentException">
     ///     Thrown when outputPath is not provided, neither inputPath nor sessionId is provided, or the input format is
     ///     unsupported.
     /// </exception>
     /// <exception cref="InvalidOperationException">Thrown when session management is not enabled but sessionId is provided.</exception>
     /// <exception cref="KeyNotFoundException">Thrown when the specified session is not found or access is denied.</exception>
-    [McpServerTool(Name = "convert_document")]
+    [McpServerTool(
+        Name = "convert_document",
+        Title = "Convert Document Between Formats",
+        Destructive = false,
+        Idempotent = true,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
+    [OutputSchema(typeof(ConversionResult))]
     [Description(@"Convert documents between various formats (auto-detect source type).
 
 Usage examples:
@@ -59,7 +69,7 @@ Usage examples:
 - Convert Excel to CSV: convert_document(inputPath='book.xlsx', outputPath='book.csv')
 - Convert PowerPoint to PDF: convert_document(inputPath='presentation.pptx', outputPath='presentation.pdf')
 - Convert from session: convert_document(sessionId='sess_xxx', outputPath='doc.pdf')")]
-    public string Execute(
+    public ConversionResult Execute(
         [Description("Input file path (required if no sessionId)")]
         string? inputPath = null,
         [Description("Session ID to convert document from session")]
@@ -78,7 +88,7 @@ Usage examples:
         var outputExtension = Path.GetExtension(outputPath).ToLower();
 
         if (!string.IsNullOrEmpty(sessionId))
-            return ConvertFromSession(sessionId, outputPath, outputExtension);
+            return ConvertFromSession(sessionId, outputPath, outputExtension, $"session:{sessionId}");
 
         SecurityHelper.ValidateFilePath(inputPath!, nameof(inputPath), true);
         return ConvertFromFile(inputPath!, outputPath, outputExtension);
@@ -90,11 +100,13 @@ Usage examples:
     /// <param name="sessionId">The session ID containing the document.</param>
     /// <param name="outputPath">The output file path.</param>
     /// <param name="outputExtension">The target format extension (e.g., ".pdf", ".html").</param>
-    /// <returns>A message indicating the conversion result.</returns>
+    /// <param name="sourcePath">The source path for the result.</param>
+    /// <returns>A ConversionResult indicating the conversion result.</returns>
     /// <exception cref="InvalidOperationException">Thrown when session management is not enabled.</exception>
     /// <exception cref="KeyNotFoundException">Thrown when the session is not found or access is denied.</exception>
     /// <exception cref="ArgumentException">Thrown when the document type is unsupported.</exception>
-    private string ConvertFromSession(string sessionId, string outputPath, string outputExtension)
+    private ConversionResult ConvertFromSession(string sessionId, string outputPath, string outputExtension,
+        string sourcePath)
     {
         if (_sessionManager == null)
             throw new InvalidOperationException("Session management is not enabled");
@@ -138,8 +150,15 @@ Usage examples:
                 throw new ArgumentException($"Unsupported document type: {session.Type}");
         }
 
-        return
-            $"Document from session {sessionId} ({sourceType}) converted to {outputExtension} format. Output: {outputPath}";
+        return new ConversionResult
+        {
+            SourcePath = sourcePath,
+            OutputPath = outputPath,
+            SourceFormat = sourceType,
+            TargetFormat = outputExtension.TrimStart('.').ToUpperInvariant(),
+            FileSize = File.Exists(outputPath) ? new FileInfo(outputPath).Length : null,
+            Message = $"Document from session {sessionId} ({sourceType}) converted to {outputExtension} format"
+        };
     }
 
     /// <summary>
@@ -148,36 +167,48 @@ Usage examples:
     /// <param name="inputPath">The source document file path.</param>
     /// <param name="outputPath">The output file path.</param>
     /// <param name="outputExtension">The target format extension (e.g., ".pdf", ".html").</param>
-    /// <returns>A message indicating the conversion result.</returns>
+    /// <returns>A ConversionResult indicating the conversion result.</returns>
     /// <exception cref="ArgumentException">Thrown when the input format is unsupported.</exception>
-    private static string ConvertFromFile(string inputPath, string outputPath, string outputExtension)
+    private static ConversionResult ConvertFromFile(string inputPath, string outputPath, string outputExtension)
     {
         var inputExtension = Path.GetExtension(inputPath).ToLower();
+        string sourceFormat;
 
         if (IsWordDocument(inputExtension))
         {
             var doc = new Document(inputPath);
             var saveFormat = GetWordSaveFormat(outputExtension);
             doc.Save(outputPath, saveFormat);
+            sourceFormat = "Word";
         }
         else if (IsExcelDocument(inputExtension))
         {
             using var workbook = new Workbook(inputPath);
             var saveFormat = GetExcelSaveFormat(outputExtension);
             workbook.Save(outputPath, saveFormat);
+            sourceFormat = "Excel";
         }
         else if (IsPresentationDocument(inputExtension))
         {
             using var presentation = new Presentation(inputPath);
             var saveFormat = GetPresentationSaveFormat(outputExtension);
             presentation.Save(outputPath, saveFormat);
+            sourceFormat = "PowerPoint";
         }
         else
         {
             throw new ArgumentException($"Unsupported input format: {inputExtension}");
         }
 
-        return $"Document converted from {inputExtension} to {outputExtension} format. Output: {outputPath}";
+        return new ConversionResult
+        {
+            SourcePath = inputPath,
+            OutputPath = outputPath,
+            SourceFormat = sourceFormat,
+            TargetFormat = outputExtension.TrimStart('.').ToUpperInvariant(),
+            FileSize = File.Exists(outputPath) ? new FileInfo(outputPath).Length : null,
+            Message = $"Document converted from {inputExtension} to {outputExtension} format"
+        };
     }
 
     /// <summary>

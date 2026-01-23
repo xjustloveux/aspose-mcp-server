@@ -1,14 +1,16 @@
 using System.Data;
-using System.Text.Json;
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Excel.DataOperations;
 
 namespace AsposeMcpServer.Handlers.Excel.DataOperations;
 
 /// <summary>
 ///     Handler for getting content from Excel worksheets.
 /// </summary>
+[ResultType(typeof(GetContentResult))]
 public class GetContentHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -22,7 +24,7 @@ public class GetContentHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex, range
     /// </param>
     /// <returns>JSON string containing the range content.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var contentParams = ExtractGetContentParameters(parameters);
 
@@ -32,6 +34,7 @@ public class GetContentHandler : OperationHandlerBase<Workbook>
             var worksheet = ExcelHelper.GetWorksheet(workbook, contentParams.SheetIndex);
             var cells = worksheet.Cells;
 
+            List<Dictionary<string, object?>> rows;
             if (!string.IsNullOrEmpty(contentParams.Range))
             {
                 var cellRange = ExcelHelper.CreateRange(cells, contentParams.Range);
@@ -39,8 +42,7 @@ public class GetContentHandler : OperationHandlerBase<Workbook>
                 var dataTable = cells.ExportDataTable(cellRange.FirstRow, cellRange.FirstColumn,
                     cellRange.RowCount, cellRange.ColumnCount, options);
 
-                var rows = ConvertDataTableToList(dataTable);
-                return JsonSerializer.Serialize(rows);
+                rows = ConvertDataTableToList(dataTable);
             }
             else
             {
@@ -49,9 +51,10 @@ public class GetContentHandler : OperationHandlerBase<Workbook>
                 var options = new ExportTableOptions { ExportColumnName = false };
                 var dataTable = cells.ExportDataTable(0, 0, maxRow + 1, maxCol + 1, options);
 
-                var rows = ConvertDataTableToList(dataTable);
-                return JsonSerializer.Serialize(rows);
+                rows = ConvertDataTableToList(dataTable);
             }
+
+            return new GetContentResult { Rows = rows };
         }
         catch (CellsException ex)
         {

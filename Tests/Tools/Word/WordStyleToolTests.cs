@@ -1,6 +1,8 @@
-using Aspose.Words;
+﻿using Aspose.Words;
 using Aspose.Words.Tables;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Word.Styles;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Word;
 
 namespace AsposeMcpServer.Tests.Tools.Word;
@@ -26,9 +28,10 @@ public class WordStyleToolTests : WordTestBase
     {
         var docPath = CreateWordDocument("test_get_styles.docx");
         var result = _tool.Execute("get_styles", docPath);
-        Assert.Contains("\"count\":", result);
-        Assert.Contains("\"paragraphStyles\":", result);
-        Assert.Contains("Normal", result);
+        var data = GetResultData<GetWordStylesResult>(result);
+        Assert.True(data.Count > 0);
+        Assert.NotNull(data.ParagraphStyles);
+        Assert.Contains(data.ParagraphStyles, s => s.Name == "Normal");
     }
 
     [Fact]
@@ -110,7 +113,8 @@ public class WordStyleToolTests : WordTestBase
     {
         var docPath = CreateWordDocument($"test_{operation.GetHashCode()}_case.docx");
         var result = _tool.Execute(operation, docPath);
-        Assert.Contains("Styles", result);
+        var data = GetResultData<GetWordStylesResult>(result);
+        Assert.NotNull(data.ParagraphStyles);
     }
 
     [Fact]
@@ -143,7 +147,10 @@ public class WordStyleToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("get_styles", sessionId: sessionId);
-        Assert.Contains("SessionStyle", result);
+        var data = GetResultData<GetWordStylesResult>(result);
+        Assert.Contains(data.ParagraphStyles, s => s.Name == "SessionStyle");
+        var output = GetResultOutput<GetWordStylesResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -153,7 +160,10 @@ public class WordStyleToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("create_style", sessionId: sessionId,
             styleName: "SessionCreatedStyle", styleType: "paragraph", fontSize: 20, bold: true);
-        Assert.Contains("SessionCreatedStyle", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("SessionCreatedStyle", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
 
         var doc = SessionManager.GetDocument<Document>(sessionId);
         var style = doc.Styles["SessionCreatedStyle"];
@@ -171,8 +181,10 @@ public class WordStyleToolTests : WordTestBase
         doc.Save(docPath);
 
         var sessionId = OpenSession(docPath);
-        _tool.Execute("apply_style", sessionId: sessionId,
+        var result = _tool.Execute("apply_style", sessionId: sessionId,
             styleName: "ApplySessionStyle", paragraphIndex: 0);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
 
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         var paragraphs = sessionDoc.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
@@ -191,7 +203,10 @@ public class WordStyleToolTests : WordTestBase
         var sessionId = OpenSession(targetPath);
 
         var result = _tool.Execute("copy_styles", sessionId: sessionId, sourceDocument: sourcePath);
-        Assert.StartsWith("Copied", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Copied", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
 
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         Assert.NotNull(sessionDoc.Styles["SourceSessionStyle"]);
@@ -219,9 +234,10 @@ public class WordStyleToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath2);
         var result = _tool.Execute("get_styles", docPath1, sessionId);
+        var data = GetResultData<GetWordStylesResult>(result);
 
-        Assert.Contains("SessionStyle", result);
-        Assert.DoesNotContain("PathStyle", result);
+        Assert.Contains(data.ParagraphStyles, s => s.Name == "SessionStyle");
+        Assert.DoesNotContain(data.ParagraphStyles, s => s.Name == "PathStyle");
     }
 
     #endregion

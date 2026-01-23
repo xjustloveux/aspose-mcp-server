@@ -1,16 +1,17 @@
-using System.Text.Json;
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Pdf;
+using AsposeMcpServer.Results.Pdf.Attachment;
 
 namespace AsposeMcpServer.Handlers.Pdf.Attachment;
 
 /// <summary>
 ///     Handler for retrieving attachments from PDF documents.
 /// </summary>
+[ResultType(typeof(GetAttachmentsResult))]
 public class GetPdfAttachmentsHandler : OperationHandlerBase<Document>
 {
-    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
-
     /// <inheritdoc />
     public override string Operation => "get";
 
@@ -20,29 +21,29 @@ public class GetPdfAttachmentsHandler : OperationHandlerBase<Document>
     /// <param name="context">The document context.</param>
     /// <param name="parameters">No parameters required.</param>
     /// <returns>JSON string containing attachment information.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var document = context.Document;
         var embeddedFiles = document.EmbeddedFiles;
 
         if (embeddedFiles == null || embeddedFiles.Count == 0)
         {
-            var emptyResult = new
+            var emptyResult = new GetAttachmentsResult
             {
-                count = 0,
-                items = Array.Empty<object>(),
-                message = "No attachments found"
+                Count = 0,
+                Items = Array.Empty<AttachmentInfo>(),
+                Message = "No attachments found"
             };
-            return JsonSerializer.Serialize(emptyResult, JsonOptions);
+            return emptyResult;
         }
 
         var attachmentList = PdfAttachmentHelper.CollectAttachmentInfo(embeddedFiles);
 
-        var result = new
+        var result = new GetAttachmentsResult
         {
-            count = attachmentList.Count,
-            items = attachmentList
+            Count = attachmentList.Count,
+            Items = attachmentList
         };
-        return JsonSerializer.Serialize(result, JsonOptions);
+        return result;
     }
 }

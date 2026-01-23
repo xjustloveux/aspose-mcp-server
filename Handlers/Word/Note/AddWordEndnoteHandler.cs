@@ -1,13 +1,17 @@
 using System.Text;
 using Aspose.Words;
 using Aspose.Words.Notes;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Note;
 
 /// <summary>
 ///     Handler for adding endnotes to Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddWordEndnoteHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -22,7 +26,7 @@ public class AddWordEndnoteHandler : OperationHandlerBase<Document>
     ///     Optional: paragraphIndex, sectionIndex, referenceText, customMark
     /// </param>
     /// <returns>Success message with endnote details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractAddEndnoteParameters(parameters);
 
@@ -52,12 +56,23 @@ public class AddWordEndnoteHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
+        return BuildSuccessResult(p.Text, insertedNote.ReferenceMark);
+    }
+
+    /// <summary>
+    ///     Builds the success result for adding an endnote.
+    /// </summary>
+    /// <param name="text">The endnote text.</param>
+    /// <param name="referenceMark">The reference mark.</param>
+    /// <returns>The success result.</returns>
+    private static SuccessResult BuildSuccessResult(string text, string? referenceMark)
+    {
         var result = new StringBuilder();
         result.AppendLine("Endnote added successfully");
-        result.AppendLine($"Text: {p.Text}");
-        if (!string.IsNullOrEmpty(insertedNote.ReferenceMark))
-            result.AppendLine($"Reference mark: {insertedNote.ReferenceMark}");
-        return result.ToString().TrimEnd();
+        result.AppendLine($"Text: {text}");
+        if (!string.IsNullOrEmpty(referenceMark))
+            result.AppendLine($"Reference mark: {referenceMark}");
+        return new SuccessResult { Message = result.ToString().TrimEnd() };
     }
 
     /// <summary>

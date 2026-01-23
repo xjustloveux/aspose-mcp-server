@@ -1,5 +1,6 @@
-using Aspose.Cells;
-using AsposeMcpServer.Tests.Helpers;
+﻿using Aspose.Cells;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Excel;
 
 namespace AsposeMcpServer.Tests.Tools.Excel;
@@ -44,7 +45,8 @@ public class ExcelGroupToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbookWithData("test_group_rows.xlsx", 10, 5);
         var outputPath = CreateTestFilePath("test_group_rows_output.xlsx");
         var result = _tool.Execute("group_rows", workbookPath, startRow: 1, endRow: 3, outputPath: outputPath);
-        Assert.Contains("Rows 1-3 grouped", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Rows 1-3 grouped", data.Message);
         using var workbook = new Workbook(outputPath);
         Assert.True(workbook.Worksheets[0].Cells.Rows[1].GroupLevel > 0 ||
                     workbook.Worksheets[0].Cells.Rows[2].GroupLevel > 0);
@@ -56,7 +58,8 @@ public class ExcelGroupToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithGroupedRows("test_ungroup_rows.xlsx", 1, 3);
         var outputPath = CreateTestFilePath("test_ungroup_rows_output.xlsx");
         var result = _tool.Execute("ungroup_rows", workbookPath, startRow: 1, endRow: 3, outputPath: outputPath);
-        Assert.Contains("Rows 1-3 ungrouped", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Rows 1-3 ungrouped", data.Message);
         using var workbook = new Workbook(outputPath);
         Assert.Equal(0, workbook.Worksheets[0].Cells.Rows[1].GroupLevel);
     }
@@ -67,7 +70,8 @@ public class ExcelGroupToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbookWithData("test_group_columns.xlsx", 5, 10);
         var outputPath = CreateTestFilePath("test_group_columns_output.xlsx");
         var result = _tool.Execute("group_columns", workbookPath, startColumn: 1, endColumn: 3, outputPath: outputPath);
-        Assert.Contains("Columns 1-3 grouped", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Columns 1-3 grouped", data.Message);
         using var workbook = new Workbook(outputPath);
         Assert.True(workbook.Worksheets[0].Cells.Columns[1].GroupLevel > 0 ||
                     workbook.Worksheets[0].Cells.Columns[2].GroupLevel > 0);
@@ -80,7 +84,8 @@ public class ExcelGroupToolTests : ExcelTestBase
         var outputPath = CreateTestFilePath("test_ungroup_columns_output.xlsx");
         var result = _tool.Execute("ungroup_columns", workbookPath,
             startColumn: 1, endColumn: 3, outputPath: outputPath);
-        Assert.Contains("Columns 1-3 ungrouped", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Columns 1-3 ungrouped", data.Message);
         using var workbook = new Workbook(outputPath);
         Assert.Equal(0, workbook.Worksheets[0].Cells.Columns[1].GroupLevel);
     }
@@ -98,7 +103,8 @@ public class ExcelGroupToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbookWithData($"test_case_{operation}.xlsx", 10, 5);
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.xlsx");
         var result = _tool.Execute(operation, workbookPath, startRow: 1, endRow: 2, outputPath: outputPath);
-        Assert.Contains("grouped", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("grouped", data.Message);
     }
 
     [Fact]
@@ -119,8 +125,10 @@ public class ExcelGroupToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbookWithData("test_session_group_rows.xlsx", 10, 5);
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("group_rows", sessionId: sessionId, startRow: 1, endRow: 3);
-        Assert.Contains("Rows 1-3 grouped", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Rows 1-3 grouped", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.True(workbook.Worksheets[0].Cells.Rows[1].GroupLevel > 0 ||
                     workbook.Worksheets[0].Cells.Rows[2].GroupLevel > 0);
@@ -132,8 +140,10 @@ public class ExcelGroupToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithGroupedRows("test_session_ungroup_rows.xlsx", 1, 3);
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("ungroup_rows", sessionId: sessionId, startRow: 1, endRow: 3);
-        Assert.Contains("Rows 1-3 ungrouped", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Rows 1-3 ungrouped", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.Equal(0, workbook.Worksheets[0].Cells.Rows[1].GroupLevel);
     }
@@ -144,8 +154,10 @@ public class ExcelGroupToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbookWithData("test_session_group_cols.xlsx", 5, 10);
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("group_columns", sessionId: sessionId, startColumn: 1, endColumn: 3);
-        Assert.Contains("Columns 1-3 grouped", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Columns 1-3 grouped", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -168,7 +180,8 @@ public class ExcelGroupToolTests : ExcelTestBase
 
         var sessionId = OpenSession(workbookPath2);
         var result = _tool.Execute("group_rows", workbookPath1, sessionId, startRow: 1, endRow: 3);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Rows 1-3 grouped", data.Message);
     }
 
     #endregion

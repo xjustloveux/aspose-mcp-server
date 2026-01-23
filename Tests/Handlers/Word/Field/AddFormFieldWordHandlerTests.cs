@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Word.Field;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Field;
 
@@ -32,9 +33,11 @@ public class AddFormFieldWordHandlerTests : WordHandlerTestBase
             { "fieldName", "TestField" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(doc.Range.FormFields.Count > 0);
         AssertModified(context);
     }
@@ -51,9 +54,11 @@ public class AddFormFieldWordHandlerTests : WordHandlerTestBase
             { "defaultValue", "Default Text" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -67,10 +72,12 @@ public class AddFormFieldWordHandlerTests : WordHandlerTestBase
             { "fieldName", "CheckField" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result.ToLower());
-        Assert.Contains("checkbox", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("checkbox", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -85,9 +92,11 @@ public class AddFormFieldWordHandlerTests : WordHandlerTestBase
             { "checkedValue", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -102,10 +111,12 @@ public class AddFormFieldWordHandlerTests : WordHandlerTestBase
             { "options", DropDownOptions }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result.ToLower());
-        Assert.Contains("dropdown", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("dropdown", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

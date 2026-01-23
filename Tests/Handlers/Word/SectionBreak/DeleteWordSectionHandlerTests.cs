@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.SectionBreak;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.SectionBreak;
 
@@ -49,9 +50,11 @@ public class DeleteWordSectionHandlerTests : WordHandlerTestBase
             { "sectionIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(initialCount - 1, doc.Sections.Count);
         AssertModified(context);
     }
@@ -66,9 +69,11 @@ public class DeleteWordSectionHandlerTests : WordHandlerTestBase
             { "sectionIndices", new[] { 1, 2 } }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted 2 section", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted 2 section", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(2, doc.Sections.Count);
     }
 

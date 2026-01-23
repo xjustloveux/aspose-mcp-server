@@ -1,7 +1,8 @@
-using System.Text.Json;
-using Aspose.Cells;
+﻿using Aspose.Cells;
 using Aspose.Cells.Charts;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Excel.Chart;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Excel;
 
 namespace AsposeMcpServer.Tests.Tools.Excel;
@@ -55,7 +56,8 @@ public class ExcelChartToolTests : ExcelTestBase
         var outputPath = CreateTestFilePath("test_add_output.xlsx");
         var result = _tool.Execute("add", workbookPath, dataRange: "B1:B10", categoryAxisDataRange: "A1:A10",
             outputPath: outputPath);
-        Assert.StartsWith("Chart added", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Chart added", data.Message);
         using var workbook = new Workbook(outputPath);
         Assert.Single(workbook.Worksheets[0].Charts);
     }
@@ -65,9 +67,9 @@ public class ExcelChartToolTests : ExcelTestBase
     {
         var workbookPath = CreateWorkbookWithChart("test_get.xlsx");
         var result = _tool.Execute("get", workbookPath);
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(1, json.RootElement.GetProperty("count").GetInt32());
-        Assert.True(json.RootElement.GetProperty("items").GetArrayLength() > 0);
+        var data = GetResultData<GetChartsResult>(result);
+        Assert.Equal(1, data.Count);
+        Assert.True(data.Items.Count > 0);
     }
 
     [Fact]
@@ -76,7 +78,8 @@ public class ExcelChartToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithChart("test_edit.xlsx");
         var outputPath = CreateTestFilePath("test_edit_output.xlsx");
         var result = _tool.Execute("edit", workbookPath, chartIndex: 0, chartType: "Bar", outputPath: outputPath);
-        Assert.StartsWith("Chart #0 edited", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Chart #0 edited", data.Message);
         using var workbook = new Workbook(outputPath);
         Assert.Equal(ChartType.Bar, workbook.Worksheets[0].Charts[0].Type);
     }
@@ -87,8 +90,9 @@ public class ExcelChartToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithChart("test_delete.xlsx");
         var outputPath = CreateTestFilePath("test_delete_output.xlsx");
         var result = _tool.Execute("delete", workbookPath, chartIndex: 0, outputPath: outputPath);
-        Assert.StartsWith("Chart #0", result);
-        Assert.Contains("deleted", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Chart #0", data.Message);
+        Assert.Contains("deleted", data.Message);
         using var workbook = new Workbook(outputPath);
         Assert.Empty(workbook.Worksheets[0].Charts);
     }
@@ -100,8 +104,9 @@ public class ExcelChartToolTests : ExcelTestBase
         var outputPath = CreateTestFilePath("test_update_data_output.xlsx");
         var result = _tool.Execute("update_data", workbookPath, chartIndex: 0, dataRange: "B1:B5",
             categoryAxisDataRange: "A1:A5", outputPath: outputPath);
-        Assert.StartsWith("Chart #0 data updated", result);
-        Assert.Contains("B1:B5", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Chart #0 data updated", data.Message);
+        Assert.Contains("B1:B5", data.Message);
     }
 
     [Fact]
@@ -111,7 +116,8 @@ public class ExcelChartToolTests : ExcelTestBase
         var outputPath = CreateTestFilePath("test_set_props_title_output.xlsx");
         var result = _tool.Execute("set_properties", workbookPath, chartIndex: 0, title: "New Title",
             outputPath: outputPath);
-        Assert.StartsWith("Chart #0 properties updated", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Chart #0 properties updated", data.Message);
         using var workbook = new Workbook(outputPath);
         Assert.Equal("New Title", workbook.Worksheets[0].Charts[0].Title.Text);
     }
@@ -129,7 +135,8 @@ public class ExcelChartToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithChartData($"test_case_{operation}.xlsx");
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.xlsx");
         var result = _tool.Execute(operation, workbookPath, dataRange: "B1:B10", outputPath: outputPath);
-        Assert.StartsWith("Chart added", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Chart added", data.Message);
     }
 
     [Fact]
@@ -156,7 +163,10 @@ public class ExcelChartToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithChartData("test_session_add.xlsx");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("add", sessionId: sessionId, dataRange: "B1:B10", categoryAxisDataRange: "A1:A10");
-        Assert.StartsWith("Chart added", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Chart added", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.Single(workbook.Worksheets[0].Charts);
     }
@@ -167,8 +177,8 @@ public class ExcelChartToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithChart("test_session_get.xlsx");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("get", sessionId: sessionId);
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(1, json.RootElement.GetProperty("count").GetInt32());
+        var data = GetResultData<GetChartsResult>(result);
+        Assert.Equal(1, data.Count);
     }
 
     [Fact]
@@ -198,7 +208,10 @@ public class ExcelChartToolTests : ExcelTestBase
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("update_data", sessionId: sessionId, chartIndex: 0, dataRange: "B1:B5",
             categoryAxisDataRange: "A1:A5");
-        Assert.StartsWith("Chart #0 data updated", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Chart #0 data updated", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -224,8 +237,8 @@ public class ExcelChartToolTests : ExcelTestBase
         var sessionWorkbook = CreateWorkbookWithChart("test_session_file.xlsx");
         var sessionId = OpenSession(sessionWorkbook);
         var result = _tool.Execute("get", pathWorkbook, sessionId);
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(1, json.RootElement.GetProperty("count").GetInt32());
+        var data = GetResultData<GetChartsResult>(result);
+        Assert.Equal(1, data.Count);
     }
 
     #endregion

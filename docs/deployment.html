@@ -164,6 +164,18 @@ services:
       # - ASPOSE_METRICS_ENABLED=true
       # - ASPOSE_METRICS_PATH=/metrics
 
+      # === Origin Validation (Optional, SSE/WS only) ===
+      # - ASPOSE_ORIGIN_VALIDATION=true        # Enable origin validation (default: true)
+      # - ASPOSE_ALLOW_LOCALHOST=true          # Allow localhost origin (default: true)
+      # - ASPOSE_ALLOW_MISSING_ORIGIN=true     # Allow requests without Origin header (default: true)
+      # - ASPOSE_ALLOWED_ORIGINS=https://app1.com,https://app2.com
+
+      # === Async Tasks (Optional) ===
+      # - ASPOSE_TASKS_ENABLED=true            # Enable async tasks (default: true)
+      # - ASPOSE_TASKS_MAX_CONCURRENT=5        # Max concurrent tasks (1-100, default: 5)
+      # - ASPOSE_TASKS_DEFAULT_TTL=300000      # Default result TTL in ms (default: 5 min)
+      # - ASPOSE_TASKS_MAX_TTL=3600000         # Max result TTL in ms (default: 1 hour)
+
     # === Volumes (Optional) ===
     # volumes:
     #   - ./license:/app/license:ro
@@ -200,8 +212,8 @@ docker-compose down</pre>
 
 <h3>deployment.yaml</h3>
 <div class="code-wrapper">
-    <button class="copy-button" onclick="copyCode(this)">📋 複製</button>
-    <pre class="code-block">apiVersion: apps/v1
+<button class="copy-button" onclick="copyCode(this)">📋 複製</button>
+<pre class="code-block">apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: aspose-mcp-server
@@ -343,6 +355,26 @@ spec:
             # - name: ASPOSE_METRICS_PATH
             #   value: "/metrics"
 
+            # === Origin Validation (Optional, SSE/WS only) ===
+            # - name: ASPOSE_ORIGIN_VALIDATION
+            #   value: "true"                  # Enable origin validation (default: true)
+            # - name: ASPOSE_ALLOW_LOCALHOST
+            #   value: "true"                  # Allow localhost origin (default: true)
+            # - name: ASPOSE_ALLOW_MISSING_ORIGIN
+            #   value: "true"                  # Allow requests without Origin header (default: true)
+            # - name: ASPOSE_ALLOWED_ORIGINS
+            #   value: "https://app1.com,https://app2.com"
+
+            # === Async Tasks (Optional) ===
+            # - name: ASPOSE_TASKS_ENABLED
+            #   value: "true"                  # Enable async tasks (default: true)
+            # - name: ASPOSE_TASKS_MAX_CONCURRENT
+            #   value: "5"                     # Max concurrent tasks (1-100, default: 5)
+            # - name: ASPOSE_TASKS_DEFAULT_TTL
+            #   value: "300000"                # Default result TTL in ms (default: 5 min)
+            # - name: ASPOSE_TASKS_MAX_TTL
+            #   value: "3600000"               # Max result TTL in ms (default: 1 hour)
+
           # === Volume Mounts (Optional) ===
           # volumeMounts:
           #   - name: license
@@ -454,6 +486,18 @@ kubectl get pods -l app=aspose-mcp</pre>
           &lt;!-- &lt;environmentVariable name="ASPOSE_SESSION_TIMEOUT" value="30" /&gt; --&gt;
           &lt;!-- &lt;environmentVariable name="ASPOSE_SESSION_TEMP_RETENTION_HOURS" value="24" /&gt; --&gt;
           &lt;!-- &lt;environmentVariable name="ASPOSE_SESSION_ISOLATION" value="group" /&gt; --&gt; &lt;!-- none (no isolation), group (group-level, default) --&gt;
+
+          &lt;!-- Origin Validation (Optional, SSE/WS only) --&gt;
+          &lt;!-- &lt;environmentVariable name="ASPOSE_ORIGIN_VALIDATION" value="true" /&gt; --&gt;
+          &lt;!-- &lt;environmentVariable name="ASPOSE_ALLOW_LOCALHOST" value="true" /&gt; --&gt;
+          &lt;!-- &lt;environmentVariable name="ASPOSE_ALLOW_MISSING_ORIGIN" value="true" /&gt; --&gt;
+          &lt;!-- &lt;environmentVariable name="ASPOSE_ALLOWED_ORIGINS" value="https://app1.com,https://app2.com" /&gt; --&gt;
+
+          &lt;!-- Async Tasks (Optional) --&gt;
+          &lt;!-- &lt;environmentVariable name="ASPOSE_TASKS_ENABLED" value="true" /&gt; --&gt;
+          &lt;!-- &lt;environmentVariable name="ASPOSE_TASKS_MAX_CONCURRENT" value="5" /&gt; --&gt;
+          &lt;!-- &lt;environmentVariable name="ASPOSE_TASKS_DEFAULT_TTL" value="300000" /&gt; --&gt;
+          &lt;!-- &lt;environmentVariable name="ASPOSE_TASKS_MAX_TTL" value="3600000" /&gt; --&gt;
         &lt;/environmentVariables&gt;
       &lt;/aspNetCore&gt;
 
@@ -995,6 +1039,126 @@ kubectl get pods -l app=aspose-mcp</pre>
     </table>
 </div>
 
+<h3>Origin 驗證（DNS 重綁定攻擊防護）</h3>
+<div class="info-box" style="margin: 15px 0; padding: 15px; background: var(--bg-hover); border-left: 4px solid var(--accent-color); border-radius: 4px;">
+    <strong>Origin 驗證說明：</strong>
+    <p style="margin: 10px 0 0 0;">SSE 和 WebSocket 模式預設啟用 Origin 標頭驗證，用於防止 DNS 重綁定攻擊。健康檢查端點（/health, /ready）自動排除驗證。</p>
+</div>
+<div class="table-wrapper">
+    <table style="width: 100%; border-collapse: collapse; margin-top: 15px; min-width: 500px;">
+        <thead>
+        <tr style="background: var(--bg-hover);">
+            <th class="accent-border" style="padding: 12px; text-align: left;">環境變數</th>
+            <th class="accent-border" style="padding: 12px; text-align: left;">命令行參數</th>
+            <th class="accent-border" style="padding: 12px; text-align: left;">說明</th>
+            <th class="accent-border" style="padding: 12px; text-align: left;">預設值</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>ASPOSE_ORIGIN_VALIDATION</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>--no-origin-validation</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">啟用/停用 Origin 驗證</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">true</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>ASPOSE_ALLOW_LOCALHOST</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>--no-localhost</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">是否允許 localhost 來源</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">true</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>ASPOSE_ALLOW_MISSING_ORIGIN</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>--require-origin</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">是否允許無 Origin 請求（curl、Postman 等）</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">true</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px;">
+                <code>ASPOSE_ALLOWED_ORIGINS</code>
+            </td>
+            <td style="padding: 10px;">
+                <code>--allowed-origins:origins</code>
+            </td>
+            <td style="padding: 10px;">允許的來源域名清單（逗號分隔）</td>
+            <td style="padding: 10px;">-</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<h3>異步任務設定</h3>
+<div class="info-box" style="margin: 15px 0; padding: 15px; background: var(--bg-hover); border-left: 4px solid var(--accent-color); border-radius: 4px;">
+    <strong>異步任務說明：</strong>
+    <p style="margin: 10px 0 0 0;">Tasks 功能支援長時間運行的操作異步執行，適用於大型文檔轉換等耗時任務。預設啟用。</p>
+</div>
+<div class="table-wrapper">
+    <table style="width: 100%; border-collapse: collapse; margin-top: 15px; min-width: 500px;">
+        <thead>
+        <tr style="background: var(--bg-hover);">
+            <th class="accent-border" style="padding: 12px; text-align: left;">環境變數</th>
+            <th class="accent-border" style="padding: 12px; text-align: left;">命令行參數</th>
+            <th class="accent-border" style="padding: 12px; text-align: left;">說明</th>
+            <th class="accent-border" style="padding: 12px; text-align: left;">預設值</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>ASPOSE_TASKS_ENABLED</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>--no-tasks</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">啟用/停用異步任務</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">true</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>ASPOSE_TASKS_MAX_CONCURRENT</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>--tasks-max-concurrent:N</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">最大並行任務數（1-100）</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">5</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>ASPOSE_TASKS_DEFAULT_TTL</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>--tasks-default-ttl:N</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">預設結果保留時間（毫秒）</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">300000（5分鐘）</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px;">
+                <code>ASPOSE_TASKS_MAX_TTL</code>
+            </td>
+            <td style="padding: 10px;">
+                <code>--tasks-max-ttl:N</code>
+            </td>
+            <td style="padding: 10px;">最大結果保留時間（毫秒）</td>
+            <td style="padding: 10px;">3600000（1小時）</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
 <div class="info-box" style="margin-top: 20px;">
     <strong>💡 優先順序</strong>
     <p style="margin-top: 8px; margin-bottom: 0;">命令行參數優先於環境變數。完整參數列表請參考 <a href="https://github.com/xjustloveux/aspose-mcp-server#readme" target="_blank">README</a>。</p>
@@ -1005,7 +1169,7 @@ kubectl get pods -l app=aspose-mcp</pre>
 
 <footer>
     <div class="container">
-        <p>基於 .NET 8.0 和 Aspose.Total 23.10.0 構建</p>
+        <p>基於 .NET 8.0、Aspose.Total 23.10.0 和 MCP SDK 0.6.0 構建</p>
         <p class="footer-links" style="margin-top: 10px;">
             <a href="https://github.com/xjustloveux/aspose-mcp-server" target="_blank">GitHub</a> |
             <a href="https://www.aspose.com/" target="_blank">Aspose</a> |

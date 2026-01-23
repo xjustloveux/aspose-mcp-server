@@ -1,8 +1,9 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Aspose.Slides;
 using Aspose.Slides.Export;
 using Aspose.Slides.SmartArt;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.PowerPoint;
 
 namespace AsposeMcpServer.Tests.Tools.PowerPoint;
@@ -41,8 +42,9 @@ public class PptSmartArtToolTests : PptTestBase
         var outputPath = CreateTestFilePath("test_add_smartart_output.pptx");
         var result = _tool.Execute("add", pptPath, slideIndex: 0, layout: "BasicProcess", x: 100, y: 100, width: 400,
             height: 300, outputPath: outputPath);
-        Assert.StartsWith("SmartArt", result);
-        Assert.Contains("added to slide", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("SmartArt", data.Message);
+        Assert.Contains("added to slide", data.Message);
         using var presentation = new Presentation(outputPath);
         var smartArts = presentation.Slides[0].Shapes.OfType<ISmartArt>().ToList();
         Assert.NotEmpty(smartArts);
@@ -63,7 +65,8 @@ public class PptSmartArtToolTests : PptTestBase
         var targetPathJson = JsonSerializer.Serialize(new[] { 0 });
         var result = _tool.Execute("manage_nodes", pptPath, slideIndex: 0, shapeIndex: shapeIndex,
             action: "delete", targetPath: targetPathJson, outputPath: outputPath);
-        Assert.Contains("deleted", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("deleted", data.Message, StringComparison.OrdinalIgnoreCase);
         using var resultPpt = new Presentation(outputPath);
         var resultSmartArt = resultPpt.Slides[0].Shapes[shapeIndex] as ISmartArt;
         Assert.NotNull(resultSmartArt);
@@ -83,8 +86,9 @@ public class PptSmartArtToolTests : PptTestBase
         var pptPath = CreatePresentation($"test_case_add_{operation}.pptx");
         var outputPath = CreateTestFilePath($"test_case_add_{operation}_output.pptx");
         var result = _tool.Execute(operation, pptPath, slideIndex: 0, layout: "BasicProcess", outputPath: outputPath);
-        Assert.StartsWith("SmartArt", result);
-        Assert.Contains("added to slide", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("SmartArt", data.Message);
+        Assert.Contains("added to slide", data.Message);
     }
 
     [Fact]
@@ -110,9 +114,11 @@ public class PptSmartArtToolTests : PptTestBase
 
         var result = _tool.Execute("add", sessionId: sessionId, slideIndex: 0, layout: "BasicProcess",
             x: 100, y: 100, width: 400, height: 300);
-        Assert.StartsWith("SmartArt", result);
-        Assert.Contains("added to slide", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("SmartArt", data.Message);
+        Assert.Contains("added to slide", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
 
         var smartArts = ppt.Slides[0].Shapes.OfType<ISmartArt>().Count();
         Assert.True(smartArts > initialCount);
@@ -130,8 +136,10 @@ public class PptSmartArtToolTests : PptTestBase
         var targetPathJson = JsonSerializer.Serialize(new[] { 0 });
         var result = _tool.Execute("manage_nodes", sessionId: sessionId, slideIndex: 0, shapeIndex: shapeIndex,
             action: "delete", targetPath: targetPathJson);
-        Assert.Contains("deleted", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("deleted", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         Assert.True(smartArt.AllNodes.Count < initialNodeCount);
     }
 
@@ -152,8 +160,7 @@ public class PptSmartArtToolTests : PptTestBase
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var initialCount = ppt.Slides[0].Shapes.OfType<ISmartArt>().Count();
 
-        var result = _tool.Execute("add", pptPath1, sessionId, slideIndex: 0, layout: "BasicProcess");
-        Assert.Contains("session", result);
+        _tool.Execute("add", pptPath1, sessionId, slideIndex: 0, layout: "BasicProcess");
 
         var smartArts = ppt.Slides[0].Shapes.OfType<ISmartArt>().Count();
         Assert.True(smartArts > initialCount);

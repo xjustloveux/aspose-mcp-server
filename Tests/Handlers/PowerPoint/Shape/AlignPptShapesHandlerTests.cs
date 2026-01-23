@@ -1,6 +1,7 @@
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Shape;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Shape;
 
@@ -89,9 +90,11 @@ public class AlignPptShapesHandlerTests : PptHandlerTestBase
             { "align", "top" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("3", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("3", result.Message);
         AssertModified(context);
     }
 
@@ -113,10 +116,12 @@ public class AlignPptShapesHandlerTests : PptHandlerTestBase
             { "align", "center" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("2", result);
-        Assert.Contains("center", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("2", result.Message);
+        Assert.Contains("center", result.Message);
     }
 
     #endregion
@@ -137,10 +142,12 @@ public class AlignPptShapesHandlerTests : PptHandlerTestBase
             { "align", "left" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Aligned", result);
-        Assert.Contains("2", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Aligned", result.Message);
+        Assert.Contains("2", result.Message);
         AssertModified(context);
     }
 
@@ -164,9 +171,11 @@ public class AlignPptShapesHandlerTests : PptHandlerTestBase
             { "align", align }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains(align, result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains(align, result.Message);
         AssertModified(context);
     }
 

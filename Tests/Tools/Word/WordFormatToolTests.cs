@@ -1,5 +1,7 @@
 using Aspose.Words;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Word.Format;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Word;
 
 namespace AsposeMcpServer.Tests.Tools.Word;
@@ -25,7 +27,10 @@ public class WordFormatToolTests : WordTestBase
     {
         var docPath = CreateWordDocumentWithContent("test_get_run_format.docx", "Test text");
         var result = _tool.Execute("get_run_format", docPath, paragraphIndex: 0, runIndex: 0);
-        Assert.Contains("Font", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<GetRunFormatWordResult>(result);
+        Assert.Equal(0, data.ParagraphIndex);
+        Assert.Equal(0, data.RunIndex);
+        Assert.NotNull(data.FontName);
     }
 
     [Fact]
@@ -49,7 +54,9 @@ public class WordFormatToolTests : WordTestBase
     {
         var docPath = CreateWordDocumentWithContent("test_get_tab_stops.docx", "Test");
         var result = _tool.Execute("get_tab_stops", docPath, paragraphIndex: 0);
-        Assert.Contains("tabStops", result);
+        var data = GetResultData<GetTabStopsWordResult>(result);
+        Assert.NotNull(data.TabStops);
+        Assert.Equal(0, data.SectionIndex);
     }
 
     [Fact]
@@ -105,7 +112,8 @@ public class WordFormatToolTests : WordTestBase
     {
         var docPath = CreateWordDocumentWithContent($"test_case_{operation.Replace("_", "")}.docx", "Test");
         var result = _tool.Execute(operation, docPath, paragraphIndex: 0, runIndex: 0);
-        Assert.Contains("Font", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<GetRunFormatWordResult>(result);
+        Assert.NotNull(data.FontName);
     }
 
     [Fact]
@@ -133,7 +141,10 @@ public class WordFormatToolTests : WordTestBase
         var docPath = CreateWordDocumentWithContent("test_session_get_format.docx", "Session text");
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("get_run_format", sessionId: sessionId, paragraphIndex: 0, runIndex: 0);
-        Assert.Contains("Font", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<GetRunFormatWordResult>(result);
+        Assert.NotNull(data.FontName);
+        var output = GetResultOutput<GetRunFormatWordResult>(result);
+        Assert.Equal(sessionId, output.SessionId);
     }
 
     [Fact]
@@ -141,8 +152,12 @@ public class WordFormatToolTests : WordTestBase
     {
         var docPath = CreateWordDocumentWithContent("test_session_set_format.docx", "Format this text");
         var sessionId = OpenSession(docPath);
-        _tool.Execute("set_run_format", sessionId: sessionId,
+        var result = _tool.Execute("set_run_format", sessionId: sessionId,
             paragraphIndex: 0, runIndex: 0, bold: true, italic: true, fontSize: 16);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("updated", data.Message, StringComparison.OrdinalIgnoreCase);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.Equal(sessionId, output.SessionId);
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         var runs = sessionDoc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
         if (runs.Count > 0)
@@ -158,8 +173,12 @@ public class WordFormatToolTests : WordTestBase
     {
         var docPath = CreateWordDocumentWithContent("test_session_add_tab.docx", "Tab test");
         var sessionId = OpenSession(docPath);
-        _tool.Execute("add_tab_stop", sessionId: sessionId,
+        var result = _tool.Execute("add_tab_stop", sessionId: sessionId,
             paragraphIndex: 0, tabPosition: 72.0, tabAlignment: "left", tabLeader: "none");
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("added", data.Message, StringComparison.OrdinalIgnoreCase);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.Equal(sessionId, output.SessionId);
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         var paragraphs = GetParagraphs(sessionDoc);
         Assert.True(paragraphs.Count > 0);
@@ -172,7 +191,10 @@ public class WordFormatToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("set_paragraph_border", sessionId: sessionId,
             paragraphIndex: 0, borderPosition: "all", lineStyle: "single", lineWidth: 1.5);
-        Assert.Contains("border", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("border", data.Message, StringComparison.OrdinalIgnoreCase);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.Equal(sessionId, output.SessionId);
     }
 
     [Fact]
@@ -188,7 +210,11 @@ public class WordFormatToolTests : WordTestBase
         }
 
         var sessionId = OpenSession(docPath);
-        _tool.Execute("clear_tab_stops", sessionId: sessionId, paragraphIndex: 0);
+        var result = _tool.Execute("clear_tab_stops", sessionId: sessionId, paragraphIndex: 0);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Cleared", data.Message, StringComparison.OrdinalIgnoreCase);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.Equal(sessionId, output.SessionId);
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         var sessionParagraphs = GetParagraphs(sessionDoc);
         Assert.Equal(0, sessionParagraphs[0].ParagraphFormat.TabStops.Count);
@@ -200,7 +226,10 @@ public class WordFormatToolTests : WordTestBase
         var docPath = CreateWordDocumentWithContent("test_session_get_tabs.docx", "Tab test");
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("get_tab_stops", sessionId: sessionId, paragraphIndex: 0);
-        Assert.Contains("tabStops", result);
+        var data = GetResultData<GetTabStopsWordResult>(result);
+        Assert.NotNull(data.TabStops);
+        var output = GetResultOutput<GetTabStopsWordResult>(result);
+        Assert.Equal(sessionId, output.SessionId);
     }
 
     [Fact]
@@ -217,7 +246,10 @@ public class WordFormatToolTests : WordTestBase
         var docPath2 = CreateWordDocumentWithContent("test_session_format.docx", "SessionContent");
         var sessionId = OpenSession(docPath2);
         var result = _tool.Execute("get_run_format", docPath1, sessionId, paragraphIndex: 0, runIndex: 0);
-        Assert.Contains("Font", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<GetRunFormatWordResult>(result);
+        Assert.NotNull(data.FontName);
+        var output = GetResultOutput<GetRunFormatWordResult>(result);
+        Assert.Equal(sessionId, output.SessionId);
     }
 
     #endregion

@@ -1,6 +1,8 @@
 ﻿using System.ComponentModel;
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -8,6 +10,7 @@ namespace AsposeMcpServer.Tools.Excel;
 /// <summary>
 ///     Tool for converting between Excel cell address formats (A1 notation and row/column index).
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Excel.GetCellAddress")]
 [McpServerToolType]
 public class ExcelGetCellAddressTool
 {
@@ -34,13 +37,20 @@ public class ExcelGetCellAddressTool
     /// <param name="column">Column index (0-based, 0 to 16383). Required for from_index.</param>
     /// <returns>A message containing the cell address in both A1 notation and row/column index format.</returns>
     /// <exception cref="ArgumentException">Thrown when parameters are invalid or out of range.</exception>
-    [McpServerTool(Name = "excel_get_cell_address")]
+    [McpServerTool(
+        Name = "excel_get_cell_address",
+        Title = "Excel Cell Address Converter",
+        Destructive = false,
+        Idempotent = true,
+        OpenWorld = false,
+        ReadOnly = true,
+        UseStructuredContent = true)]
     [Description(@"Convert between cell address formats (A1 notation and row/column index).
 
 Usage examples:
 - Convert A1 to index: excel_get_cell_address(operation='from_a1', cellAddress='B2') returns row/column index
 - Convert index to A1: excel_get_cell_address(operation='from_index', row=1, column=1) returns 'B2'")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: from_a1 (convert A1 to index), from_index (convert index to A1)")]
         string operation,
         [Description("Cell address in A1 notation (e.g., 'A1', 'B2', 'AA100'). Required for from_a1.")]
@@ -58,7 +68,8 @@ Usage examples:
             Document = new Workbook()
         };
 
-        return handler.Execute(operationContext, parameters);
+        var result = handler.Execute(operationContext, parameters);
+        return ResultHelper.FinalizeResult((dynamic)result, null, null);
     }
 
     /// <summary>

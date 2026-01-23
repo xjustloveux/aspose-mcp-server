@@ -1,7 +1,8 @@
 using Aspose.Words;
 using Aspose.Words.Notes;
 using AsposeMcpServer.Handlers.Word.Content;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Word.Content;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Content;
 
@@ -22,16 +23,17 @@ public class GetWordStatisticsHandlerTests : WordHandlerTestBase
     #region Basic Statistics Retrieval
 
     [Fact]
-    public void Execute_ReturnsJsonResult()
+    public void Execute_ReturnsResult()
     {
         var doc = CreateDocumentWithText("Test content");
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("{", result);
-        Assert.Contains("}", result);
+        var result = Assert.IsType<GetWordStatisticsResult>(res);
+
+        Assert.NotNull(result);
     }
 
     [Fact]
@@ -41,9 +43,12 @@ public class GetWordStatisticsHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"pages\":", result);
+        var result = Assert.IsType<GetWordStatisticsResult>(res);
+
+        Assert.NotNull(result);
+        Assert.True(result.Pages >= 1);
     }
 
     [Fact]
@@ -53,9 +58,12 @@ public class GetWordStatisticsHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"words\":", result);
+        var result = Assert.IsType<GetWordStatisticsResult>(res);
+
+        Assert.NotNull(result);
+        Assert.True(result.Words >= 5);
     }
 
     [Fact]
@@ -65,9 +73,12 @@ public class GetWordStatisticsHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"characters\":", result);
+        var result = Assert.IsType<GetWordStatisticsResult>(res);
+
+        Assert.NotNull(result);
+        Assert.True(result.Characters >= 4);
     }
 
     [Fact]
@@ -77,9 +88,12 @@ public class GetWordStatisticsHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"charactersWithSpaces\":", result);
+        var result = Assert.IsType<GetWordStatisticsResult>(res);
+
+        Assert.NotNull(result);
+        Assert.True(result.CharactersWithSpaces >= 12);
     }
 
     [Fact]
@@ -89,9 +103,12 @@ public class GetWordStatisticsHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"paragraphs\":", result);
+        var result = Assert.IsType<GetWordStatisticsResult>(res);
+
+        Assert.NotNull(result);
+        Assert.True(result.Paragraphs >= 1);
     }
 
     [Fact]
@@ -101,9 +118,12 @@ public class GetWordStatisticsHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"lines\":", result);
+        var result = Assert.IsType<GetWordStatisticsResult>(res);
+
+        Assert.NotNull(result);
+        Assert.True(result.Lines >= 1);
     }
 
     [Fact]
@@ -113,9 +133,12 @@ public class GetWordStatisticsHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"tables\":", result);
+        var result = Assert.IsType<GetWordStatisticsResult>(res);
+
+        Assert.NotNull(result);
+        Assert.Equal(0, result.Tables);
     }
 
     [Fact]
@@ -125,9 +148,12 @@ public class GetWordStatisticsHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"images\":", result);
+        var result = Assert.IsType<GetWordStatisticsResult>(res);
+
+        Assert.NotNull(result);
+        Assert.Equal(0, result.Images);
     }
 
     [Fact]
@@ -137,9 +163,12 @@ public class GetWordStatisticsHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"shapes\":", result);
+        var result = Assert.IsType<GetWordStatisticsResult>(res);
+
+        Assert.NotNull(result);
+        Assert.Equal(0, result.Shapes);
     }
 
     [Fact]
@@ -161,9 +190,12 @@ public class GetWordStatisticsHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"statisticsUpdated\": true", result);
+        var result = Assert.IsType<GetWordStatisticsResult>(res);
+
+        Assert.NotNull(result);
+        Assert.True(result.StatisticsUpdated);
     }
 
     #endregion
@@ -180,10 +212,13 @@ public class GetWordStatisticsHandlerTests : WordHandlerTestBase
             { "includeFootnotes", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"footnotes\":", result);
-        Assert.Contains("\"footnotesIncluded\": true", result);
+        var result = Assert.IsType<GetWordStatisticsResult>(res);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.Footnotes);
+        Assert.True(result.FootnotesIncluded);
     }
 
     [Fact]
@@ -196,9 +231,12 @@ public class GetWordStatisticsHandlerTests : WordHandlerTestBase
             { "includeFootnotes", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"footnotesIncluded\": false", result);
+        var result = Assert.IsType<GetWordStatisticsResult>(res);
+
+        Assert.NotNull(result);
+        Assert.False(result.FootnotesIncluded);
     }
 
     [Fact]
@@ -208,9 +246,12 @@ public class GetWordStatisticsHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"footnotesIncluded\": true", result);
+        var result = Assert.IsType<GetWordStatisticsResult>(res);
+
+        Assert.NotNull(result);
+        Assert.True(result.FootnotesIncluded);
     }
 
     #endregion
@@ -224,9 +265,12 @@ public class GetWordStatisticsHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"tables\": 1", result);
+        var result = Assert.IsType<GetWordStatisticsResult>(res);
+
+        Assert.NotNull(result);
+        Assert.Equal(1, result.Tables);
     }
 
     [Fact]
@@ -240,9 +284,12 @@ public class GetWordStatisticsHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"paragraphs\":", result);
+        var result = Assert.IsType<GetWordStatisticsResult>(res);
+
+        Assert.NotNull(result);
+        Assert.True(result.Paragraphs >= 3);
     }
 
     #endregion

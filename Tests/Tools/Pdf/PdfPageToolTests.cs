@@ -1,6 +1,7 @@
-using System.Text.Json;
-using Aspose.Pdf;
-using AsposeMcpServer.Tests.Helpers;
+﻿using Aspose.Pdf;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Pdf.Page;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Pdf;
 
 namespace AsposeMcpServer.Tests.Tools.Pdf;
@@ -38,8 +39,8 @@ public class PdfPageToolTests : PdfTestBase
         var outputPath = CreateTestFilePath("test_add_output.pdf");
 
         var result = _tool.Execute("add", pdfPath, outputPath: outputPath, count: 1);
-
-        Assert.StartsWith("Added 1 page(s)", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Added 1 page(s)", data.Message);
         using var document = new Document(outputPath);
         Assert.Equal(3, document.Pages.Count);
     }
@@ -51,8 +52,8 @@ public class PdfPageToolTests : PdfTestBase
         var outputPath = CreateTestFilePath("test_delete_output.pdf");
 
         var result = _tool.Execute("delete", pdfPath, outputPath: outputPath, pageIndex: 1);
-
-        Assert.StartsWith("Deleted page 1", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Deleted page 1", data.Message);
         using var document = new Document(outputPath);
         Assert.Single(document.Pages);
     }
@@ -65,8 +66,8 @@ public class PdfPageToolTests : PdfTestBase
 
         var result = _tool.Execute("rotate", pdfPath, outputPath: outputPath,
             pageIndex: 1, rotation: 90);
-
-        Assert.StartsWith("Rotated 1 page(s) by 90 degrees", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Rotated 1 page(s) by 90 degrees", data.Message);
         using var document = new Document(outputPath);
         Assert.Equal(Rotation.on90, document.Pages[1].Rotate);
     }
@@ -76,10 +77,10 @@ public class PdfPageToolTests : PdfTestBase
     {
         var pdfPath = CreateTestPdf("test_info.pdf");
         var result = _tool.Execute("get_info", pdfPath);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
-        Assert.Equal(2, json.GetProperty("count").GetInt32());
-        Assert.True(json.TryGetProperty("items", out var items));
-        Assert.Equal(2, items.GetArrayLength());
+        var data = GetResultData<GetPdfPageInfoResult>(result);
+        Assert.Equal(2, data.Count);
+        Assert.NotNull(data.Items);
+        Assert.Equal(2, data.Items.Count);
     }
 
     [Fact]
@@ -87,10 +88,10 @@ public class PdfPageToolTests : PdfTestBase
     {
         var pdfPath = CreateTestPdf("test_details.pdf");
         var result = _tool.Execute("get_details", pdfPath, pageIndex: 1);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
-        Assert.Equal(1, json.GetProperty("pageIndex").GetInt32());
-        Assert.True(json.TryGetProperty("width", out _));
-        Assert.True(json.TryGetProperty("height", out _));
+        var data = GetResultData<GetPdfPageDetailsResult>(result);
+        Assert.Equal(1, data.PageIndex);
+        Assert.True(data.Width > 0);
+        Assert.True(data.Height > 0);
     }
 
     #endregion
@@ -107,8 +108,8 @@ public class PdfPageToolTests : PdfTestBase
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.pdf");
 
         var result = _tool.Execute(operation, pdfPath, outputPath: outputPath, count: 1);
-
-        Assert.StartsWith("Added 1 page(s)", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Added 1 page(s)", data.Message);
     }
 
     [Fact]
@@ -136,9 +137,11 @@ public class PdfPageToolTests : PdfTestBase
         var sessionId = OpenSession(pdfPath);
 
         var result = _tool.Execute("get_info", sessionId: sessionId);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
+        var data = GetResultData<GetPdfPageInfoResult>(result);
 
-        Assert.Equal(2, json.GetProperty("count").GetInt32());
+        Assert.Equal(2, data.Count);
+        var output = GetResultOutput<GetPdfPageInfoResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -150,9 +153,10 @@ public class PdfPageToolTests : PdfTestBase
         var countBefore = docBefore.Pages.Count;
 
         var result = _tool.Execute("add", sessionId: sessionId, count: 1);
-
-        Assert.StartsWith("Added 1 page(s)", result);
-        Assert.Contains(sessionId, result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Added 1 page(s)", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var docAfter = SessionManager.GetDocument<Document>(sessionId);
         Assert.Equal(countBefore + 1, docAfter.Pages.Count);
     }
@@ -166,9 +170,10 @@ public class PdfPageToolTests : PdfTestBase
         var countBefore = docBefore.Pages.Count;
 
         var result = _tool.Execute("delete", sessionId: sessionId, pageIndex: 1);
-
-        Assert.StartsWith("Deleted page 1", result);
-        Assert.Contains(sessionId, result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Deleted page 1", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var docAfter = SessionManager.GetDocument<Document>(sessionId);
         Assert.Equal(countBefore - 1, docAfter.Pages.Count);
     }
@@ -180,9 +185,10 @@ public class PdfPageToolTests : PdfTestBase
         var sessionId = OpenSession(pdfPath);
 
         var result = _tool.Execute("rotate", sessionId: sessionId, pageIndex: 1, rotation: 90);
-
-        Assert.StartsWith("Rotated 1 page(s) by 90 degrees", result);
-        Assert.Contains(sessionId, result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Rotated 1 page(s) by 90 degrees", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var doc = SessionManager.GetDocument<Document>(sessionId);
         Assert.Equal(Rotation.on90, doc.Pages[1].Rotate);
     }
@@ -194,9 +200,11 @@ public class PdfPageToolTests : PdfTestBase
         var sessionId = OpenSession(pdfPath);
 
         var result = _tool.Execute("get_details", sessionId: sessionId, pageIndex: 1);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
+        var data = GetResultData<GetPdfPageDetailsResult>(result);
 
-        Assert.Equal(1, json.GetProperty("pageIndex").GetInt32());
+        Assert.Equal(1, data.PageIndex);
+        var output = GetResultOutput<GetPdfPageDetailsResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -213,9 +221,9 @@ public class PdfPageToolTests : PdfTestBase
         var sessionId = OpenSession(pdfPath2);
 
         var result = _tool.Execute("get_info", pdfPath1, sessionId);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
+        var data = GetResultData<GetPdfPageInfoResult>(result);
 
-        Assert.Equal(3, json.GetProperty("count").GetInt32());
+        Assert.Equal(3, data.Count);
     }
 
     #endregion

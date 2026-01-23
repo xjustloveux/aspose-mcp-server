@@ -1,12 +1,15 @@
-using System.Text;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Word.Content;
 
 namespace AsposeMcpServer.Handlers.Word.Content;
 
 /// <summary>
 ///     Handler for getting Word document content as plain text with optional pagination.
 /// </summary>
+[ResultType(typeof(GetWordContentResult))]
 public class GetWordContentHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class GetWordContentHandler : OperationHandlerBase<Document>
     ///     Optional: maxChars, offset
     /// </param>
     /// <returns>Document content as plain text.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractGetContentParameters(parameters);
 
@@ -45,17 +48,13 @@ public class GetWordContentHandler : OperationHandlerBase<Document>
             content = p.Offset > 0 ? fullText.Substring(p.Offset) : fullText;
         }
 
-        var sb = new StringBuilder();
-        sb.AppendLine("=== Document Content ===");
-        if (p.MaxChars.HasValue || p.Offset > 0)
+        return new GetWordContentResult
         {
-            sb.AppendLine($"[Showing chars {p.Offset} to {p.Offset + content.Length} of {totalLength}]");
-            if (hasMore)
-                sb.AppendLine($"[More content available, use offset={p.Offset + content.Length} to continue]");
-        }
-
-        sb.AppendLine(content);
-        return sb.ToString();
+            Content = content,
+            TotalLength = totalLength,
+            Offset = p.Offset,
+            HasMore = hasMore
+        };
     }
 
     /// <summary>

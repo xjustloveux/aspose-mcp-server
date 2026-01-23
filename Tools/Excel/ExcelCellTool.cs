@@ -1,7 +1,9 @@
 ﻿using System.ComponentModel;
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Excel;
 /// <summary>
 ///     Unified tool for managing Excel cells (write, edit, get, clear)
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Excel.Cell")]
 [McpServerToolType]
 public class ExcelCellTool
 {
@@ -59,7 +62,14 @@ public class ExcelCellTool
     /// <param name="clearFormat">Clear cell format (optional, for clear).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operation.</returns>
     /// <exception cref="ArgumentException">Thrown when cell is not provided or the operation is unknown.</exception>
-    [McpServerTool(Name = "excel_cell")]
+    [McpServerTool(
+        Name = "excel_cell",
+        Title = "Excel Cell Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage Excel cells. Supports 4 operations: write, edit, get, clear.
 
 Usage examples:
@@ -67,7 +77,7 @@ Usage examples:
 - Edit cell: excel_cell(operation='edit', path='book.xlsx', cell='A1', value='Updated')
 - Get cell: excel_cell(operation='get', path='book.xlsx', cell='A1')
 - Clear cell: excel_cell(operation='clear', path='book.xlsx', cell='A1')")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: write, edit, get, clear")]
         string operation,
         [Description("Excel file path (required if no sessionId)")]
@@ -115,13 +125,10 @@ Usage examples:
 
         var result = handler.Execute(operationContext, parameters);
 
-        if (string.Equals(operation, "get", StringComparison.OrdinalIgnoreCase))
-            return result;
-
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

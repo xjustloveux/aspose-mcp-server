@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Excel;
 /// <summary>
 ///     Unified tool for managing Excel freeze panes (freeze/unfreeze/get).
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Excel.FreezePanes")]
 [McpServerToolType]
 public class ExcelFreezePanesTool
 {
@@ -52,14 +55,21 @@ public class ExcelFreezePanesTool
     /// <param name="column">Number of columns to freeze from left (0-based, required for freeze).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "excel_freeze_panes")]
+    [McpServerTool(
+        Name = "excel_freeze_panes",
+        Title = "Excel Freeze Panes Operations",
+        Destructive = false,
+        Idempotent = true,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage Excel freeze panes. Supports 3 operations: freeze, unfreeze, get.
 
 Usage examples:
 - Freeze panes: excel_freeze_panes(operation='freeze', path='book.xlsx', row=1, column=1)
 - Unfreeze panes: excel_freeze_panes(operation='unfreeze', path='book.xlsx')
 - Get freeze status: excel_freeze_panes(operation='get', path='book.xlsx')")]
-    public string Execute(
+    public object Execute(
         [Description(@"Operation to perform.
 - 'freeze': Freeze panes at specified row and column (required params: path, row, column)
 - 'unfreeze': Remove freeze panes (required params: path)
@@ -97,12 +107,12 @@ Usage examples:
         var result = handler.Execute(operationContext, parameters);
 
         if (string.Equals(operation, "get", StringComparison.OrdinalIgnoreCase))
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
 using AsposeMcpServer.Core.Tools;
@@ -11,6 +12,7 @@ namespace AsposeMcpServer.Tools.Word;
 ///     Unified tool for managing Word document properties (get, set)
 ///     Merges: WordGetDocumentPropertiesTool, WordSetDocumentPropertiesTool, WordSetPropertiesTool
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Word.Properties")]
 [McpServerToolType]
 public class WordPropertiesTool : PropertiesToolBase<Document>
 {
@@ -43,7 +45,14 @@ public class WordPropertiesTool : PropertiesToolBase<Document>
     /// <param name="customProperties">Custom properties as JSON string (for set).</param>
     /// <returns>Document properties as JSON for get, or a success message for set operations.</returns>
     /// <exception cref="ArgumentException">Thrown when the operation is unknown.</exception>
-    [McpServerTool(Name = "word_properties")]
+    [McpServerTool(
+        Name = "word_properties",
+        Title = "Word Properties Operations",
+        Destructive = false,
+        Idempotent = true,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Get or set Word document properties (metadata). Supports 2 operations: get, set.
 
 Usage examples:
@@ -54,7 +63,7 @@ Notes:
 - The 'set' operation is for content metadata (title, author, subject, etc.), not for statistics (word count, page count)
 - Statistics like word count and page count are automatically calculated by Word and cannot be manually set
 - Custom properties support multiple types: string, number (integer/double), boolean, and datetime (ISO 8601 format)")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: get, set")] string operation,
         [Description("Document file path (required if no sessionId)")]
         string? path = null,
@@ -90,8 +99,7 @@ Notes:
             sessionId,
             path,
             outputPath,
-            parameters,
-            op => string.Equals(op, "get", StringComparison.OrdinalIgnoreCase));
+            parameters);
     }
 
     /// <summary>

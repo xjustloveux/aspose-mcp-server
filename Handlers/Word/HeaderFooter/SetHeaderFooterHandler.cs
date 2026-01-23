@@ -1,5 +1,8 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 using Section = Aspose.Words.Section;
 
@@ -8,6 +11,7 @@ namespace AsposeMcpServer.Handlers.Word.HeaderFooter;
 /// <summary>
 ///     Handler for setting both headers and footers in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetHeaderFooterHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -23,7 +27,7 @@ public class SetHeaderFooterHandler : OperationHandlerBase<Document>
     ///     autoTabStops, clearExisting, clearTextOnly
     /// </param>
     /// <returns>Success message.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractSetHeaderFooterParameters(parameters);
 
@@ -52,7 +56,7 @@ public class SetHeaderFooterHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success("Header and footer set");
+        return new SuccessResult { Message = "Header and footer set" };
     }
 
     /// <summary>

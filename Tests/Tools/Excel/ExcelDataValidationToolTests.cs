@@ -1,5 +1,7 @@
-using Aspose.Cells;
-using AsposeMcpServer.Tests.Helpers;
+﻿using Aspose.Cells;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Excel.DataValidation;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Excel;
 
 namespace AsposeMcpServer.Tests.Tools.Excel;
@@ -40,7 +42,8 @@ public class ExcelDataValidationToolTests : ExcelTestBase
         var outputPath = CreateTestFilePath("test_add_list_output.xlsx");
         var result = _tool.Execute("add", workbookPath, range: "A1:A10", validationType: "List",
             formula1: "Option1,Option2,Option3", outputPath: outputPath);
-        Assert.StartsWith("Data validation added", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Data validation added", data.Message);
         using var workbook = new Workbook(outputPath);
         var validation = workbook.Worksheets[0].Validations[^1];
         Assert.Equal(ValidationType.List, validation.Type);
@@ -51,7 +54,8 @@ public class ExcelDataValidationToolTests : ExcelTestBase
     {
         var workbookPath = CreateWorkbookWithValidation("test_get.xlsx");
         var result = _tool.Execute("get", workbookPath);
-        Assert.Contains("count", result);
+        var data = GetResultData<GetDataValidationsResult>(result);
+        Assert.True(data.Count >= 0);
     }
 
     [Fact]
@@ -61,7 +65,8 @@ public class ExcelDataValidationToolTests : ExcelTestBase
         var outputPath = CreateTestFilePath("test_edit_output.xlsx");
         var result = _tool.Execute("edit", workbookPath, validationIndex: 0, validationType: "WholeNumber",
             formula1: "0", formula2: "100", outputPath: outputPath);
-        Assert.StartsWith("Edited data validation #0", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Edited data validation #0", data.Message);
         using var workbook = new Workbook(outputPath);
         Assert.Equal(ValidationType.WholeNumber, workbook.Worksheets[0].Validations[0].Type);
     }
@@ -72,7 +77,8 @@ public class ExcelDataValidationToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithValidation("test_delete.xlsx");
         var outputPath = CreateTestFilePath("test_delete_output.xlsx");
         var result = _tool.Execute("delete", workbookPath, validationIndex: 0, outputPath: outputPath);
-        Assert.StartsWith("Deleted data validation #0", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Deleted data validation #0", data.Message);
         using var workbook = new Workbook(outputPath);
         Assert.Empty(workbook.Worksheets[0].Validations);
     }
@@ -84,7 +90,8 @@ public class ExcelDataValidationToolTests : ExcelTestBase
         var outputPath = CreateTestFilePath("test_set_messages_output.xlsx");
         var result = _tool.Execute("set_messages", workbookPath, validationIndex: 0,
             inputMessage: "Please select a value", errorMessage: "Invalid value selected", outputPath: outputPath);
-        Assert.StartsWith("Updated data validation #0", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Updated data validation #0", data.Message);
         using var workbook = new Workbook(outputPath);
         var validation = workbook.Worksheets[0].Validations[0];
         Assert.Equal("Please select a value", validation.InputMessage);
@@ -104,7 +111,8 @@ public class ExcelDataValidationToolTests : ExcelTestBase
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.xlsx");
         var result = _tool.Execute(operation, workbookPath, range: "A1:A10", validationType: "List", formula1: "A,B,C",
             outputPath: outputPath);
-        Assert.StartsWith("Data validation added", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Data validation added", data.Message);
     }
 
     [Fact]
@@ -126,8 +134,10 @@ public class ExcelDataValidationToolTests : ExcelTestBase
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("add", sessionId: sessionId, range: "A1:A10", validationType: "List",
             formula1: "SessionOpt1,SessionOpt2");
-        Assert.StartsWith("Data validation added", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Data validation added", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.True(workbook.Worksheets[0].Validations.Count > 0);
     }
@@ -138,7 +148,10 @@ public class ExcelDataValidationToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithValidation("test_session_get.xlsx");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("get", sessionId: sessionId);
-        Assert.Contains("count", result);
+        var data = GetResultData<GetDataValidationsResult>(result);
+        Assert.True(data.Count >= 0);
+        var output = GetResultOutput<GetDataValidationsResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -170,7 +183,8 @@ public class ExcelDataValidationToolTests : ExcelTestBase
 
         var sessionId = OpenSession(sessionWorkbook);
         var result = _tool.Execute("get", pathWorkbook, sessionId);
-        Assert.Contains("SessionSheet", result);
+        var data = GetResultData<GetDataValidationsResult>(result);
+        Assert.Contains("SessionSheet", data.WorksheetName);
     }
 
     #endregion

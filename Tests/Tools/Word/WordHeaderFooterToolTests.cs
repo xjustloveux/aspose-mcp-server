@@ -1,5 +1,7 @@
-using Aspose.Words;
-using AsposeMcpServer.Tests.Helpers;
+﻿using Aspose.Words;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Word.HeaderFooter;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Word;
 
 namespace AsposeMcpServer.Tests.Tools.Word;
@@ -62,7 +64,8 @@ public class WordHeaderFooterToolTests : WordTestBase
         doc.Save(docPath);
 
         var result = _tool.Execute("get", docPath);
-        Assert.Contains("Header", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<GetHeadersFootersResult>(result);
+        Assert.True(data.TotalSections > 0);
     }
 
     [Fact]
@@ -113,7 +116,8 @@ public class WordHeaderFooterToolTests : WordTestBase
         var docPath = CreateWordDocument($"test_case_{operation.Replace("_", "")}.docx");
         var outputPath = CreateTestFilePath($"test_case_{operation.Replace("_", "")}_output.docx");
         var result = _tool.Execute(operation, docPath, outputPath: outputPath, headerLeft: "Test");
-        Assert.StartsWith("Header text set successfully", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Header text set successfully", data.Message);
     }
 
     [Fact]
@@ -142,7 +146,8 @@ public class WordHeaderFooterToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("set_header_text", sessionId: sessionId,
             headerLeft: "Session Left", headerCenter: "Session Center");
-        Assert.Contains("Header", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Header", data.Message, StringComparison.OrdinalIgnoreCase);
 
         var doc = SessionManager.GetDocument<Document>(sessionId);
         var header = doc.FirstSection.HeadersFooters[HeaderFooterType.HeaderPrimary];
@@ -157,7 +162,8 @@ public class WordHeaderFooterToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("set_footer_text", sessionId: sessionId,
             footerLeft: "Session Footer", footerRight: "{PAGE}");
-        Assert.Contains("Footer", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Footer", data.Message, StringComparison.OrdinalIgnoreCase);
 
         var doc = SessionManager.GetDocument<Document>(sessionId);
         var footer = doc.FirstSection.HeadersFooters[HeaderFooterType.FooterPrimary];
@@ -177,7 +183,10 @@ public class WordHeaderFooterToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("get", sessionId: sessionId);
-        Assert.Contains("Header", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<GetHeadersFootersResult>(result);
+        Assert.True(data.TotalSections > 0);
+        var output = GetResultOutput<GetHeadersFootersResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -186,7 +195,8 @@ public class WordHeaderFooterToolTests : WordTestBase
         var docPath = CreateWordDocument("test_session_header_line.docx");
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("set_header_line", sessionId: sessionId, lineStyle: "double");
-        Assert.StartsWith("Header line set", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Header line set", data.Message);
 
         var doc = SessionManager.GetDocument<Document>(sessionId);
         Assert.NotNull(doc.FirstSection.HeadersFooters[HeaderFooterType.HeaderPrimary]);
@@ -198,7 +208,8 @@ public class WordHeaderFooterToolTests : WordTestBase
         var docPath = CreateWordDocument("test_session_footer_line.docx");
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("set_footer_line", sessionId: sessionId, lineStyle: "thick");
-        Assert.StartsWith("Footer line set", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Footer line set", data.Message);
 
         var doc = SessionManager.GetDocument<Document>(sessionId);
         Assert.NotNull(doc.FirstSection.HeadersFooters[HeaderFooterType.FooterPrimary]);
@@ -211,7 +222,8 @@ public class WordHeaderFooterToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("set_header_footer", sessionId: sessionId,
             headerCenter: "Session Header", footerCenter: "Session Footer");
-        Assert.StartsWith("Header and footer set", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Header and footer set", data.Message);
 
         var doc = SessionManager.GetDocument<Document>(sessionId);
         Assert.NotNull(doc.FirstSection.HeadersFooters[HeaderFooterType.HeaderPrimary]);
@@ -245,8 +257,10 @@ public class WordHeaderFooterToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath2);
         var result = _tool.Execute("get", docPath1, sessionId);
-        Assert.Contains("Session Header Unique", result);
-        Assert.DoesNotContain("Path Header", result);
+        var data = GetResultData<GetHeadersFootersResult>(result);
+        Assert.True(data.TotalSections > 0);
+        var output = GetResultOutput<GetHeadersFootersResult>(result);
+        Assert.True(output.IsSession);
     }
 
     #endregion

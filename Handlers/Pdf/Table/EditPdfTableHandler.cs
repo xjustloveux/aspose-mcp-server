@@ -1,12 +1,15 @@
 using Aspose.Pdf;
 using Aspose.Pdf.Text;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.Table;
 
 /// <summary>
 ///     Handler for editing tables in PDF documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class EditPdfTableHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class EditPdfTableHandler : OperationHandlerBase<Document>
     ///     Optional: cellRow, cellColumn, cellValue
     /// </param>
     /// <returns>Success message with table edit details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractEditParameters(parameters);
 
@@ -40,7 +43,7 @@ public class EditPdfTableHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Edited table {p.TableIndex}.");
+        return new SuccessResult { Message = $"Edited table {p.TableIndex}." };
     }
 
     /// <summary>

@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.DataOperations;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Excel.DataOperations;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.DataOperations;
 
@@ -32,10 +33,13 @@ public class FindReplaceHandlerTests : ExcelHandlerTestBase
             { "replaceText", "Hi" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("replaced", result.ToLower());
-        Assert.Contains("2", result);
+        var result = Assert.IsType<FindReplaceResult>(res);
+
+        Assert.Equal("Hello", result.FindText);
+        Assert.Equal("Hi", result.ReplaceText);
+        Assert.Equal(2, result.ReplacementCount);
         Assert.Equal("Hi World", workbook.Worksheets[0].Cells["A1"].StringValue);
         Assert.Equal("Hi Again", workbook.Worksheets[0].Cells["A2"].StringValue);
         AssertModified(context);
@@ -55,8 +59,11 @@ public class FindReplaceHandlerTests : ExcelHandlerTestBase
             { "sheetIndex", 1 }
         });
 
-        _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
+        var result = Assert.IsType<FindReplaceResult>(res);
+
+        Assert.Equal(1, result.ReplacementCount);
         Assert.Equal("Test", workbook.Worksheets[0].Cells["A1"].StringValue);
         Assert.Equal("Changed", workbook.Worksheets[1].Cells["A1"].StringValue);
     }
@@ -75,8 +82,11 @@ public class FindReplaceHandlerTests : ExcelHandlerTestBase
             { "matchCase", true }
         });
 
-        _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
+        var result = Assert.IsType<FindReplaceResult>(res);
+
+        Assert.Equal(1, result.ReplacementCount);
         Assert.Equal("Hi", workbook.Worksheets[0].Cells["A1"].StringValue);
         Assert.Equal("hello", workbook.Worksheets[0].Cells["A2"].StringValue);
     }
@@ -95,8 +105,11 @@ public class FindReplaceHandlerTests : ExcelHandlerTestBase
             { "matchEntireCell", true }
         });
 
-        _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
+        var result = Assert.IsType<FindReplaceResult>(res);
+
+        Assert.Equal(1, result.ReplacementCount);
         Assert.Equal("Changed", workbook.Worksheets[0].Cells["A1"].StringValue);
         Assert.Equal("Test Data", workbook.Worksheets[0].Cells["A2"].StringValue);
     }
@@ -129,6 +142,50 @@ public class FindReplaceHandlerTests : ExcelHandlerTestBase
         });
 
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+    }
+
+    #endregion
+
+    #region Result Properties
+
+    [Fact]
+    public void Execute_ReturnsCorrectProperties()
+    {
+        var workbook = CreateEmptyWorkbook();
+        workbook.Worksheets[0].Cells["A1"].PutValue("Original Text");
+        var context = CreateContext(workbook);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "findText", "Original" },
+            { "replaceText", "New" }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<FindReplaceResult>(res);
+
+        Assert.Equal("Original", result.FindText);
+        Assert.Equal("New", result.ReplaceText);
+        Assert.Equal(1, result.ReplacementCount);
+    }
+
+    [Fact]
+    public void Execute_WithNoMatches_ReturnsZeroCount()
+    {
+        var workbook = CreateEmptyWorkbook();
+        workbook.Worksheets[0].Cells["A1"].PutValue("Hello World");
+        var context = CreateContext(workbook);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "findText", "NotFound" },
+            { "replaceText", "Replaced" }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<FindReplaceResult>(res);
+
+        Assert.Equal(0, result.ReplacementCount);
     }
 
     #endregion

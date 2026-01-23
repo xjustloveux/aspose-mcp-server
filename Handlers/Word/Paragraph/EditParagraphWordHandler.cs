@@ -1,13 +1,17 @@
 using System.Text.Json.Nodes;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Paragraph;
 
 /// <summary>
 ///     Handler for editing paragraphs in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class EditParagraphWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -24,7 +28,7 @@ public class EditParagraphWordHandler : OperationHandlerBase<Document>
     ///     lineSpacing, lineSpacingRule, tabStops
     /// </param>
     /// <returns>Success message.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var editParams = ExtractEditParagraphParameters(parameters);
 
@@ -58,7 +62,7 @@ public class EditParagraphWordHandler : OperationHandlerBase<Document>
 
         var resultMsg = $"Paragraph {resolvedIndex} format edited successfully";
         if (!string.IsNullOrEmpty(editParams.Text)) resultMsg += ", text content updated";
-        return resultMsg;
+        return new SuccessResult { Message = resultMsg };
     }
 
     /// <summary>

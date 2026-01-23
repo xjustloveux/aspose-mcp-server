@@ -112,30 +112,82 @@
         │ ├── Excel/ Excel 處理器
         │ ├── PowerPoint/ PowerPoint 處理器
         │ └── Pdf/ PDF 處理器
+        ├── Helpers/ 🛠️ 通用輔助工具
+        │ ├── Excel/ Excel 專用 Helper
+        │ ├── Word/ Word 專用 Helper
+        │ ├── PowerPoint/ PowerPoint 專用 Helper
+        │ └── Pdf/ PDF 專用 Helper
+        ├── Results/ 📊 結果類型定義
+        │ ├── Common/ 通用結果類型
+        │ ├── Word/ Word 操作結果
+        │ ├── Excel/ Excel 操作結果
+        │ ├── PowerPoint/ PowerPoint 操作結果
+        │ └── Pdf/ PDF 操作結果
         ├── Core/ 🔧 MCP 伺服器核心
         │ ├── Handlers/ Handler 基礎架構
-        │ ├── Helpers/ 通用輔助工具
-        │ ├── Security/ 認證模組
+        │ ├── Security/ 安全模組（認證、Origin 驗證）
         │ ├── Session/ Session 管理模組
+        │ ├── Tasks/ ⏱️ 異步任務模組
         │ ├── Tracking/ 追蹤模組
         │ ├── Transport/ 傳輸層模組
-        │ ├── ServerConfig.cs - 伺服器配置
-        │ └── LicenseManager.cs - 授權管理
+        │ └── ShapeDetailProviders/ PowerPoint 形狀詳細資訊提供者
         ├── Tests/ 🧪 單元測試
         │ ├── Core/ 核心功能測試
-        │ ├── Handlers/ Handler 測試（408 個測試類）
+        │ ├── Handlers/ Handler 測試
         │ ├── Tools/ 工具測試
-        │ │ ├── Word/ 24 個測試類
-        │ │ ├── Excel/ 25 個測試類
-        │ │ ├── PowerPoint/ 21 個測試類
-        │ │ ├── Pdf/ 15 個測試類
-        │ │ └── Conversion/ 2 個測試類
-        │ └── Helpers/ 測試基礎設施
+        │ ├── Helpers/ Helper 單元測試
+        │ └── Infrastructure/ 測試基礎設施
         ├── deploy/ 🚢 部署配置
         ├── docs/ 📚 GitHub Pages 文檔
         ├── .github/workflows/ 🔄 GitHub Actions
         └── bin/ ❌ 本地編譯輸出（不在版本控制）
     </div>
+</div>
+
+<div class="section">
+    <h2>🏗️ 架構設計</h2>
+
+    <h3>Tool-Handler 模式</h3>
+    <p>專案採用 Tool-Handler 分離架構，Tool 負責 MCP 介面，Handler 負責業務邏輯：</p>
+    <div class="structure-tree">
+        Tool.Execute(operation, ...)
+        ↓
+        HandlerRegistry.GetHandler(operation)
+        ↓
+        Handler.Execute(context, parameters)
+        ↓
+        ResultHelper.FinalizeResult(result, context)
+        ↓
+        結構化輸出（含 outputSchema）
+    </div>
+
+    <h3>結構化輸出（outputSchema）</h3>
+    <p>所有 Handler 回傳強型別結果物件，SDK 自動生成 <code>outputSchema</code>：</p>
+    <ul style="margin-top: 15px; padding-left: 25px;">
+        <li><code>[ResultType(typeof(TResult))]</code> - Handler 聲明結果類型</li>
+        <li><code>[ToolHandlerMapping("namespace")]</code> - Tool 聲明對應的 Handler namespace</li>
+        <li><code>OutputSchemaGenerator</code> - 從 Handler namespace 收集結果類型，生成 <code>oneOf</code> JSON Schema</li>
+    </ul>
+
+    <h3>Tool Annotations</h3>
+    <p>所有工具使用 MCP SDK 0.6.0 的 Tool Annotations 描述行為特性：</p>
+    <ul style="margin-top: 15px; padding-left: 25px;">
+        <li><code>Title</code> - 人類可讀的工具標題</li>
+        <li><code>ReadOnly</code> - 是否只讀取不修改</li>
+        <li><code>Destructive</code> - 是否可能造成破壞性變更</li>
+        <li><code>Idempotent</code> - 重複調用是否產生相同結果</li>
+        <li><code>OpenWorld = false</code> - 所有工具都是本地檔案操作</li>
+    </ul>
+
+    <h3>結果類型目錄結構</h3>
+    <p>結果類型按文檔類型和操作類別組織在 <code>Results/</code>：</p>
+    <ul style="margin-top: 15px; padding-left: 25px;">
+        <li><code>Common/</code> - 通用結果類型（SuccessResult 等）</li>
+        <li><code>Word/Content/</code> - Word 內容操作結果</li>
+        <li><code>Excel/Cell/</code> - Excel 儲存格操作結果</li>
+        <li><code>PowerPoint/Slide/</code> - PowerPoint 投影片操作結果</li>
+        <li><code>Pdf/Page/</code> - PDF 頁面操作結果</li>
+    </ul>
 </div>
 
 <div class="section">
@@ -326,7 +378,8 @@ cd aspose-mcp-server">
         <li><code>Tests/Tools/PowerPoint/</code> - PowerPoint 工具測試（21 個測試類）</li>
         <li><code>Tests/Tools/Pdf/</code> - PDF 工具測試（15 個測試類）</li>
         <li><code>Tests/Tools/Conversion/</code> - 轉換工具測試（2 個測試類）</li>
-        <li><code>Tests/Helpers/</code> - 測試基礎設施（TestBase、WordTestBase、ExcelTestBase、PdfTestBase、HandlerTestBase）</li>
+        <li><code>Tests/Helpers/</code> - Helper 單元測試（Excel、Word、PowerPoint、PDF Helper 測試）</li>
+        <li><code>Tests/Infrastructure/</code> - 測試基礎設施（TestBase、WordTestBase、ExcelTestBase、PdfTestBase、HandlerTestBase）</li>
     </ul>
 
     <h3>CI/CD 集成</h3>
@@ -394,8 +447,11 @@ cd aspose-mcp-server">
     <h3>Handlers/</h3>
     <p>操作處理器：407 個 Handler 實作業務邏輯。每個 Handler 對應一個操作（如 AddWordBookmarkHandler），並透過 HandlerRegistry 註冊。100% 單元測試覆蓋（408 個測試類）。</p>
 
-    <h3>Core/Helpers/</h3>
-    <p>通用輔助工具：SecurityHelper（安全驗證）、ColorHelper（顏色處理）、FontHelper（字型設定）、ValueHelper（值轉換）等。</p>
+    <h3>Helpers/</h3>
+    <p>通用輔助工具：SecurityHelper（安全驗證）、ColorHelper（顏色處理）、FontHelper（字型設定）、ValueHelper（值轉換）等。包含各文檔類型的專用 Helper（Excel/、Word/、PowerPoint/、Pdf/）。</p>
+
+    <h3>Results/</h3>
+    <p>結果類型定義：所有操作的結構化輸出類型，按文檔類型和操作類別組織（Common/、Word/、Excel/、PowerPoint/、Pdf/）。</p>
 
     <h3>Core/Security/</h3>
     <p>認證模組：API Key 認證、JWT 認證中間件，支援多種驗證模式。</p>
@@ -416,7 +472,7 @@ cd aspose-mcp-server">
 
 <footer>
     <div class="container">
-        <p>基於 .NET 8.0 和 Aspose.Total 23.10.0 構建</p>
+        <p>基於 .NET 8.0、Aspose.Total 23.10.0 和 MCP SDK 0.6.0 構建</p>
         <p class="footer-links" style="margin-top: 10px;">
             <a href="https://github.com/xjustloveux/aspose-mcp-server" target="_blank">GitHub</a> |
             <a href="https://www.aspose.com/" target="_blank">Aspose</a> |

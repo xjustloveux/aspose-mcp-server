@@ -1,11 +1,14 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Notes;
 
 /// <summary>
 ///     Handler for clearing notes from PowerPoint slides.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class ClearNotesHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -19,7 +22,7 @@ public class ClearNotesHandler : OperationHandlerBase<Presentation>
     ///     Optional: slideIndices (if not provided, clears all slides)
     /// </param>
     /// <returns>Success message indicating how many slides were cleared.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractClearNotesParameters(parameters);
 
@@ -44,7 +47,8 @@ public class ClearNotesHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Cleared speaker notes for {clearedCount} slides (of {targets.Length} targeted).");
+        return new SuccessResult
+            { Message = $"Cleared speaker notes for {clearedCount} slides (of {targets.Length} targeted)." };
     }
 
     /// <summary>

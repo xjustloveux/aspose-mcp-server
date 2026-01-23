@@ -1,7 +1,8 @@
 using Aspose.Pdf;
 using Aspose.Pdf.Text;
 using AsposeMcpServer.Handlers.Pdf.Redact;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Redact;
 
@@ -55,9 +56,11 @@ public class RedactTextHandlerTests : PdfHandlerTestBase
             { "textToRedact", "confidential" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("redacted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("redacted", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -72,9 +75,11 @@ public class RedactTextHandlerTests : PdfHandlerTestBase
             { "textToRedact", "nonexistent" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("no occurrences", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("no occurrences", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [SkippableFact]
@@ -89,9 +94,11 @@ public class RedactTextHandlerTests : PdfHandlerTestBase
             { "caseSensitive", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("redacted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("redacted", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [SkippableFact]
@@ -106,9 +113,11 @@ public class RedactTextHandlerTests : PdfHandlerTestBase
             { "pageIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("redacted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("redacted", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [SkippableFact]
@@ -124,9 +133,11 @@ public class RedactTextHandlerTests : PdfHandlerTestBase
             { "overlayText", "REDACTED" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("redacted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("redacted", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

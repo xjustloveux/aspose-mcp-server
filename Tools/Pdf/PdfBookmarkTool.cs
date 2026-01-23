@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Pdf;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Pdf;
 /// <summary>
 ///     Tool for managing bookmarks in PDF documents (add, delete, edit, get)
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Pdf.Bookmark")]
 [McpServerToolType]
 public class PdfBookmarkTool
 {
@@ -52,7 +55,14 @@ public class PdfBookmarkTool
     /// <param name="bookmarkIndex">Bookmark index (1-based, required for delete, edit).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "pdf_bookmark")]
+    [McpServerTool(
+        Name = "pdf_bookmark",
+        Title = "PDF Bookmark Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage bookmarks in PDF documents. Supports 4 operations: add, delete, edit, get.
 
 Usage examples:
@@ -60,7 +70,7 @@ Usage examples:
 - Delete bookmark: pdf_bookmark(operation='delete', path='doc.pdf', bookmarkIndex=0)
 - Edit bookmark: pdf_bookmark(operation='edit', path='doc.pdf', bookmarkIndex=0, title='Updated Title', pageIndex=2)
 - Get bookmarks: pdf_bookmark(operation='get', path='doc.pdf')")]
-    public string Execute(
+    public object Execute(
         [Description(@"Operation to perform.
 - 'add': Add a bookmark (required params: path, title, pageIndex)
 - 'delete': Delete a bookmark (required params: path, bookmarkIndex)
@@ -99,12 +109,12 @@ Usage examples:
         var result = handler.Execute(operationContext, parameters);
 
         if (string.Equals(operation, "get", StringComparison.OrdinalIgnoreCase))
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

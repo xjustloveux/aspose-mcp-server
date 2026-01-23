@@ -1,12 +1,15 @@
 using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Pdf.Annotation;
 
 namespace AsposeMcpServer.Handlers.Pdf.Annotation;
 
 /// <summary>
 ///     Handler for getting annotations from PDF documents.
 /// </summary>
+[ResultType(typeof(GetAnnotationsResult))]
 public class GetPdfAnnotationsHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,13 +23,13 @@ public class GetPdfAnnotationsHandler : OperationHandlerBase<Document>
     ///     Optional: pageIndex (default: 1, or 0 for all pages).
     /// </param>
     /// <returns>JSON result with annotation information.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var getParams = ExtractGetParameters(parameters);
 
         var document = context.Document;
 
-        var annotations = new List<object>();
+        var annotations = new List<AnnotationInfo>();
 
         if (getParams.PageIndex == 0)
         {
@@ -40,13 +43,13 @@ public class GetPdfAnnotationsHandler : OperationHandlerBase<Document>
             AddPageAnnotations(document.Pages[getParams.PageIndex], getParams.PageIndex, annotations);
         }
 
-        var result = new
+        var result = new GetAnnotationsResult
         {
-            count = annotations.Count,
-            annotations
+            Count = annotations.Count,
+            Annotations = annotations
         };
 
-        return JsonResult(result);
+        return result;
     }
 
     /// <summary>
@@ -55,7 +58,7 @@ public class GetPdfAnnotationsHandler : OperationHandlerBase<Document>
     /// <param name="page">The page to get annotations from.</param>
     /// <param name="pageIndex">The page index.</param>
     /// <param name="annotations">The annotation collection to add to.</param>
-    private static void AddPageAnnotations(Aspose.Pdf.Page page, int pageIndex, List<object> annotations)
+    private static void AddPageAnnotations(Aspose.Pdf.Page page, int pageIndex, List<AnnotationInfo> annotations)
     {
         for (var i = 1; i <= page.Annotations.Count; i++)
         {
@@ -63,20 +66,20 @@ public class GetPdfAnnotationsHandler : OperationHandlerBase<Document>
             var title = (annotation as MarkupAnnotation)?.Title;
             var subject = (annotation as MarkupAnnotation)?.Subject;
 
-            annotations.Add(new
+            annotations.Add(new AnnotationInfo
             {
-                pageIndex,
-                index = i,
-                type = annotation.AnnotationType.ToString(),
-                title,
-                subject,
-                contents = annotation.Contents,
-                rect = new
+                PageIndex = pageIndex,
+                Index = i,
+                Type = annotation.AnnotationType.ToString(),
+                Title = title,
+                Subject = subject,
+                Contents = annotation.Contents,
+                Rect = new AnnotationRect
                 {
-                    x = annotation.Rect.LLX,
-                    y = annotation.Rect.LLY,
-                    width = annotation.Rect.Width,
-                    height = annotation.Rect.Height
+                    X = annotation.Rect.LLX,
+                    Y = annotation.Rect.LLY,
+                    Width = annotation.Rect.Width,
+                    Height = annotation.Rect.Height
                 }
             });
         }

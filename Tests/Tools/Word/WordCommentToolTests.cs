@@ -1,5 +1,7 @@
-using Aspose.Words;
-using AsposeMcpServer.Tests.Helpers;
+﻿using Aspose.Words;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Word.Comment;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Word;
 
 namespace AsposeMcpServer.Tests.Tools.Word;
@@ -45,8 +47,10 @@ public class WordCommentToolTests : WordTestBase
         doc.Save(docPath);
         var result = _tool.Execute("get", docPath);
         Assert.NotNull(result);
-        Assert.NotEmpty(result);
-        Assert.Contains("Comment", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<GetCommentsResult>(result);
+        Assert.True(data.Count > 0);
+        Assert.NotEmpty(data.Comments);
+        Assert.Contains("Comment text", data.Comments[0].Content);
     }
 
     [Fact]
@@ -105,7 +109,8 @@ public class WordCommentToolTests : WordTestBase
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.docx");
         var result = _tool.Execute(operation, docPath, outputPath: outputPath,
             text: "Case test comment", author: "Author", paragraphIndex: 0);
-        Assert.StartsWith("Comment added", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Comment added", data.Message);
     }
 
     [Fact]
@@ -135,7 +140,8 @@ public class WordCommentToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("add", sessionId: sessionId, text: "Session comment", author: "Session Author",
             paragraphIndex: 0);
-        Assert.Contains("comment", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("comment", data.Message, StringComparison.OrdinalIgnoreCase);
 
         var doc = SessionManager.GetDocument<Document>(sessionId);
         var comments = doc.GetChildNodes(NodeType.Comment, true).Cast<Comment>().ToList();
@@ -155,7 +161,9 @@ public class WordCommentToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("get", sessionId: sessionId);
-        Assert.Contains("Session comment text", result);
+        var data = GetResultData<GetCommentsResult>(result);
+        Assert.True(data.Count > 0);
+        Assert.Contains("Session comment text", data.Comments[0].Content);
     }
 
     [Fact]
@@ -193,7 +201,8 @@ public class WordCommentToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("reply", sessionId: sessionId,
             commentIndex: 0, replyText: "Session reply", author: "Reply Author");
-        Assert.Contains("reply", result, StringComparison.OrdinalIgnoreCase);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("reply", data.Message, StringComparison.OrdinalIgnoreCase);
 
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         var comments = sessionDoc.GetChildNodes(NodeType.Comment, true).Cast<Comment>().ToList();
@@ -228,8 +237,9 @@ public class WordCommentToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath2);
         var result = _tool.Execute("get", docPath1, sessionId);
-        Assert.Contains("SessionComment", result);
-        Assert.DoesNotContain("PathComment", result);
+        var data = GetResultData<GetCommentsResult>(result);
+        Assert.Contains("SessionComment", data.Comments[0].Content);
+        Assert.DoesNotContain("PathComment", data.Comments[0].Content);
     }
 
     #endregion

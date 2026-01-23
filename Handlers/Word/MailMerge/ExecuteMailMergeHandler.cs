@@ -1,15 +1,17 @@
-using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Words.MailMerging;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.Word.MailMerge;
 
 namespace AsposeMcpServer.Handlers.Word.MailMerge;
 
 /// <summary>
 ///     Handler for executing mail merge operations on Word documents.
 /// </summary>
+[ResultType(typeof(MailMergeResult))]
 public class ExecuteMailMergeHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -27,7 +29,7 @@ public class ExecuteMailMergeHandler : OperationHandlerBase<Document>
     /// <exception cref="ArgumentException">
     ///     Thrown when required parameters are missing or both data and dataArray are provided.
     /// </exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractMailMergeParameters(parameters);
 
@@ -77,8 +79,9 @@ public class ExecuteMailMergeHandler : OperationHandlerBase<Document>
     /// <param name="outputPath">The output file path.</param>
     /// <param name="data">The JSON object containing field names and values.</param>
     /// <param name="cleanupOptions">The mail merge cleanup options to apply.</param>
-    /// <returns>A message indicating the result of the mail merge operation.</returns>
-    private static string ExecuteSingleRecord(OperationContext<Document> context, string outputPath, JsonObject data,
+    /// <returns>A result containing the mail merge operation details.</returns>
+    private static MailMergeResult ExecuteSingleRecord(OperationContext<Document> context, string outputPath,
+        JsonObject data,
         MailMergeCleanupOptions cleanupOptions)
     {
         var doc = context.Document.Clone() ?? throw new InvalidOperationException("Failed to clone document");
@@ -91,15 +94,14 @@ public class ExecuteMailMergeHandler : OperationHandlerBase<Document>
         doc.MailMerge.Execute(fieldNames, fieldValues);
         doc.Save(outputPath);
 
-        var result = new StringBuilder();
-        result.AppendLine("Mail merge completed successfully");
-        result.AppendLine($"Template: {GetTemplateSource(context)}");
-        result.AppendLine($"Output: {outputPath}");
-        result.AppendLine($"Fields merged: {fieldNames.Length}");
-        if (cleanupOptions != MailMergeCleanupOptions.None)
-            result.AppendLine($"Cleanup applied: {cleanupOptions}");
-
-        return Success(result.ToString());
+        return new MailMergeResult
+        {
+            TemplateSource = GetTemplateSource(context),
+            FieldsMerged = fieldNames.Length,
+            RecordsProcessed = 1,
+            CleanupApplied = cleanupOptions != MailMergeCleanupOptions.None ? cleanupOptions.ToString() : null,
+            OutputFiles = [outputPath]
+        };
     }
 
     /// <summary>
@@ -109,8 +111,8 @@ public class ExecuteMailMergeHandler : OperationHandlerBase<Document>
     /// <param name="outputPath">The base output file path (files will be numbered).</param>
     /// <param name="dataArray">The JSON array containing multiple record objects.</param>
     /// <param name="cleanupOptions">The mail merge cleanup options to apply.</param>
-    /// <returns>A message indicating the result of the mail merge operation.</returns>
-    private static string ExecuteMultipleRecords(OperationContext<Document> context, string outputPath,
+    /// <returns>A result containing the mail merge operation details.</returns>
+    private static MailMergeResult ExecuteMultipleRecords(OperationContext<Document> context, string outputPath,
         JsonArray dataArray,
         MailMergeCleanupOptions cleanupOptions)
     {
@@ -118,6 +120,7 @@ public class ExecuteMailMergeHandler : OperationHandlerBase<Document>
         var outputDir = Path.GetDirectoryName(outputPath) ?? ".";
         var outputName = Path.GetFileNameWithoutExtension(outputPath);
         var outputExt = Path.GetExtension(outputPath);
+        var fieldsMerged = 0;
 
         for (var i = 0; i < dataArray.Count; i++)
         {
@@ -132,6 +135,7 @@ public class ExecuteMailMergeHandler : OperationHandlerBase<Document>
             var fieldValues = recordData.Select(kvp => kvp.Value?.ToString() ?? "").Cast<object>().ToArray();
 
             doc.MailMerge.Execute(fieldNames, fieldValues);
+            fieldsMerged = Math.Max(fieldsMerged, fieldNames.Length);
 
             var recordOutputPath = dataArray.Count == 1
                 ? outputPath
@@ -141,16 +145,14 @@ public class ExecuteMailMergeHandler : OperationHandlerBase<Document>
             outputFiles.Add(recordOutputPath);
         }
 
-        var result = new StringBuilder();
-        result.AppendLine("Mail merge completed successfully (multiple records)");
-        result.AppendLine($"Template: {GetTemplateSource(context)}");
-        result.AppendLine($"Records processed: {outputFiles.Count}");
-        if (cleanupOptions != MailMergeCleanupOptions.None)
-            result.AppendLine($"Cleanup applied: {cleanupOptions}");
-        result.AppendLine("Output files:");
-        foreach (var file in outputFiles) result.AppendLine($"  - {file}");
-
-        return Success(result.ToString());
+        return new MailMergeResult
+        {
+            TemplateSource = GetTemplateSource(context),
+            FieldsMerged = fieldsMerged,
+            RecordsProcessed = outputFiles.Count,
+            CleanupApplied = cleanupOptions != MailMergeCleanupOptions.None ? cleanupOptions.ToString() : null,
+            OutputFiles = outputFiles
+        };
     }
 
     /// <summary>

@@ -2,13 +2,16 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Cells;
 using Aspose.Cells.Properties;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Properties;
 
 /// <summary>
 ///     Handler for setting workbook properties in Excel files.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetWorkbookPropertiesHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -22,7 +25,7 @@ public class SetWorkbookPropertiesHandler : OperationHandlerBase<Workbook>
     ///     Optional: title, subject, author, keywords, comments, category, company, manager, customProperties
     /// </param>
     /// <returns>Success message.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var setParams = ExtractSetWorkbookPropertiesParameters(parameters);
 
@@ -33,7 +36,7 @@ public class SetWorkbookPropertiesHandler : OperationHandlerBase<Workbook>
         SetCustomProperties(workbook, setParams.CustomProperties);
 
         MarkModified(context);
-        return Success("Workbook properties updated successfully.");
+        return new SuccessResult { Message = "Workbook properties updated successfully." };
     }
 
     /// <summary>

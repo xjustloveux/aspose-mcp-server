@@ -1,6 +1,7 @@
-using System.Text.Json;
-using Aspose.Cells;
-using AsposeMcpServer.Tests.Helpers;
+﻿using Aspose.Cells;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Excel.Protect;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Excel;
 
 namespace AsposeMcpServer.Tests.Tools.Excel;
@@ -27,7 +28,8 @@ public class ExcelProtectToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbook("test_protect_worksheet.xlsx");
         var outputPath = CreateTestFilePath("test_protect_worksheet_output.xlsx");
         var result = _tool.Execute("protect", workbookPath, sheetIndex: 0, password: "test123", outputPath: outputPath);
-        Assert.Contains("protected", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("protected", data.Message);
         using var workbook = new Workbook(outputPath);
         Assert.True(workbook.Worksheets[0].IsProtected);
     }
@@ -45,7 +47,8 @@ public class ExcelProtectToolTests : ExcelTestBase
         var outputPath = CreateTestFilePath("test_unprotect_worksheet_output.xlsx");
         var result = _tool.Execute("unprotect", workbookPath, sheetIndex: 0, password: "test123",
             outputPath: outputPath);
-        Assert.Contains("protection removed", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("protection removed", data.Message);
         using var resultWorkbook = new Workbook(outputPath);
         Assert.False(resultWorkbook.Worksheets[0].IsProtected);
     }
@@ -61,8 +64,8 @@ public class ExcelProtectToolTests : ExcelTestBase
         }
 
         var result = _tool.Execute("get", workbookPath);
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("worksheets", out _));
+        var data = GetResultData<GetProtectionResult>(result);
+        Assert.NotNull(data.Worksheets);
     }
 
     [Fact]
@@ -72,7 +75,8 @@ public class ExcelProtectToolTests : ExcelTestBase
         var outputPath = CreateTestFilePath("test_set_locked_output.xlsx");
         var result = _tool.Execute("set_cell_locked", workbookPath, range: "A1:B2", locked: true,
             outputPath: outputPath);
-        Assert.Contains("locked", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("locked", data.Message);
         using var workbook = new Workbook(outputPath);
         Assert.True(workbook.Worksheets[0].Cells["A1"].GetStyle().IsLocked);
     }
@@ -90,7 +94,8 @@ public class ExcelProtectToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbook($"test_case_{operation}.xlsx");
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.xlsx");
         var result = _tool.Execute(operation, workbookPath, sheetIndex: 0, password: "test123", outputPath: outputPath);
-        Assert.Contains("protected", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("protected", data.Message);
     }
 
     [Fact]
@@ -111,8 +116,10 @@ public class ExcelProtectToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbook("test_session_protect.xlsx");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("protect", sessionId: sessionId, sheetIndex: 0, password: "test123");
-        Assert.Contains("protected", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("protected", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.True(workbook.Worksheets[0].IsProtected);
     }
@@ -129,7 +136,10 @@ public class ExcelProtectToolTests : ExcelTestBase
 
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("unprotect", sessionId: sessionId, sheetIndex: 0, password: "test123");
-        Assert.Contains("protection removed", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("protection removed", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var sessionWorkbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.False(sessionWorkbook.Worksheets[0].IsProtected);
     }
@@ -146,8 +156,8 @@ public class ExcelProtectToolTests : ExcelTestBase
 
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("get", sessionId: sessionId, sheetIndex: 0);
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.GetProperty("worksheets")[0].GetProperty("isProtected").GetBoolean());
+        var data = GetResultData<GetProtectionResult>(result);
+        Assert.True(data.Worksheets[0].IsProtected);
     }
 
     [Fact]
@@ -170,7 +180,8 @@ public class ExcelProtectToolTests : ExcelTestBase
 
         var sessionId = OpenSession(workbookPath2);
         var result = _tool.Execute("get", workbookPath1, sessionId, sheetIndex: 0);
-        Assert.Contains("SessionSheet", result);
+        var data = GetResultData<GetProtectionResult>(result);
+        Assert.Contains("SessionSheet", data.Worksheets[0].Name);
     }
 
     #endregion

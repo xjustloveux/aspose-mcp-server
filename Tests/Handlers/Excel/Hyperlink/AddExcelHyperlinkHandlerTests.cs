@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.Hyperlink;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Hyperlink;
 
@@ -79,9 +80,11 @@ public class AddExcelHyperlinkHandlerTests : ExcelHandlerTestBase
             { "url", "https://example.com" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains(cell, result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains(cell, result.Message);
     }
 
     #endregion
@@ -99,9 +102,11 @@ public class AddExcelHyperlinkHandlerTests : ExcelHandlerTestBase
             { "url", "https://test.com" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("B2", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("B2", result.Message);
     }
 
     [Fact]
@@ -115,9 +120,11 @@ public class AddExcelHyperlinkHandlerTests : ExcelHandlerTestBase
             { "url", "https://www.example.org" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("https://www.example.org", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("https://www.example.org", result.Message);
     }
 
     [Fact]

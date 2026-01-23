@@ -1,7 +1,8 @@
 using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
 using AsposeMcpServer.Handlers.Pdf.Bookmark;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Bookmark;
 
@@ -54,9 +55,11 @@ public class DeletePdfBookmarkHandlerTests : PdfHandlerTestBase
             { "bookmarkIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Deleted bookmark", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Deleted bookmark", result.Message);
         AssertModified(context);
     }
 
@@ -76,9 +79,11 @@ public class DeletePdfBookmarkHandlerTests : PdfHandlerTestBase
             { "bookmarkIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("ToDelete", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("ToDelete", result.Message);
     }
 
     [Fact]
@@ -91,9 +96,11 @@ public class DeletePdfBookmarkHandlerTests : PdfHandlerTestBase
             { "bookmarkIndex", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("index 2", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("index 2", result.Message);
     }
 
     [Theory]
@@ -109,9 +116,11 @@ public class DeletePdfBookmarkHandlerTests : PdfHandlerTestBase
             { "bookmarkIndex", index }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Deleted bookmark", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Deleted bookmark", result.Message);
     }
 
     #endregion

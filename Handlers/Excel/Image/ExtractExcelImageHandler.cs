@@ -1,13 +1,17 @@
 using Aspose.Cells;
 using Aspose.Cells.Rendering;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Image;
 
 /// <summary>
 ///     Handler for extracting images from Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class ExtractExcelImageHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -22,7 +26,7 @@ public class ExtractExcelImageHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0)
     /// </param>
     /// <returns>Success message with extraction details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var extractParams = ExtractExtractParameters(parameters);
 
@@ -54,8 +58,11 @@ public class ExtractExcelImageHandler : OperationHandlerBase<Workbook>
         picture.ToImage(extractParams.ExportPath, options);
 
         var fileInfo = new FileInfo(extractParams.ExportPath);
-        return Success(
-            $"Image #{extractParams.ImageIndex} (at {upperLeftCell}) extracted to: {extractParams.ExportPath} ({fileInfo.Length} bytes, {picture.Width}x{picture.Height})");
+        return new SuccessResult
+        {
+            Message =
+                $"Image #{extractParams.ImageIndex} (at {upperLeftCell}) extracted to: {extractParams.ExportPath} ({fileInfo.Length} bytes, {picture.Width}x{picture.Height})"
+        };
     }
 
     private static ExtractParameters ExtractExtractParameters(OperationParameters parameters)

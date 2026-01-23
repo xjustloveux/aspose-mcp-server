@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Field;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Field;
 
@@ -30,9 +31,11 @@ public class EditFieldWordHandlerTests : WordHandlerTestBase
             { "fieldIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("edited", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("edited", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -47,9 +50,11 @@ public class EditFieldWordHandlerTests : WordHandlerTestBase
             { "lockField", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("locked", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("locked", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(doc.Range.Fields[0].IsLocked);
     }
 
@@ -64,9 +69,11 @@ public class EditFieldWordHandlerTests : WordHandlerTestBase
             { "unlockField", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("unlocked", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("unlocked", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.False(doc.Range.Fields[0].IsLocked);
     }
 
@@ -81,9 +88,11 @@ public class EditFieldWordHandlerTests : WordHandlerTestBase
             { "updateField", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("edited", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("edited", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

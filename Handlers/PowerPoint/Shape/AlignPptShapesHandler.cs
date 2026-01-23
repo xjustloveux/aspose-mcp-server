@@ -1,12 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Shape;
 
 /// <summary>
 ///     Handler for aligning multiple shapes.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AlignPptShapesHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class AlignPptShapesHandler : OperationHandlerBase<Presentation>
     ///     Optional: alignToSlide (default: false)
     /// </param>
     /// <returns>Success message with alignment details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractAlignPptShapesParameters(parameters);
 
@@ -61,7 +64,7 @@ public class AlignPptShapesHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Aligned {p.ShapeIndices.Length} shapes: {p.Align}.");
+        return new SuccessResult { Message = $"Aligned {p.ShapeIndices.Length} shapes: {p.Align}." };
     }
 
     private static AlignPptShapesParameters ExtractAlignPptShapesParameters(OperationParameters parameters)

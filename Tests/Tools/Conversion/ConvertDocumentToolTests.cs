@@ -1,7 +1,7 @@
 using Aspose.Cells;
 using Aspose.Slides;
 using Aspose.Words;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Conversion;
 using SlidesSaveFormat = Aspose.Slides.Export.SaveFormat;
 
@@ -61,7 +61,8 @@ public class ConvertDocumentToolTests : TestBase
 
         var result = _tool.Execute(docPath, outputPath: outputPath);
 
-        Assert.StartsWith("Document converted from", result);
+        Assert.Equal("PDF", result.TargetFormat);
+        Assert.Equal(outputPath, result.OutputPath);
         Assert.True(File.Exists(outputPath));
 
         using var pdfDoc = new Aspose.Pdf.Document(outputPath);
@@ -76,7 +77,7 @@ public class ConvertDocumentToolTests : TestBase
 
         var result = _tool.Execute(docPath, outputPath: outputPath);
 
-        Assert.StartsWith("Document converted from", result);
+        Assert.Equal("HTML", result.TargetFormat);
         Assert.True(File.Exists(outputPath));
 
         var htmlContent = File.ReadAllText(outputPath);
@@ -91,7 +92,7 @@ public class ConvertDocumentToolTests : TestBase
 
         var result = _tool.Execute(xlsxPath, outputPath: outputPath);
 
-        Assert.StartsWith("Document converted from", result);
+        Assert.Equal("CSV", result.TargetFormat);
         Assert.True(File.Exists(outputPath));
 
         var csvContent = File.ReadAllText(outputPath);
@@ -106,7 +107,7 @@ public class ConvertDocumentToolTests : TestBase
 
         var result = _tool.Execute(xlsxPath, outputPath: outputPath);
 
-        Assert.StartsWith("Document converted from", result);
+        Assert.Equal("PDF", result.TargetFormat);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -118,7 +119,7 @@ public class ConvertDocumentToolTests : TestBase
 
         var result = _tool.Execute(pptxPath, outputPath: outputPath);
 
-        Assert.StartsWith("Document converted from", result);
+        Assert.Equal("PDF", result.TargetFormat);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -176,8 +177,8 @@ public class ConvertDocumentToolTests : TestBase
 
         var result = _tool.Execute(sessionId: sessionId, outputPath: outputPath);
 
-        Assert.StartsWith("Document from session", result);
-        Assert.Contains(sessionId, result);
+        Assert.Contains(sessionId, result.SourcePath);
+        Assert.Contains(sessionId, result.Message!);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -190,8 +191,8 @@ public class ConvertDocumentToolTests : TestBase
 
         var result = _tool.Execute(sessionId: sessionId, outputPath: outputPath);
 
-        Assert.StartsWith("Document from session", result);
-        Assert.Contains(sessionId, result);
+        Assert.Contains(sessionId, result.SourcePath);
+        Assert.Contains(sessionId, result.Message!);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -204,8 +205,8 @@ public class ConvertDocumentToolTests : TestBase
 
         var result = _tool.Execute(sessionId: sessionId, outputPath: outputPath);
 
-        Assert.StartsWith("Document from session", result);
-        Assert.Contains(sessionId, result);
+        Assert.Contains(sessionId, result.SourcePath);
+        Assert.Contains(sessionId, result.Message!);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -229,8 +230,8 @@ public class ConvertDocumentToolTests : TestBase
 
         var result = _tool.Execute(fileDocPath, sessionId, outputPath);
 
-        Assert.Contains(sessionId, result);
-        Assert.Contains("Excel", result);
+        Assert.Contains(sessionId, result.SourcePath);
+        Assert.Equal("Excel", result.SourceFormat);
         Assert.True(File.Exists(outputPath));
 
         var csvContent = File.ReadAllText(outputPath);

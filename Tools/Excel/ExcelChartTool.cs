@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Excel;
 /// <summary>
 ///     Unified tool for managing Excel charts (add, edit, delete, get, update data, set properties)
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Excel.Chart")]
 [McpServerToolType]
 public class ExcelChartTool
 {
@@ -63,7 +66,14 @@ public class ExcelChartTool
     /// <param name="legendVisible">Legend visibility (optional, for set_properties).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operation.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "excel_chart")]
+    [McpServerTool(
+        Name = "excel_chart",
+        Title = "Excel Chart Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage Excel charts. Supports 6 operations: add, edit, delete, get, update_data, set_properties.
 
 Usage examples:
@@ -73,7 +83,7 @@ Usage examples:
 - Get charts: excel_chart(operation='get', path='book.xlsx')
 - Update data: excel_chart(operation='update_data', path='book.xlsx', chartIndex=0, dataRange='A1:C10')
 - Set properties: excel_chart(operation='set_properties', path='book.xlsx', chartIndex=0, title='Chart Title')")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: add, edit, delete, get, update_data, set_properties")]
         string operation,
         [Description("Excel file path (required if no sessionId)")]
@@ -132,12 +142,12 @@ Usage examples:
         var result = handler.Execute(operationContext, parameters);
 
         if (string.Equals(operation, "get", StringComparison.OrdinalIgnoreCase))
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

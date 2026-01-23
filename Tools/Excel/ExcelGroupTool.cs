@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Excel;
 /// <summary>
 ///     Unified tool for managing Excel row and column groups (group/ungroup).
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Excel.Group")]
 [McpServerToolType]
 public class ExcelGroupTool
 {
@@ -55,7 +58,14 @@ public class ExcelGroupTool
     /// <param name="isCollapsed">Collapse group initially (optional, for group_rows/group_columns, default: false).</param>
     /// <returns>A message indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "excel_group")]
+    [McpServerTool(
+        Name = "excel_group",
+        Title = "Excel Group Operations",
+        Destructive = false,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage Excel groups. Supports 4 operations: group_rows, ungroup_rows, group_columns, ungroup_columns.
 
 Usage examples:
@@ -63,7 +73,7 @@ Usage examples:
 - Ungroup rows: excel_group(operation='ungroup_rows', path='book.xlsx', startRow=1, endRow=5)
 - Group columns: excel_group(operation='group_columns', path='book.xlsx', startColumn=1, endColumn=3)
 - Ungroup columns: excel_group(operation='ungroup_columns', path='book.xlsx', startColumn=1, endColumn=3)")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: group_rows, ungroup_rows, group_columns, ungroup_columns")]
         string operation,
         [Description("Excel file path (required if no sessionId)")]
@@ -106,7 +116,7 @@ Usage examples:
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

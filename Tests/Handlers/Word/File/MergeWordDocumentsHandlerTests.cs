@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.File;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.File;
 
@@ -49,10 +50,12 @@ public class MergeWordDocumentsHandlerTests : WordHandlerTestBase
             { "outputPath", outputPath }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("merged", result.ToLower());
-        Assert.Contains("2", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("merged", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2", result.Message);
         Assert.True(System.IO.File.Exists(outputPath));
         var fileInfo = new FileInfo(outputPath);
         Assert.True(fileInfo.Length > 0, "Merged file should have content");
@@ -77,9 +80,11 @@ public class MergeWordDocumentsHandlerTests : WordHandlerTestBase
             { "importFormatMode", "KeepSourceFormatting" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("merged", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("merged", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(System.IO.File.Exists(outputPath));
         var fileInfo = new FileInfo(outputPath);
         Assert.True(fileInfo.Length > 0, "Merged file should have content");
@@ -104,9 +109,11 @@ public class MergeWordDocumentsHandlerTests : WordHandlerTestBase
             { "unlinkHeadersFooters", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("merged", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("merged", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(System.IO.File.Exists(outputPath));
         var fileInfo = new FileInfo(outputPath);
         Assert.True(fileInfo.Length > 0, "Merged file should have content");

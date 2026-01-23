@@ -1,8 +1,10 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Text.Json.Nodes;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
@@ -13,6 +15,7 @@ namespace AsposeMcpServer.Tools.Word;
 ///     WordSetHeaderLineTool, WordSetFooterLineTool, WordSetHeaderTabStopsTool, WordSetFooterTabStopsTool,
 ///     WordSetHeaderFooterTool, WordGetHeadersFootersTool
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Word.HeaderFooter")]
 [McpServerToolType]
 public class WordHeaderFooterTool
 {
@@ -81,7 +84,14 @@ public class WordHeaderFooterTool
     /// <param name="removeExisting">Remove existing images before adding new one.</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "word_header_footer")]
+    [McpServerTool(
+        Name = "word_header_footer",
+        Title = "Word Header Footer Operations",
+        Destructive = false,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(
         @"Manage headers and footers in Word documents. Supports 10 operations: set_header_text, set_footer_text, set_header_image, set_footer_image, set_header_line, set_footer_line, set_header_tabs, set_footer_tabs, set_header_footer, get.
 
@@ -90,7 +100,7 @@ Usage examples:
 - Set footer text: word_header_footer(operation='set_footer_text', path='doc.docx', footerLeft='Page', footerCenter='', footerRight='{PAGE}')
 - Set header image: word_header_footer(operation='set_header_image', path='doc.docx', imagePath='logo.png')
 - Get headers/footers: word_header_footer(operation='get', path='doc.docx')")]
-    public string Execute(
+    public object Execute(
         [Description(@"Operation to perform.
 - 'set_header_text': Set header text (required params: path)
 - 'set_footer_text': Set footer text (required params: path)
@@ -188,7 +198,7 @@ Usage examples:
         if (operationContext.IsModified)
             ctx.Save(effectiveOutputPath);
 
-        return ctx.IsSession ? result : $"{result}\n{ctx.GetOutputMessage(effectiveOutputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, effectiveOutputPath);
     }
 
     /// <summary>

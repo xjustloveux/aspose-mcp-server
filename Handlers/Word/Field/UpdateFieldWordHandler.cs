@@ -1,11 +1,14 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Field;
 
 /// <summary>
 ///     Handler for updating fields in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class UpdateFieldWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class UpdateFieldWordHandler : OperationHandlerBase<Document>
     ///     Optional: updateAll (update all fields)
     /// </param>
     /// <returns>Success message with update details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractUpdateFieldParameters(parameters);
 
@@ -35,7 +38,8 @@ public class UpdateFieldWordHandler : OperationHandlerBase<Document>
 
             var field = fields[p.FieldIndex.Value];
             if (field.IsLocked)
-                return $"Warning: Field #{p.FieldIndex.Value} is locked and cannot be updated.";
+                return new SuccessResult
+                    { Message = $"Warning: Field #{p.FieldIndex.Value} is locked and cannot be updated." };
 
             var oldResult = field.Result ?? "";
             field.Update();
@@ -43,17 +47,18 @@ public class UpdateFieldWordHandler : OperationHandlerBase<Document>
 
             MarkModified(context);
 
-            return $"Field #{p.FieldIndex.Value} updated\nOld result: {oldResult}\nNew result: {newResult}";
+            return new SuccessResult
+                { Message = $"Field #{p.FieldIndex.Value} updated\nOld result: {oldResult}\nNew result: {newResult}" };
         }
 
         var lockedCount = fields.Count(f => f.IsLocked);
         document.UpdateFields();
         MarkModified(context);
 
-        var result = $"Updated {fields.Count - lockedCount} field(s)";
+        var message = $"Updated {fields.Count - lockedCount} field(s)";
         if (lockedCount > 0)
-            result += $"\nSkipped {lockedCount} locked field(s)";
-        return result;
+            message += $"\nSkipped {lockedCount} locked field(s)";
+        return new SuccessResult { Message = message };
     }
 
     /// <summary>

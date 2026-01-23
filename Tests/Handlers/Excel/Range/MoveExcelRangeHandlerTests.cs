@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.Range;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Range;
 
@@ -57,11 +58,13 @@ public class MoveExcelRangeHandlerTests : ExcelHandlerTestBase
             { "destCell", "D1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("A1:B2", result);
-        Assert.Contains("D1", result);
-        Assert.Contains("moved", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("A1:B2", result.Message);
+        Assert.Contains("D1", result.Message);
+        Assert.Contains("moved", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -83,9 +86,11 @@ public class MoveExcelRangeHandlerTests : ExcelHandlerTestBase
             { "destCell", "D1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("moved", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("moved", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("A", workbook.Worksheets[0].Cells["D1"].Value);
         Assert.Equal("D", workbook.Worksheets[0].Cells["E2"].Value);
         AssertModified(context);
@@ -109,9 +114,11 @@ public class MoveExcelRangeHandlerTests : ExcelHandlerTestBase
             { "destCell", destCell }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("moved", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("moved", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 

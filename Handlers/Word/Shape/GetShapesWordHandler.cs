@@ -1,12 +1,16 @@
 using System.Text;
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Word.Shape;
 
 namespace AsposeMcpServer.Handlers.Word.Shape;
 
 /// <summary>
 ///     Handler for getting all shapes from Word documents.
 /// </summary>
+[ResultType(typeof(GetShapesWordResult))]
 public class GetShapesWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -18,7 +22,7 @@ public class GetShapesWordHandler : OperationHandlerBase<Document>
     /// <param name="context">The document context.</param>
     /// <param name="parameters">No parameters required.</param>
     /// <returns>Formatted string containing shape information.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var doc = context.Document;
         var shapes = WordShapeHelper.GetAllShapes(doc);
@@ -30,7 +34,7 @@ public class GetShapesWordHandler : OperationHandlerBase<Document>
         if (shapes.Count == 0)
         {
             result.AppendLine("No shapes found");
-            return result.ToString();
+            return new GetShapesWordResult { Content = result.ToString() };
         }
 
         for (var i = 0; i < shapes.Count; i++)
@@ -44,6 +48,6 @@ public class GetShapesWordHandler : OperationHandlerBase<Document>
             result.AppendLine();
         }
 
-        return result.ToString();
+        return new GetShapesWordResult { Content = result.ToString() };
     }
 }

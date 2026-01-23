@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Reference;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Reference;
 
@@ -45,9 +46,11 @@ public class AddCrossReferenceWordHandlerTests : WordHandlerTestBase
             { "targetName", "MyBookmark" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("cross-reference added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("cross-reference added", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -63,9 +66,11 @@ public class AddCrossReferenceWordHandlerTests : WordHandlerTestBase
             { "referenceText", "See " }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("heading", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("heading", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -80,9 +85,11 @@ public class AddCrossReferenceWordHandlerTests : WordHandlerTestBase
             { "includeAboveBelow", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

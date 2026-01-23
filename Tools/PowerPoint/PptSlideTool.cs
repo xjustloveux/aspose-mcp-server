@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 /// <summary>
 ///     Unified tool for managing PowerPoint slides (add, delete, get info, move, duplicate, hide, clear, edit)
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.PowerPoint.Slide")]
 [McpServerToolType]
 public class PptSlideTool
 {
@@ -61,7 +64,14 @@ public class PptSlideTool
     /// <param name="layoutIndex">Layout index (0-based, optional, for edit operation).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "ppt_slide")]
+    [McpServerTool(
+        Name = "ppt_slide",
+        Title = "PowerPoint Slide Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(
         @"Manage PowerPoint slides. Supports 8 operations: add, delete, get_info, move, duplicate, hide, clear, edit.
 
@@ -74,7 +84,7 @@ Usage examples:
 - Hide slide: ppt_slide(operation='hide', path='presentation.pptx', slideIndex=0, hidden=true)
 - Clear slide: ppt_slide(operation='clear', path='presentation.pptx', slideIndex=0)
 - Edit slide: ppt_slide(operation='edit', path='presentation.pptx', slideIndex=0)")]
-    public string Execute(
+    public object Execute(
         [Description(@"Operation to perform.
 - 'add': Add a new slide (required params: path)
 - 'delete': Delete a slide (required params: path, slideIndex)
@@ -128,12 +138,12 @@ Usage examples:
         var result = handler.Execute(operationContext, parameters);
 
         if (string.Equals(operation, "get_info", StringComparison.OrdinalIgnoreCase))
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

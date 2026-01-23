@@ -1,13 +1,16 @@
 using System.Text.Json.Nodes;
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Range;
 
 /// <summary>
 ///     Handler for writing data to Excel ranges.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class WriteExcelRangeHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -22,7 +25,7 @@ public class WriteExcelRangeHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex
     /// </param>
     /// <returns>Success message with write details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractWriteExcelRangeParameters(parameters);
 
@@ -43,7 +46,7 @@ public class WriteExcelRangeHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Data written to range starting at {p.StartCell}.");
+        return new SuccessResult { Message = $"Data written to range starting at {p.StartCell}." };
     }
 
     /// <summary>

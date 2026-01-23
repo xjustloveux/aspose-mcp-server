@@ -1,14 +1,15 @@
-using System.Text.Json;
 using Aspose.Words;
 using Aspose.Words.Fields;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Results.Word.Field;
 
 namespace AsposeMcpServer.Handlers.Word.Field;
 
 /// <summary>
 ///     Handler for getting all form fields from Word documents.
 /// </summary>
+[ResultType(typeof(GetFormFieldsWordResult))]
 public class GetFormFieldsWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,58 +21,56 @@ public class GetFormFieldsWordHandler : OperationHandlerBase<Document>
     /// <param name="context">The document context.</param>
     /// <param name="parameters">No required parameters.</param>
     /// <returns>A JSON string containing the list of form fields.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         _ = parameters;
 
         var document = context.Document;
         var formFields = document.Range.FormFields.ToList();
-        List<object> formFieldsList = [];
+        List<FormFieldInfo> formFieldsList = [];
 
         for (var i = 0; i < formFields.Count; i++)
         {
             var field = formFields[i];
-            object fieldData = field.Type switch
+            var fieldData = field.Type switch
             {
-                FieldType.FieldFormTextInput => new
+                FieldType.FieldFormTextInput => new TextFormFieldInfo
                 {
-                    index = i,
-                    name = field.Name,
-                    type = field.Type.ToString(),
-                    value = field.Result
+                    Index = i,
+                    Name = field.Name,
+                    Type = field.Type.ToString(),
+                    Value = field.Result
                 },
-                FieldType.FieldFormCheckBox => new
+                FieldType.FieldFormCheckBox => new CheckBoxFormFieldInfo
                 {
-                    index = i,
-                    name = field.Name,
-                    type = field.Type.ToString(),
-                    isChecked = field.Checked
+                    Index = i,
+                    Name = field.Name,
+                    Type = field.Type.ToString(),
+                    IsChecked = field.Checked
                 },
-                FieldType.FieldFormDropDown => new
+                FieldType.FieldFormDropDown => new DropDownFormFieldInfo
                 {
-                    index = i,
-                    name = field.Name,
-                    type = field.Type.ToString(),
-                    selectedIndex = field.DropDownSelectedIndex,
-                    options = field.DropDownItems.ToList()
+                    Index = i,
+                    Name = field.Name,
+                    Type = field.Type.ToString(),
+                    SelectedIndex = field.DropDownSelectedIndex,
+                    Options = field.DropDownItems.ToList()
                 },
-                _ => new
+                _ => new FormFieldInfo
                 {
-                    index = i,
-                    name = field.Name,
-                    type = field.Type.ToString()
+                    Index = i,
+                    Name = field.Name,
+                    Type = field.Type.ToString()
                 }
             };
 
             formFieldsList.Add(fieldData);
         }
 
-        var result = new
+        return new GetFormFieldsWordResult
         {
-            count = formFields.Count,
-            formFields = formFieldsList
+            Count = formFields.Count,
+            FormFields = formFieldsList
         };
-
-        return JsonSerializer.Serialize(result, JsonDefaults.Indented);
     }
 }

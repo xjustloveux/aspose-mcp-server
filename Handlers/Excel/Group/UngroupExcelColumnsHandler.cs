@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Group;
 
 /// <summary>
 ///     Handler for ungrouping columns in Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class UngroupExcelColumnsHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class UngroupExcelColumnsHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0)
     /// </param>
     /// <returns>Success message with ungroup details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         ExcelGroupHelper.ValidateRequiredParams(Operation, parameters, "startColumn", "endColumn");
 
@@ -35,7 +38,8 @@ public class UngroupExcelColumnsHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Columns {p.StartColumn}-{p.EndColumn} ungrouped in sheet {p.SheetIndex}.");
+        return new SuccessResult
+            { Message = $"Columns {p.StartColumn}-{p.EndColumn} ungrouped in sheet {p.SheetIndex}." };
     }
 
     private static UngroupColumnsParameters ExtractUngroupColumnsParameters(OperationParameters parameters)

@@ -1,5 +1,7 @@
-using Aspose.Cells;
-using AsposeMcpServer.Tests.Helpers;
+﻿using Aspose.Cells;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Excel.Range;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Excel;
 
 namespace AsposeMcpServer.Tests.Tools.Excel;
@@ -38,8 +40,11 @@ public class ExcelRangeToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbookWithData("test_get.xlsx", 3);
         var result = _tool.Execute("get", workbookPath, range: "A1:B2");
-        Assert.NotNull(result);
-        Assert.Contains("R1C1", result);
+        var data = GetResultData<GetRangeResult>(result);
+        Assert.Equal("A1:B2", data.Range);
+        Assert.Equal(2, data.RowCount);
+        Assert.Equal(2, data.ColumnCount);
+        Assert.Contains(data.Items, item => item.Value == "R1C1");
     }
 
     [Fact]
@@ -124,9 +129,10 @@ public class ExcelRangeToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbook($"test_case_{operation}.xlsx");
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.xlsx");
-        var data = "[[\"Test\"]]";
-        var result = _tool.Execute(operation, workbookPath, startCell: "A1", data: data, outputPath: outputPath);
-        Assert.Contains("A1", result);
+        var rangeData = "[[\"Test\"]]";
+        var result = _tool.Execute(operation, workbookPath, startCell: "A1", data: rangeData, outputPath: outputPath);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("A1", data.Message);
     }
 
     [Fact]
@@ -158,9 +164,12 @@ public class ExcelRangeToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbook("test_session_write.xlsx");
         var sessionId = OpenSession(workbookPath);
-        var data = "[[\"SessionA\", \"SessionB\"], [\"SessionC\", \"SessionD\"]]";
-        var result = _tool.Execute("write", sessionId: sessionId, startCell: "A1", data: data);
-        Assert.StartsWith("Data written", result);
+        var rangeData = "[[\"SessionA\", \"SessionB\"], [\"SessionC\", \"SessionD\"]]";
+        var result = _tool.Execute("write", sessionId: sessionId, startCell: "A1", data: rangeData);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Data written", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.Equal("SessionA", workbook.Worksheets[0].Cells["A1"].Value);
     }
@@ -171,8 +180,9 @@ public class ExcelRangeToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbookWithData("test_session_get.xlsx", 3);
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("get", sessionId: sessionId, range: "A1:B2");
-        Assert.NotNull(result);
-        Assert.Contains("R1C1", result);
+        var data = GetResultData<GetRangeResult>(result);
+        Assert.Equal("A1:B2", data.Range);
+        Assert.Contains(data.Items, item => item.Value == "R1C1");
     }
 
     [Fact]
@@ -180,9 +190,12 @@ public class ExcelRangeToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbookWithData("test_session_edit.xlsx", 3);
         var sessionId = OpenSession(workbookPath);
-        var data = "[[\"X\", \"Y\"]]";
-        var result = _tool.Execute("edit", sessionId: sessionId, range: "A1:B1", data: data);
-        Assert.StartsWith("Range A1:B1 edited", result);
+        var rangeData = "[[\"X\", \"Y\"]]";
+        var result = _tool.Execute("edit", sessionId: sessionId, range: "A1:B1", data: rangeData);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Range A1:B1 edited", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.Equal("X", workbook.Worksheets[0].Cells["A1"].Value);
     }
@@ -193,7 +206,10 @@ public class ExcelRangeToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbookWithData("test_session_clear.xlsx", 3);
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("clear", sessionId: sessionId, range: "A1:B2");
-        Assert.StartsWith("Range A1:B2 cleared", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Range A1:B2 cleared", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         var a1Value = workbook.Worksheets[0].Cells["A1"].Value;
         Assert.True(a1Value == null || a1Value.ToString() == "");
@@ -205,7 +221,10 @@ public class ExcelRangeToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbookWithData("test_session_copy.xlsx", 3);
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("copy", sessionId: sessionId, sourceRange: "A1:B2", destCell: "D1");
-        Assert.StartsWith("Range A1:B2 copied", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Range A1:B2 copied", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         var worksheet = workbook.Worksheets[0];
         var sourceA1 = worksheet.Cells["A1"].Value?.ToString() ?? "";
@@ -221,7 +240,10 @@ public class ExcelRangeToolTests : ExcelTestBase
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         var originalValue = workbook.Worksheets[0].Cells["A1"].Value;
         var result = _tool.Execute("move", sessionId: sessionId, sourceRange: "A1:B2", destCell: "D1");
-        Assert.StartsWith("Range A1:B2 moved", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Range A1:B2 moved", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         Assert.Equal(originalValue, workbook.Worksheets[0].Cells["D1"].Value);
         var a1 = workbook.Worksheets[0].Cells["A1"].Value;
         Assert.True(a1 == null || a1.ToString() == "");
@@ -242,7 +264,10 @@ public class ExcelRangeToolTests : ExcelTestBase
 
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("copy_format", sessionId: sessionId, range: "A1", destCell: "B1");
-        Assert.StartsWith("Format copied", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Format copied", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         var destStyle = workbook.Worksheets[0].Cells["B1"].GetStyle();
         Assert.True(destStyle.Font.IsBold);
@@ -262,7 +287,8 @@ public class ExcelRangeToolTests : ExcelTestBase
         var workbookPath2 = CreateExcelWorkbookWithData("test_session_file.xlsx");
         var sessionId = OpenSession(workbookPath2);
         var result = _tool.Execute("get", workbookPath1, sessionId, range: "A1:C5");
-        Assert.Contains("R5C3", result);
+        var data = GetResultData<GetRangeResult>(result);
+        Assert.Contains(data.Items, item => item.Value == "R5C3");
     }
 
     #endregion

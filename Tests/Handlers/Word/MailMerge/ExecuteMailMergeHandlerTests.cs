@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.MailMerge;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Word.MailMerge;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.MailMerge;
 
@@ -34,6 +35,33 @@ public class ExecuteMailMergeHandlerTests : WordHandlerTestBase
 
     #endregion
 
+    #region Result Properties
+
+    [Fact]
+    public void Execute_ReturnsCorrectProperties()
+    {
+        var outputPath = Path.Combine(TestDir, "properties_output.docx");
+        var doc = CreateTemplateDocument();
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "outputPath", outputPath },
+            { "data", "{\"Name\": \"John\", \"Company\": \"Corp\"}" }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<MailMergeResult>(res);
+
+        Assert.NotEmpty(result.TemplateSource);
+        Assert.Equal(2, result.FieldsMerged);
+        Assert.Equal(1, result.RecordsProcessed);
+        Assert.Single(result.OutputFiles);
+        Assert.Equal(outputPath, result.OutputFiles[0]);
+    }
+
+    #endregion
+
     #region Single Record Mail Merge
 
     [Fact]
@@ -48,10 +76,13 @@ public class ExecuteMailMergeHandlerTests : WordHandlerTestBase
             { "data", "{\"Name\": \"John Doe\", \"Company\": \"Acme Corp\"}" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Mail merge completed", result);
-        Assert.Contains("Fields merged: 2", result);
+        var result = Assert.IsType<MailMergeResult>(res);
+
+        Assert.Equal(2, result.FieldsMerged);
+        Assert.Equal(1, result.RecordsProcessed);
+        Assert.Single(result.OutputFiles);
         Assert.True(System.IO.File.Exists(outputPath));
 
         var mergedDoc = new Document(outputPath);
@@ -72,9 +103,11 @@ public class ExecuteMailMergeHandlerTests : WordHandlerTestBase
             { "data", "{\"Name\": \"Test\"}" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains(outputPath, result);
+        var result = Assert.IsType<MailMergeResult>(res);
+
+        Assert.Contains(outputPath, result.OutputFiles);
     }
 
     #endregion
@@ -93,11 +126,12 @@ public class ExecuteMailMergeHandlerTests : WordHandlerTestBase
             { "dataArray", "[{\"Name\": \"John\"}, {\"Name\": \"Jane\"}]" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Mail merge completed", result);
-        Assert.Contains("multiple records", result);
-        Assert.Contains("Records processed: 2", result);
+        var result = Assert.IsType<MailMergeResult>(res);
+
+        Assert.Equal(2, result.RecordsProcessed);
+        Assert.Equal(2, result.OutputFiles.Count);
     }
 
     [Fact]
@@ -112,9 +146,12 @@ public class ExecuteMailMergeHandlerTests : WordHandlerTestBase
             { "dataArray", "[{\"Name\": \"John\"}, {\"Name\": \"Jane\"}]" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Output files:", result);
+        var result = Assert.IsType<MailMergeResult>(res);
+
+        Assert.NotEmpty(result.OutputFiles);
+        Assert.True(result.OutputFiles.Count > 0);
     }
 
     #endregion
@@ -134,10 +171,12 @@ public class ExecuteMailMergeHandlerTests : WordHandlerTestBase
             { "cleanupOptions", "RemoveUnusedFields,RemoveEmptyParagraphs" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Mail merge completed", result);
-        Assert.Contains("Cleanup applied", result);
+        var result = Assert.IsType<MailMergeResult>(res);
+
+        Assert.NotNull(result.CleanupApplied);
+        Assert.Contains("RemoveUnusedFields", result.CleanupApplied);
     }
 
     [Fact]
@@ -152,9 +191,12 @@ public class ExecuteMailMergeHandlerTests : WordHandlerTestBase
             { "data", "{\"Name\": \"Test\"}" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Mail merge completed", result);
+        var result = Assert.IsType<MailMergeResult>(res);
+
+        // Default cleanup options are applied
+        Assert.NotNull(result.CleanupApplied);
     }
 
     #endregion

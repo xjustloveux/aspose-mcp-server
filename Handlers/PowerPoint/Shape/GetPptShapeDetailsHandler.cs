@@ -1,12 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.PowerPoint.Shape;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Shape;
 
 /// <summary>
 ///     Handler for getting detailed information about a specific shape.
 /// </summary>
+[ResultType(typeof(GetShapeDetailsResult))]
 public class GetPptShapeDetailsHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class GetPptShapeDetailsHandler : OperationHandlerBase<Presentation>
     ///     Optional: slideIndex (default: 0).
     /// </param>
     /// <returns>JSON result with detailed shape information.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractGetPptShapeDetailsParameters(parameters);
 
@@ -32,35 +35,46 @@ public class GetPptShapeDetailsHandler : OperationHandlerBase<Presentation>
 
         var shape = slide.Shapes[p.ShapeIndex];
 
-        var result = new Dictionary<string, object?>
-        {
-            ["index"] = p.ShapeIndex,
-            ["name"] = shape.Name,
-            ["type"] = shape.GetType().Name,
-            ["x"] = shape.X,
-            ["y"] = shape.Y,
-            ["width"] = shape.Width,
-            ["height"] = shape.Height,
-            ["rotation"] = shape.Rotation,
-            ["hidden"] = shape.Hidden
-        };
+        string? shapeType = null;
+        string? text = null;
+        string? fillType = null;
+        int? rows = null;
+        int? columns = null;
+        int? shapeCount = null;
 
         if (shape is IAutoShape autoShape)
         {
-            result["shapeType"] = autoShape.ShapeType.ToString();
-            result["text"] = autoShape.TextFrame?.Text;
-            result["fillType"] = autoShape.FillFormat?.FillType.ToString();
+            shapeType = autoShape.ShapeType.ToString();
+            text = autoShape.TextFrame?.Text;
+            fillType = autoShape.FillFormat?.FillType.ToString();
         }
 
         if (shape is ITable table)
         {
-            result["rows"] = table.Rows.Count;
-            result["columns"] = table.Columns.Count;
+            rows = table.Rows.Count;
+            columns = table.Columns.Count;
         }
 
-        if (shape is IGroupShape groupShape) result["shapeCount"] = groupShape.Shapes.Count;
+        if (shape is IGroupShape groupShape) shapeCount = groupShape.Shapes.Count;
 
-        return JsonResult(result);
+        return new GetShapeDetailsResult
+        {
+            Index = p.ShapeIndex,
+            Name = shape.Name,
+            Type = shape.GetType().Name,
+            X = shape.X,
+            Y = shape.Y,
+            Width = shape.Width,
+            Height = shape.Height,
+            Rotation = shape.Rotation,
+            Hidden = shape.Hidden,
+            ShapeType = shapeType,
+            Text = text,
+            FillType = fillType,
+            Rows = rows,
+            Columns = columns,
+            ShapeCount = shapeCount
+        };
     }
 
     /// <summary>

@@ -1,11 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Sheet;
 
 /// <summary>
 ///     Handler for adding worksheets to Excel workbooks.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddExcelSheetHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -20,7 +24,7 @@ public class AddExcelSheetHandler : OperationHandlerBase<Workbook>
     ///     Optional: insertAt (position to insert, 0-based)
     /// </param>
     /// <returns>Success message with operation details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractAddExcelSheetParameters(parameters);
 
@@ -61,7 +65,7 @@ public class AddExcelSheetHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Worksheet '{sheetName}' added.");
+        return new SuccessResult { Message = $"Worksheet '{sheetName}' added." };
     }
 
     private static AddExcelSheetParameters ExtractAddExcelSheetParameters(OperationParameters parameters)

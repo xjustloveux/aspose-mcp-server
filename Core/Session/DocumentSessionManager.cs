@@ -3,7 +3,7 @@ using System.Text.Json;
 using Aspose.Cells;
 using Aspose.Slides;
 using Aspose.Words;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
 using SaveFormat = Aspose.Slides.Export.SaveFormat;
 
 namespace AsposeMcpServer.Core.Session;
@@ -723,50 +723,4 @@ public class DocumentSessionManager : IDisposable // NOSONAR S3881 - Simple disp
         var metadataPath = tempPath + ".meta.json";
         File.WriteAllText(metadataPath, JsonSerializer.Serialize(metadata, JsonDefaults.Indented));
     }
-}
-
-/// <summary>
-///     Session information for API responses
-/// </summary>
-public class SessionInfo
-{
-    /// <summary>
-    ///     Unique session identifier
-    /// </summary>
-    public string SessionId { get; set; } = "";
-
-    /// <summary>
-    ///     Document type (word, excel, powerpoint, pdf)
-    /// </summary>
-    public string DocumentType { get; set; } = "";
-
-    /// <summary>
-    ///     Original file path
-    /// </summary>
-    public string Path { get; set; } = "";
-
-    /// <summary>
-    ///     Access mode (readonly, readwrite)
-    /// </summary>
-    public string Mode { get; set; } = "";
-
-    /// <summary>
-    ///     Whether the document has unsaved changes
-    /// </summary>
-    public bool IsDirty { get; set; }
-
-    /// <summary>
-    ///     When the session was opened
-    /// </summary>
-    public DateTime OpenedAt { get; set; }
-
-    /// <summary>
-    ///     Last access time
-    /// </summary>
-    public DateTime LastAccessedAt { get; set; }
-
-    /// <summary>
-    ///     Estimated memory usage in MB
-    /// </summary>
-    public double EstimatedMemoryMb { get; set; }
 }

@@ -1,6 +1,6 @@
-using System.Text.Json;
 using AsposeMcpServer.Handlers.Excel.Range;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Excel.Range;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Range;
 
@@ -31,13 +31,13 @@ public class GetExcelRangeHandlerTests : ExcelHandlerTestBase
             { "includeFormat", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var items = json.RootElement.GetProperty("items");
-        Assert.True(items[0].TryGetProperty("format", out var format));
-        Assert.True(format.TryGetProperty("fontName", out _));
-        Assert.True(format.TryGetProperty("fontSize", out _));
+        var result = Assert.IsType<GetRangeResult>(res);
+
+        Assert.NotNull(result.Items[0].Format);
+        Assert.NotNull(result.Items[0].Format!.FontName);
+        Assert.True(result.Items[0].Format!.FontSize > 0);
     }
 
     #endregion
@@ -77,11 +77,11 @@ public class GetExcelRangeHandlerTests : ExcelHandlerTestBase
             { "range", "A1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var items = json.RootElement.GetProperty("items");
-        Assert.True(items[0].TryGetProperty("value", out _));
+        var result = Assert.IsType<GetRangeResult>(res);
+
+        Assert.NotNull(result.Items[0].Value);
     }
 
     #endregion
@@ -102,11 +102,12 @@ public class GetExcelRangeHandlerTests : ExcelHandlerTestBase
             { "range", "A1:B2" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal("A1:B2", json.RootElement.GetProperty("range").GetString());
-        Assert.Equal(4, json.RootElement.GetProperty("count").GetInt32());
+        var result = Assert.IsType<GetRangeResult>(res);
+
+        Assert.Equal("A1:B2", result.Range);
+        Assert.Equal(4, result.Count);
         AssertNotModified(context);
     }
 
@@ -128,11 +129,12 @@ public class GetExcelRangeHandlerTests : ExcelHandlerTestBase
             { "range", range }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(expectedRows, json.RootElement.GetProperty("rowCount").GetInt32());
-        Assert.Equal(expectedCols, json.RootElement.GetProperty("columnCount").GetInt32());
+        var result = Assert.IsType<GetRangeResult>(res);
+
+        Assert.Equal(expectedRows, result.RowCount);
+        Assert.Equal(expectedCols, result.ColumnCount);
     }
 
     #endregion
@@ -152,12 +154,12 @@ public class GetExcelRangeHandlerTests : ExcelHandlerTestBase
             { "range", "A1:B1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("items", out var items));
-        Assert.Equal(JsonValueKind.Array, items.ValueKind);
-        Assert.Equal(2, items.GetArrayLength());
+        var result = Assert.IsType<GetRangeResult>(res);
+
+        Assert.NotNull(result.Items);
+        Assert.Equal(2, result.Items.Count);
     }
 
     [Fact]
@@ -170,12 +172,11 @@ public class GetExcelRangeHandlerTests : ExcelHandlerTestBase
             { "range", "A1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var items = json.RootElement.GetProperty("items");
-        Assert.True(items[0].TryGetProperty("cell", out var cell));
-        Assert.Equal("A1", cell.GetString());
+        var result = Assert.IsType<GetRangeResult>(res);
+
+        Assert.Equal("A1", result.Items[0].Cell);
     }
 
     [Fact]
@@ -188,12 +189,11 @@ public class GetExcelRangeHandlerTests : ExcelHandlerTestBase
             { "range", "A1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var items = json.RootElement.GetProperty("items");
-        Assert.True(items[0].TryGetProperty("value", out var value));
-        Assert.Equal("TestValue", value.GetString());
+        var result = Assert.IsType<GetRangeResult>(res);
+
+        Assert.Equal("TestValue", result.Items[0].Value);
     }
 
     #endregion
@@ -214,11 +214,11 @@ public class GetExcelRangeHandlerTests : ExcelHandlerTestBase
             { "sheetIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var items = json.RootElement.GetProperty("items");
-        Assert.Contains("Sheet2", items[0].GetProperty("value").GetString());
+        var result = Assert.IsType<GetRangeResult>(res);
+
+        Assert.Contains("Sheet2", result.Items[0].Value);
     }
 
     [Fact]
@@ -234,11 +234,11 @@ public class GetExcelRangeHandlerTests : ExcelHandlerTestBase
             { "range", "A1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var items = json.RootElement.GetProperty("items");
-        Assert.Contains("FirstSheet", items[0].GetProperty("value").GetString());
+        var result = Assert.IsType<GetRangeResult>(res);
+
+        Assert.Contains("FirstSheet", result.Items[0].Value);
     }
 
     #endregion
@@ -258,16 +258,16 @@ public class GetExcelRangeHandlerTests : ExcelHandlerTestBase
             { "includeFormulas", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var items = json.RootElement.GetProperty("items");
-        Assert.True(items[0].TryGetProperty("formula", out var formula));
-        Assert.Contains("A1", formula.GetString());
+        var result = Assert.IsType<GetRangeResult>(res);
+
+        Assert.NotNull(result.Items[0].Formula);
+        Assert.Contains("A1", result.Items[0].Formula);
     }
 
     [Fact]
-    public void Execute_WithoutIncludeFormulas_FormulaIsNull()
+    public void Execute_WithoutIncludeFormulas_FormulaIsOmitted()
     {
         var workbook = CreateEmptyWorkbook();
         workbook.Worksheets[0].Cells["A1"].Value = 10;
@@ -279,12 +279,11 @@ public class GetExcelRangeHandlerTests : ExcelHandlerTestBase
             { "includeFormulas", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var items = json.RootElement.GetProperty("items");
-        var formula = items[0].GetProperty("formula");
-        Assert.Equal(JsonValueKind.Null, formula.ValueKind);
+        var result = Assert.IsType<GetRangeResult>(res);
+
+        Assert.Null(result.Items[0].Formula);
     }
 
     #endregion

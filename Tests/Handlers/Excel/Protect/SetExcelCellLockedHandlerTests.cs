@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.Protect;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Protect;
 
@@ -31,9 +32,11 @@ public class SetExcelCellLockedHandlerTests : ExcelHandlerTestBase
             { "locked", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("sheet 1", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("sheet 1", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(workbook.Worksheets[1].Cells["A1"].GetStyle().IsLocked);
     }
 
@@ -52,10 +55,12 @@ public class SetExcelCellLockedHandlerTests : ExcelHandlerTestBase
             { "locked", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("locked", result.ToLower());
-        Assert.Contains("A1:B2", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("locked", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("A1:B2", result.Message);
         Assert.True(workbook.Worksheets[0].Cells["A1"].GetStyle().IsLocked);
         AssertModified(context);
     }
@@ -71,9 +76,11 @@ public class SetExcelCellLockedHandlerTests : ExcelHandlerTestBase
             { "locked", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("unlocked", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("unlocked", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.False(workbook.Worksheets[0].Cells["A1"].GetStyle().IsLocked);
         AssertModified(context);
     }
@@ -88,9 +95,11 @@ public class SetExcelCellLockedHandlerTests : ExcelHandlerTestBase
             { "range", "A1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("unlocked", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("unlocked", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -104,9 +113,11 @@ public class SetExcelCellLockedHandlerTests : ExcelHandlerTestBase
             { "locked", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("C5", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("C5", result.Message);
         Assert.True(workbook.Worksheets[0].Cells["C5"].GetStyle().IsLocked);
     }
 

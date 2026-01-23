@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.PowerPoint.Layout;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Layout;
 
@@ -30,10 +31,12 @@ public class SetLayoutHandlerTests : PptHandlerTestBase
             { "layout", "Title" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("layout", result.ToLower());
-        Assert.Contains("set", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("layout", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("set", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -48,9 +51,11 @@ public class SetLayoutHandlerTests : PptHandlerTestBase
             { "layout", "Blank" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("blank", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("blank", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 

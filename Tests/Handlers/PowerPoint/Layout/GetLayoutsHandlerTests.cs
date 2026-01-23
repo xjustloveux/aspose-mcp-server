@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.PowerPoint.Layout;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.PowerPoint.Layout;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Layout;
 
@@ -43,10 +44,13 @@ public class GetLayoutsHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("masters", result.ToLower());
-        Assert.Contains("layouts", result.ToLower());
+        var result = Assert.IsType<GetLayoutsResult>(res);
+
+        Assert.NotNull(result.Masters);
+        Assert.True(result.Masters.Count > 0);
+        Assert.NotNull(result.Masters[0].Layouts);
         AssertNotModified(context);
     }
 
@@ -60,24 +64,28 @@ public class GetLayoutsHandlerTests : PptHandlerTestBase
             { "masterIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("masterIndex", result);
-        Assert.Contains("layouts", result.ToLower());
+        var result = Assert.IsType<GetLayoutsResult>(res);
+
+        Assert.Equal(0, result.MasterIndex);
+        Assert.NotNull(result.Layouts);
         AssertNotModified(context);
     }
 
     [Fact]
-    public void Execute_ReturnsJsonFormat()
+    public void Execute_ReturnsResultType()
     {
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("{", result);
-        Assert.Contains("}", result);
+        var result = Assert.IsType<GetLayoutsResult>(res);
+
+        Assert.NotNull(result);
+        Assert.IsType<GetLayoutsResult>(result);
     }
 
     #endregion

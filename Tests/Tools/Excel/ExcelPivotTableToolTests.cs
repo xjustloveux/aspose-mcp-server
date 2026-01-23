@@ -1,6 +1,7 @@
-using System.Text.Json;
-using Aspose.Cells;
-using AsposeMcpServer.Tests.Helpers;
+﻿using Aspose.Cells;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Excel.PivotTable;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Excel;
 
 namespace AsposeMcpServer.Tests.Tools.Excel;
@@ -70,7 +71,8 @@ public class ExcelPivotTableToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithDataForPivot("test_add.xlsx");
         var outputPath = CreateTestFilePath("test_add_output.xlsx");
         var result = _tool.Execute("add", workbookPath, sourceRange: "A1:D11", destCell: "F1", outputPath: outputPath);
-        Assert.Contains("added", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("added", data.Message);
         using var workbook = new Workbook(outputPath);
         Assert.True(workbook.Worksheets[0].PivotTables.Count > 0);
     }
@@ -80,9 +82,8 @@ public class ExcelPivotTableToolTests : ExcelTestBase
     {
         var workbookPath = CreateWorkbookWithPivotTable("test_get.xlsx");
         var result = _tool.Execute("get", workbookPath);
-        var json = JsonDocument.Parse(result);
-        var root = json.RootElement;
-        Assert.Equal(1, root.GetProperty("count").GetInt32());
+        var data = GetResultData<GetPivotTablesResult>(result);
+        Assert.Equal(1, data.Count);
     }
 
     [Fact]
@@ -91,7 +92,8 @@ public class ExcelPivotTableToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithPivotTable("test_delete.xlsx");
         var outputPath = CreateTestFilePath("test_delete_output.xlsx");
         var result = _tool.Execute("delete", workbookPath, pivotTableIndex: 0, outputPath: outputPath);
-        Assert.Contains("deleted", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("deleted", data.Message);
         using var workbook = new Workbook(outputPath);
         Assert.Empty(workbook.Worksheets[0].PivotTables);
     }
@@ -103,7 +105,8 @@ public class ExcelPivotTableToolTests : ExcelTestBase
         var outputPath = CreateTestFilePath("test_edit_output.xlsx");
         var result = _tool.Execute("edit", workbookPath, pivotTableIndex: 0,
             name: "EditedPivot", outputPath: outputPath);
-        Assert.Contains("edited", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("edited", data.Message);
         using var workbook = new Workbook(outputPath);
         Assert.Equal("EditedPivot", workbook.Worksheets[0].PivotTables[0].Name);
     }
@@ -115,7 +118,8 @@ public class ExcelPivotTableToolTests : ExcelTestBase
         var outputPath = CreateTestFilePath("test_add_field_output.xlsx");
         var result = _tool.Execute("add_field", workbookPath, pivotTableIndex: 0,
             fieldName: "Region", area: "Row", outputPath: outputPath);
-        Assert.Contains("added", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("added", data.Message);
     }
 
     [Fact]
@@ -124,7 +128,8 @@ public class ExcelPivotTableToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithPivotTable("test_refresh.xlsx");
         var outputPath = CreateTestFilePath("test_refresh_output.xlsx");
         var result = _tool.Execute("refresh", workbookPath, pivotTableIndex: 0, outputPath: outputPath);
-        Assert.Contains("Refreshed", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Refreshed", data.Message);
     }
 
     #endregion
@@ -141,7 +146,8 @@ public class ExcelPivotTableToolTests : ExcelTestBase
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.xlsx");
         var result = _tool.Execute(operation, workbookPath, sourceRange: "A1:D11", destCell: "F1",
             outputPath: outputPath);
-        Assert.Contains("added", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("added", data.Message);
     }
 
     [Fact]
@@ -169,7 +175,10 @@ public class ExcelPivotTableToolTests : ExcelTestBase
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("add", sessionId: sessionId,
             sourceRange: "A1:D11", destCell: "F1", name: "SessionPivot");
-        Assert.Contains("added", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("added", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.True(workbook.Worksheets[0].PivotTables.Count > 0);
     }
@@ -180,7 +189,8 @@ public class ExcelPivotTableToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithPivotTable("test_session_get.xlsx");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("get", sessionId: sessionId);
-        Assert.Equal(1, JsonDocument.Parse(result).RootElement.GetProperty("count").GetInt32());
+        var data = GetResultData<GetPivotTablesResult>(result);
+        Assert.Equal(1, data.Count);
     }
 
     [Fact]
@@ -189,7 +199,10 @@ public class ExcelPivotTableToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithPivotTable("test_session_delete.xlsx");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("delete", sessionId: sessionId, pivotTableIndex: 0);
-        Assert.Contains("deleted", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("deleted", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.Empty(workbook.Worksheets[0].PivotTables);
     }
@@ -200,7 +213,10 @@ public class ExcelPivotTableToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithPivotTable("test_session_edit.xlsx");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("edit", sessionId: sessionId, pivotTableIndex: 0, name: "UpdatedPivot");
-        Assert.Contains("edited", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("edited", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.Equal("UpdatedPivot", workbook.Worksheets[0].PivotTables[0].Name);
     }
@@ -212,7 +228,10 @@ public class ExcelPivotTableToolTests : ExcelTestBase
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("add_field", sessionId: sessionId, pivotTableIndex: 0,
             fieldName: "Region", area: "Row");
-        Assert.Contains("added", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("added", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -221,7 +240,10 @@ public class ExcelPivotTableToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithPivotTable("test_session_refresh.xlsx");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("refresh", sessionId: sessionId, pivotTableIndex: 0);
-        Assert.Contains("Refreshed", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Refreshed", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -243,7 +265,8 @@ public class ExcelPivotTableToolTests : ExcelTestBase
 
         var sessionId = OpenSession(workbookPath2);
         var result = _tool.Execute("get", workbookPath1, sessionId);
-        Assert.Contains("SessionPivotTable", result);
+        var data = GetResultData<GetPivotTablesResult>(result);
+        Assert.Contains(data.Items, pt => pt.Name == "SessionPivotTable");
     }
 
     #endregion

@@ -1,12 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Image;
 
 /// <summary>
 ///     Handler for deleting images from PowerPoint slides.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeletePptImageHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class DeletePptImageHandler : OperationHandlerBase<Presentation>
     ///     Required: slideIndex, imageIndex
     /// </param>
     /// <returns>Success message with deletion details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractDeleteParameters(parameters);
 
@@ -35,7 +38,7 @@ public class DeletePptImageHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Image {p.ImageIndex} deleted from slide {p.SlideIndex}.");
+        return new SuccessResult { Message = $"Image {p.ImageIndex} deleted from slide {p.SlideIndex}." };
     }
 
     /// <summary>

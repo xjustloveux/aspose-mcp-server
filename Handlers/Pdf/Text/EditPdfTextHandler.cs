@@ -1,13 +1,16 @@
 using System.Text.RegularExpressions;
 using Aspose.Pdf;
 using Aspose.Pdf.Text;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.Text;
 
 /// <summary>
 ///     Handler for editing (replacing) text in PDF documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class EditPdfTextHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -22,7 +25,7 @@ public class EditPdfTextHandler : OperationHandlerBase<Document>
     ///     Optional: pageIndex, replaceAll
     /// </param>
     /// <returns>Success message with replacement count.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractEditParameters(parameters);
 
@@ -74,7 +77,8 @@ public class EditPdfTextHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Replaced {replacedCount} occurrence(s) of '{p.OldText}' on page {p.PageIndex}.");
+        return new SuccessResult
+            { Message = $"Replaced {replacedCount} occurrence(s) of '{p.OldText}' on page {p.PageIndex}." };
     }
 
     /// <summary>

@@ -1,12 +1,16 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Media;
 
 /// <summary>
 ///     Handler for adding video to PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddVideoHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -21,7 +25,7 @@ public class AddVideoHandler : OperationHandlerBase<Presentation>
     ///     Optional: slideIndex (default: 0), x, y, width, height, playMode.
     /// </param>
     /// <returns>Success message with video details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractAddVideoParameters(parameters);
 
@@ -47,8 +51,11 @@ public class AddVideoHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success(
-            $"Video embedded into slide {p.SlideIndex} at position ({videoFrame.X:F0}, {videoFrame.Y:F0}) with dimensions {videoFrame.Width:F0}x{videoFrame.Height:F0}.");
+        return new SuccessResult
+        {
+            Message =
+                $"Video embedded into slide {p.SlideIndex} at position ({videoFrame.X:F0}, {videoFrame.Y:F0}) with dimensions {videoFrame.Width:F0}x{videoFrame.Height:F0}."
+        };
     }
 
     /// <summary>

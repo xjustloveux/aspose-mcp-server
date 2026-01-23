@@ -1,7 +1,8 @@
 using Aspose.Slides;
 using Aspose.Slides.Charts;
 using AsposeMcpServer.Handlers.PowerPoint.Chart;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.PowerPoint.Chart;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Chart;
 
@@ -44,11 +45,13 @@ public class GetPptChartDataHandlerTests : PptHandlerTestBase
             { "shapeIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("chartType", result);
-        Assert.Contains("categories", result.ToLower());
-        Assert.Contains("series", result.ToLower());
+        var result = Assert.IsType<GetChartDataPptResult>(res);
+
+        Assert.NotNull(result.ChartType);
+        Assert.NotNull(result.Categories);
+        Assert.NotNull(result.Series);
         AssertNotModified(context);
     }
 
@@ -63,10 +66,12 @@ public class GetPptChartDataHandlerTests : PptHandlerTestBase
             { "shapeIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("{", result);
-        Assert.Contains("}", result);
+        var result = Assert.IsType<GetChartDataPptResult>(res);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.ChartType);
     }
 
     #endregion

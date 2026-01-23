@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Chart;
 
 /// <summary>
 ///     Handler for updating Excel chart data range.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class UpdateExcelChartDataHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -22,7 +25,7 @@ public class UpdateExcelChartDataHandler : OperationHandlerBase<Workbook>
     /// </param>
     /// <returns>Success message with update details.</returns>
     /// <exception cref="ArgumentException">Thrown when dataRange is not provided.</exception>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var updateParams = ExtractUpdateDataParameters(parameters);
 
@@ -41,7 +44,7 @@ public class UpdateExcelChartDataHandler : OperationHandlerBase<Workbook>
         var result = $"Chart #{updateParams.ChartIndex} data updated to: {updateParams.DataRange}";
         if (!string.IsNullOrEmpty(updateParams.CategoryAxisDataRange))
             result += $", X-axis: {updateParams.CategoryAxisDataRange}";
-        return Success(result);
+        return new SuccessResult { Message = result };
     }
 
     /// <summary>

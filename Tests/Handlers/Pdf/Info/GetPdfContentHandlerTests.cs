@@ -1,8 +1,8 @@
-using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using Aspose.Pdf.Text;
 using AsposeMcpServer.Handlers.Pdf.Info;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Pdf.Info;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Info;
 
@@ -30,26 +30,26 @@ public class GetPdfContentHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("content", result);
-        Assert.Contains("totalPages", result);
+        var result = Assert.IsType<GetPdfContentResult>(res);
+        Assert.NotNull(result.Content);
+        Assert.True(result.TotalPages > 0);
     }
 
     [SkippableFact]
-    public void Execute_ReturnsJsonFormat()
+    public void Execute_ReturnsTypedResult()
     {
         SkipInEvaluationMode(AsposeLibraryType.Pdf);
         var doc = CreatePdfWithText("Sample text");
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonNode.Parse(result);
-        Assert.NotNull(json);
-        Assert.NotNull(json["totalPages"]);
-        Assert.NotNull(json["content"]);
+        var result = Assert.IsType<GetPdfContentResult>(res);
+        Assert.True(result.TotalPages > 0);
+        Assert.NotNull(result.Content);
     }
 
     [SkippableFact]
@@ -64,12 +64,11 @@ public class GetPdfContentHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonNode.Parse(result);
-        Assert.NotNull(json);
-        Assert.Equal(3, json["totalPages"]?.GetValue<int>());
-        Assert.Equal(3, json["extractedPages"]?.GetValue<int>());
+        var result = Assert.IsType<GetPdfContentResult>(res);
+        Assert.Equal(3, result.TotalPages);
+        Assert.Equal(3, result.ExtractedPages);
     }
 
     #endregion
@@ -89,11 +88,10 @@ public class GetPdfContentHandlerTests : PdfHandlerTestBase
             { "pageIndex", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonNode.Parse(result);
-        Assert.NotNull(json);
-        Assert.Equal(2, json["pageIndex"]?.GetValue<int>());
+        var result = Assert.IsType<GetPdfContentResult>(res);
+        Assert.Equal(2, result.PageIndex);
     }
 
     [Fact]
@@ -139,13 +137,12 @@ public class GetPdfContentHandlerTests : PdfHandlerTestBase
             { "maxPages", 3 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonNode.Parse(result);
-        Assert.NotNull(json);
-        Assert.Equal(10, json["totalPages"]?.GetValue<int>());
-        Assert.Equal(3, json["extractedPages"]?.GetValue<int>());
-        Assert.True(json["truncated"]?.GetValue<bool>());
+        var result = Assert.IsType<GetPdfContentResult>(res);
+        Assert.Equal(10, result.TotalPages);
+        Assert.Equal(3, result.ExtractedPages);
+        Assert.True(result.Truncated);
     }
 
     [SkippableFact]
@@ -159,12 +156,11 @@ public class GetPdfContentHandlerTests : PdfHandlerTestBase
             { "maxPages", 100 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonNode.Parse(result);
-        Assert.NotNull(json);
-        Assert.Equal(3, json["extractedPages"]?.GetValue<int>());
-        Assert.False(json["truncated"]?.GetValue<bool>());
+        var result = Assert.IsType<GetPdfContentResult>(res);
+        Assert.Equal(3, result.ExtractedPages);
+        Assert.False(result.Truncated);
     }
 
     #endregion

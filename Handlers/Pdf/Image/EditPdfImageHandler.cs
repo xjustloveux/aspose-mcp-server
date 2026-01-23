@@ -1,13 +1,16 @@
 using System.Drawing.Imaging;
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.Image;
 
 /// <summary>
 ///     Handler for editing images in PDF documents (move or replace).
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class EditPdfImageHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class EditPdfImageHandler : OperationHandlerBase<Document>
     ///     Optional: pageIndex, imageIndex, imagePath, x, y, width, height
     /// </param>
     /// <returns>Success message with edit details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractEditParameters(parameters);
 
@@ -68,7 +71,7 @@ public class EditPdfImageHandler : OperationHandlerBase<Document>
             MarkModified(context);
 
             var action = tempImagePath != null ? "Moved" : "Replaced";
-            return Success($"{action} image {p.ImageIndex} on page {p.PageIndex}.");
+            return new SuccessResult { Message = $"{action} image {p.ImageIndex} on page {p.PageIndex}." };
         }
         finally
         {

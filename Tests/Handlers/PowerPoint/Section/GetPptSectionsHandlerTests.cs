@@ -1,7 +1,7 @@
-using System.Text.Json.Nodes;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Section;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.PowerPoint.Section;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Section;
 
@@ -44,9 +44,11 @@ public class GetPptSectionsHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"count\": 0", result);
+        var result = Assert.IsType<GetSectionsResult>(res);
+
+        Assert.Equal(0, result.Count);
     }
 
     [Fact]
@@ -56,9 +58,11 @@ public class GetPptSectionsHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("No sections found", result);
+        var result = Assert.IsType<GetSectionsResult>(res);
+
+        Assert.Contains("No sections found", result.Message);
     }
 
     [Fact]
@@ -68,22 +72,26 @@ public class GetPptSectionsHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"count\": 3", result);
+        var result = Assert.IsType<GetSectionsResult>(res);
+
+        Assert.Equal(3, result.Count);
     }
 
     [Fact]
-    public void Execute_ReturnsJsonFormat()
+    public void Execute_ReturnsResultType()
     {
         var pres = CreatePresentationWithSections(2);
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonNode.Parse(result);
-        Assert.NotNull(json);
+        var result = Assert.IsType<GetSectionsResult>(res);
+
+        Assert.NotNull(result);
+        Assert.IsType<GetSectionsResult>(result);
     }
 
     #endregion
@@ -97,10 +105,13 @@ public class GetPptSectionsHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"index\": 0", result);
-        Assert.Contains("\"index\": 1", result);
+        var result = Assert.IsType<GetSectionsResult>(res);
+
+        Assert.NotNull(result.Sections);
+        Assert.Equal(0, result.Sections[0].Index);
+        Assert.Equal(1, result.Sections[1].Index);
     }
 
     [Fact]
@@ -110,9 +121,12 @@ public class GetPptSectionsHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("name", result);
+        var result = Assert.IsType<GetSectionsResult>(res);
+
+        Assert.NotNull(result.Sections);
+        Assert.NotNull(result.Sections[0].Name);
     }
 
     [Fact]
@@ -122,9 +136,12 @@ public class GetPptSectionsHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("startSlideIndex", result);
+        var result = Assert.IsType<GetSectionsResult>(res);
+
+        Assert.NotNull(result.Sections);
+        Assert.True(result.Sections[0].StartSlideIndex >= 0);
     }
 
     [Fact]
@@ -134,9 +151,12 @@ public class GetPptSectionsHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("slideCount", result);
+        var result = Assert.IsType<GetSectionsResult>(res);
+
+        Assert.NotNull(result.Sections);
+        Assert.True(result.Sections[0].SlideCount >= 0);
     }
 
     #endregion

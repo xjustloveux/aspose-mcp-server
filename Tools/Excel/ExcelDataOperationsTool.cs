@@ -1,8 +1,10 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Text.Json.Nodes;
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -11,6 +13,7 @@ namespace AsposeMcpServer.Tools.Excel;
 ///     Unified tool for Excel data operations (sort, find/replace, batch write, get content, get statistics, get used
 ///     range)
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Excel.DataOperations")]
 [McpServerToolType]
 public class ExcelDataOperationsTool
 {
@@ -65,7 +68,14 @@ public class ExcelDataOperationsTool
     /// <param name="data">Data for batch_write as JSON array or object.</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "excel_data_operations")]
+    [McpServerTool(
+        Name = "excel_data_operations",
+        Title = "Excel Data Operations",
+        Destructive = true,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(
         @"Excel data operations. Supports 6 operations: sort, find_replace, batch_write, get_content, get_statistics, get_used_range.
 
@@ -76,7 +86,7 @@ Usage examples:
 - Get content: excel_data_operations(operation='get_content', path='book.xlsx', range='A1:C10')
 - Get statistics: excel_data_operations(operation='get_statistics', path='book.xlsx', range='A1:A10')
 - Get used range: excel_data_operations(operation='get_used_range', path='book.xlsx')")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: sort, find_replace, batch_write, get_content, get_statistics, get_used_range")]
         string operation,
         [Description("Excel file path (required if no sessionId)")]
@@ -127,12 +137,12 @@ Usage examples:
 
         var op = operation.ToLowerInvariant();
         if (op == "get_content" || op == "get_statistics" || op == "get_used_range")
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

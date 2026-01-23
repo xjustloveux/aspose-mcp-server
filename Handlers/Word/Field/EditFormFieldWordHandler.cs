@@ -1,12 +1,15 @@
 using Aspose.Words;
 using Aspose.Words.Fields;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Field;
 
 /// <summary>
 ///     Handler for editing form fields in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class EditFormFieldWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class EditFormFieldWordHandler : OperationHandlerBase<Document>
     ///     Optional: value (for TextInput), checkedValue (for CheckBox), selectedIndex (for DropDown)
     /// </param>
     /// <returns>Success message.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractEditFormFieldParameters(parameters);
 
@@ -41,7 +44,7 @@ public class EditFormFieldWordHandler : OperationHandlerBase<Document>
             field.DropDownSelectedIndex = selectedIndex;
 
         MarkModified(context);
-        return Success($"Form field '{p.FieldName}' updated");
+        return new SuccessResult { Message = $"Form field '{p.FieldName}' updated" };
     }
 
     /// <summary>

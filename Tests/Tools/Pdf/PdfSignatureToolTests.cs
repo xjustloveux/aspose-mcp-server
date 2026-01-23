@@ -1,6 +1,6 @@
-using System.Text.Json;
 using Aspose.Pdf;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Pdf.Signature;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Pdf;
 
 namespace AsposeMcpServer.Tests.Tools.Pdf;
@@ -45,12 +45,10 @@ public class PdfSignatureToolTests : PdfTestBase
     {
         var pdfPath = CreateTestPdf("test_get_empty.pdf");
         var result = _tool.Execute("get", pdfPath);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
+        var data = GetResultData<GetSignaturesResult>(result);
 
-        Assert.True(json.TryGetProperty("count", out var countProp));
-        Assert.Equal(0, countProp.GetInt32());
-        Assert.True(json.TryGetProperty("message", out var messageProp));
-        Assert.Equal("No signatures found", messageProp.GetString());
+        Assert.Equal(0, data.Count);
+        Assert.Equal("No signatures found", data.Message);
     }
 
     [Fact]
@@ -58,9 +56,9 @@ public class PdfSignatureToolTests : PdfTestBase
     {
         var pdfPath = CreateTestPdf("test_get_json.pdf");
         var result = _tool.Execute("get", pdfPath);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
-        Assert.True(json.TryGetProperty("count", out _));
-        Assert.True(json.TryGetProperty("items", out _));
+        var data = GetResultData<GetSignaturesResult>(result);
+        Assert.True(data.Count >= 0);
+        Assert.NotNull(data.Items);
     }
 
     #endregion
@@ -75,9 +73,8 @@ public class PdfSignatureToolTests : PdfTestBase
     {
         var pdfPath = CreateTestPdf($"test_case_{operation}.pdf");
         var result = _tool.Execute(operation, pdfPath);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
-        Assert.True(json.TryGetProperty("count", out var countProp));
-        Assert.Equal(0, countProp.GetInt32());
+        var data = GetResultData<GetSignaturesResult>(result);
+        Assert.Equal(0, data.Count);
     }
 
     [Fact]
@@ -104,9 +101,8 @@ public class PdfSignatureToolTests : PdfTestBase
         var pdfPath = CreateTestPdf("test_session_get.pdf");
         var sessionId = OpenSession(pdfPath);
         var result = _tool.Execute("get", sessionId: sessionId);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
-        Assert.True(json.TryGetProperty("count", out var countProp));
-        Assert.Equal(0, countProp.GetInt32());
+        var data = GetResultData<GetSignaturesResult>(result);
+        Assert.Equal(0, data.Count);
         var document = SessionManager.GetDocument<Document>(sessionId);
         Assert.NotNull(document);
     }
@@ -124,9 +120,8 @@ public class PdfSignatureToolTests : PdfTestBase
         var pdfPath2 = CreateMultiPagePdf("test_session_sig.pdf", 2);
         var sessionId = OpenSession(pdfPath2);
         var result = _tool.Execute("get", pdfPath1, sessionId);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
-        Assert.True(json.TryGetProperty("count", out var countProp));
-        Assert.Equal(0, countProp.GetInt32());
+        var data = GetResultData<GetSignaturesResult>(result);
+        Assert.Equal(0, data.Count);
     }
 
     #endregion

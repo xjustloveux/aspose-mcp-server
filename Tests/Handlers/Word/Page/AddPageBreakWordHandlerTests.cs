@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Word.Page;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Page;
 
@@ -43,10 +44,12 @@ public class AddPageBreakWordHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("page break added", result.ToLower());
-        Assert.Contains("document end", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("page break added", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("document end", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -60,10 +63,12 @@ public class AddPageBreakWordHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("page break added", result.ToLower());
-        Assert.Contains("after paragraph 1", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("page break added", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("after paragraph 1", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

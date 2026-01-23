@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
@@ -10,6 +12,7 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 ///     Unified tool for PowerPoint text formatting (batch format text)
 ///     Merges: PptBatchFormatTextTool
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.PowerPoint.TextFormat")]
 [McpServerToolType]
 public class PptTextFormatTool
 {
@@ -57,7 +60,14 @@ public class PptTextFormatTool
     /// <param name="color">Text color: Hex (#FF5500, #RGB) or named color (Red, Blue, DarkGreen) (optional).</param>
     /// <returns>A message indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">Thrown when slide index is out of range.</exception>
-    [McpServerTool(Name = "ppt_text_format")]
+    [McpServerTool(
+        Name = "ppt_text_format",
+        Title = "PowerPoint Text Format Operations",
+        Destructive = false,
+        Idempotent = true,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Batch format PowerPoint text. Formats font, size, bold, italic, color across slides.
 Applies to text in AutoShapes and Table cells.
 
@@ -67,7 +77,7 @@ Usage examples:
 - Format all slides: ppt_text_format(operation='format', path='presentation.pptx', fontName='Arial', fontSize=14, bold=true)
 - Format specific slides: ppt_text_format(operation='format', path='presentation.pptx', slideIndices='[0,1,2]', fontName='Times New Roman', fontSize=12)
 - Format with color: ppt_text_format(operation='format', path='presentation.pptx', color='#FF0000') or ppt_text_format(operation='format', path='presentation.pptx', color='Red')")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: format")] string operation = "format",
         [Description("Presentation file path (required if no sessionId)")]
         string? path = null,
@@ -105,7 +115,7 @@ Usage examples:
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

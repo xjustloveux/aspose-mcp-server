@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Excel.FreezePanes;
 
 namespace AsposeMcpServer.Handlers.Excel.FreezePanes;
 
 /// <summary>
 ///     Handler for getting freeze panes status from Excel worksheets.
 /// </summary>
+[ResultType(typeof(GetFreezePanesResult))]
 public class GetExcelFreezePanesHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class GetExcelFreezePanesHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0)
     /// </param>
     /// <returns>JSON result with freeze panes status information.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractGetFreezePanesParameters(parameters);
 
@@ -42,16 +45,16 @@ public class GetExcelFreezePanesHandler : OperationHandlerBase<Workbook>
             frozenColumns = cols;
         }
 
-        return JsonResult(new
+        return new GetFreezePanesResult
         {
-            worksheetName = worksheet.Name,
-            isFrozen,
-            frozenRow,
-            frozenColumn,
-            frozenRows,
-            frozenColumns,
-            status = isFrozen ? "Panes are frozen" : "Panes are not frozen"
-        });
+            WorksheetName = worksheet.Name,
+            IsFrozen = isFrozen,
+            FrozenRow = frozenRow,
+            FrozenColumn = frozenColumn,
+            FrozenRows = frozenRows,
+            FrozenColumns = frozenColumns,
+            Status = isFrozen ? "Panes are frozen" : "Panes are not frozen"
+        };
     }
 
     private static GetFreezePanesParameters ExtractGetFreezePanesParameters(OperationParameters parameters)

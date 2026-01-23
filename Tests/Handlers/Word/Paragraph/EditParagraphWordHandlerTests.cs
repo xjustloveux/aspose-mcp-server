@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using AsposeMcpServer.Handlers.Word.Paragraph;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Paragraph;
 
@@ -31,9 +32,11 @@ public class EditParagraphWordHandlerTests : WordHandlerTestBase
             { "sectionIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("0", result.Message);
         AssertModified(context);
     }
 
@@ -52,9 +55,11 @@ public class EditParagraphWordHandlerTests : WordHandlerTestBase
             { "styleName", "Normal" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("edited", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("edited", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -100,9 +105,11 @@ public class EditParagraphWordHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("edited", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("edited", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -117,9 +124,11 @@ public class EditParagraphWordHandlerTests : WordHandlerTestBase
             { "text", "Updated text" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("text content updated", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("text content updated", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertContainsText(doc, "Updated text");
     }
 
@@ -140,9 +149,11 @@ public class EditParagraphWordHandlerTests : WordHandlerTestBase
             { "paragraphIndex", index }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains(index.ToString(), result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains(index.ToString(), result.Message);
         AssertModified(context);
     }
 

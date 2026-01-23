@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.Protect;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Protect;
 
@@ -31,10 +32,12 @@ public class UnprotectExcelHandlerTests : ExcelHandlerTestBase
             { "password", "test123" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("removed", result.ToLower());
-        Assert.Contains("workbook", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("removed", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("workbook", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -45,9 +48,11 @@ public class UnprotectExcelHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("workbook", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("workbook", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -69,9 +74,11 @@ public class UnprotectExcelHandlerTests : ExcelHandlerTestBase
             { "password", "test123" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("removed", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("removed", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.False(workbook.Worksheets[0].IsProtected);
         AssertModified(context);
     }
@@ -88,9 +95,11 @@ public class UnprotectExcelHandlerTests : ExcelHandlerTestBase
             { "sheetIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("not protected", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("not protected", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

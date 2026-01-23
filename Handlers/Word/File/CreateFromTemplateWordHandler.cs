@@ -1,15 +1,18 @@
 using System.Text;
 using Aspose.Words;
 using Aspose.Words.Reporting;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.File;
 
 /// <summary>
 ///     Handler for creating Word documents from templates.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class CreateFromTemplateWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -26,7 +29,7 @@ public class CreateFromTemplateWordHandler : OperationHandlerBase<Document>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing.</exception>
     /// <exception cref="InvalidOperationException">Thrown when session management is not enabled or clone fails.</exception>
     /// <exception cref="FileNotFoundException">Thrown when template file is not found.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractCreateFromTemplateParameters(parameters);
 
@@ -83,7 +86,10 @@ public class CreateFromTemplateWordHandler : OperationHandlerBase<Document>
         engine.BuildReport(doc, dataSource, "ds");
 
         doc.Save(p.OutputPath);
-        return $"Document created from template ({templateSource}) using LINQ Reporting Engine: {p.OutputPath}";
+        return new SuccessResult
+        {
+            Message = $"Document created from template ({templateSource}) using LINQ Reporting Engine: {p.OutputPath}"
+        };
     }
 
     private static CreateFromTemplateParameters ExtractCreateFromTemplateParameters(OperationParameters parameters)

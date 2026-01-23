@@ -1,6 +1,7 @@
 using Aspose.Slides.SlideShow;
 using AsposeMcpServer.Handlers.PowerPoint.Transition;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Transition;
 
@@ -51,10 +52,12 @@ public class SetPptTransitionHandlerTests : PptHandlerTestBase
             { "transitionType", "Fade" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Transition", result);
-        Assert.Contains("Fade", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Transition", result.Message);
+        Assert.Contains("Fade", result.Message);
         Assert.Equal(TransitionType.Fade, pres.Slides[0].SlideShowTransition.Type);
         AssertModified(context);
     }
@@ -123,9 +126,11 @@ public class SetPptTransitionHandlerTests : PptHandlerTestBase
             { "slideIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("slide 0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("slide 0", result.Message);
     }
 
     #endregion

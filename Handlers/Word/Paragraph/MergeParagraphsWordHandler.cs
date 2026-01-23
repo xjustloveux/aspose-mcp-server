@@ -1,11 +1,14 @@
 ﻿using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Paragraph;
 
 /// <summary>
 ///     Handler for merging paragraphs in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class MergeParagraphsWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -19,7 +22,7 @@ public class MergeParagraphsWordHandler : OperationHandlerBase<Document>
     ///     Required: startParagraphIndex, endParagraphIndex
     /// </param>
     /// <returns>Success message with merge details.</returns>
-    public override string
+    public override object
         Execute(OperationContext<Document> context,
             OperationParameters parameters)
     {
@@ -68,14 +71,14 @@ public class MergeParagraphsWordHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        var result = "Paragraphs merged successfully\n";
-        result +=
+        var message = "Paragraphs merged successfully\n";
+        message +=
             $"Merge range: Paragraph #{mergeParams.StartParagraphIndex.Value} to #{mergeParams.EndParagraphIndex.Value}\n";
-        result +=
+        message +=
             $"Merged paragraphs: {mergeParams.EndParagraphIndex.Value - mergeParams.StartParagraphIndex.Value + 1}\n";
-        result += $"Remaining paragraphs: {doc.GetChildNodes(NodeType.Paragraph, true).Count}";
+        message += $"Remaining paragraphs: {doc.GetChildNodes(NodeType.Paragraph, true).Count}";
 
-        return result;
+        return new SuccessResult { Message = message };
     }
 
     /// <summary>

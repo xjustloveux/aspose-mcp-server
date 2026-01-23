@@ -1,12 +1,15 @@
 using System.Text.Json;
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Slide;
 
 /// <summary>
 ///     Handler for hiding or showing slides in PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class HidePptSlidesHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class HidePptSlidesHandler : OperationHandlerBase<Presentation>
     ///     Optional: slideIndices (JSON array of indices, default: all slides)
     /// </param>
     /// <returns>Success message with hide/show details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractHidePptSlidesParameters(parameters);
 
@@ -47,7 +50,7 @@ public class HidePptSlidesHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Set {targets.Length} slide(s) hidden={p.Hidden}.");
+        return new SuccessResult { Message = $"Set {targets.Length} slide(s) hidden={p.Hidden}." };
     }
 
     /// <summary>

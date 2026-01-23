@@ -1,7 +1,8 @@
-using System.Text.Json;
-using Aspose.Pdf;
+﻿using Aspose.Pdf;
 using Aspose.Pdf.Forms;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Pdf.FormField;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Pdf;
 
 namespace AsposeMcpServer.Tests.Tools.Pdf;
@@ -55,7 +56,8 @@ public class PdfFormFieldToolTests : PdfTestBase
         var result = _tool.Execute("add", pdfPath, outputPath: outputPath,
             fieldType: "TextField", fieldName: "newField",
             pageIndex: 1, x: 100, y: 700, width: 200, height: 20);
-        Assert.StartsWith("Added", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Added", data.Message);
         using var document = new Document(outputPath);
         Assert.True(document.Form.Count > 0);
     }
@@ -67,7 +69,8 @@ public class PdfFormFieldToolTests : PdfTestBase
         var outputPath = CreateTestFilePath("test_delete_output.pdf");
         var result = _tool.Execute("delete", pdfPath, outputPath: outputPath,
             fieldName: "fieldToDelete");
-        Assert.StartsWith("Deleted", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Deleted", data.Message);
         using var document = new Document(outputPath);
         Assert.Empty(document.Form);
     }
@@ -79,7 +82,8 @@ public class PdfFormFieldToolTests : PdfTestBase
         var outputPath = CreateTestFilePath("test_edit_text_output.pdf");
         var result = _tool.Execute("edit", pdfPath, outputPath: outputPath,
             fieldName: "fieldToEdit", value: "Updated Value");
-        Assert.StartsWith("Edited", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Edited", data.Message);
         using var document = new Document(outputPath);
         var field = document.Form["fieldToEdit"] as TextBoxField;
         Assert.NotNull(field);
@@ -91,9 +95,9 @@ public class PdfFormFieldToolTests : PdfTestBase
     {
         var pdfPath = CreatePdfWithTextField("test_get.pdf");
         var result = _tool.Execute("get", pdfPath);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
-        Assert.True(json.GetProperty("count").GetInt32() > 0);
-        Assert.True(json.TryGetProperty("items", out _));
+        var data = GetResultData<GetFormFieldsResult>(result);
+        Assert.True(data.Count > 0);
+        Assert.NotNull(data.Items);
     }
 
     #endregion
@@ -111,7 +115,8 @@ public class PdfFormFieldToolTests : PdfTestBase
         var result = _tool.Execute(operation, pdfPath, outputPath: outputPath,
             fieldType: "TextField", fieldName: $"field_{operation}",
             pageIndex: 1, x: 100, y: 700, width: 200, height: 20);
-        Assert.StartsWith("Added", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Added", data.Message);
     }
 
     [Fact]
@@ -132,7 +137,11 @@ public class PdfFormFieldToolTests : PdfTestBase
         var pdfPath = CreatePdfWithTextField("test_session_get.pdf", "sessionField");
         var sessionId = OpenSession(pdfPath);
         var result = _tool.Execute("get", sessionId: sessionId);
-        Assert.Contains("sessionField", result);
+        var data = GetResultData<GetFormFieldsResult>(result);
+        Assert.True(data.Count > 0);
+        Assert.Contains(data.Items, f => f.Name == "sessionField");
+        var output = GetResultOutput<GetFormFieldsResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -143,8 +152,10 @@ public class PdfFormFieldToolTests : PdfTestBase
         var result = _tool.Execute("add", sessionId: sessionId,
             fieldType: "TextField", fieldName: "sessionField",
             pageIndex: 1, x: 100, y: 700, width: 200, height: 20);
-        Assert.StartsWith("Added", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Added", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -153,8 +164,10 @@ public class PdfFormFieldToolTests : PdfTestBase
         var pdfPath = CreatePdfWithTextField("test_session_delete.pdf", "fieldToDelete");
         var sessionId = OpenSession(pdfPath);
         var result = _tool.Execute("delete", sessionId: sessionId, fieldName: "fieldToDelete");
-        Assert.StartsWith("Deleted", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Deleted", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
     }
 
     [Fact]
@@ -164,8 +177,10 @@ public class PdfFormFieldToolTests : PdfTestBase
         var sessionId = OpenSession(pdfPath);
         var result = _tool.Execute("edit", sessionId: sessionId,
             fieldName: "fieldToEdit", value: "Session Updated");
-        Assert.StartsWith("Edited", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Edited", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var doc = SessionManager.GetDocument<Document>(sessionId);
         var field = doc.Form["fieldToEdit"] as TextBoxField;
         Assert.NotNull(field);
@@ -186,7 +201,8 @@ public class PdfFormFieldToolTests : PdfTestBase
         var pdfPath2 = CreatePdfWithTextField("test_session_form.pdf", "sessionOnlyField");
         var sessionId = OpenSession(pdfPath2);
         var result = _tool.Execute("get", pdfPath1, sessionId);
-        Assert.Contains("sessionOnlyField", result);
+        var data = GetResultData<GetFormFieldsResult>(result);
+        Assert.Contains(data.Items, f => f.Name == "sessionOnlyField");
     }
 
     #endregion

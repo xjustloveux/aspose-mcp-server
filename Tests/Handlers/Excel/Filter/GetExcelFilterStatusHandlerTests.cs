@@ -1,7 +1,7 @@
-using System.Text.Json;
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.Filter;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Excel.Filter;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Filter;
 
@@ -34,11 +34,12 @@ public class GetExcelFilterStatusHandlerTests : ExcelHandlerTestBase
             { "sheetIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal("FilteredSheet", json.RootElement.GetProperty("worksheetName").GetString());
-        Assert.True(json.RootElement.GetProperty("isFilterEnabled").GetBoolean());
+        var result = Assert.IsType<GetFilterStatusResult>(res);
+
+        Assert.Equal("FilteredSheet", result.WorksheetName);
+        Assert.True(result.IsFilterEnabled);
     }
 
     #endregion
@@ -101,11 +102,11 @@ public class GetExcelFilterStatusHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("isFilterEnabled", out _));
-        Assert.True(json.RootElement.TryGetProperty("worksheetName", out _));
+        var result = Assert.IsType<GetFilterStatusResult>(res);
+
+        Assert.NotNull(result.WorksheetName);
         AssertNotModified(context);
     }
 
@@ -116,11 +117,12 @@ public class GetExcelFilterStatusHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.GetProperty("isFilterEnabled").GetBoolean());
-        Assert.Equal("A1:B10", json.RootElement.GetProperty("filterRange").GetString());
+        var result = Assert.IsType<GetFilterStatusResult>(res);
+
+        Assert.True(result.IsFilterEnabled);
+        Assert.Equal("A1:B10", result.FilterRange);
     }
 
     [Fact]
@@ -130,11 +132,12 @@ public class GetExcelFilterStatusHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.False(json.RootElement.GetProperty("isFilterEnabled").GetBoolean());
-        Assert.Equal(JsonValueKind.Null, json.RootElement.GetProperty("filterRange").ValueKind);
+        var result = Assert.IsType<GetFilterStatusResult>(res);
+
+        Assert.False(result.IsFilterEnabled);
+        Assert.Null(result.FilterRange);
     }
 
     [Fact]
@@ -144,10 +147,11 @@ public class GetExcelFilterStatusHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal("Sheet1", json.RootElement.GetProperty("worksheetName").GetString());
+        var result = Assert.IsType<GetFilterStatusResult>(res);
+
+        Assert.Equal("Sheet1", result.WorksheetName);
     }
 
     [Fact]
@@ -157,11 +161,11 @@ public class GetExcelFilterStatusHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("status", out var status));
-        Assert.Contains("Auto filter enabled", status.GetString());
+        var result = Assert.IsType<GetFilterStatusResult>(res);
+
+        Assert.Contains("Auto filter enabled", result.Status);
     }
 
     #endregion

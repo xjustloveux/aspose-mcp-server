@@ -1,11 +1,14 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Comment;
 
 /// <summary>
 ///     Handler for deleting comments from Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeleteWordCommentHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class DeleteWordCommentHandler : OperationHandlerBase<Document>
     /// <returns>Success message with deletion details.</returns>
     /// <exception cref="ArgumentException">Thrown when commentIndex is not provided or is out of range.</exception>
     /// <exception cref="InvalidOperationException">Thrown when comment cannot be found at the specified index.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractDeleteParameters(parameters);
 
@@ -55,8 +58,11 @@ public class DeleteWordCommentHandler : OperationHandlerBase<Document>
 
         var remainingCount = doc.GetChildNodes(NodeType.Comment, true).Count;
 
-        return
-            $"Comment #{p.CommentIndex} deleted successfully\nAuthor: {author}\nRemaining comments: {remainingCount}";
+        return new SuccessResult
+        {
+            Message =
+                $"Comment #{p.CommentIndex} deleted successfully\nAuthor: {author}\nRemaining comments: {remainingCount}"
+        };
     }
 
     /// <summary>

@@ -1,12 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.PageSetup;
 
 /// <summary>
 ///     Handler for setting footer in PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetFooterHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class SetFooterHandler : OperationHandlerBase<Presentation>
     ///     Optional: footerText, showSlideNumber (default: true), dateText, slideIndices
     /// </param>
     /// <returns>Success message with number of slides updated.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractSetFooterParameters(parameters);
         var presentation = context.Document;
@@ -35,7 +38,7 @@ public class SetFooterHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Footer settings updated for {slides.Count} slide(s).");
+        return new SuccessResult { Message = $"Footer settings updated for {slides.Count} slide(s)." };
     }
 
     /// <summary>

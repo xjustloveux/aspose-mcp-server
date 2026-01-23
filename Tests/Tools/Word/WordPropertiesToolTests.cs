@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using Aspose.Words;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Word.Properties;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Word;
 
 namespace AsposeMcpServer.Tests.Tools.Word;
@@ -27,10 +28,9 @@ public class WordPropertiesToolTests : WordTestBase
         var docPath = CreateWordDocument("test_get_properties.docx");
         var result = _tool.Execute("get", docPath);
         Assert.NotNull(result);
-        var json = JsonNode.Parse(result);
-        Assert.NotNull(json);
-        Assert.NotNull(json["builtInProperties"]);
-        Assert.NotNull(json["statistics"]);
+        var data = GetResultData<GetWordPropertiesResult>(result);
+        Assert.NotNull(data.BuiltInProperties);
+        Assert.NotNull(data.Statistics);
     }
 
     [Fact]
@@ -73,7 +73,8 @@ public class WordPropertiesToolTests : WordTestBase
     {
         var docPath = CreateWordDocument($"test_case_{operation}.docx");
         var result = _tool.Execute(operation, docPath);
-        Assert.Contains("builtInProperties", result);
+        var data = GetResultData<GetWordPropertiesResult>(result);
+        Assert.NotNull(data.BuiltInProperties);
     }
 
     [Fact]
@@ -97,7 +98,10 @@ public class WordPropertiesToolTests : WordTestBase
         doc.Save(docPath);
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("get", sessionId: sessionId);
-        Assert.Contains("Session Title", result);
+        var data = GetResultData<GetWordPropertiesResult>(result);
+        Assert.Equal("Session Title", data.BuiltInProperties.Title);
+        var output = GetResultOutput<GetWordPropertiesResult>(result);
+        Assert.Equal(sessionId, output.SessionId);
     }
 
     [Fact]
@@ -130,8 +134,9 @@ public class WordPropertiesToolTests : WordTestBase
         doc2.Save(docPath2);
         var sessionId = OpenSession(docPath2);
         var result = _tool.Execute("get", docPath1, sessionId);
-        Assert.Contains("Session Title", result);
-        Assert.DoesNotContain("Path Title", result);
+        var data = GetResultData<GetWordPropertiesResult>(result);
+        Assert.Equal("Session Title", data.BuiltInProperties.Title);
+        Assert.NotEqual("Path Title", data.BuiltInProperties.Title);
     }
 
     #endregion

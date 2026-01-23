@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.RowColumn;
 
 /// <summary>
 ///     Handler for inserting cells in a range and shifting existing cells.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class InsertCellsHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class InsertCellsHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0)
     /// </param>
     /// <returns>Success message with insertion details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractInsertCellsParameters(parameters);
 
@@ -43,7 +46,7 @@ public class InsertCellsHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Cells inserted in range {p.Range}, shifted {p.ShiftDirection}.");
+        return new SuccessResult { Message = $"Cells inserted in range {p.Range}, shifted {p.ShiftDirection}." };
     }
 
     private static InsertCellsParameters ExtractInsertCellsParameters(OperationParameters parameters)

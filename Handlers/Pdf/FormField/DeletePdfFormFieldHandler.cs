@@ -1,12 +1,15 @@
 using Aspose.Pdf;
 using Aspose.Pdf.Forms;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.FormField;
 
 /// <summary>
 ///     Handler for deleting form fields from PDF documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeletePdfFormFieldHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class DeletePdfFormFieldHandler : OperationHandlerBase<Document>
     ///     Required: fieldName
     /// </param>
     /// <returns>Success message with deletion details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractDeleteParameters(parameters);
 
@@ -32,7 +35,7 @@ public class DeletePdfFormFieldHandler : OperationHandlerBase<Document>
         document.Form.Delete(p.FieldName);
         MarkModified(context);
 
-        return Success($"Deleted form field '{p.FieldName}'.");
+        return new SuccessResult { Message = $"Deleted form field '{p.FieldName}'." };
     }
 
     /// <summary>

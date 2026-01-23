@@ -1,11 +1,15 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Word.SectionBreak;
 
 namespace AsposeMcpServer.Handlers.Word.SectionBreak;
 
 /// <summary>
 ///     Handler for getting section information from Word documents.
 /// </summary>
+[ResultType(typeof(GetSectionsWordResult))]
 public class GetWordSectionsHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -19,7 +23,7 @@ public class GetWordSectionsHandler : OperationHandlerBase<Document>
     ///     Optional: sectionIndex (null for all sections)
     /// </param>
     /// <returns>JSON string containing section information.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractGetWordSectionsParameters(parameters);
 
@@ -34,30 +38,30 @@ public class GetWordSectionsHandler : OperationHandlerBase<Document>
             var section = doc.Sections[p.SectionIndex.Value];
             var sectionInfo = WordSectionHelper.BuildSectionInfo(section, p.SectionIndex.Value);
 
-            var result = new
+            var result = new GetSectionsWordResult
             {
-                totalSections = doc.Sections.Count,
-                section = sectionInfo
+                TotalSections = doc.Sections.Count,
+                Section = sectionInfo
             };
 
-            return JsonResult(result);
+            return result;
         }
         else
         {
-            List<object> sectionList = [];
+            List<SectionInfo> sectionList = [];
             for (var i = 0; i < doc.Sections.Count; i++)
             {
                 var section = doc.Sections[i];
                 sectionList.Add(WordSectionHelper.BuildSectionInfo(section, i));
             }
 
-            var result = new
+            var result = new GetSectionsWordResult
             {
-                totalSections = doc.Sections.Count,
-                sections = sectionList
+                TotalSections = doc.Sections.Count,
+                Sections = sectionList
             };
 
-            return JsonResult(result);
+            return result;
         }
     }
 

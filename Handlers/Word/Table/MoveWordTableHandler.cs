@@ -1,5 +1,7 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.Table;
@@ -7,6 +9,7 @@ namespace AsposeMcpServer.Handlers.Word.Table;
 /// <summary>
 ///     Handler for moving tables in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class MoveWordTableHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class MoveWordTableHandler : OperationHandlerBase<Document>
     /// </param>
     /// <returns>Success message.</returns>
     /// <exception cref="ArgumentException">Thrown when indices are out of range or target paragraph cannot be found.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractMoveWordTableParameters(parameters);
 
@@ -65,7 +68,7 @@ public class MoveWordTableHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Successfully moved table {p.TableIndex}.");
+        return new SuccessResult { Message = $"Successfully moved table {p.TableIndex}." };
     }
 
     private static MoveWordTableParameters ExtractMoveWordTableParameters(OperationParameters parameters)

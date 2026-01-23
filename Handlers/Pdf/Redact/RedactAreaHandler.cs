@@ -1,7 +1,9 @@
 using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.Common;
 using Color = System.Drawing.Color;
 
 namespace AsposeMcpServer.Handlers.Pdf.Redact;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Handlers.Pdf.Redact;
 /// <summary>
 ///     Handler for redacting a specific rectangular area on a PDF page.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class RedactAreaHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -23,7 +26,7 @@ public class RedactAreaHandler : OperationHandlerBase<Document>
     ///     Optional: fillColor, overlayText
     /// </param>
     /// <returns>Success message with redaction details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractAreaParameters(parameters);
 
@@ -43,7 +46,7 @@ public class RedactAreaHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Redaction applied to page {p.PageIndex}.");
+        return new SuccessResult { Message = $"Redaction applied to page {p.PageIndex}." };
     }
 
     /// <summary>

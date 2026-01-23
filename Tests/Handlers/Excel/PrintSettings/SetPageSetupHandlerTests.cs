@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.PrintSettings;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.PrintSettings;
 
@@ -30,9 +31,11 @@ public class SetPageSetupHandlerTests : ExcelHandlerTestBase
             { "orientation", "landscape" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("page setup updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("page setup updated", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(PageOrientationType.Landscape, workbook.Worksheets[0].PageSetup.Orientation);
         AssertModified(context);
     }
@@ -50,9 +53,11 @@ public class SetPageSetupHandlerTests : ExcelHandlerTestBase
             { "bottomMargin", 0.5 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("page setup updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("page setup updated", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(Math.Abs(1.0 - workbook.Worksheets[0].PageSetup.LeftMargin) < 0.01);
         Assert.True(Math.Abs(1.0 - workbook.Worksheets[0].PageSetup.RightMargin) < 0.01);
     }
@@ -68,9 +73,11 @@ public class SetPageSetupHandlerTests : ExcelHandlerTestBase
             { "footer", "&CPage &P" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("page setup updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("page setup updated", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -85,9 +92,11 @@ public class SetPageSetupHandlerTests : ExcelHandlerTestBase
             { "fitToPagesTall", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("page setup updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("page setup updated", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(1, workbook.Worksheets[0].PageSetup.FitToPagesWide);
         Assert.Equal(2, workbook.Worksheets[0].PageSetup.FitToPagesTall);
     }
@@ -115,9 +124,11 @@ public class SetPageSetupHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("no changes", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("no changes", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.PowerPoint.SmartArt;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.SmartArt;
 
@@ -30,10 +31,12 @@ public class AddSmartArtHandlerTests : PptHandlerTestBase
             { "layout", "BasicProcess" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result.ToLower());
-        Assert.Contains("basicprocess", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("basicprocess", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -52,9 +55,11 @@ public class AddSmartArtHandlerTests : PptHandlerTestBase
             { "height", 250f }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("hierarchy", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("hierarchy", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 

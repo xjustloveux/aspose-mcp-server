@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.Hyperlink;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Hyperlink;
 
@@ -33,9 +34,11 @@ public class DeleteExcelHyperlinkHandlerTests : ExcelHandlerTestBase
             { "hyperlinkIndex", index }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted", result.Message);
     }
 
     #endregion
@@ -74,9 +77,11 @@ public class DeleteExcelHyperlinkHandlerTests : ExcelHandlerTestBase
             { "cell", "A1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted", result.Message);
         AssertModified(context);
     }
 
@@ -90,9 +95,11 @@ public class DeleteExcelHyperlinkHandlerTests : ExcelHandlerTestBase
             { "hyperlinkIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted", result.Message);
     }
 
     [Fact]
@@ -122,9 +129,11 @@ public class DeleteExcelHyperlinkHandlerTests : ExcelHandlerTestBase
             { "hyperlinkIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("2 hyperlinks remaining", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("2 hyperlinks remaining", result.Message);
     }
 
     [Fact]
@@ -137,9 +146,11 @@ public class DeleteExcelHyperlinkHandlerTests : ExcelHandlerTestBase
             { "cell", "B2" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("B2", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("B2", result.Message);
     }
 
     #endregion

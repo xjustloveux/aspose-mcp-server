@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Pdf;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Pdf;
 /// <summary>
 ///     Unified tool for managing PDF tables (add, edit)
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Pdf.Table")]
 [McpServerToolType]
 public class PdfTableTool
 {
@@ -60,7 +63,14 @@ public class PdfTableTool
     /// <param name="cellValue">New cell value (for edit).</param>
     /// <returns>A message indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "pdf_table")]
+    [McpServerTool(
+        Name = "pdf_table",
+        Title = "PDF Table Operations",
+        Destructive = false,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage tables in PDF documents. Supports 2 operations: add, edit.
 
 Usage examples:
@@ -70,7 +80,7 @@ Usage examples:
 - Edit table cell: pdf_table(operation='edit', path='doc.pdf', tableIndex=0, cellRow=0, cellColumn=1, cellValue='NewValue')
 
 Note: PDF table editing has limitations. After saving, tables may be converted to graphics and cannot be edited as Table objects.")]
-    public string Execute(
+    public object Execute(
         [Description("Operation: add, edit")] string operation,
         [Description("PDF file path (required if no sessionId)")]
         string? path = null,
@@ -123,7 +133,7 @@ Note: PDF table editing has limitations. After saving, tables may be converted t
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
 using AsposeMcpServer.Core.Tools;
@@ -10,19 +11,10 @@ namespace AsposeMcpServer.Tools.Excel;
 /// <summary>
 ///     Unified tool for managing Excel properties (workbook properties, sheet properties, sheet info).
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Excel.Properties")]
 [McpServerToolType]
 public class ExcelPropertiesTool : PropertiesToolBase<Workbook>
 {
-    /// <summary>
-    ///     Read-only operations that return results directly without saving.
-    /// </summary>
-    private static readonly HashSet<string> ReadOnlyOperations = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "get_workbook_properties",
-        "get_sheet_properties",
-        "get_sheet_info"
-    };
-
     /// <summary>
     ///     Initializes a new instance of the <see cref="ExcelPropertiesTool" /> class.
     /// </summary>
@@ -62,7 +54,14 @@ public class ExcelPropertiesTool : PropertiesToolBase<Workbook>
     /// <param name="targetSheetIndex">Sheet index for get_sheet_info (optional, if not provided returns all sheets).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "excel_properties")]
+    [McpServerTool(
+        Name = "excel_properties",
+        Title = "Excel Properties Operations",
+        Destructive = false,
+        Idempotent = true,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(
         @"Manage Excel properties. Supports 5 operations: get_workbook_properties, set_workbook_properties, get_sheet_properties, edit_sheet_properties, get_sheet_info.
 
@@ -72,7 +71,7 @@ Usage examples:
 - Get sheet properties: excel_properties(operation='get_sheet_properties', path='book.xlsx', sheetIndex=0)
 - Edit sheet properties: excel_properties(operation='edit_sheet_properties', path='book.xlsx', sheetIndex=0, name='New Name')
 - Get sheet info: excel_properties(operation='get_sheet_info', path='book.xlsx')")]
-    public string Execute(
+    public object Execute(
         [Description(@"Operation to perform.
 - 'get_workbook_properties': Get workbook properties (required params: path)
 - 'set_workbook_properties': Set workbook properties (required params: path)
@@ -125,8 +124,7 @@ Usage examples:
             sessionId,
             path,
             outputPath,
-            parameters,
-            op => ReadOnlyOperations.Contains(op));
+            parameters);
     }
 
     /// <summary>

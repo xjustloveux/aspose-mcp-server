@@ -1,6 +1,6 @@
-using System.Text.Json;
 using AsposeMcpServer.Handlers.Pdf.Page;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Pdf.Page;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Page;
 
@@ -45,10 +45,11 @@ public class GetPdfPageInfoHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(1, json.RootElement.GetProperty("count").GetInt32());
+        var result = Assert.IsType<GetPdfPageInfoResult>(res);
+
+        Assert.Equal(1, result.Count);
     }
 
     #endregion
@@ -62,11 +63,11 @@ public class GetPdfPageInfoHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("count", out var count));
-        Assert.Equal(3, count.GetInt32());
+        var result = Assert.IsType<GetPdfPageInfoResult>(res);
+
+        Assert.Equal(3, result.Count);
         AssertNotModified(context);
     }
 
@@ -79,10 +80,11 @@ public class GetPdfPageInfoHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(pageCount, json.RootElement.GetProperty("count").GetInt32());
+        var result = Assert.IsType<GetPdfPageInfoResult>(res);
+
+        Assert.Equal(pageCount, result.Count);
         AssertNotModified(context);
     }
 
@@ -96,10 +98,11 @@ public class GetPdfPageInfoHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(pageCount, json.RootElement.GetProperty("count").GetInt32());
+        var result = Assert.IsType<GetPdfPageInfoResult>(res);
+
+        Assert.Equal(pageCount, result.Count);
         AssertNotModified(context);
     }
 
@@ -114,12 +117,12 @@ public class GetPdfPageInfoHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("items", out var items));
-        Assert.Equal(JsonValueKind.Array, items.ValueKind);
-        Assert.Equal(3, items.GetArrayLength());
+        var result = Assert.IsType<GetPdfPageInfoResult>(res);
+
+        Assert.NotNull(result.Items);
+        Assert.Equal(3, result.Items.Count);
     }
 
     [Fact]
@@ -129,13 +132,12 @@ public class GetPdfPageInfoHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var items = json.RootElement.GetProperty("items");
-        var firstItem = items[0];
-        Assert.True(firstItem.TryGetProperty("pageIndex", out var pageIndex));
-        Assert.Equal(1, pageIndex.GetInt32());
+        var result = Assert.IsType<GetPdfPageInfoResult>(res);
+
+        var firstItem = result.Items[0];
+        Assert.Equal(1, firstItem.PageIndex);
     }
 
     [Fact]
@@ -145,13 +147,13 @@ public class GetPdfPageInfoHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var items = json.RootElement.GetProperty("items");
-        var firstItem = items[0];
-        Assert.True(firstItem.TryGetProperty("width", out _));
-        Assert.True(firstItem.TryGetProperty("height", out _));
+        var result = Assert.IsType<GetPdfPageInfoResult>(res);
+
+        var firstItem = result.Items[0];
+        Assert.True(firstItem.Width >= 0);
+        Assert.True(firstItem.Height >= 0);
     }
 
     [Fact]
@@ -161,12 +163,12 @@ public class GetPdfPageInfoHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var items = json.RootElement.GetProperty("items");
-        var firstItem = items[0];
-        Assert.True(firstItem.TryGetProperty("rotation", out _));
+        var result = Assert.IsType<GetPdfPageInfoResult>(res);
+
+        var firstItem = result.Items[0];
+        Assert.NotNull(firstItem.Rotation);
     }
 
     #endregion

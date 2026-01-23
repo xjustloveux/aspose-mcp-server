@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.ViewSettings;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.ViewSettings;
 
@@ -43,9 +44,11 @@ public class SetTabColorExcelViewHandlerTests : ExcelHandlerTestBase
             { "color", "Red" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("red", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("red", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -61,9 +64,11 @@ public class SetTabColorExcelViewHandlerTests : ExcelHandlerTestBase
             { "color", "Blue" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("blue", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("blue", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -76,9 +81,11 @@ public class SetTabColorExcelViewHandlerTests : ExcelHandlerTestBase
             { "color", "#FF5733" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("#FF5733", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("#FF5733", result.Message);
         AssertModified(context);
     }
 

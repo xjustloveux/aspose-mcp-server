@@ -1,7 +1,7 @@
-using System.Text.Json;
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.DataValidation;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Excel.DataValidation;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.DataValidation;
 
@@ -62,10 +62,11 @@ public class GetExcelDataValidationsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(2, json.RootElement.GetProperty("count").GetInt32());
+        var result = Assert.IsType<GetDataValidationsResult>(res);
+
+        Assert.Equal(2, result.Count);
         AssertNotModified(context);
     }
 
@@ -76,11 +77,12 @@ public class GetExcelDataValidationsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(0, json.RootElement.GetProperty("count").GetInt32());
-        Assert.Empty(json.RootElement.GetProperty("items").EnumerateArray());
+        var result = Assert.IsType<GetDataValidationsResult>(res);
+
+        Assert.Equal(0, result.Count);
+        Assert.Empty(result.Items);
     }
 
     [Fact]
@@ -98,15 +100,15 @@ public class GetExcelDataValidationsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var items = json.RootElement.GetProperty("items");
-        var firstItem = items[0];
-        Assert.Equal("List", firstItem.GetProperty("type").GetString());
-        Assert.Equal("Red,Green,Blue", firstItem.GetProperty("formula1").GetString());
-        Assert.Equal("Select a color", firstItem.GetProperty("errorMessage").GetString());
-        Assert.True(firstItem.GetProperty("showError").GetBoolean());
+        var result = Assert.IsType<GetDataValidationsResult>(res);
+
+        var firstItem = result.Items[0];
+        Assert.Equal("List", firstItem.Type);
+        Assert.Equal("Red,Green,Blue", firstItem.Formula1);
+        Assert.Equal("Select a color", firstItem.ErrorMessage);
+        Assert.True(firstItem.ShowError);
     }
 
     #endregion
@@ -127,11 +129,12 @@ public class GetExcelDataValidationsHandlerTests : ExcelHandlerTestBase
             { "sheetIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(2, json.RootElement.GetProperty("count").GetInt32());
-        Assert.Equal("Sheet2", json.RootElement.GetProperty("worksheetName").GetString());
+        var result = Assert.IsType<GetDataValidationsResult>(res);
+
+        Assert.Equal(2, result.Count);
+        Assert.Equal("Sheet2", result.WorksheetName);
     }
 
     [Fact]
@@ -143,11 +146,12 @@ public class GetExcelDataValidationsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(1, json.RootElement.GetProperty("count").GetInt32());
-        Assert.Equal("Sheet1", json.RootElement.GetProperty("worksheetName").GetString());
+        var result = Assert.IsType<GetDataValidationsResult>(res);
+
+        Assert.Equal(1, result.Count);
+        Assert.Equal("Sheet1", result.WorksheetName);
     }
 
     #endregion
@@ -161,12 +165,13 @@ public class GetExcelDataValidationsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("count", out _));
-        Assert.True(json.RootElement.TryGetProperty("worksheetName", out _));
-        Assert.True(json.RootElement.TryGetProperty("items", out _));
+        var result = Assert.IsType<GetDataValidationsResult>(res);
+
+        Assert.True(result.Count >= 0);
+        Assert.NotNull(result.WorksheetName);
+        Assert.NotNull(result.Items);
     }
 
     [Fact]
@@ -176,14 +181,14 @@ public class GetExcelDataValidationsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var items = json.RootElement.GetProperty("items");
+        var result = Assert.IsType<GetDataValidationsResult>(res);
+
         var index = 0;
-        foreach (var item in items.EnumerateArray())
+        foreach (var item in result.Items)
         {
-            Assert.Equal(index, item.GetProperty("index").GetInt32());
+            Assert.Equal(index, item.Index);
             index++;
         }
     }

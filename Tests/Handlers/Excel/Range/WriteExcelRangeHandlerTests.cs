@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.Range;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Range;
 
@@ -54,10 +55,12 @@ public class WriteExcelRangeHandlerTests : ExcelHandlerTestBase
             { "data", "[[\"Test\"]]" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("B3", result);
-        Assert.Contains("written", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("B3", result.Message);
+        Assert.Contains("written", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -75,9 +78,11 @@ public class WriteExcelRangeHandlerTests : ExcelHandlerTestBase
             { "data", "[[\"A\",\"B\"],[\"C\",\"D\"]]" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("A1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("A1", result.Message);
         Assert.Equal("A", workbook.Worksheets[0].Cells["A1"].StringValue);
         Assert.Equal("B", workbook.Worksheets[0].Cells["B1"].StringValue);
         Assert.Equal("C", workbook.Worksheets[0].Cells["A2"].StringValue);
@@ -99,9 +104,11 @@ public class WriteExcelRangeHandlerTests : ExcelHandlerTestBase
             { "data", "[[\"Test\"]]" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains(startCell, result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains(startCell, result.Message);
         Assert.Equal("Test", workbook.Worksheets[0].Cells[startCell].StringValue);
         AssertModified(context);
     }

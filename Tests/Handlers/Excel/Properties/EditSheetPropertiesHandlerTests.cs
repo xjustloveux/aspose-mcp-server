@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.Properties;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Properties;
 
@@ -29,9 +30,11 @@ public class EditSheetPropertiesHandlerTests : ExcelHandlerTestBase
             { "name", "NewName" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated successfully", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated successfully", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("NewName", workbook.Worksheets[0].Name);
         AssertModified(context);
     }
@@ -62,9 +65,11 @@ public class EditSheetPropertiesHandlerTests : ExcelHandlerTestBase
             { "tabColor", "#FF0000" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("updated successfully", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("updated successfully", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -94,9 +99,11 @@ public class EditSheetPropertiesHandlerTests : ExcelHandlerTestBase
             { "name", "UpdatedSheet" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("sheet 1", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("sheet 1", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("UpdatedSheet", workbook.Worksheets[1].Name);
     }
 

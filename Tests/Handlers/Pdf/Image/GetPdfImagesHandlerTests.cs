@@ -1,7 +1,7 @@
-using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using AsposeMcpServer.Handlers.Pdf.Image;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Pdf.Image;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Image;
 
@@ -31,10 +31,10 @@ public class GetPdfImagesHandlerTests : PdfHandlerTestBase
             { "pageIndex", -1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("count", result);
-        Assert.DoesNotContain("pageIndex must be between", result);
+        var result = Assert.IsType<GetImagesPdfResult>(res);
+        Assert.True(result.Count >= 0);
     }
 
     #endregion
@@ -51,10 +51,11 @@ public class GetPdfImagesHandlerTests : PdfHandlerTestBase
             { "pageIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("\"count\": 0", result);
-        Assert.Contains("No images found on page 1", result);
+        var result = Assert.IsType<GetImagesPdfResult>(res);
+        Assert.Equal(0, result.Count);
+        Assert.Equal("No images found on page 1", result.Message);
     }
 
     #endregion
@@ -68,10 +69,10 @@ public class GetPdfImagesHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("count", result);
-        Assert.Contains("\"count\": 0", result);
+        var result = Assert.IsType<GetImagesPdfResult>(res);
+        Assert.Equal(0, result.Count);
     }
 
     [Fact]
@@ -81,13 +82,14 @@ public class GetPdfImagesHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("No images found", result);
+        var result = Assert.IsType<GetImagesPdfResult>(res);
+        Assert.Contains("No images found", result.Message);
     }
 
     [Fact]
-    public void Execute_ReturnsJsonFormat()
+    public void Execute_ReturnsTypedResult()
     {
         var doc = CreateEmptyDocument();
         var context = CreateContext(doc);
@@ -95,8 +97,7 @@ public class GetPdfImagesHandlerTests : PdfHandlerTestBase
 
         var result = _handler.Execute(context, parameters);
 
-        var json = JsonNode.Parse(result);
-        Assert.NotNull(json);
+        Assert.IsType<GetImagesPdfResult>(result);
     }
 
     #endregion
@@ -113,10 +114,10 @@ public class GetPdfImagesHandlerTests : PdfHandlerTestBase
             { "pageIndex", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("pageIndex", result);
-        Assert.Contains("2", result);
+        var result = Assert.IsType<GetImagesPdfResult>(res);
+        Assert.Equal(2, result.PageIndex);
     }
 
     [Fact]
@@ -126,9 +127,10 @@ public class GetPdfImagesHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("count", result);
+        var result = Assert.IsType<GetImagesPdfResult>(res);
+        Assert.True(result.Count >= 0);
     }
 
     #endregion
@@ -159,10 +161,10 @@ public class GetPdfImagesHandlerTests : PdfHandlerTestBase
             { "pageIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("count", result);
-        Assert.DoesNotContain("pageIndex must be between", result);
+        var result = Assert.IsType<GetImagesPdfResult>(res);
+        Assert.True(result.Count >= 0);
     }
 
     #endregion
@@ -176,13 +178,12 @@ public class GetPdfImagesHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonNode.Parse(result);
-        Assert.NotNull(json);
-        Assert.NotNull(json["count"]);
-        Assert.NotNull(json["items"]);
-        Assert.NotNull(json["message"]);
+        var result = Assert.IsType<GetImagesPdfResult>(res);
+        Assert.Equal(0, result.Count);
+        Assert.NotNull(result.Items);
+        Assert.NotNull(result.Message);
     }
 
     [Fact]
@@ -195,12 +196,11 @@ public class GetPdfImagesHandlerTests : PdfHandlerTestBase
             { "pageIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonNode.Parse(result);
-        Assert.NotNull(json);
-        Assert.NotNull(json["items"]);
-        Assert.Empty(json["items"]!.AsArray());
+        var result = Assert.IsType<GetImagesPdfResult>(res);
+        Assert.NotNull(result.Items);
+        Assert.Empty(result.Items);
     }
 
     #endregion
@@ -217,12 +217,11 @@ public class GetPdfImagesHandlerTests : PdfHandlerTestBase
             { "pageIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonNode.Parse(result);
-        Assert.NotNull(json);
-        Assert.Equal(1, json["count"]!.GetValue<int>());
-        Assert.NotEmpty(json["items"]!.AsArray());
+        var result = Assert.IsType<GetImagesPdfResult>(res);
+        Assert.Equal(1, result.Count);
+        Assert.NotEmpty(result.Items);
     }
 
     [Fact]
@@ -232,11 +231,10 @@ public class GetPdfImagesHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonNode.Parse(result);
-        Assert.NotNull(json);
-        Assert.True(json["count"]!.GetValue<int>() >= 2);
+        var result = Assert.IsType<GetImagesPdfResult>(res);
+        Assert.True(result.Count >= 2);
     }
 
     [Fact]
@@ -249,16 +247,13 @@ public class GetPdfImagesHandlerTests : PdfHandlerTestBase
             { "pageIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonNode.Parse(result);
-        Assert.NotNull(json);
-        var items = json["items"]!.AsArray();
-        Assert.NotEmpty(items);
-        var firstItem = items[0];
-        Assert.NotNull(firstItem);
-        Assert.True(firstItem["index"]!.GetValue<int>() >= 1);
-        Assert.Equal(1, firstItem["pageIndex"]!.GetValue<int>());
+        var result = Assert.IsType<GetImagesPdfResult>(res);
+        Assert.NotEmpty(result.Items);
+        var firstItem = result.Items[0];
+        Assert.True(firstItem.Index >= 1);
+        Assert.Equal(1, firstItem.PageIndex);
     }
 
     #endregion

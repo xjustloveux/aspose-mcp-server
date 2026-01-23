@@ -1,5 +1,6 @@
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 
 namespace AsposeMcpServer.Core.Tools;
 
@@ -49,15 +50,13 @@ public abstract class PropertiesToolBase<TDocument> where TDocument : class
     /// <param name="path">Document file path.</param>
     /// <param name="outputPath">Output file path.</param>
     /// <param name="parameters">The operation parameters.</param>
-    /// <param name="isReadOnlyOperation">Function to determine if the operation is read-only.</param>
     /// <returns>The operation result.</returns>
-    protected string ExecuteOperation(
+    protected object ExecuteOperation(
         string operation,
         string? sessionId,
         string? path,
         string? outputPath,
-        OperationParameters parameters,
-        Func<string, bool> isReadOnlyOperation)
+        OperationParameters parameters)
     {
         using var ctx = DocumentContext<TDocument>.Create(SessionManager, sessionId, path, IdentityAccessor);
 
@@ -76,17 +75,9 @@ public abstract class PropertiesToolBase<TDocument> where TDocument : class
 
         var result = handler.Execute(operationContext, parameters);
 
-        // Read-only operations return result directly
-        if (isReadOnlyOperation(operation))
-            return result;
-
-        // Write operations save and return with output message
         if (operationContext.IsModified)
             ctx.Save(effectiveOutputPath);
 
-        if (ctx.IsSession || !operationContext.IsModified)
-            return result;
-
-        return $"{result}\n{ctx.GetOutputMessage(effectiveOutputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, effectiveOutputPath);
     }
 }

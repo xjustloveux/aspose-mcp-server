@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Word.SectionBreak;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.SectionBreak;
 
@@ -30,9 +31,11 @@ public class InsertWordSectionHandlerTests : WordHandlerTestBase
             { "sectionBreakType", "NextPage" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("section break inserted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("section break inserted", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(doc.Sections.Count > initialCount);
         AssertModified(context);
     }
@@ -48,9 +51,11 @@ public class InsertWordSectionHandlerTests : WordHandlerTestBase
             { "sectionBreakType", "Continuous" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("continuous", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("continuous", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(doc.Sections.Count > initialCount);
     }
 
@@ -64,9 +69,11 @@ public class InsertWordSectionHandlerTests : WordHandlerTestBase
             { "sectionBreakType", "OddPage" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("section break inserted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("section break inserted", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -79,9 +86,11 @@ public class InsertWordSectionHandlerTests : WordHandlerTestBase
             { "sectionBreakType", "EvenPage" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("section break inserted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("section break inserted", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

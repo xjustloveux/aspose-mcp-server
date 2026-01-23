@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.PivotTable;
 
 /// <summary>
 ///     Handler for deleting a pivot table from the worksheet.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeleteExcelPivotTableHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class DeleteExcelPivotTableHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex
     /// </param>
     /// <returns>Success message with delete details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractDeletePivotTableParameters(parameters);
 
@@ -40,7 +43,7 @@ public class DeleteExcelPivotTableHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Pivot table #{p.PivotTableIndex} ({pivotTableName}) deleted.");
+        return new SuccessResult { Message = $"Pivot table #{p.PivotTableIndex} ({pivotTableName}) deleted." };
     }
 
     private static DeletePivotTableParameters ExtractDeletePivotTableParameters(OperationParameters parameters)

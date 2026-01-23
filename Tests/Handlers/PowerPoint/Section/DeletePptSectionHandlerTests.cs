@@ -1,6 +1,7 @@
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Section;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Section;
 
@@ -46,9 +47,11 @@ public class DeletePptSectionHandlerTests : PptHandlerTestBase
             { "sectionIndex", 2 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("removed", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("removed", result.Message);
         AssertModified(context);
     }
 
@@ -78,9 +81,11 @@ public class DeletePptSectionHandlerTests : PptHandlerTestBase
             { "sectionIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Section 1", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Section 1", result.Message);
     }
 
     #endregion
@@ -148,9 +153,11 @@ public class DeletePptSectionHandlerTests : PptHandlerTestBase
             { "keepSlides", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("keep slides", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("keep slides", result.Message);
     }
 
     #endregion
@@ -169,9 +176,11 @@ public class DeletePptSectionHandlerTests : PptHandlerTestBase
             { "sectionIndex", sectionIndex }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("removed", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("removed", result.Message);
     }
 
     [Fact]
@@ -184,9 +193,11 @@ public class DeletePptSectionHandlerTests : PptHandlerTestBase
             { "sectionIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("removed", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("removed", result.Message);
     }
 
     #endregion

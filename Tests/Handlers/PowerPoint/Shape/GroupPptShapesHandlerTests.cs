@@ -1,6 +1,7 @@
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Shape;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Shape;
 
@@ -38,9 +39,11 @@ public class GroupPptShapesHandlerTests : PptHandlerTestBase
             { "shapeIndices", ThreeShapeIndices }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("3", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("3", result.Message);
         Assert.Single(pres.Slides[0].Shapes);
         AssertModified(context);
     }
@@ -83,9 +86,11 @@ public class GroupPptShapesHandlerTests : PptHandlerTestBase
             { "shapeIndices", TwoShapeIndices }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("shapeIndex", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("shapeIndex", result.Message);
     }
 
     #endregion
@@ -104,10 +109,12 @@ public class GroupPptShapesHandlerTests : PptHandlerTestBase
             { "shapeIndices", TwoShapeIndices }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Grouped", result);
-        Assert.Contains("2", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Grouped", result.Message);
+        Assert.Contains("2", result.Message);
         AssertModified(context);
     }
 
@@ -162,9 +169,11 @@ public class GroupPptShapesHandlerTests : PptHandlerTestBase
             { "shapeIndices", TwoShapeIndices }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Grouped", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Grouped", result.Message);
         Assert.Contains(pres.Slides[1].Shapes.OfType<IGroupShape>(), s => s != null);
     }
 

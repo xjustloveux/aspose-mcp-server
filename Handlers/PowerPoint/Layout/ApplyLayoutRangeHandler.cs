@@ -1,11 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Layout;
 
 /// <summary>
 ///     Handler for applying layout to a range of slides.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class ApplyLayoutRangeHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -19,7 +23,7 @@ public class ApplyLayoutRangeHandler : OperationHandlerBase<Presentation>
     ///     Required: slideIndices (JSON array), layout
     /// </param>
     /// <returns>Success message with operation details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractApplyLayoutRangeParameters(parameters);
 
@@ -38,7 +42,7 @@ public class ApplyLayoutRangeHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Layout '{p.Layout}' applied to {slideIndicesArray.Length} slide(s).");
+        return new SuccessResult { Message = $"Layout '{p.Layout}' applied to {slideIndicesArray.Length} slide(s)." };
     }
 
     /// <summary>

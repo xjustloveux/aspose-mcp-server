@@ -1,9 +1,9 @@
-using System.Text.Json.Nodes;
-using Aspose.Cells;
+﻿using Aspose.Cells;
 using Aspose.Slides;
 using Aspose.Words;
 using AsposeMcpServer.Core.Session;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Session;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Session;
 using SaveFormat = Aspose.Slides.Export.SaveFormat;
 
@@ -68,12 +68,11 @@ public class DocumentSessionToolTests : TestBase
         return filePath;
     }
 
-    private (string sessionId, JsonNode json) OpenDocument(string path, string mode = "readwrite")
+    private (string sessionId, OpenSessionResult data) OpenDocument(string path, string mode = "readwrite")
     {
         var result = _tool.Execute("open", path, mode: mode);
-        var json = JsonNode.Parse(result)!;
-        var sessionId = json["sessionId"]!.GetValue<string>();
-        return (sessionId, json);
+        var data = GetResultData<OpenSessionResult>(result);
+        return (data.SessionId, data);
     }
 
     #region File I/O Smoke Tests
@@ -92,14 +91,14 @@ public class DocumentSessionToolTests : TestBase
             _ => throw new ArgumentException($"Unsupported extension: {extension}")
         };
 
-        var (sessionId, json) = OpenDocument(docPath);
+        var (sessionId, openData) = OpenDocument(docPath);
 
-        Assert.True(json["success"]!.GetValue<bool>());
+        Assert.True(openData.Success);
         Assert.StartsWith("sess_", sessionId);
 
         var statusResult = _tool.Execute("status", sessionId: sessionId);
-        var statusJson = JsonNode.Parse(statusResult)!;
-        Assert.Equal(expectedType, statusJson["session"]!["DocumentType"]!.GetValue<string>());
+        var data = GetResultData<SessionStatusResult>(statusResult);
+        Assert.Equal(expectedType, data.Session.DocumentType);
     }
 
     [Fact]
@@ -113,8 +112,8 @@ public class DocumentSessionToolTests : TestBase
         _sessionManager.MarkDirty(sessionId);
 
         var saveResult = _tool.Execute("save", sessionId: sessionId);
-        var saveJson = JsonNode.Parse(saveResult)!;
-        Assert.True(saveJson["success"]!.GetValue<bool>());
+        var data = GetResultData<SaveSessionResult>(saveResult);
+        Assert.True(data.Success);
 
         var savedDoc = new Document(docPath);
         Assert.Contains("Modified content", savedDoc.GetText());
@@ -132,9 +131,9 @@ public class DocumentSessionToolTests : TestBase
         _sessionManager.MarkDirty(sessionId);
 
         var saveResult = _tool.Execute("save", sessionId: sessionId, outputPath: outputPath);
-        var saveJson = JsonNode.Parse(saveResult)!;
+        var data = GetResultData<SaveSessionResult>(saveResult);
 
-        Assert.True(saveJson["success"]!.GetValue<bool>());
+        Assert.True(data.Success);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -144,15 +143,15 @@ public class DocumentSessionToolTests : TestBase
         var docPath = CreateWordDocument("test_close.docx");
         var (sessionId, _) = OpenDocument(docPath);
 
-        var listBefore = JsonNode.Parse(_tool.Execute("list"))!;
-        Assert.Equal(1, listBefore["count"]!.GetValue<int>());
+        var listBefore = GetResultData<ListSessionsResult>(_tool.Execute("list"));
+        Assert.Equal(1, listBefore.Count);
 
         var closeResult = _tool.Execute("close", sessionId: sessionId);
-        var closeJson = JsonNode.Parse(closeResult)!;
-        Assert.True(closeJson["success"]!.GetValue<bool>());
+        var closeData = GetResultData<CloseSessionResult>(closeResult);
+        Assert.True(closeData.Success);
 
-        var listAfter = JsonNode.Parse(_tool.Execute("list"))!;
-        Assert.Equal(0, listAfter["count"]!.GetValue<int>());
+        var listAfter = GetResultData<ListSessionsResult>(_tool.Execute("list"));
+        Assert.Equal(0, listAfter.Count);
     }
 
     [Fact]
@@ -162,12 +161,11 @@ public class DocumentSessionToolTests : TestBase
         var (sessionId, _) = OpenDocument(docPath);
 
         var listResult = _tool.Execute("list");
-        var listJson = JsonNode.Parse(listResult)!;
+        var data = GetResultData<ListSessionsResult>(listResult);
 
-        Assert.True(listJson["success"]!.GetValue<bool>());
-        Assert.Equal(1, listJson["count"]!.GetValue<int>());
-        var sessions = listJson["sessions"]!.AsArray();
-        Assert.Equal(sessionId, sessions[0]!["SessionId"]!.GetValue<string>());
+        Assert.True(data.Success);
+        Assert.Equal(1, data.Count);
+        Assert.Equal(sessionId, data.Sessions[0].SessionId);
     }
 
     [Fact]
@@ -177,10 +175,10 @@ public class DocumentSessionToolTests : TestBase
         var (sessionId, _) = OpenDocument(docPath);
 
         var statusResult = _tool.Execute("status", sessionId: sessionId);
-        var statusJson = JsonNode.Parse(statusResult)!;
+        var data = GetResultData<SessionStatusResult>(statusResult);
 
-        Assert.True(statusJson["success"]!.GetValue<bool>());
-        Assert.Equal("word", statusJson["session"]!["DocumentType"]!.GetValue<string>());
+        Assert.True(data.Success);
+        Assert.Equal("word", data.Session.DocumentType);
     }
 
     #endregion
@@ -195,8 +193,8 @@ public class DocumentSessionToolTests : TestBase
     {
         var docPath = CreateWordDocument($"test_case_{operation}.docx");
         var result = _tool.Execute(operation, docPath);
-        var json = JsonNode.Parse(result)!;
-        Assert.True(json["success"]!.GetValue<bool>());
+        var data = GetResultData<OpenSessionResult>(result);
+        Assert.True(data.Success);
     }
 
     [Fact]
@@ -225,30 +223,30 @@ public class DocumentSessionToolTests : TestBase
     public void ListTemp_WhenNoTempFiles_ShouldReturnEmptyList()
     {
         var result = _tool.Execute("list_temp");
-        var json = JsonNode.Parse(result)!;
+        var data = GetResultData<ListTempFilesResult>(result);
 
-        Assert.True(json["success"]!.GetValue<bool>());
-        Assert.Equal(0, json["count"]!.GetValue<int>());
+        Assert.True(data.Success);
+        Assert.Equal(0, data.Count);
     }
 
     [Fact]
     public void TempStats_WhenNoTempFiles_ShouldReturnZeroStats()
     {
         var result = _tool.Execute("temp_stats");
-        var json = JsonNode.Parse(result)!;
+        var data = GetResultData<TempFileStatsResult>(result);
 
-        Assert.True(json["success"]!.GetValue<bool>());
-        Assert.Equal(0, json["TotalCount"]!.GetValue<int>());
+        Assert.True(data.Success);
+        Assert.Equal(0, data.TotalCount);
     }
 
     [Fact]
     public void Cleanup_WhenNoTempFiles_ShouldSucceed()
     {
         var result = _tool.Execute("cleanup");
-        var json = JsonNode.Parse(result)!;
+        var data = GetResultData<CleanupTempFilesResult>(result);
 
-        Assert.True(json["success"]!.GetValue<bool>());
-        Assert.Equal(0, json["DeletedCount"]!.GetValue<int>());
+        Assert.True(data.Success);
+        Assert.Equal(0, data.DeletedCount);
     }
 
     #endregion

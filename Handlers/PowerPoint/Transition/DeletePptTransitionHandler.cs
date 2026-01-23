@@ -1,13 +1,16 @@
 using Aspose.Slides;
 using Aspose.Slides.SlideShow;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Transition;
 
 /// <summary>
 ///     Handler for removing slide transitions from PowerPoint presentations.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class DeletePptTransitionHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class DeletePptTransitionHandler : OperationHandlerBase<Presentation>
     ///     Optional: slideIndex (default: 0).
     /// </param>
     /// <returns>Success message with deletion details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var deleteParams = ExtractDeleteTransitionParameters(parameters);
 
@@ -35,7 +38,7 @@ public class DeletePptTransitionHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Transition removed from slide {deleteParams.SlideIndex}.");
+        return new SuccessResult { Message = $"Transition removed from slide {deleteParams.SlideIndex}." };
     }
 
     /// <summary>

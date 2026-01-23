@@ -1,7 +1,8 @@
 using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Handlers.PowerPoint.Image;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Image;
 
@@ -52,10 +53,12 @@ public class ExportSlidesHandlerTests : PptHandlerTestBase
             { "outputDir", outputDir }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("exported", result.ToLower());
-        Assert.Contains("2", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("exported", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("2", result.Message);
         Assert.True(Directory.Exists(outputDir));
         var files = Directory.GetFiles(outputDir);
         Assert.Equal(2, files.Length);
@@ -84,9 +87,11 @@ public class ExportSlidesHandlerTests : PptHandlerTestBase
             { "slideIndexes", "0,1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("exported", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("exported", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(Directory.Exists(outputDir));
         var files = Directory.GetFiles(outputDir);
         Assert.Equal(2, files.Length);
@@ -110,9 +115,11 @@ public class ExportSlidesHandlerTests : PptHandlerTestBase
             { "format", "jpeg" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("exported", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("exported", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(Directory.Exists(outputDir));
         var files = Directory.GetFiles(outputDir, "*.jpg");
         Assert.NotEmpty(files);

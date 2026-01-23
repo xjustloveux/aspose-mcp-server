@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Table;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Table;
 
@@ -27,9 +28,11 @@ public class CopyWordTableHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("copied", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("copied", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(2, GetTableCount(doc));
         AssertModified(context);
     }
@@ -64,9 +67,11 @@ public class CopyWordTableHandlerTests : WordHandlerTestBase
             { "tableIndex", tableIndex }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("copied", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("copied", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(4, GetTableCount(doc));
     }
 
@@ -116,9 +121,11 @@ public class CopyWordTableHandlerTests : WordHandlerTestBase
             { "targetParagraphIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("copied", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("copied", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -145,9 +152,11 @@ public class CopyWordTableHandlerTests : WordHandlerTestBase
             { "targetParagraphIndex", -1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("copied", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("copied", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(2, GetTableCount(doc));
     }
 

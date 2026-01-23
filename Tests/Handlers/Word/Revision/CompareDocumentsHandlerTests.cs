@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Revision;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Word.Revision;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Revision;
 
@@ -32,6 +33,34 @@ public class CompareDocumentsHandlerTests : WordHandlerTestBase
 
     #endregion
 
+    #region Result Properties
+
+    [Fact]
+    public void Execute_ReturnsCorrectProperties()
+    {
+        var originalPath = CreateTempDocumentWithText("First version.");
+        var revisedPath = CreateTempDocumentWithText("Second version.");
+        var outputPath = Path.Combine(TestDir, "properties_output.docx");
+
+        var doc = CreateEmptyDocument();
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "originalPath", originalPath },
+            { "revisedPath", revisedPath },
+            { "outputPath", outputPath }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<CompareDocumentsResult>(res);
+
+        Assert.True(result.RevisionCount >= 0);
+        Assert.Equal(outputPath, result.OutputPath);
+    }
+
+    #endregion
+
     #region Basic Compare Operations
 
     [Fact]
@@ -50,10 +79,12 @@ public class CompareDocumentsHandlerTests : WordHandlerTestBase
             { "outputPath", outputPath }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("comparison completed", result.ToLower());
-        Assert.Contains("difference", result.ToLower());
+        var result = Assert.IsType<CompareDocumentsResult>(res);
+
+        Assert.True(result.RevisionCount > 0);
+        Assert.Equal(outputPath, result.OutputPath);
         Assert.True(System.IO.File.Exists(outputPath));
     }
 
@@ -73,9 +104,11 @@ public class CompareDocumentsHandlerTests : WordHandlerTestBase
             { "outputPath", outputPath }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("0 difference", result.ToLower());
+        var result = Assert.IsType<CompareDocumentsResult>(res);
+
+        Assert.Equal(0, result.RevisionCount);
     }
 
     [Fact]
@@ -95,9 +128,12 @@ public class CompareDocumentsHandlerTests : WordHandlerTestBase
             { "authorName", "TestAuthor" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("comparison completed", result.ToLower());
+        var result = Assert.IsType<CompareDocumentsResult>(res);
+
+        Assert.True(result.RevisionCount > 0);
+        Assert.Equal(outputPath, result.OutputPath);
     }
 
     [Fact]
@@ -117,9 +153,11 @@ public class CompareDocumentsHandlerTests : WordHandlerTestBase
             { "ignoreFormatting", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("comparison completed", result.ToLower());
+        var result = Assert.IsType<CompareDocumentsResult>(res);
+
+        Assert.Equal(0, result.RevisionCount);
     }
 
     #endregion

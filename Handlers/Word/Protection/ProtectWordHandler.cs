@@ -1,11 +1,14 @@
 using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Protection;
 
 /// <summary>
 ///     Handler for protecting Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class ProtectWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class ProtectWordHandler : OperationHandlerBase<Document>
     ///     Optional: protectionType (default: ReadOnly)
     /// </param>
     /// <returns>Success message with protection details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var protectParams = ExtractProtectParameters(parameters);
 
@@ -35,7 +38,7 @@ public class ProtectWordHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Document protected with {protectionTypeEnum}");
+        return new SuccessResult { Message = $"Document protected with {protectionTypeEnum}" };
     }
 
     /// <summary>

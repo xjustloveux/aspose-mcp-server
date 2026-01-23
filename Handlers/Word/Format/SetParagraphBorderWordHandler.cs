@@ -1,12 +1,16 @@
 ﻿using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Format;
 
 /// <summary>
 ///     Handler for setting paragraph border in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetParagraphBorderWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -21,7 +25,7 @@ public class SetParagraphBorderWordHandler : OperationHandlerBase<Document>
     ///     Optional: borderPosition, borderTop, borderBottom, borderLeft, borderRight, lineStyle, lineWidth, lineColor
     /// </param>
     /// <returns>Success message.</returns>
-    public override string
+    public override object
         Execute(OperationContext<Document> context,
             OperationParameters parameters)
     {
@@ -119,7 +123,7 @@ public class SetParagraphBorderWordHandler : OperationHandlerBase<Document>
 
         var bordersDesc = enabledBorders.Count > 0 ? string.Join(", ", enabledBorders) : "None";
 
-        return Success($"Paragraph {p.ParagraphIndex} borders set: {bordersDesc}");
+        return new SuccessResult { Message = $"Paragraph {p.ParagraphIndex} borders set: {bordersDesc}" };
     }
 
     private static SetParagraphBorderParameters ExtractSetParagraphBorderParameters(OperationParameters parameters)

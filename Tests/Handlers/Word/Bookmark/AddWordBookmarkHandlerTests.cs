@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Bookmark;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Bookmark;
 
@@ -30,9 +31,11 @@ public class AddWordBookmarkHandlerTests : WordHandlerTestBase
             { "name", "TestBookmark" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Bookmark added successfully", result);
+        var result = Assert.IsType<SuccessResult>(res).Message;
+
+        Assert.Contains("Bookmark added successfully", result, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -46,9 +49,11 @@ public class AddWordBookmarkHandlerTests : WordHandlerTestBase
             { "name", "MyBookmark" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("MyBookmark", result);
+        var result = Assert.IsType<SuccessResult>(res).Message;
+
+        Assert.Contains("MyBookmark", result, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -62,9 +67,11 @@ public class AddWordBookmarkHandlerTests : WordHandlerTestBase
             { "text", "Bookmark content here" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Bookmark text: Bookmark content here", result);
+        var result = Assert.IsType<SuccessResult>(res).Message;
+
+        Assert.Contains("Bookmark text: Bookmark content here", result, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -78,9 +85,11 @@ public class AddWordBookmarkHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("after paragraph #1", result);
+        var result = Assert.IsType<SuccessResult>(res).Message;
+
+        Assert.Contains("after paragraph #1", result, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -94,9 +103,11 @@ public class AddWordBookmarkHandlerTests : WordHandlerTestBase
             { "paragraphIndex", -1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("beginning of document", result);
+        var result = Assert.IsType<SuccessResult>(res).Message;
+
+        Assert.Contains("beginning of document", result, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -109,9 +120,11 @@ public class AddWordBookmarkHandlerTests : WordHandlerTestBase
             { "name", "EndBookmark" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("end of document", result);
+        var result = Assert.IsType<SuccessResult>(res).Message;
+
+        Assert.Contains("end of document", result, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

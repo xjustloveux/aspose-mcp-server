@@ -1,7 +1,8 @@
 using Aspose.Pdf;
 using Aspose.Pdf.Text;
 using AsposeMcpServer.Handlers.Pdf.Redact;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Redact;
 
@@ -48,10 +49,12 @@ public class RedactAreaHandlerTests : PdfHandlerTestBase
             { "height", 50.0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("redaction applied", result.ToLower());
-        Assert.Contains("page 1", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("redaction applied", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("page 1", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -71,9 +74,11 @@ public class RedactAreaHandlerTests : PdfHandlerTestBase
             { "fillColor", "#FF0000" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("redaction applied", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("redaction applied", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [SkippableFact]
@@ -92,9 +97,11 @@ public class RedactAreaHandlerTests : PdfHandlerTestBase
             { "overlayText", "REDACTED" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("redaction applied", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("redaction applied", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

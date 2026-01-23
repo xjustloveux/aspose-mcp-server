@@ -1,13 +1,16 @@
 using System.Drawing.Imaging;
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.Image;
 
 /// <summary>
 ///     Handler for extracting images from PDF documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class ExtractPdfImageHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class ExtractPdfImageHandler : OperationHandlerBase<Document>
     ///     Optional: pageIndex, imageIndex, outputPath, outputDir
     /// </param>
     /// <returns>Success message with extraction details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractExtractParameters(parameters);
 
@@ -42,7 +45,7 @@ public class ExtractPdfImageHandler : OperationHandlerBase<Document>
         var page = document.Pages[actualPageIndex];
         var images = page.Resources?.Images;
         if (images == null || images.Count == 0)
-            return Success($"No images found on page {p.PageIndex}.");
+            return new SuccessResult { Message = $"No images found on page {p.PageIndex}." };
 
         if (p.ImageIndex is > 0)
         {
@@ -56,7 +59,8 @@ public class ExtractPdfImageHandler : OperationHandlerBase<Document>
 #pragma warning disable CA1416
             image.Save(imageStream, ImageFormat.Png);
 #pragma warning restore CA1416
-            return Success($"Extracted image {p.ImageIndex.Value} from page {p.PageIndex} to: {fileName}");
+            return new SuccessResult
+                { Message = $"Extracted image {p.ImageIndex.Value} from page {p.PageIndex} to: {fileName}" };
         }
 
         var count = 0;
@@ -71,7 +75,7 @@ public class ExtractPdfImageHandler : OperationHandlerBase<Document>
             count++;
         }
 
-        return Success($"Extracted {count} image(s) from page {p.PageIndex} to: {targetDir}");
+        return new SuccessResult { Message = $"Extracted {count} image(s) from page {p.PageIndex} to: {targetDir}" };
     }
 
     /// <summary>

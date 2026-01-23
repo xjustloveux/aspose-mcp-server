@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.PrintSettings;
 
 /// <summary>
 ///     Handler for setting all print settings at once in Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetAllPrintSettingsHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -22,7 +25,7 @@ public class SetAllPrintSettingsHandler : OperationHandlerBase<Workbook>
     ///     topMargin, bottomMargin, header, footer, fitToPage, fitToPagesWide, fitToPagesTall
     /// </param>
     /// <returns>Success message with all settings details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var setParams = ExtractSetAllPrintSettingsParameters(parameters);
 
@@ -60,7 +63,8 @@ public class SetAllPrintSettingsHandler : OperationHandlerBase<Workbook>
         MarkModified(context);
 
         var changesStr = changes.Count > 0 ? string.Join(", ", changes) : "no changes";
-        return Success($"Print settings updated for sheet {setParams.SheetIndex} ({changesStr}).");
+        return new SuccessResult
+            { Message = $"Print settings updated for sheet {setParams.SheetIndex} ({changesStr})." };
     }
 
     /// <summary>

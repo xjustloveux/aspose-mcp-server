@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Format;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Word.Format;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Format;
 
@@ -60,15 +61,18 @@ public class GetTabStopsWordHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("tabStops", result);
-        Assert.Contains("count", result);
+        var result = Assert.IsType<GetTabStopsWordResult>(res);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.TabStops);
+        Assert.True(result.Count >= 0);
         AssertNotModified(context);
     }
 
     [Fact]
-    public void Execute_ReturnsJsonFormat()
+    public void Execute_ReturnsLocation()
     {
         var doc = CreateDocumentWithText("Sample text.");
         var context = CreateContext(doc);
@@ -77,11 +81,12 @@ public class GetTabStopsWordHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("{", result);
-        Assert.Contains("}", result);
-        Assert.Contains("location", result);
+        var result = Assert.IsType<GetTabStopsWordResult>(res);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.Location);
     }
 
     [Fact]
@@ -94,9 +99,12 @@ public class GetTabStopsWordHandlerTests : WordHandlerTestBase
             { "allParagraphs", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("paragraphCount", result);
+        var result = Assert.IsType<GetTabStopsWordResult>(res);
+
+        Assert.NotNull(result);
+        Assert.True(result.ParagraphCount >= 1);
     }
 
     [Fact]
@@ -124,10 +132,12 @@ public class GetTabStopsWordHandlerTests : WordHandlerTestBase
             { "includeStyle", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("includeStyle", result);
-        Assert.Contains("false", result);
+        var result = Assert.IsType<GetTabStopsWordResult>(res);
+
+        Assert.NotNull(result);
+        Assert.False(result.IncludeStyle);
     }
 
     #endregion
@@ -146,9 +156,12 @@ public class GetTabStopsWordHandlerTests : WordHandlerTestBase
             { "location", "header" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Header", result);
+        var result = Assert.IsType<GetTabStopsWordResult>(res);
+
+        Assert.NotNull(result);
+        Assert.Contains("Header", result.LocationDescription);
     }
 
     [SkippableFact]
@@ -163,9 +176,12 @@ public class GetTabStopsWordHandlerTests : WordHandlerTestBase
             { "location", "footer" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Footer", result);
+        var result = Assert.IsType<GetTabStopsWordResult>(res);
+
+        Assert.NotNull(result);
+        Assert.Contains("Footer", result.LocationDescription);
     }
 
     [SkippableFact]

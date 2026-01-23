@@ -1,6 +1,9 @@
 ﻿using Aspose.Words;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.Word;
+using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.Shape;
@@ -8,6 +11,7 @@ namespace AsposeMcpServer.Handlers.Word.Shape;
 /// <summary>
 ///     Handler for editing textbox content in Word documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class EditTextBoxContentWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -25,7 +29,7 @@ public class EditTextBoxContentWordHandler : OperationHandlerBase<Document>
     /// <returns>Success message.</returns>
     /// <exception cref="ArgumentException">Thrown when textboxIndex is missing or out of range.</exception>
     /// <exception cref="Exception">Thrown when textbox paragraph cannot be retrieved.</exception>
-    public override string
+    public override object
         Execute(OperationContext<Document> context,
             OperationParameters parameters)
     {
@@ -101,7 +105,7 @@ public class EditTextBoxContentWordHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return $"Successfully edited textbox #{p.TextboxIndex}.";
+        return new SuccessResult { Message = $"Successfully edited textbox #{p.TextboxIndex}." };
     }
 
     private static EditTextBoxContentParameters ExtractEditTextBoxContentParameters(OperationParameters parameters)

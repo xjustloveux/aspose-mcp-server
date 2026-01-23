@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.PowerPoint.Background;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Background;
 
@@ -29,9 +30,11 @@ public class SetPptBackgroundHandlerTests : PptHandlerTestBase
             { "color", "#FF0000" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("background", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("background", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -46,9 +49,11 @@ public class SetPptBackgroundHandlerTests : PptHandlerTestBase
             { "color", "#00FF00" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("slide 1", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("slide 1", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -63,10 +68,12 @@ public class SetPptBackgroundHandlerTests : PptHandlerTestBase
             { "applyToAll", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("all", result.ToLower());
-        Assert.Contains("3", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("all", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("3", result.Message);
         AssertModified(context);
     }
 

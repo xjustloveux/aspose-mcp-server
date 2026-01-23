@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Tools.Excel;
 /// <summary>
 ///     Unified tool for managing Excel formulas (add, get, get_result, calculate, set_array, get_array).
 /// </summary>
+[ToolHandlerMapping("AsposeMcpServer.Handlers.Excel.Formula")]
 [McpServerToolType]
 public class ExcelFormulaTool
 {
@@ -55,7 +58,14 @@ public class ExcelFormulaTool
     /// <param name="autoCalculate">Automatically calculate formulas after adding (optional, for add/set_array, default: true).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
-    [McpServerTool(Name = "excel_formula")]
+    [McpServerTool(
+        Name = "excel_formula",
+        Title = "Excel Formula Operations",
+        Destructive = false,
+        Idempotent = false,
+        OpenWorld = false,
+        ReadOnly = false,
+        UseStructuredContent = true)]
     [Description(@"Manage Excel formulas. Supports 6 operations: add, get, get_result, calculate, set_array, get_array.
 
 Usage examples:
@@ -65,7 +75,7 @@ Usage examples:
 - Calculate: excel_formula(operation='calculate', path='book.xlsx')
 - Set array formula: excel_formula(operation='set_array', path='book.xlsx', range='A1:A10', formula='=B1:B10*2')
 - Get array formula: excel_formula(operation='get_array', path='book.xlsx', cell='A1')")]
-    public string Execute(
+    public object Execute(
         [Description(@"Operation to perform.
 - 'add': Add a formula to a cell (required params: path, cell, formula)
 - 'get': Get formula from a cell (required params: path, cell)
@@ -114,12 +124,12 @@ Usage examples:
 
         var op = operation.ToLowerInvariant();
         if (op == "get" || op == "get_result" || op == "get_array")
-            return result;
+            return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+        return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
     }
 
     /// <summary>

@@ -1,8 +1,8 @@
-using System.Text.Json;
 using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
 using AsposeMcpServer.Handlers.Pdf.Link;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Pdf.Link;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Link;
 
@@ -32,11 +32,12 @@ public class GetPdfLinksHandlerTests : PdfHandlerTestBase
             { "pageIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.True(json.RootElement.TryGetProperty("pageIndex", out var pageIndex));
-        Assert.Equal(1, pageIndex.GetInt32());
+        var result = Assert.IsType<GetLinksResult>(res);
+
+        Assert.NotNull(result.PageIndex);
+        Assert.Equal(1, result.PageIndex);
     }
 
     #endregion
@@ -90,10 +91,11 @@ public class GetPdfLinksHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.True(json.RootElement.TryGetProperty("count", out _));
+        var result = Assert.IsType<GetLinksResult>(res);
+
+        Assert.True(result.Count >= 0);
     }
 
     [Fact]
@@ -103,10 +105,11 @@ public class GetPdfLinksHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(3, json.RootElement.GetProperty("count").GetInt32());
+        var result = Assert.IsType<GetLinksResult>(res);
+
+        Assert.Equal(3, result.Count);
     }
 
     [Fact]
@@ -116,10 +119,11 @@ public class GetPdfLinksHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(2, json.RootElement.GetProperty("items").GetArrayLength());
+        var result = Assert.IsType<GetLinksResult>(res);
+
+        Assert.Equal(2, result.Items.Count);
     }
 
     #endregion
@@ -133,11 +137,12 @@ public class GetPdfLinksHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
-        var firstLink = json.RootElement.GetProperty("items")[0];
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(0, firstLink.GetProperty("index").GetInt32());
+        var result = Assert.IsType<GetLinksResult>(res);
+        var firstLink = result.Items[0];
+
+        Assert.Equal(0, firstLink.Index);
     }
 
     [Fact]
@@ -147,11 +152,12 @@ public class GetPdfLinksHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
-        var firstLink = json.RootElement.GetProperty("items")[0];
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(1, firstLink.GetProperty("pageIndex").GetInt32());
+        var result = Assert.IsType<GetLinksResult>(res);
+        var firstLink = result.Items[0];
+
+        Assert.Equal(1, firstLink.PageIndex);
     }
 
     [Fact]
@@ -161,11 +167,12 @@ public class GetPdfLinksHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
-        var firstLink = json.RootElement.GetProperty("items")[0];
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal("url", firstLink.GetProperty("type").GetString());
+        var result = Assert.IsType<GetLinksResult>(res);
+        var firstLink = result.Items[0];
+
+        Assert.Equal("url", firstLink.Type);
     }
 
     #endregion
@@ -179,11 +186,12 @@ public class GetPdfLinksHandlerTests : PdfHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(0, json.RootElement.GetProperty("count").GetInt32());
-        Assert.Contains("No links found", json.RootElement.GetProperty("message").GetString());
+        var result = Assert.IsType<GetLinksResult>(res);
+
+        Assert.Equal(0, result.Count);
+        Assert.Contains("No links found", result.Message);
     }
 
     [Fact]
@@ -196,10 +204,11 @@ public class GetPdfLinksHandlerTests : PdfHandlerTestBase
             { "pageIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(0, json.RootElement.GetProperty("count").GetInt32());
+        var result = Assert.IsType<GetLinksResult>(res);
+
+        Assert.Equal(0, result.Count);
     }
 
     #endregion

@@ -1,6 +1,7 @@
-using System.Text.Json;
-using Aspose.Cells;
-using AsposeMcpServer.Tests.Helpers;
+﻿using Aspose.Cells;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Excel.NamedRange;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Excel;
 
 namespace AsposeMcpServer.Tests.Tools.Excel;
@@ -44,7 +45,8 @@ public class ExcelNamedRangeToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbookWithData("test_add.xlsx", 5, 5);
         var outputPath = CreateTestFilePath("test_add_output.xlsx");
         var result = _tool.Execute("add", workbookPath, name: "TestRange", range: "A1:C5", outputPath: outputPath);
-        Assert.StartsWith("Named range 'TestRange' added", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Named range 'TestRange' added", data.Message);
         using var workbook = new Workbook(outputPath);
         Assert.NotNull(workbook.Worksheets.Names["TestRange"]);
     }
@@ -55,7 +57,8 @@ public class ExcelNamedRangeToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithNamedRange("test_delete.xlsx", "RangeToDelete", "A1:B2");
         var outputPath = CreateTestFilePath("test_delete_output.xlsx");
         var result = _tool.Execute("delete", workbookPath, name: "RangeToDelete", outputPath: outputPath);
-        Assert.StartsWith("Named range 'RangeToDelete' deleted", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Named range 'RangeToDelete' deleted", data.Message);
         using var workbook = new Workbook(outputPath);
         Assert.Null(workbook.Worksheets.Names["RangeToDelete"]);
     }
@@ -72,8 +75,8 @@ public class ExcelNamedRangeToolTests : ExcelTestBase
         }
 
         var result = _tool.Execute("get", workbookPath);
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(2, json.RootElement.GetProperty("count").GetInt32());
+        var data = GetResultData<GetNamedRangesResult>(result);
+        Assert.Equal(2, data.Count);
     }
 
     [Fact]
@@ -81,8 +84,8 @@ public class ExcelNamedRangeToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbook("test_get_empty.xlsx");
         var result = _tool.Execute("get", workbookPath);
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(0, json.RootElement.GetProperty("count").GetInt32());
+        var data = GetResultData<GetNamedRangesResult>(result);
+        Assert.Equal(0, data.Count);
     }
 
     #endregion
@@ -99,7 +102,8 @@ public class ExcelNamedRangeToolTests : ExcelTestBase
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.xlsx");
         var result = _tool.Execute(operation, workbookPath, name: $"Range_{operation}",
             range: "A1:B2", outputPath: outputPath);
-        Assert.Contains("added", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("added", data.Message);
     }
 
     [Fact]
@@ -120,8 +124,10 @@ public class ExcelNamedRangeToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbookWithData("test_session_add.xlsx", 5, 5);
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("add", sessionId: sessionId, name: "InMemoryRange", range: "A1:C3");
-        Assert.StartsWith("Named range 'InMemoryRange' added", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Named range 'InMemoryRange' added", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.NotNull(workbook.Worksheets.Names["InMemoryRange"]);
     }
@@ -132,8 +138,10 @@ public class ExcelNamedRangeToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithNamedRange("test_session_delete.xlsx", "RangeToDelete", "A1:B2");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("delete", sessionId: sessionId, name: "RangeToDelete");
-        Assert.StartsWith("Named range 'RangeToDelete' deleted", result);
-        Assert.Contains("session", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.StartsWith("Named range 'RangeToDelete' deleted", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.Null(workbook.Worksheets.Names["RangeToDelete"]);
     }
@@ -144,8 +152,8 @@ public class ExcelNamedRangeToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithNamedRange("test_session_get.xlsx", "SessionRange", "A1:B2");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("get", sessionId: sessionId);
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(1, json.RootElement.GetProperty("count").GetInt32());
+        var data = GetResultData<GetNamedRangesResult>(result);
+        Assert.Equal(1, data.Count);
     }
 
     [Fact]
@@ -161,7 +169,9 @@ public class ExcelNamedRangeToolTests : ExcelTestBase
         var workbookPath2 = CreateWorkbookWithNamedRange("test_session_file.xlsx", "SessionRange", "A1:B2");
         var sessionId = OpenSession(workbookPath2);
         var result = _tool.Execute("get", workbookPath1, sessionId);
-        Assert.Contains("SessionRange", result);
+        var data = GetResultData<GetNamedRangesResult>(result);
+        Assert.Equal(1, data.Count);
+        Assert.Contains(data.Items, i => i.Name == "SessionRange");
     }
 
     #endregion

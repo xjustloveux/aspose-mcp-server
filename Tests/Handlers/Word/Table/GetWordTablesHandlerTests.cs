@@ -1,7 +1,7 @@
-using System.Text.Json;
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Table;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Word.Table;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Table;
 
@@ -28,17 +28,15 @@ public class GetWordTablesHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var tables = json.RootElement.GetProperty("tables");
-        Assert.True(tables.GetArrayLength() > 0);
-        var firstTable = tables[0];
-        Assert.True(firstTable.TryGetProperty("index", out _));
-        Assert.True(firstTable.TryGetProperty("rows", out _));
-        Assert.True(firstTable.TryGetProperty("columns", out _));
-        Assert.Equal(4, firstTable.GetProperty("rows").GetInt32());
-        Assert.Equal(5, firstTable.GetProperty("columns").GetInt32());
+        var result = Assert.IsType<GetTablesWordResult>(res);
+
+        Assert.True(result.Tables.Count > 0);
+        var firstTable = result.Tables[0];
+        Assert.Equal(0, firstTable.Index);
+        Assert.Equal(4, firstTable.Rows);
+        Assert.Equal(5, firstTable.Columns);
     }
 
     #endregion
@@ -56,10 +54,11 @@ public class GetWordTablesHandlerTests : WordHandlerTestBase
             { "sectionIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(1, json.RootElement.GetProperty("count").GetInt32());
+        var result = Assert.IsType<GetTablesWordResult>(res);
+
+        Assert.Equal(1, result.Count);
     }
 
     #endregion
@@ -91,11 +90,12 @@ public class GetWordTablesHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("count", out _));
-        Assert.True(json.RootElement.TryGetProperty("tables", out _));
+        var result = Assert.IsType<GetTablesWordResult>(res);
+
+        Assert.True(result.Count >= 0);
+        Assert.NotNull(result.Tables);
         AssertNotModified(context);
     }
 
@@ -106,10 +106,11 @@ public class GetWordTablesHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(3, json.RootElement.GetProperty("count").GetInt32());
+        var result = Assert.IsType<GetTablesWordResult>(res);
+
+        Assert.Equal(3, result.Count);
     }
 
     [Fact]
@@ -119,10 +120,11 @@ public class GetWordTablesHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(0, json.RootElement.GetProperty("count").GetInt32());
+        var result = Assert.IsType<GetTablesWordResult>(res);
+
+        Assert.Equal(0, result.Count);
     }
 
     #endregion

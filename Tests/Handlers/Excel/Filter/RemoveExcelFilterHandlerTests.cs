@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.Filter;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Filter;
 
@@ -82,9 +83,11 @@ public class RemoveExcelFilterHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Auto filter removed", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Auto filter removed", result.Message);
         AssertModified(context);
     }
 
@@ -95,9 +98,11 @@ public class RemoveExcelFilterHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("sheet 0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("sheet 0", result.Message);
     }
 
     [Fact]
@@ -107,9 +112,11 @@ public class RemoveExcelFilterHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Auto filter removed", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Auto filter removed", result.Message);
     }
 
     #endregion

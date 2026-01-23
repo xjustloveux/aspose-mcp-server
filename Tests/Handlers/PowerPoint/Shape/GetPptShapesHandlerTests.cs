@@ -1,7 +1,7 @@
-using System.Text.Json;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Shape;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.PowerPoint.Shape;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Shape;
 
@@ -29,19 +29,18 @@ public class GetPptShapesHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        var shapes = json.RootElement.GetProperty("shapes");
-        Assert.True(shapes.GetArrayLength() > 0);
-        var firstShape = shapes[0];
-        Assert.True(firstShape.TryGetProperty("index", out _));
-        Assert.True(firstShape.TryGetProperty("name", out _));
-        Assert.True(firstShape.TryGetProperty("type", out _));
-        Assert.True(firstShape.TryGetProperty("x", out _));
-        Assert.True(firstShape.TryGetProperty("y", out _));
-        Assert.True(firstShape.TryGetProperty("width", out _));
-        Assert.True(firstShape.TryGetProperty("height", out _));
+        var result = Assert.IsType<GetShapesResult>(res);
+
+        Assert.True(result.Shapes.Count > 0);
+        var firstShape = result.Shapes[0];
+        Assert.True(firstShape.Index >= 0);
+        Assert.NotNull(firstShape.Type);
+        Assert.True(firstShape.X >= 0);
+        Assert.True(firstShape.Y >= 0);
+        Assert.True(firstShape.Width >= 0);
+        Assert.True(firstShape.Height >= 0);
     }
 
     #endregion
@@ -95,12 +94,13 @@ public class GetPptShapesHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.TryGetProperty("slideIndex", out _));
-        Assert.True(json.RootElement.TryGetProperty("count", out _));
-        Assert.True(json.RootElement.TryGetProperty("shapes", out _));
+        var result = Assert.IsType<GetShapesResult>(res);
+
+        Assert.Equal(0, result.SlideIndex);
+        Assert.True(result.Count > 0);
+        Assert.NotNull(result.Shapes);
         AssertNotModified(context);
     }
 
@@ -114,10 +114,11 @@ public class GetPptShapesHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(shapeCount, json.RootElement.GetProperty("count").GetInt32());
+        var result = Assert.IsType<GetShapesResult>(res);
+
+        Assert.Equal(shapeCount, result.Count);
     }
 
     #endregion
@@ -135,10 +136,11 @@ public class GetPptShapesHandlerTests : PptHandlerTestBase
             { "slideIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(1, json.RootElement.GetProperty("slideIndex").GetInt32());
+        var result = Assert.IsType<GetShapesResult>(res);
+
+        Assert.Equal(1, result.SlideIndex);
     }
 
     [Fact]
@@ -149,10 +151,11 @@ public class GetPptShapesHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(0, json.RootElement.GetProperty("slideIndex").GetInt32());
+        var result = Assert.IsType<GetShapesResult>(res);
+
+        Assert.Equal(0, result.SlideIndex);
     }
 
     #endregion

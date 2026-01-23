@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Image;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 using WordShape = Aspose.Words.Drawing.Shape;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Image;
@@ -34,9 +35,11 @@ public class DeleteImageWordHandlerTests : WordHandlerTestBase
             { "imageIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("deleted", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("deleted", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(0, GetImageCount(doc));
         AssertModified(context);
     }
@@ -52,9 +55,11 @@ public class DeleteImageWordHandlerTests : WordHandlerTestBase
             { "imageIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("#0", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("#0", result.Message);
     }
 
     [Fact]
@@ -68,9 +73,11 @@ public class DeleteImageWordHandlerTests : WordHandlerTestBase
             { "imageIndex", 0 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Remaining images: 2", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Remaining images: 2", result.Message);
     }
 
     #endregion

@@ -1,12 +1,15 @@
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.Image;
 
 /// <summary>
 ///     Handler for adding images to PDF documents.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class AddPdfImageHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class AddPdfImageHandler : OperationHandlerBase<Document>
     ///     Optional: pageIndex (default: 1), x (default: 100), y (default: 600), width, height
     /// </param>
     /// <returns>Success message with add details.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractAddParameters(parameters);
 
@@ -43,7 +46,7 @@ public class AddPdfImageHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return Success($"Added image to page {actualPageIndex}.");
+        return new SuccessResult { Message = $"Added image to page {actualPageIndex}." };
     }
 
     /// <summary>

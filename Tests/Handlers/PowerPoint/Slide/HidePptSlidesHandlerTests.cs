@@ -1,6 +1,7 @@
 using System.Text.Json;
 using AsposeMcpServer.Handlers.PowerPoint.Slide;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Slide;
 
@@ -61,10 +62,12 @@ public class HidePptSlidesHandlerTests : PptHandlerTestBase
             { "slideIndices", indices }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("2", result);
-        Assert.Contains("slide", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("2", result.Message);
+        Assert.Contains("slide", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -108,9 +111,11 @@ public class HidePptSlidesHandlerTests : PptHandlerTestBase
             { "hidden", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("hidden=True", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("hidden=True", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(pres.Slides[0].Hidden);
         Assert.True(pres.Slides[1].Hidden);
         Assert.True(pres.Slides[2].Hidden);
@@ -129,9 +134,11 @@ public class HidePptSlidesHandlerTests : PptHandlerTestBase
             { "slideIndices", indices }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("3", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("3", result.Message);
         Assert.True(pres.Slides[0].Hidden);
         Assert.False(pres.Slides[1].Hidden);
         Assert.True(pres.Slides[2].Hidden);
@@ -157,9 +164,11 @@ public class HidePptSlidesHandlerTests : PptHandlerTestBase
             { "hidden", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("hidden=False", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("hidden=False", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.False(pres.Slides[0].Hidden);
         Assert.False(pres.Slides[1].Hidden);
         Assert.False(pres.Slides[2].Hidden);
@@ -221,9 +230,11 @@ public class HidePptSlidesHandlerTests : PptHandlerTestBase
             { "hidden", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("5", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("5", result.Message);
         foreach (var slide in pres.Slides)
             Assert.True(slide.Hidden);
     }

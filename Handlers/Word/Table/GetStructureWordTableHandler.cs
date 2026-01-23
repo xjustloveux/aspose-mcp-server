@@ -1,7 +1,9 @@
 using System.Text;
 using Aspose.Words;
 using Aspose.Words.Tables;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Word.Table;
 using WordTable = Aspose.Words.Tables.Table;
 
 namespace AsposeMcpServer.Handlers.Word.Table;
@@ -9,6 +11,7 @@ namespace AsposeMcpServer.Handlers.Word.Table;
 /// <summary>
 ///     Handler for getting table structure in Word documents.
 /// </summary>
+[ResultType(typeof(GetTableStructureWordResult))]
 public class GetStructureWordTableHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -24,7 +27,7 @@ public class GetStructureWordTableHandler : OperationHandlerBase<Document>
     /// </param>
     /// <returns>Formatted string containing table structure information.</returns>
     /// <exception cref="ArgumentException">Thrown when tableIndex or sectionIndex is out of range.</exception>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractGetStructureParameters(parameters);
 
@@ -50,7 +53,7 @@ public class GetStructureWordTableHandler : OperationHandlerBase<Document>
         if (p.IncludeCellFormatting && table.Rows.Count > 0 && table.Rows[0].Cells.Count > 0)
             AppendCellFormatting(result, table);
 
-        return result.ToString();
+        return new GetTableStructureWordResult { Content = result.ToString() };
     }
 
     /// <summary>

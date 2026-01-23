@@ -3,7 +3,7 @@
 本文件記錄 JetBrains InspectCode 報告中被排除修復的問題及其原因。
 這些問題經過評估後決定保留，未來進行代碼品質檢查時可參考本文件跳過這些項目。
 
-**最後更新日期**: 2026-01-17
+**最後更新日期**: 2026-01-23
 **分析工具**: JetBrains InspectCode 2025.3.0.4
 
 ---
@@ -13,15 +13,15 @@
 1. [AccessToDisposedClosure](#1-accesstodisposedclosure)
 2. [AutoPropertyCanBeMadeGetOnly.Global](#2-autopropertycanbemadegetonlyglobal)
 3. [ClassNeverInstantiated.Global](#3-classneverinstantiatedglobal)
-4. [ConvertToPrimaryConstructor](#4-converttoprimaryconstructor)
-5. [MemberCanBePrivate.Global](#5-membercanbeprivateglobal)
-6. [MemberCanBeProtected.Global](#6-membercanbeprotectedglobal)
-7. [MethodSupportsCancellation](#7-methodsupportscancellation)
-8. [OutParameterValueIsAlwaysDiscarded.Local](#8-outparametervalueisalwaysdiscardedlocal)
-9. [PropertyCanBeMadeInitOnly.Global](#9-propertycanbemadeinitonlyglobal)
-10. [UnusedAutoPropertyAccessor.Global](#10-unusedautopropertyaccessorglobal)
-11. [UnusedMember.Global](#11-unusedmemberglobal)
-12. [UnusedMember.Local](#12-unusedmemberlocal)
+4. [CompareOfFloatsByEqualityOperator](#4-compareoffloatsbyequalityoperator)
+5. [ConvertToPrimaryConstructor](#5-converttoprimaryconstructor)
+6. [MemberCanBePrivate.Global](#6-membercanbeprivateglobal)
+7. [MemberCanBeProtected.Global](#7-membercanbeprotectedglobal)
+8. [MethodSupportsCancellation](#8-methodsupportscancellation)
+9. [ParameterOnlyUsedForPreconditionCheck.Local](#9-parameteronlyusedforpreconditionchecklocal)
+10. [PropertyCanBeMadeInitOnly.Global](#10-propertycanbemadeinitonlyglobal)
+11. [UnusedAutoPropertyAccessor.Global](#11-unusedautopropertyaccessorglobal)
+12. [UnusedMember.Global](#12-unusedmemberglobal)
 13. [UnusedMethodReturnValue.Global](#13-unusedmethodreturnvalueglobal)
 14. [UnusedType.Global](#14-unusedtypeglobal)
 15. [UseObjectOrCollectionInitializer](#15-useobjectorollectioninitializer)
@@ -76,15 +76,16 @@ Assert.Throws<ObjectDisposedException>(() => document.SomeMethod());
 | 項目 | 內容 |
 |------|------|
 | **級別** | Note |
-| **數量** | 2 |
+| **數量** | 3 |
 | **訊息** | Auto-property can be made get-only |
 
 ### 受影響檔案
 
 | 檔案 | 行號 | 屬性 |
 |------|------|------|
-| `Core/Security/AuthConfig.cs` | 200 | `ClientSecret` (JWT 配置屬性) |
-| `Core/Security/AuthConfig.cs` | 206 | `CustomEndpoint` (JWT 配置屬性) |
+| `Core/Security/JwtConfig.cs` | 73 | `ClientSecret` (JWT 配置屬性) |
+| `Core/Security/JwtConfig.cs` | 79 | `CustomEndpoint` (JWT 配置屬性) |
+| `Core/Security/ApiKeyConfig.cs` | 47 | `CustomEndpoint` (API Key 配置屬性) |
 
 ### 問題描述
 
@@ -154,7 +155,44 @@ public class DifferentContextHandler : OperationHandlerBase<DifferentContextDocu
 
 ---
 
-## 4. ConvertToPrimaryConstructor
+## 4. CompareOfFloatsByEqualityOperator
+
+| 項目 | 內容 |
+|------|------|
+| **級別** | Warning |
+| **數量** | 1 |
+| **訊息** | Comparison of floating point numbers with equality operator |
+| **處理方式** | 已添加 `// ReSharper disable once` 註解 |
+
+### 受影響檔案
+
+| 檔案 | 行號 | 說明 |
+|------|------|------|
+| `Tests/Handlers/Excel/DataOperations/GetContentHandlerTests.cs` | 43 | 整數值 100 的浮點比較 |
+
+### 問題描述
+
+使用 `==` 運算符比較浮點數可能因精度問題導致意外結果。
+
+### 不修復原因
+
+這是測試代碼中驗證 Excel 儲存格值的邏輯。比較的值是整數 `100`，不是浮點運算結果。
+當整數被存儲為 `double` 類型時（Excel 的內部表示），精確的整數值比較是安全的。
+
+### 範例代碼
+
+```csharp
+// 測試代碼 - 檢查儲存格值是否為 100
+// ReSharper disable once CompareOfFloatsByEqualityOperator - Exact integer value 100 comparison is safe
+Assert.Contains(result.Rows[1].Values,
+    v => v?.ToString() == "100" || v is (int or double) and 100);
+```
+
+整數 100 可以精確表示為 IEEE 754 double，因此這個比較是安全的。
+
+---
+
+## 5. ConvertToPrimaryConstructor
 
 | 項目 | 內容 |
 |------|------|
@@ -202,7 +240,7 @@ public class NoParameterlessCtorHandler(string requiredValue) : OperationHandler
 
 ---
 
-## 5. MemberCanBePrivate.Global
+## 6. MemberCanBePrivate.Global
 
 | 項目 | 內容 |
 |------|------|
@@ -233,7 +271,7 @@ public class NoParameterlessCtorHandler(string requiredValue) : OperationHandler
 
 ---
 
-## 6. MemberCanBeProtected.Global
+## 7. MemberCanBeProtected.Global
 
 | 項目 | 內容 |
 |------|------|
@@ -245,7 +283,7 @@ public class NoParameterlessCtorHandler(string requiredValue) : OperationHandler
 
 | 檔案 | 行號 | 成員 |
 |------|------|------|
-| `Tests/Helpers/TestBase.cs` | 491 | `AsposeLibraryType` enum |
+| `Tests/Infrastructure/TestBase.cs` | 526 | `AsposeLibraryType` enum |
 
 ### 問題描述
 
@@ -259,7 +297,7 @@ Enum 可以改為 protected 可見性。
 
 ---
 
-## 7. MethodSupportsCancellation
+## 8. MethodSupportsCancellation
 
 | 項目 | 內容 |
 |------|------|
@@ -288,7 +326,49 @@ Enum 可以改為 protected 可見性。
 
 ---
 
-## 8. PropertyCanBeMadeInitOnly.Global
+---
+
+## 9. ParameterOnlyUsedForPreconditionCheck.Local
+
+| 項目 | 內容 |
+|------|------|
+| **級別** | Warning |
+| **數量** | 2 |
+| **訊息** | Parameter is only used for precondition check(s) |
+| **處理方式** | 已添加 `// ReSharper disable once` 註解 |
+
+### 受影響檔案
+
+| 檔案 | 行號 | 參數 |
+|------|------|------|
+| `Tests/Helpers/PowerPoint/PptLayoutHelperTests.cs` | 21 | `item` (Assert.All lambda 參數) |
+| `Tests/Handlers/Word/Text/SearchWordTextHandlerTests.cs` | 345 | `m` (Assert.All lambda 參數) |
+
+### 問題描述
+
+Lambda 參數僅用於前置條件檢查（如 `Assert` 語句），而非其他邏輯。
+
+### 不修復原因
+
+這是 xUnit 的 `Assert.All` 方法的正確使用方式。該方法需要一個 lambda 來對集合中的每個元素執行驗證。
+參數在 lambda 內被用於 Assert 語句，這正是預期的行為。
+
+### 範例代碼
+
+```csharp
+// Assert.All 的正確用法 - 參數用於驗證每個元素
+// ReSharper disable once ParameterOnlyUsedForPreconditionCheck.Local - Assert.All parameter is intended for validation
+Assert.All(result, item =>
+{
+    Assert.NotNull(item);
+    Assert.IsType<GetLayoutInfo>(item);
+    Assert.NotNull(item.Type);
+});
+```
+
+---
+
+## 10. PropertyCanBeMadeInitOnly.Global
 
 | 項目 | 內容 |
 |------|------|
@@ -334,7 +414,7 @@ public string Host { get; init; } = "localhost";  // 會導致反序列化失敗
 
 ---
 
-## 9. UnusedAutoPropertyAccessor.Global
+## 11. UnusedAutoPropertyAccessor.Global
 
 | 項目 | 內容 |
 |------|------|
@@ -367,7 +447,7 @@ public string Host { get; init; } = "localhost";  // 會導致反序列化失敗
 
 ---
 
-## 10. UnusedMember.Global
+## 12. UnusedMember.Global
 
 | 項目 | 內容 |
 |------|------|
@@ -379,13 +459,13 @@ public string Host { get; init; } = "localhost";  // 會導致反序列化失敗
 
 | 檔案 | 行號 | 成員 |
 |------|------|------|
-| `Tests/Helpers/ExcelTestBase.cs` | 41 | `AssertCellValue()` |
-| `Tests/Helpers/WordTestBase.cs` | 52 | `AssertParagraphExists()` |
-| `Tests/Helpers/WordTestBase.cs` | 62 | `AssertParagraphStyle()` |
-| `Tests/Helpers/PdfTestBase.cs` | 11 | `IsEvaluationMode()` |
+| `Tests/Infrastructure/ExcelTestBase.cs` | 41 | `AssertCellValue()` |
+| `Tests/Infrastructure/WordTestBase.cs` | 52 | `AssertParagraphExists()` |
+| `Tests/Infrastructure/WordTestBase.cs` | 62 | `AssertParagraphStyle()` |
+| `Tests/Infrastructure/PdfTestBase.cs` | 11 | `IsEvaluationMode()` |
 | `Core/Session/DocumentSession.cs` | 226 | `GetDocumentAsync()` |
 | `Core/Session/DocumentSessionManager.cs` | 467 | `OnServerShutdown()` |
-| `Core/Tracking/TrackingMiddleware.cs` | 405 | `UseTracking()` |
+| `Core/Tracking/TrackingExtensions.cs` | 14 | `UseTracking()` |
 
 ### 問題描述
 
@@ -400,7 +480,7 @@ public string Host { get; init; } = "localhost";  // 會導致反序列化失敗
 
 ---
 
-## 11. UnusedMethodReturnValue.Global
+## 13. UnusedMethodReturnValue.Global
 
 | 項目 | 內容 |
 |------|------|
@@ -439,7 +519,7 @@ builder.WithFilteredTools(filter);
 
 ---
 
-## 12. UnusedType.Global
+## 14. UnusedType.Global
 
 | 項目 | 內容 |
 |------|------|
@@ -451,7 +531,7 @@ builder.WithFilteredTools(filter);
 
 | 檔案 | 行號 | 類型 |
 |------|------|------|
-| `Core/Tracking/TrackingMiddleware.cs` | 397 | `TrackingExtensions` |
+| `Core/Tracking/TrackingExtensions.cs` | 6 | `TrackingExtensions` |
 
 ### 問題描述
 
@@ -473,7 +553,7 @@ app.UseTracking();
 
 ---
 
-## 13. UseObjectOrCollectionInitializer
+## 15. UseObjectOrCollectionInitializer
 
 | 項目 | 內容 |
 |------|------|
@@ -549,7 +629,7 @@ var builder = new DocumentBuilder(doc)
 
 ---
 
-## 14. UseUtf8StringLiteral
+## 16. UseUtf8StringLiteral
 
 | 項目 | 內容 |
 |------|------|
@@ -590,12 +670,14 @@ PNG 檔案的 signature 包含 `0x89` 等非 ASCII 字元，這些是二進制�
 | 問題類型 | 數量 | 級別 | 主要原因 | 處理方式 |
 |----------|------|------|----------|----------|
 | AccessToDisposedClosure | 6 | Warning | 測試邏輯需要 | 文件記錄 |
-| AutoPropertyCanBeMadeGetOnly.Global | 2 | Note | JSON 序列化 | 文件記錄 |
+| AutoPropertyCanBeMadeGetOnly.Global | 3 | Note | JSON 序列化 | 文件記錄 |
 | ClassNeverInstantiated.Global | 1 | Note | 測試類別 | ReSharper disable once |
+| CompareOfFloatsByEqualityOperator | 1 | Warning | 整數值比較安全 | ReSharper disable once |
 | ConvertToPrimaryConstructor | 1 | Note | 風格選擇 | .editorconfig 排除 |
 | MemberCanBePrivate.Global | 6 | Note | 公開 API | 文件記錄 |
 | MemberCanBeProtected.Global | 1 | Note | 測試彈性 | 文件記錄 |
 | MethodSupportsCancellation | 1 | Note | 複雜度考量 | ReSharper disable once |
+| ParameterOnlyUsedForPreconditionCheck.Local | 2 | Warning | Assert.All 用法 | ReSharper disable once |
 | PropertyCanBeMadeInitOnly.Global | 38 | Note | JSON 序列化 | 文件記錄 |
 | UnusedAutoPropertyAccessor.Global | 7 | Warning | JSON 序列化 / 外部 API | 文件記錄 |
 | UnusedMember.Global | 7 | Note | 公開 API | 文件記錄 |
@@ -603,7 +685,7 @@ PNG 檔案的 signature 包含 `0x89` 等非 ASCII 字元，這些是二進制�
 | UnusedType.Global | 1 | Note | 公開 API | 文件記錄 |
 | UseObjectOrCollectionInitializer | 26 | Note | 測試可讀性/誤判 | 文件記錄 |
 | UseUtf8StringLiteral | 2 | Note | 誤判 | ReSharper disable/restore |
-| **總計** | **100** | - | - | - |
+| **總計** | **104** | - | - | - |
 
 ---
 

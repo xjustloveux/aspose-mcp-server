@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Content;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Word.Content;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.Content;
 
@@ -33,8 +34,8 @@ public class GetWordContentDetailedHandlerTests : WordHandlerTestBase
 
         var result = _handler.Execute(context, parameters);
 
-        Assert.Contains("Headers", result);
-        Assert.Contains("Footers", result);
+        Assert.Contains("Headers", ((GetWordContentDetailedResult)result).Content);
+        Assert.Contains("Footers", ((GetWordContentDetailedResult)result).Content);
     }
 
     #endregion
@@ -54,8 +55,8 @@ public class GetWordContentDetailedHandlerTests : WordHandlerTestBase
 
         var result = _handler.Execute(context, parameters);
 
-        Assert.Contains("Section 1 content", result);
-        Assert.Contains("Section 2 content", result);
+        Assert.Contains("Section 1 content", ((GetWordContentDetailedResult)result).Content);
+        Assert.Contains("Section 2 content", ((GetWordContentDetailedResult)result).Content);
     }
 
     #endregion
@@ -71,7 +72,7 @@ public class GetWordContentDetailedHandlerTests : WordHandlerTestBase
 
         var result = _handler.Execute(context, parameters);
 
-        Assert.Contains("Detailed Document Content", result);
+        Assert.Contains("Detailed Document Content", ((GetWordContentDetailedResult)result).Content);
     }
 
     [Fact]
@@ -83,8 +84,8 @@ public class GetWordContentDetailedHandlerTests : WordHandlerTestBase
 
         var result = _handler.Execute(context, parameters);
 
-        Assert.Contains("Body Content", result);
-        Assert.Contains("Body content here", result);
+        Assert.Contains("Body Content", ((GetWordContentDetailedResult)result).Content);
+        Assert.Contains("Body content here", ((GetWordContentDetailedResult)result).Content);
     }
 
     [Fact]
@@ -115,7 +116,7 @@ public class GetWordContentDetailedHandlerTests : WordHandlerTestBase
 
         var result = _handler.Execute(context, parameters);
 
-        Assert.Contains("Headers", result);
+        Assert.Contains("Headers", ((GetWordContentDetailedResult)result).Content);
     }
 
     [Fact]
@@ -130,7 +131,7 @@ public class GetWordContentDetailedHandlerTests : WordHandlerTestBase
 
         var result = _handler.Execute(context, parameters);
 
-        Assert.DoesNotContain("--- Headers ---", result);
+        Assert.DoesNotContain("--- Headers ---", ((GetWordContentDetailedResult)result).Content);
     }
 
     [Fact]
@@ -142,7 +143,7 @@ public class GetWordContentDetailedHandlerTests : WordHandlerTestBase
 
         var result = _handler.Execute(context, parameters);
 
-        Assert.DoesNotContain("--- Headers ---", result);
+        Assert.DoesNotContain("--- Headers ---", ((GetWordContentDetailedResult)result).Content);
     }
 
     #endregion
@@ -161,7 +162,7 @@ public class GetWordContentDetailedHandlerTests : WordHandlerTestBase
 
         var result = _handler.Execute(context, parameters);
 
-        Assert.Contains("Footers", result);
+        Assert.Contains("Footers", ((GetWordContentDetailedResult)result).Content);
     }
 
     [Fact]
@@ -176,7 +177,7 @@ public class GetWordContentDetailedHandlerTests : WordHandlerTestBase
 
         var result = _handler.Execute(context, parameters);
 
-        Assert.DoesNotContain("--- Footers ---", result);
+        Assert.DoesNotContain("--- Footers ---", ((GetWordContentDetailedResult)result).Content);
     }
 
     [Fact]
@@ -188,7 +189,7 @@ public class GetWordContentDetailedHandlerTests : WordHandlerTestBase
 
         var result = _handler.Execute(context, parameters);
 
-        Assert.DoesNotContain("--- Footers ---", result);
+        Assert.DoesNotContain("--- Footers ---", ((GetWordContentDetailedResult)result).Content);
     }
 
     #endregion

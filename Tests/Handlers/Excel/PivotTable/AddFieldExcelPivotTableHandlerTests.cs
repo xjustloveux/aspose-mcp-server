@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.PivotTable;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.PivotTable;
 
@@ -59,9 +60,11 @@ public class AddFieldExcelPivotTableHandlerTests : ExcelHandlerTestBase
             { "function", function }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("data", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("data", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -82,9 +85,11 @@ public class AddFieldExcelPivotTableHandlerTests : ExcelHandlerTestBase
             { "fieldType", "row" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -104,9 +109,11 @@ public class AddFieldExcelPivotTableHandlerTests : ExcelHandlerTestBase
             { "fieldType", "row" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("added", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -123,10 +130,12 @@ public class AddFieldExcelPivotTableHandlerTests : ExcelHandlerTestBase
             { "function", "Sum" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("Value", result);
-        Assert.Contains("data", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("Value", result.Message);
+        Assert.Contains("data", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -222,9 +231,11 @@ public class AddFieldExcelPivotTableHandlerTests : ExcelHandlerTestBase
             { "fieldType", "column" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("column", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("column", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -240,9 +251,11 @@ public class AddFieldExcelPivotTableHandlerTests : ExcelHandlerTestBase
             { "fieldType", "page" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("page", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("page", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 

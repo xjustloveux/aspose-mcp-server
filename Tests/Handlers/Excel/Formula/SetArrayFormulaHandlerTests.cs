@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.Formula;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Formula;
 
@@ -37,9 +38,11 @@ public class SetArrayFormulaHandlerTests : ExcelHandlerTestBase
             { "formula", formula }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("B1:B3", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("B1:B3", result.Message);
     }
 
     #endregion
@@ -61,9 +64,11 @@ public class SetArrayFormulaHandlerTests : ExcelHandlerTestBase
             { "sheetIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("B1:B2", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("B1:B2", result.Message);
     }
 
     #endregion
@@ -86,9 +91,11 @@ public class SetArrayFormulaHandlerTests : ExcelHandlerTestBase
             { "autoCalculate", false }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("B1:B2", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("B1:B2", result.Message);
     }
 
     #endregion
@@ -110,9 +117,11 @@ public class SetArrayFormulaHandlerTests : ExcelHandlerTestBase
             { "formula", "A1:A2*2" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("B1:B2", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("B1:B2", result.Message);
     }
 
     #endregion
@@ -133,9 +142,11 @@ public class SetArrayFormulaHandlerTests : ExcelHandlerTestBase
             { "formula", "=SUM(A1:C1)" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("formula", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("formula", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -158,9 +169,11 @@ public class SetArrayFormulaHandlerTests : ExcelHandlerTestBase
             { "formula", "=A1:A3*B1:B3" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("C1:C3", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("C1:C3", result.Message);
         AssertModified(context);
     }
 
@@ -178,9 +191,11 @@ public class SetArrayFormulaHandlerTests : ExcelHandlerTestBase
             { "formula", "=A1:C1" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("formula", result, StringComparison.OrdinalIgnoreCase);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("formula", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

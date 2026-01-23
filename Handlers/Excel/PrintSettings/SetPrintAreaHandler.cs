@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.PrintSettings;
 
 /// <summary>
 ///     Handler for setting print area in Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetPrintAreaHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class SetPrintAreaHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0), clearPrintArea (default: false)
     /// </param>
     /// <returns>Success message with print area details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var setParams = ExtractSetPrintAreaParameters(parameters);
 
@@ -37,9 +40,12 @@ public class SetPrintAreaHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return setParams.ClearPrintArea
-            ? Success($"Print area cleared for sheet {setParams.SheetIndex}.")
-            : Success($"Print area set to {setParams.Range} for sheet {setParams.SheetIndex}.");
+        return new SuccessResult
+        {
+            Message = setParams.ClearPrintArea
+                ? $"Print area cleared for sheet {setParams.SheetIndex}."
+                : $"Print area set to {setParams.Range} for sheet {setParams.SheetIndex}."
+        };
     }
 
     /// <summary>

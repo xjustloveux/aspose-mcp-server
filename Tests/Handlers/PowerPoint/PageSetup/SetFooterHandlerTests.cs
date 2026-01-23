@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.PowerPoint.PageSetup;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.PageSetup;
 
@@ -31,9 +32,11 @@ public class SetFooterHandlerTests : PptHandlerTestBase
             { "footerText", "My Footer" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("footer settings updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("footer settings updated", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -47,9 +50,11 @@ public class SetFooterHandlerTests : PptHandlerTestBase
             { "dateText", "2026-01-11" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("footer settings updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("footer settings updated", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -62,9 +67,11 @@ public class SetFooterHandlerTests : PptHandlerTestBase
             { "showSlideNumber", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("footer settings updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("footer settings updated", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -77,9 +84,11 @@ public class SetFooterHandlerTests : PptHandlerTestBase
             { "footerText", "Test Footer" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("3 slide", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("3 slide", result.Message);
     }
 
     [Fact]
@@ -93,9 +102,11 @@ public class SetFooterHandlerTests : PptHandlerTestBase
             { "slideIndices", SlideIndicesZeroTwo }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("2 slide", result);
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("2 slide", result.Message);
     }
 
     #endregion

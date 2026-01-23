@@ -2,14 +2,17 @@ using System.Text;
 using System.Text.Json;
 using Aspose.Slides;
 using Aspose.Slides.SmartArt;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.SmartArt;
 
 /// <summary>
 ///     Handler for managing SmartArt nodes (add, edit, delete).
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class ManageSmartArtNodesHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -24,7 +27,7 @@ public class ManageSmartArtNodesHandler : OperationHandlerBase<Presentation>
     ///     Optional: text (required for add/edit), position.
     /// </param>
     /// <returns>Success message with node operation details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var nodeParams = ExtractNodeParameters(parameters);
 
@@ -35,10 +38,10 @@ public class ManageSmartArtNodesHandler : OperationHandlerBase<Presentation>
         var (targetNode, rootIndex) = NavigateToTargetNode(smartArt, targetPathArray);
 
         var actionContext = new ActionContext(smartArt, targetNode, targetPathArray, rootIndex);
-        var result = ExecuteAction(nodeParams, actionContext);
+        var message = ExecuteAction(nodeParams, actionContext);
 
         MarkModified(context);
-        return result;
+        return new SuccessResult { Message = message };
     }
 
     /// <summary>

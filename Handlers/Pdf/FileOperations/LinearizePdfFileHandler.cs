@@ -1,11 +1,14 @@
 using Aspose.Pdf;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.FileOperations;
 
 /// <summary>
 ///     Handler for linearizing a PDF document for fast web viewing.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class LinearizePdfFileHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
@@ -17,13 +20,13 @@ public class LinearizePdfFileHandler : OperationHandlerBase<Document>
     /// <param name="context">The document context.</param>
     /// <param name="parameters">No additional parameters required.</param>
     /// <returns>Success message.</returns>
-    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var document = context.Document;
         document.Optimize();
 
         MarkModified(context);
 
-        return Success("PDF linearized for fast web view.");
+        return new SuccessResult { Message = "PDF linearized for fast web view." };
     }
 }

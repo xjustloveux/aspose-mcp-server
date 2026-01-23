@@ -1,8 +1,8 @@
-using System.Text.Json;
 using Aspose.Cells;
 using Aspose.Cells.Charts;
 using AsposeMcpServer.Handlers.Excel.Chart;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Excel.Chart;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.Chart;
 
@@ -29,11 +29,12 @@ public class GetExcelChartsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(0, json.RootElement.GetProperty("count").GetInt32());
-        Assert.Contains("No charts found", json.RootElement.GetProperty("message").GetString());
+        var result = Assert.IsType<GetChartsResult>(res);
+
+        Assert.Equal(0, result.Count);
+        Assert.Contains("No charts found", result.Message);
     }
 
     #endregion
@@ -51,10 +52,11 @@ public class GetExcelChartsHandlerTests : ExcelHandlerTestBase
             { "sheetIndex", 1 }
         });
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(0, json.RootElement.GetProperty("count").GetInt32());
+        var result = Assert.IsType<GetChartsResult>(res);
+
+        Assert.Equal(0, result.Count);
     }
 
     #endregion
@@ -85,10 +87,11 @@ public class GetExcelChartsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.True(json.RootElement.TryGetProperty("count", out _));
+        var result = Assert.IsType<GetChartsResult>(res);
+
+        Assert.True(result.Count >= 0);
     }
 
     [Fact]
@@ -98,10 +101,11 @@ public class GetExcelChartsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(2, json.RootElement.GetProperty("count").GetInt32());
+        var result = Assert.IsType<GetChartsResult>(res);
+
+        Assert.Equal(2, result.Count);
     }
 
     [Fact]
@@ -111,10 +115,11 @@ public class GetExcelChartsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(1, json.RootElement.GetProperty("items").GetArrayLength());
+        var result = Assert.IsType<GetChartsResult>(res);
+
+        Assert.Single(result.Items);
     }
 
     [Fact]
@@ -124,10 +129,11 @@ public class GetExcelChartsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.NotNull(json.RootElement.GetProperty("worksheetName").GetString());
+        var result = Assert.IsType<GetChartsResult>(res);
+
+        Assert.NotNull(result.WorksheetName);
     }
 
     #endregion
@@ -141,11 +147,11 @@ public class GetExcelChartsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
-        var firstChart = json.RootElement.GetProperty("items")[0];
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(0, firstChart.GetProperty("index").GetInt32());
+        var result = Assert.IsType<GetChartsResult>(res);
+
+        Assert.Equal(0, result.Items[0].Index);
     }
 
     [Fact]
@@ -155,11 +161,11 @@ public class GetExcelChartsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
-        var firstChart = json.RootElement.GetProperty("items")[0];
+        var res = _handler.Execute(context, parameters);
 
-        Assert.NotNull(firstChart.GetProperty("type").GetString());
+        var result = Assert.IsType<GetChartsResult>(res);
+
+        Assert.NotNull(result.Items[0].Type);
     }
 
     [Fact]
@@ -169,11 +175,11 @@ public class GetExcelChartsHandlerTests : ExcelHandlerTestBase
         var context = CreateContext(workbook);
         var parameters = CreateEmptyParameters();
 
-        var result = _handler.Execute(context, parameters);
-        var json = JsonDocument.Parse(result);
-        var firstChart = json.RootElement.GetProperty("items")[0];
+        var res = _handler.Execute(context, parameters);
 
-        Assert.True(firstChart.TryGetProperty("location", out _));
+        var result = Assert.IsType<GetChartsResult>(res);
+
+        Assert.NotNull(result.Items[0].Location);
     }
 
     #endregion

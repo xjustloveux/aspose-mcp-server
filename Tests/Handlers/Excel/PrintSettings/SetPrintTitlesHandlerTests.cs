@@ -1,5 +1,6 @@
 using AsposeMcpServer.Handlers.Excel.PrintSettings;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.PrintSettings;
 
@@ -29,9 +30,11 @@ public class SetPrintTitlesHandlerTests : ExcelHandlerTestBase
             { "rows", "$1:$2" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("print titles updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("print titles updated", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("$1:$2", workbook.Worksheets[0].PageSetup.PrintTitleRows);
         AssertModified(context);
     }
@@ -46,9 +49,11 @@ public class SetPrintTitlesHandlerTests : ExcelHandlerTestBase
             { "columns", "$A:$B" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("print titles updated", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("print titles updated", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("$A:$B", workbook.Worksheets[0].PageSetup.PrintTitleColumns);
     }
 
@@ -98,9 +103,11 @@ public class SetPrintTitlesHandlerTests : ExcelHandlerTestBase
             { "rows", "$1:$3" }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("sheet 1", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("sheet 1", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("$1:$3", workbook.Worksheets[1].PageSetup.PrintTitleRows);
     }
 

@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.ViewSettings;
-using AsposeMcpServer.Tests.Helpers;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.ViewSettings;
 
@@ -57,9 +58,11 @@ public class SplitWindowExcelViewHandlerTests : ExcelHandlerTestBase
             { "splitColumn", 3 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("split", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("split", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -73,10 +76,12 @@ public class SplitWindowExcelViewHandlerTests : ExcelHandlerTestBase
             { "splitRow", 10 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("split", result.ToLower());
-        Assert.Contains("row 10", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("split", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("row 10", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -90,9 +95,11 @@ public class SplitWindowExcelViewHandlerTests : ExcelHandlerTestBase
             { "removeSplit", true }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("removed", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("removed", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -108,9 +115,11 @@ public class SplitWindowExcelViewHandlerTests : ExcelHandlerTestBase
             { "splitRow", 5 }
         });
 
-        var result = _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Contains("split", result.ToLower());
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("split", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

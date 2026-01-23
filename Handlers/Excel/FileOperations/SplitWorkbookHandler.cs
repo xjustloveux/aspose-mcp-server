@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.FileOperations;
 
 /// <summary>
 ///     Handler for splitting an Excel workbook into separate files per worksheet.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SplitWorkbookHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class SplitWorkbookHandler : OperationHandlerBase<Workbook>
     ///     Optional: inputPath, path, sessionId (one is required), sheetIndices, outputFileNamePattern
     /// </param>
     /// <returns>Success message with split details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractSplitParameters(parameters);
 
@@ -32,7 +35,8 @@ public class SplitWorkbookHandler : OperationHandlerBase<Workbook>
         var indicesToSplit = GetIndicesToSplit(p.SheetIndices, sourceWorkbook.Worksheets.Count);
         var splitFiles = SplitWorksheets(sourceWorkbook, indicesToSplit, p.OutputDirectory!, p.OutputFileNamePattern);
 
-        return Success($"Split workbook into {splitFiles.Count} files. Output: {p.OutputDirectory}");
+        return new SuccessResult
+            { Message = $"Split workbook into {splitFiles.Count} files. Output: {p.OutputDirectory}" };
     }
 
     /// <summary>

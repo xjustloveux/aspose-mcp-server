@@ -1,6 +1,7 @@
-using System.Text.Json;
-using Aspose.Cells;
-using AsposeMcpServer.Tests.Helpers;
+﻿using Aspose.Cells;
+using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Excel.Hyperlink;
+using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Excel;
 
 namespace AsposeMcpServer.Tests.Tools.Excel;
@@ -37,7 +38,8 @@ public class ExcelHyperlinkToolTests : ExcelTestBase
         var outputPath = CreateTestFilePath("test_add_output.xlsx");
         var result = _tool.Execute("add", workbookPath, cell: "A1",
             url: "https://example.com", displayText: "Click here", outputPath: outputPath);
-        Assert.Contains("Hyperlink added to A1", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Hyperlink added to A1", data.Message);
         using var workbook = new Workbook(outputPath);
         Assert.Single(workbook.Worksheets[0].Hyperlinks);
         Assert.Equal("https://example.com", workbook.Worksheets[0].Hyperlinks[0].Address);
@@ -50,7 +52,8 @@ public class ExcelHyperlinkToolTests : ExcelTestBase
         var outputPath = CreateTestFilePath("test_edit_cell_output.xlsx");
         var result = _tool.Execute("edit", workbookPath, cell: "A1",
             url: "https://new.com", displayText: "New Link", outputPath: outputPath);
-        Assert.Contains("Hyperlink at", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Hyperlink at", data.Message);
         using var workbook = new Workbook(outputPath);
         Assert.Equal("https://new.com", workbook.Worksheets[0].Hyperlinks[0].Address);
     }
@@ -61,7 +64,8 @@ public class ExcelHyperlinkToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithHyperlink("test_delete_cell.xlsx");
         var outputPath = CreateTestFilePath("test_delete_cell_output.xlsx");
         var result = _tool.Execute("delete", workbookPath, cell: "A1", outputPath: outputPath);
-        Assert.Contains("deleted", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("deleted", data.Message);
         using var workbook = new Workbook(outputPath);
         Assert.Empty(workbook.Worksheets[0].Hyperlinks);
     }
@@ -78,9 +82,8 @@ public class ExcelHyperlinkToolTests : ExcelTestBase
         }
 
         var result = _tool.Execute("get", workbookPath);
-        var json = JsonDocument.Parse(result);
-        var root = json.RootElement;
-        Assert.Equal(2, root.GetProperty("count").GetInt32());
+        var data = GetResultData<GetHyperlinksExcelResult>(result);
+        Assert.Equal(2, data.Count);
     }
 
     #endregion
@@ -97,7 +100,8 @@ public class ExcelHyperlinkToolTests : ExcelTestBase
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.xlsx");
         var result = _tool.Execute(operation, workbookPath, cell: "A1",
             url: "https://test.com", outputPath: outputPath);
-        Assert.Contains("Hyperlink added", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Hyperlink added", data.Message);
     }
 
     [Fact]
@@ -125,7 +129,10 @@ public class ExcelHyperlinkToolTests : ExcelTestBase
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("add", sessionId: sessionId, cell: "A1",
             url: "https://session.com", displayText: "Session Link");
-        Assert.Contains("Hyperlink added to A1", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Hyperlink added to A1", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.Single(workbook.Worksheets[0].Hyperlinks);
     }
@@ -136,7 +143,10 @@ public class ExcelHyperlinkToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithHyperlink("test_session_edit.xlsx", "A1", "https://old.com");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("edit", sessionId: sessionId, cell: "A1", url: "https://new-session.com");
-        Assert.Contains("Hyperlink at", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("Hyperlink at", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.Equal("https://new-session.com", workbook.Worksheets[0].Hyperlinks[0].Address);
     }
@@ -147,7 +157,10 @@ public class ExcelHyperlinkToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithHyperlink("test_session_delete.xlsx");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("delete", sessionId: sessionId, cell: "A1");
-        Assert.Contains("deleted", result);
+        var data = GetResultData<SuccessResult>(result);
+        Assert.Contains("deleted", data.Message);
+        var output = GetResultOutput<SuccessResult>(result);
+        Assert.True(output.IsSession);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.Empty(workbook.Worksheets[0].Hyperlinks);
     }
@@ -165,8 +178,8 @@ public class ExcelHyperlinkToolTests : ExcelTestBase
 
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("get", sessionId: sessionId);
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(2, json.RootElement.GetProperty("count").GetInt32());
+        var data = GetResultData<GetHyperlinksExcelResult>(result);
+        Assert.Equal(2, data.Count);
     }
 
     [Fact]
@@ -182,7 +195,9 @@ public class ExcelHyperlinkToolTests : ExcelTestBase
         var workbookPath2 = CreateWorkbookWithHyperlink("test_session_file.xlsx", "A1", "https://session.com");
         var sessionId = OpenSession(workbookPath2);
         var result = _tool.Execute("get", workbookPath1, sessionId);
-        Assert.Contains("https://session.com", result);
+        var data = GetResultData<GetHyperlinksExcelResult>(result);
+        Assert.Equal(1, data.Count);
+        Assert.Equal("https://session.com", data.Items.First().Url);
     }
 
     #endregion

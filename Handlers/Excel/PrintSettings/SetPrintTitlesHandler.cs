@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.PrintSettings;
 
 /// <summary>
 ///     Handler for setting print titles (repeating rows/columns) in Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetPrintTitlesHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -20,7 +23,7 @@ public class SetPrintTitlesHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex (default: 0), rows, columns, clearTitles (default: false)
     /// </param>
     /// <returns>Success message with print titles details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var setParams = ExtractSetPrintTitlesParameters(parameters);
 
@@ -42,7 +45,7 @@ public class SetPrintTitlesHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        return Success($"Print titles updated for sheet {setParams.SheetIndex}.");
+        return new SuccessResult { Message = $"Print titles updated for sheet {setParams.SheetIndex}." };
     }
 
     /// <summary>

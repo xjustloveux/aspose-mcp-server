@@ -1,11 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Table;
 
 /// <summary>
 ///     Handler for editing cell content in PowerPoint tables.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class EditPptTableCellHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
@@ -20,7 +24,7 @@ public class EditPptTableCellHandler : OperationHandlerBase<Presentation>
     ///     Optional: slideIndex.
     /// </param>
     /// <returns>Success message with update details.</returns>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var cellParams = ExtractEditCellParameters(parameters);
 
@@ -35,7 +39,7 @@ public class EditPptTableCellHandler : OperationHandlerBase<Presentation>
 
         MarkModified(context);
 
-        return Success($"Cell [{cellParams.RowIndex},{cellParams.ColumnIndex}] updated.");
+        return new SuccessResult { Message = $"Cell [{cellParams.RowIndex},{cellParams.ColumnIndex}] updated." };
     }
 
     /// <summary>

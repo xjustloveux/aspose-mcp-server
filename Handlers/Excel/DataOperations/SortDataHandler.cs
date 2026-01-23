@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.Excel;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.DataOperations;
 
 /// <summary>
 ///     Handler for sorting data in Excel worksheets.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SortDataHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class SortDataHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex, sortColumn, ascending, hasHeader
     /// </param>
     /// <returns>Success message with sort details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var sortParams = ExtractSortDataParameters(parameters);
 
@@ -41,8 +44,11 @@ public class SortDataHandler : OperationHandlerBase<Workbook>
 
             MarkModified(context);
 
-            return Success(
-                $"Sorted range {sortParams.Range} by column {sortParams.SortColumn} ({(sortParams.Ascending ? "ascending" : "descending")}).");
+            return new SuccessResult
+            {
+                Message =
+                    $"Sorted range {sortParams.Range} by column {sortParams.SortColumn} ({(sortParams.Ascending ? "ascending" : "descending")})."
+            };
         }
         catch (CellsException ex)
         {

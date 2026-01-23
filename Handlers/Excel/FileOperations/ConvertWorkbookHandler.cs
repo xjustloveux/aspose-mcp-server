@@ -1,12 +1,15 @@
 using Aspose.Cells;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.FileOperations;
 
 /// <summary>
 ///     Handler for converting Excel workbooks to different formats.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class ConvertWorkbookHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
@@ -21,7 +24,7 @@ public class ConvertWorkbookHandler : OperationHandlerBase<Workbook>
     ///     Optional: inputPath, sessionId (one of inputPath or sessionId is required if not using context document)
     /// </param>
     /// <returns>Success message with conversion details.</returns>
-    public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractConvertParameters(parameters);
 
@@ -65,7 +68,8 @@ public class ConvertWorkbookHandler : OperationHandlerBase<Workbook>
 
         workbook.Save(p.OutputPath, saveFormat);
 
-        return Success($"Workbook from {sourceDescription} converted to {p.Format} format. Output: {p.OutputPath}");
+        return new SuccessResult
+            { Message = $"Workbook from {sourceDescription} converted to {p.Format} format. Output: {p.OutputPath}" };
     }
 
     /// <summary>

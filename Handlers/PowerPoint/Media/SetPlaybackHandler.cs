@@ -1,12 +1,15 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Media;
 
 /// <summary>
 ///     Handler for setting media playback options in PowerPoint slides.
 /// </summary>
+[ResultType(typeof(SuccessResult))]
 public class SetPlaybackHandler : OperationHandlerBase<Presentation>
 {
     private static readonly Dictionary<string, AudioVolumeMode> VolumeMap = new(StringComparer.OrdinalIgnoreCase)
@@ -34,7 +37,7 @@ public class SetPlaybackHandler : OperationHandlerBase<Presentation>
     /// <exception cref="ArgumentException">
     ///     Thrown when shapeIndex is not provided, volume is invalid, or shape is not a media frame.
     /// </exception>
-    public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
+    public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractPlaybackParameters(parameters);
 
@@ -74,7 +77,7 @@ public class SetPlaybackHandler : OperationHandlerBase<Presentation>
         if (p.Loop) settings.Add("loop=true");
         if (p.Rewind && shape is IVideoFrame) settings.Add("rewind=true");
 
-        return Success($"Playback settings updated ({string.Join(", ", settings)}).");
+        return new SuccessResult { Message = $"Playback settings updated ({string.Join(", ", settings)})." };
     }
 
     /// <summary>
