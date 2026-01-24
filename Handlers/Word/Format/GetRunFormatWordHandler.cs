@@ -72,7 +72,7 @@ public class GetRunFormatWordHandler : OperationHandlerBase<Document>
             var colorHex = $"#{font.Color.R:X2}{font.Color.G:X2}{font.Color.B:X2}";
             return new RunFormatInfo
             {
-                Index = i,
+                RunIndex = i,
                 Text = run.Text,
                 FontNameAscii = font.NameAscii,
                 FontNameFarEast = font.NameFarEast,

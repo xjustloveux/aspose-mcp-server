@@ -52,6 +52,8 @@ resharper_access_to_disposed_closure_highlighting = none
 resharper_method_supports_cancellation_highlighting = none
 
 # ===== Roslyn Analyzer Rule Exclusions (Tests Only) =====
+# CA1826: Don't use Enumerable methods on indexable collections
+dotnet_diagnostic.CA1826.severity = none
 # CA1861: Avoid constant arrays as arguments
 dotnet_diagnostic.CA1861.severity = none
 # CA2016: Forward the 'CancellationToken' parameter to methods

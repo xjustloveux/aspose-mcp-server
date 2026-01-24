@@ -1,7 +1,6 @@
 using Aspose.Cells;
-using AsposeMcpServer.Core;
+using Aspose.Cells.Pivot;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Helpers.Excel;
 using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.PivotTable;
@@ -9,112 +8,84 @@ namespace AsposeMcpServer.Handlers.Excel.PivotTable;
 /// <summary>
 ///     Handler for removing a field from a pivot table.
 /// </summary>
-[ResultType(typeof(SuccessResult))]
-public class DeleteFieldExcelPivotTableHandler : OperationHandlerBase<Workbook>
+public class DeleteFieldExcelPivotTableHandler : ExcelPivotTableFieldHandlerBase
 {
     /// <inheritdoc />
     public override string Operation => "delete_field";
 
-    /// <summary>
-    ///     Removes a field from the pivot table.
-    /// </summary>
-    /// <param name="context">The workbook context.</param>
-    /// <param name="parameters">
-    ///     Required: pivotTableIndex, fieldName, fieldType
-    ///     Optional: sheetIndex
-    /// </param>
-    /// <returns>Success message with delete field details.</returns>
-    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
+    /// <inheritdoc />
+    protected override string OperationVerb => "remove";
+
+    /// <inheritdoc />
+    protected override string OperationVerbPast => "removed";
+
+    /// <inheritdoc />
+    protected override string GetPreposition()
     {
-        var p = ExtractDeleteFieldParameters(parameters);
-
-        try
-        {
-            var workbook = context.Document;
-            var worksheet = ExcelHelper.GetWorksheet(workbook, p.SheetIndex);
-            var pivotTables = worksheet.PivotTables;
-
-            if (p.PivotTableIndex < 0 || p.PivotTableIndex >= pivotTables.Count)
-                throw new ArgumentException(
-                    $"Pivot table index {p.PivotTableIndex} is out of range (worksheet has {pivotTables.Count} pivot tables)");
-
-            var pivotTable = pivotTables[p.PivotTableIndex];
-
-            var (sourceSheet, sourceRangeObj) = ExcelPivotTableHelper.ParseDataSource(
-                workbook, pivotTable, p.SheetIndex, p.PivotTableIndex, worksheet.Name);
-
-            var fieldIndex = ExcelPivotTableHelper.FindFieldIndex(sourceSheet, sourceRangeObj, p.FieldName);
-
-            if (fieldIndex < 0)
-            {
-                var availableFields = ExcelPivotTableHelper.GetAvailableFieldNames(sourceSheet, sourceRangeObj);
-                var availableFieldsStr = availableFields.Count > 0
-                    ? $" Available fields in header row: {string.Join(", ", availableFields)}"
-                    : " No field names found in header row.";
-
-                throw new ArgumentException(
-                    $"Field '{p.FieldName}' not found in pivot table source data.{availableFieldsStr} Please check that the field name matches exactly (case-sensitive).");
-            }
-
-            var fieldTypeEnum = ExcelPivotTableHelper.ParseFieldType(p.FieldType);
-
-            try
-            {
-                pivotTable.RemoveField(fieldTypeEnum, fieldIndex);
-
-                try
-                {
-                    pivotTable.CalculateData();
-                }
-                catch (Exception calcEx)
-                {
-                    Console.Error.WriteLine($"[WARN] CalculateData warning: {calcEx.Message}");
-                }
-
-                MarkModified(context);
-
-                return new SuccessResult
-                {
-                    Message =
-                        $"Field '{p.FieldName}' removed from {p.FieldType} area of pivot table #{p.PivotTableIndex}."
-                };
-            }
-            catch (Exception ex)
-            {
-                if (ex.Message.Contains("not found") || ex.Message.Contains("does not exist"))
-                {
-                    MarkModified(context);
-                    return new SuccessResult
-                    {
-                        Message =
-                            $"Field '{p.FieldName}' may already be removed from {p.FieldType} area of pivot table #{p.PivotTableIndex}."
-                    };
-                }
-
-                throw new ArgumentException(
-                    $"Failed to remove field '{p.FieldName}' from pivot table: {ex.Message}. Field index: {fieldIndex}, Field type: {p.FieldType}");
-            }
-        }
-        catch (Exception outerEx)
-        {
-            throw new ArgumentException(
-                $"Failed to remove field '{p.FieldName}' from pivot table: {outerEx.Message}");
-        }
+        return "from";
     }
 
-    private static DeleteFieldParameters ExtractDeleteFieldParameters(OperationParameters parameters)
+    /// <summary>
+    ///     Extracts field parameters from operation parameters.
+    ///     Overridden to exclude the function parameter which is not needed for delete.
+    /// </summary>
+    /// <param name="parameters">The operation parameters to extract from.</param>
+    /// <returns>The extracted <see cref="ExcelPivotTableFieldHandlerBase.FieldParameters" />.</returns>
+    protected override FieldParameters ExtractFieldParameters(OperationParameters parameters)
     {
-        return new DeleteFieldParameters(
+        return new FieldParameters(
             parameters.GetOptional("sheetIndex", 0),
             parameters.GetRequired<int>("pivotTableIndex"),
             parameters.GetRequired<string>("fieldName"),
-            parameters.GetRequired<string>("fieldType")
+            parameters.GetRequired<string>("fieldType"),
+            "Sum"
         );
     }
 
-    private sealed record DeleteFieldParameters(
-        int SheetIndex,
-        int PivotTableIndex,
-        string FieldName,
-        string FieldType);
+    /// <summary>
+    ///     Removes a field from the specified area of the pivot table.
+    /// </summary>
+    /// <param name="context">The workbook context containing the Excel workbook.</param>
+    /// <param name="pivotTable">The target pivot table.</param>
+    /// <param name="parameters">The extracted field parameters.</param>
+    /// <param name="fieldIndex">The zero-based field index in the source data.</param>
+    /// <param name="fieldType">The pivot field type (Row, Column, Page, Data).</param>
+    /// <returns>A <see cref="SuccessResult" /> indicating the field was removed.</returns>
+    /// <exception cref="ArgumentException">Thrown when removing the field fails.</exception>
+    protected override SuccessResult ExecuteFieldOperation(
+        OperationContext<Workbook> context,
+        Aspose.Cells.Pivot.PivotTable pivotTable,
+        FieldParameters parameters,
+        int fieldIndex,
+        PivotFieldType fieldType)
+    {
+        try
+        {
+            pivotTable.RemoveField(fieldType, fieldIndex);
+
+            CalculatePivotTableData(pivotTable);
+            MarkModified(context);
+
+            return new SuccessResult
+            {
+                Message =
+                    $"Field '{parameters.FieldName}' removed from {parameters.FieldType} area of pivot table #{parameters.PivotTableIndex}."
+            };
+        }
+        catch (Exception ex)
+        {
+            if (ex.Message.Contains("not found") || ex.Message.Contains("does not exist"))
+            {
+                MarkModified(context);
+                return new SuccessResult
+                {
+                    Message =
+                        $"Field '{parameters.FieldName}' may already be removed from {parameters.FieldType} area of pivot table #{parameters.PivotTableIndex}."
+                };
+            }
+
+            throw new ArgumentException(
+                $"Failed to remove field '{parameters.FieldName}' from pivot table: {ex.Message}. Field index: {fieldIndex}, Field type: {parameters.FieldType}");
+        }
+    }
 }

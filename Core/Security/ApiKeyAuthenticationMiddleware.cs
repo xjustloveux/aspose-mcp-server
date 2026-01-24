@@ -374,20 +374,24 @@ public sealed class ApiKeyAuthenticationMiddleware : IMiddleware, IDisposable
     }
 
     /// <summary>
-    ///     Response from introspection endpoint
+    ///     Response from introspection endpoint.
+    ///     Properties are set by System.Text.Json deserializer.
     /// </summary>
     private sealed class IntrospectionResponse
     {
+        // NOSONAR S1144 S3459 - Properties are set by JSON deserializer
         public bool Active { get; init; }
 
         [JsonPropertyName("group_id")] public string? GroupId { get; init; }
     }
 
     /// <summary>
-    ///     Response from custom validation endpoint
+    ///     Response from custom validation endpoint.
+    ///     Properties are set by System.Text.Json deserializer.
     /// </summary>
     private sealed class CustomValidationResponse
     {
+        // NOSONAR S1144 S3459 - Properties are set by JSON deserializer
         public bool Valid { get; init; }
 
         [JsonPropertyName("group_id")] public string? GroupId { get; init; }

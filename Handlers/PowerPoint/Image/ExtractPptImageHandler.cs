@@ -63,6 +63,7 @@ public class ExtractPptImageHandler : OperationHandlerBase<Presentation>
         var formatStr = parameters.GetOptional("format", "png");
         var skipDuplicates = parameters.GetOptional("skipDuplicates", false);
 
+        // CA1416 - System.Drawing.Common is Windows-only, cross-platform support not required
 #pragma warning disable CA1416
         var format = formatStr.ToLower() switch
         {
@@ -124,6 +125,7 @@ public class ExtractPptImageHandler : OperationHandlerBase<Presentation>
         }
 
         var fileName = Path.Combine(p.OutputDir, $"slide{slideNum}_img{++count}.{p.Extension}");
+        // CA1416 - System.Drawing.Common is Windows-only, cross-platform support not required
 #pragma warning disable CA1416
         image.SystemImage.Save(fileName, p.Format);
 #pragma warning restore CA1416

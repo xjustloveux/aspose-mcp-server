@@ -1,4 +1,5 @@
 using Aspose.Cells;
+using Aspose.Cells.Pivot;
 using AsposeMcpServer.Handlers.Excel.PivotTable;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -15,27 +16,6 @@ public class AddFieldExcelPivotTableHandlerTests : ExcelHandlerTestBase
     public void Operation_Returns_AddField()
     {
         Assert.Equal("add_field", _handler.Operation);
-    }
-
-    #endregion
-
-    #region Helper Methods
-
-    private static Workbook CreateWorkbookWithPivotTable()
-    {
-        var workbook = new Workbook();
-        var worksheet = workbook.Worksheets[0];
-        worksheet.Cells["A1"].PutValue("Category");
-        worksheet.Cells["B1"].PutValue("Value");
-        worksheet.Cells["A2"].PutValue("A");
-        worksheet.Cells["B2"].PutValue(100);
-        worksheet.Cells["A3"].PutValue("B");
-        worksheet.Cells["B3"].PutValue(200);
-
-        var pivotTables = worksheet.PivotTables;
-        pivotTables.Add($"={worksheet.Name}!A1:B3", "D1", "TestPivot");
-
-        return workbook;
     }
 
     #endregion
@@ -91,6 +71,47 @@ public class AddFieldExcelPivotTableHandlerTests : ExcelHandlerTestBase
 
         Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
+    }
+
+    #endregion
+
+    #region Helper Methods
+
+    private static Workbook CreateWorkbookWithPivotTable()
+    {
+        var workbook = new Workbook();
+        var worksheet = workbook.Worksheets[0];
+        worksheet.Cells["A1"].PutValue("Category");
+        worksheet.Cells["B1"].PutValue("Value");
+        worksheet.Cells["A2"].PutValue("A");
+        worksheet.Cells["B2"].PutValue(100);
+        worksheet.Cells["A3"].PutValue("B");
+        worksheet.Cells["B3"].PutValue(200);
+
+        var pivotTables = worksheet.PivotTables;
+        pivotTables.Add($"={worksheet.Name}!A1:B3", "D1", "TestPivot");
+
+        return workbook;
+    }
+
+    private static Workbook CreateWorkbookWithPivotTableAndExistingField()
+    {
+        var workbook = new Workbook();
+        var worksheet = workbook.Worksheets[0];
+        worksheet.Cells["A1"].PutValue("Category");
+        worksheet.Cells["B1"].PutValue("Value");
+        worksheet.Cells["A2"].PutValue("A");
+        worksheet.Cells["B2"].PutValue(100);
+        worksheet.Cells["A3"].PutValue("B");
+        worksheet.Cells["B3"].PutValue(200);
+
+        var pivotTables = worksheet.PivotTables;
+        var idx = pivotTables.Add($"={worksheet.Name}!A1:B3", "D1", "TestPivot");
+        var pivotTable = pivotTables[idx];
+        pivotTable.AddFieldToArea(PivotFieldType.Row, 0);
+        pivotTable.CalculateData();
+
+        return workbook;
     }
 
     #endregion
@@ -213,6 +234,28 @@ public class AddFieldExcelPivotTableHandlerTests : ExcelHandlerTestBase
         });
 
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+    }
+
+    [Fact]
+    public void Execute_WithDuplicateField_ReturnsSuccessWithMayAlreadyExistMessage()
+    {
+        var workbook = CreateWorkbookWithPivotTableAndExistingField();
+        var context = CreateContext(workbook);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "pivotTableIndex", 0 },
+            { "fieldName", "Category" },
+            { "fieldType", "row" }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.True(
+            result.Message.Contains("added", StringComparison.OrdinalIgnoreCase) ||
+            result.Message.Contains("already exist", StringComparison.OrdinalIgnoreCase));
+        AssertModified(context);
     }
 
     #endregion

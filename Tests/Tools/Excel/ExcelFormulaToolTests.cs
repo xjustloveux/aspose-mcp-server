@@ -38,6 +38,7 @@ public class ExcelFormulaToolTests : ExcelTestBase
         using var workbook = new Workbook(path);
         workbook.Worksheets[0].Cells["A1"].Value = 1;
         workbook.Worksheets[0].Cells["A2"].Value = 2;
+        // CS0618 - Using obsolete SetArrayFormula for backward compatibility testing
 #pragma warning disable CS0618
         workbook.Worksheets[0].Cells["B1"].SetArrayFormula("=A1:A2*2", 2, 1);
 #pragma warning restore CS0618

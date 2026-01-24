@@ -4,6 +4,7 @@ using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Core.Progress;
 using AsposeMcpServer.Core.Session;
 using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Helpers.PowerPoint;
@@ -67,6 +68,7 @@ public class ConvertPresentationHandler : OperationHandlerBase<Presentation>
             var slideSize = presentation.SlideSize.Size;
             var targetSize = new Size((int)slideSize.Width, (int)slideSize.Height);
 
+            // CA1416 - System.Drawing.Common is Windows-only, cross-platform support not required
 #pragma warning disable CA1416
             using var bitmap = slide.GetThumbnail(targetSize);
             var imageFormat = format == "png" ? ImageFormat.Png : ImageFormat.Jpeg;
@@ -93,7 +95,18 @@ public class ConvertPresentationHandler : OperationHandlerBase<Presentation>
             _ => throw new ArgumentException($"Unsupported format: {format}")
         };
 
-        presentation.Save(p.OutputPath, saveFormat);
+        if (format == "pdf" && context.Progress != null)
+        {
+            var pdfOptions = new PdfOptions
+            {
+                ProgressCallback = new SlidesProgressAdapter(context.Progress)
+            };
+            presentation.Save(p.OutputPath, SaveFormat.Pdf, pdfOptions);
+        }
+        else
+        {
+            presentation.Save(p.OutputPath, saveFormat);
+        }
 
         return new SuccessResult
         {

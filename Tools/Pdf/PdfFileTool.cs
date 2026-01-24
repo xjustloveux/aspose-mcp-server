@@ -4,6 +4,7 @@ using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
 using AsposeMcpServer.Helpers;
+using ModelContextProtocol;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Pdf;
@@ -59,6 +60,7 @@ public class PdfFileTool
     /// <param name="removeUnusedObjects">Remove unused objects (for compress, default: true).</param>
     /// <param name="userPassword">User password for opening PDF (required for encrypt).</param>
     /// <param name="ownerPassword">Owner password for permissions control (required for encrypt).</param>
+    /// <param name="progress">Optional progress reporter for long-running operations.</param>
     /// <returns>A message indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(
@@ -114,25 +116,27 @@ Usage examples:
         [Description("User password for opening PDF (required for encrypt)")]
         string? userPassword = null,
         [Description("Owner password for permissions control (required for encrypt)")]
-        string? ownerPassword = null)
+        string? ownerPassword = null,
+        IProgress<ProgressNotificationValue>? progress = null)
     {
         var lowerOperation = operation.ToLowerInvariant();
 
         if (lowerOperation is "create" or "merge")
         {
-            var message = ExecuteWithoutContext(lowerOperation, outputPath, inputPaths);
+            var message = ExecuteWithoutContext(lowerOperation, outputPath, inputPaths, progress);
             return ResultHelper.FinalizeResult((dynamic)message, outputPath, sessionId);
         }
 
         var result = ExecuteWithContext(lowerOperation, path, sessionId, outputPath, outputDir, pagesPerFile, startPage,
-            endPage, compressImages, compressFonts, removeUnusedObjects, userPassword, ownerPassword);
+            endPage, compressImages, compressFonts, removeUnusedObjects, userPassword, ownerPassword, progress);
         return ResultHelper.FinalizeResult((dynamic)result, outputPath, sessionId);
     }
 
     /// <summary>
     ///     Executes operations that don't require an existing document context.
     /// </summary>
-    private object ExecuteWithoutContext(string operation, string? outputPath, string[]? inputPaths)
+    private object ExecuteWithoutContext(string operation, string? outputPath, string[]? inputPaths,
+        IProgress<ProgressNotificationValue>? progress)
     {
         var parameters = operation switch
         {
@@ -148,7 +152,8 @@ Usage examples:
             Document = null!,
             SessionManager = _sessionManager,
             IdentityAccessor = _identityAccessor,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            Progress = progress
         };
 
         return handler.Execute(operationContext, parameters);
@@ -185,7 +190,8 @@ Usage examples:
     /// </summary>
     private object ExecuteWithContext(string operation, string? path, string? sessionId, string? outputPath,
         string? outputDir, int pagesPerFile, int? startPage, int? endPage, bool compressImages, bool compressFonts,
-        bool removeUnusedObjects, string? userPassword, string? ownerPassword)
+        bool removeUnusedObjects, string? userPassword, string? ownerPassword,
+        IProgress<ProgressNotificationValue>? progress)
     {
         using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
@@ -202,7 +208,8 @@ Usage examples:
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            Progress = progress
         };
 
         var result = handler.Execute(operationContext, parameters);

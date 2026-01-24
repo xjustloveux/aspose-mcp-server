@@ -1,13 +1,17 @@
 ﻿using System.ComponentModel;
 using Aspose.Cells;
 using Aspose.Slides;
+using Aspose.Slides.Export;
 using Aspose.Words;
 using AsposeMcpServer.Core;
+using AsposeMcpServer.Core.Progress;
 using AsposeMcpServer.Core.Session;
 using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Results.Conversion;
+using ModelContextProtocol;
 using ModelContextProtocol.Server;
-using SaveFormat = Aspose.Words.SaveFormat;
+using PdfSaveOptions = Aspose.Words.Saving.PdfSaveOptions;
+using SaveFormat = Aspose.Slides.Export.SaveFormat;
 
 namespace AsposeMcpServer.Tools.Conversion;
 
@@ -45,6 +49,7 @@ public class ConvertToPdfTool
     /// <param name="inputPath">Input file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID to convert document from session.</param>
     /// <param name="outputPath">Output PDF file path (required).</param>
+    /// <param name="progress">Optional progress reporter for long-running operations.</param>
     /// <returns>A ConversionResult indicating the conversion result with output path information.</returns>
     /// <exception cref="ArgumentException">
     ///     Thrown when outputPath is not provided, neither inputPath nor sessionId is provided,
@@ -74,7 +79,8 @@ Usage examples:
         [Description("Session ID to convert document from session")]
         string? sessionId = null,
         [Description("Output PDF file path (required)")]
-        string? outputPath = null)
+        string? outputPath = null,
+        IProgress<ProgressNotificationValue>? progress = null)
     {
         if (string.IsNullOrEmpty(outputPath))
             throw new ArgumentException("outputPath is required");
@@ -85,10 +91,10 @@ Usage examples:
             throw new ArgumentException("Either inputPath or sessionId must be provided");
 
         if (!string.IsNullOrEmpty(sessionId))
-            return ConvertFromSession(sessionId, outputPath, $"session:{sessionId}");
+            return ConvertFromSession(sessionId, outputPath, $"session:{sessionId}", progress);
 
         SecurityHelper.ValidateFilePath(inputPath!, nameof(inputPath), true);
-        return ConvertFromFile(inputPath!, outputPath);
+        return ConvertFromFile(inputPath!, outputPath, progress);
     }
 
     /// <summary>
@@ -97,11 +103,13 @@ Usage examples:
     /// <param name="sessionId">The session ID containing the document.</param>
     /// <param name="outputPath">The output PDF file path.</param>
     /// <param name="sourcePath">The source path for the result.</param>
+    /// <param name="progress">Optional progress reporter for long-running operations.</param>
     /// <returns>A ConversionResult indicating the conversion result.</returns>
     /// <exception cref="InvalidOperationException">Thrown when session management is not enabled.</exception>
     /// <exception cref="KeyNotFoundException">Thrown when the session is not found or access is denied.</exception>
     /// <exception cref="ArgumentException">Thrown when the document type is PDF (cannot convert PDF to PDF) or unsupported.</exception>
-    private ConversionResult ConvertFromSession(string sessionId, string outputPath, string sourcePath)
+    private ConversionResult ConvertFromSession(string sessionId, string outputPath, string sourcePath,
+        IProgress<ProgressNotificationValue>? progress)
     {
         if (_sessionManager == null)
             throw new InvalidOperationException("Session management is not enabled");
@@ -115,19 +123,31 @@ Usage examples:
         {
             case DocumentType.Word:
                 var wordDoc = _sessionManager.GetDocument<Document>(sessionId, identity);
-                wordDoc.Save(outputPath, SaveFormat.Pdf);
+                var wordSaveOptions = new PdfSaveOptions
+                {
+                    ProgressCallback = new WordsProgressAdapter(progress)
+                };
+                wordDoc.Save(outputPath, wordSaveOptions);
                 sourceFormat = "Word";
                 break;
 
             case DocumentType.Excel:
                 var workbook = _sessionManager.GetDocument<Workbook>(sessionId, identity);
-                workbook.Save(outputPath, Aspose.Cells.SaveFormat.Pdf);
+                var cellsSaveOptions = new Aspose.Cells.PdfSaveOptions
+                {
+                    PageSavingCallback = new CellsProgressAdapter(progress)
+                };
+                workbook.Save(outputPath, cellsSaveOptions);
                 sourceFormat = "Excel";
                 break;
 
             case DocumentType.PowerPoint:
                 var presentation = _sessionManager.GetDocument<Presentation>(sessionId, identity);
-                presentation.Save(outputPath, Aspose.Slides.Export.SaveFormat.Pdf);
+                var slidesSaveOptions = new PdfOptions
+                {
+                    ProgressCallback = new SlidesProgressAdapter(progress)
+                };
+                presentation.Save(outputPath, SaveFormat.Pdf, slidesSaveOptions);
                 sourceFormat = "PowerPoint";
                 break;
 
@@ -154,9 +174,11 @@ Usage examples:
     /// </summary>
     /// <param name="inputPath">The source document file path.</param>
     /// <param name="outputPath">The output PDF file path.</param>
+    /// <param name="progress">Optional progress reporter for long-running operations.</param>
     /// <returns>A ConversionResult indicating the conversion result.</returns>
     /// <exception cref="ArgumentException">Thrown when the file format is not supported.</exception>
-    private static ConversionResult ConvertFromFile(string inputPath, string outputPath)
+    private static ConversionResult ConvertFromFile(string inputPath, string outputPath,
+        IProgress<ProgressNotificationValue>? progress)
     {
         var extension = Path.GetExtension(inputPath).ToLower();
         string sourceFormat;
@@ -168,7 +190,11 @@ Usage examples:
             case ".rtf":
             case ".odt":
                 var wordDoc = new Document(inputPath);
-                wordDoc.Save(outputPath, SaveFormat.Pdf);
+                var wordSaveOptions = new PdfSaveOptions
+                {
+                    ProgressCallback = new WordsProgressAdapter(progress)
+                };
+                wordDoc.Save(outputPath, wordSaveOptions);
                 sourceFormat = "Word";
                 break;
 
@@ -178,7 +204,11 @@ Usage examples:
             case ".ods":
                 using (var workbook = new Workbook(inputPath))
                 {
-                    workbook.Save(outputPath, Aspose.Cells.SaveFormat.Pdf);
+                    var cellsSaveOptions = new Aspose.Cells.PdfSaveOptions
+                    {
+                        PageSavingCallback = new CellsProgressAdapter(progress)
+                    };
+                    workbook.Save(outputPath, cellsSaveOptions);
                 }
 
                 sourceFormat = "Excel";
@@ -189,7 +219,11 @@ Usage examples:
             case ".odp":
                 using (var presentation = new Presentation(inputPath))
                 {
-                    presentation.Save(outputPath, Aspose.Slides.Export.SaveFormat.Pdf);
+                    var slidesSaveOptions = new PdfOptions
+                    {
+                        ProgressCallback = new SlidesProgressAdapter(progress)
+                    };
+                    presentation.Save(outputPath, SaveFormat.Pdf, slidesSaveOptions);
                 }
 
                 sourceFormat = "PowerPoint";

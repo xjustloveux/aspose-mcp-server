@@ -88,6 +88,7 @@ public static class PptImageHelper
 
         if (jpegQuality.HasValue || maxWidth.HasValue || maxHeight.HasValue)
         {
+            // CA1416 - System.Drawing.Common is Windows-only, cross-platform support not required
 #pragma warning disable CA1416
             using var fileStream = new FileStream(imagePath, FileMode.Open, FileAccess.Read);
             using var src = Image.FromStream(fileStream);

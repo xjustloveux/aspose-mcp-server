@@ -1,19 +1,19 @@
 # Aspose MCP Server
 
-[![GitHub release](https://img.shields.io/github/v/release/xjustloveux/aspose-mcp-server?include_prereleases&style=flat-square)](https://github.com/xjustloveux/aspose-mcp-server/releases)
-[![GitHub license](https://img.shields.io/github/license/xjustloveux/aspose-mcp-server?style=flat-square&cacheSeconds=3600)](LICENSE)
-[![.NET Version](https://img.shields.io/badge/.NET-8.0-512BD4?style=flat-square&logo=dotnet)](https://dotnet.microsoft.com/)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/xjustloveux/aspose-mcp-server/build-multi-platform.yml?branch=master&label=build&style=flat-square)](https://github.com/xjustloveux/aspose-mcp-server/actions/workflows/build-multi-platform.yml)
-[![Test Status](https://img.shields.io/github/actions/workflow/status/xjustloveux/aspose-mcp-server/test.yml?branch=master&label=tests&style=flat-square)](https://github.com/xjustloveux/aspose-mcp-server/actions/workflows/test.yml)
+[![GitHub release](https://img.shields.io/github/v/release/xjustloveux/aspose-mcp-server?include_prereleases)](https://github.com/xjustloveux/aspose-mcp-server/releases)
+[![GitHub license](https://img.shields.io/github/license/xjustloveux/aspose-mcp-server?cacheSeconds=3600)](LICENSE)
+[![.NET Version](https://img.shields.io/badge/.NET-8.0-512BD4)](https://dotnet.microsoft.com/)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/xjustloveux/aspose-mcp-server/build-multi-platform.yml?branch=master&label=build)](https://github.com/xjustloveux/aspose-mcp-server/actions/workflows/build-multi-platform.yml)
+[![Test Status](https://img.shields.io/github/actions/workflow/status/xjustloveux/aspose-mcp-server/test.yml?branch=master&label=tests)](https://github.com/xjustloveux/aspose-mcp-server/actions/workflows/test.yml)
 [![Test Coverage](https://codecov.io/gh/xjustloveux/aspose-mcp-server/branch/master/graph/badge.svg)](https://codecov.io/gh/xjustloveux/aspose-mcp-server)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=xjustloveux_aspose-mcp-server&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=xjustloveux_aspose-mcp-server)
 [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=xjustloveux_aspose-mcp-server&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=xjustloveux_aspose-mcp-server)
-[![MCP Version](https://img.shields.io/badge/MCP-2025--11--25-blue?style=flat-square)](https://modelcontextprotocol.io/)
-[![MCP SDK](https://img.shields.io/badge/MCP%20SDK-0.6.0-purple?style=flat-square)](https://github.com/modelcontextprotocol/csharp-sdk)
-[![Aspose Version](https://img.shields.io/badge/Aspose-23.10.0-orange?style=flat-square)](https://products.aspose.com/total/net/)
-[![xUnit](https://img.shields.io/badge/xUnit-2.9.2-blue?style=flat-square&logo=xunit)](https://xunit.net/)
+[![MCP Version](https://img.shields.io/badge/MCP-2025--11--25-blue)](https://modelcontextprotocol.io/)
+[![MCP SDK](https://img.shields.io/badge/MCP%20SDK-0.6.0-purple)](https://github.com/modelcontextprotocol/csharp-sdk)
+[![Aspose Version](https://img.shields.io/badge/Aspose-23.10.0-orange)](https://products.aspose.com/total/net/)
+[![xUnit](https://img.shields.io/badge/xUnit-2.9.2-blue?logo=xunit)](https://xunit.net/)
 
-**格式支援：** ![Word](https://img.shields.io/badge/Word-DOC%2CDOCX-blue?style=flat-square) ![Excel](https://img.shields.io/badge/Excel-XLS%2CXLSX-green?style=flat-square) ![PowerPoint](https://img.shields.io/badge/PowerPoint-PPT%2CPPTX-orange?style=flat-square) ![PDF](https://img.shields.io/badge/PDF-PDF-red?style=flat-square)
+**格式支援：** ![Word](https://img.shields.io/badge/Word-DOC%2CDOCX-blue) ![Excel](https://img.shields.io/badge/Excel-XLS%2CXLSX-green) ![PowerPoint](https://img.shields.io/badge/PowerPoint-PPT%2CPPTX-orange) ![PDF](https://img.shields.io/badge/PDF-PDF-red)
 
 基於 .NET 8.0 和 Aspose.Total 的 Model Context Protocol (MCP) 伺服器，為 MCP 客戶端提供強大的辦公文檔處理能力。
 
@@ -36,7 +36,6 @@
 - **認證機制** - 可選的 API Key 和 JWT 認證（4 種驗證模式）
 - **追蹤系統** - 結構化日誌、Webhook 通知、Prometheus Metrics
 - **Origin 驗證** - 防止 DNS 重綁定攻擊（SSE/WebSocket 模式）
-- **Tasks 異步任務** - 支援長時間運行的操作異步執行
 
 ### 技術特性
 - **MCP SDK 0.6.0** - 使用官方 ModelContextProtocol NuGet 套件，支援 Tool Annotations 和 outputSchema
@@ -601,39 +600,6 @@ set ASPOSE_METRICS_PATH=/metrics
 | `--metrics-disabled` | 停用 Metrics |
 | `--metrics-path:path` | Metrics 路徑 |
 
-## ⏱️ Tasks 異步任務
-
-Tasks 功能支援長時間運行的操作異步執行，適用於大型文檔轉換等耗時任務。
-
-> **注意**：Tasks 功能預設啟用。可使用 `--no-tasks` 參數或設定 `ASPOSE_TASKS_ENABLED=false` 環境變數停用。
-
-### 適用工具
-
-| 工具 | 適用原因 |
-|------|----------|
-| `convert_to_pdf` | 大型文檔轉換可能耗時 |
-| `convert_document` | 跨格式轉換可能耗時 |
-
-### Tasks 配置
-
-**環境變數：**
-
-| 變數 | 說明 | 預設值 |
-|------|------|--------|
-| `ASPOSE_TASKS_ENABLED` | 啟用 Tasks 功能 | true |
-| `ASPOSE_TASKS_MAX_CONCURRENT` | 最大併發任務數 | 5 |
-| `ASPOSE_TASKS_DEFAULT_TTL` | 預設任務結果保留時間（毫秒） | 300000 (5分鐘) |
-| `ASPOSE_TASKS_MAX_TTL` | 最大任務結果保留時間（毫秒） | 3600000 (1小時) |
-
-**命令行參數：**
-
-| 參數 | 說明 |
-|------|------|
-| `--no-tasks` | 停用 Tasks 功能 |
-| `--tasks-max-concurrent:N` | 最大併發任務數 |
-| `--tasks-default-ttl:N` | 預設任務結果保留時間（毫秒） |
-| `--tasks-max-ttl:N` | 最大任務結果保留時間（毫秒） |
-
 ## 🚢 部署指南
 
 Aspose MCP Server 支援多種部署方式：
@@ -789,7 +755,6 @@ aspose-mcp-server/
 │   ├── Handlers/             Handler 基礎架構
 │   ├── Security/             安全模組（認證、Origin 驗證）
 │   ├── Session/              Session 管理模組
-│   ├── Tasks/                ⏱️ 異步任務模組
 │   ├── Tracking/             追蹤模組（日誌、Webhook、Metrics）
 │   ├── Transport/            傳輸層模組
 │   └── ShapeDetailProviders/ PowerPoint 形狀詳細資訊提供者
@@ -900,7 +865,7 @@ pwsh test.ps1 -Verbose -Coverage -Filter "FullyQualifiedName~Word"
 - `-SkipLicense` - 跳過授權載入，強制使用評估模式
 
 **測試結構：**
-- `Tests/Core/` - 核心功能測試（Handlers、Security、Session、Tasks、Tracking）
+- `Tests/Core/` - 核心功能測試（Handlers、Security、Session、Tracking）
 - `Tests/Handlers/` - Handler 測試
   - `Word/` - Word Handler 測試
   - `Excel/` - Excel Handler 測試

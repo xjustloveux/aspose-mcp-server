@@ -3,6 +3,7 @@ using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Results.Common;
+using ModelContextProtocol;
 
 namespace AsposeMcpServer.Handlers.Pdf.FileOperations;
 
@@ -69,6 +70,8 @@ public class SplitPdfFileHandler : OperationHandlerBase<Document>
         }
 
         var fileCount = 0;
+        var totalSplits = (int)Math.Ceiling((double)totalPages / splitParams.PagesPerFile);
+
         for (var i = 0; i < totalPages; i += splitParams.PagesPerFile)
         {
             using var newDocument = new Document();
@@ -78,7 +81,18 @@ public class SplitPdfFileHandler : OperationHandlerBase<Document>
             var safeFileName = SecurityHelper.SanitizeFileName($"{baseName}_part_{++fileCount}.pdf");
             var splitOutputPath = Path.Combine(splitParams.OutputDir, safeFileName);
             newDocument.Save(splitOutputPath);
+
+            var splitProgress = fileCount * 100 / totalSplits;
+            context.Progress?.Report(new ProgressNotificationValue
+            {
+                Progress = splitProgress,
+                Total = 100,
+                Message = $"Created split file {fileCount} of {totalSplits}"
+            });
         }
+
+        context.Progress?.Report(new ProgressNotificationValue
+            { Progress = 100, Total = 100, Message = "Split completed" });
 
         return new SuccessResult { Message = $"PDF split into {fileCount} files. Output: {splitParams.OutputDir}" };
     }

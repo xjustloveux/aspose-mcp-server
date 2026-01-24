@@ -1,7 +1,6 @@
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Results;
 using Microsoft.Extensions.AI;
 
@@ -12,6 +11,16 @@ namespace AsposeMcpServer.Core;
 /// </summary>
 public static class OutputSchemaGenerator
 {
+    /// <summary>
+    ///     Creates a fresh JsonSerializerOptions instance with camelCase naming policy.
+    ///     Required because AIJsonUtilities.CreateJsonSchema modifies the options.
+    /// </summary>
+    /// <returns>A new JsonSerializerOptions with camelCase naming.</returns>
+    private static JsonSerializerOptions CreateCamelCaseOptions()
+    {
+        return new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+    }
+
     /// <summary>
     ///     Generates JSON Schema from all Handlers in the specified namespace.
     ///     Returns schema for FinalizedResult with data field containing handler result types.
@@ -26,10 +35,10 @@ public static class OutputSchemaGenerator
         var handlerTypes = scanAssembly.GetTypes()
             .Where(t => t.Namespace == handlerNamespace &&
                         t is { IsClass: true, IsAbstract: false } &&
-                        t.GetCustomAttribute<ResultTypeAttribute>() != null);
+                        t.GetCustomAttribute<ResultTypeAttribute>(true) != null);
 
         var resultTypes = handlerTypes
-            .Select(t => t.GetCustomAttribute<ResultTypeAttribute>()!.ResultType)
+            .Select(t => t.GetCustomAttribute<ResultTypeAttribute>(true)!.ResultType)
             .Distinct()
             .ToList();
 
@@ -77,10 +86,10 @@ public static class OutputSchemaGenerator
     private static JsonElement GenerateFinalizedResultSchema(IReadOnlyCollection<Type> dataTypes)
     {
         var outputSchema = AIJsonUtilities.CreateJsonSchema(
-            typeof(OutputInfo), serializerOptions: JsonDefaults.CamelCase);
+            typeof(OutputInfo), serializerOptions: CreateCamelCaseOptions());
 
         var dataSchema = dataTypes.Count == 1
-            ? AIJsonUtilities.CreateJsonSchema(dataTypes.First(), serializerOptions: JsonDefaults.CamelCase)
+            ? AIJsonUtilities.CreateJsonSchema(dataTypes.First(), serializerOptions: CreateCamelCaseOptions())
             : GenerateOneOfSchema(dataTypes);
 
         var schemaNode = new JsonObject
@@ -106,7 +115,7 @@ public static class OutputSchemaGenerator
     private static JsonElement GenerateOneOfSchema(IReadOnlyCollection<Type> types)
     {
         var schemas = types.Select(t =>
-            AIJsonUtilities.CreateJsonSchema(t, serializerOptions: JsonDefaults.CamelCase)
+            AIJsonUtilities.CreateJsonSchema(t, serializerOptions: CreateCamelCaseOptions())
         ).ToList();
 
         var oneOfNode = new JsonObject

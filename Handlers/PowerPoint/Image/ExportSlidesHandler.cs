@@ -46,6 +46,7 @@ public class ExportSlidesHandler : OperationHandlerBase<Presentation>
         {
             using var bmp = presentation.Slides[i].GetThumbnail(p.Scale, p.Scale);
             var fileName = Path.Combine(p.OutputDir, $"slide_{i + 1}.{p.Extension}");
+            // CA1416 - System.Drawing.Common is Windows-only, cross-platform support not required
 #pragma warning disable CA1416
             bmp.Save(fileName, p.Format);
 #pragma warning restore CA1416
@@ -69,6 +70,7 @@ public class ExportSlidesHandler : OperationHandlerBase<Presentation>
         var formatStr = parameters.GetOptional("format", "png");
         var scale = parameters.GetOptional("scale", 1.0f);
 
+        // CA1416 - System.Drawing.Common is Windows-only, cross-platform support not required
 #pragma warning disable CA1416
         var format = formatStr.ToLower() switch
         {

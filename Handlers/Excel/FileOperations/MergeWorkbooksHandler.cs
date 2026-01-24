@@ -3,6 +3,7 @@ using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Results.Common;
+using ModelContextProtocol;
 
 namespace AsposeMcpServer.Handlers.Excel.FileOperations;
 
@@ -43,6 +44,11 @@ public class MergeWorkbooksHandler : OperationHandlerBase<Workbook>
         SecurityHelper.ValidateFilePath(targetPath, "outputPath", true);
 
         using var targetWorkbook = new Workbook(validPaths[0]);
+        var totalFiles = validPaths.Count;
+
+        var initialProgress = 100 / totalFiles;
+        context.Progress?.Report(new ProgressNotificationValue
+            { Progress = initialProgress, Total = 100, Message = $"Loaded workbook 1 of {totalFiles}" });
 
         for (var i = 1; i < validPaths.Count; i++)
         {
@@ -52,9 +58,19 @@ public class MergeWorkbooksHandler : OperationHandlerBase<Workbook>
                 MergeSheetsWithSameName(targetWorkbook, sourceWorkbook);
             else
                 targetWorkbook.Combine(sourceWorkbook);
+
+            var mergeProgress = (i + 1) * 100 / totalFiles;
+            context.Progress?.Report(new ProgressNotificationValue
+            {
+                Progress = mergeProgress,
+                Total = 100,
+                Message = $"Merged workbook {i + 1} of {totalFiles}"
+            });
         }
 
         targetWorkbook.Save(targetPath);
+        context.Progress?.Report(new ProgressNotificationValue
+            { Progress = 100, Total = 100, Message = "Merge completed" });
 
         return new SuccessResult
             { Message = $"Merged {validPaths.Count} workbooks successfully. Output: {targetPath}" };

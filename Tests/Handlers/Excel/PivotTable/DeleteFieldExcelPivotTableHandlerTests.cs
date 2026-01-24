@@ -42,6 +42,91 @@ public class DeleteFieldExcelPivotTableHandlerTests : ExcelHandlerTestBase
         AssertModified(context);
     }
 
+    [Fact]
+    public void Execute_WithSheetIndex_UsesCorrectSheet()
+    {
+        var workbook = CreateWorkbookWithPivotTableAndFields();
+        var context = CreateContext(workbook);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "sheetIndex", 0 },
+            { "pivotTableIndex", 0 },
+            { "fieldName", "Category" },
+            { "fieldType", "row" }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("removed", result.Message, StringComparison.OrdinalIgnoreCase);
+        AssertModified(context);
+    }
+
+    [Fact]
+    public void Execute_DeletesColumnField()
+    {
+        var workbook = CreateWorkbookWithPivotTableAndMultipleFieldTypes();
+        var context = CreateContext(workbook);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "pivotTableIndex", 0 },
+            { "fieldName", "Product" },
+            { "fieldType", "column" }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("removed", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("column", result.Message, StringComparison.OrdinalIgnoreCase);
+        AssertModified(context);
+    }
+
+    [Fact]
+    public void Execute_DeletesDataField()
+    {
+        var workbook = CreateWorkbookWithPivotTableAndFields();
+        var context = CreateContext(workbook);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "pivotTableIndex", 0 },
+            { "fieldName", "Value" },
+            { "fieldType", "data" }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("removed", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("data", result.Message, StringComparison.OrdinalIgnoreCase);
+        AssertModified(context);
+    }
+
+    [Fact]
+    public void Execute_WithFieldNotInArea_ReturnsSuccessWithMayAlreadyBeRemovedMessage()
+    {
+        var workbook = CreateWorkbookWithPivotTableAndFields();
+        var context = CreateContext(workbook);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "pivotTableIndex", 0 },
+            { "fieldName", "Value" },
+            { "fieldType", "row" }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.True(
+            result.Message.Contains("removed", StringComparison.OrdinalIgnoreCase) ||
+            result.Message.Contains("may already be removed", StringComparison.OrdinalIgnoreCase));
+        AssertModified(context);
+    }
+
     #endregion
 
     #region Helper Methods
@@ -62,6 +147,31 @@ public class DeleteFieldExcelPivotTableHandlerTests : ExcelHandlerTestBase
         var pivotTable = pivotTables[idx];
         pivotTable.AddFieldToArea(PivotFieldType.Row, 0);
         pivotTable.AddFieldToArea(PivotFieldType.Data, 1);
+        pivotTable.CalculateData();
+
+        return workbook;
+    }
+
+    private static Workbook CreateWorkbookWithPivotTableAndMultipleFieldTypes()
+    {
+        var workbook = new Workbook();
+        var worksheet = workbook.Worksheets[0];
+        worksheet.Cells["A1"].PutValue("Region");
+        worksheet.Cells["B1"].PutValue("Product");
+        worksheet.Cells["C1"].PutValue("Amount");
+        worksheet.Cells["A2"].PutValue("North");
+        worksheet.Cells["B2"].PutValue("Widget");
+        worksheet.Cells["C2"].PutValue(100);
+        worksheet.Cells["A3"].PutValue("South");
+        worksheet.Cells["B3"].PutValue("Gadget");
+        worksheet.Cells["C3"].PutValue(200);
+
+        var pivotTables = worksheet.PivotTables;
+        var idx = pivotTables.Add($"={worksheet.Name}!A1:C3", "E1", "TestPivot");
+        var pivotTable = pivotTables[idx];
+        pivotTable.AddFieldToArea(PivotFieldType.Row, 0);
+        pivotTable.AddFieldToArea(PivotFieldType.Column, 1);
+        pivotTable.AddFieldToArea(PivotFieldType.Data, 2);
         pivotTable.CalculateData();
 
         return workbook;

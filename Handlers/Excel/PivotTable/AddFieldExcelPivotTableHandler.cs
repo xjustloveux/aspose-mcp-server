@@ -1,6 +1,5 @@
 using Aspose.Cells;
 using Aspose.Cells.Pivot;
-using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Helpers.Excel;
 using AsposeMcpServer.Results.Common;
@@ -10,119 +9,73 @@ namespace AsposeMcpServer.Handlers.Excel.PivotTable;
 /// <summary>
 ///     Handler for adding a field to a pivot table.
 /// </summary>
-[ResultType(typeof(SuccessResult))]
-public class AddFieldExcelPivotTableHandler : OperationHandlerBase<Workbook>
+public class AddFieldExcelPivotTableHandler : ExcelPivotTableFieldHandlerBase
 {
     /// <inheritdoc />
     public override string Operation => "add_field";
 
-    /// <summary>
-    ///     Adds a field to the pivot table.
-    /// </summary>
-    /// <param name="context">The workbook context.</param>
-    /// <param name="parameters">
-    ///     Required: pivotTableIndex, fieldName, fieldType
-    ///     Optional: sheetIndex, function
-    /// </param>
-    /// <returns>Success message with add field details.</returns>
-    public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
-    {
-        var p = ExtractAddFieldParameters(parameters);
+    /// <inheritdoc />
+    protected override string OperationVerb => "add";
 
+    /// <inheritdoc />
+    protected override string OperationVerbPast => "added";
+
+    /// <inheritdoc />
+    protected override string GetPreposition()
+    {
+        return "to";
+    }
+
+    /// <summary>
+    ///     Adds a field to the specified area of the pivot table.
+    /// </summary>
+    /// <param name="context">The workbook context containing the Excel workbook.</param>
+    /// <param name="pivotTable">The target pivot table.</param>
+    /// <param name="parameters">The extracted field parameters.</param>
+    /// <param name="fieldIndex">The zero-based field index in the source data.</param>
+    /// <param name="fieldType">The pivot field type (Row, Column, Page, Data).</param>
+    /// <returns>A <see cref="SuccessResult" /> indicating the field was added.</returns>
+    /// <exception cref="ArgumentException">Thrown when adding the field fails.</exception>
+    protected override SuccessResult ExecuteFieldOperation(
+        OperationContext<Workbook> context,
+        Aspose.Cells.Pivot.PivotTable pivotTable,
+        FieldParameters parameters,
+        int fieldIndex,
+        PivotFieldType fieldType)
+    {
         try
         {
-            var workbook = context.Document;
-            var worksheet = ExcelHelper.GetWorksheet(workbook, p.SheetIndex);
-            var pivotTables = worksheet.PivotTables;
+            pivotTable.AddFieldToArea(fieldType, fieldIndex);
 
-            if (p.PivotTableIndex < 0 || p.PivotTableIndex >= pivotTables.Count)
-                throw new ArgumentException(
-                    $"Pivot table index {p.PivotTableIndex} is out of range (worksheet has {pivotTables.Count} pivot tables)");
-
-            var pivotTable = pivotTables[p.PivotTableIndex];
-
-            var (sourceSheet, sourceRangeObj) = ExcelPivotTableHelper.ParseDataSource(
-                workbook, pivotTable, p.SheetIndex, p.PivotTableIndex, worksheet.Name);
-
-            var fieldIndex = ExcelPivotTableHelper.FindFieldIndex(sourceSheet, sourceRangeObj, p.FieldName);
-
-            if (fieldIndex < 0)
+            if (fieldType == PivotFieldType.Data && pivotTable.DataFields.Count > 0)
             {
-                var availableFields = ExcelPivotTableHelper.GetAvailableFieldNames(sourceSheet, sourceRangeObj);
-                var availableFieldsStr = availableFields.Count > 0
-                    ? $" Available fields in header row: {string.Join(", ", availableFields)}"
-                    : " No field names found in header row.";
-
-                throw new ArgumentException(
-                    $"Field '{p.FieldName}' not found in pivot table source data.{availableFieldsStr} Please check that the field name matches exactly (case-sensitive).");
+                var dataField = pivotTable.DataFields[^1];
+                dataField.Function = ExcelPivotTableHelper.ParseFunction(parameters.Function);
             }
 
-            try
+            CalculatePivotTableData(pivotTable);
+            MarkModified(context);
+
+            return new SuccessResult
             {
-                var pivotFieldType = ExcelPivotTableHelper.ParseFieldType(p.FieldType);
-                pivotTable.AddFieldToArea(pivotFieldType, fieldIndex);
-
-                if (pivotFieldType == PivotFieldType.Data && pivotTable.DataFields.Count > 0)
-                {
-                    var dataField = pivotTable.DataFields[^1];
-                    dataField.Function = ExcelPivotTableHelper.ParseFunction(p.Function);
-                }
-
-                try
-                {
-                    pivotTable.CalculateData();
-                }
-                catch (Exception calcEx)
-                {
-                    Console.Error.WriteLine($"[WARN] CalculateData warning: {calcEx.Message}");
-                }
-
+                Message =
+                    $"Field '{parameters.FieldName}' added as {parameters.FieldType} field to pivot table #{parameters.PivotTableIndex}."
+            };
+        }
+        catch (Exception ex)
+        {
+            if (ex.Message.Contains("already exists") || ex.Message.Contains("duplicate"))
+            {
                 MarkModified(context);
-
                 return new SuccessResult
                 {
                     Message =
-                        $"Field '{p.FieldName}' added as {p.FieldType} field to pivot table #{p.PivotTableIndex}."
+                        $"Field '{parameters.FieldName}' may already exist in {parameters.FieldType} area of pivot table #{parameters.PivotTableIndex}."
                 };
             }
-            catch (Exception ex)
-            {
-                if (ex.Message.Contains("already exists") || ex.Message.Contains("duplicate"))
-                {
-                    MarkModified(context);
-                    return new SuccessResult
-                    {
-                        Message =
-                            $"Field '{p.FieldName}' may already exist in {p.FieldType} area of pivot table #{p.PivotTableIndex}."
-                    };
-                }
 
-                throw new ArgumentException(
-                    $"Failed to add field '{p.FieldName}' to pivot table: {ex.Message}. Field index: {fieldIndex}, Field type: {p.FieldType}");
-            }
-        }
-        catch (Exception outerEx)
-        {
             throw new ArgumentException(
-                $"Failed to add field '{p.FieldName}' to pivot table: {outerEx.Message}");
+                $"Failed to add field '{parameters.FieldName}' to pivot table: {ex.Message}. Field index: {fieldIndex}, Field type: {parameters.FieldType}");
         }
     }
-
-    private static AddFieldParameters ExtractAddFieldParameters(OperationParameters parameters)
-    {
-        return new AddFieldParameters(
-            parameters.GetOptional("sheetIndex", 0),
-            parameters.GetRequired<int>("pivotTableIndex"),
-            parameters.GetRequired<string>("fieldName"),
-            parameters.GetRequired<string>("fieldType"),
-            parameters.GetOptional("function", "Sum")
-        );
-    }
-
-    private sealed record AddFieldParameters(
-        int SheetIndex,
-        int PivotTableIndex,
-        string FieldName,
-        string FieldType,
-        string Function);
 }

@@ -3,7 +3,7 @@
 本文件記錄 JetBrains InspectCode 報告中被排除修復的問題及其原因。
 這些問題經過評估後決定保留，未來進行代碼品質檢查時可參考本文件跳過這些項目。
 
-**最後更新日期**: 2026-01-23
+**最後更新日期**: 2026-01-24
 **分析工具**: JetBrains InspectCode 2025.3.0.4
 
 ---
@@ -20,12 +20,11 @@
 8. [MethodSupportsCancellation](#8-methodsupportscancellation)
 9. [ParameterOnlyUsedForPreconditionCheck.Local](#9-parameteronlyusedforpreconditionchecklocal)
 10. [PropertyCanBeMadeInitOnly.Global](#10-propertycanbemadeinitonlyglobal)
-11. [UnusedAutoPropertyAccessor.Global](#11-unusedautopropertyaccessorglobal)
-12. [UnusedMember.Global](#12-unusedmemberglobal)
-13. [UnusedMethodReturnValue.Global](#13-unusedmethodreturnvalueglobal)
-14. [UnusedType.Global](#14-unusedtypeglobal)
-15. [UseObjectOrCollectionInitializer](#15-useobjectorollectioninitializer)
-16. [UseUtf8StringLiteral](#16-useutf8stringliteral)
+11. [UnusedMember.Global](#11-unusedmemberglobal)
+12. [UnusedMethodReturnValue.Global](#12-unusedmethodreturnvalueglobal)
+13. [UnusedType.Global](#13-unusedtypeglobal)
+14. [UseObjectOrCollectionInitializer](#14-useobjectorollectioninitializer)
+15. [UseUtf8StringLiteral](#15-useutf8stringliteral)
 
 ---
 
@@ -41,9 +40,9 @@
 
 | 檔案 | 行號 | 變量 |
 |------|------|------|
-| `Tests/Core/Helpers/AsposeHelperTests.cs` | 21 | `workbook` |
-| `Tests/Core/Helpers/AsposeHelperTests.cs` | 251 | `presentation` |
-| `Tests/Core/Session/DocumentContextTests.cs` | 265 | `context` |
+| `Tests/Helpers/AsposeHelperTests.cs` | 19 | `workbook` |
+| `Tests/Helpers/AsposeHelperTests.cs` | 249 | `presentation` |
+| `Tests/Core/Session/DocumentContextTests.cs` | 272 | `context` |
 | `Tests/Core/Session/DocumentSessionManagerTests.cs` | 169 | `manager` |
 | `Tests/Core/Session/DocumentSessionManagerTests.cs` | 408 | `manager` |
 | `Tests/Core/Session/DocumentSessionManagerTests.cs` | 423 | `manager` |
@@ -252,12 +251,12 @@ public class NoParameterlessCtorHandler(string requiredValue) : OperationHandler
 
 | 檔案 | 行號 | 成員 |
 |------|------|------|
-| `Core/Transport/TransportConfig.cs` | 28 | `Mode.set` |
-| `Core/Transport/TransportConfig.cs` | 33 | `Port.set` |
-| `Core/Transport/TransportConfig.cs` | 38 | `Host.set` |
+| `Core/Transport/TransportConfig.cs` | 13 | `Mode.set` |
+| `Core/Transport/TransportConfig.cs` | 18 | `Port.set` |
+| `Core/Transport/TransportConfig.cs` | 23 | `Host.set` |
 | `Core/Session/DocumentSession.cs` | 75 | `LastAccessedAt.set` |
-| `Core/Tracking/TrackingConfig.cs` | 47 | `WebhookAuthHeader.set` |
-| `Core/Tracking/TrackingConfig.cs` | 52 | `WebhookTimeoutSeconds.set` |
+| `Core/Tracking/TrackingConfig.cs` | 31 | `WebhookAuthHeader.set` |
+| `Core/Tracking/TrackingConfig.cs` | 36 | `WebhookTimeoutSeconds.set` |
 
 ### 問題描述
 
@@ -414,40 +413,7 @@ public string Host { get; init; } = "localhost";  // 會導致反序列化失敗
 
 ---
 
-## 11. UnusedAutoPropertyAccessor.Global
-
-| 項目 | 內容 |
-|------|------|
-| **級別** | Warning |
-| **數量** | 7 |
-| **訊息** | Auto-property accessor is never used |
-
-### 受影響檔案
-
-| 檔案 | 行號 | 屬性 |
-|------|------|------|
-| `Core/Tracking/TrackingConfig.cs` | 264 | `Error.get` |
-| `Core/Session/DocumentSessionManager.cs` | 771 | `EstimatedMemoryMb.get` |
-| `Core/Session/DocumentSessionManager.cs` | 766 | `LastAccessedAt.get` |
-| `Core/Session/DocumentSessionManager.cs` | 761 | `OpenedAt.get` |
-| `Core/Session/TempFileManager.cs` | 605 | `OwnerGroupId.get` |
-| `Core/Session/TempFileManager.cs` | 610 | `OwnerUserId.get` |
-| `Core/Session/TempFileManager.cs` | 575 | `TempPath.get` |
-
-### 問題描述
-
-自動屬性的 getter 或 setter 在專案內部未被使用。
-
-### 不修復原因
-
-- Setter 用於 JSON 反序列化
-- 這些屬性可能被外部代碼或未來功能使用
-- 移除會影響序列化/反序列化行為
-- 這些是狀態記錄屬性，提供給外部診斷使用
-
----
-
-## 12. UnusedMember.Global
+## 11. UnusedMember.Global
 
 | 項目 | 內容 |
 |------|------|
@@ -480,7 +446,7 @@ public string Host { get; init; } = "localhost";  // 會導致反序列化失敗
 
 ---
 
-## 13. UnusedMethodReturnValue.Global
+## 12. UnusedMethodReturnValue.Global
 
 | 項目 | 內容 |
 |------|------|
@@ -519,7 +485,7 @@ builder.WithFilteredTools(filter);
 
 ---
 
-## 14. UnusedType.Global
+## 13. UnusedType.Global
 
 | 項目 | 內容 |
 |------|------|
@@ -553,7 +519,7 @@ app.UseTracking();
 
 ---
 
-## 15. UseObjectOrCollectionInitializer
+## 14. UseObjectOrCollectionInitializer
 
 | 項目 | 內容 |
 |------|------|
@@ -563,25 +529,25 @@ app.UseTracking();
 
 ### 受影響檔案
 
-#### 測試檔案 - AuthConfigTests.cs (20 個)
+#### 測試檔案 - AuthConfigTests.cs (14 個)
 
 這些是測試程式碼中對 `AuthConfig` 嵌套屬性的設定：
 
 | 檔案 | 行號 |
 |------|------|
-| `Tests/Core/Security/AuthConfigTests.cs` | 629, 641, 653, 665, 677, 689, 701, 715, 730, 743, 755, 767, 779, 791, 805, 820, 830, 840, 851 |
+| `Tests/Core/Security/AuthConfigTests.cs` | 629, 640, 652, 664, 676, 688, 739, 751, 763, 775, 787, 836, 844, 870 |
 
 #### 測試檔案 - GetParagraphFormatWordHandlerTests.cs (5 個)
 
 | 檔案 | 行號 | 說明 |
 |------|------|------|
-| `Tests/Handlers/Word/Paragraph/GetParagraphFormatWordHandlerTests.cs` | 313, 338, 429, 456, 479 | 誤判 |
+| `Tests/Handlers/Word/Paragraph/GetParagraphFormatWordHandlerTests.cs` | 216, 345, 347-348, 438-440, 466, 489 | 誤判 |
 
 #### 測試檔案 - AddTableOfContentsWordHandlerTests.cs (1 個)
 
 | 檔案 | 行號 | 說明 |
 |------|------|------|
-| `Tests/Handlers/Word/Reference/AddTableOfContentsWordHandlerTests.cs` | 26 | 誤判 |
+| `Tests/Handlers/Word/Reference/AddTableOfContentsWordHandlerTests.cs` | 29, 31, 33 | 誤判 |
 
 ### 問題描述
 
@@ -629,7 +595,7 @@ var builder = new DocumentBuilder(doc)
 
 ---
 
-## 16. UseUtf8StringLiteral
+## 15. UseUtf8StringLiteral
 
 | 項目 | 內容 |
 |------|------|
@@ -679,13 +645,12 @@ PNG 檔案的 signature 包含 `0x89` 等非 ASCII 字元，這些是二進制�
 | MethodSupportsCancellation | 1 | Note | 複雜度考量 | ReSharper disable once |
 | ParameterOnlyUsedForPreconditionCheck.Local | 2 | Warning | Assert.All 用法 | ReSharper disable once |
 | PropertyCanBeMadeInitOnly.Global | 38 | Note | JSON 序列化 | 文件記錄 |
-| UnusedAutoPropertyAccessor.Global | 7 | Warning | JSON 序列化 / 外部 API | 文件記錄 |
 | UnusedMember.Global | 7 | Note | 公開 API | 文件記錄 |
 | UnusedMethodReturnValue.Global | 1 | Note | 公開 API | ReSharper disable once |
 | UnusedType.Global | 1 | Note | 公開 API | 文件記錄 |
-| UseObjectOrCollectionInitializer | 26 | Note | 測試可讀性/誤判 | 文件記錄 |
+| UseObjectOrCollectionInitializer | 20 | Note | 測試可讀性/誤判 | 文件記錄 |
 | UseUtf8StringLiteral | 2 | Note | 誤判 | ReSharper disable/restore |
-| **總計** | **104** | - | - | - |
+| **總計** | **91** | - | - | - |
 
 ---
 

@@ -3,7 +3,7 @@ namespace AsposeMcpServer.Core;
 /// <summary>
 ///     Specifies the result type for a Handler, used for generating outputSchema.
 /// </summary>
-[AttributeUsage(AttributeTargets.Class, Inherited = false)]
+[AttributeUsage(AttributeTargets.Class)]
 public class ResultTypeAttribute : Attribute
 {
     /// <summary>

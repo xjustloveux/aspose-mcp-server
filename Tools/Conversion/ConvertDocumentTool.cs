@@ -1,12 +1,16 @@
 ﻿using System.ComponentModel;
 using Aspose.Cells;
 using Aspose.Slides;
+using Aspose.Slides.Export;
 using Aspose.Words;
 using AsposeMcpServer.Core;
+using AsposeMcpServer.Core.Progress;
 using AsposeMcpServer.Core.Session;
 using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Results.Conversion;
+using ModelContextProtocol;
 using ModelContextProtocol.Server;
+using PdfSaveOptions = Aspose.Words.Saving.PdfSaveOptions;
 using SaveFormat = Aspose.Words.SaveFormat;
 
 namespace AsposeMcpServer.Tools.Conversion;
@@ -46,6 +50,7 @@ public class ConvertDocumentTool
     /// <param name="inputPath">Input file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID to convert document from session.</param>
     /// <param name="outputPath">Output file path (required, format determined by extension).</param>
+    /// <param name="progress">Optional progress reporter for long-running operations.</param>
     /// <returns>A ConversionResult indicating the conversion result with source and output information.</returns>
     /// <exception cref="ArgumentException">
     ///     Thrown when outputPath is not provided, neither inputPath nor sessionId is provided, or the input format is
@@ -75,7 +80,8 @@ Usage examples:
         [Description("Session ID to convert document from session")]
         string? sessionId = null,
         [Description("Output file path (required, format determined by extension)")]
-        string? outputPath = null)
+        string? outputPath = null,
+        IProgress<ProgressNotificationValue>? progress = null)
     {
         if (string.IsNullOrEmpty(outputPath))
             throw new ArgumentException("outputPath is required");
@@ -88,10 +94,10 @@ Usage examples:
         var outputExtension = Path.GetExtension(outputPath).ToLower();
 
         if (!string.IsNullOrEmpty(sessionId))
-            return ConvertFromSession(sessionId, outputPath, outputExtension, $"session:{sessionId}");
+            return ConvertFromSession(sessionId, outputPath, outputExtension, $"session:{sessionId}", progress);
 
         SecurityHelper.ValidateFilePath(inputPath!, nameof(inputPath), true);
-        return ConvertFromFile(inputPath!, outputPath, outputExtension);
+        return ConvertFromFile(inputPath!, outputPath, outputExtension, progress);
     }
 
     /// <summary>
@@ -101,12 +107,13 @@ Usage examples:
     /// <param name="outputPath">The output file path.</param>
     /// <param name="outputExtension">The target format extension (e.g., ".pdf", ".html").</param>
     /// <param name="sourcePath">The source path for the result.</param>
+    /// <param name="progress">Optional progress reporter for long-running operations.</param>
     /// <returns>A ConversionResult indicating the conversion result.</returns>
     /// <exception cref="InvalidOperationException">Thrown when session management is not enabled.</exception>
     /// <exception cref="KeyNotFoundException">Thrown when the session is not found or access is denied.</exception>
     /// <exception cref="ArgumentException">Thrown when the document type is unsupported.</exception>
     private ConversionResult ConvertFromSession(string sessionId, string outputPath, string outputExtension,
-        string sourcePath)
+        string sourcePath, IProgress<ProgressNotificationValue>? progress)
     {
         if (_sessionManager == null)
             throw new InvalidOperationException("Session management is not enabled");
@@ -121,21 +128,57 @@ Usage examples:
             case DocumentType.Word:
                 var wordDoc = _sessionManager.GetDocument<Document>(sessionId, identity);
                 var wordFormat = GetWordSaveFormat(outputExtension);
-                wordDoc.Save(outputPath, wordFormat);
+                if (outputExtension == ".pdf")
+                {
+                    var wordSaveOptions = new PdfSaveOptions
+                    {
+                        ProgressCallback = new WordsProgressAdapter(progress)
+                    };
+                    wordDoc.Save(outputPath, wordSaveOptions);
+                }
+                else
+                {
+                    wordDoc.Save(outputPath, wordFormat);
+                }
+
                 sourceType = "Word";
                 break;
 
             case DocumentType.Excel:
                 var workbook = _sessionManager.GetDocument<Workbook>(sessionId, identity);
                 var excelFormat = GetExcelSaveFormat(outputExtension);
-                workbook.Save(outputPath, excelFormat);
+                if (outputExtension == ".pdf")
+                {
+                    var cellsSaveOptions = new Aspose.Cells.PdfSaveOptions
+                    {
+                        PageSavingCallback = new CellsProgressAdapter(progress)
+                    };
+                    workbook.Save(outputPath, cellsSaveOptions);
+                }
+                else
+                {
+                    workbook.Save(outputPath, excelFormat);
+                }
+
                 sourceType = "Excel";
                 break;
 
             case DocumentType.PowerPoint:
                 var presentation = _sessionManager.GetDocument<Presentation>(sessionId, identity);
                 var pptFormat = GetPresentationSaveFormat(outputExtension);
-                presentation.Save(outputPath, pptFormat);
+                if (outputExtension == ".pdf")
+                {
+                    var slidesSaveOptions = new PdfOptions
+                    {
+                        ProgressCallback = new SlidesProgressAdapter(progress)
+                    };
+                    presentation.Save(outputPath, Aspose.Slides.Export.SaveFormat.Pdf, slidesSaveOptions);
+                }
+                else
+                {
+                    presentation.Save(outputPath, pptFormat);
+                }
+
                 sourceType = "PowerPoint";
                 break;
 
@@ -167,9 +210,11 @@ Usage examples:
     /// <param name="inputPath">The source document file path.</param>
     /// <param name="outputPath">The output file path.</param>
     /// <param name="outputExtension">The target format extension (e.g., ".pdf", ".html").</param>
+    /// <param name="progress">Optional progress reporter for long-running operations.</param>
     /// <returns>A ConversionResult indicating the conversion result.</returns>
     /// <exception cref="ArgumentException">Thrown when the input format is unsupported.</exception>
-    private static ConversionResult ConvertFromFile(string inputPath, string outputPath, string outputExtension)
+    private static ConversionResult ConvertFromFile(string inputPath, string outputPath, string outputExtension,
+        IProgress<ProgressNotificationValue>? progress)
     {
         var inputExtension = Path.GetExtension(inputPath).ToLower();
         string sourceFormat;
@@ -177,22 +222,58 @@ Usage examples:
         if (IsWordDocument(inputExtension))
         {
             var doc = new Document(inputPath);
-            var saveFormat = GetWordSaveFormat(outputExtension);
-            doc.Save(outputPath, saveFormat);
+            if (outputExtension == ".pdf")
+            {
+                var wordSaveOptions = new PdfSaveOptions
+                {
+                    ProgressCallback = new WordsProgressAdapter(progress)
+                };
+                doc.Save(outputPath, wordSaveOptions);
+            }
+            else
+            {
+                var saveFormat = GetWordSaveFormat(outputExtension);
+                doc.Save(outputPath, saveFormat);
+            }
+
             sourceFormat = "Word";
         }
         else if (IsExcelDocument(inputExtension))
         {
             using var workbook = new Workbook(inputPath);
-            var saveFormat = GetExcelSaveFormat(outputExtension);
-            workbook.Save(outputPath, saveFormat);
+            if (outputExtension == ".pdf")
+            {
+                var cellsSaveOptions = new Aspose.Cells.PdfSaveOptions
+                {
+                    PageSavingCallback = new CellsProgressAdapter(progress)
+                };
+                workbook.Save(outputPath, cellsSaveOptions);
+            }
+            else
+            {
+                var saveFormat = GetExcelSaveFormat(outputExtension);
+                workbook.Save(outputPath, saveFormat);
+            }
+
             sourceFormat = "Excel";
         }
         else if (IsPresentationDocument(inputExtension))
         {
             using var presentation = new Presentation(inputPath);
-            var saveFormat = GetPresentationSaveFormat(outputExtension);
-            presentation.Save(outputPath, saveFormat);
+            if (outputExtension == ".pdf")
+            {
+                var slidesSaveOptions = new PdfOptions
+                {
+                    ProgressCallback = new SlidesProgressAdapter(progress)
+                };
+                presentation.Save(outputPath, Aspose.Slides.Export.SaveFormat.Pdf, slidesSaveOptions);
+            }
+            else
+            {
+                var saveFormat = GetPresentationSaveFormat(outputExtension);
+                presentation.Save(outputPath, saveFormat);
+            }
+
             sourceFormat = "PowerPoint";
         }
         else

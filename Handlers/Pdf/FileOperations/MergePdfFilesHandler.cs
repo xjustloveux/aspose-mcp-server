@@ -3,6 +3,7 @@ using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Results.Common;
+using ModelContextProtocol;
 
 namespace AsposeMcpServer.Handlers.Pdf.FileOperations;
 
@@ -41,13 +42,29 @@ public class MergePdfFilesHandler : OperationHandlerBase<Document>
         SecurityHelper.ValidateFilePath(mergeParams.OutputPath, "outputPath", true);
 
         using var mergedDocument = new Document(validPaths[0]);
+        var totalFiles = validPaths.Count;
+
+        var initialProgress = 100 / totalFiles;
+        context.Progress?.Report(new ProgressNotificationValue
+            { Progress = initialProgress, Total = 100, Message = $"Loaded document 1 of {totalFiles}" });
+
         for (var i = 1; i < validPaths.Count; i++)
         {
             using var doc = new Document(validPaths[i]);
             mergedDocument.Pages.Add(doc.Pages);
+
+            var mergeProgress = (i + 1) * 100 / totalFiles;
+            context.Progress?.Report(new ProgressNotificationValue
+            {
+                Progress = mergeProgress,
+                Total = 100,
+                Message = $"Merged document {i + 1} of {totalFiles}"
+            });
         }
 
         mergedDocument.Save(mergeParams.OutputPath);
+        context.Progress?.Report(new ProgressNotificationValue
+            { Progress = 100, Total = 100, Message = "Merge completed" });
 
         return new SuccessResult
             { Message = $"Merged {validPaths.Count} PDF documents. Output: {mergeParams.OutputPath}" };

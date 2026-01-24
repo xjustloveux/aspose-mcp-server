@@ -107,15 +107,13 @@ public static class PowerPointHelper
                 break;
             case ITable table:
                 foreach (var row in table.Rows)
-                foreach (var cell in row)
-                    if (!string.IsNullOrWhiteSpace(cell.TextFrame?.Text))
-                        textContent.Add(cell.TextFrame.Text);
+                foreach (var cell in row.Where(cell => !string.IsNullOrWhiteSpace(cell.TextFrame?.Text)))
+                    textContent.Add(cell.TextFrame.Text);
 
                 break;
             case ISmartArt smartArt:
-                foreach (var node in smartArt.AllNodes)
-                    if (!string.IsNullOrWhiteSpace(node.TextFrame?.Text))
-                        textContent.Add(node.TextFrame.Text);
+                foreach (var node in smartArt.AllNodes.Where(node => !string.IsNullOrWhiteSpace(node.TextFrame?.Text)))
+                    textContent.Add(node.TextFrame.Text);
                 break;
             case IGroupShape groupShape:
                 foreach (var childShape in groupShape.Shapes)
@@ -140,15 +138,13 @@ public static class PowerPointHelper
                 break;
             case ITable table:
                 foreach (var row in table.Rows)
-                foreach (var cell in row)
-                    if (!string.IsNullOrWhiteSpace(cell.TextFrame?.Text))
-                        count += cell.TextFrame.Text.Length;
+                foreach (var cell in row.Where(cell => !string.IsNullOrWhiteSpace(cell.TextFrame?.Text)))
+                    count += cell.TextFrame.Text.Length;
 
                 break;
             case ISmartArt smartArt:
-                foreach (var node in smartArt.AllNodes)
-                    if (!string.IsNullOrWhiteSpace(node.TextFrame?.Text))
-                        count += node.TextFrame.Text.Length;
+                foreach (var node in smartArt.AllNodes.Where(node => !string.IsNullOrWhiteSpace(node.TextFrame?.Text)))
+                    count += node.TextFrame.Text.Length;
                 break;
             case IGroupShape groupShape:
                 foreach (var childShape in groupShape.Shapes)
@@ -210,6 +206,7 @@ public static class PowerPointHelper
     {
         using var bitmap = slide.GetThumbnail(scaleX, scaleY);
         using var stream = new MemoryStream();
+        // CA1416 - System.Drawing.Common is Windows-only, cross-platform support not required
 #pragma warning disable CA1416
         bitmap.Save(stream, ImageFormat.Png);
 #pragma warning restore CA1416

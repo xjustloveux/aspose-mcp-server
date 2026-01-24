@@ -198,15 +198,6 @@ nav {
     background: var(--nav-hover);
 }
 
-.menu-toggle {
-    color: var(--accent-primary);
-}
-
-/* Header */
-header {
-    background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
-}
-
 /* Cards */
 .feature-card,
 .category-card,
@@ -264,16 +255,6 @@ header {
 
 [data-theme="dark"] .btn-secondary:hover {
     background: #7a5a9a;
-}
-
-/* Footer */
-footer {
-    color: var(--text-secondary);
-    border-top-color: var(--border-color);
-}
-
-footer a {
-    color: var(--accent-primary);
 }
 
 /* Code blocks */

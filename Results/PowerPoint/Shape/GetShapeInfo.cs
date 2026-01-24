@@ -5,7 +5,7 @@ namespace AsposeMcpServer.Results.PowerPoint.Shape;
 /// <summary>
 ///     Information about a shape.
 /// </summary>
-public sealed record GetShapeInfo
+public record GetShapeInfo
 {
     /// <summary>
     ///     Gets the shape index.

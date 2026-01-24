@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Core.Progress;
 using AsposeMcpServer.Core.Session;
 using AsposeMcpServer.Results.Common;
 
@@ -53,7 +54,8 @@ public class ConvertWorkbookHandler : OperationHandlerBase<Workbook>
             sourceDescription = p.InputPath!;
         }
 
-        var saveFormat = p.Format.ToLower() switch
+        var formatLower = p.Format.ToLower();
+        var saveFormat = formatLower switch
         {
             "pdf" => SaveFormat.Pdf,
             "html" => SaveFormat.Html,
@@ -66,7 +68,18 @@ public class ConvertWorkbookHandler : OperationHandlerBase<Workbook>
             _ => throw new ArgumentException($"Unsupported format: {p.Format}")
         };
 
-        workbook.Save(p.OutputPath, saveFormat);
+        if (formatLower == "pdf" && context.Progress != null)
+        {
+            var pdfSaveOptions = new PdfSaveOptions
+            {
+                PageSavingCallback = new CellsProgressAdapter(context.Progress)
+            };
+            workbook.Save(p.OutputPath, pdfSaveOptions);
+        }
+        else
+        {
+            workbook.Save(p.OutputPath, saveFormat);
+        }
 
         return new SuccessResult
             { Message = $"Workbook from {sourceDescription} converted to {p.Format} format. Output: {p.OutputPath}" };

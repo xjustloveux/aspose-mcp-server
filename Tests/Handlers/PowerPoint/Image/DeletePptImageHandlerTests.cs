@@ -5,6 +5,7 @@ using AsposeMcpServer.Handlers.PowerPoint.Image;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 
+// CA1416 - System.Drawing.Common is Windows-only, cross-platform support not required
 #pragma warning disable CA1416
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Image;

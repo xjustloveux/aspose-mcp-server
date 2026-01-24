@@ -223,7 +223,7 @@ public static class WordNoteHelper
     /// <summary>
     ///     Callback handler for inserting notes at matched text locations.
     /// </summary>
-    private class NoteInsertingCallback( // NOSONAR S3260 - Primary constructor parameters are readonly by design
+    private sealed class NoteInsertingCallback(
         DocumentBuilder builder,
         FootnoteType noteType,
         string noteText,

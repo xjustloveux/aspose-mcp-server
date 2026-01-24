@@ -3,6 +3,7 @@ using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Results.Common;
+using ModelContextProtocol;
 
 namespace AsposeMcpServer.Handlers.Word.File;
 
@@ -51,11 +52,24 @@ public class MergeWordDocumentsHandler : OperationHandlerBase<Document>
         };
 
         var mergedDoc = new Document(p.InputPaths[0]);
+        var totalFiles = p.InputPaths.Length;
+
+        var initialProgress = 100 / totalFiles;
+        context.Progress?.Report(new ProgressNotificationValue
+            { Progress = initialProgress, Total = 100, Message = $"Loaded document 1 of {totalFiles}" });
 
         for (var i = 1; i < p.InputPaths.Length; i++)
         {
             var doc = new Document(p.InputPaths[i]);
             mergedDoc.AppendDocument(doc, importFormatMode);
+
+            var mergeProgress = (i + 1) * 100 / totalFiles;
+            context.Progress?.Report(new ProgressNotificationValue
+            {
+                Progress = mergeProgress,
+                Total = 100,
+                Message = $"Merged document {i + 1} of {totalFiles}"
+            });
         }
 
         if (p.UnlinkHeadersFooters)
@@ -63,6 +77,8 @@ public class MergeWordDocumentsHandler : OperationHandlerBase<Document>
                 section.HeadersFooters.LinkToPrevious(false);
 
         mergedDoc.Save(p.OutputPath);
+        context.Progress?.Report(new ProgressNotificationValue
+            { Progress = 100, Total = 100, Message = "Merge completed" });
         return new SuccessResult
         {
             Message =

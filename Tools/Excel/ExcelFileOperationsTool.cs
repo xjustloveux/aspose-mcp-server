@@ -4,6 +4,7 @@ using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
 using AsposeMcpServer.Helpers;
+using ModelContextProtocol;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -59,6 +60,7 @@ public class ExcelFileOperationsTool
     /// <param name="mergeSheets">When true, merges data from sheets with same name by appending rows.</param>
     /// <param name="sheetIndices">Sheet indices to split (0-based, optional).</param>
     /// <param name="outputFileNamePattern">Output file name pattern with {index} and {name} placeholders.</param>
+    /// <param name="progress">Optional progress reporter for long-running operations.</param>
     /// <returns>A message indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">Thrown when the operation is unknown or required parameters are missing.</exception>
     [McpServerTool(
@@ -108,7 +110,8 @@ Usage examples:
         int[]? sheetIndices = null,
         [Description(
             "Output file name pattern, use {index} for sheet index, {name} for sheet name (optional, for split, default: 'sheet_{name}.xlsx')")]
-        string outputFileNamePattern = "sheet_{name}.xlsx")
+        string outputFileNamePattern = "sheet_{name}.xlsx",
+        IProgress<ProgressNotificationValue>? progress = null)
     {
         var parameters = BuildParameters(operation, sessionId, path, outputPath, inputPath, outputDirectory,
             sheetName, format, inputPaths, mergeSheets, sheetIndices, outputFileNamePattern);
@@ -122,7 +125,8 @@ Usage examples:
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = inputPath ?? path,
-            OutputPath = outputPath ?? path
+            OutputPath = outputPath ?? path,
+            Progress = progress
         };
 
         var result = handler.Execute(operationContext, parameters);

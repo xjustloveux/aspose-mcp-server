@@ -49,6 +49,7 @@ public class EditPdfImageHandler : OperationHandlerBase<Document>
             {
                 tempImagePath = Path.Combine(Path.GetTempPath(), $"temp_image_{Guid.NewGuid()}.png");
                 using var imageStream = new FileStream(tempImagePath, FileMode.Create);
+                // CA1416 - System.Drawing.Common is Windows-only, cross-platform support not required
 #pragma warning disable CA1416
                 images[p.ImageIndex].Save(imageStream, ImageFormat.Png);
 #pragma warning restore CA1416

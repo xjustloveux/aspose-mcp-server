@@ -1,4 +1,5 @@
 using AsposeMcpServer.Core.Session;
+using ModelContextProtocol;
 
 namespace AsposeMcpServer.Core.Handlers;
 
@@ -73,4 +74,11 @@ public class OperationContext<TContext> where TContext : class
     ///     When set, the Tool layer should save this document instead of the original.
     /// </summary>
     public TContext? ResultDocument { get; set; }
+
+    /// <summary>
+    ///     Gets the MCP progress reporter for long-running operations.
+    ///     Handlers can use this to report progress during operations like merge, split, or convert.
+    ///     May be null if the client did not request progress notifications.
+    /// </summary>
+    public IProgress<ProgressNotificationValue>? Progress { get; init; }
 }

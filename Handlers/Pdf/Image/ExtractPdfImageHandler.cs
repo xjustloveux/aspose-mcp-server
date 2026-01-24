@@ -56,6 +56,7 @@ public class ExtractPdfImageHandler : OperationHandlerBase<Document>
             var fileName = p.OutputPath ??
                            Path.Combine(targetDir, $"page_{p.PageIndex}_image_{p.ImageIndex.Value}.png");
             using var imageStream = new FileStream(fileName, FileMode.Create);
+            // CA1416 - System.Drawing.Common is Windows-only, cross-platform support not required
 #pragma warning disable CA1416
             image.Save(imageStream, ImageFormat.Png);
 #pragma warning restore CA1416
@@ -69,6 +70,7 @@ public class ExtractPdfImageHandler : OperationHandlerBase<Document>
             var image = images[i];
             var fileName = Path.Combine(targetDir, $"page_{p.PageIndex}_image_{i}.png");
             using var imageStream = new FileStream(fileName, FileMode.Create);
+            // CA1416 - System.Drawing.Common is Windows-only, cross-platform support not required
 #pragma warning disable CA1416
             image.Save(imageStream, ImageFormat.Png);
 #pragma warning restore CA1416

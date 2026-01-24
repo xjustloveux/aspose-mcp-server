@@ -4,6 +4,7 @@ using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
 using AsposeMcpServer.Helpers;
+using ModelContextProtocol;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
@@ -73,6 +74,7 @@ public class WordFileTool
     /// <param name="pageHeight">Page height in points (overrides paperSize).</param>
     /// <param name="headerDistance">Header distance from page top in points.</param>
     /// <param name="footerDistance">Footer distance from page bottom in points.</param>
+    /// <param name="progress">Optional progress reporter for long-running operations.</param>
     /// <returns>A message indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">Thrown when the operation is unknown or required parameters are missing.</exception>
     /// <exception cref="InvalidOperationException">Thrown when session management is not enabled but sessionId is provided.</exception>
@@ -151,7 +153,8 @@ Template syntax (LINQ Reporting Engine, use 'ds' as data source prefix):
         [Description("Header distance from page top in points (default: 35.4)")]
         double headerDistance = 35.4,
         [Description("Footer distance from page bottom in points (default: 35.4)")]
-        double footerDistance = 35.4)
+        double footerDistance = 35.4,
+        IProgress<ProgressNotificationValue>? progress = null)
     {
         var parameters = BuildParameters(operation, sessionId, path, outputPath, templatePath, dataJson, format,
             inputPaths, importFormatMode, unlinkHeadersFooters, outputDir, splitBy, content, skipInitialContent,
@@ -168,7 +171,8 @@ Template syntax (LINQ Reporting Engine, use 'ds' as data source prefix):
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            Progress = progress
         };
 
         var message = handler.Execute(operationContext, parameters);

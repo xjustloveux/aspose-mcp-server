@@ -106,6 +106,7 @@ public class SetArrayFormulaHandler : OperationHandlerBase<Workbook>
     /// <param name="Message">The result message or error description.</param>
     private sealed record FormulaResult(bool IsSuccess, string Message);
 
+    // CS0618 - Using obsolete SetArrayFormula methods for backward compatibility with legacy Excel files
 #pragma warning disable CS0618
     /// <summary>
     ///     Tries to set an array formula using multiple methods.

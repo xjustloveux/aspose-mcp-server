@@ -59,6 +59,26 @@ public class EditWordFootnoteHandlerTests : WordHandlerTestBase
         Assert.Contains("edited successfully", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void Execute_WithReferenceMark_EditsFootnoteByMark()
+    {
+        var doc = CreateDocumentWithCustomMarkFootnote();
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "referenceMark", "*" },
+            { "text", "Edited by reference mark" }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("edited successfully", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Edited by reference mark", result.Message);
+        AssertModified(context);
+    }
+
     #endregion
 
     #region Error Handling
@@ -107,6 +127,15 @@ public class EditWordFootnoteHandlerTests : WordHandlerTestBase
         builder.InsertFootnote(FootnoteType.Footnote, "First footnote");
         builder.Write(" more text");
         builder.InsertFootnote(FootnoteType.Footnote, "Second footnote");
+        return doc;
+    }
+
+    private static Document CreateDocumentWithCustomMarkFootnote()
+    {
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        builder.Write("Text with custom footnote");
+        builder.InsertFootnote(FootnoteType.Footnote, "Footnote with custom mark", "*");
         return doc;
     }
 

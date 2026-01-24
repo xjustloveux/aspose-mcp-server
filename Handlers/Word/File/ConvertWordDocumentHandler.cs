@@ -1,6 +1,8 @@
 using Aspose.Words;
+using Aspose.Words.Saving;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Core.Progress;
 using AsposeMcpServer.Core.Session;
 using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Results.Common;
@@ -95,7 +97,19 @@ public class ConvertWordDocumentHandler : OperationHandlerBase<Document>
             _ => throw new ArgumentException($"Unsupported format: {p.Format}")
         };
 
-        doc.Save(p.OutputPath, saveFormat);
+        if (formatLower == "pdf" && context.Progress != null)
+        {
+            var pdfSaveOptions = new PdfSaveOptions
+            {
+                ProgressCallback = new WordsProgressAdapter(context.Progress)
+            };
+            doc.Save(p.OutputPath, pdfSaveOptions);
+        }
+        else
+        {
+            doc.Save(p.OutputPath, saveFormat);
+        }
+
         return new SuccessResult
             { Message = $"Document converted from {sourceDescription} to {p.OutputPath} ({formatLower})" };
     }

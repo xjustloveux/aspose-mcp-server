@@ -88,11 +88,8 @@ public class OriginValidationMiddleware
     /// <returns>True if the path is excluded; otherwise, false.</returns>
     private bool IsExcludedPath(PathString path)
     {
-        foreach (var excludedPath in _excludedPaths)
-            if (path.StartsWithSegments(excludedPath, StringComparison.OrdinalIgnoreCase))
-                return true;
-
-        return false;
+        return _excludedPaths.Any(excludedPath =>
+            path.StartsWithSegments(excludedPath, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>

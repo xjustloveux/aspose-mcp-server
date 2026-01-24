@@ -5,7 +5,7 @@ namespace AsposeMcpServer.Results.Word.List;
 /// <summary>
 ///     Information about a list paragraph.
 /// </summary>
-public sealed record ListParagraphInfo
+public record ListParagraphInfo
 {
     /// <summary>
     ///     Zero-based paragraph index.

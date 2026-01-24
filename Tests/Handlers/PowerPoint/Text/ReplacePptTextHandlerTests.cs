@@ -42,9 +42,11 @@ public class ReplacePptTextHandlerTests : PptHandlerTestBase
 
     #region Result Properties
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsCorrectProperties()
     {
+        SkipInEvaluationMode(AsposeLibraryType.Slides, "Text replacement has limitations in evaluation mode");
+
         var pres = CreatePresentationWithText("Original Value");
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -66,9 +68,11 @@ public class ReplacePptTextHandlerTests : PptHandlerTestBase
 
     #region Basic Replace Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReplacesText()
     {
+        SkipInEvaluationMode(AsposeLibraryType.Slides, "Text replacement has limitations in evaluation mode");
+
         var pres = CreatePresentationWithText("Hello World");
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

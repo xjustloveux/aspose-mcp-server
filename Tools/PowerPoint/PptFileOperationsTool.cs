@@ -4,6 +4,7 @@ using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
 using AsposeMcpServer.Helpers;
+using ModelContextProtocol;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
@@ -62,6 +63,7 @@ public class PptFileOperationsTool
     /// <param name="startSlideIndex">Start slide index (0-based, for split).</param>
     /// <param name="endSlideIndex">End slide index (0-based, for split).</param>
     /// <param name="outputFileNamePattern">Output file name pattern with {index} placeholder.</param>
+    /// <param name="progress">Optional progress reporter for long-running operations.</param>
     /// <returns>A message indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">Thrown when the operation is unknown or required parameters are missing.</exception>
     /// <exception cref="InvalidOperationException">Thrown when session management is not enabled but sessionId is provided.</exception>
@@ -112,7 +114,8 @@ Usage examples:
         int? endSlideIndex = null,
         [Description(
             "Output file name pattern, use {index} for slide number (optional, for split, default: 'slide_{index}.pptx')")]
-        string outputFileNamePattern = "slide_{index}.pptx")
+        string outputFileNamePattern = "slide_{index}.pptx",
+        IProgress<ProgressNotificationValue>? progress = null)
     {
         var parameters = BuildParameters(operation, sessionId, path, outputPath, inputPath, outputDirectory,
             format, slideIndex, inputPaths, keepSourceFormatting, slidesPerFile,
@@ -127,7 +130,8 @@ Usage examples:
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = inputPath ?? path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            Progress = progress
         };
 
         var result = handler.Execute(operationContext, parameters);
