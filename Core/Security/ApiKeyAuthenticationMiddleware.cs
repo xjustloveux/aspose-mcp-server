@@ -222,9 +222,7 @@ public sealed class ApiKeyAuthenticationMiddleware : IMiddleware, IDisposable
     /// <param name="context">HTTP context containing the request</param>
     /// <param name="_">API key (unused in gateway mode, validation is trusted from gateway)</param>
     /// <returns>Authentication result</returns>
-    private ApiKeyAuthResult
-        ValidateGateway(HttpContext context,
-            string _) // NOSONAR S1172 - Discard pattern, parameter required by delegate signature
+    private ApiKeyAuthResult ValidateGateway(HttpContext context, string _)
     {
         var groupId = context.Request.Headers[_config.GroupIdentifierHeader].FirstOrDefault();
 
@@ -379,7 +377,7 @@ public sealed class ApiKeyAuthenticationMiddleware : IMiddleware, IDisposable
     /// </summary>
     private sealed class IntrospectionResponse
     {
-        public bool Active { get; init; } // NOSONAR S1144 S3459 - Set by JSON deserializer
+        public bool Active { get; init; }
 
         [JsonPropertyName("group_id")] public string? GroupId { get; init; }
     }
@@ -390,10 +388,10 @@ public sealed class ApiKeyAuthenticationMiddleware : IMiddleware, IDisposable
     /// </summary>
     private sealed class CustomValidationResponse
     {
-        public bool Valid { get; init; } // NOSONAR S1144 S3459 - Set by JSON deserializer
+        public bool Valid { get; init; }
 
         [JsonPropertyName("group_id")] public string? GroupId { get; init; }
 
-        public string? Error { get; init; } // NOSONAR S1144 S3459 - Set by JSON deserializer
+        public string? Error { get; init; }
     }
 }

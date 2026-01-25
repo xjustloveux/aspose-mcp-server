@@ -33,7 +33,7 @@ public class GetWordListFormatHandler : OperationHandlerBase<Document>
 
         var listItemIndices = new Dictionary<(int listId, int paraIndex), int>();
         var listCounters = new Dictionary<int, int>();
-        foreach (var para in paragraphs) // NOSONAR S3267 - Loop has side effects, not suitable for LINQ
+        foreach (var para in paragraphs)
             if (para.ListFormat is { IsListItem: true, List: not null })
             {
                 var listId = para.ListFormat.List.ListId;

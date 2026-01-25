@@ -98,9 +98,7 @@ public class TransportConfig
     ///     Loads configuration from command line arguments (overrides environment variables)
     /// </summary>
     /// <param name="args">Command line arguments</param>
-    private void
-        LoadFromCommandLine(
-            string[] args) // NOSONAR S127 - Loop counter increment for consuming paired CLI arguments is intentional
+    private void LoadFromCommandLine(string[] args)
     {
         for (var i = 0; i < args.Length; i++)
         {

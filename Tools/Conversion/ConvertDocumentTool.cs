@@ -328,9 +328,7 @@ Usage examples:
     /// <param name="extension">The target file extension.</param>
     /// <returns>The corresponding <see cref="SaveFormat" /> value.</returns>
     /// <exception cref="ArgumentException">Thrown when the extension is not supported for Word output.</exception>
-    private static SaveFormat
-        GetWordSaveFormat(
-            string extension) // NOSONAR S1192 - File extension strings are intentionally repeated in each format converter
+    private static SaveFormat GetWordSaveFormat(string extension)
     {
         return extension switch
         {

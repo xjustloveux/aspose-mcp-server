@@ -71,7 +71,7 @@ public class TrackingConfig
         }
 
         if (!string.IsNullOrEmpty(MetricsPath) && !MetricsPath.StartsWith('/'))
-            MetricsPath = "/" + MetricsPath; // NOSONAR S1075 - URL path prefix, not file system path
+            MetricsPath = "/" + MetricsPath;
     }
 
     /// <summary>

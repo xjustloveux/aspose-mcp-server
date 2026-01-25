@@ -95,8 +95,8 @@ public class TrackingMiddleware
         }
         catch (Exception ex)
         {
-            success = false; // NOSONAR S1854 - Used in finally block for BuildTrackingEvent
-            error = ex.Message; // NOSONAR S1854 - Used in finally block for BuildTrackingEvent
+            success = false;
+            error = ex.Message;
             throw;
         }
         finally
@@ -252,9 +252,10 @@ public class TrackingMiddleware
         }
         catch (OperationCanceledException)
         {
-            _logger.LogWarning( // NOSONAR S6667 - Structured logging with placeholders is correct pattern
+            _logger.LogWarning(
                 "Webhook request to {Url} timed out after {Timeout} seconds",
-                _config.WebhookUrl, _config.WebhookTimeoutSeconds);
+                _config.WebhookUrl,
+                _config.WebhookTimeoutSeconds);
         }
         catch (Exception ex)
         {

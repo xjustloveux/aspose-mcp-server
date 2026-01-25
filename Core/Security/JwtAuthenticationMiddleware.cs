@@ -297,9 +297,7 @@ public sealed class JwtAuthenticationMiddleware : IMiddleware, IDisposable
         }
         catch (SecurityTokenException ex)
         {
-            _logger.LogDebug( // NOSONAR S6667 - Structured logging with placeholders is correct pattern
-                "Token validation failed: {Message}",
-                ex.Message);
+            _logger.LogDebug("Token validation failed: {Message}", ex.Message);
             return new JwtAuthResult
             {
                 IsValid = false,
@@ -487,8 +485,8 @@ public sealed class JwtAuthenticationMiddleware : IMiddleware, IDisposable
     /// </summary>
     private sealed class IntrospectionResponse
     {
-        public bool Active { get; init; } // NOSONAR S1144 S3459 - Set by JSON deserializer
-        public string? Sub { get; init; } // NOSONAR S1144 S3459 - Set by JSON deserializer
+        public bool Active { get; init; }
+        public string? Sub { get; init; }
 
         [JsonPropertyName("client_id")] public string? ClientId { get; init; }
 
@@ -501,12 +499,12 @@ public sealed class JwtAuthenticationMiddleware : IMiddleware, IDisposable
     /// </summary>
     private sealed class CustomValidationResponse
     {
-        public bool Valid { get; init; } // NOSONAR S1144 S3459 - Set by JSON deserializer
+        public bool Valid { get; init; }
 
         [JsonPropertyName("group_id")] public string? GroupId { get; init; }
 
         [JsonPropertyName("user_id")] public string? UserId { get; init; }
 
-        public string? Error { get; init; } // NOSONAR S1144 S3459 - Set by JSON deserializer
+        public string? Error { get; init; }
     }
 }

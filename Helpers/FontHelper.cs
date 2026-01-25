@@ -32,20 +32,19 @@ public static class FontHelper
         /// <param name="strikethrough">Strikethrough (optional)</param>
         /// <param name="superscript">Superscript (optional)</param>
         /// <param name="subscript">Subscript (optional)</param>
-        public static void
-            ApplyFontSettings( // NOSONAR S107 - Font utility requires all font settings as optional parameters
-                Run run,
-                string? fontName = null,
-                string? fontNameAscii = null,
-                string? fontNameFarEast = null,
-                double? fontSize = null,
-                bool? bold = null,
-                bool? italic = null,
-                string? underline = null,
-                string? color = null,
-                bool? strikethrough = null,
-                bool? superscript = null,
-                bool? subscript = null)
+        public static void ApplyFontSettings(
+            Run run,
+            string? fontName = null,
+            string? fontNameAscii = null,
+            string? fontNameFarEast = null,
+            double? fontSize = null,
+            bool? bold = null,
+            bool? italic = null,
+            string? underline = null,
+            string? color = null,
+            bool? strikethrough = null,
+            bool? superscript = null,
+            bool? subscript = null)
         {
             ApplyFontNames(run.Font, fontName, fontNameAscii, fontNameFarEast);
             ApplyBasicFontSettings(run.Font, fontSize, bold, italic, underline, color, strikethrough);
@@ -67,20 +66,19 @@ public static class FontHelper
         /// <param name="strikethrough">Strikethrough (optional)</param>
         /// <param name="superscript">Superscript (optional)</param>
         /// <param name="subscript">Subscript (optional)</param>
-        public static void
-            ApplyFontSettings( // NOSONAR S107 - Font utility requires all font settings as optional parameters
-                DocumentBuilder builder,
-                string? fontName = null,
-                string? fontNameAscii = null,
-                string? fontNameFarEast = null,
-                double? fontSize = null,
-                bool? bold = null,
-                bool? italic = null,
-                string? underline = null,
-                string? color = null,
-                bool? strikethrough = null,
-                bool? superscript = null,
-                bool? subscript = null)
+        public static void ApplyFontSettings(
+            DocumentBuilder builder,
+            string? fontName = null,
+            string? fontNameAscii = null,
+            string? fontNameFarEast = null,
+            double? fontSize = null,
+            bool? bold = null,
+            bool? italic = null,
+            string? underline = null,
+            string? color = null,
+            bool? strikethrough = null,
+            bool? superscript = null,
+            bool? subscript = null)
         {
             ApplyFontNames(builder.Font, fontName, fontNameAscii, fontNameFarEast);
             ApplyBasicFontSettings(builder.Font, fontSize, bold, italic, underline, color, strikethrough);
