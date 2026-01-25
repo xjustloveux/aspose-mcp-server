@@ -111,9 +111,9 @@ jobs:
       if: env.SONAR_TOKEN != ''
       shell: pwsh
       run: |
-        # Settings are loaded from sonar-project.properties
-        # Only token is passed via command line (secret)
-        .\.sonar\scanner\dotnet-sonarscanner begin /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+        # Project key and organization must be passed via command line
+        # Other settings are loaded from sonar-project.properties
+        .\.sonar\scanner\dotnet-sonarscanner begin /k:"xjustloveux_aspose-mcp-server" /o:"xjustloveux" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
 
     - name: Build Solution
       run: dotnet build AsposeMcpServer.sln --configuration Release --no-restore
