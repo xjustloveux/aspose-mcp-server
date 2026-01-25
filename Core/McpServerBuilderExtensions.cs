@@ -126,16 +126,8 @@ public static class McpServerBuilderExtensions
                     !filterService.IsToolEnabled(toolAttr.Name))
                     continue;
 
-                // Create tool with custom options
-                var options = new McpServerToolCreateOptions
-                {
-                    Services = serviceProvider
-                };
-
-                // Check for OutputSchemaAttribute
+                var options = new McpServerToolCreateOptions { Services = serviceProvider };
                 var schemaAttr = method.GetCustomAttribute<OutputSchemaAttribute>();
-
-                // Create tool instance factory
                 var tool = McpServerTool.Create(
                     method,
                     context => ActivatorUtilities.CreateInstance(context.Services!, toolType),
@@ -169,7 +161,6 @@ public static class McpServerBuilderExtensions
                             $"[WARN] Failed to create OutputSchema for {toolAttr.Name} from {schemaAttr.SchemaType.Name}: {ex.Message}");
                     }
 
-                // Register the tool
                 builder.Services.AddSingleton(tool);
             }
         }

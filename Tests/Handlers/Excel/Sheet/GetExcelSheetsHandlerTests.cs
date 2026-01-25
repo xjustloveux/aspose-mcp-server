@@ -1,3 +1,5 @@
+using Aspose.Cells;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Handlers.Excel.Sheet;
 using AsposeMcpServer.Results.Excel.Sheet;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -50,6 +52,43 @@ public class GetExcelSheetsHandlerTests : ExcelHandlerTestBase
         var result = Assert.IsType<GetSheetsResult>(res);
 
         Assert.NotNull(result.WorkbookName);
+    }
+
+    [Fact]
+    public void Execute_WithSourcePath_ReturnsFileName()
+    {
+        var workbook = CreateEmptyWorkbook();
+        var context = CreateContextWithSourcePath(workbook, "/path/to/test_workbook.xlsx");
+        var parameters = CreateEmptyParameters();
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<GetSheetsResult>(res);
+
+        Assert.Equal("test_workbook.xlsx", result.WorkbookName);
+    }
+
+    [Fact]
+    public void Execute_WithoutSourcePath_ReturnsSession()
+    {
+        var workbook = CreateEmptyWorkbook();
+        var context = CreateContext(workbook);
+        var parameters = CreateEmptyParameters();
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<GetSheetsResult>(res);
+
+        Assert.Equal("session", result.WorkbookName);
+    }
+
+    private static OperationContext<Workbook> CreateContextWithSourcePath(Workbook workbook, string sourcePath)
+    {
+        return new OperationContext<Workbook>
+        {
+            Document = workbook,
+            SourcePath = sourcePath
+        };
     }
 
     #endregion

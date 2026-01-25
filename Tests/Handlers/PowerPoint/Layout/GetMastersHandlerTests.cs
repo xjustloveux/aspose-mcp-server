@@ -37,6 +37,22 @@ public class GetMastersHandlerTests : PptHandlerTestBase
     }
 
     [Fact]
+    public void Execute_ReturnsCorrectMasterCount()
+    {
+        var pres = CreateEmptyPresentation();
+        var expectedCount = pres.Masters.Count;
+        var context = CreateContext(pres);
+        var parameters = CreateEmptyParameters();
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<GetMastersResult>(res);
+
+        Assert.Equal(expectedCount, result.Count);
+        Assert.Equal(expectedCount, result.Masters.Count);
+    }
+
+    [Fact]
     public void Execute_ReturnsResultType()
     {
         var pres = CreateEmptyPresentation();

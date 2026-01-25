@@ -27,21 +27,17 @@ public class AuthMiddlewareTests : IDisposable
     [Fact]
     public async Task Middleware_PublicEndpoint_NoAuthRequired()
     {
-        // Arrange
         var config = CreateEnabledConfig();
         _middleware = CreateMiddleware(config);
-
         var context = CreateHttpContext("/health");
         var nextCalled = false;
 
-        // Act
         await _middleware.InvokeAsync(context, _ =>
         {
             nextCalled = true;
             return Task.CompletedTask;
         });
 
-        // Assert
         Assert.True(nextCalled);
     }
 
@@ -51,22 +47,17 @@ public class AuthMiddlewareTests : IDisposable
     [Fact]
     public async Task Middleware_ProtectedEndpoint_RequiresAuth()
     {
-        // Arrange
         var config = CreateEnabledConfig();
         _middleware = CreateMiddleware(config);
-
         var context = CreateHttpContext("/mcp");
-        // No API key set
         var nextCalled = false;
 
-        // Act
         await _middleware.InvokeAsync(context, _ =>
         {
             nextCalled = true;
             return Task.CompletedTask;
         });
 
-        // Assert
         Assert.False(nextCalled);
         Assert.Equal(StatusCodes.Status401Unauthorized, context.Response.StatusCode);
     }
@@ -77,7 +68,6 @@ public class AuthMiddlewareTests : IDisposable
     [Fact]
     public async Task Middleware_GatewayMode_TrustsRequest()
     {
-        // Arrange
         var config = new ApiKeyConfig
         {
             Enabled = true,
@@ -86,20 +76,17 @@ public class AuthMiddlewareTests : IDisposable
             GroupIdentifierHeader = "X-Group-Id"
         };
         _middleware = CreateMiddleware(config);
-
         var context = CreateHttpContext("/mcp");
-        context.Request.Headers["X-API-Key"] = "any-key"; // Gateway mode trusts the key
+        context.Request.Headers["X-API-Key"] = "any-key";
         context.Request.Headers["X-Group-Id"] = "gateway-group";
         var nextCalled = false;
 
-        // Act
         await _middleware.InvokeAsync(context, _ =>
         {
             nextCalled = true;
             return Task.CompletedTask;
         });
 
-        // Assert
         Assert.True(nextCalled);
         Assert.Equal("gateway-group", context.Items["GroupId"]);
     }
@@ -110,28 +97,24 @@ public class AuthMiddlewareTests : IDisposable
     [Fact]
     public async Task Middleware_LocalModeNoKeys_ReturnsError()
     {
-        // Arrange
         var config = new ApiKeyConfig
         {
             Enabled = true,
             Mode = ApiKeyMode.Local,
             HeaderName = "X-API-Key",
-            Keys = null // No keys configured
+            Keys = null
         };
         _middleware = CreateMiddleware(config);
-
         var context = CreateHttpContext("/mcp");
         context.Request.Headers["X-API-Key"] = "some-key";
         var nextCalled = false;
 
-        // Act
         await _middleware.InvokeAsync(context, _ =>
         {
             nextCalled = true;
             return Task.CompletedTask;
         });
 
-        // Assert
         Assert.False(nextCalled);
         Assert.Equal(StatusCodes.Status401Unauthorized, context.Response.StatusCode);
     }

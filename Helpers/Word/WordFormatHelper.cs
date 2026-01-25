@@ -62,7 +62,6 @@ public static class WordFormatHelper
         if (color is { IsEmpty: true } or { R: 0, G: 0, B: 0, A: 0 })
             return "Auto/Black";
 
-        // Check for known colors using pattern matching
         if (color is { R: 255, G: 0, B: 0 }) return "Red";
         if (color is { R: 0, G: 255, B: 0 }) return "Green";
         if (color is { R: 0, G: 0, B: 255 }) return "Blue";

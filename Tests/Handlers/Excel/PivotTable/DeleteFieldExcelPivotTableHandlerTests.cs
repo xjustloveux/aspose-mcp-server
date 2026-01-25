@@ -179,6 +179,99 @@ public class DeleteFieldExcelPivotTableHandlerTests : ExcelHandlerTestBase
 
     #endregion
 
+    #region Protected Property Tests
+
+    [Fact]
+    public void OperationVerb_Returns_Remove()
+    {
+        var handler = new TestableDeleteFieldHandler();
+        Assert.Equal("remove", handler.GetOperationVerb());
+    }
+
+    [Fact]
+    public void OperationVerbPast_Returns_Removed()
+    {
+        var handler = new TestableDeleteFieldHandler();
+        Assert.Equal("removed", handler.GetOperationVerbPast());
+    }
+
+    [Fact]
+    public void GetPreposition_Returns_From()
+    {
+        var handler = new TestableDeleteFieldHandler();
+        Assert.Equal("from", handler.GetPrepositionValue());
+    }
+
+    private sealed class TestableDeleteFieldHandler : DeleteFieldExcelPivotTableHandler
+    {
+        public string GetOperationVerb()
+        {
+            return OperationVerb;
+        }
+
+        public string GetOperationVerbPast()
+        {
+            return OperationVerbPast;
+        }
+
+        public string GetPrepositionValue()
+        {
+            return GetPreposition();
+        }
+    }
+
+    #endregion
+
+    #region Page Field Tests
+
+    [Fact]
+    public void Execute_DeletesPageField()
+    {
+        var workbook = CreateWorkbookWithPivotTableAndPageField();
+        var context = CreateContext(workbook);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "pivotTableIndex", 0 },
+            { "fieldName", "Region" },
+            { "fieldType", "page" }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("removed", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("page", result.Message, StringComparison.OrdinalIgnoreCase);
+        AssertModified(context);
+    }
+
+    private static Workbook CreateWorkbookWithPivotTableAndPageField()
+    {
+        var workbook = new Workbook();
+        var worksheet = workbook.Worksheets[0];
+        worksheet.Cells["A1"].PutValue("Region");
+        worksheet.Cells["B1"].PutValue("Product");
+        worksheet.Cells["C1"].PutValue("Amount");
+        worksheet.Cells["A2"].PutValue("North");
+        worksheet.Cells["B2"].PutValue("Widget");
+        worksheet.Cells["C2"].PutValue(100);
+        worksheet.Cells["A3"].PutValue("South");
+        worksheet.Cells["B3"].PutValue("Gadget");
+        worksheet.Cells["C3"].PutValue(200);
+
+        var pivotTables = worksheet.PivotTables;
+        var idx = pivotTables.Add($"={worksheet.Name}!A1:C3", "E1", "TestPivot");
+        var pivotTable = pivotTables[idx];
+        pivotTable.AddFieldToArea(PivotFieldType.Page, 0);
+        pivotTable.AddFieldToArea(PivotFieldType.Row, 1);
+        pivotTable.AddFieldToArea(PivotFieldType.Data, 2);
+        pivotTable.CalculateData();
+
+        return workbook;
+    }
+
+    #endregion
+
     #region Error Handling
 
     [Fact]

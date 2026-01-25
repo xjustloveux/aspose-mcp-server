@@ -481,10 +481,14 @@ public sealed class JwtAuthenticationMiddleware : IMiddleware, IDisposable
     /// <summary>
     ///     Response from OAuth 2.0 introspection endpoint (RFC 7662)
     /// </summary>
+    /// <summary>
+    ///     Response from OAuth 2.0 introspection endpoint (RFC 7662).
+    ///     Properties are set by System.Text.Json deserializer.
+    /// </summary>
     private sealed class IntrospectionResponse
     {
-        public bool Active { get; init; }
-        public string? Sub { get; init; }
+        public bool Active { get; init; } // NOSONAR S1144 S3459 - Set by JSON deserializer
+        public string? Sub { get; init; } // NOSONAR S1144 S3459 - Set by JSON deserializer
 
         [JsonPropertyName("client_id")] public string? ClientId { get; init; }
 
@@ -492,16 +496,17 @@ public sealed class JwtAuthenticationMiddleware : IMiddleware, IDisposable
     }
 
     /// <summary>
-    ///     Response from custom validation endpoint
+    ///     Response from custom validation endpoint.
+    ///     Properties are set by System.Text.Json deserializer.
     /// </summary>
     private sealed class CustomValidationResponse
     {
-        public bool Valid { get; init; }
+        public bool Valid { get; init; } // NOSONAR S1144 S3459 - Set by JSON deserializer
 
         [JsonPropertyName("group_id")] public string? GroupId { get; init; }
 
         [JsonPropertyName("user_id")] public string? UserId { get; init; }
 
-        public string? Error { get; init; }
+        public string? Error { get; init; } // NOSONAR S1144 S3459 - Set by JSON deserializer
     }
 }

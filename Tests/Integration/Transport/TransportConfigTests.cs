@@ -14,10 +14,8 @@ public class TransportConfigTests
     [Fact]
     public void Config_Default_HasExpectedValues()
     {
-        // Act
         var config = new TransportConfig();
 
-        // Assert
         Assert.Equal(TransportMode.Stdio, config.Mode);
         Assert.Equal(3000, config.Port);
         Assert.Equal("localhost", config.Host);
@@ -29,10 +27,8 @@ public class TransportConfigTests
     [Fact]
     public void Config_StdioArg_SetsStdioMode()
     {
-        // Act
         var config = TransportConfig.LoadFromArgs(["--stdio"]);
 
-        // Assert
         Assert.Equal(TransportMode.Stdio, config.Mode);
     }
 
@@ -42,10 +38,8 @@ public class TransportConfigTests
     [Fact]
     public void Config_SseArg_SetsSseMode()
     {
-        // Act
         var config = TransportConfig.LoadFromArgs(["--sse"]);
 
-        // Assert
         Assert.Equal(TransportMode.Sse, config.Mode);
     }
 
@@ -57,10 +51,8 @@ public class TransportConfigTests
     [InlineData("--websocket")]
     public void Config_WebSocketArg_SetsWebSocketMode(string arg)
     {
-        // Act
         var config = TransportConfig.LoadFromArgs([arg]);
 
-        // Assert
         Assert.Equal(TransportMode.WebSocket, config.Mode);
     }
 
@@ -73,10 +65,8 @@ public class TransportConfigTests
     [InlineData(new[] { "--port=8082" }, 8082)]
     public void Config_PortArg_SetsPort(string[] args, int expectedPort)
     {
-        // Act
         var config = TransportConfig.LoadFromArgs(args);
 
-        // Assert
         Assert.Equal(expectedPort, config.Port);
     }
 
@@ -89,10 +79,8 @@ public class TransportConfigTests
     [InlineData(new[] { "--host=192.168.1.1" }, "192.168.1.1")]
     public void Config_HostArg_SetsHost(string[] args, string expectedHost)
     {
-        // Act
         var config = TransportConfig.LoadFromArgs(args);
 
-        // Assert
         Assert.Equal(expectedHost, config.Host);
     }
 
@@ -106,13 +94,10 @@ public class TransportConfigTests
     [InlineData(100000)]
     public void Config_InvalidPort_ResetsToDefault(int invalidPort)
     {
-        // Arrange
         var config = new TransportConfig { Port = invalidPort };
 
-        // Act
         config.Validate();
 
-        // Assert
         Assert.Equal(3000, config.Port);
     }
 
@@ -125,13 +110,10 @@ public class TransportConfigTests
     [InlineData("invalid-host-name")]
     public void Config_InvalidHost_ResetsToDefault(string invalidHost)
     {
-        // Arrange
         var config = new TransportConfig { Host = invalidHost };
 
-        // Act
         config.Validate();
 
-        // Assert
         Assert.Equal("localhost", config.Host);
     }
 
@@ -146,13 +128,10 @@ public class TransportConfigTests
     [InlineData("192.168.1.100")]
     public void Config_ValidHost_RemainsUnchanged(string validHost)
     {
-        // Arrange
         var config = new TransportConfig { Host = validHost };
 
-        // Act
         config.Validate();
 
-        // Assert
         Assert.Equal(validHost, config.Host);
     }
 
@@ -162,10 +141,8 @@ public class TransportConfigTests
     [Fact]
     public void Config_MultipleArgs_AllApplied()
     {
-        // Act
         var config = TransportConfig.LoadFromArgs(["--sse", "--port", "9000", "--host", "0.0.0.0"]);
 
-        // Assert
         Assert.Equal(TransportMode.Sse, config.Mode);
         Assert.Equal(9000, config.Port);
         Assert.Equal("0.0.0.0", config.Host);

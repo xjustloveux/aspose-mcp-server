@@ -69,7 +69,7 @@ public class DeleteFieldExcelPivotTableHandler : ExcelPivotTableFieldHandlerBase
             return new SuccessResult
             {
                 Message =
-                    $"Field '{parameters.FieldName}' removed from {parameters.FieldType} area of pivot table #{parameters.PivotTableIndex}."
+                    $"Field '{parameters.FieldName}' {OperationVerbPast} from {parameters.FieldType} area of pivot table #{parameters.PivotTableIndex}."
             };
         }
         catch (Exception ex)

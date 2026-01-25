@@ -260,6 +260,49 @@ public class AddFieldExcelPivotTableHandlerTests : ExcelHandlerTestBase
 
     #endregion
 
+    #region Protected Property Tests
+
+    [Fact]
+    public void OperationVerb_Returns_Add()
+    {
+        var handler = new TestableAddFieldHandler();
+        Assert.Equal("add", handler.GetOperationVerb());
+    }
+
+    [Fact]
+    public void OperationVerbPast_Returns_Added()
+    {
+        var handler = new TestableAddFieldHandler();
+        Assert.Equal("added", handler.GetOperationVerbPast());
+    }
+
+    [Fact]
+    public void GetPreposition_Returns_To()
+    {
+        var handler = new TestableAddFieldHandler();
+        Assert.Equal("to", handler.GetPrepositionValue());
+    }
+
+    private sealed class TestableAddFieldHandler : AddFieldExcelPivotTableHandler
+    {
+        public string GetOperationVerb()
+        {
+            return OperationVerb;
+        }
+
+        public string GetOperationVerbPast()
+        {
+            return OperationVerbPast;
+        }
+
+        public string GetPrepositionValue()
+        {
+            return GetPreposition();
+        }
+    }
+
+    #endregion
+
     #region Field Type Tests
 
     [Fact]

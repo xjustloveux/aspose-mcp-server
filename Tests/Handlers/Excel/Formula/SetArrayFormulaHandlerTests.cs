@@ -151,6 +151,36 @@ public class SetArrayFormulaHandlerTests : ExcelHandlerTestBase
 
     #endregion
 
+    #region Range Size Tests
+
+    [Fact]
+    public void Execute_WithLargeRange_SetsFormula()
+    {
+        var workbook = CreateWorkbookWithData(new object[,]
+        {
+            { 1, 2 },
+            { 3, 4 },
+            { 5, 6 },
+            { 7, 8 },
+            { 9, 10 }
+        });
+        var context = CreateContext(workbook);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "range", "C1:D5" },
+            { "formula", "=A1:B5*2" }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("C1:D5", result.Message);
+        AssertModified(context);
+    }
+
+    #endregion
+
     #region Basic Set Array Operations
 
     [Fact]
@@ -228,6 +258,21 @@ public class SetArrayFormulaHandlerTests : ExcelHandlerTestBase
 
         var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
         Assert.Contains("formula", ex.Message);
+    }
+
+    [Fact]
+    public void Execute_WithInvalidSheetIndex_ThrowsArgumentException()
+    {
+        var workbook = CreateEmptyWorkbook();
+        var context = CreateContext(workbook);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "range", "A1:A3" },
+            { "formula", "=B1:B3*2" },
+            { "sheetIndex", 99 }
+        });
+
+        Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
     #endregion

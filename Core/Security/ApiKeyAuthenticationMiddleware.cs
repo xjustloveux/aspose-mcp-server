@@ -379,8 +379,7 @@ public sealed class ApiKeyAuthenticationMiddleware : IMiddleware, IDisposable
     /// </summary>
     private sealed class IntrospectionResponse
     {
-        // NOSONAR S1144 S3459 - Properties are set by JSON deserializer
-        public bool Active { get; init; }
+        public bool Active { get; init; } // NOSONAR S1144 S3459 - Set by JSON deserializer
 
         [JsonPropertyName("group_id")] public string? GroupId { get; init; }
     }
@@ -391,11 +390,10 @@ public sealed class ApiKeyAuthenticationMiddleware : IMiddleware, IDisposable
     /// </summary>
     private sealed class CustomValidationResponse
     {
-        // NOSONAR S1144 S3459 - Properties are set by JSON deserializer
-        public bool Valid { get; init; }
+        public bool Valid { get; init; } // NOSONAR S1144 S3459 - Set by JSON deserializer
 
         [JsonPropertyName("group_id")] public string? GroupId { get; init; }
 
-        public string? Error { get; init; }
+        public string? Error { get; init; } // NOSONAR S1144 S3459 - Set by JSON deserializer
     }
 }

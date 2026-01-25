@@ -21,6 +21,7 @@ public abstract class ExcelPivotTableFieldHandlerBase : OperationHandlerBase<Wor
     /// <summary>
     ///     Gets the operation verb in past tense for messages (e.g., "added", "removed").
     /// </summary>
+    // ReSharper disable once UnusedMemberInSuper.Global - Template method pattern: enforces derived classes to provide this value
     protected abstract string OperationVerbPast { get; }
 
     /// <summary>

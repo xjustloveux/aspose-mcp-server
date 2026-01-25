@@ -17,13 +17,9 @@ public class WebSocketTransportTests
     [Fact]
     public void WebSocket_Handler_CanBeCreated()
     {
-        // Arrange
         var loggerFactory = Mock.Of<ILoggerFactory>();
-
-        // Act
         var handler = new WebSocketConnectionHandler("dotnet", "--all", loggerFactory);
 
-        // Assert
         Assert.NotNull(handler);
     }
 
@@ -33,10 +29,8 @@ public class WebSocketTransportTests
     [Fact]
     public void WebSocket_Handler_AcceptsNullLogger()
     {
-        // Act
         var handler = new WebSocketConnectionHandler("dotnet", "--all");
 
-        // Assert
         Assert.NotNull(handler);
     }
 
@@ -46,15 +40,15 @@ public class WebSocketTransportTests
     [Fact]
     public async Task WebSocket_ClosedConnection_HandledGracefully()
     {
-        // Arrange
         var handler = new WebSocketConnectionHandler("dotnet", "--all");
         var mockWebSocket = new Mock<WebSocket>();
         mockWebSocket.Setup(ws => ws.State).Returns(WebSocketState.Closed);
-
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
 
-        // Act & Assert - should not throw
-        await handler.HandleConnectionAsync(mockWebSocket.Object, cts.Token);
+        var exception =
+            await Record.ExceptionAsync(() => handler.HandleConnectionAsync(mockWebSocket.Object, cts.Token));
+
+        Assert.Null(exception);
     }
 
     /// <summary>
@@ -63,17 +57,12 @@ public class WebSocketTransportTests
     [Fact]
     public async Task WebSocket_Cancellation_StopsProcessing()
     {
-        // Arrange
         var handler = new WebSocketConnectionHandler("dotnet", "--all");
         var mockWebSocket = new Mock<WebSocket>();
         mockWebSocket.Setup(ws => ws.State).Returns(WebSocketState.Open);
-
         using var cts = new CancellationTokenSource();
-
-        // Cancel immediately
         await cts.CancelAsync();
 
-        // Act & Assert - should complete quickly due to cancellation
         var task = handler.HandleConnectionAsync(mockWebSocket.Object, cts.Token);
         var completedInTime = await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(5))) == task;
 
@@ -86,18 +75,17 @@ public class WebSocketTransportTests
     [Fact]
     public async Task WebSocket_WithIdentity_AcceptsGroupAndUser()
     {
-        // Arrange
         var handler = new WebSocketConnectionHandler("dotnet", "--all");
         var mockWebSocket = new Mock<WebSocket>();
         mockWebSocket.Setup(ws => ws.State).Returns(WebSocketState.Closed);
-
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
 
-        // Act & Assert - should accept identity parameters
-        await handler.HandleConnectionAsync(
+        var exception = await Record.ExceptionAsync(() => handler.HandleConnectionAsync(
             mockWebSocket.Object,
             cts.Token,
             "test-group",
-            "test-user");
+            "test-user"));
+
+        Assert.Null(exception);
     }
 }

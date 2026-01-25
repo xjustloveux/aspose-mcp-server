@@ -48,19 +48,16 @@ public class ApiKeyAuthTests : IDisposable
     [Fact]
     public async Task ApiKey_ValidKey_Authenticated()
     {
-        // Arrange
         var context = CreateHttpContext("/mcp");
         context.Request.Headers["X-API-Key"] = "valid-api-key-1";
         var nextCalled = false;
 
-        // Act
         await _middleware.InvokeAsync(context, _ =>
         {
             nextCalled = true;
             return Task.CompletedTask;
         });
 
-        // Assert
         Assert.True(nextCalled);
         Assert.Equal("group-a", context.Items["GroupId"]);
     }
@@ -71,19 +68,16 @@ public class ApiKeyAuthTests : IDisposable
     [Fact]
     public async Task ApiKey_InvalidKey_Rejected()
     {
-        // Arrange
         var context = CreateHttpContext("/mcp");
         context.Request.Headers["X-API-Key"] = "invalid-api-key";
         var nextCalled = false;
 
-        // Act
         await _middleware.InvokeAsync(context, _ =>
         {
             nextCalled = true;
             return Task.CompletedTask;
         });
 
-        // Assert
         Assert.False(nextCalled);
         Assert.Equal(StatusCodes.Status401Unauthorized, context.Response.StatusCode);
     }
@@ -94,19 +88,15 @@ public class ApiKeyAuthTests : IDisposable
     [Fact]
     public async Task ApiKey_MissingKey_Rejected()
     {
-        // Arrange
         var context = CreateHttpContext("/mcp");
-        // No API key header set
         var nextCalled = false;
 
-        // Act
         await _middleware.InvokeAsync(context, _ =>
         {
             nextCalled = true;
             return Task.CompletedTask;
         });
 
-        // Assert
         Assert.False(nextCalled);
         Assert.Equal(StatusCodes.Status401Unauthorized, context.Response.StatusCode);
     }
@@ -117,24 +107,14 @@ public class ApiKeyAuthTests : IDisposable
     [Fact]
     public async Task ApiKey_DifferentKeys_DifferentGroups()
     {
-        // Arrange - Key 1
         var context1 = CreateHttpContext("/mcp");
         context1.Request.Headers["X-API-Key"] = "valid-api-key-1";
-
-        // Act
         await _middleware.InvokeAsync(context1, _ => Task.CompletedTask);
-
-        // Assert
         Assert.Equal("group-a", context1.Items["GroupId"]);
 
-        // Arrange - Key 2
         var context2 = CreateHttpContext("/mcp");
         context2.Request.Headers["X-API-Key"] = "valid-api-key-2";
-
-        // Act
         await _middleware.InvokeAsync(context2, _ => Task.CompletedTask);
-
-        // Assert
         Assert.Equal("group-b", context2.Items["GroupId"]);
     }
 
@@ -147,19 +127,15 @@ public class ApiKeyAuthTests : IDisposable
     [InlineData("/metrics")]
     public async Task ApiKey_HealthEndpoints_NoAuthRequired(string path)
     {
-        // Arrange
         var context = CreateHttpContext(path);
-        // No API key header set
         var nextCalled = false;
 
-        // Act
         await _middleware.InvokeAsync(context, _ =>
         {
             nextCalled = true;
             return Task.CompletedTask;
         });
 
-        // Assert
         Assert.True(nextCalled);
     }
 

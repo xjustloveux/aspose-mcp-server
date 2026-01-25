@@ -59,7 +59,7 @@ public class AddFieldExcelPivotTableHandler : ExcelPivotTableFieldHandlerBase
             return new SuccessResult
             {
                 Message =
-                    $"Field '{parameters.FieldName}' added as {parameters.FieldType} field to pivot table #{parameters.PivotTableIndex}."
+                    $"Field '{parameters.FieldName}' {OperationVerbPast} as {parameters.FieldType} field to pivot table #{parameters.PivotTableIndex}."
             };
         }
         catch (Exception ex)
