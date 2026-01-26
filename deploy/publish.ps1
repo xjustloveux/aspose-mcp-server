@@ -72,17 +72,21 @@ function Build-Platform {
         # Clean up unnecessary files for standalone deployment
         $unnecessaryFiles = @(
             "*.pdb",
-            "*.staticwebassets.endpoints.json",
-            "web.config",
-            "config_example.json"
+            "*.lic",
+            "*.json",
+            "web.config"
         )
         foreach ($pattern in $unnecessaryFiles) {
             Get-ChildItem -Path $outputPath -Filter $pattern -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
         }
-        # Remove deploy folder if accidentally included
-        $deployFolder = Join-Path $outputPath "deploy"
-        if (Test-Path $deployFolder) {
-            Remove-Item -Path $deployFolder -Recurse -Force -ErrorAction SilentlyContinue
+
+        # Remove unnecessary directories
+        $unnecessaryDirs = @("deploy", "Tests", "coverage-reports", "sonar-reports", ".claude")
+        foreach ($dir in $unnecessaryDirs) {
+            $dirPath = Join-Path $outputPath $dir
+            if (Test-Path $dirPath) {
+                Remove-Item -Path $dirPath -Recurse -Force -ErrorAction SilentlyContinue
+            }
         }
         Write-Host "  ✓ Cleaned up unnecessary files" -ForegroundColor Green
 
@@ -146,6 +150,21 @@ if ($IIS) {
     if ($LASTEXITCODE -eq 0) {
         Write-Host "  ✓ Build successful: $outputPath" -ForegroundColor Green
 
+        # Clean up unnecessary files (keep web.config for IIS)
+        $unnecessaryFiles = @("*.pdb", "*.lic")
+        foreach ($pattern in $unnecessaryFiles) {
+            Get-ChildItem -Path $outputPath -Filter $pattern -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+        }
+
+        # Remove unnecessary directories
+        $unnecessaryDirs = @("deploy", "Tests", "coverage-reports", "sonar-reports", ".claude")
+        foreach ($dir in $unnecessaryDirs) {
+            $dirPath = Join-Path $outputPath $dir
+            if (Test-Path $dirPath) {
+                Remove-Item -Path $dirPath -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+
         # Copy web.config (relative to this script in deploy/)
         $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
         $webConfigSource = Join-Path $scriptDir "web.config"
@@ -155,6 +174,7 @@ if ($IIS) {
         } else {
             Write-Host "  ! web.config not found at $webConfigSource" -ForegroundColor Yellow
         }
+        Write-Host "  ✓ Cleaned up unnecessary files" -ForegroundColor Green
 
         # Get directory size
         $size = (Get-ChildItem -Path $outputPath -Recurse | Measure-Object -Property Length -Sum).Sum / 1MB

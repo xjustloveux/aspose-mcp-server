@@ -118,10 +118,14 @@ build_platform() {
 
         # Clean up unnecessary files for standalone deployment
         rm -f "$output_path"/*.pdb 2>/dev/null || true
-        rm -f "$output_path"/*.staticwebassets.endpoints.json 2>/dev/null || true
+        rm -f "$output_path"/*.lic 2>/dev/null || true
+        rm -f "$output_path"/*.json 2>/dev/null || true
         rm -f "$output_path"/web.config 2>/dev/null || true
-        rm -f "$output_path"/config_example.json 2>/dev/null || true
         rm -rf "$output_path"/deploy 2>/dev/null || true
+        rm -rf "$output_path"/Tests 2>/dev/null || true
+        rm -rf "$output_path"/coverage-reports 2>/dev/null || true
+        rm -rf "$output_path"/sonar-reports 2>/dev/null || true
+        rm -rf "$output_path"/.claude 2>/dev/null || true
         echo -e "  ${GREEN}✓ Cleaned up unnecessary files${NC}"
 
         # Make executable (for Linux/macOS)

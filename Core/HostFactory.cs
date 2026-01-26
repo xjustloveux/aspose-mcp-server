@@ -70,7 +70,7 @@ internal static class HostFactory
 
         builder.Services.AddMcpServer()
             .WithStdioServerTransport()
-            .WithFilteredTools(config, sessionConfig);
+            .WithFilteredToolsAndSchemas(config, sessionConfig);
 
         return builder.Build();
     }
@@ -96,7 +96,7 @@ internal static class HostFactory
         ServerConfig config)
     {
         var builder = CreateWebAppBuilder(args, transportConfig, sessionConfig, authConfig, trackingConfig);
-        builder.Services.AddMcpServer().WithFilteredTools(config, sessionConfig);
+        builder.Services.AddMcpServer().WithFilteredToolsAndSchemas(config, sessionConfig);
         var app = builder.Build();
 
         LogServerStartup($"SSE server listening on http://{transportConfig.Host}:{transportConfig.Port}");
@@ -127,9 +127,8 @@ internal static class HostFactory
         OriginValidationConfig originConfig,
         ServerConfig config)
     {
-        _ = config;
-
         var builder = CreateWebAppBuilder(args, transportConfig, sessionConfig, authConfig, trackingConfig);
+        builder.Services.AddMcpServer().WithFilteredToolsAndSchemas(config, sessionConfig);
         var app = builder.Build();
 
         LogServerStartup($"WebSocket server listening on ws://{transportConfig.Host}:{transportConfig.Port}");

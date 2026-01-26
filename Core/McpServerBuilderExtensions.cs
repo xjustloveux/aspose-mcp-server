@@ -82,29 +82,23 @@ public static class McpServerBuilderExtensions
     /// <returns>The service collection for method chaining.</returns>
     public static IServiceCollection ApplyCustomOutputSchemas(this IServiceCollection services)
     {
-        // This method would be called to post-process tools
-        // However, accessing ToolCollection requires the McpServer to be built
-        // A better approach is to use a hosted service or middleware
-
-        // For now, we'll use a different approach: configure tools during registration
-        // See WithFilteredToolsAndSchemas method below
         return services;
     }
 
     /// <summary>
     ///     Registers tools with custom OutputSchema support.
     ///     This method creates tools programmatically to allow schema customization.
+    ///     Uses deferred service resolution to avoid requiring IServiceProvider at configuration time.
     /// </summary>
     /// <param name="builder">The MCP server builder.</param>
     /// <param name="serverConfig">The server configuration for tool filtering.</param>
     /// <param name="sessionConfig">The session configuration for session tool filtering.</param>
-    /// <param name="serviceProvider">Service provider for dependency injection.</param>
     /// <returns>The builder for method chaining.</returns>
+    // ReSharper disable once UnusedMethodReturnValue.Global - Fluent API design, return value is optional for chaining
     public static IMcpServerBuilder WithFilteredToolsAndSchemas(
         this IMcpServerBuilder builder,
         ServerConfig serverConfig,
-        SessionConfig sessionConfig,
-        IServiceProvider serviceProvider)
+        SessionConfig sessionConfig)
     {
         var filterService = new ToolFilterService(serverConfig, sessionConfig);
         var assembly = Assembly.GetExecutingAssembly();
@@ -126,17 +120,18 @@ public static class McpServerBuilderExtensions
                     !filterService.IsToolEnabled(toolAttr.Name))
                     continue;
 
-                var options = new McpServerToolCreateOptions { Services = serviceProvider };
-                var schemaAttr = method.GetCustomAttribute<OutputSchemaAttribute>();
+                var capturedToolType = toolType;
                 var tool = McpServerTool.Create(
                     method,
-                    context => ActivatorUtilities.CreateInstance(context.Services!, toolType),
-                    options);
+                    context => ActivatorUtilities.CreateInstance(context.Services!, capturedToolType));
 
-                // Apply OutputSchema from ToolHandlerMapping or OutputSchema attribute
+                if (!string.IsNullOrEmpty(tool.ProtocolTool.Description))
+                    tool.ProtocolTool.Description =
+                        tool.ProtocolTool.Description.Replace("\r\n", "\n").Replace("\r", "\n");
+
                 var mappingAttr = toolType.GetCustomAttribute<ToolHandlerMappingAttribute>();
                 if (mappingAttr != null)
-                    // Use ToolHandlerMapping to generate schema from Handler namespace
+                {
                     try
                     {
                         var schema = OutputSchemaGenerator.GenerateFromNamespace(mappingAttr.HandlerNamespace);
@@ -148,18 +143,24 @@ public static class McpServerBuilderExtensions
                         Console.Error.WriteLine(
                             $"[WARN] Failed to generate OutputSchema for {toolAttr.Name} from namespace {mappingAttr.HandlerNamespace}: {ex.Message}");
                     }
-                else if (schemaAttr != null)
-                    // Fallback to OutputSchema attribute for special tools
-                    try
-                    {
-                        var schema = OutputSchemaGenerator.GenerateForType(schemaAttr.SchemaType);
-                        tool.ProtocolTool.OutputSchema = schema;
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.Error.WriteLine(
-                            $"[WARN] Failed to create OutputSchema for {toolAttr.Name} from {schemaAttr.SchemaType.Name}: {ex.Message}");
-                    }
+                }
+                else
+                {
+                    var schemaAttr = method.GetCustomAttribute<OutputSchemaAttribute>();
+                    if (schemaAttr != null)
+                        try
+                        {
+                            var schema = OutputSchemaGenerator.GenerateForType(schemaAttr.SchemaType);
+                            tool.ProtocolTool.OutputSchema = schema;
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.Error.WriteLine(
+                                $"[WARN] Failed to create OutputSchema for {toolAttr.Name} from {schemaAttr.SchemaType.Name}: {ex.Message}");
+                        }
+                    else
+                        tool.ProtocolTool.OutputSchema = null;
+                }
 
                 builder.Services.AddSingleton(tool);
             }
