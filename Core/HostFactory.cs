@@ -96,7 +96,9 @@ internal static class HostFactory
         ServerConfig config)
     {
         var builder = CreateWebAppBuilder(args, transportConfig, sessionConfig, authConfig, trackingConfig);
-        builder.Services.AddMcpServer().WithFilteredToolsAndSchemas(config, sessionConfig);
+        builder.Services.AddMcpServer()
+            .WithHttpTransport()
+            .WithFilteredToolsAndSchemas(config, sessionConfig);
         var app = builder.Build();
 
         LogServerStartup($"SSE server listening on http://{transportConfig.Host}:{transportConfig.Port}");

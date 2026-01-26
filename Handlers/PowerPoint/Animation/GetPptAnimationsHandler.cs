@@ -55,8 +55,8 @@ public class GetPptAnimationsHandler : OperationHandlerBase<Presentation>
                 EffectType = effect.Type.ToString(),
                 EffectSubtype = effect.Subtype.ToString(),
                 TriggerType = effect.Timing.TriggerType.ToString(),
-                Duration = effect.Timing.Duration,
-                Delay = effect.Timing.TriggerDelayTime
+                Duration = SanitizeFloat(effect.Timing.Duration),
+                Delay = SanitizeFloat(effect.Timing.TriggerDelayTime)
             });
 
             index++;
@@ -83,6 +83,17 @@ public class GetPptAnimationsHandler : OperationHandlerBase<Presentation>
         return new GetAnimationsParameters(
             parameters.GetRequired<int>("slideIndex"),
             parameters.GetOptional<int?>("shapeIndex"));
+    }
+
+    /// <summary>
+    ///     Sanitizes a float value to ensure it can be serialized to JSON.
+    ///     Converts NaN and Infinity values to 0.
+    /// </summary>
+    /// <param name="value">The float value to sanitize.</param>
+    /// <returns>The sanitized float value.</returns>
+    private static float SanitizeFloat(float value)
+    {
+        return float.IsNaN(value) || float.IsInfinity(value) ? 0f : value;
     }
 
     /// <summary>
