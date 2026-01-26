@@ -1,4 +1,5 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
@@ -483,6 +484,7 @@ public sealed class JwtAuthenticationMiddleware : IMiddleware, IDisposable
     ///     Response from OAuth 2.0 introspection endpoint (RFC 7662).
     ///     Properties are set by System.Text.Json deserializer.
     /// </summary>
+    [SuppressMessage("SonarAnalyzer.CSharp", "S1144", Justification = "Properties are set by JSON deserializer")]
     private sealed class IntrospectionResponse
     {
         public bool Active { get; init; }
@@ -497,6 +499,7 @@ public sealed class JwtAuthenticationMiddleware : IMiddleware, IDisposable
     ///     Response from custom validation endpoint.
     ///     Properties are set by System.Text.Json deserializer.
     /// </summary>
+    [SuppressMessage("SonarAnalyzer.CSharp", "S1144", Justification = "Properties are set by JSON deserializer")]
     private sealed class CustomValidationResponse
     {
         public bool Valid { get; init; }

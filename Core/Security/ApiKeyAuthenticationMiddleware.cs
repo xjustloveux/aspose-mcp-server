@@ -1,4 +1,5 @@
-﻿using System.Net.Http.Headers;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -375,6 +376,7 @@ public sealed class ApiKeyAuthenticationMiddleware : IMiddleware, IDisposable
     ///     Response from introspection endpoint.
     ///     Properties are set by System.Text.Json deserializer.
     /// </summary>
+    [SuppressMessage("SonarAnalyzer.CSharp", "S1144", Justification = "Properties are set by JSON deserializer")]
     private sealed class IntrospectionResponse
     {
         public bool Active { get; init; }
@@ -386,6 +388,7 @@ public sealed class ApiKeyAuthenticationMiddleware : IMiddleware, IDisposable
     ///     Response from custom validation endpoint.
     ///     Properties are set by System.Text.Json deserializer.
     /// </summary>
+    [SuppressMessage("SonarAnalyzer.CSharp", "S1144", Justification = "Properties are set by JSON deserializer")]
     private sealed class CustomValidationResponse
     {
         public bool Valid { get; init; }

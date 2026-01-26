@@ -79,7 +79,7 @@ dotnet_diagnostic.S2368.severity = none
 dotnet_diagnostic.S107.severity = none
 
 # PptImageHelper.cs - SHA hash for image deduplication
-[Helpers/PptImageHelper.cs]
+[Helpers/PowerPoint/PptImageHelper.cs]
 # S4790: Make sure that hashing data is safe here
 dotnet_diagnostic.S4790.severity = none
 
