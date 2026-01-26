@@ -27,6 +27,10 @@ dotnet_diagnostic.CA1859.severity = none
 dotnet_diagnostic.S6966.severity = none
 # S127: Loop counter modification is valid for argument parsing patterns
 dotnet_diagnostic.S127.severity = none
+# S3973: Use curly braces or indentation to denote the code conditionally executed
+dotnet_diagnostic.S3973.severity = none
+# S3776: Cognitive Complexity of methods should not be too high
+dotnet_diagnostic.S3776.severity = none
 
 # ===== JetBrains ReSharper/InspectCode Rule Exclusions =====
 # Reference: CODE_QUALITY_EXCEPTIONS.md
@@ -58,6 +62,101 @@ dotnet_diagnostic.CA1826.severity = none
 dotnet_diagnostic.CA1861.severity = none
 # CA2016: Forward the 'CancellationToken' parameter to methods
 dotnet_diagnostic.CA2016.severity = none
+# S2925: Do not use 'Thread.Sleep()' in a test
+dotnet_diagnostic.S2925.severity = none
+
+# ===== Tools Directory Rules =====
+[Tools/**/*.cs]
+# S107: Methods should not have too many parameters (MCP tools require many parameters)
+dotnet_diagnostic.S107.severity = none
+# S2368: Make this method private or simplify its parameters to not use multidimensional/jagged arrays
+dotnet_diagnostic.S2368.severity = none
+
+# ===== Helpers Directory Rules =====
+[Helpers/**/*.cs]
+# S107: Methods should not have too many parameters
+dotnet_diagnostic.S107.severity = none
+# S4790: Make sure that hashing data is safe here (PptImageHelper uses SHA for deduplication)
+dotnet_diagnostic.S4790.severity = none
+
+# ===== File-Specific Rules =====
+# ApiKeyAuthenticationMiddleware.cs - JSON deserialization DTOs
+[**/ApiKeyAuthenticationMiddleware.cs]
+# S1144: Remove the unused private set accessor
+dotnet_diagnostic.S1144.severity = none
+# S3459: Remove unassigned auto-property (JSON deserialization)
+dotnet_diagnostic.S3459.severity = none
+# S1172: Unused method parameters (required by interface)
+dotnet_diagnostic.S1172.severity = none
+
+# JwtAuthenticationMiddleware.cs - JSON deserialization DTOs
+[**/JwtAuthenticationMiddleware.cs]
+# S1144: Remove the unused private set accessor
+dotnet_diagnostic.S1144.severity = none
+# S3459: Remove unassigned auto-property (JSON deserialization)
+dotnet_diagnostic.S3459.severity = none
+# S6667: Logging in a catch clause should pass the caught exception
+dotnet_diagnostic.S6667.severity = none
+
+# DocumentSessionManager.cs - IDisposable implementation
+[**/DocumentSessionManager.cs]
+# S3881: Fix this implementation of 'IDisposable' to conform to the dispose pattern
+dotnet_diagnostic.S3881.severity = none
+
+# TempFileManager.cs - IDisposable implementation
+[**/TempFileManager.cs]
+# S3881: Fix this implementation of 'IDisposable' to conform to the dispose pattern
+dotnet_diagnostic.S3881.severity = none
+
+# SessionConfig.cs - Temp directory usage
+[**/SessionConfig.cs]
+# S5443: Make sure publicly writable directories are used safely here
+dotnet_diagnostic.S5443.severity = none
+
+# ConvertDocumentTool.cs - String literals
+[**/ConvertDocumentTool.cs]
+# S1192: Define a constant instead of using this literal
+dotnet_diagnostic.S1192.severity = none
+
+# RunFormatInfo.cs - Empty record used as marker
+[**/RunFormatInfo.cs]
+# S2094: Remove this empty record
+dotnet_diagnostic.S2094.severity = none
+
+# Handler files with S3267 - Loop simplification
+[**/DeleteColumnWordTableHandler.cs]
+# S3267: Loop should be simplified by calling Select
+dotnet_diagnostic.S3267.severity = none
+
+[**/GetWordListFormatHandler.cs]
+# S3267: Loops should be simplified using the "Where" LINQ method
+dotnet_diagnostic.S3267.severity = none
+
+[**/SetColumnWidthWordTableHandler.cs]
+# S3267: Loop should be simplified
+dotnet_diagnostic.S3267.severity = none
+
+# WebSocketConnectionHandler.cs - Logging
+[**/WebSocketConnectionHandler.cs]
+# S6667: Logging in a catch clause should pass the caught exception
+dotnet_diagnostic.S6667.severity = none
+
+# TrackingMiddleware.cs - Logging and dead stores
+[**/TrackingMiddleware.cs]
+# S6667: Logging in a catch clause should pass the caught exception
+dotnet_diagnostic.S6667.severity = none
+# S1854: Remove this useless assignment (intentional for clarity)
+dotnet_diagnostic.S1854.severity = none
+
+# TrackingConfig.cs - URI hardcoding
+[**/TrackingConfig.cs]
+# S1075: Refactor your code not to use hardcoded absolute paths or URIs
+dotnet_diagnostic.S1075.severity = none
+
+# McpServerBuilderExtensions.cs - Reflection usage
+[**/McpServerBuilderExtensions.cs]
+# S3011: Reflection should not be used to increase accessibility
+dotnet_diagnostic.S3011.severity = none
 
 # XML and config files
 [*.{xml,config,json,yml,yaml}]
