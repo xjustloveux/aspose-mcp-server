@@ -72,16 +72,20 @@ dotnet_diagnostic.S107.severity = none
 # S2368: Make this method private or simplify its parameters to not use multidimensional/jagged arrays
 dotnet_diagnostic.S2368.severity = none
 
-# ===== Helpers Directory Rules =====
-[Helpers/**/*.cs]
+# ===== Helpers File-Specific Rules =====
+# FontHelper.cs - Many parameters for font configuration
+[Helpers/FontHelper.cs]
 # S107: Methods should not have too many parameters
 dotnet_diagnostic.S107.severity = none
-# S4790: Make sure that hashing data is safe here (PptImageHelper uses SHA for deduplication)
+
+# PptImageHelper.cs - SHA hash for image deduplication
+[Helpers/PptImageHelper.cs]
+# S4790: Make sure that hashing data is safe here
 dotnet_diagnostic.S4790.severity = none
 
 # ===== File-Specific Rules =====
 # ApiKeyAuthenticationMiddleware.cs - JSON deserialization DTOs
-[**/ApiKeyAuthenticationMiddleware.cs]
+[Core/Security/ApiKeyAuthenticationMiddleware.cs]
 # S1144: Remove the unused private set accessor
 dotnet_diagnostic.S1144.severity = none
 # S3459: Remove unassigned auto-property (JSON deserialization)
@@ -90,7 +94,7 @@ dotnet_diagnostic.S3459.severity = none
 dotnet_diagnostic.S1172.severity = none
 
 # JwtAuthenticationMiddleware.cs - JSON deserialization DTOs
-[**/JwtAuthenticationMiddleware.cs]
+[Core/Security/JwtAuthenticationMiddleware.cs]
 # S1144: Remove the unused private set accessor
 dotnet_diagnostic.S1144.severity = none
 # S3459: Remove unassigned auto-property (JSON deserialization)
@@ -99,62 +103,62 @@ dotnet_diagnostic.S3459.severity = none
 dotnet_diagnostic.S6667.severity = none
 
 # DocumentSessionManager.cs - IDisposable implementation
-[**/DocumentSessionManager.cs]
+[Core/Session/DocumentSessionManager.cs]
 # S3881: Fix this implementation of 'IDisposable' to conform to the dispose pattern
 dotnet_diagnostic.S3881.severity = none
 
 # TempFileManager.cs - IDisposable implementation
-[**/TempFileManager.cs]
+[Core/Session/TempFileManager.cs]
 # S3881: Fix this implementation of 'IDisposable' to conform to the dispose pattern
 dotnet_diagnostic.S3881.severity = none
 
 # SessionConfig.cs - Temp directory usage
-[**/SessionConfig.cs]
+[Core/Session/SessionConfig.cs]
 # S5443: Make sure publicly writable directories are used safely here
 dotnet_diagnostic.S5443.severity = none
 
 # ConvertDocumentTool.cs - String literals
-[**/ConvertDocumentTool.cs]
+[Tools/Conversion/ConvertDocumentTool.cs]
 # S1192: Define a constant instead of using this literal
 dotnet_diagnostic.S1192.severity = none
 
 # RunFormatInfo.cs - Empty record used as marker
-[**/RunFormatInfo.cs]
+[Results/Word/Format/RunFormatInfo.cs]
 # S2094: Remove this empty record
 dotnet_diagnostic.S2094.severity = none
 
 # Handler files with S3267 - Loop simplification
-[**/DeleteColumnWordTableHandler.cs]
+[Handlers/Word/Table/DeleteColumnWordTableHandler.cs]
 # S3267: Loop should be simplified by calling Select
 dotnet_diagnostic.S3267.severity = none
 
-[**/GetWordListFormatHandler.cs]
+[Handlers/Word/List/GetWordListFormatHandler.cs]
 # S3267: Loops should be simplified using the "Where" LINQ method
 dotnet_diagnostic.S3267.severity = none
 
-[**/SetColumnWidthWordTableHandler.cs]
+[Handlers/Word/Table/SetColumnWidthWordTableHandler.cs]
 # S3267: Loop should be simplified
 dotnet_diagnostic.S3267.severity = none
 
 # WebSocketConnectionHandler.cs - Logging
-[**/WebSocketConnectionHandler.cs]
+[Core/Transport/WebSocketConnectionHandler.cs]
 # S6667: Logging in a catch clause should pass the caught exception
 dotnet_diagnostic.S6667.severity = none
 
 # TrackingMiddleware.cs - Logging and dead stores
-[**/TrackingMiddleware.cs]
+[Core/Tracking/TrackingMiddleware.cs]
 # S6667: Logging in a catch clause should pass the caught exception
 dotnet_diagnostic.S6667.severity = none
 # S1854: Remove this useless assignment (intentional for clarity)
 dotnet_diagnostic.S1854.severity = none
 
 # TrackingConfig.cs - URI hardcoding
-[**/TrackingConfig.cs]
+[Core/Tracking/TrackingConfig.cs]
 # S1075: Refactor your code not to use hardcoded absolute paths or URIs
 dotnet_diagnostic.S1075.severity = none
 
 # McpServerBuilderExtensions.cs - Reflection usage
-[**/McpServerBuilderExtensions.cs]
+[Core/McpServerBuilderExtensions.cs]
 # S3011: Reflection should not be used to increase accessibility
 dotnet_diagnostic.S3011.severity = none
 
