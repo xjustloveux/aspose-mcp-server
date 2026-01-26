@@ -109,18 +109,21 @@ build_platform() {
         -p:PublishSingleFile=true \
         -p:PublishTrimmed=false \
         -p:IncludeNativeLibrariesForSelfExtract=true \
+        -p:DebugType=none \
         --nologo \
         --verbosity quiet
-    
+
     if [[ $? -eq 0 ]]; then
         echo -e "  ${GREEN}✓ Build successful: $output_path${NC}"
-        
-        # Copy license file
-        if [[ -f "Aspose.Total.lic" ]]; then
-            cp "Aspose.Total.lic" "$output_path/"
-            echo -e "  ${GREEN}✓ License file copied${NC}"
-        fi
-        
+
+        # Clean up unnecessary files for standalone deployment
+        rm -f "$output_path"/*.pdb 2>/dev/null || true
+        rm -f "$output_path"/*.staticwebassets.endpoints.json 2>/dev/null || true
+        rm -f "$output_path"/web.config 2>/dev/null || true
+        rm -f "$output_path"/config_example.json 2>/dev/null || true
+        rm -rf "$output_path"/deploy 2>/dev/null || true
+        echo -e "  ${GREEN}✓ Cleaned up unnecessary files${NC}"
+
         # Make executable (for Linux/macOS)
         if [[ "$runtime" != "win-x64" ]]; then
             chmod +x "$output_path/AsposeMcpServer"

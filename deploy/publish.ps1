@@ -62,18 +62,30 @@ function Build-Platform {
         -p:PublishSingleFile=true `
         -p:PublishTrimmed=false `
         -p:IncludeNativeLibrariesForSelfExtract=true `
+        -p:DebugType=none `
         --nologo `
         --verbosity quiet
-    
+
     if ($LASTEXITCODE -eq 0) {
         Write-Host "  ✓ Build successful: $outputPath" -ForegroundColor Green
-        
-        # Copy license file
-        if (Test-Path "Aspose.Total.lic") {
-            Copy-Item "Aspose.Total.lic" -Destination $outputPath
-            Write-Host "  ✓ License file copied" -ForegroundColor Green
+
+        # Clean up unnecessary files for standalone deployment
+        $unnecessaryFiles = @(
+            "*.pdb",
+            "*.staticwebassets.endpoints.json",
+            "web.config",
+            "config_example.json"
+        )
+        foreach ($pattern in $unnecessaryFiles) {
+            Get-ChildItem -Path $outputPath -Filter $pattern -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
         }
-        
+        # Remove deploy folder if accidentally included
+        $deployFolder = Join-Path $outputPath "deploy"
+        if (Test-Path $deployFolder) {
+            Remove-Item -Path $deployFolder -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        Write-Host "  ✓ Cleaned up unnecessary files" -ForegroundColor Green
+
         # Get directory size
         $size = (Get-ChildItem -Path $outputPath -Recurse | Measure-Object -Property Length -Sum).Sum / 1MB
         Write-Host "  Size: $([math]::Round($size, 2)) MB" -ForegroundColor Gray
