@@ -99,7 +99,7 @@ services:
       - "3000:3000"
     environment:
       # === Transport Settings ===
-      - ASPOSE_TRANSPORT=sse              # stdio, sse, ws
+      - ASPOSE_TRANSPORT=http             # stdio, http, ws
       - ASPOSE_PORT=3000
       - ASPOSE_HOST=0.0.0.0
 
@@ -164,7 +164,7 @@ services:
       # - ASPOSE_METRICS_ENABLED=true
       # - ASPOSE_METRICS_PATH=/metrics
 
-      # === Origin Validation (Optional, SSE/WS only) ===
+      # === Origin Validation (Optional, HTTP/WS only) ===
       # - ASPOSE_ORIGIN_VALIDATION=true        # Enable origin validation (default: true)
       # - ASPOSE_ALLOW_LOCALHOST=true          # Allow localhost origin (default: true)
       # - ASPOSE_ALLOW_MISSING_ORIGIN=true     # Allow requests without Origin header (default: true)
@@ -237,7 +237,7 @@ spec:
           env:
             # === Transport Settings ===
             - name: ASPOSE_TRANSPORT
-              value: "sse"                # stdio, sse, ws
+              value: "http"               # stdio, http, ws
             - name: ASPOSE_PORT
               value: "3000"
             - name: ASPOSE_HOST
@@ -349,7 +349,7 @@ spec:
             # - name: ASPOSE_METRICS_PATH
             #   value: "/metrics"
 
-            # === Origin Validation (Optional, SSE/WS only) ===
+            # === Origin Validation (Optional, HTTP/WS only) ===
             # - name: ASPOSE_ORIGIN_VALIDATION
             #   value: "true"                  # Enable origin validation (default: true)
             # - name: ASPOSE_ALLOW_LOCALHOST
@@ -455,7 +455,7 @@ kubectl get pods -l app=aspose-mcp</pre>
                   hostingModel="InProcess"&gt;
         &lt;environmentVariables&gt;
           &lt;!-- Transport Settings (Required) --&gt;
-          &lt;environmentVariable name="ASPOSE_TRANSPORT" value="sse" /&gt;
+          &lt;environmentVariable name="ASPOSE_TRANSPORT" value="http" /&gt;
           &lt;environmentVariable name="ASPOSE_PORT" value="3000" /&gt;
 
           &lt;!-- Tools (Required) --&gt;
@@ -471,7 +471,7 @@ kubectl get pods -l app=aspose-mcp</pre>
           &lt;!-- &lt;environmentVariable name="ASPOSE_SESSION_TEMP_RETENTION_HOURS" value="24" /&gt; --&gt;
           &lt;!-- &lt;environmentVariable name="ASPOSE_SESSION_ISOLATION" value="group" /&gt; --&gt; &lt;!-- none (no isolation), group (group-level, default) --&gt;
 
-          &lt;!-- Origin Validation (Optional, SSE/WS only) --&gt;
+          &lt;!-- Origin Validation (Optional, HTTP/WS only) --&gt;
           &lt;!-- &lt;environmentVariable name="ASPOSE_ORIGIN_VALIDATION" value="true" /&gt; --&gt;
           &lt;!-- &lt;environmentVariable name="ASPOSE_ALLOW_LOCALHOST" value="true" /&gt; --&gt;
           &lt;!-- &lt;environmentVariable name="ASPOSE_ALLOW_MISSING_ORIGIN" value="true" /&gt; --&gt;
@@ -512,7 +512,7 @@ kubectl get pods -l app=aspose-mcp</pre>
                 <code>ASPOSE_TRANSPORT</code>
             </td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-                <code>--stdio/--sse/--ws/--websocket</code>
+                <code>--stdio/--http/--ws/--websocket</code>
             </td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">傳輸模式</td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">stdio</td>
@@ -1020,7 +1020,7 @@ kubectl get pods -l app=aspose-mcp</pre>
 <h3>Origin 驗證（DNS 重綁定攻擊防護）</h3>
 <div class="info-box" style="margin: 15px 0; padding: 15px; background: var(--bg-hover); border-left: 4px solid var(--accent-color); border-radius: 4px;">
     <strong>Origin 驗證說明：</strong>
-    <p style="margin: 10px 0 0 0;">SSE 和 WebSocket 模式預設啟用 Origin 標頭驗證，用於防止 DNS 重綁定攻擊。健康檢查端點（/health, /ready）自動排除驗證。</p>
+    <p style="margin: 10px 0 0 0;">HTTP 和 WebSocket 模式預設啟用 Origin 標頭驗證，用於防止 DNS 重綁定攻擊。健康檢查端點（/health, /ready）自動排除驗證。</p>
 </div>
 <div class="table-wrapper">
     <table style="width: 100%; border-collapse: collapse; margin-top: 15px; min-width: 500px;">

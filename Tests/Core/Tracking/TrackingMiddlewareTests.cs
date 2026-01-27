@@ -207,7 +207,7 @@ public class TrackingMiddlewareTests
         }
 
         var middleware = new TrackingMiddleware(Next, config, logger);
-        var context = new DefaultHttpContext { Request = { Path = "/sse/messages" } };
+        var context = new DefaultHttpContext { Request = { Path = "/mcp" } };
 
         await middleware.InvokeAsync(context);
 

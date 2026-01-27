@@ -1,7 +1,7 @@
 namespace AsposeMcpServer.Core.Session;
 
 /// <summary>
-///     Gets session identity from HttpContext (for SSE/WebSocket modes)
+///     Gets session identity from HttpContext (for HTTP/WebSocket modes)
 /// </summary>
 public class HttpContextSessionIdentityAccessor : ISessionIdentityAccessor
 {

@@ -8,17 +8,17 @@ namespace AsposeMcpServer.Core.Transport;
 public class TransportConfig
 {
     /// <summary>
-    ///     Transport mode (Stdio, SSE, WebSocket)
+    ///     Transport mode (Stdio, Http, WebSocket)
     /// </summary>
     public TransportMode Mode { get; set; } = TransportMode.Stdio;
 
     /// <summary>
-    ///     Port number for SSE/WebSocket modes
+    ///     Port number for Http/WebSocket modes
     /// </summary>
     public int Port { get; set; } = 3000;
 
     /// <summary>
-    ///     Host address for SSE/WebSocket modes
+    ///     Host address for Http/WebSocket modes
     /// </summary>
     public string Host { get; set; } = "localhost";
 
@@ -80,7 +80,7 @@ public class TransportConfig
             Mode = transport.ToLowerInvariant() switch
             {
                 "stdio" => TransportMode.Stdio,
-                "sse" => TransportMode.Sse,
+                "http" => TransportMode.Http,
                 "ws" or "websocket" => TransportMode.WebSocket,
                 _ => Mode
             };
@@ -108,9 +108,9 @@ public class TransportConfig
             {
                 Mode = TransportMode.Stdio;
             }
-            else if (arg.Equals("--sse", StringComparison.OrdinalIgnoreCase))
+            else if (arg.Equals("--http", StringComparison.OrdinalIgnoreCase))
             {
-                Mode = TransportMode.Sse;
+                Mode = TransportMode.Http;
             }
             else if (arg.Equals("--ws", StringComparison.OrdinalIgnoreCase) ||
                      arg.Equals("--websocket", StringComparison.OrdinalIgnoreCase))

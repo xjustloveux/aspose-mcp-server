@@ -28,14 +28,14 @@
 
 ### 傳輸模式
 - **Stdio 模式** (預設) - 標準輸入輸出，適用於本地 MCP 客戶端
-- **SSE 模式** - HTTP Server-Sent Events，適用於網頁應用
+- **HTTP 模式** - Streamable HTTP（MCP 2025-03-26+），適用於網頁應用
 - **WebSocket 模式** - 雙向通訊，適用於即時互動
 
 ### 進階功能
 - **Session 管理** - 在記憶體中編輯文件，支援 open/save/close 操作，支援多租戶隔離
 - **認證機制** - 可選的 API Key 和 JWT 認證（4 種驗證模式）
 - **追蹤系統** - 結構化日誌、Webhook 通知、Prometheus Metrics
-- **Origin 驗證** - 防止 DNS 重綁定攻擊（SSE/WebSocket 模式）
+- **Origin 驗證** - 防止 DNS 重綁定攻擊（HTTP/WebSocket 模式）
 
 ### 技術特性
 - **MCP SDK 0.6.0** - 使用官方 ModelContextProtocol NuGet 套件，支援 Tool Annotations 和 outputSchema
@@ -53,7 +53,7 @@
 - [📋 工具列表](#-工具列表) - 88 個工具的詳細說明
 
 **進階配置**
-- [🔌 傳輸模式](#-傳輸模式) - Stdio、SSE、WebSocket 配置
+- [🔌 傳輸模式](#-傳輸模式) - Stdio、HTTP、WebSocket 配置
 - [📂 Session 管理](#-session-管理) - 文件記憶體編輯、DocumentSessionTool
 - [🔐 認證機制](#-認證機制) - API Key、JWT 認證配置
 - [📡 追蹤系統](#-追蹤系統) - 日誌、Webhook、Prometheus Metrics
@@ -207,16 +207,16 @@ AsposeMcpServer.exe --word
 AsposeMcpServer.exe --stdio --word
 ```
 
-### SSE 模式
+### HTTP 模式
 
-HTTP Server-Sent Events 模式，適用於網頁應用：
+Streamable HTTP 模式（MCP 2025-03-26+），適用於網頁應用：
 
 ```bash
 # 命令列參數
-AsposeMcpServer.exe --sse --port 3000 --word
+AsposeMcpServer.exe --http --port 3000 --word
 
 # 或使用環境變數
-set ASPOSE_TRANSPORT=sse
+set ASPOSE_TRANSPORT=http
 set ASPOSE_PORT=3000
 AsposeMcpServer.exe --word
 ```
@@ -246,7 +246,7 @@ AsposeMcpServer.exe --word
 
 | 變數 | 說明 | 預設值 |
 |------|------|--------|
-| `ASPOSE_TRANSPORT` | 傳輸模式 (stdio/sse/ws) | stdio |
+| `ASPOSE_TRANSPORT` | 傳輸模式 (stdio/http/ws) | stdio |
 | `ASPOSE_PORT` | 監聽埠號（1-65535，無效值重設為 3000） | 3000 |
 | `ASPOSE_HOST` | 監聽位址（`localhost`、`0.0.0.0`、`*` 或特定 IP，無效值重設為 localhost） | localhost |
 | `ASPOSE_TOOLS` | 啟用的工具 (all 或 word,excel,pdf,ppt) | all |
@@ -354,7 +354,7 @@ document_session(operation="recover", sessionId="sess_abc123", outputPath="recov
 
 ## 🔐 認證機制
 
-啟用 SSE 或 WebSocket 模式時，可配置認證機制保護 API：
+啟用 HTTP 或 WebSocket 模式時，可配置認證機制保護 API：
 
 > **雙重認證模式**：當 API Key 和 JWT 同時啟用時，請求必須**同時通過兩者驗證**（串聯模式）。API Key 驗證先執行，失敗則直接返回 401；通過後再執行 JWT 驗證。若只需其中一種認證通過，請僅啟用其一。
 
@@ -612,7 +612,7 @@ docker build -f deploy/Dockerfile -t aspose-mcp-server .
 
 # 執行容器
 docker run -d -p 3000:3000 \
-  -e ASPOSE_TRANSPORT=sse \
+  -e ASPOSE_TRANSPORT=http \
   -e ASPOSE_HOST=0.0.0.0 \
   -e ASPOSE_TOOLS=all \
   aspose-mcp-server
@@ -656,7 +656,7 @@ copy deploy/web.config ./publish/
 
 ### Health Check 端點
 
-SSE/WebSocket 模式下提供以下端點：
+HTTP/WebSocket 模式下提供以下端點：
 - `GET /health` - 健康檢查
 - `GET /ready` - 就緒檢查
 - `GET /metrics` - Prometheus 指標（需啟用）
@@ -667,20 +667,20 @@ SSE/WebSocket 模式下提供以下端點：
 
 ### Origin 驗證
 
-SSE 和 WebSocket 模式預設啟用 Origin 標頭驗證，防止 DNS 重綁定攻擊：
+HTTP 和 WebSocket 模式預設啟用 Origin 標頭驗證，防止 DNS 重綁定攻擊：
 
 ```bash
 # 停用 Origin 驗證（不建議用於生產環境）
-AsposeMcpServer.exe --sse --no-origin-validation
+AsposeMcpServer.exe --http --no-origin-validation
 
 # 不允許 localhost（生產環境）
-AsposeMcpServer.exe --sse --no-localhost
+AsposeMcpServer.exe --http --no-localhost
 
 # 要求必須有 Origin 標頭
-AsposeMcpServer.exe --sse --require-origin
+AsposeMcpServer.exe --http --require-origin
 
 # 指定允許的 Origin 清單
-AsposeMcpServer.exe --sse --allowed-origins:https://app.example.com,https://admin.example.com
+AsposeMcpServer.exe --http --allowed-origins:https://app.example.com,https://admin.example.com
 ```
 
 **環境變數：**

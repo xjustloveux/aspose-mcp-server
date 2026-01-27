@@ -69,9 +69,9 @@ public class StdioTransportTests
     ///     Verifies that mode precedence works correctly (last wins).
     /// </summary>
     [Fact]
-    public void Stdio_AfterSse_StdioWins()
+    public void Stdio_AfterHttp_StdioWins()
     {
-        var config = TransportConfig.LoadFromArgs(["--sse", "--stdio"]);
+        var config = TransportConfig.LoadFromArgs(["--http", "--stdio"]);
 
         Assert.Equal(TransportMode.Stdio, config.Mode);
     }

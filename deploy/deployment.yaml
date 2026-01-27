@@ -28,7 +28,7 @@ spec:
           env:
             # === Transport Settings (Required) ===
             - name: ASPOSE_TRANSPORT
-              value: "sse"                # stdio, sse, ws
+              value: "http"               # stdio, http, ws
             - name: ASPOSE_PORT
               value: "3000"
             - name: ASPOSE_HOST

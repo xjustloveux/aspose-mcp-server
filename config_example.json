@@ -131,13 +131,13 @@
   },
 
   "_範例11": "========================================",
-  "_範例11說明": "SSE 模式（HTTP Server-Sent Events）",
+  "_範例11說明": "HTTP 模式（Streamable HTTP，MCP 2025-03-26+）",
   "_範例11適用": "網頁應用、遠端連線",
   "_範例11端點": "http://localhost:3000/mcp",
-  "mcpServers_example11_sse": {
+  "mcpServers_example11_http": {
     "aspose-all": {
       "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",
-      "args": ["--all", "--sse", "--port:3000"]
+      "args": ["--all", "--http", "--port:3000"]
     }
   },
 
@@ -153,14 +153,14 @@
   },
 
   "_範例13": "========================================",
-  "_範例13說明": "SSE 模式 + Session 管理",
+  "_範例13說明": "HTTP 模式 + Session 管理",
   "_範例13適用": "需要在記憶體中編輯文件時",
-  "mcpServers_example13_sse_session": {
+  "mcpServers_example13_http_session": {
     "aspose-all": {
       "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",
       "args": [
         "--all",
-        "--sse",
+        "--http",
         "--port:3000",
         "--session-enabled",
         "--session-max:20",
@@ -170,14 +170,14 @@
   },
 
   "_範例14": "========================================",
-  "_範例14說明": "SSE 模式 + API Key 認證",
+  "_範例14說明": "HTTP 模式 + API Key 認證",
   "_範例14適用": "需要保護 API 存取時",
-  "mcpServers_example14_sse_auth": {
+  "mcpServers_example14_http_auth": {
     "aspose-all": {
       "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",
       "args": [
         "--all",
-        "--sse",
+        "--http",
         "--port:3000",
         "--auth-apikey-enabled",
         "--auth-apikey-keys:mykey1:group1,mykey2:group2"
@@ -186,14 +186,14 @@
   },
 
   "_範例15": "========================================",
-  "_範例15說明": "SSE 模式 + Session 群組隔離",
+  "_範例15說明": "HTTP 模式 + Session 群組隔離",
   "_範例15適用": "多群組環境，同群組用戶可共享 session",
   "mcpServers_example15_group_isolation": {
     "aspose-all": {
       "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",
       "args": [
         "--all",
-        "--sse",
+        "--http",
         "--port:3000",
         "--session-enabled",
         "--session-isolation:group",
@@ -204,14 +204,14 @@
   },
 
   "_範例16": "========================================",
-  "_範例16說明": "SSE 模式 + 自訂群組識別符來源",
+  "_範例16說明": "HTTP 模式 + 自訂群組識別符來源",
   "_範例16適用": "使用非預設的 JWT claim 作為群組識別符",
   "mcpServers_example16_custom_group_claim": {
     "aspose-all": {
       "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",
       "args": [
         "--all",
-        "--sse",
+        "--http",
         "--port:3000",
         "--session-enabled",
         "--session-isolation:group",
@@ -223,14 +223,14 @@
   },
 
   "_範例17": "========================================",
-  "_範例17說明": "SSE 模式 + Origin 驗證配置",
+  "_範例17說明": "HTTP 模式 + Origin 驗證配置",
   "_範例17適用": "需要嚴格控制允許的來源域名時",
   "mcpServers_example17_origin_validation": {
     "aspose-all": {
       "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",
       "args": [
         "--all",
-        "--sse",
+        "--http",
         "--port:3000",
         "--allowed-origins:https://myapp.example.com,https://admin.example.com",
         "--require-origin",
@@ -250,7 +250,7 @@
   },
   "_參數列表_傳輸": {
     "--stdio": "標準輸入輸出模式（預設）",
-    "--sse": "SSE 模式（HTTP Server-Sent Events）",
+    "--http": "HTTP 模式（Streamable HTTP，MCP 2025-03-26+）",
     "--ws 或 --websocket": "WebSocket 模式",
     "--port:N": "監聽埠號（預設：3000）",
     "--host:addr": "監聽位址（預設：localhost）"
@@ -339,8 +339,8 @@
   "_使用建議": "========================================",
   "_一般用戶": "從 GitHub Releases 下載預編譯版本（範例1-7、10）",
   "_開發者": "克隆倉庫並本地編譯（範例8-9）",
-  "_遠端連線": "使用 SSE 或 WebSocket 模式（範例11-16）",
-  "_安全配置": "SSE/WebSocket 模式預設啟用 Origin 驗證（範例17）",
+  "_遠端連線": "使用 HTTP 或 WebSocket 模式（範例11-16）",
+  "_安全配置": "HTTP/WebSocket 模式預設啟用 Origin 驗證（範例17）",
   "_授權配置": "優先使用自動搜尋，或使用 --license:路徑 參數（範例2、10）",
   "_多服務": "可同時配置多個服務實例（範例1、5-7）",
   "_下載地址": "https://github.com/xjustloveux/aspose-mcp-server/releases"

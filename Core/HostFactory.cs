@@ -36,7 +36,7 @@ internal static class HostFactory
         {
             TransportMode.Stdio => CreateStdioHost(args, transportConfig, sessionConfig, authConfig, trackingConfig,
                 config),
-            TransportMode.Sse => CreateSseHost(args, transportConfig, sessionConfig, authConfig, trackingConfig,
+            TransportMode.Http => CreateHttpHost(args, transportConfig, sessionConfig, authConfig, trackingConfig,
                 originConfig, config),
             TransportMode.WebSocket => CreateWebSocketHost(args, transportConfig, sessionConfig, authConfig,
                 trackingConfig, originConfig, config),
@@ -76,7 +76,7 @@ internal static class HostFactory
     }
 
     /// <summary>
-    ///     Creates a host configured for SSE (Server-Sent Events) transport mode.
+    ///     Creates a host configured for Streamable HTTP transport mode (MCP 2025-03-26+).
     /// </summary>
     /// <param name="args">Command line arguments.</param>
     /// <param name="transportConfig">Transport configuration.</param>
@@ -85,8 +85,8 @@ internal static class HostFactory
     /// <param name="trackingConfig">Tracking configuration.</param>
     /// <param name="originConfig">Origin validation configuration.</param>
     /// <param name="config">Server configuration.</param>
-    /// <returns>The configured SSE host instance.</returns>
-    private static IHost CreateSseHost(
+    /// <returns>The configured HTTP host instance.</returns>
+    private static IHost CreateHttpHost(
         string[] args,
         TransportConfig transportConfig,
         SessionConfig sessionConfig,
@@ -101,7 +101,7 @@ internal static class HostFactory
             .WithFilteredToolsAndSchemas(config, sessionConfig);
         var app = builder.Build();
 
-        LogServerStartup($"SSE server listening on http://{transportConfig.Host}:{transportConfig.Port}");
+        LogServerStartup($"HTTP server listening on http://{transportConfig.Host}:{transportConfig.Port}");
         ConfigureMiddleware(app, authConfig, trackingConfig, originConfig);
         MapHealthEndpoints(app);
         app.MapMcp("/mcp");

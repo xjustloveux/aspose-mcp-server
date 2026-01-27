@@ -128,7 +128,7 @@ public class TrackingMiddleware
         if (string.IsNullOrEmpty(tool))
         {
             var path = context.Request.Path.Value ?? "";
-            if (path.Contains("/sse") || path.Contains("/ws") || path.Contains("/mcp")) tool = "mcp_request";
+            if (path.Contains("/ws") || path.Contains("/mcp")) tool = "mcp_request";
         }
 
         return new TrackingEvent

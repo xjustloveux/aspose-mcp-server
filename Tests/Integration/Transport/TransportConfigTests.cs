@@ -33,14 +33,14 @@ public class TransportConfigTests
     }
 
     /// <summary>
-    ///     Verifies that SSE mode can be set via command line.
+    ///     Verifies that HTTP mode can be set via command line.
     /// </summary>
     [Fact]
-    public void Config_SseArg_SetsSseMode()
+    public void Config_HttpArg_SetsHttpMode()
     {
-        var config = TransportConfig.LoadFromArgs(["--sse"]);
+        var config = TransportConfig.LoadFromArgs(["--http"]);
 
-        Assert.Equal(TransportMode.Sse, config.Mode);
+        Assert.Equal(TransportMode.Http, config.Mode);
     }
 
     /// <summary>
@@ -141,9 +141,9 @@ public class TransportConfigTests
     [Fact]
     public void Config_MultipleArgs_AllApplied()
     {
-        var config = TransportConfig.LoadFromArgs(["--sse", "--port", "9000", "--host", "0.0.0.0"]);
+        var config = TransportConfig.LoadFromArgs(["--http", "--port", "9000", "--host", "0.0.0.0"]);
 
-        Assert.Equal(TransportMode.Sse, config.Mode);
+        Assert.Equal(TransportMode.Http, config.Mode);
         Assert.Equal(9000, config.Port);
         Assert.Equal("0.0.0.0", config.Host);
     }

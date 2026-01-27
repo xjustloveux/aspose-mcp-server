@@ -8,8 +8,8 @@ public enum TransportMode
     /// <summary>Standard input/output transport</summary>
     Stdio,
 
-    /// <summary>Server-Sent Events transport</summary>
-    Sse,
+    /// <summary>Streamable HTTP transport (MCP 2025-03-26+)</summary>
+    Http,
 
     /// <summary>WebSocket transport</summary>
     WebSocket

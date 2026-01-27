@@ -32,11 +32,11 @@ public class TransportConfigTests
     }
 
     [Fact]
-    public void LoadFromArgs_WithSse_ShouldSetSseMode()
+    public void LoadFromArgs_WithHttp_ShouldSetHttpMode()
     {
-        var config = TransportConfig.LoadFromArgs(["--sse"]);
+        var config = TransportConfig.LoadFromArgs(["--http"]);
 
-        Assert.Equal(TransportMode.Sse, config.Mode);
+        Assert.Equal(TransportMode.Http, config.Mode);
     }
 
     [Fact]
@@ -195,12 +195,12 @@ public class TransportConfigTests
     [Fact]
     public void LoadFromArgs_WithTransportEnvVar_ShouldSetMode()
     {
-        Environment.SetEnvironmentVariable("ASPOSE_TRANSPORT", "sse");
+        Environment.SetEnvironmentVariable("ASPOSE_TRANSPORT", "http");
         try
         {
             var config = TransportConfig.LoadFromArgs([]);
 
-            Assert.Equal(TransportMode.Sse, config.Mode);
+            Assert.Equal(TransportMode.Http, config.Mode);
         }
         finally
         {
@@ -263,9 +263,9 @@ public class TransportConfigTests
     [Fact]
     public void LoadFromArgs_UpperCaseArgs_ShouldWork()
     {
-        var config = TransportConfig.LoadFromArgs(["--SSE"]);
+        var config = TransportConfig.LoadFromArgs(["--HTTP"]);
 
-        Assert.Equal(TransportMode.Sse, config.Mode);
+        Assert.Equal(TransportMode.Http, config.Mode);
     }
 
     [Fact]
