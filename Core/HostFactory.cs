@@ -222,6 +222,7 @@ internal static class HostFactory
         services.AddSingleton<DocumentSessionManager>();
         services.AddSingleton<TempFileManager>();
         services.AddHostedService(sp => sp.GetRequiredService<TempFileManager>());
+        services.AddHostedService<SessionLifetimeService>();
     }
 
     /// <summary>

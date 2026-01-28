@@ -113,7 +113,7 @@ services:
       # - ASPOSE_SESSION_ENABLED=true       # Enable session management (required for document_session tool)
       # - ASPOSE_SESSION_MAX=10             # Max concurrent sessions (default: 10)
       # - ASPOSE_SESSION_TIMEOUT=30         # Session timeout in minutes (default: 30)
-      # - ASPOSE_SESSION_MAX_FILE_SIZE_MB=100  # Max file size in MB (default: 100)
+      # - ASPOSE_SESSION_MAX_FILE_SIZE_MB=100  # Max file size in MB (min: 1, default: 100)
       # - ASPOSE_SESSION_TEMP_DIR=/tmp      # Temp directory (default: system temp)
       # - ASPOSE_SESSION_TEMP_RETENTION_HOURS=24  # Temp file retention in hours (default: 24)
       # - ASPOSE_SESSION_ON_DISCONNECT=SaveToTemp  # Disconnect behavior: SaveToTemp, Discard, KeepInMemory
@@ -259,7 +259,7 @@ spec:
             # - name: ASPOSE_SESSION_TIMEOUT
             #   value: "30"                 # Session timeout in minutes (default: 30)
             # - name: ASPOSE_SESSION_MAX_FILE_SIZE_MB
-            #   value: "100"                # Max file size in MB (default: 100)
+            #   value: "100"                # Max file size in MB (min: 1, default: 100)
             # - name: ASPOSE_SESSION_TEMP_DIR
             #   value: "/tmp"               # Temp directory (default: system temp)
             # - name: ASPOSE_SESSION_TEMP_RETENTION_HOURS
@@ -615,7 +615,7 @@ kubectl get pods -l app=aspose-mcp</pre>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
                 <code>--session-max-file-size:N</code>
             </td>
-            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">最大檔案大小（MB）</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">最大檔案大小（MB，最小 1）</td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">100</td>
         </tr>
         <tr>

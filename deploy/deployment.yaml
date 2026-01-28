@@ -50,7 +50,7 @@ spec:
             # - name: ASPOSE_SESSION_TIMEOUT
             #   value: "30"                 # Session timeout in minutes (default: 30)
             # - name: ASPOSE_SESSION_MAX_FILE_SIZE_MB
-            #   value: "100"                # Max file size in MB (default: 100)
+            #   value: "100"                # Max file size in MB (min: 1, default: 100)
             # - name: ASPOSE_SESSION_TEMP_DIR
             #   value: "/tmp"               # Temp directory (default: system temp)
             # - name: ASPOSE_SESSION_TEMP_RETENTION_HOURS

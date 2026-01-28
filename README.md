@@ -328,7 +328,7 @@ document_session(operation="recover", sessionId="sess_abc123", outputPath="recov
 | `ASPOSE_SESSION_ENABLED` | 啟用 Session 管理 | false |
 | `ASPOSE_SESSION_MAX` | 最大 Session 數 | 10 |
 | `ASPOSE_SESSION_TIMEOUT` | 閒置超時（分鐘） | 30 |
-| `ASPOSE_SESSION_MAX_FILE_SIZE_MB` | 最大檔案大小（MB） | 100 |
+| `ASPOSE_SESSION_MAX_FILE_SIZE_MB` | 最大檔案大小（MB，最小 1） | 100 |
 | `ASPOSE_SESSION_TEMP_DIR` | 臨時目錄 | 系統臨時目錄 |
 | `ASPOSE_SESSION_TEMP_RETENTION_HOURS` | 暫存檔保留時間（小時） | 24 |
 | `ASPOSE_SESSION_ON_DISCONNECT` | 斷線行為 (SaveToTemp/Discard/KeepInMemory) | SaveToTemp |
@@ -346,7 +346,7 @@ document_session(operation="recover", sessionId="sess_abc123", outputPath="recov
 | `--session-disabled` | 停用 Session 管理 |
 | `--session-max:N` | 最大 Session 數 |
 | `--session-timeout:N` | 閒置超時（分鐘） |
-| `--session-max-file-size:N` | 最大檔案大小（MB） |
+| `--session-max-file-size:N` | 最大檔案大小（MB，最小 1） |
 | `--session-temp-dir:path` | 臨時目錄 |
 | `--session-temp-retention-hours:N` | 暫存檔保留時間（小時） |
 | `--session-on-disconnect:behavior` | 斷線行為 |
