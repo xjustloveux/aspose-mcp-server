@@ -116,8 +116,9 @@ services:
       # - ASPOSE_SESSION_MAX_FILE_SIZE_MB=100  # Max file size in MB (min: 1, default: 100)
       # - ASPOSE_SESSION_TEMP_DIR=/tmp      # Temp directory (default: system temp)
       # - ASPOSE_SESSION_TEMP_RETENTION_HOURS=24  # Temp file retention in hours (default: 24)
-      # - ASPOSE_SESSION_ON_DISCONNECT=SaveToTemp  # Disconnect behavior: SaveToTemp, Discard, KeepInMemory
+      # - ASPOSE_SESSION_ON_DISCONNECT=SaveToTemp  # Session termination: AutoSave, Discard, SaveToTemp, PromptOnReconnect
       # - ASPOSE_SESSION_ISOLATION=group    # Isolation mode: none (no isolation), group (group-level, default)
+      # - ASPOSE_SESSION_AUTO_SAVE_INTERVAL=0  # Auto-save interval in minutes (0 = disabled, default: 0)
 
       # === API Key Authentication (Optional) ===
       # - ASPOSE_AUTH_APIKEY_ENABLED=true
@@ -130,6 +131,7 @@ services:
       # - ASPOSE_AUTH_APIKEY_CACHE_MAX_SIZE=10000
       # - ASPOSE_AUTH_APIKEY_INTROSPECTION_URL=https://auth.example.com/introspect
       # - ASPOSE_AUTH_APIKEY_INTROSPECTION_AUTH=Bearer token
+      # - ASPOSE_AUTH_APIKEY_INTROSPECTION_FIELD=key
       # - ASPOSE_AUTH_APIKEY_CUSTOM_URL=https://auth.example.com/validate
       # - ASPOSE_AUTH_APIKEY_CUSTOM_TIMEOUT=5
 
@@ -141,6 +143,7 @@ services:
       # - ASPOSE_AUTH_JWT_ISSUER=your-issuer
       # - ASPOSE_AUTH_JWT_AUDIENCE=your-audience
       # - ASPOSE_AUTH_JWT_GROUP_CLAIM=tenant_id  # Claim for group ID (e.g., tenant_id, team_id, org_id)
+      # - ASPOSE_AUTH_JWT_USER_CLAIM=sub
       # - ASPOSE_AUTH_JWT_GROUP_HEADER=X-Group-Id
       # - ASPOSE_AUTH_JWT_USER_HEADER=X-User-Id
       # - ASPOSE_AUTH_JWT_CACHE_ENABLED=true
@@ -265,9 +268,11 @@ spec:
             # - name: ASPOSE_SESSION_TEMP_RETENTION_HOURS
             #   value: "24"                 # Temp file retention in hours (default: 24)
             # - name: ASPOSE_SESSION_ON_DISCONNECT
-            #   value: "SaveToTemp"         # Disconnect behavior: SaveToTemp, Discard, KeepInMemory
+            #   value: "SaveToTemp"         # Session termination: AutoSave, Discard, SaveToTemp, PromptOnReconnect
             # - name: ASPOSE_SESSION_ISOLATION
             #   value: "group"              # Isolation mode: none (no isolation), group (group-level, default)
+            # - name: ASPOSE_SESSION_AUTO_SAVE_INTERVAL
+            #   value: "0"                  # Auto-save interval in minutes (0 = disabled, default: 0)
 
             # === API Key Authentication (Optional) ===
             # - name: ASPOSE_AUTH_APIKEY_ENABLED
@@ -290,6 +295,8 @@ spec:
             #   value: "https://auth.example.com/introspect"
             # - name: ASPOSE_AUTH_APIKEY_INTROSPECTION_AUTH
             #   value: "Bearer token"
+            # - name: ASPOSE_AUTH_APIKEY_INTROSPECTION_FIELD
+            #   value: "key"
             # - name: ASPOSE_AUTH_APIKEY_CUSTOM_URL
             #   value: "https://auth.example.com/validate"
             # - name: ASPOSE_AUTH_APIKEY_CUSTOM_TIMEOUT
@@ -310,6 +317,8 @@ spec:
             #   value: "your-audience"
             # - name: ASPOSE_AUTH_JWT_GROUP_CLAIM
             #   value: "tenant_id"           # Claim for group ID (e.g., tenant_id, team_id, org_id)
+            # - name: ASPOSE_AUTH_JWT_USER_CLAIM
+            #   value: "sub"
             # - name: ASPOSE_AUTH_JWT_GROUP_HEADER
             #   value: "X-Group-Id"
             # - name: ASPOSE_AUTH_JWT_USER_HEADER
@@ -470,6 +479,7 @@ kubectl get pods -l app=aspose-mcp</pre>
           &lt;!-- &lt;environmentVariable name="ASPOSE_SESSION_TIMEOUT" value="30" /&gt; --&gt;
           &lt;!-- &lt;environmentVariable name="ASPOSE_SESSION_TEMP_RETENTION_HOURS" value="24" /&gt; --&gt;
           &lt;!-- &lt;environmentVariable name="ASPOSE_SESSION_ISOLATION" value="group" /&gt; --&gt; &lt;!-- none (no isolation), group (group-level, default) --&gt;
+          &lt;!-- &lt;environmentVariable name="ASPOSE_SESSION_AUTO_SAVE_INTERVAL" value="0" /&gt; --&gt; &lt;!-- Auto-save interval in minutes (0 = disabled, default: 0) --&gt;
 
           &lt;!-- Origin Validation (Optional, HTTP/WS only) --&gt;
           &lt;!-- &lt;environmentVariable name="ASPOSE_ORIGIN_VALIDATION" value="true" /&gt; --&gt;
@@ -645,21 +655,36 @@ kubectl get pods -l app=aspose-mcp</pre>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
                 <code>--session-on-disconnect:behavior</code>
             </td>
-            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">斷線行為</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">逾時處理</td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">SaveToTemp</td>
         </tr>
         <tr>
-            <td style="padding: 10px;">
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
                 <code>ASPOSE_SESSION_ISOLATION</code>
             </td>
-            <td style="padding: 10px;">
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
                 <code>--session-isolation:mode</code>
             </td>
-            <td style="padding: 10px;">Session 隔離模式（none/group）</td>
-            <td style="padding: 10px;">group</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">Session 隔離模式（none/group）</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">group</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px;">
+                <code>ASPOSE_SESSION_AUTO_SAVE_INTERVAL</code>
+            </td>
+            <td style="padding: 10px;">
+                <code>--session-auto-save:N</code>
+            </td>
+            <td style="padding: 10px;">自動暫存間隔（分鐘，0 = 停用）</td>
+            <td style="padding: 10px;">0</td>
         </tr>
         </tbody>
     </table>
+</div>
+
+<div class="info-box" style="margin: 15px 0; padding: 15px; background: var(--bg-hover); border-left: 4px solid var(--accent-color); border-radius: 4px;">
+    <strong>自動暫存說明：</strong>
+    <p style="margin: 10px 0 0 0;">當設定為大於 0 的值時，系統會定期將有變更的 Session 暫存到臨時目錄，防止因非預期終止（如 kill -9）導致的資料遺失。暫存不會影響活動中的 Session。</p>
 </div>
 
 <div class="info-box" style="margin: 15px 0; padding: 15px; background: var(--bg-hover); border-left: 4px solid var(--accent-color); border-radius: 4px;">

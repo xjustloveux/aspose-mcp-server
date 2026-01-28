@@ -56,9 +56,11 @@ spec:
             # - name: ASPOSE_SESSION_TEMP_RETENTION_HOURS
             #   value: "24"                 # Temp file retention in hours (default: 24)
             # - name: ASPOSE_SESSION_ON_DISCONNECT
-            #   value: "SaveToTemp"         # Disconnect behavior: SaveToTemp, Discard, KeepInMemory
+            #   value: "SaveToTemp"         # Session termination: AutoSave, Discard, SaveToTemp, PromptOnReconnect
             # - name: ASPOSE_SESSION_ISOLATION
             #   value: "group"              # Isolation mode: none (no isolation), group (group-level, default)
+            # - name: ASPOSE_SESSION_AUTO_SAVE_INTERVAL
+            #   value: "0"                  # Auto-save interval in minutes (0 = disabled, default: 0)
 
             # === API Key Authentication (Optional) ===
             # - name: ASPOSE_AUTH_APIKEY_ENABLED
@@ -81,6 +83,8 @@ spec:
             #   value: "https://auth.example.com/introspect"
             # - name: ASPOSE_AUTH_APIKEY_INTROSPECTION_AUTH
             #   value: "Bearer token"
+            # - name: ASPOSE_AUTH_APIKEY_INTROSPECTION_FIELD
+            #   value: "key"
             # - name: ASPOSE_AUTH_APIKEY_CUSTOM_URL
             #   value: "https://auth.example.com/validate"
             # - name: ASPOSE_AUTH_APIKEY_CUSTOM_TIMEOUT
@@ -141,6 +145,16 @@ spec:
             #   value: "true"
             # - name: ASPOSE_METRICS_PATH
             #   value: "/metrics"
+
+            # === Origin Validation (Optional, HTTP/WS only) ===
+            # - name: ASPOSE_ORIGIN_VALIDATION
+            #   value: "true"               # Enable origin validation (default: true)
+            # - name: ASPOSE_ALLOW_LOCALHOST
+            #   value: "true"               # Allow localhost origin (default: true)
+            # - name: ASPOSE_ALLOW_MISSING_ORIGIN
+            #   value: "true"               # Allow requests without Origin header (default: true)
+            # - name: ASPOSE_ALLOWED_ORIGINS
+            #   value: "https://app1.com,https://app2.com"
 
           # === Volume Mounts (Optional) ===
           # volumeMounts:

@@ -297,7 +297,19 @@ document_session(operation="list")
 
 ### 暫存檔操作
 
-當 Session 因斷線或超時而中斷時，變更會儲存到暫存檔。使用以下操作管理暫存檔：
+當 Session 結束時，根據 `ASPOSE_SESSION_ON_DISCONNECT` 設定處理未儲存的變更（預設 `SaveToTemp`）。
+
+**觸發時機：**
+
+| 情境 | 說明 |
+|------|------|
+| 閒置逾時 | 依據 `ASPOSE_SESSION_TIMEOUT` 設定（預設 30 分鐘），最常見的觸發情境 |
+| 手動關閉 | 呼叫 `document_session(operation="close")` 時 |
+| 伺服器優雅關閉 | 正常終止程序時（SIGTERM 等） |
+
+> **注意**：強制終止（如 `kill -9`）不會觸發此設定，建議啟用 `ASPOSE_SESSION_AUTO_SAVE_INTERVAL` 定期暫存來保護資料。
+
+使用以下操作管理暫存檔：
 
 | 操作 | 說明 |
 |------|------|
@@ -331,8 +343,15 @@ document_session(operation="recover", sessionId="sess_abc123", outputPath="recov
 | `ASPOSE_SESSION_MAX_FILE_SIZE_MB` | 最大檔案大小（MB，最小 1） | 100 |
 | `ASPOSE_SESSION_TEMP_DIR` | 臨時目錄 | 系統臨時目錄 |
 | `ASPOSE_SESSION_TEMP_RETENTION_HOURS` | 暫存檔保留時間（小時） | 24 |
-| `ASPOSE_SESSION_ON_DISCONNECT` | 斷線行為 (SaveToTemp/Discard/KeepInMemory) | SaveToTemp |
+| `ASPOSE_SESSION_ON_DISCONNECT` | 逾時處理 (AutoSave/Discard/SaveToTemp/PromptOnReconnect) | SaveToTemp |
 | `ASPOSE_SESSION_ISOLATION` | 隔離模式 (none/group) | group |
+| `ASPOSE_SESSION_AUTO_SAVE_INTERVAL` | 自動暫存間隔（分鐘，0 = 停用） | 0 |
+
+**自動暫存說明：**
+- 當設定為大於 0 的值時，系統會定期將有變更的 Session 暫存到臨時目錄
+- 此功能可防止因非預期終止（如 kill -9）導致的資料遺失
+- 暫存檔會保存到 `ASPOSE_SESSION_TEMP_DIR` 指定的目錄
+- 自動暫存**不會**關閉或影響活動中的 Session，僅作為資料保護機制
 
 **隔離模式說明：**
 - `none` - 無隔離，所有用戶可存取所有 session（Stdio 模式向後兼容）
@@ -349,8 +368,9 @@ document_session(operation="recover", sessionId="sess_abc123", outputPath="recov
 | `--session-max-file-size:N` | 最大檔案大小（MB，最小 1） |
 | `--session-temp-dir:path` | 臨時目錄 |
 | `--session-temp-retention-hours:N` | 暫存檔保留時間（小時） |
-| `--session-on-disconnect:behavior` | 斷線行為 |
+| `--session-on-disconnect:behavior` | 逾時處理 |
 | `--session-isolation:mode` | 隔離模式 (none/group) |
+| `--session-auto-save:N` | 自動暫存間隔（分鐘，0 = 停用） |
 
 ## 🔐 認證機制
 

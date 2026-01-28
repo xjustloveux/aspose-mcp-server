@@ -50,6 +50,14 @@ public class SessionConfig
     public SessionIsolationMode IsolationMode { get; set; } = SessionIsolationMode.Group;
 
     /// <summary>
+    ///     Auto-save interval in minutes for dirty sessions.
+    ///     When set to a value greater than 0, dirty sessions will be periodically saved to temp files.
+    ///     This helps prevent data loss in case of unexpected termination (e.g., kill -9).
+    ///     Default is 0 (disabled). Set via ASPOSE_SESSION_AUTO_SAVE_INTERVAL or --session-auto-save:N
+    /// </summary>
+    public int AutoSaveIntervalMinutes { get; set; }
+
+    /// <summary>
     ///     Loads configuration from environment variables and command line arguments.
     ///     Command line arguments take precedence over environment variables.
     /// </summary>
@@ -97,6 +105,10 @@ public class SessionConfig
         if (!string.IsNullOrEmpty(isolation) &&
             Enum.TryParse<SessionIsolationMode>(isolation, true, out var isolationMode))
             IsolationMode = isolationMode;
+
+        if (int.TryParse(Environment.GetEnvironmentVariable("ASPOSE_SESSION_AUTO_SAVE_INTERVAL"),
+                out var autoSaveInterval))
+            AutoSaveIntervalMinutes = autoSaveInterval;
     }
 
     /// <summary>
@@ -138,6 +150,8 @@ public class SessionConfig
             MaxFileSizeMb = maxFileSize;
         else if (TryParseIntArg(arg, "--session-temp-retention-hours", out var retention))
             TempRetentionHours = retention;
+        else if (TryParseIntArg(arg, "--session-auto-save", out var autoSave))
+            AutoSaveIntervalMinutes = autoSave;
     }
 
     /// <summary>
@@ -251,6 +265,9 @@ public class SessionConfig
 
         if (TempRetentionHours < 1)
             throw new InvalidOperationException("TempRetentionHours must be at least 1");
+
+        if (AutoSaveIntervalMinutes < 0)
+            throw new InvalidOperationException("AutoSaveIntervalMinutes cannot be negative");
 
         if (string.IsNullOrEmpty(TempDirectory))
             throw new InvalidOperationException("TempDirectory cannot be empty");

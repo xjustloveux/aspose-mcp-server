@@ -261,7 +261,8 @@
     "--session-timeout:N": "Session 逾時分鐘（預設：30）",
     "--session-isolation:mode": "隔離模式（none/group，預設：group）",
     "--session-temp-retention-hours:N": "暫存檔保留時間（預設：24 小時）",
-    "--session-on-disconnect:behavior": "斷線行為（SaveToTemp/Discard/KeepInMemory）"
+    "--session-on-disconnect:behavior": "逾時處理（AutoSave/Discard/SaveToTemp/PromptOnReconnect）",
+    "--session-auto-save:N": "自動暫存間隔分鐘（0 = 停用，預設：0）"
   },
   "_參數列表_Session_隔離模式說明": {
     "none": "無隔離 - 所有用戶可存取所有 session（Stdio 模式向後兼容）",

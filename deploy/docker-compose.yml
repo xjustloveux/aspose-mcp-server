@@ -25,8 +25,9 @@ services:
       # - ASPOSE_SESSION_MAX_FILE_SIZE_MB=100  # Max file size in MB (min: 1, default: 100)
       # - ASPOSE_SESSION_TEMP_DIR=/tmp      # Temp directory (default: system temp)
       # - ASPOSE_SESSION_TEMP_RETENTION_HOURS=24  # Temp file retention in hours (default: 24)
-      # - ASPOSE_SESSION_ON_DISCONNECT=SaveToTemp  # Disconnect behavior: SaveToTemp, Discard, KeepInMemory
+      # - ASPOSE_SESSION_ON_DISCONNECT=SaveToTemp  # Session termination: AutoSave, Discard, SaveToTemp, PromptOnReconnect
       # - ASPOSE_SESSION_ISOLATION=group    # Isolation mode: none (no isolation), group (group-level, default)
+      # - ASPOSE_SESSION_AUTO_SAVE_INTERVAL=0  # Auto-save interval in minutes (0 = disabled, default: 0)
 
       # === API Key Authentication (Optional) ===
       # - ASPOSE_AUTH_APIKEY_ENABLED=true
@@ -39,6 +40,7 @@ services:
       # - ASPOSE_AUTH_APIKEY_CACHE_MAX_SIZE=10000
       # - ASPOSE_AUTH_APIKEY_INTROSPECTION_URL=https://auth.example.com/introspect
       # - ASPOSE_AUTH_APIKEY_INTROSPECTION_AUTH=Bearer token
+      # - ASPOSE_AUTH_APIKEY_INTROSPECTION_FIELD=key
       # - ASPOSE_AUTH_APIKEY_CUSTOM_URL=https://auth.example.com/validate
       # - ASPOSE_AUTH_APIKEY_CUSTOM_TIMEOUT=5
 
@@ -52,6 +54,7 @@ services:
       # - ASPOSE_AUTH_JWT_GROUP_CLAIM=tenant_id  # Claim for group ID (e.g., tenant_id, team_id, org_id)
       # - ASPOSE_AUTH_JWT_USER_CLAIM=sub
       # - ASPOSE_AUTH_JWT_GROUP_HEADER=X-Group-Id
+      # - ASPOSE_AUTH_JWT_USER_HEADER=X-User-Id
       # - ASPOSE_AUTH_JWT_USER_HEADER=X-User-Id
       # - ASPOSE_AUTH_JWT_CACHE_ENABLED=true
       # - ASPOSE_AUTH_JWT_CACHE_TTL=300
@@ -73,6 +76,12 @@ services:
       # === Prometheus Metrics (Optional) ===
       # - ASPOSE_METRICS_ENABLED=true
       # - ASPOSE_METRICS_PATH=/metrics
+
+      # === Origin Validation (Optional, HTTP/WS only) ===
+      # - ASPOSE_ORIGIN_VALIDATION=true        # Enable origin validation (default: true)
+      # - ASPOSE_ALLOW_LOCALHOST=true          # Allow localhost origin (default: true)
+      # - ASPOSE_ALLOW_MISSING_ORIGIN=true     # Allow requests without Origin header (default: true)
+      # - ASPOSE_ALLOWED_ORIGINS=https://app1.com,https://app2.com
 
     # === Volumes (Optional) ===
     # volumes:

@@ -14,6 +14,11 @@ namespace AsposeMcpServer.Core.Session;
 public class DocumentSessionManager : IDisposable
 {
     /// <summary>
+    ///     Timer for periodic auto-save of dirty sessions
+    /// </summary>
+    private readonly Timer? _autoSaveTimer;
+
+    /// <summary>
     ///     Timer for periodic cleanup of idle sessions
     /// </summary>
     private readonly Timer? _cleanupTimer;
@@ -51,6 +56,13 @@ public class DocumentSessionManager : IDisposable
                 null,
                 TimeSpan.FromMinutes(1),
                 TimeSpan.FromMinutes(1));
+
+        if (config.AutoSaveIntervalMinutes > 0)
+            _autoSaveTimer = new Timer(
+                AutoSaveDirtySessions,
+                null,
+                TimeSpan.FromMinutes(config.AutoSaveIntervalMinutes),
+                TimeSpan.FromMinutes(config.AutoSaveIntervalMinutes));
     }
 
     /// <summary>
@@ -70,6 +82,7 @@ public class DocumentSessionManager : IDisposable
             return;
 
         _cleanupTimer?.Dispose();
+        _autoSaveTimer?.Dispose();
 
         foreach (var ownerSessions in _sessionsByOwner.Values)
         foreach (var session in ownerSessions.Values)
@@ -551,7 +564,9 @@ public class DocumentSessionManager : IDisposable
             {
                 case DisconnectBehavior.AutoSave:
                     SaveDocumentToFile(session.Document, session.Type, session.Path);
-                    _logger?.LogInformation("Auto-saved session {SessionId}", session.SessionId);
+                    DeleteSessionTempFiles(session.SessionId);
+                    _logger?.LogInformation("Auto-saved session {SessionId} and cleaned up temp files",
+                        session.SessionId);
                     break;
 
                 case DisconnectBehavior.SaveToTemp:
@@ -563,7 +578,9 @@ public class DocumentSessionManager : IDisposable
                     break;
 
                 case DisconnectBehavior.Discard:
-                    _logger?.LogInformation("Discarded changes for session {SessionId}", session.SessionId);
+                    DeleteSessionTempFiles(session.SessionId);
+                    _logger?.LogInformation("Discarded changes for session {SessionId} and cleaned up temp files",
+                        session.SessionId);
                     break;
 
                 case DisconnectBehavior.PromptOnReconnect:
@@ -611,6 +628,39 @@ public class DocumentSessionManager : IDisposable
                 {
                     _logger?.LogError(ex, "Error cleaning up idle session {SessionId}", session.SessionId);
                 }
+            }
+    }
+
+    /// <summary>
+    ///     Timer callback to auto-save dirty sessions to temp files.
+    ///     This helps prevent data loss in case of unexpected termination (e.g., kill -9).
+    ///     Unlike HandleDisconnect, this does NOT dispose or remove sessions - they remain active.
+    /// </summary>
+    /// <param name="state">Timer state (not used)</param>
+    private void AutoSaveDirtySessions(object? state)
+    {
+        var dirtySessions = _sessionsByOwner.Values
+            .SelectMany(s => s.Values)
+            .Where(s => s is { IsDirty: true, IsDisposed: false })
+            .ToList();
+
+        if (dirtySessions.Count == 0)
+            return;
+
+        _logger?.LogDebug("Auto-saving {Count} dirty sessions", dirtySessions.Count);
+
+        foreach (var session in dirtySessions)
+            try
+            {
+                var tempPath = GetTempPath(session);
+                SaveDocumentToFile(session.Document, session.Type, tempPath);
+                SaveSessionMetadata(session, tempPath);
+                _logger?.LogInformation("Auto-saved dirty session {SessionId} to temp: {TempPath}",
+                    session.SessionId, tempPath);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error auto-saving session {SessionId}", session.SessionId);
             }
     }
 
@@ -698,6 +748,42 @@ public class DocumentSessionManager : IDisposable
         var ext = Path.GetExtension(session.Path);
         var timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
         return Path.Combine(Config.TempDirectory, $"aspose_session_{session.SessionId}_{timestamp}{ext}");
+    }
+
+    /// <summary>
+    ///     Deletes all temporary files associated with a session.
+    ///     This is called when AutoSave or Discard behavior is used to prevent
+    ///     stale temp files from appearing in list_temp_files.
+    /// </summary>
+    /// <param name="sessionId">Session ID to delete temp files for</param>
+    private void DeleteSessionTempFiles(string sessionId)
+    {
+        try
+        {
+            var pattern = $"aspose_session_{sessionId}_*.json";
+            var metadataFiles = Directory.GetFiles(Config.TempDirectory, pattern);
+
+            foreach (var metadataPath in metadataFiles)
+                try
+                {
+                    var json = File.ReadAllText(metadataPath);
+                    var metadata = JsonSerializer.Deserialize<TempFileMetadata>(json);
+
+                    if (metadata?.TempPath != null && File.Exists(metadata.TempPath))
+                        File.Delete(metadata.TempPath);
+
+                    File.Delete(metadataPath);
+                    _logger?.LogDebug("Deleted temp file for session {SessionId}: {Path}", sessionId, metadataPath);
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogWarning(ex, "Failed to delete temp file: {Path}", metadataPath);
+                }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Failed to cleanup temp files for session {SessionId}", sessionId);
+        }
     }
 
     /// <summary>
