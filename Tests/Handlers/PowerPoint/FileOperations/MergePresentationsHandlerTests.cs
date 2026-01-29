@@ -112,6 +112,28 @@ public class MergePresentationsHandlerTests : PptHandlerTestBase
         Assert.True(fileInfo.Length > 0, "Merged file should have content");
     }
 
+    [Fact]
+    public void Execute_WithInputPathAsBase_MergesAllSlides()
+    {
+        var outputPath = Path.Combine(TestDir, "merged_with_base.pptx");
+        var pres = CreateEmptyPresentation();
+        var context = CreateContext(pres);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "outputPath", outputPath },
+            { "inputPath", _input1Path },
+            { "inputPaths", new[] { _input2Path } }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<SuccessResult>(res);
+        Assert.Contains("merged", result.Message, StringComparison.OrdinalIgnoreCase);
+
+        using var mergedPres = new Presentation(outputPath);
+        Assert.Equal(2, mergedPres.Slides.Count);
+    }
+
     #endregion
 
     #region Error Handling

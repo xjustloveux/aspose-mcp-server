@@ -1,3 +1,4 @@
+using Aspose.Cells;
 using AsposeMcpServer.Handlers.Excel.Sheet;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -119,6 +120,65 @@ public class CopyExcelSheetHandlerTests : ExcelHandlerTestBase
         _handler.Execute(context, parameters);
 
         Assert.Equal(2, workbook.Worksheets.Count);
+    }
+
+    #endregion
+
+    #region New Name
+
+    [Fact]
+    public void Execute_WithNewName_RenamesCopiedSheet()
+    {
+        var workbook = CreateEmptyWorkbook();
+        workbook.Worksheets[0].Name = "Original";
+        var context = CreateContext(workbook);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "sheetIndex", 0 },
+            { "newName", "MyCopy" }
+        });
+
+        _handler.Execute(context, parameters);
+
+        Assert.Equal(2, workbook.Worksheets.Count);
+        Assert.Equal("Original", workbook.Worksheets[0].Name);
+        Assert.Equal("MyCopy", workbook.Worksheets[1].Name);
+    }
+
+    [Fact]
+    public void Execute_WithNewNameAndCopyToPath_RenamesInExternalFile()
+    {
+        var workbook = CreateEmptyWorkbook();
+        workbook.Worksheets[0].Name = "Source";
+        var outputPath = CreateTestFilePath("named_external.xlsx");
+        var context = CreateContext(workbook);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "sheetIndex", 0 },
+            { "newName", "ExternalCopy" },
+            { "copyToPath", outputPath }
+        });
+
+        _handler.Execute(context, parameters);
+
+        Assert.True(File.Exists(outputPath));
+        var targetWorkbook = new Workbook(outputPath);
+        Assert.Equal("ExternalCopy", targetWorkbook.Worksheets[0].Name);
+    }
+
+    [Fact]
+    public void Execute_WithDuplicateNewName_ThrowsArgumentException()
+    {
+        var workbook = CreateEmptyWorkbook();
+        workbook.Worksheets[0].Name = "Existing";
+        var context = CreateContext(workbook);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "sheetIndex", 0 },
+            { "newName", "Existing" }
+        });
+
+        Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
     #endregion

@@ -43,7 +43,7 @@ public class EditPptTableCellHandlerTests : PptHandlerTestBase
 
         var table = pres.Slides[0].Shapes[0] as ITable;
         Assert.NotNull(table);
-        Assert.Equal($"Cell_{row}_{col}", table[row, col].TextFrame.Text);
+        Assert.Equal($"Cell_{row}_{col}", table[col, row].TextFrame.Text);
     }
 
     #endregion
@@ -157,6 +157,27 @@ public class EditPptTableCellHandlerTests : PptHandlerTestBase
         var table = pres.Slides[0].Shapes[0] as ITable;
         Assert.NotNull(table);
         Assert.Equal("", table[0, 0].TextFrame.Text);
+    }
+
+    [SkippableFact]
+    public void Execute_WithNonSquareTable_WritesToCorrectRowAndColumn()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation mode adds watermark to text");
+        var pres = CreatePresentationWithTable(3, 2);
+        var context = CreateContext(pres);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "shapeIndex", 0 },
+            { "rowIndex", 2 },
+            { "columnIndex", 0 },
+            { "text", "Target" }
+        });
+
+        _handler.Execute(context, parameters);
+
+        var table = pres.Slides[0].Shapes[0] as ITable;
+        Assert.NotNull(table);
+        Assert.Equal("Target", table[0, 2].TextFrame.Text);
     }
 
     #endregion

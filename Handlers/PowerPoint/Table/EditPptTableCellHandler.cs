@@ -35,7 +35,7 @@ public class EditPptTableCellHandler : OperationHandlerBase<Presentation>
         PptTableHelper.ValidateRowIndex(table, cellParams.RowIndex);
         PptTableHelper.ValidateColumnIndex(table, cellParams.ColumnIndex);
 
-        table[cellParams.RowIndex, cellParams.ColumnIndex].TextFrame.Text = cellParams.Text;
+        table[cellParams.ColumnIndex, cellParams.RowIndex].TextFrame.Text = cellParams.Text;
 
         MarkModified(context);
 

@@ -44,9 +44,10 @@ public class AddPdfAttachmentHandler : OperationHandlerBase<Document>
                                        StringComparison.OrdinalIgnoreCase)))
             throw new ArgumentException($"Attachment with name '{addParams.AttachmentName}' already exists");
 
-        var fileSpecification = new FileSpecification(addParams.AttachmentPath, addParams.Description ?? "")
+        var fileBytes = File.ReadAllBytes(addParams.AttachmentPath);
+        var fileSpecification = new FileSpecification(new MemoryStream(fileBytes), addParams.AttachmentName)
         {
-            Name = addParams.AttachmentName
+            Description = addParams.Description ?? ""
         };
 
         document.EmbeddedFiles.Add(fileSpecification);

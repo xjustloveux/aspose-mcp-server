@@ -149,7 +149,7 @@ Usage examples:
             "delete" or "get" or "hide" => parameters,
             "rename" => BuildRenameParameters(parameters, newName),
             "move" => BuildMoveParameters(parameters, targetIndex, insertAt),
-            "copy" => BuildCopyParameters(parameters, targetIndex, copyToPath),
+            "copy" => BuildCopyParameters(parameters, targetIndex, copyToPath, newName),
             _ => parameters
         };
     }
@@ -202,12 +202,14 @@ Usage examples:
     /// <param name="parameters">The base operation parameters.</param>
     /// <param name="targetIndex">The target index for the copy operation (0-based).</param>
     /// <param name="copyToPath">The target file path for the copy operation.</param>
+    /// <param name="newName">The new name for the copied sheet (max 31 characters).</param>
     /// <returns>OperationParameters configured for the copy operation.</returns>
     private static OperationParameters BuildCopyParameters(OperationParameters parameters, int? targetIndex,
-        string? copyToPath)
+        string? copyToPath, string? newName)
     {
         if (targetIndex.HasValue) parameters.Set("targetIndex", targetIndex.Value);
         if (copyToPath != null) parameters.Set("copyToPath", copyToPath);
+        if (newName != null) parameters.Set("newName", newName);
         return parameters;
     }
 }

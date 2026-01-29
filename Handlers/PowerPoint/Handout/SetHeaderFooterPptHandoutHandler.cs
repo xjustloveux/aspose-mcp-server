@@ -23,9 +23,6 @@ public class SetHeaderFooterPptHandoutHandler : OperationHandlerBase<Presentatio
     ///     Optional: headerText, footerText, dateText, showPageNumber
     /// </param>
     /// <returns>Success message with updated settings.</returns>
-    /// <exception cref="InvalidOperationException">
-    ///     Thrown when the presentation does not have a handout master slide.
-    /// </exception>
     public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractHeaderFooterParameters(parameters);
@@ -34,9 +31,10 @@ public class SetHeaderFooterPptHandoutHandler : OperationHandlerBase<Presentatio
 
         var handoutMaster = presentation.MasterHandoutSlideManager.MasterHandoutSlide;
         if (handoutMaster == null)
-            throw new InvalidOperationException(
-                "Presentation does not have a handout master slide. " +
-                "Please open the presentation in PowerPoint, go to View > Handout Master to create one, then save.");
+        {
+            presentation.MasterHandoutSlideManager.SetDefaultMasterHandoutSlide();
+            handoutMaster = presentation.MasterHandoutSlideManager.MasterHandoutSlide;
+        }
 
         var manager = handoutMaster.HeaderFooterManager;
 

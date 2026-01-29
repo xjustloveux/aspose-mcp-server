@@ -53,6 +53,93 @@ public class CreateFromTemplateWordHandlerTests : WordHandlerTestBase
         Assert.True(System.IO.File.Exists(outputPath));
     }
 
+    [Fact]
+    public void Execute_WithNestedObject_ReplacesNestedFields()
+    {
+        var templatePath = Path.Combine(TestDir, "template_nested.docx");
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        builder.Write("Customer: <<[ds.Customer.Name]>>, City: <<[ds.Customer.Address.City]>>");
+        doc.Save(templatePath);
+
+        var outputPath = Path.Combine(TestDir, "output_nested.docx");
+        var context = CreateContext(CreateEmptyDocument());
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "templatePath", templatePath },
+            { "outputPath", outputPath },
+            { "dataJson", "{\"Customer\":{\"Name\":\"Bob\",\"Address\":{\"City\":\"Taipei\"}}}" }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        Assert.IsType<SuccessResult>(res);
+        Assert.True(System.IO.File.Exists(outputPath));
+
+        var resultDoc = new Document(outputPath);
+        var text = resultDoc.GetText();
+        Assert.Contains("Bob", text);
+        Assert.Contains("Taipei", text);
+    }
+
+    [Fact]
+    public void Execute_WithArrayData_IteratesForEachBlock()
+    {
+        var templatePath = Path.Combine(TestDir, "template_array.docx");
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        builder.Write("Items: <<foreach [item in ds.Items]>><<[item.Product]>> <</foreach>>");
+        doc.Save(templatePath);
+
+        var outputPath = Path.Combine(TestDir, "output_array.docx");
+        var context = CreateContext(CreateEmptyDocument());
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "templatePath", templatePath },
+            { "outputPath", outputPath },
+            { "dataJson", "{\"Items\":[{\"Product\":\"Laptop\"},{\"Product\":\"Mouse\"},{\"Product\":\"Keyboard\"}]}" }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        Assert.IsType<SuccessResult>(res);
+        Assert.True(System.IO.File.Exists(outputPath));
+
+        var resultDoc = new Document(outputPath);
+        var text = resultDoc.GetText();
+        Assert.Contains("Laptop", text);
+        Assert.Contains("Mouse", text);
+        Assert.Contains("Keyboard", text);
+    }
+
+    [Fact]
+    public void Execute_WithMixedFlatAndNestedData_ReplacesAllFields()
+    {
+        var templatePath = Path.Combine(TestDir, "template_mixed.docx");
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        builder.Write("Name: <<[ds.Name]>>, City: <<[ds.Address.City]>>");
+        doc.Save(templatePath);
+
+        var outputPath = Path.Combine(TestDir, "output_mixed.docx");
+        var context = CreateContext(CreateEmptyDocument());
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "templatePath", templatePath },
+            { "outputPath", outputPath },
+            { "dataJson", "{\"Name\":\"Alice\",\"Address\":{\"City\":\"Tokyo\"}}" }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        Assert.IsType<SuccessResult>(res);
+
+        var resultDoc = new Document(outputPath);
+        var text = resultDoc.GetText();
+        Assert.Contains("Alice", text);
+        Assert.Contains("Tokyo", text);
+    }
+
     #endregion
 
     #region Error Handling

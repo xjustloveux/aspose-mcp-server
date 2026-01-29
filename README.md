@@ -98,7 +98,7 @@
 
 1. **自動搜尋**（推薦）：將授權檔案放在可執行檔案目錄，系統會自動搜尋
 2. **環境變數**：設定 `ASPOSE_LICENSE_PATH` 環境變數指向授權檔案路徑
-3. **命令列參數**：使用 `--license:路徑` 或 `--license=路徑` 指定授權檔案
+3. **命令列參數**：使用 `--license 路徑` 指定授權檔案
 
 **範例：**
 ```json
@@ -106,7 +106,7 @@
   "mcpServers": {
     "aspose-word": {
       "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",
-      "args": ["--word", "--license:C:/Licenses/Aspose.Words.lic"]
+      "args": ["--word", "--license", "C:/Licenses/Aspose.Words.lic"]
     }
   }
 }
@@ -137,7 +137,7 @@
 - `--pdf` - PDF 工具
 - `--all` - 所有工具
 - `--session-enabled` - 啟用 Session 管理（`document_session` 工具）
-- `--license:路徑` 或 `--license=路徑` - 指定授權檔案路徑（可選）
+- `--license 路徑` - 指定授權檔案路徑（可選）
 
 > **工具過濾**：只有啟用的工具類別會出現在 MCP 工具列表中。例如使用 `--word` 時，只會顯示 `word_*` 相關工具。
 
@@ -363,14 +363,14 @@ document_session(operation="recover", sessionId="sess_abc123", outputPath="recov
 |------|------|
 | `--session-enabled` | 啟用 Session 管理 |
 | `--session-disabled` | 停用 Session 管理 |
-| `--session-max:N` | 最大 Session 數 |
-| `--session-timeout:N` | 閒置超時（分鐘） |
-| `--session-max-file-size:N` | 最大檔案大小（MB，最小 1） |
-| `--session-temp-dir:path` | 臨時目錄 |
-| `--session-temp-retention-hours:N` | 暫存檔保留時間（小時） |
-| `--session-on-disconnect:behavior` | 逾時處理 |
-| `--session-isolation:mode` | 隔離模式 (none/group) |
-| `--session-auto-save:N` | 自動暫存間隔（分鐘，0 = 停用） |
+| `--session-max N` | 最大 Session 數 |
+| `--session-timeout N` | 閒置超時（分鐘） |
+| `--session-max-file-size N` | 最大檔案大小（MB，最小 1） |
+| `--session-temp-dir path` | 臨時目錄 |
+| `--session-temp-retention-hours N` | 暫存檔保留時間（小時） |
+| `--session-on-disconnect behavior` | 逾時處理 |
+| `--session-isolation mode` | 隔離模式 (none/group) |
+| `--session-auto-save N` | 自動暫存間隔（分鐘，0 = 停用） |
 
 ## 🔐 認證機制
 
@@ -505,37 +505,37 @@ MCP Server 發送到外部驗證端點的請求格式：
 |------|------|
 | `--auth-apikey-enabled` | 啟用 API Key 認證 |
 | `--auth-apikey-disabled` | 停用 API Key 認證 |
-| `--auth-apikey-mode:mode` | API Key 驗證模式 |
-| `--auth-apikey-keys:key1:group1,key2:group2` | API Key 列表（group 可包含冒號） |
-| `--auth-apikey-header:name` | API Key 標頭名稱 |
-| `--auth-apikey-group-header:name` | 群組 ID 標頭名稱 |
-| `--auth-apikey-introspection-url:url` | Introspection 端點 URL |
-| `--auth-apikey-introspection-auth:value` | Introspection 認證標頭值 |
-| `--auth-apikey-introspection-field:name` | Introspection 請求欄位名稱（預設：key） |
-| `--auth-apikey-custom-url:url` | Custom 驗證端點 URL |
-| `--auth-apikey-timeout:N` | 外部驗證逾時（秒，Introspection/Custom） |
+| `--auth-apikey-mode mode` | API Key 驗證模式 |
+| `--auth-apikey-keys key1:group1,key2:group2` | API Key 列表（group 可包含冒號） |
+| `--auth-apikey-header name` | API Key 標頭名稱 |
+| `--auth-apikey-group-header name` | 群組 ID 標頭名稱 |
+| `--auth-apikey-introspection-url url` | Introspection 端點 URL |
+| `--auth-apikey-introspection-auth value` | Introspection 認證標頭值 |
+| `--auth-apikey-introspection-field name` | Introspection 請求欄位名稱（預設：key） |
+| `--auth-apikey-custom-url url` | Custom 驗證端點 URL |
+| `--auth-apikey-timeout N` | 外部驗證逾時（秒，Introspection/Custom） |
 | `--auth-apikey-cache-enabled` | 啟用驗證結果快取 |
-| `--auth-apikey-cache-ttl:N` | 快取存活時間（秒） |
-| `--auth-apikey-cache-max-size:N` | 快取最大項目數 |
+| `--auth-apikey-cache-ttl N` | 快取存活時間（秒） |
+| `--auth-apikey-cache-max-size N` | 快取最大項目數 |
 | `--auth-jwt-enabled` | 啟用 JWT 認證 |
 | `--auth-jwt-disabled` | 停用 JWT 認證 |
-| `--auth-jwt-mode:mode` | JWT 驗證模式 |
-| `--auth-jwt-secret:value` | HMAC 密鑰 |
-| `--auth-jwt-public-key-path:path` | RSA/ECDSA 公鑰文件路徑 |
-| `--auth-jwt-issuer:value` | 預期發行者 |
-| `--auth-jwt-audience:value` | 預期受眾 |
-| `--auth-jwt-group-claim:name` | 群組 ID Claim 名稱 (如 tenant_id, team_id, org_id) |
-| `--auth-jwt-user-claim:name` | 使用者 ID Claim 名稱 |
-| `--auth-jwt-group-header:name` | 群組 ID 標頭名稱 |
-| `--auth-jwt-user-header:name` | 使用者 ID 標頭名稱 |
-| `--auth-jwt-introspection-url:url` | OAuth Introspection 端點 URL |
-| `--auth-jwt-client-id:value` | OAuth Client ID（Introspection 模式） |
-| `--auth-jwt-client-secret:value` | OAuth Client Secret（Introspection 模式） |
-| `--auth-jwt-custom-url:url` | Custom 驗證端點 URL |
-| `--auth-jwt-timeout:N` | 外部驗證逾時（秒，Introspection/Custom） |
+| `--auth-jwt-mode mode` | JWT 驗證模式 |
+| `--auth-jwt-secret value` | HMAC 密鑰 |
+| `--auth-jwt-public-key-path path` | RSA/ECDSA 公鑰文件路徑 |
+| `--auth-jwt-issuer value` | 預期發行者 |
+| `--auth-jwt-audience value` | 預期受眾 |
+| `--auth-jwt-group-claim name` | 群組 ID Claim 名稱 (如 tenant_id, team_id, org_id) |
+| `--auth-jwt-user-claim name` | 使用者 ID Claim 名稱 |
+| `--auth-jwt-group-header name` | 群組 ID 標頭名稱 |
+| `--auth-jwt-user-header name` | 使用者 ID 標頭名稱 |
+| `--auth-jwt-introspection-url url` | OAuth Introspection 端點 URL |
+| `--auth-jwt-client-id value` | OAuth Client ID（Introspection 模式） |
+| `--auth-jwt-client-secret value` | OAuth Client Secret（Introspection 模式） |
+| `--auth-jwt-custom-url url` | Custom 驗證端點 URL |
+| `--auth-jwt-timeout N` | 外部驗證逾時（秒，Introspection/Custom） |
 | `--auth-jwt-cache-enabled` | 啟用驗證結果快取 |
-| `--auth-jwt-cache-ttl:N` | 快取存活時間（秒） |
-| `--auth-jwt-cache-max-size:N` | 快取最大項目數 |
+| `--auth-jwt-cache-ttl N` | 快取存活時間（秒） |
+| `--auth-jwt-cache-max-size N` | 快取最大項目數 |
 
 ## 📡 追蹤系統
 
@@ -610,15 +610,15 @@ set ASPOSE_METRICS_PATH=/metrics
 |------|------|
 | `--log-enabled` | 啟用日誌 |
 | `--log-disabled` | 停用日誌 |
-| `--log-targets:Console,EventLog` | 日誌目標 |
+| `--log-targets Console,EventLog` | 日誌目標 |
 | `--webhook-enabled` | 啟用 Webhook |
 | `--webhook-disabled` | 停用 Webhook |
-| `--webhook-url:url` | Webhook URL（設定後自動啟用） |
-| `--webhook-auth-header:header` | Webhook 認證標頭 |
-| `--webhook-timeout:N` | Webhook 超時（1-300 秒，無效值重設為 5） |
+| `--webhook-url url` | Webhook URL（設定後自動啟用） |
+| `--webhook-auth-header header` | Webhook 認證標頭 |
+| `--webhook-timeout N` | Webhook 超時（1-300 秒，無效值重設為 5） |
 | `--metrics-enabled` | 啟用 Metrics |
 | `--metrics-disabled` | 停用 Metrics |
-| `--metrics-path:path` | Metrics 路徑 |
+| `--metrics-path path` | Metrics 路徑 |
 
 ## 🚢 部署指南
 
@@ -700,7 +700,7 @@ AsposeMcpServer.exe --http --no-localhost
 AsposeMcpServer.exe --http --require-origin
 
 # 指定允許的 Origin 清單
-AsposeMcpServer.exe --http --allowed-origins:https://app.example.com,https://admin.example.com
+AsposeMcpServer.exe --http --allowed-origins https://app.example.com,https://admin.example.com
 ```
 
 **環境變數：**
@@ -719,7 +719,7 @@ AsposeMcpServer.exe --http --allowed-origins:https://app.example.com,https://adm
 | `--no-origin-validation` | 停用 Origin 驗證 |
 | `--no-localhost` | 不允許 localhost Origin |
 | `--require-origin` | 要求必須有 Origin 標頭 |
-| `--allowed-origins:origins` | 允許的 Origin 清單（逗號分隔） |
+| `--allowed-origins origins` | 允許的 Origin 清單（逗號分隔） |
 
 ### 路徑驗證
 - ✅ 所有檔案路徑都經過 `SecurityHelper.ValidateFilePath()` 驗證
@@ -1210,7 +1210,7 @@ System.TypeInitializationException: The type initializer for 'Gdip' threw an exc
 - `Aspose.Pdf.lic` - PDF 組件授權
 
 **授權檔案配置方式（按優先順序）：**
-1. **命令列參數**（最高優先級）：`--license:路徑` 或 `--license=路徑`
+1. **命令列參數**（最高優先級）：`--license 路徑`
 2. **環境變數**：設定 `ASPOSE_LICENSE_PATH` 環境變數
 3. **自動搜尋**（預設）：在可執行檔案同一目錄搜尋常見授權檔案名稱
 

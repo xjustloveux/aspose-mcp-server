@@ -88,16 +88,19 @@ public class ExecuteMailMergeHandler : OperationHandlerBase<Document>
 
         doc.MailMerge.CleanupOptions = cleanupOptions;
 
+        var templateFieldNames = doc.MailMerge.GetFieldNames();
         var fieldNames = data.Select(kvp => kvp.Key).ToArray();
         var fieldValues = data.Select(kvp => kvp.Value?.ToString() ?? "").Cast<object>().ToArray();
 
         doc.MailMerge.Execute(fieldNames, fieldValues);
         doc.Save(outputPath);
 
+        var actualMergedCount = fieldNames.Count(f => templateFieldNames.Contains(f));
+
         return new MailMergeResult
         {
             TemplateSource = GetTemplateSource(context),
-            FieldsMerged = fieldNames.Length,
+            FieldsMerged = actualMergedCount,
             RecordsProcessed = 1,
             CleanupApplied = cleanupOptions != MailMergeCleanupOptions.None ? cleanupOptions.ToString() : null,
             OutputFiles = [outputPath]
@@ -131,11 +134,13 @@ public class ExecuteMailMergeHandler : OperationHandlerBase<Document>
 
             doc.MailMerge.CleanupOptions = cleanupOptions;
 
+            var templateFieldNames = doc.MailMerge.GetFieldNames();
             var fieldNames = recordData.Select(kvp => kvp.Key).ToArray();
             var fieldValues = recordData.Select(kvp => kvp.Value?.ToString() ?? "").Cast<object>().ToArray();
 
             doc.MailMerge.Execute(fieldNames, fieldValues);
-            fieldsMerged = Math.Max(fieldsMerged, fieldNames.Length);
+            var actualMergedCount = fieldNames.Count(f => templateFieldNames.Contains(f));
+            fieldsMerged = Math.Max(fieldsMerged, actualMergedCount);
 
             var recordOutputPath = dataArray.Count == 1
                 ? outputPath

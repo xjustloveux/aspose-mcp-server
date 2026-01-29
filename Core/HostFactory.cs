@@ -3,6 +3,8 @@ using AsposeMcpServer.Core.Security;
 using AsposeMcpServer.Core.Session;
 using AsposeMcpServer.Core.Tracking;
 using AsposeMcpServer.Core.Transport;
+using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Core;
 
@@ -70,7 +72,8 @@ internal static class HostFactory
 
         builder.Services.AddMcpServer()
             .WithStdioServerTransport()
-            .WithFilteredToolsAndSchemas(config, sessionConfig);
+            .WithFilteredToolsAndSchemas(config, sessionConfig)
+            .AddCallToolFilter(CreateErrorDetailFilter());
 
         return builder.Build();
     }
@@ -98,7 +101,8 @@ internal static class HostFactory
         var builder = CreateWebAppBuilder(args, transportConfig, sessionConfig, authConfig, trackingConfig);
         builder.Services.AddMcpServer()
             .WithHttpTransport()
-            .WithFilteredToolsAndSchemas(config, sessionConfig);
+            .WithFilteredToolsAndSchemas(config, sessionConfig)
+            .AddCallToolFilter(CreateErrorDetailFilter());
         var app = builder.Build();
 
         LogServerStartup($"HTTP server listening on http://{transportConfig.Host}:{transportConfig.Port}");
@@ -130,7 +134,9 @@ internal static class HostFactory
         ServerConfig config)
     {
         var builder = CreateWebAppBuilder(args, transportConfig, sessionConfig, authConfig, trackingConfig);
-        builder.Services.AddMcpServer().WithFilteredToolsAndSchemas(config, sessionConfig);
+        builder.Services.AddMcpServer()
+            .WithFilteredToolsAndSchemas(config, sessionConfig)
+            .AddCallToolFilter(CreateErrorDetailFilter());
         var app = builder.Build();
 
         LogServerStartup($"WebSocket server listening on ws://{transportConfig.Host}:{transportConfig.Port}");
@@ -186,6 +192,30 @@ internal static class HostFactory
             else
                 options.Listen(IPAddress.Parse(transport.Host), transport.Port);
         });
+    }
+
+    /// <summary>
+    ///     Creates a filter that preserves original exception messages in tool error responses.
+    ///     Without this filter, the MCP SDK replaces exception details with a generic error message.
+    /// </summary>
+    /// <returns>A filter that catches exceptions and returns them as detailed error results.</returns>
+    private static McpRequestFilter<CallToolRequestParams, CallToolResult> CreateErrorDetailFilter()
+    {
+        return next => async (request, cancellationToken) =>
+        {
+            try
+            {
+                return await next(request, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                return new CallToolResult
+                {
+                    IsError = true,
+                    Content = [new TextContentBlock { Text = ex.Message }]
+                };
+            }
+        };
     }
 
     /// <summary>

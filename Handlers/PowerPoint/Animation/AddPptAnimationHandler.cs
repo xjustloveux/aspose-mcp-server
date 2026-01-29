@@ -37,7 +37,10 @@ public class AddPptAnimationHandler : OperationHandlerBase<Presentation>
         var effectSubtype = PptAnimationHelper.ParseEffectSubtype(p.EffectSubtype);
         var triggerType = PptAnimationHelper.ParseTriggerType(p.TriggerType);
 
-        slide.Timeline.MainSequence.AddEffect(shape, effectType, effectSubtype, triggerType);
+        var effect = slide.Timeline.MainSequence.AddEffect(shape, effectType, effectSubtype, triggerType);
+
+        if (p.Duration.HasValue) effect.Timing.Duration = p.Duration.Value;
+        if (p.Delay.HasValue) effect.Timing.TriggerDelayTime = p.Delay.Value;
 
         MarkModified(context);
 
@@ -59,7 +62,9 @@ public class AddPptAnimationHandler : OperationHandlerBase<Presentation>
             parameters.GetRequired<int>("shapeIndex"),
             parameters.GetOptional<string?>("effectType"),
             parameters.GetOptional<string?>("effectSubtype"),
-            parameters.GetOptional<string?>("triggerType"));
+            parameters.GetOptional<string?>("triggerType"),
+            parameters.GetOptional<float?>("duration"),
+            parameters.GetOptional<float?>("delay"));
     }
 
     /// <summary>
@@ -70,10 +75,14 @@ public class AddPptAnimationHandler : OperationHandlerBase<Presentation>
     /// <param name="EffectType">The optional effect type.</param>
     /// <param name="EffectSubtype">The optional effect subtype.</param>
     /// <param name="TriggerType">The optional trigger type.</param>
+    /// <param name="Duration">The optional animation duration in seconds.</param>
+    /// <param name="Delay">The optional animation delay in seconds.</param>
     private sealed record AddAnimationParameters(
         int SlideIndex,
         int ShapeIndex,
         string? EffectType,
         string? EffectSubtype,
-        string? TriggerType);
+        string? TriggerType,
+        float? Duration,
+        float? Delay);
 }

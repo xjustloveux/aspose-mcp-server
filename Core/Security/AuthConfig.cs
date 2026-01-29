@@ -149,20 +149,27 @@ public class AuthConfig
     /// <param name="args">Command line arguments</param>
     private void LoadFromCommandLine(string[] args)
     {
-        foreach (var arg in args.Where(arg => !ProcessApiKeyArg(arg)))
-            _ = ProcessJwtArg(arg);
+        for (var i = 0; i < args.Length; i++)
+        {
+            var arg = args[i];
+            if (!ProcessApiKeyArg(arg, args, ref i))
+                ProcessJwtArg(arg, args, ref i);
+        }
     }
 
     /// <summary>
     ///     Processes API Key related command line argument
     /// </summary>
+    /// <param name="arg">The command line argument to process</param>
+    /// <param name="args">All command line arguments</param>
+    /// <param name="index">Current index in the arguments array</param>
     /// <returns>True if the argument was processed, false otherwise</returns>
-    private bool ProcessApiKeyArg(string arg)
+    private bool ProcessApiKeyArg(string arg, string[] args, ref int index)
     {
         if (TryProcessApiKeyBooleanArg(arg)) return true;
-        if (TryProcessApiKeyModeArg(arg)) return true;
-        if (TryProcessApiKeyStringArg(arg)) return true;
-        return TryProcessApiKeyIntArg(arg);
+        if (TryProcessApiKeyModeArg(arg, args, ref index)) return true;
+        if (TryProcessApiKeyStringArg(arg, args, ref index)) return true;
+        return TryProcessApiKeyIntArg(arg, args, ref index);
     }
 
     /// <summary>
@@ -189,10 +196,12 @@ public class AuthConfig
     ///     Tries to process API key mode argument.
     /// </summary>
     /// <param name="arg">The command line argument to process.</param>
+    /// <param name="args">All command line arguments.</param>
+    /// <param name="index">Current index in the arguments array.</param>
     /// <returns>True if the argument was processed as an API key mode argument; otherwise, false.</returns>
-    private bool TryProcessApiKeyModeArg(string arg)
+    private bool TryProcessApiKeyModeArg(string arg, string[] args, ref int index)
     {
-        var value = TryGetArgValue(arg, "--auth-apikey-mode");
+        var value = TryGetArgValue(arg, "--auth-apikey-mode", args, ref index);
         if (value == null || !Enum.TryParse<ApiKeyMode>(value, true, out var apiMode)) return false;
         ApiKey.Mode = apiMode;
         return true;
@@ -202,8 +211,10 @@ public class AuthConfig
     ///     Tries to process API key string arguments.
     /// </summary>
     /// <param name="arg">The command line argument to process.</param>
+    /// <param name="args">All command line arguments.</param>
+    /// <param name="index">Current index in the arguments array.</param>
     /// <returns>True if the argument was processed as a string API key argument; otherwise, false.</returns>
-    private bool TryProcessApiKeyStringArg(string arg)
+    private bool TryProcessApiKeyStringArg(string arg, string[] args, ref int index)
     {
         var stringArgs = new Dictionary<string, Action<string>>
         {
@@ -218,7 +229,7 @@ public class AuthConfig
 
         foreach (var (prefix, action) in stringArgs)
         {
-            var value = TryGetArgValue(arg, prefix);
+            var value = TryGetArgValue(arg, prefix, args, ref index);
             if (value == null) continue;
             action(value);
             return true;
@@ -231,8 +242,10 @@ public class AuthConfig
     ///     Tries to process API key integer arguments.
     /// </summary>
     /// <param name="arg">The command line argument to process.</param>
+    /// <param name="args">All command line arguments.</param>
+    /// <param name="index">Current index in the arguments array.</param>
     /// <returns>True if the argument was processed as an integer API key argument; otherwise, false.</returns>
-    private bool TryProcessApiKeyIntArg(string arg)
+    private bool TryProcessApiKeyIntArg(string arg, string[] args, ref int index)
     {
         var intArgs = new Dictionary<string, Action<int>>
         {
@@ -243,7 +256,7 @@ public class AuthConfig
 
         foreach (var (prefix, action) in intArgs)
         {
-            var value = TryGetArgValue(arg, prefix);
+            var value = TryGetArgValue(arg, prefix, args, ref index);
             if (value == null || !int.TryParse(value, out var intValue)) continue;
             action(intValue);
             return true;
@@ -255,13 +268,15 @@ public class AuthConfig
     /// <summary>
     ///     Processes JWT related command line argument
     /// </summary>
-    /// <returns>True if the argument was processed, false otherwise</returns>
-    private bool ProcessJwtArg(string arg)
+    /// <param name="arg">The command line argument to process</param>
+    /// <param name="args">All command line arguments</param>
+    /// <param name="index">Current index in the arguments array</param>
+    private void ProcessJwtArg(string arg, string[] args, ref int index)
     {
-        if (TryProcessJwtBooleanArg(arg)) return true;
-        if (TryProcessJwtModeArg(arg)) return true;
-        if (TryProcessJwtStringArg(arg)) return true;
-        return TryProcessJwtIntArg(arg);
+        if (TryProcessJwtBooleanArg(arg)) return;
+        if (TryProcessJwtModeArg(arg, args, ref index)) return;
+        if (TryProcessJwtStringArg(arg, args, ref index)) return;
+        TryProcessJwtIntArg(arg, args, ref index);
     }
 
     /// <summary>
@@ -288,10 +303,12 @@ public class AuthConfig
     ///     Tries to process JWT mode argument.
     /// </summary>
     /// <param name="arg">The command line argument to process.</param>
+    /// <param name="args">All command line arguments.</param>
+    /// <param name="index">Current index in the arguments array.</param>
     /// <returns>True if the argument was processed as a JWT mode argument; otherwise, false.</returns>
-    private bool TryProcessJwtModeArg(string arg)
+    private bool TryProcessJwtModeArg(string arg, string[] args, ref int index)
     {
-        var value = TryGetArgValue(arg, "--auth-jwt-mode");
+        var value = TryGetArgValue(arg, "--auth-jwt-mode", args, ref index);
         if (value == null || !Enum.TryParse<JwtMode>(value, true, out var jwtMode)) return false;
         Jwt.Mode = jwtMode;
         return true;
@@ -301,8 +318,10 @@ public class AuthConfig
     ///     Tries to process JWT string arguments.
     /// </summary>
     /// <param name="arg">The command line argument to process.</param>
+    /// <param name="args">All command line arguments.</param>
+    /// <param name="index">Current index in the arguments array.</param>
     /// <returns>True if the argument was processed as a string JWT argument; otherwise, false.</returns>
-    private bool TryProcessJwtStringArg(string arg)
+    private bool TryProcessJwtStringArg(string arg, string[] args, ref int index)
     {
         var stringArgs = new Dictionary<string, Action<string>>
         {
@@ -322,7 +341,7 @@ public class AuthConfig
 
         foreach (var (prefix, action) in stringArgs)
         {
-            var value = TryGetArgValue(arg, prefix);
+            var value = TryGetArgValue(arg, prefix, args, ref index);
             if (value == null) continue;
             action(value);
             return true;
@@ -335,8 +354,9 @@ public class AuthConfig
     ///     Tries to process JWT integer arguments.
     /// </summary>
     /// <param name="arg">The command line argument to process.</param>
-    /// <returns>True if the argument was processed as an integer JWT argument; otherwise, false.</returns>
-    private bool TryProcessJwtIntArg(string arg)
+    /// <param name="args">All command line arguments.</param>
+    /// <param name="index">Current index in the arguments array.</param>
+    private void TryProcessJwtIntArg(string arg, string[] args, ref int index)
     {
         var intArgs = new Dictionary<string, Action<int>>
         {
@@ -347,23 +367,29 @@ public class AuthConfig
 
         foreach (var (prefix, action) in intArgs)
         {
-            var value = TryGetArgValue(arg, prefix);
+            var value = TryGetArgValue(arg, prefix, args, ref index);
             if (value == null || !int.TryParse(value, out var intValue)) continue;
             action(intValue);
-            return true;
+            return;
         }
-
-        return false;
     }
 
     /// <summary>
-    ///     Tries to extract value from command line argument with either ':' or '=' separator
+    ///     Tries to extract value from command line argument with ':', '=' or space separator
     /// </summary>
     /// <param name="arg">The command line argument</param>
     /// <param name="prefix">The argument prefix (e.g., "--auth-jwt-secret")</param>
+    /// <param name="args">All command line arguments</param>
+    /// <param name="index">Current index in the arguments array</param>
     /// <returns>The value if found, null otherwise</returns>
-    private static string? TryGetArgValue(string arg, string prefix)
+    private static string? TryGetArgValue(string arg, string prefix, string[] args, ref int index)
     {
+        if (arg.Equals(prefix, StringComparison.OrdinalIgnoreCase) && index + 1 < args.Length)
+        {
+            index++;
+            return args[index];
+        }
+
         var colonPrefix = prefix + ":";
         if (arg.StartsWith(colonPrefix, StringComparison.OrdinalIgnoreCase))
             return arg[colonPrefix.Length..];

@@ -117,12 +117,13 @@ public class SessionConfig
     /// <param name="args">Command line arguments</param>
     private void LoadFromCommandLine(string[] args)
     {
-        foreach (var arg in args)
+        for (var i = 0; i < args.Length; i++)
         {
+            var arg = args[i];
             ProcessBooleanArgs(arg);
-            ProcessIntArgs(arg);
-            ProcessStringArgs(arg);
-            ProcessEnumArgs(arg);
+            ProcessIntArgs(arg, args, ref i);
+            ProcessStringArgs(arg, args, ref i);
+            ProcessEnumArgs(arg, args, ref i);
         }
     }
 
@@ -140,50 +141,69 @@ public class SessionConfig
     /// <summary>
     ///     Processes integer command line arguments.
     /// </summary>
-    private void ProcessIntArgs(string arg)
+    /// <param name="arg">The current argument string.</param>
+    /// <param name="args">The full arguments array.</param>
+    /// <param name="index">The current index in the arguments array.</param>
+    private void ProcessIntArgs(string arg, string[] args, ref int index)
     {
-        if (TryParseIntArg(arg, "--session-max", out var maxSessions))
+        if (TryParseIntArg(arg, "--session-max", args, ref index, out var maxSessions))
             MaxSessions = maxSessions;
-        else if (TryParseIntArg(arg, "--session-timeout", out var timeout))
+        else if (TryParseIntArg(arg, "--session-timeout", args, ref index, out var timeout))
             IdleTimeoutMinutes = timeout;
-        else if (TryParseIntArg(arg, "--session-max-file-size", out var maxFileSize))
+        else if (TryParseIntArg(arg, "--session-max-file-size", args, ref index, out var maxFileSize))
             MaxFileSizeMb = maxFileSize;
-        else if (TryParseIntArg(arg, "--session-temp-retention-hours", out var retention))
+        else if (TryParseIntArg(arg, "--session-temp-retention-hours", args, ref index, out var retention))
             TempRetentionHours = retention;
-        else if (TryParseIntArg(arg, "--session-auto-save", out var autoSave))
+        else if (TryParseIntArg(arg, "--session-auto-save", args, ref index, out var autoSave))
             AutoSaveIntervalMinutes = autoSave;
     }
 
     /// <summary>
     ///     Processes string command line arguments.
     /// </summary>
-    private void ProcessStringArgs(string arg)
+    /// <param name="arg">The current argument string.</param>
+    /// <param name="args">The full arguments array.</param>
+    /// <param name="index">The current index in the arguments array.</param>
+    private void ProcessStringArgs(string arg, string[] args, ref int index)
     {
-        if (TryParseStringArg(arg, "--session-temp-dir", out var tempDir))
+        if (TryParseStringArg(arg, "--session-temp-dir", args, ref index, out var tempDir))
             TempDirectory = tempDir;
     }
 
     /// <summary>
     ///     Processes enum command line arguments.
     /// </summary>
-    private void ProcessEnumArgs(string arg)
+    /// <param name="arg">The current argument string.</param>
+    /// <param name="args">The full arguments array.</param>
+    /// <param name="index">The current index in the arguments array.</param>
+    private void ProcessEnumArgs(string arg, string[] args, ref int index)
     {
-        if (TryParseEnumArg<DisconnectBehavior>(arg, "--session-on-disconnect", out var behavior))
+        if (TryParseEnumArg<DisconnectBehavior>(arg, "--session-on-disconnect", args, ref index, out var behavior))
             OnDisconnect = behavior;
-        else if (TryParseEnumArg<SessionIsolationMode>(arg, "--session-isolation", out var isolation))
+        else if (TryParseEnumArg<SessionIsolationMode>(arg, "--session-isolation", args, ref index, out var isolation))
             IsolationMode = isolation;
     }
 
     /// <summary>
-    ///     Tries to parse an integer argument with both : and = separators.
+    ///     Tries to parse an integer argument with space, colon, and equals separators.
     /// </summary>
     /// <param name="arg">The argument string to parse.</param>
     /// <param name="prefix">The argument prefix to match.</param>
+    /// <param name="args">The full arguments array for space-separated value lookup.</param>
+    /// <param name="index">The current index in the arguments array.</param>
     /// <param name="value">The parsed integer value.</param>
     /// <returns>True if parsing succeeded; otherwise, false.</returns>
-    private static bool TryParseIntArg(string arg, string prefix, out int value)
+    private static bool TryParseIntArg(string arg, string prefix, string[] args, ref int index, out int value)
     {
         value = 0;
+
+        if (arg.Equals(prefix, StringComparison.OrdinalIgnoreCase) &&
+            index + 1 < args.Length && int.TryParse(args[index + 1], out value))
+        {
+            index++;
+            return true;
+        }
+
         var colonPrefix = prefix + ":";
         var equalsPrefix = prefix + "=";
 
@@ -196,15 +216,25 @@ public class SessionConfig
     }
 
     /// <summary>
-    ///     Tries to parse a string argument with both : and = separators.
+    ///     Tries to parse a string argument with space, colon, and equals separators.
     /// </summary>
     /// <param name="arg">The argument string to parse.</param>
     /// <param name="prefix">The argument prefix to match.</param>
+    /// <param name="args">The full arguments array for space-separated value lookup.</param>
+    /// <param name="index">The current index in the arguments array.</param>
     /// <param name="value">The parsed string value.</param>
     /// <returns>True if parsing succeeded; otherwise, false.</returns>
-    private static bool TryParseStringArg(string arg, string prefix, out string value)
+    private static bool TryParseStringArg(string arg, string prefix, string[] args, ref int index, out string value)
     {
         value = string.Empty;
+
+        if (arg.Equals(prefix, StringComparison.OrdinalIgnoreCase) && index + 1 < args.Length)
+        {
+            value = args[index + 1];
+            index++;
+            return true;
+        }
+
         var colonPrefix = prefix + ":";
         var equalsPrefix = prefix + "=";
 
@@ -224,16 +254,27 @@ public class SessionConfig
     }
 
     /// <summary>
-    ///     Tries to parse an enum argument with both : and = separators.
+    ///     Tries to parse an enum argument with space, colon, and equals separators.
     /// </summary>
     /// <typeparam name="T">The enum type to parse.</typeparam>
     /// <param name="arg">The argument string to parse.</param>
     /// <param name="prefix">The argument prefix to match.</param>
+    /// <param name="args">The full arguments array for space-separated value lookup.</param>
+    /// <param name="index">The current index in the arguments array.</param>
     /// <param name="value">The parsed enum value.</param>
     /// <returns>True if parsing succeeded; otherwise, false.</returns>
-    private static bool TryParseEnumArg<T>(string arg, string prefix, out T value) where T : struct, Enum
+    private static bool TryParseEnumArg<T>(string arg, string prefix, string[] args, ref int index, out T value)
+        where T : struct, Enum
     {
         value = default;
+
+        if (arg.Equals(prefix, StringComparison.OrdinalIgnoreCase) &&
+            index + 1 < args.Length && Enum.TryParse(args[index + 1], true, out value))
+        {
+            index++;
+            return true;
+        }
+
         var colonPrefix = prefix + ":";
         var equalsPrefix = prefix + "=";
 

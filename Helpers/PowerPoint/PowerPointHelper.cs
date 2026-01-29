@@ -170,6 +170,12 @@ public static class PowerPointHelper
     {
         switch (shape)
         {
+            case IAudioFrame:
+                audio++;
+                break;
+            case IVideoFrame:
+                video++;
+                break;
             case PictureFrame:
                 images++;
                 break;
@@ -181,12 +187,6 @@ public static class PowerPointHelper
                 break;
             case ISmartArt:
                 smartArt++;
-                break;
-            case IAudioFrame:
-                audio++;
-                break;
-            case IVideoFrame:
-                video++;
                 break;
             case IGroupShape groupShape:
                 foreach (var childShape in groupShape.Shapes)

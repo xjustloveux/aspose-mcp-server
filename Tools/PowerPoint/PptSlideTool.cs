@@ -171,7 +171,7 @@ Usage examples:
             "get_info" => parameters,
             "move" => BuildMoveParameters(parameters, fromIndex, toIndex),
             "duplicate" => BuildDuplicateParameters(parameters, slideIndex, insertAt),
-            "hide" => BuildHideParameters(parameters, slideIndices, hidden),
+            "hide" => BuildHideParameters(parameters, slideIndex, slideIndices, hidden),
             "edit" => BuildEditParameters(parameters, slideIndex, layoutIndex),
             _ => parameters
         };
@@ -234,13 +234,17 @@ Usage examples:
     ///     Builds parameters for the hide/show slide operation.
     /// </summary>
     /// <param name="parameters">Base parameters to add to.</param>
+    /// <param name="slideIndex">Single slide index (0-based), used as fallback when slideIndices is not provided.</param>
     /// <param name="slideIndices">JSON array of slide indices to hide/show.</param>
     /// <param name="hidden">Whether to hide (true) or show (false) the slides.</param>
     /// <returns>OperationParameters configured for hiding/showing slides.</returns>
-    private static OperationParameters BuildHideParameters(OperationParameters parameters, string? slideIndices,
-        bool hidden)
+    private static OperationParameters BuildHideParameters(OperationParameters parameters, int? slideIndex,
+        string? slideIndices, bool hidden)
     {
-        if (slideIndices != null) parameters.Set("slideIndices", slideIndices);
+        if (slideIndices != null)
+            parameters.Set("slideIndices", slideIndices);
+        else if (slideIndex.HasValue)
+            parameters.Set("slideIndices", $"[{slideIndex.Value}]");
         parameters.Set("hidden", hidden);
         return parameters;
     }

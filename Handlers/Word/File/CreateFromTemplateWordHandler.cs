@@ -78,6 +78,7 @@ public class CreateFromTemplateWordHandler : OperationHandlerBase<Document>
         using var jsonStream = new MemoryStream(Encoding.UTF8.GetBytes(p.DataJson));
         var loadOptions = new JsonDataLoadOptions
         {
+            AlwaysGenerateRootObject = true,
             ExactDateTimeParseFormats = ["yyyy-MM-dd", "yyyy-MM-ddTHH:mm:ss"],
             SimpleValueParseMode = JsonSimpleValueParseMode.Strict
         };

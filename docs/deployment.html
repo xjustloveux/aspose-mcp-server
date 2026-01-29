@@ -532,7 +532,7 @@ kubectl get pods -l app=aspose-mcp</pre>
                 <code>ASPOSE_PORT</code>
             </td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-                <code>--port:N</code>
+                <code>--port N</code>
             </td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">監聽埠號（1-65535，無效值重設為 3000）</td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">3000</td>
@@ -542,7 +542,7 @@ kubectl get pods -l app=aspose-mcp</pre>
                 <code>ASPOSE_HOST</code>
             </td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-                <code>--host:addr</code>
+                <code>--host addr</code>
             </td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">監聽位址（localhost/0.0.0.0/*/特定IP，無效值重設為 localhost）</td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">localhost</td>
@@ -562,7 +562,7 @@ kubectl get pods -l app=aspose-mcp</pre>
                 <code>ASPOSE_LICENSE_PATH</code>
             </td>
             <td style="padding: 10px;">
-                <code>--license:path</code>
+                <code>--license path</code>
             </td>
             <td style="padding: 10px;">License 檔案路徑</td>
             <td style="padding: 10px;">-</td>
@@ -603,7 +603,7 @@ kubectl get pods -l app=aspose-mcp</pre>
                 <code>ASPOSE_SESSION_MAX</code>
             </td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-                <code>--session-max:N</code>
+                <code>--session-max N</code>
             </td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">最大 Session 數</td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">10</td>
@@ -613,7 +613,7 @@ kubectl get pods -l app=aspose-mcp</pre>
                 <code>ASPOSE_SESSION_TIMEOUT</code>
             </td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-                <code>--session-timeout:N</code>
+                <code>--session-timeout N</code>
             </td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">Session 逾時（分鐘）</td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">30</td>
@@ -623,7 +623,7 @@ kubectl get pods -l app=aspose-mcp</pre>
                 <code>ASPOSE_SESSION_MAX_FILE_SIZE_MB</code>
             </td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-                <code>--session-max-file-size:N</code>
+                <code>--session-max-file-size N</code>
             </td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">最大檔案大小（MB，最小 1）</td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">100</td>
@@ -633,7 +633,7 @@ kubectl get pods -l app=aspose-mcp</pre>
                 <code>ASPOSE_SESSION_TEMP_DIR</code>
             </td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-                <code>--session-temp-dir:path</code>
+                <code>--session-temp-dir path</code>
             </td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">臨時目錄</td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">系統臨時目錄</td>
@@ -643,7 +643,7 @@ kubectl get pods -l app=aspose-mcp</pre>
                 <code>ASPOSE_SESSION_TEMP_RETENTION_HOURS</code>
             </td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-                <code>--session-temp-retention-hours:N</code>
+                <code>--session-temp-retention-hours N</code>
             </td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">暫存檔保留時間（小時）</td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">24</td>
@@ -653,7 +653,7 @@ kubectl get pods -l app=aspose-mcp</pre>
                 <code>ASPOSE_SESSION_ON_DISCONNECT</code>
             </td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-                <code>--session-on-disconnect:behavior</code>
+                <code>--session-on-disconnect behavior</code>
             </td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">逾時處理</td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">SaveToTemp</td>
@@ -663,7 +663,7 @@ kubectl get pods -l app=aspose-mcp</pre>
                 <code>ASPOSE_SESSION_ISOLATION</code>
             </td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-                <code>--session-isolation:mode</code>
+                <code>--session-isolation mode</code>
             </td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">Session 隔離模式（none/group）</td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">group</td>
@@ -673,7 +673,7 @@ kubectl get pods -l app=aspose-mcp</pre>
                 <code>ASPOSE_SESSION_AUTO_SAVE_INTERVAL</code>
             </td>
             <td style="padding: 10px;">
-                <code>--session-auto-save:N</code>
+                <code>--session-auto-save N</code>
             </td>
             <td style="padding: 10px;">自動暫存間隔（分鐘，0 = 停用）</td>
             <td style="padding: 10px;">0</td>
@@ -727,7 +727,7 @@ kubectl get pods -l app=aspose-mcp</pre>
         <code>ASPOSE_AUTH_APIKEY_MODE</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-        <code>--auth-apikey-mode:mode</code>
+        <code>--auth-apikey-mode mode</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">API Key 驗證模式</td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">local</td>
@@ -737,7 +737,7 @@ kubectl get pods -l app=aspose-mcp</pre>
         <code>ASPOSE_AUTH_APIKEY_KEYS</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-        <code>--auth-apikey-keys:keys</code>
+        <code>--auth-apikey-keys keys</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">API Key 列表（key:group 格式）</td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">-</td>
@@ -747,7 +747,7 @@ kubectl get pods -l app=aspose-mcp</pre>
         <code>ASPOSE_AUTH_APIKEY_HEADER</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-        <code>--auth-apikey-header:name</code>
+        <code>--auth-apikey-header name</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">API Key Header 名稱</td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">X-API-Key</td>
@@ -757,7 +757,7 @@ kubectl get pods -l app=aspose-mcp</pre>
         <code>ASPOSE_AUTH_APIKEY_GROUP_HEADER</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-        <code>--auth-apikey-group-header:name</code>
+        <code>--auth-apikey-group-header name</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">Group ID Header（Gateway 模式）</td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">X-Group-Id</td>
@@ -767,7 +767,7 @@ kubectl get pods -l app=aspose-mcp</pre>
         <code>ASPOSE_AUTH_APIKEY_INTROSPECTION_URL</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-        <code>--auth-apikey-introspection-url:url</code>
+        <code>--auth-apikey-introspection-url url</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">Introspection 端點 URL</td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">-</td>
@@ -777,7 +777,7 @@ kubectl get pods -l app=aspose-mcp</pre>
         <code>ASPOSE_AUTH_APIKEY_INTROSPECTION_AUTH</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-        <code>--auth-apikey-introspection-auth:value</code>
+        <code>--auth-apikey-introspection-auth value</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">Introspection 認證 Header</td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">-</td>
@@ -787,7 +787,7 @@ kubectl get pods -l app=aspose-mcp</pre>
         <code>ASPOSE_AUTH_APIKEY_INTROSPECTION_FIELD</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-        <code>--auth-apikey-introspection-field:name</code>
+        <code>--auth-apikey-introspection-field name</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">Introspection 請求欄位名稱</td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">key</td>
@@ -797,7 +797,7 @@ kubectl get pods -l app=aspose-mcp</pre>
         <code>ASPOSE_AUTH_APIKEY_CUSTOM_URL</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-        <code>--auth-apikey-custom-url:url</code>
+        <code>--auth-apikey-custom-url url</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">Custom 驗證端點 URL</td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">-</td>
@@ -807,7 +807,7 @@ kubectl get pods -l app=aspose-mcp</pre>
         <code>ASPOSE_AUTH_APIKEY_TIMEOUT</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-        <code>--auth-apikey-timeout:N</code>
+        <code>--auth-apikey-timeout N</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">外部驗證逾時（秒，Introspection/Custom）</td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">5</td>
@@ -827,7 +827,7 @@ kubectl get pods -l app=aspose-mcp</pre>
         <code>ASPOSE_AUTH_JWT_MODE</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-        <code>--auth-jwt-mode:mode</code>
+        <code>--auth-jwt-mode mode</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">JWT 驗證模式</td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">local</td>
@@ -837,7 +837,7 @@ kubectl get pods -l app=aspose-mcp</pre>
         <code>ASPOSE_AUTH_JWT_SECRET</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-        <code>--auth-jwt-secret:value</code>
+        <code>--auth-jwt-secret value</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">JWT HMAC 密鑰</td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">-</td>
@@ -847,7 +847,7 @@ kubectl get pods -l app=aspose-mcp</pre>
         <code>ASPOSE_AUTH_JWT_PUBLIC_KEY_PATH</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-        <code>--auth-jwt-public-key-path:path</code>
+        <code>--auth-jwt-public-key-path path</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">RSA/ECDSA 公鑰檔案路徑</td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">-</td>
@@ -857,7 +857,7 @@ kubectl get pods -l app=aspose-mcp</pre>
         <code>ASPOSE_AUTH_JWT_ISSUER</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-        <code>--auth-jwt-issuer:value</code>
+        <code>--auth-jwt-issuer value</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">JWT 發行者</td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">-</td>
@@ -867,7 +867,7 @@ kubectl get pods -l app=aspose-mcp</pre>
         <code>ASPOSE_AUTH_JWT_AUDIENCE</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-        <code>--auth-jwt-audience:value</code>
+        <code>--auth-jwt-audience value</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">JWT 受眾</td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">-</td>
@@ -877,7 +877,7 @@ kubectl get pods -l app=aspose-mcp</pre>
         <code>ASPOSE_AUTH_JWT_GROUP_CLAIM</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-        <code>--auth-jwt-group-claim:name</code>
+        <code>--auth-jwt-group-claim name</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">Group ID Claim 名稱（如 tenant_id, team_id, org_id）</td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">tenant_id</td>
@@ -887,7 +887,7 @@ kubectl get pods -l app=aspose-mcp</pre>
         <code>ASPOSE_AUTH_JWT_USER_CLAIM</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-        <code>--auth-jwt-user-claim:name</code>
+        <code>--auth-jwt-user-claim name</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">User ID Claim 名稱</td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">sub</td>
@@ -897,7 +897,7 @@ kubectl get pods -l app=aspose-mcp</pre>
         <code>ASPOSE_AUTH_JWT_GROUP_HEADER</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-        <code>--auth-jwt-group-header:name</code>
+        <code>--auth-jwt-group-header name</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">Group ID Header（Gateway 模式）</td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">X-Group-Id</td>
@@ -907,7 +907,7 @@ kubectl get pods -l app=aspose-mcp</pre>
         <code>ASPOSE_AUTH_JWT_USER_HEADER</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-        <code>--auth-jwt-user-header:name</code>
+        <code>--auth-jwt-user-header name</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">User ID Header（Gateway 模式）</td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">X-User-Id</td>
@@ -917,7 +917,7 @@ kubectl get pods -l app=aspose-mcp</pre>
         <code>ASPOSE_AUTH_JWT_INTROSPECTION_URL</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-        <code>--auth-jwt-introspection-url:url</code>
+        <code>--auth-jwt-introspection-url url</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">OAuth Introspection 端點 URL</td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">-</td>
@@ -927,7 +927,7 @@ kubectl get pods -l app=aspose-mcp</pre>
         <code>ASPOSE_AUTH_JWT_CLIENT_ID</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-        <code>--auth-jwt-client-id:value</code>
+        <code>--auth-jwt-client-id value</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">OAuth Client ID（Introspection 模式）</td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">-</td>
@@ -937,7 +937,7 @@ kubectl get pods -l app=aspose-mcp</pre>
         <code>ASPOSE_AUTH_JWT_CLIENT_SECRET</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-        <code>--auth-jwt-client-secret:value</code>
+        <code>--auth-jwt-client-secret value</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">OAuth Client Secret（Introspection 模式）</td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">-</td>
@@ -947,7 +947,7 @@ kubectl get pods -l app=aspose-mcp</pre>
         <code>ASPOSE_AUTH_JWT_CUSTOM_URL</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-        <code>--auth-jwt-custom-url:url</code>
+        <code>--auth-jwt-custom-url url</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">Custom 驗證端點 URL</td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">-</td>
@@ -957,7 +957,7 @@ kubectl get pods -l app=aspose-mcp</pre>
         <code>ASPOSE_AUTH_JWT_TIMEOUT</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-        <code>--auth-jwt-timeout:N</code>
+        <code>--auth-jwt-timeout N</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">外部驗證逾時（秒，Introspection/Custom）</td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">5</td>
@@ -1003,7 +1003,7 @@ kubectl get pods -l app=aspose-mcp</pre>
                 <code>ASPOSE_LOG_TARGETS</code>
             </td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-                <code>--log-targets:Console,EventLog</code>
+                <code>--log-targets Console,EventLog</code>
             </td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">日誌目標</td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">Console</td>
@@ -1013,7 +1013,7 @@ kubectl get pods -l app=aspose-mcp</pre>
                 <code>ASPOSE_WEBHOOK_URL</code>
             </td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-                <code>--webhook-url:url</code>
+                <code>--webhook-url url</code>
             </td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">Webhook URL</td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">-</td>
@@ -1023,7 +1023,7 @@ kubectl get pods -l app=aspose-mcp</pre>
                 <code>ASPOSE_WEBHOOK_AUTH_HEADER</code>
             </td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-                <code>--webhook-auth-header:header</code>
+                <code>--webhook-auth-header header</code>
             </td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">Webhook 認證標頭值</td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">-</td>
@@ -1093,7 +1093,7 @@ kubectl get pods -l app=aspose-mcp</pre>
                 <code>ASPOSE_ALLOWED_ORIGINS</code>
             </td>
             <td style="padding: 10px;">
-                <code>--allowed-origins:origins</code>
+                <code>--allowed-origins origins</code>
             </td>
             <td style="padding: 10px;">允許的來源域名清單（逗號分隔）</td>
             <td style="padding: 10px;">-</td>

@@ -2,6 +2,7 @@ using Aspose.Cells;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.Excel;
 using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.Sheet;
@@ -21,7 +22,7 @@ public class CopyExcelSheetHandler : OperationHandlerBase<Workbook>
     /// <param name="context">The workbook context.</param>
     /// <param name="parameters">
     ///     Required: sheetIndex (0-based index of sheet to copy)
-    ///     Optional: targetIndex (position for copy), copyToPath (external file path)
+    ///     Optional: targetIndex (position for copy), copyToPath (external file path), newName (name for copied sheet)
     /// </param>
     /// <returns>Success message with operation details.</returns>
     public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
@@ -30,6 +31,10 @@ public class CopyExcelSheetHandler : OperationHandlerBase<Workbook>
 
         if (!string.IsNullOrEmpty(p.CopyToPath))
             SecurityHelper.ValidateFilePath(p.CopyToPath, "copyToPath", true);
+
+        var newName = p.NewName?.Trim();
+        if (!string.IsNullOrEmpty(newName))
+            ExcelSheetHelper.ValidateSheetName(newName, "newName");
 
         var workbook = context.Document;
 
@@ -44,10 +49,18 @@ public class CopyExcelSheetHandler : OperationHandlerBase<Workbook>
         {
             using var targetWorkbook = new Workbook();
             targetWorkbook.Worksheets[0].Copy(sourceSheet);
-            targetWorkbook.Worksheets[0].Name = sheetName;
+            targetWorkbook.Worksheets[0].Name = newName ?? sheetName;
             targetWorkbook.Save(p.CopyToPath);
             return new SuccessResult
                 { Message = $"Worksheet '{sheetName}' copied to external file. Output: {p.CopyToPath}" };
+        }
+
+        if (!string.IsNullOrEmpty(newName))
+        {
+            var duplicate = workbook.Worksheets.Any(ws =>
+                string.Equals(ws.Name, newName, StringComparison.OrdinalIgnoreCase));
+            if (duplicate)
+                throw new ArgumentException($"Worksheet name '{newName}' already exists in the workbook");
         }
 
         var targetIndex = p.TargetIndex ?? workbook.Worksheets.Count;
@@ -56,7 +69,10 @@ public class CopyExcelSheetHandler : OperationHandlerBase<Workbook>
             throw new ArgumentException(
                 $"Target index {targetIndex} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
 
-        _ = workbook.Worksheets.AddCopy(p.SheetIndex);
+        var copyIndex = workbook.Worksheets.AddCopy(p.SheetIndex);
+
+        if (!string.IsNullOrEmpty(newName))
+            workbook.Worksheets[copyIndex].Name = newName;
 
         MarkModified(context);
 
@@ -68,9 +84,14 @@ public class CopyExcelSheetHandler : OperationHandlerBase<Workbook>
         var sheetIndex = parameters.GetRequired<int>("sheetIndex");
         var targetIndex = parameters.GetOptional<int?>("targetIndex");
         var copyToPath = parameters.GetOptional<string?>("copyToPath");
+        var newName = parameters.GetOptional<string?>("newName");
 
-        return new CopyExcelSheetParameters(sheetIndex, targetIndex, copyToPath);
+        return new CopyExcelSheetParameters(sheetIndex, targetIndex, copyToPath, newName);
     }
 
-    private sealed record CopyExcelSheetParameters(int SheetIndex, int? TargetIndex, string? CopyToPath);
+    private sealed record CopyExcelSheetParameters(
+        int SheetIndex,
+        int? TargetIndex,
+        string? CopyToPath,
+        string? NewName);
 }

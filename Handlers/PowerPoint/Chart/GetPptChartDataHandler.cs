@@ -54,7 +54,7 @@ public class GetPptChartDataHandler : OperationHandlerBase<Presentation>
                 dataPointsList.Add(new GetChartDataPoint
                 {
                     Index = j,
-                    Value = point.Value?.ToString()
+                    Value = point.Value?.Data.ToString()
                 });
             }
 

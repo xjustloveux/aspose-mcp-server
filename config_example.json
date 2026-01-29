@@ -7,7 +7,7 @@
   "_comment6": "Windows 路徑可使用正斜線 (/) 或雙反斜線 (\\\\)",
   "_comment7": "請將路徑替換為解壓後的實際路徑",
   "_comment8": "授權文件支援：Aspose.Total.lic 或單一組件授權（如 Aspose.Words.lic）",
-  "_comment9": "授權文件配置：自動搜尋、環境變數 ASPOSE_LICENSE_PATH 或 --license:路徑 參數",
+  "_comment9": "授權文件配置：自動搜尋、環境變數 ASPOSE_LICENSE_PATH 或 --license 路徑 參數",
   "_comment10": "下載地址：https://github.com/xjustloveux/aspose-mcp-server/releases",
 
   "_範例1": "========================================",
@@ -30,7 +30,7 @@
   "mcpServers_example2_custom_license": {
     "aspose-word": {
       "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",
-      "args": ["--word", "--license:C:/Licenses/Aspose.Words.lic"]
+      "args": ["--word", "--license", "C:/Licenses/Aspose.Words.lic"]
     }
   },
 
@@ -126,7 +126,7 @@
   "mcpServers_example10_unix_license": {
     "aspose-word": {
       "command": "/Users/username/tools/aspose-mcp-server/AsposeMcpServer",
-      "args": ["--word", "--license:/Users/username/licenses/Aspose.Words.lic"]
+      "args": ["--word", "--license", "/Users/username/licenses/Aspose.Words.lic"]
     }
   },
 
@@ -137,7 +137,7 @@
   "mcpServers_example11_http": {
     "aspose-all": {
       "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",
-      "args": ["--all", "--http", "--port:3000"]
+      "args": ["--all", "--http", "--port", "3000"]
     }
   },
 
@@ -148,7 +148,7 @@
   "mcpServers_example12_websocket": {
     "aspose-all": {
       "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",
-      "args": ["--all", "--ws", "--port:3000"]
+      "args": ["--all", "--ws", "--port", "3000"]
     }
   },
 
@@ -161,10 +161,10 @@
       "args": [
         "--all",
         "--http",
-        "--port:3000",
+        "--port", "3000",
         "--session-enabled",
-        "--session-max:20",
-        "--session-timeout:60"
+        "--session-max", "20",
+        "--session-timeout", "60"
       ]
     }
   },
@@ -178,9 +178,9 @@
       "args": [
         "--all",
         "--http",
-        "--port:3000",
+        "--port", "3000",
         "--auth-apikey-enabled",
-        "--auth-apikey-keys:mykey1:group1,mykey2:group2"
+        "--auth-apikey-keys", "mykey1:group1,mykey2:group2"
       ]
     }
   },
@@ -194,11 +194,11 @@
       "args": [
         "--all",
         "--http",
-        "--port:3000",
+        "--port", "3000",
         "--session-enabled",
-        "--session-isolation:group",
+        "--session-isolation", "group",
         "--auth-jwt-enabled",
-        "--auth-jwt-secret:your-jwt-secret"
+        "--auth-jwt-secret", "your-jwt-secret"
       ]
     }
   },
@@ -212,12 +212,12 @@
       "args": [
         "--all",
         "--http",
-        "--port:3000",
+        "--port", "3000",
         "--session-enabled",
-        "--session-isolation:group",
+        "--session-isolation", "group",
         "--auth-jwt-enabled",
-        "--auth-jwt-secret:your-jwt-secret",
-        "--auth-jwt-group-claim:team_id"
+        "--auth-jwt-secret", "your-jwt-secret",
+        "--auth-jwt-group-claim", "team_id"
       ]
     }
   },
@@ -231,8 +231,8 @@
       "args": [
         "--all",
         "--http",
-        "--port:3000",
-        "--allowed-origins:https://myapp.example.com,https://admin.example.com",
+        "--port", "3000",
+        "--allowed-origins", "https://myapp.example.com,https://admin.example.com",
         "--require-origin",
         "--no-localhost"
       ]
@@ -246,23 +246,23 @@
     "--powerpoint 或 --ppt": "啟用 PowerPoint 工具（自動包含轉換功能）",
     "--pdf": "啟用 PDF 工具",
     "--all": "啟用所有工具",
-    "--license:路徑": "指定授權文件路徑（可選）"
+    "--license 路徑": "指定授權文件路徑（可選）"
   },
   "_參數列表_傳輸": {
     "--stdio": "標準輸入輸出模式（預設）",
     "--http": "HTTP 模式（Streamable HTTP，MCP 2025-03-26+）",
     "--ws 或 --websocket": "WebSocket 模式",
-    "--port:N": "監聽埠號（預設：3000）",
-    "--host:addr": "監聽位址（預設：localhost）"
+    "--port N": "監聽埠號（預設：3000）",
+    "--host addr": "監聽位址（預設：localhost）"
   },
   "_參數列表_Session": {
     "--session-enabled": "啟用 Session 管理",
-    "--session-max:N": "最大 Session 數（預設：10）",
-    "--session-timeout:N": "Session 逾時分鐘（預設：30）",
-    "--session-isolation:mode": "隔離模式（none/group，預設：group）",
-    "--session-temp-retention-hours:N": "暫存檔保留時間（預設：24 小時）",
-    "--session-on-disconnect:behavior": "逾時處理（AutoSave/Discard/SaveToTemp/PromptOnReconnect）",
-    "--session-auto-save:N": "自動暫存間隔分鐘（0 = 停用，預設：0）"
+    "--session-max N": "最大 Session 數（預設：10）",
+    "--session-timeout N": "Session 逾時分鐘（預設：30）",
+    "--session-isolation mode": "隔離模式（none/group，預設：group）",
+    "--session-temp-retention-hours N": "暫存檔保留時間（預設：24 小時）",
+    "--session-on-disconnect behavior": "逾時處理（AutoSave/Discard/SaveToTemp/PromptOnReconnect）",
+    "--session-auto-save N": "自動暫存間隔分鐘（0 = 停用，預設：0）"
   },
   "_參數列表_Session_隔離模式說明": {
     "none": "無隔離 - 所有用戶可存取所有 session（Stdio 模式向後兼容）",
@@ -270,57 +270,57 @@
   },
   "_參數列表_認證_ApiKey": {
     "--auth-apikey-enabled": "啟用 API Key 認證",
-    "--auth-apikey-mode:mode": "驗證模式（local, gateway, introspection, custom）",
-    "--auth-apikey-keys:key1:group1,key2:group2": "API Key 列表（group 可包含冒號）",
-    "--auth-apikey-header:name": "Header 名稱（預設：X-API-Key）",
-    "--auth-apikey-group-header:name": "Group ID Header（Gateway 模式，預設：X-Group-Id）",
-    "--auth-apikey-introspection-url:url": "Introspection 端點 URL",
-    "--auth-apikey-introspection-auth:value": "Introspection 認證 Header",
-    "--auth-apikey-introspection-field:name": "Introspection 請求欄位名稱（預設：key）",
-    "--auth-apikey-custom-url:url": "Custom 驗證端點 URL",
-    "--auth-apikey-timeout:N": "外部驗證逾時秒數（Introspection/Custom，預設：5）",
+    "--auth-apikey-mode mode": "驗證模式（local, gateway, introspection, custom）",
+    "--auth-apikey-keys key1:group1,key2:group2": "API Key 列表（group 可包含冒號）",
+    "--auth-apikey-header name": "Header 名稱（預設：X-API-Key）",
+    "--auth-apikey-group-header name": "Group ID Header（Gateway 模式，預設：X-Group-Id）",
+    "--auth-apikey-introspection-url url": "Introspection 端點 URL",
+    "--auth-apikey-introspection-auth value": "Introspection 認證 Header",
+    "--auth-apikey-introspection-field name": "Introspection 請求欄位名稱（預設：key）",
+    "--auth-apikey-custom-url url": "Custom 驗證端點 URL",
+    "--auth-apikey-timeout N": "外部驗證逾時秒數（Introspection/Custom，預設：5）",
     "--auth-apikey-cache-enabled": "啟用驗證結果快取（預設：true）",
-    "--auth-apikey-cache-ttl:N": "快取存活時間秒數（預設：300）",
-    "--auth-apikey-cache-max-size:N": "快取最大項目數（預設：10000）"
+    "--auth-apikey-cache-ttl N": "快取存活時間秒數（預設：300）",
+    "--auth-apikey-cache-max-size N": "快取最大項目數（預設：10000）"
   },
   "_參數列表_認證_JWT": {
     "--auth-jwt-enabled": "啟用 JWT 認證",
-    "--auth-jwt-mode:mode": "驗證模式（local, gateway, introspection, custom）",
-    "--auth-jwt-secret:value": "JWT HMAC 密鑰",
-    "--auth-jwt-public-key-path:path": "RSA/ECDSA 公鑰文件路徑",
-    "--auth-jwt-issuer:value": "JWT 發行者",
-    "--auth-jwt-audience:value": "JWT 受眾",
-    "--auth-jwt-group-claim:name": "Group ID Claim 名稱（預設：tenant_id，可設為 team_id, org_id 等）",
-    "--auth-jwt-user-claim:name": "User ID Claim 名稱（預設：sub）",
-    "--auth-jwt-group-header:name": "Group ID Header（Gateway 模式，預設：X-Group-Id）",
-    "--auth-jwt-user-header:name": "User ID Header（Gateway 模式，預設：X-User-Id）",
-    "--auth-jwt-introspection-url:url": "OAuth Introspection 端點 URL",
-    "--auth-jwt-client-id:value": "OAuth Client ID（Introspection 模式）",
-    "--auth-jwt-client-secret:value": "OAuth Client Secret（Introspection 模式）",
-    "--auth-jwt-custom-url:url": "Custom 驗證端點 URL",
-    "--auth-jwt-timeout:N": "外部驗證逾時秒數（Introspection/Custom，預設：5）",
+    "--auth-jwt-mode mode": "驗證模式（local, gateway, introspection, custom）",
+    "--auth-jwt-secret value": "JWT HMAC 密鑰",
+    "--auth-jwt-public-key-path path": "RSA/ECDSA 公鑰文件路徑",
+    "--auth-jwt-issuer value": "JWT 發行者",
+    "--auth-jwt-audience value": "JWT 受眾",
+    "--auth-jwt-group-claim name": "Group ID Claim 名稱（預設：tenant_id，可設為 team_id, org_id 等）",
+    "--auth-jwt-user-claim name": "User ID Claim 名稱（預設：sub）",
+    "--auth-jwt-group-header name": "Group ID Header（Gateway 模式，預設：X-Group-Id）",
+    "--auth-jwt-user-header name": "User ID Header（Gateway 模式，預設：X-User-Id）",
+    "--auth-jwt-introspection-url url": "OAuth Introspection 端點 URL",
+    "--auth-jwt-client-id value": "OAuth Client ID（Introspection 模式）",
+    "--auth-jwt-client-secret value": "OAuth Client Secret（Introspection 模式）",
+    "--auth-jwt-custom-url url": "Custom 驗證端點 URL",
+    "--auth-jwt-timeout N": "外部驗證逾時秒數（Introspection/Custom，預設：5）",
     "--auth-jwt-cache-enabled": "啟用驗證結果快取（預設：true）",
-    "--auth-jwt-cache-ttl:N": "快取存活時間秒數（預設：300）",
-    "--auth-jwt-cache-max-size:N": "快取最大項目數（預設：10000）"
+    "--auth-jwt-cache-ttl N": "快取存活時間秒數（預設：300）",
+    "--auth-jwt-cache-max-size N": "快取最大項目數（預設：10000）"
   },
   "_參數列表_追蹤": {
     "--log-enabled": "啟用日誌",
     "--log-disabled": "停用日誌",
-    "--log-targets:Console,EventLog": "日誌目標（Console, EventLog）",
+    "--log-targets Console,EventLog": "日誌目標（Console, EventLog）",
     "--webhook-enabled": "啟用 Webhook",
     "--webhook-disabled": "停用 Webhook",
-    "--webhook-url:url": "Webhook URL（設定後自動啟用）",
-    "--webhook-auth-header:header": "Webhook 認證標頭",
-    "--webhook-timeout:N": "Webhook 超時（1-300 秒，預設：5）",
+    "--webhook-url url": "Webhook URL（設定後自動啟用）",
+    "--webhook-auth-header header": "Webhook 認證標頭",
+    "--webhook-timeout N": "Webhook 超時（1-300 秒，預設：5）",
     "--metrics-enabled": "啟用 Prometheus Metrics",
     "--metrics-disabled": "停用 Prometheus Metrics",
-    "--metrics-path:path": "Metrics 路徑（預設：/metrics）"
+    "--metrics-path path": "Metrics 路徑（預設：/metrics）"
   },
   "_參數列表_Origin驗證": {
     "--no-origin-validation": "停用 Origin 驗證",
     "--no-localhost": "禁止 localhost 來源",
     "--require-origin": "要求必須有 Origin 標頭",
-    "--allowed-origins:origins": "允許的來源（逗號分隔，如：https://app1.com,https://app2.com）"
+    "--allowed-origins origins": "允許的來源（逗號分隔，如：https://app1.com,https://app2.com）"
   },
   "_參數列表_Origin驗證_環境變數": {
     "ASPOSE_ORIGIN_VALIDATION": "true/false - 啟用或停用 Origin 驗證",
@@ -342,7 +342,7 @@
   "_開發者": "克隆倉庫並本地編譯（範例8-9）",
   "_遠端連線": "使用 HTTP 或 WebSocket 模式（範例11-16）",
   "_安全配置": "HTTP/WebSocket 模式預設啟用 Origin 驗證（範例17）",
-  "_授權配置": "優先使用自動搜尋，或使用 --license:路徑 參數（範例2、10）",
+  "_授權配置": "優先使用自動搜尋，或使用 --license 路徑 參數（範例2、10）",
   "_多服務": "可同時配置多個服務實例（範例1、5-7）",
   "_下載地址": "https://github.com/xjustloveux/aspose-mcp-server/releases"
 }

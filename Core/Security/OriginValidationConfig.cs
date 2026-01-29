@@ -65,15 +65,38 @@ public class OriginValidationConfig
         if (!string.IsNullOrEmpty(allowedOrigins))
             config.AllowedOrigins = allowedOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries);
 
-        foreach (var arg in args)
+        for (var i = 0; i < args.Length; i++)
+        {
+            var arg = args[i];
             if (arg.Equals("--no-origin-validation", StringComparison.OrdinalIgnoreCase))
+            {
                 config.Enabled = false;
+            }
             else if (arg.Equals("--no-localhost", StringComparison.OrdinalIgnoreCase))
+            {
                 config.AllowLocalhost = false;
+            }
             else if (arg.Equals("--require-origin", StringComparison.OrdinalIgnoreCase))
+            {
                 config.AllowMissingOrigin = false;
+            }
+            else if (arg.Equals("--allowed-origins", StringComparison.OrdinalIgnoreCase) &&
+                     i + 1 < args.Length)
+            {
+                config.AllowedOrigins = args[i + 1].Split(',', StringSplitOptions.RemoveEmptyEntries);
+                i++;
+            }
             else if (arg.StartsWith("--allowed-origins:", StringComparison.OrdinalIgnoreCase))
-                config.AllowedOrigins = arg[18..].Split(',', StringSplitOptions.RemoveEmptyEntries);
+            {
+                config.AllowedOrigins = arg["--allowed-origins:".Length..]
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries);
+            }
+            else if (arg.StartsWith("--allowed-origins=", StringComparison.OrdinalIgnoreCase))
+            {
+                config.AllowedOrigins = arg["--allowed-origins=".Length..]
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries);
+            }
+        }
 
         return config;
     }

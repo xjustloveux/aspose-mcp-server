@@ -32,7 +32,7 @@ public class EditPdfTableHandler : OperationHandlerBase<Document>
         var tables = FindTables(document);
 
         if (tables.Count == 0)
-            throw new ArgumentException(BuildNoTablesErrorMessage(document));
+            throw new ArgumentException(BuildNoTablesErrorMessage(document, context.SessionId != null));
 
         if (p.TableIndex < 0 || p.TableIndex >= tables.Count)
             throw new ArgumentException(
@@ -180,8 +180,9 @@ public class EditPdfTableHandler : OperationHandlerBase<Document>
     ///     Builds a detailed error message when no tables are found in the document.
     /// </summary>
     /// <param name="document">The PDF document that was searched.</param>
+    /// <param name="isSession">Whether the document is opened in session mode.</param>
     /// <returns>A detailed error message with diagnostic information.</returns>
-    private static string BuildNoTablesErrorMessage(Document document)
+    private static string BuildNoTablesErrorMessage(Document document, bool isSession)
     {
         var (totalParagraphs, paragraphTypes, pageInfo) = AnalyzeDocumentStructure(document);
 
@@ -193,18 +194,15 @@ public class EditPdfTableHandler : OperationHandlerBase<Document>
 
         var errorMsg =
             $"No tables found in the document. Total paragraphs across all pages: {totalParagraphs}.{typeInfo}{pageDetails}";
-        errorMsg +=
-            " Make sure tables are added using the 'add' operation first, and that the document has been saved after adding tables.";
-        errorMsg +=
-            " Note: If you just added a table, ensure you're editing the saved output file, not the original input file.";
 
-        if (totalParagraphs == 0)
-        {
+        if (!isSession)
             errorMsg +=
-                " IMPORTANT: After saving, tables may be converted to graphics objects and cannot be edited as Table objects.";
-            errorMsg += " This is a limitation of the PDF format and Aspose.Pdf library.";
-            errorMsg += " To edit tables, you may need to recreate them or use a different approach.";
-        }
+                " Table editing requires session mode. In file mode, saved tables are converted to graphics objects" +
+                " and cannot be edited as Table objects (PDF format limitation)." +
+                " Please use pdf_session open to create a session, then add and edit tables within the same session.";
+        else
+            errorMsg +=
+                " Make sure tables are added using the 'add' operation first within this session.";
 
         return errorMsg;
     }

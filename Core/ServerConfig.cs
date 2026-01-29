@@ -119,8 +119,9 @@ public class ServerConfig
             EnablePdf = false;
         }
 
-        foreach (var originalArg in args)
+        for (var i = 0; i < args.Length; i++)
         {
+            var originalArg = args[i];
             var arg = originalArg.ToLower();
             switch (arg)
             {
@@ -144,10 +145,20 @@ public class ServerConfig
                     EnablePdf = true;
                     break;
                 default:
-                    if (originalArg.StartsWith("--license:", StringComparison.OrdinalIgnoreCase))
+                    if (arg == "--license" && i + 1 < args.Length)
+                    {
+                        LicensePath = args[i + 1];
+                        i++;
+                    }
+                    else if (originalArg.StartsWith("--license:", StringComparison.OrdinalIgnoreCase))
+                    {
                         LicensePath = originalArg["--license:".Length..];
+                    }
                     else if (originalArg.StartsWith("--license=", StringComparison.OrdinalIgnoreCase))
+                    {
                         LicensePath = originalArg["--license=".Length..];
+                    }
+
                     break;
             }
         }

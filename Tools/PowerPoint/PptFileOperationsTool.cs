@@ -164,7 +164,7 @@ Usage examples:
         {
             "create" => BuildCreateParameters(path, outputPath),
             "convert" => BuildConvertParameters(inputPath, path, sessionId, outputPath, format, slideIndex),
-            "merge" => BuildMergeParameters(path, outputPath, inputPaths, keepSourceFormatting),
+            "merge" => BuildMergeParameters(path, outputPath, inputPath, inputPaths, keepSourceFormatting),
             "split" => BuildSplitParameters(inputPath, path, sessionId, outputDirectory, slidesPerFile, startSlideIndex,
                 endSlideIndex, outputFileNamePattern),
             _ => new OperationParameters()
@@ -213,15 +213,17 @@ Usage examples:
     /// </summary>
     /// <param name="path">The base presentation file path.</param>
     /// <param name="outputPath">The output file path for merged presentation.</param>
+    /// <param name="inputPath">The base input file path to use as the first presentation.</param>
     /// <param name="inputPaths">The array of input presentation file paths to merge.</param>
     /// <param name="keepSourceFormatting">Whether to keep source formatting when merging.</param>
     /// <returns>OperationParameters configured for merging presentations.</returns>
-    private static OperationParameters BuildMergeParameters(string? path, string? outputPath, string[]? inputPaths,
-        bool keepSourceFormatting)
+    private static OperationParameters BuildMergeParameters(string? path, string? outputPath, string? inputPath,
+        string[]? inputPaths, bool keepSourceFormatting)
     {
         var parameters = new OperationParameters();
         if (path != null) parameters.Set("path", path);
         if (outputPath != null) parameters.Set("outputPath", outputPath);
+        if (inputPath != null) parameters.Set("inputPath", inputPath);
         if (inputPaths != null) parameters.Set("inputPaths", inputPaths);
         parameters.Set("keepSourceFormatting", keepSourceFormatting);
         return parameters;

@@ -110,10 +110,12 @@ public class TrackingConfig
     ///     Loads configuration from command line arguments (overrides environment variables)
     /// </summary>
     /// <param name="args">Command line arguments</param>
-    private void
-        LoadFromCommandLine(string[] args)
+    private void LoadFromCommandLine(string[] args)
     {
-        foreach (var arg in args)
+        for (var i = 0; i < args.Length; i++)
+        {
+            var arg = args[i];
+
             if (arg.Equals("--log-enabled", StringComparison.OrdinalIgnoreCase))
             {
                 LogEnabled = true;
@@ -122,13 +124,9 @@ public class TrackingConfig
             {
                 LogEnabled = false;
             }
-            else if (arg.StartsWith("--log-targets:", StringComparison.OrdinalIgnoreCase))
+            else if (TryGetStringValue(arg, "--log-targets", args, ref i, out var logTargets))
             {
-                ParseLogTargets(arg["--log-targets:".Length..]);
-            }
-            else if (arg.StartsWith("--log-targets=", StringComparison.OrdinalIgnoreCase))
-            {
-                ParseLogTargets(arg["--log-targets=".Length..]);
+                ParseLogTargets(logTargets);
             }
             else if (arg.Equals("--webhook-enabled", StringComparison.OrdinalIgnoreCase))
             {
@@ -138,35 +136,19 @@ public class TrackingConfig
             {
                 WebhookEnabled = false;
             }
-            else if (arg.StartsWith("--webhook-url:", StringComparison.OrdinalIgnoreCase))
+            else if (TryGetStringValue(arg, "--webhook-url", args, ref i, out var webhookUrl))
             {
-                WebhookUrl = arg["--webhook-url:".Length..];
+                WebhookUrl = webhookUrl;
                 if (!string.IsNullOrEmpty(WebhookUrl))
                     WebhookEnabled = true;
             }
-            else if (arg.StartsWith("--webhook-url=", StringComparison.OrdinalIgnoreCase))
+            else if (TryGetIntValue(arg, "--webhook-timeout", args, ref i, out var timeout))
             {
-                WebhookUrl = arg["--webhook-url=".Length..];
-                if (!string.IsNullOrEmpty(WebhookUrl))
-                    WebhookEnabled = true;
+                WebhookTimeoutSeconds = timeout;
             }
-            else if (arg.StartsWith("--webhook-timeout:", StringComparison.OrdinalIgnoreCase) &&
-                     int.TryParse(arg["--webhook-timeout:".Length..], out var timeout1))
+            else if (TryGetStringValue(arg, "--webhook-auth-header", args, ref i, out var authHeader))
             {
-                WebhookTimeoutSeconds = timeout1;
-            }
-            else if (arg.StartsWith("--webhook-timeout=", StringComparison.OrdinalIgnoreCase) &&
-                     int.TryParse(arg["--webhook-timeout=".Length..], out var timeout2))
-            {
-                WebhookTimeoutSeconds = timeout2;
-            }
-            else if (arg.StartsWith("--webhook-auth-header:", StringComparison.OrdinalIgnoreCase))
-            {
-                WebhookAuthHeader = arg["--webhook-auth-header:".Length..];
-            }
-            else if (arg.StartsWith("--webhook-auth-header=", StringComparison.OrdinalIgnoreCase))
-            {
-                WebhookAuthHeader = arg["--webhook-auth-header=".Length..];
+                WebhookAuthHeader = authHeader;
             }
             else if (arg.Equals("--metrics-enabled", StringComparison.OrdinalIgnoreCase))
             {
@@ -176,14 +158,79 @@ public class TrackingConfig
             {
                 MetricsEnabled = false;
             }
-            else if (arg.StartsWith("--metrics-path:", StringComparison.OrdinalIgnoreCase))
+            else if (TryGetStringValue(arg, "--metrics-path", args, ref i, out var metricsPath))
             {
-                MetricsPath = arg["--metrics-path:".Length..];
+                MetricsPath = metricsPath;
             }
-            else if (arg.StartsWith("--metrics-path=", StringComparison.OrdinalIgnoreCase))
-            {
-                MetricsPath = arg["--metrics-path=".Length..];
-            }
+        }
+    }
+
+    /// <summary>
+    ///     Tries to extract a string value from a command line argument with space, colon, or equals separator.
+    /// </summary>
+    /// <param name="arg">The current argument string.</param>
+    /// <param name="prefix">The argument prefix to match.</param>
+    /// <param name="args">The full arguments array.</param>
+    /// <param name="index">The current index in the arguments array.</param>
+    /// <param name="value">The extracted string value.</param>
+    /// <returns>True if the argument was matched and a value extracted; otherwise, false.</returns>
+    private static bool TryGetStringValue(string arg, string prefix, string[] args, ref int index, out string value)
+    {
+        value = string.Empty;
+
+        if (arg.Equals(prefix, StringComparison.OrdinalIgnoreCase) && index + 1 < args.Length)
+        {
+            value = args[index + 1];
+            index++;
+            return true;
+        }
+
+        var colonPrefix = prefix + ":";
+        if (arg.StartsWith(colonPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            value = arg[colonPrefix.Length..];
+            return true;
+        }
+
+        var equalsPrefix = prefix + "=";
+        if (arg.StartsWith(equalsPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            value = arg[equalsPrefix.Length..];
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    ///     Tries to extract an integer value from a command line argument with space, colon, or equals separator.
+    /// </summary>
+    /// <param name="arg">The current argument string.</param>
+    /// <param name="prefix">The argument prefix to match.</param>
+    /// <param name="args">The full arguments array.</param>
+    /// <param name="index">The current index in the arguments array.</param>
+    /// <param name="value">The parsed integer value.</param>
+    /// <returns>True if the argument was matched and a value parsed; otherwise, false.</returns>
+    private static bool TryGetIntValue(string arg, string prefix, string[] args, ref int index, out int value)
+    {
+        value = 0;
+
+        if (arg.Equals(prefix, StringComparison.OrdinalIgnoreCase) &&
+            index + 1 < args.Length && int.TryParse(args[index + 1], out value))
+        {
+            index++;
+            return true;
+        }
+
+        var colonPrefix = prefix + ":";
+        if (arg.StartsWith(colonPrefix, StringComparison.OrdinalIgnoreCase))
+            return int.TryParse(arg[colonPrefix.Length..], out value);
+
+        var equalsPrefix = prefix + "=";
+        if (arg.StartsWith(equalsPrefix, StringComparison.OrdinalIgnoreCase))
+            return int.TryParse(arg[equalsPrefix.Length..], out value);
+
+        return false;
     }
 
     /// <summary>

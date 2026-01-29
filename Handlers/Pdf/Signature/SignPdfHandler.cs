@@ -1,9 +1,11 @@
 using Aspose.Pdf;
+using Aspose.Pdf.Facades;
 using Aspose.Pdf.Forms;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Results.Common;
+using Rectangle = System.Drawing.Rectangle;
 
 namespace AsposeMcpServer.Handlers.Pdf.Signature;
 
@@ -17,7 +19,8 @@ public class SignPdfHandler : OperationHandlerBase<Document>
     public override string Operation => "sign";
 
     /// <summary>
-    ///     Signs a PDF document with a digital signature.
+    ///     Signs a PDF document with a digital signature using PdfFileSignature (Facades API).
+    ///     Signing requires atomic sign+save, so this handler saves directly for file mode.
     /// </summary>
     /// <param name="context">The document context.</param>
     /// <param name="parameters">
@@ -39,14 +42,6 @@ public class SignPdfHandler : OperationHandlerBase<Document>
         if (p.PageIndex < 1 || p.PageIndex > document.Pages.Count)
             throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
 
-        var signatureField = new SignatureField(document.Pages[p.PageIndex],
-            new Rectangle(p.X, p.Y, p.X + p.Width, p.Y + p.Height))
-        {
-            Name = $"Signature_{DateTime.Now:yyyyMMddHHmmss}"
-        };
-
-        document.Form.Add(signatureField);
-
         var pkcs = new PKCS7(p.CertificatePath, p.Password)
         {
             Reason = p.Reason,
@@ -54,9 +49,16 @@ public class SignPdfHandler : OperationHandlerBase<Document>
             Date = DateTime.Now
         };
 
-        signatureField.Sign(pkcs);
+        var rect = new Rectangle((int)p.X, (int)p.Y, (int)p.Width, (int)p.Height);
 
-        MarkModified(context);
+        using var pdfSign = new PdfFileSignature(document);
+        pdfSign.Sign(p.PageIndex, p.Reason, "", p.Location, true, rect, pkcs);
+
+        var savePath = context.OutputPath ?? context.SourcePath;
+        if (context.SessionId == null && !string.IsNullOrEmpty(savePath))
+            pdfSign.Save(savePath);
+        else
+            MarkModified(context);
 
         return new SuccessResult { Message = $"Document signed on page {p.PageIndex}." };
     }

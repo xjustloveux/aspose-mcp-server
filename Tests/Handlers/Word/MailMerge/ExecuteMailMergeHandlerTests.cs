@@ -60,6 +60,86 @@ public class ExecuteMailMergeHandlerTests : WordHandlerTestBase
         Assert.Equal(outputPath, result.OutputFiles[0]);
     }
 
+    [Fact]
+    public void Execute_WithExtraDataKeys_ReportsOnlyMatchedFields()
+    {
+        var outputPath = Path.Combine(TestDir, "extra_keys_output.docx");
+        var doc = CreateTemplateDocument();
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "outputPath", outputPath },
+            { "data", "{\"Name\": \"Test\", \"Company\": \"Corp\", \"ExtraField\": \"Ignored\"}" }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<MailMergeResult>(res);
+
+        Assert.Equal(2, result.FieldsMerged);
+    }
+
+    [Fact]
+    public void Execute_WithPartialData_ReportsOnlyMatchedFields()
+    {
+        var outputPath = Path.Combine(TestDir, "partial_data_output.docx");
+        var doc = CreateTemplateDocument();
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "outputPath", outputPath },
+            { "data", "{\"Name\": \"OnlyName\"}" }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<MailMergeResult>(res);
+
+        Assert.Equal(1, result.FieldsMerged);
+    }
+
+    [Fact]
+    public void Execute_WithNoMatchingFields_ReportsZeroFieldsMerged()
+    {
+        var outputPath = Path.Combine(TestDir, "no_match_output.docx");
+
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        builder.Write("Hello World");
+        var context = CreateContext(doc);
+
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "outputPath", outputPath },
+            { "data", "{\"Name\": \"Test\", \"Company\": \"Corp\"}" }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<MailMergeResult>(res);
+
+        Assert.Equal(0, result.FieldsMerged);
+    }
+
+    [Fact]
+    public void Execute_WithMultipleRecords_ReportsOnlyMatchedFields()
+    {
+        var outputPath = Path.Combine(TestDir, "multi_match_output.docx");
+        var doc = CreateTemplateDocument();
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "outputPath", outputPath },
+            { "dataArray", "[{\"Name\": \"John\", \"Extra\": \"X\"}, {\"Name\": \"Jane\", \"Company\": \"Corp\"}]" }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<MailMergeResult>(res);
+
+        Assert.Equal(2, result.FieldsMerged);
+    }
+
     #endregion
 
     #region Single Record Mail Merge

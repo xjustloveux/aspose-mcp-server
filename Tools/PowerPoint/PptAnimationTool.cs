@@ -151,7 +151,8 @@ Usage examples:
 
         return operation.ToLowerInvariant() switch
         {
-            "add" => BuildAddParameters(parameters, shapeIndex, effectType, effectSubtype, triggerType),
+            "add" => BuildAddParameters(parameters, shapeIndex, effectType, effectSubtype, triggerType, duration,
+                delay),
             "edit" => BuildEditParameters(parameters, shapeIndex, animationIndex, effectType, effectSubtype,
                 triggerType,
                 duration, delay),
@@ -169,14 +170,18 @@ Usage examples:
     /// <param name="effectType">The animation effect type (e.g., Fade, Fly, Appear).</param>
     /// <param name="effectSubtype">The animation effect subtype for direction or style.</param>
     /// <param name="triggerType">The trigger type (OnClick, AfterPrevious, WithPrevious).</param>
+    /// <param name="duration">The animation duration in seconds.</param>
+    /// <param name="delay">The animation delay in seconds.</param>
     /// <returns>OperationParameters configured for adding an animation.</returns>
     private static OperationParameters BuildAddParameters(OperationParameters parameters, int? shapeIndex,
-        string? effectType, string? effectSubtype, string? triggerType)
+        string? effectType, string? effectSubtype, string? triggerType, float? duration, float? delay)
     {
         if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
         if (effectType != null) parameters.Set("effectType", effectType);
         if (effectSubtype != null) parameters.Set("effectSubtype", effectSubtype);
         if (triggerType != null) parameters.Set("triggerType", triggerType);
+        if (duration.HasValue) parameters.Set("duration", duration.Value);
+        if (delay.HasValue) parameters.Set("delay", delay.Value);
         return parameters;
     }
 

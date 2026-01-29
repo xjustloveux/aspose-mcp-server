@@ -51,7 +51,7 @@ public class UpdatePptChartDataHandler : OperationHandlerBase<Presentation>
         }
 
         AddCategories(chartData, workbook, categories);
-        AddSeriesData(chart, chartData, workbook, categories, seriesList);
+        AddSeriesData(chart, chartData, workbook, seriesList);
         SetChartRange(chart, chartData, categories, seriesList);
 
         MarkModified(context);
@@ -147,15 +147,13 @@ public class UpdatePptChartDataHandler : OperationHandlerBase<Presentation>
     /// <param name="chart">The chart.</param>
     /// <param name="chartData">The chart data.</param>
     /// <param name="workbook">The chart data workbook.</param>
-    /// <param name="categories">The categories.</param>
     /// <param name="seriesList">The series list to add.</param>
     private static void AddSeriesData(IChart chart, IChartData chartData, IChartDataWorkbook workbook,
-        string[]? categories, List<(string name, double[] values)>? seriesList)
+        List<(string name, double[] values)>? seriesList)
     {
         if (seriesList is not { Count: > 0 }) return;
 
-        var baseColumnOffset = categories != null ? 1 : 0;
-        var yColumnStart = baseColumnOffset + 1;
+        const int yColumnStart = 1;
 
         for (var seriesIdx = 0; seriesIdx < seriesList.Count; seriesIdx++)
         {
@@ -311,9 +309,10 @@ public class UpdatePptChartDataHandler : OperationHandlerBase<Presentation>
             seriesList?.Max(s => s.values.Length) ?? 0
         );
 
-        var maxCol = (seriesList?.Count ?? 0) + (categories != null ? 1 : 0);
+        var seriesCount = seriesList?.Count ?? 0;
+        var maxCol = 1 + seriesCount;
         if (IsBubbleChart(chart.Type))
-            maxCol += seriesList?.Count ?? 0;
+            maxCol += seriesCount;
 
         if (maxRow > 0 && maxCol > 0)
         {

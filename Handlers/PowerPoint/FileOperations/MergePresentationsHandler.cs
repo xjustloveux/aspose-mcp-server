@@ -36,6 +36,10 @@ public class MergePresentationsHandler : OperationHandlerBase<Presentation>
         SecurityHelper.ValidateFilePath(savePath, "outputPath", true);
 
         var validPaths = p.InputPaths.Where(path => !string.IsNullOrEmpty(path)).ToList();
+
+        if (!string.IsNullOrEmpty(p.InputPath))
+            validPaths.Insert(0, p.InputPath);
+
         if (validPaths.Count == 0)
             throw new ArgumentException("No valid input paths provided");
 
@@ -79,6 +83,7 @@ public class MergePresentationsHandler : OperationHandlerBase<Presentation>
         return new MergeParameters(
             parameters.GetOptional<string?>("path"),
             parameters.GetOptional<string?>("outputPath"),
+            parameters.GetOptional<string?>("inputPath"),
             parameters.GetRequired<string[]>("inputPaths"),
             parameters.GetOptional("keepSourceFormatting", true));
     }
@@ -88,11 +93,13 @@ public class MergePresentationsHandler : OperationHandlerBase<Presentation>
     /// </summary>
     /// <param name="Path">The output file path.</param>
     /// <param name="OutputPath">Alternative output file path.</param>
-    /// <param name="InputPaths">The array of input file paths.</param>
+    /// <param name="InputPath">The base presentation file path.</param>
+    /// <param name="InputPaths">The array of input file paths to merge.</param>
     /// <param name="KeepSourceFormatting">Whether to keep source formatting.</param>
     private sealed record MergeParameters(
         string? Path,
         string? OutputPath,
+        string? InputPath,
         string[] InputPaths,
         bool KeepSourceFormatting);
 }

@@ -1,4 +1,5 @@
 using AsposeMcpServer.Handlers.PowerPoint.Handout;
+using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Handout;
@@ -17,10 +18,10 @@ public class SetHeaderFooterPptHandoutHandlerTests : PptHandlerTestBase
 
     #endregion
 
-    #region Basic Set Header Footer Operations
+    #region Auto-Create Handout Master
 
     [Fact]
-    public void Execute_WithNoHandoutMaster_ThrowsInvalidOperationException()
+    public void Execute_WithNoHandoutMaster_AutoCreatesAndSetsHeader()
     {
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
@@ -29,11 +30,14 @@ public class SetHeaderFooterPptHandoutHandlerTests : PptHandlerTestBase
             { "headerText", "Test Header" }
         });
 
-        Assert.Throws<InvalidOperationException>(() => _handler.Execute(context, parameters));
+        var result = _handler.Execute(context, parameters);
+
+        var success = Assert.IsType<SuccessResult>(result);
+        Assert.Contains("header", success.Message);
     }
 
     [Fact]
-    public void Execute_WithNoHandoutMaster_WithFooterText_ThrowsInvalidOperationException()
+    public void Execute_WithNoHandoutMaster_AutoCreatesAndSetsFooter()
     {
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
@@ -42,11 +46,14 @@ public class SetHeaderFooterPptHandoutHandlerTests : PptHandlerTestBase
             { "footerText", "Test Footer" }
         });
 
-        Assert.Throws<InvalidOperationException>(() => _handler.Execute(context, parameters));
+        var result = _handler.Execute(context, parameters);
+
+        var success = Assert.IsType<SuccessResult>(result);
+        Assert.Contains("footer", success.Message);
     }
 
     [Fact]
-    public void Execute_WithNoHandoutMaster_WithDateText_ThrowsInvalidOperationException()
+    public void Execute_WithNoHandoutMaster_AutoCreatesAndSetsDate()
     {
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
@@ -55,11 +62,14 @@ public class SetHeaderFooterPptHandoutHandlerTests : PptHandlerTestBase
             { "dateText", "2026-01-11" }
         });
 
-        Assert.Throws<InvalidOperationException>(() => _handler.Execute(context, parameters));
+        var result = _handler.Execute(context, parameters);
+
+        var success = Assert.IsType<SuccessResult>(result);
+        Assert.Contains("date", success.Message);
     }
 
     [Fact]
-    public void Execute_WithNoHandoutMaster_WithAllSettings_ThrowsInvalidOperationException()
+    public void Execute_WithNoHandoutMaster_AutoCreatesAndSetsAllSettings()
     {
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
@@ -71,7 +81,13 @@ public class SetHeaderFooterPptHandoutHandlerTests : PptHandlerTestBase
             { "showPageNumber", true }
         });
 
-        Assert.Throws<InvalidOperationException>(() => _handler.Execute(context, parameters));
+        var result = _handler.Execute(context, parameters);
+
+        var success = Assert.IsType<SuccessResult>(result);
+        Assert.Contains("header", success.Message);
+        Assert.Contains("footer", success.Message);
+        Assert.Contains("date", success.Message);
+        Assert.Contains("page number shown", success.Message);
     }
 
     #endregion
