@@ -58,6 +58,7 @@
     <PackageReference Include="Aspose.Slides.NET" Version="23.10.0" />
     <PackageReference Include="Aspose.Pdf" Version="23.10.0" />
     <PackageReference Include="Aspose.Email" Version="23.10.0" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="2.88.6" />
     <PackageReference Include="System.Text.Json" Version="10.0.2" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.15.0" />
     <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.15.0" />
@@ -82,6 +83,10 @@
   <!-- Allow test project to access internal types -->
   <ItemGroup>
     <InternalsVisibleTo Include="AsposeMcpServer.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <RuntimeHostConfigurationOption Include="System.Drawing.EnableUnixSupport" Value="true" />
   </ItemGroup>
 
 </Project>

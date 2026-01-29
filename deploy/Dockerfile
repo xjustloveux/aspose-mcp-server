@@ -23,9 +23,10 @@ RUN VERSION_NUM=$(echo "${VERSION}" | sed 's/^v//') && \
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 
-# Update system packages to latest security patches
+# Update system packages and install libgdiplus
 RUN apt-get update && \
     apt-get upgrade -y && \
+    apt-get install -y --no-install-recommends libgdiplus libc6-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
