@@ -15,7 +15,8 @@ RUN VERSION_NUM=$(echo "${VERSION}" | sed 's/^v//') && \
 COPY . .
 RUN VERSION_NUM=$(echo "${VERSION}" | sed 's/^v//') && \
     dotnet publish AsposeMcpServer.csproj -c Release -o /app/publish --no-restore -p:Version=${VERSION_NUM} -p:VersionExplicitlySet=true -p:DebugType=none && \
-    rm -f /app/publish/*.pdb /app/publish/*.lic /app/publish/*.json /app/publish/web.config && \
+    rm -f /app/publish/*.pdb /app/publish/*.lic /app/publish/web.config && \
+    find /app/publish -maxdepth 1 -name '*.json' ! -name '*.runtimeconfig.json' ! -name '*.deps.json' -delete && \
     rm -rf /app/publish/deploy /app/publish/Tests /app/publish/coverage-reports /app/publish/sonar-reports /app/publish/.claude
 
 # Runtime stage

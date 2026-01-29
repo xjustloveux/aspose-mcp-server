@@ -314,7 +314,7 @@ public class UpdatePptChartDataHandler : OperationHandlerBase<Presentation>
         if (IsBubbleChart(chart.Type))
             maxCol += seriesCount;
 
-        if (maxRow > 0 && maxCol > 0)
+        if (maxRow > 0)
         {
             var lastCol = (char)('A' + maxCol - 1);
             var range = $"Sheet1!$A$1:${lastCol}${maxRow + 1}";

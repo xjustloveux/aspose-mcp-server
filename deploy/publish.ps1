@@ -152,6 +152,10 @@ if ($IIS) {
 
         # Clean up unnecessary files (keep web.config for IIS)
         $unnecessaryFiles = @("*.pdb", "*.lic")
+        # Clean JSON files except runtime-essential ones (framework-dependent needs these)
+        Get-ChildItem -Path $outputPath -Filter "*.json" -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -notlike '*.runtimeconfig.json' -and $_.Name -notlike '*.deps.json' } |
+            Remove-Item -Force -ErrorAction SilentlyContinue
         foreach ($pattern in $unnecessaryFiles) {
             Get-ChildItem -Path $outputPath -Filter $pattern -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
         }
