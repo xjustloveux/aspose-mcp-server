@@ -46,10 +46,9 @@ public class ExportSlidesHandler : OperationHandlerBase<Presentation>
         {
             using var bmp = presentation.Slides[i].GetThumbnail(p.Scale, p.Scale);
             var fileName = Path.Combine(p.OutputDir, $"slide_{i + 1}.{p.Extension}");
-            // CA1416 - System.Drawing.Common is Windows-only, cross-platform support not required
-#pragma warning disable CA1416
-            bmp.Save(fileName, p.Format);
-#pragma warning restore CA1416
+            bmp.Save(fileName, p.IsJpeg
+                ? ImageFormat.Jpeg
+                : ImageFormat.Png);
             exportedCount++;
         }
 
@@ -70,17 +69,10 @@ public class ExportSlidesHandler : OperationHandlerBase<Presentation>
         var formatStr = parameters.GetOptional("format", "png");
         var scale = parameters.GetOptional("scale", 1.0f);
 
-        // CA1416 - System.Drawing.Common is Windows-only, cross-platform support not required
-#pragma warning disable CA1416
-        var format = formatStr.ToLower() switch
-        {
-            "jpeg" or "jpg" => ImageFormat.Jpeg,
-            _ => ImageFormat.Png
-        };
-        var extension = format.Equals(ImageFormat.Png) ? "png" : "jpg";
-#pragma warning restore CA1416
+        var isJpeg = formatStr.ToLower() is "jpeg" or "jpg";
+        var extension = isJpeg ? "jpg" : "png";
 
-        return new ExportParameters(outputDir, slideIndexes, format, extension, scale);
+        return new ExportParameters(outputDir, slideIndexes, isJpeg, extension, scale);
     }
 
     /// <summary>
@@ -88,13 +80,13 @@ public class ExportSlidesHandler : OperationHandlerBase<Presentation>
     /// </summary>
     /// <param name="OutputDir">The output directory.</param>
     /// <param name="SlideIndexes">The optional slide indexes string.</param>
-    /// <param name="Format">The image format.</param>
+    /// <param name="IsJpeg">Whether the output format is JPEG (false = PNG).</param>
     /// <param name="Extension">The file extension.</param>
     /// <param name="Scale">The scale factor.</param>
     private sealed record ExportParameters(
         string OutputDir,
         string? SlideIndexes,
-        ImageFormat Format,
+        bool IsJpeg,
         string Extension,
         float Scale);
 }

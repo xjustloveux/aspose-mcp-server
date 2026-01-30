@@ -1,4 +1,6 @@
 using Aspose.Slides;
+using AsposeMcpServer.Results;
+using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.PowerPoint;
 
@@ -21,12 +23,12 @@ public class PptHandoutToolTests : PptTestBase
     #region File I/O Smoke Tests
 
     [Fact]
-    public void SetHeaderFooter_WithoutHandoutMaster_ShouldThrowWithHelpfulMessage()
+    public void SetHeaderFooter_WithoutHandoutMaster_ShouldAutoCreateAndSucceed()
     {
         var pptPath = CreatePresentation("test_handout_no_master.pptx");
-        var ex = Assert.Throws<InvalidOperationException>(() =>
-            _tool.Execute("set_header_footer", pptPath, headerText: "Handout Header"));
-        Assert.Contains("handout master", ex.Message, StringComparison.OrdinalIgnoreCase);
+        var result = _tool.Execute("set_header_footer", pptPath, headerText: "Handout Header");
+        var finalized = Assert.IsType<FinalizedResult<SuccessResult>>(result);
+        Assert.Contains("header", finalized.Data.Message);
     }
 
     #endregion
@@ -40,9 +42,9 @@ public class PptHandoutToolTests : PptTestBase
     public void Operation_ShouldBeCaseInsensitive(string operation)
     {
         var pptPath = CreatePresentation($"test_case_{operation.Replace("_", "")}.pptx");
-        var ex = Assert.Throws<InvalidOperationException>(() =>
-            _tool.Execute(operation, pptPath, headerText: "Test"));
-        Assert.Contains("handout master", ex.Message, StringComparison.OrdinalIgnoreCase);
+        var result = _tool.Execute(operation, pptPath, headerText: "Test");
+        var finalized = Assert.IsType<FinalizedResult<SuccessResult>>(result);
+        Assert.Contains("header", finalized.Data.Message);
     }
 
     [Fact]
@@ -58,13 +60,13 @@ public class PptHandoutToolTests : PptTestBase
     #region Session Management
 
     [Fact]
-    public void SetHeaderFooter_WithSessionId_WithoutHandoutMaster_ShouldThrow()
+    public void SetHeaderFooter_WithSessionId_WithoutHandoutMaster_ShouldAutoCreateAndSucceed()
     {
         var pptPath = CreatePresentation("test_session_set_header_footer.pptx");
         var sessionId = OpenSession(pptPath);
-        var ex = Assert.Throws<InvalidOperationException>(() =>
-            _tool.Execute("set_header_footer", sessionId: sessionId, headerText: "Session Header"));
-        Assert.Contains("handout master", ex.Message, StringComparison.OrdinalIgnoreCase);
+        var result = _tool.Execute("set_header_footer", sessionId: sessionId, headerText: "Session Header");
+        var finalized = Assert.IsType<FinalizedResult<SuccessResult>>(result);
+        Assert.Contains("header", finalized.Data.Message);
     }
 
     [Fact]
@@ -82,9 +84,9 @@ public class PptHandoutToolTests : PptTestBase
         var sessionId = OpenSession(pptPath2);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         Assert.NotNull(ppt);
-        var ex = Assert.Throws<InvalidOperationException>(() =>
-            _tool.Execute("set_header_footer", pptPath1, sessionId, headerText: "Test"));
-        Assert.Contains("handout master", ex.Message, StringComparison.OrdinalIgnoreCase);
+        var result = _tool.Execute("set_header_footer", pptPath1, sessionId, headerText: "Test");
+        var finalized = Assert.IsType<FinalizedResult<SuccessResult>>(result);
+        Assert.Contains("header", finalized.Data.Message);
     }
 
     #endregion

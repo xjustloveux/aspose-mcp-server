@@ -88,8 +88,6 @@ public static class PptImageHelper
 
         if (jpegQuality.HasValue || maxWidth.HasValue || maxHeight.HasValue)
         {
-            // CA1416 - System.Drawing.Common is Windows-only, cross-platform support not required
-#pragma warning disable CA1416
             using var fileStream = new FileStream(imagePath, FileMode.Open, FileAccess.Read);
             using var src = Image.FromStream(fileStream);
 
@@ -124,7 +122,6 @@ public static class PptImageHelper
 
             if (needsDispose)
                 processedImage.Dispose();
-#pragma warning restore CA1416
 
             ms.Position = 0;
             processingDetails.Insert(0, "image replaced");

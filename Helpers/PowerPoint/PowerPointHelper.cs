@@ -206,10 +206,7 @@ public static class PowerPointHelper
     {
         using var bitmap = slide.GetThumbnail(scaleX, scaleY);
         using var stream = new MemoryStream();
-        // CA1416 - System.Drawing.Common is Windows-only, cross-platform support not required
-#pragma warning disable CA1416
         bitmap.Save(stream, ImageFormat.Png);
-#pragma warning restore CA1416
         return Convert.ToBase64String(stream.ToArray());
     }
 }

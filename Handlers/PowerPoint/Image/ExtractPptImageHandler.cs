@@ -63,17 +63,10 @@ public class ExtractPptImageHandler : OperationHandlerBase<Presentation>
         var formatStr = parameters.GetOptional("format", "png");
         var skipDuplicates = parameters.GetOptional("skipDuplicates", false);
 
-        // CA1416 - System.Drawing.Common is Windows-only, cross-platform support not required
-#pragma warning disable CA1416
-        var format = formatStr.ToLower() switch
-        {
-            "jpeg" or "jpg" => ImageFormat.Jpeg,
-            _ => ImageFormat.Png
-        };
-        var extension = format.Equals(ImageFormat.Png) ? "png" : "jpg";
-#pragma warning restore CA1416
+        var isJpeg = formatStr.ToLower() is "jpeg" or "jpg";
+        var extension = isJpeg ? "jpg" : "png";
 
-        return new ExtractionParameters(outputDir, format, extension, skipDuplicates);
+        return new ExtractionParameters(outputDir, isJpeg, extension, skipDuplicates);
     }
 
     /// <summary>
@@ -125,10 +118,9 @@ public class ExtractPptImageHandler : OperationHandlerBase<Presentation>
         }
 
         var fileName = Path.Combine(p.OutputDir, $"slide{slideNum}_img{++count}.{p.Extension}");
-        // CA1416 - System.Drawing.Common is Windows-only, cross-platform support not required
-#pragma warning disable CA1416
-        image.SystemImage.Save(fileName, p.Format);
-#pragma warning restore CA1416
+        image.SystemImage.Save(fileName, p.IsJpeg
+            ? ImageFormat.Jpeg
+            : ImageFormat.Png);
         return true;
     }
 
@@ -151,12 +143,12 @@ public class ExtractPptImageHandler : OperationHandlerBase<Presentation>
     ///     Record for holding extraction parameters.
     /// </summary>
     /// <param name="OutputDir">The output directory.</param>
-    /// <param name="Format">The image format.</param>
+    /// <param name="IsJpeg">Whether the output format is JPEG (false = PNG).</param>
     /// <param name="Extension">The file extension.</param>
     /// <param name="SkipDuplicates">Whether to skip duplicate images.</param>
     private sealed record ExtractionParameters(
         string OutputDir,
-        ImageFormat Format,
+        bool IsJpeg,
         string Extension,
         bool SkipDuplicates);
 }

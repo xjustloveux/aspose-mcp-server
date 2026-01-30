@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Aspose.Pdf.Text;
 using Aspose.Slides;
 using Aspose.Words;
@@ -272,7 +273,23 @@ public static class FontHelper
     public static class Pdf
     {
         /// <summary>
-        ///     Applies font settings to a PDF TextState object
+        ///     Maps common Windows font names to Liberation font file paths on Linux.
+        /// </summary>
+        private static readonly Dictionary<string, string> LinuxFontFilePaths = new(StringComparer.OrdinalIgnoreCase)
+        {
+            { "Arial", "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf" },
+            { "Helvetica", "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf" },
+            { "Times New Roman", "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf" },
+            { "Courier New", "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf" },
+            { "Liberation Sans", "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf" },
+            { "Liberation Serif", "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf" },
+            { "Liberation Mono", "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf" }
+        };
+
+        /// <summary>
+        ///     Applies font settings to a PDF TextState object.
+        ///     On Linux, automatically substitutes common Windows fonts with Liberation equivalents
+        ///     by loading font files directly when FontRepository cannot discover them.
         /// </summary>
         /// <param name="textState">PDF TextState object to apply font settings to</param>
         /// <param name="fontName">Font name (optional)</param>
@@ -283,17 +300,48 @@ public static class FontHelper
             double? fontSize = null)
         {
             if (!string.IsNullOrWhiteSpace(fontName))
-                try
-                {
-                    textState.Font = FontRepository.FindFont(fontName);
-                }
-                catch
-                {
-                    // Ignore font not found errors, use default font
-                }
+            {
+                var font = FindFontWithFallback(fontName);
+                if (font != null)
+                    textState.Font = font;
+            }
 
             if (fontSize.HasValue)
                 textState.FontSize = (float)fontSize.Value;
+        }
+
+        /// <summary>
+        ///     Finds a font by name, falling back to loading a substitute font file
+        ///     directly on Linux if FontRepository cannot discover installed fonts.
+        /// </summary>
+        /// <param name="fontName">The requested font name.</param>
+        /// <returns>The resolved font, or null if no font could be found.</returns>
+        internal static Aspose.Pdf.Text.Font? FindFontWithFallback(string fontName)
+        {
+            try
+            {
+                return FontRepository.FindFont(fontName);
+            }
+            catch
+            {
+                // Font not found via repository
+            }
+
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                return null;
+
+            // Try to load the font file directly from disk
+            if (LinuxFontFilePaths.TryGetValue(fontName, out var fontFilePath) && File.Exists(fontFilePath))
+                try
+                {
+                    return FontRepository.OpenFont(fontFilePath);
+                }
+                catch
+                {
+                    // Failed to open font file
+                }
+
+            return null;
         }
     }
 }

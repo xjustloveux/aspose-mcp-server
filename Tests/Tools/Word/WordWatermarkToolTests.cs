@@ -1,11 +1,15 @@
-﻿using System.Drawing;
-using System.Drawing.Imaging;
+extern alias SysDrawing;
+using System.Drawing;
 using System.Runtime.Versioning;
 using Aspose.Words;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Word;
-using Font = System.Drawing.Font;
+using Bitmap = SysDrawing::System.Drawing.Bitmap;
+using Brushes = SysDrawing::System.Drawing.Brushes;
+using Font = SysDrawing::System.Drawing.Font;
+using Graphics = SysDrawing::System.Drawing.Graphics;
+using ImageFormat = SysDrawing::System.Drawing.Imaging.ImageFormat;
 
 namespace AsposeMcpServer.Tests.Tools.Word;
 

@@ -1,3 +1,5 @@
+using System.Runtime.InteropServices;
+using Aspose.Pdf.Text;
 using Aspose.Words;
 
 namespace AsposeMcpServer.Core;
@@ -24,6 +26,7 @@ public static class LicenseManager
             var loadedLicenses = LoadLicenses(config, licensePath);
 
             Console.SetOut(originalOut);
+            ConfigureFontSubstitutions(config);
             LogLicenseResult(licensePath, loadedLicenses, licenseFileNames);
         }
         catch (Exception ex)
@@ -31,6 +34,48 @@ public static class LicenseManager
             Console.SetOut(originalOut);
             Console.Error.WriteLine($"[ERROR] Error loading Aspose license: {ex.Message}");
             Console.Error.WriteLine("[WARN] Running in evaluation mode.");
+        }
+    }
+
+    /// <summary>
+    ///     Configures font substitutions for Linux environments where common Windows fonts
+    ///     (e.g., Arial, Times New Roman) are not available. Maps them to Liberation font equivalents.
+    /// </summary>
+    /// <param name="config">The server configuration.</param>
+    private static void ConfigureFontSubstitutions(ServerConfig config)
+    {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            return;
+
+        if (!config.EnablePdf)
+            return;
+
+        try
+        {
+            var fontDirs = new[]
+            {
+                "/usr/share/fonts",
+                "/usr/share/fonts/truetype",
+                "/usr/share/fonts/truetype/liberation"
+            };
+
+            foreach (var dir in fontDirs)
+                if (Directory.Exists(dir))
+                    FontRepository.Sources.Add(new FolderFontSource(dir));
+
+            var substitutions = new (string original, string replacement)[]
+            {
+                ("Arial", "Liberation Sans"),
+                ("Times New Roman", "Liberation Serif"),
+                ("Courier New", "Liberation Mono")
+            };
+
+            foreach (var (original, replacement) in substitutions)
+                FontRepository.Substitutions.Add(new SimpleFontSubstitution(original, replacement));
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[WARN] Error configuring font substitutions: {ex.Message}");
         }
     }
 

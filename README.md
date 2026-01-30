@@ -1164,36 +1164,32 @@ word_style(path="B.docx", operation="copy_styles", sourceDocument="A.docx")
 
 **注意：** GitHub Actions 會在推送到 main/master 分支時自動構建所有平台版本。
 
-### Linux/macOS 額外需求
+### Linux/macOS 跨平台支援
 
-部分圖片處理功能依賴 `System.Drawing.Common`，在 Linux/macOS 上需要安裝 `libgdiplus`：
+所有功能已原生支援跨平台運行，**不需要安裝 `libgdiplus`**：
 
-**安裝方式：**
+| 組件 | 跨平台方案 | 說明 |
+|------|------------|------|
+| PowerPoint | `Aspose.Slides.NET6.CrossPlatform` | 內建 C++ 圖形引擎，無需外部圖形庫 |
+| PDF | `Aspose.PDF.Drawing` | 使用 `Aspose.Drawing` 後端，取代 `System.Drawing.Common` |
+| Word / Excel | `SkiaSharp` | 透過 SkiaSharp 原生資源提供圖形支援 |
+
+**字型需求（僅 Linux）：**
+
+Linux 環境預設不包含 Windows 常用字型（Arial、Times New Roman 等），建議安裝字型以確保文檔正確呈現：
+
 ```bash
-# Ubuntu/Debian
-sudo apt-get install libgdiplus
+# Ubuntu/Debian - 安裝 Liberation 字型（開源替代）
+sudo apt-get install fonts-liberation fontconfig
 
-# CentOS/RHEL
-sudo yum install libgdiplus
+# 安裝 Microsoft 核心字型（需接受 EULA）
+sudo apt-get install ttf-mscorefonts-installer
 
-# macOS
-brew install mono-libgdiplus
+# 更新字型快取
+sudo fc-cache -f -v
 ```
 
-**受影響的功能：**
-
-| 功能 | 工具 | 說明 |
-|------|------|------|
-| 投影片匯出為圖片 | `ppt_image_operations` | `export_slides` 操作 |
-| 投影片縮圖生成 | `ppt_data_operations` | `get_slide_details` 的 `includeThumbnail` 參數 |
-| 簡報轉圖片 | `ppt_file_operations` | 轉換為圖片格式 |
-| PDF 圖片提取 | `pdf_image` | `extract` 操作的某些格式 |
-
-**未安裝 libgdiplus 時的錯誤訊息：**
-```
-System.TypeInitializationException: The type initializer for 'Gdip' threw an exception.
----> System.PlatformNotSupportedException: System.Drawing.Common is not supported on non-Windows platforms.
-```
+> macOS 已內建常用字型，無需額外安裝。
 
 ## 📄 授權
 

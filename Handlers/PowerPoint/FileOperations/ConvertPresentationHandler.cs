@@ -68,12 +68,9 @@ public class ConvertPresentationHandler : OperationHandlerBase<Presentation>
             var slideSize = presentation.SlideSize.Size;
             var targetSize = new Size((int)slideSize.Width, (int)slideSize.Height);
 
-            // CA1416 - System.Drawing.Common is Windows-only, cross-platform support not required
-#pragma warning disable CA1416
             using var bitmap = slide.GetThumbnail(targetSize);
             var imageFormat = format == "png" ? ImageFormat.Png : ImageFormat.Jpeg;
             bitmap.Save(p.OutputPath, imageFormat);
-#pragma warning restore CA1416
 
             var formatName = format == "png" ? "PNG" : "JPEG";
             return new SuccessResult
