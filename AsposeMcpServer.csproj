@@ -24,16 +24,10 @@
   <Target Name="GetGitVersion" BeforeTargets="BeforeBuild" Condition="'$(VersionExplicitlySet)' != 'true'">
     <!-- Try to get version from Git tag -->
     <!-- Use different commands for Windows (cmd) vs Unix (sh) -->
-    <Exec Command="cmd /c &quot;git describe --tags --abbrev=0 2&gt;nul || echo v1.0.0&quot;"
-          ConsoleToMSBuild="true"
-          IgnoreExitCode="true"
-          Condition="'$(OS)' == 'Windows_NT'">
+    <Exec Command="cmd /c &quot;git describe --tags --abbrev=0 2&gt;nul || echo v1.0.0&quot;" ConsoleToMSBuild="true" IgnoreExitCode="true" Condition="'$(OS)' == 'Windows_NT'">
       <Output TaskParameter="ConsoleOutput" PropertyName="GitTagRaw" />
     </Exec>
-    <Exec Command="sh -c 'git describe --tags --abbrev=0 2&gt;/dev/null || echo v1.0.0'"
-          ConsoleToMSBuild="true"
-          IgnoreExitCode="true"
-          Condition="'$(OS)' != 'Windows_NT'">
+    <Exec Command="sh -c 'git describe --tags --abbrev=0 2&gt;/dev/null || echo v1.0.0'" ConsoleToMSBuild="true" IgnoreExitCode="true" Condition="'$(OS)' != 'Windows_NT'">
       <Output TaskParameter="ConsoleOutput" PropertyName="GitTagRaw" />
     </Exec>
     <PropertyGroup>
@@ -53,6 +47,7 @@
   <ItemGroup>
     <!-- License supports versions until 22 Nov 2023 -->
     <!-- Using latest compatible versions from Oct 2023 -->
+    <PackageReference Include="Aspose.OCR" Version="23.10.0" />
     <PackageReference Include="Aspose.Words" Version="23.10.0" />
     <PackageReference Include="Aspose.Cells" Version="23.10.0" />
     <PackageReference Include="Aspose.Slides.NET6.CrossPlatform" Version="23.10.0" />
@@ -90,7 +85,30 @@
   </ItemGroup>
 
   <!-- Fix: Aspose.Slides.NET6.CrossPlatform 23.10.0 only copies native DLLs for net6.0/net7.0 -->
-  <ItemGroup Condition="'$(TargetFramework)' != 'net6.0' AND '$(TargetFramework)' != 'net7.0'">
+  <!-- Platform-specific native libraries for publish (reduces output size) -->
+  <ItemGroup Condition="'$(TargetFramework)' != 'net6.0' AND '$(TargetFramework)' != 'net7.0' AND '$(RuntimeIdentifier)' == 'linux-x64'">
+    <None Include="$(NuGetPackageRoot)aspose.slides.net6.crossplatform\23.10.0\net6.0_native\libaspose.slides.drawing.capi_x86_64_libstdcpp_libc2.23.so">
+      <Link>%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' != 'net6.0' AND '$(TargetFramework)' != 'net7.0' AND ('$(RuntimeIdentifier)' == 'osx-x64' OR '$(RuntimeIdentifier)' == 'osx-arm64')">
+    <None Include="$(NuGetPackageRoot)aspose.slides.net6.crossplatform\23.10.0\net6.0_native\libaspose.slides.drawing.capi_appleclang.dylib">
+      <Link>%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' != 'net6.0' AND '$(TargetFramework)' != 'net7.0' AND '$(RuntimeIdentifier)' == 'win-x64'">
+    <None Include="$(NuGetPackageRoot)aspose.slides.net6.crossplatform\23.10.0\net6.0_native\aspose.slides.drawing.capi_vc14x64.dll">
+      <Link>%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <!-- Development fallback: include all native libraries when no RuntimeIdentifier is specified -->
+  <ItemGroup Condition="'$(TargetFramework)' != 'net6.0' AND '$(TargetFramework)' != 'net7.0' AND '$(RuntimeIdentifier)' == ''">
     <None Include="$(NuGetPackageRoot)aspose.slides.net6.crossplatform\23.10.0\net6.0_native\*.*">
       <Link>%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

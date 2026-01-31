@@ -23,21 +23,31 @@ RUN VERSION_NUM=$(echo "${VERSION}" | sed 's/^v//') && \
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 
-# Install required libraries and fonts for Aspose document processing
-# Microsoft core fonts (Arial, Times New Roman, etc.) are required by Aspose.PDF.Drawing
+# Install locale, required libraries and fonts:
+# - locales: UTF-8 locale for proper CJK character handling
+# - Microsoft core fonts (Arial, Times New Roman, etc.): required by Aspose.PDF.Drawing
+# - fonts-wqy-zenhei: basic CJK (Chinese/Japanese/Korean) font support
 RUN sed -i 's/main/main contrib/g' /etc/apt/sources.list.d/debian.sources || \
     echo "deb http://deb.debian.org/debian bookworm contrib" >> /etc/apt/sources.list && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
+        locales \
         libgdiplus \
         libx11-6 \
         fontconfig \
         fonts-liberation \
-        && echo "ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true" | debconf-set-selections \
-        && apt-get install -y --no-install-recommends ttf-mscorefonts-installer \
+        fonts-wqy-zenhei \
+    && sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen \
+    && locale-gen en_US.UTF-8 \
+    && echo "ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true" | debconf-set-selections \
+    && apt-get install -y --no-install-recommends ttf-mscorefonts-installer \
     && fc-cache -f -v \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+ENV LANG=en_US.UTF-8
+ENV LC_ALL=en_US.UTF-8
+ENV LANGUAGE=en_US:en
 
 # Create non-root user for security
 RUN groupadd -r aspose && useradd -r -g aspose aspose

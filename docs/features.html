@@ -126,7 +126,7 @@
 
         <h3>核心功能</h3>
         <ul class="feature-list">
-            <li><strong>88 個統一工具</strong> - Word(24)、Excel(25)、PowerPoint(21)、PDF(15)、轉換(2)、Session(1) 已整合</li>
+            <li><strong>89 個統一工具</strong> - Word(24)、Excel(25)、PowerPoint(21)、PDF(15)、OCR(1)、轉換(2)、Session(1) 已整合</li>
             <li><strong>按需啟用</strong> - 只啟用需要的文檔類型，減少資源佔用</li>
             <li><strong>跨平台</strong> - Windows、Linux、macOS (Intel + ARM) 原生支援，無需外部圖形庫，單一可執行檔案</li>
             <li><strong>開箱即用</strong> - 預編譯版本無需安裝 .NET Runtime</li>
@@ -221,6 +221,25 @@
             <li>SDK 自動生成 outputSchema（使用 oneOf 支援多種結果類型）</li>
             <li>包含 <code>output</code> 欄位（path 或 sessionId）指示輸出位置</li>
             <li>客戶端可根據 schema 自動解析結果</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>🔍 OCR 文字辨識</h2>
+
+        <h3>文字辨識功能</h3>
+        <ul class="feature-list">
+            <li><strong>圖片文字辨識</strong> - 支援 PNG、JPG、BMP、TIFF 等圖片格式的文字辨識</li>
+            <li><strong>掃描 PDF 轉換</strong> - 將掃描 PDF 轉換為可編輯文件（DOCX、XLSX、PDF、TXT）</li>
+            <li><strong>多語言支援</strong> - 英文、中文、德文、法文、西班牙文、義大利文、俄文、印地文等</li>
+            <li><strong>詳細辨識資訊</strong> - 回傳文字內容、信心度、單詞座標（Bounding Box）</li>
+        </ul>
+
+        <h3>平台支援</h3>
+        <ul class="feature-list">
+            <li>Windows x64、Linux x64、macOS x64 完整支援</li>
+            <li>macOS ARM64 透過 Rosetta 2 支援</li>
+            <li>Linux ARM64 不支援（ONNX Runtime 限制）</li>
         </ul>
     </div>
 

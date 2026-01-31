@@ -68,11 +68,15 @@ public class ConvertDocumentTool
         UseStructuredContent = true)]
     [OutputSchema(typeof(ConversionResult))]
     [Description(@"Convert documents between various formats (auto-detect source type).
+Supports Word, Excel, PowerPoint, and PDF as input.
 
 Usage examples:
 - Convert Word to HTML: convert_document(inputPath='doc.docx', outputPath='doc.html')
 - Convert Excel to CSV: convert_document(inputPath='book.xlsx', outputPath='book.csv')
 - Convert PowerPoint to PDF: convert_document(inputPath='presentation.pptx', outputPath='presentation.pdf')
+- Convert PDF to Word: convert_document(inputPath='document.pdf', outputPath='document.docx')
+- Convert PDF to Excel: convert_document(inputPath='data.pdf', outputPath='data.xlsx')
+- Convert PDF to PowerPoint: convert_document(inputPath='slides.pdf', outputPath='slides.pptx')
 - Convert from session: convert_document(sessionId='sess_xxx', outputPath='doc.pdf')")]
     public ConversionResult Execute(
         [Description("Input file path (required if no sessionId)")]
@@ -276,6 +280,13 @@ Usage examples:
 
             sourceFormat = "PowerPoint";
         }
+        else if (IsPdfDocument(inputExtension))
+        {
+            using var pdfDoc = new Aspose.Pdf.Document(inputPath);
+            var pdfFormat = GetPdfSaveFormat(outputExtension);
+            pdfDoc.Save(outputPath, pdfFormat);
+            sourceFormat = "PDF";
+        }
         else
         {
             throw new ArgumentException($"Unsupported input format: {inputExtension}");
@@ -320,6 +331,16 @@ Usage examples:
     private static bool IsPresentationDocument(string extension)
     {
         return extension is ".ppt" or ".pptx" or ".odp";
+    }
+
+    /// <summary>
+    ///     Determines whether the specified extension represents a PDF document.
+    /// </summary>
+    /// <param name="extension">The file extension to check.</param>
+    /// <returns><c>true</c> if the extension is a PDF document format; otherwise, <c>false</c>.</returns>
+    private static bool IsPdfDocument(string extension)
+    {
+        return extension is ".pdf";
     }
 
     /// <summary>

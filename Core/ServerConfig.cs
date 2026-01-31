@@ -26,6 +26,13 @@ public class ServerConfig
     public bool EnablePdf { get; private set; } = true;
 
     /// <summary>
+    ///     Gets a value indicating whether OCR text recognition tools are enabled.
+    ///     Defaults to false because OCR requires a separate Aspose.OCR license
+    ///     and adds ONNX Runtime overhead.
+    /// </summary>
+    public bool EnableOcr { get; private set; }
+
+    /// <summary>
     ///     Gets the license file path or filename. Can be absolute path, relative path, or just filename.
     ///     If not specified, will search for common license file names.
     /// </summary>
@@ -68,6 +75,7 @@ public class ServerConfig
         EnableExcel = false;
         EnablePowerPoint = false;
         EnablePdf = false;
+        EnableOcr = false;
 
         var toolList = tools.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         foreach (var tool in toolList)
@@ -78,7 +86,7 @@ public class ServerConfig
                     EnableExcel = true;
                     EnablePowerPoint = true;
                     EnablePdf = true;
-                    return;
+                    break;
                 case "word":
                     EnableWord = true;
                     break;
@@ -91,6 +99,9 @@ public class ServerConfig
                     break;
                 case "pdf":
                     EnablePdf = true;
+                    break;
+                case "ocr":
+                    EnableOcr = true;
                     break;
             }
     }
@@ -109,6 +120,7 @@ public class ServerConfig
             a.Equals("--powerpoint", StringComparison.OrdinalIgnoreCase) ||
             a.Equals("--ppt", StringComparison.OrdinalIgnoreCase) ||
             a.Equals("--pdf", StringComparison.OrdinalIgnoreCase) ||
+            a.Equals("--ocr", StringComparison.OrdinalIgnoreCase) ||
             a.Equals("--all", StringComparison.OrdinalIgnoreCase));
 
         if (hasToolArg)
@@ -117,6 +129,7 @@ public class ServerConfig
             EnableExcel = false;
             EnablePowerPoint = false;
             EnablePdf = false;
+            EnableOcr = false;
         }
 
         for (var i = 0; i < args.Length; i++)
@@ -137,6 +150,9 @@ public class ServerConfig
                     break;
                 case "--pdf":
                     EnablePdf = true;
+                    break;
+                case "--ocr":
+                    EnableOcr = true;
                     break;
                 case "--all":
                     EnableWord = true;
@@ -175,6 +191,7 @@ public class ServerConfig
         if (EnableExcel) enabled.Add("Excel");
         if (EnablePowerPoint) enabled.Add("PowerPoint");
         if (EnablePdf) enabled.Add("PDF");
+        if (EnableOcr) enabled.Add("OCR");
 
         return enabled.Count > 0 ? string.Join(", ", enabled) : "None";
     }
@@ -185,8 +202,8 @@ public class ServerConfig
     /// <exception cref="InvalidOperationException">Thrown when no tool category is enabled.</exception>
     public void Validate()
     {
-        if (!EnableWord && !EnableExcel && !EnablePowerPoint && !EnablePdf)
+        if (!EnableWord && !EnableExcel && !EnablePowerPoint && !EnablePdf && !EnableOcr)
             throw new InvalidOperationException(
-                "At least one tool category must be enabled. Use --word, --excel, --powerpoint, --pdf, or --all");
+                "At least one tool category must be enabled. Use --word, --excel, --powerpoint, --pdf, --ocr, or --all");
     }
 }

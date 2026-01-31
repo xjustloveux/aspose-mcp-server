@@ -166,16 +166,19 @@ public abstract class TestBase : IDisposable
             "Aspose.Cells.lic",
             "Aspose.Slides.lic",
             "Aspose.Pdf.lic",
+            "Aspose.OCR.lic",
             Path.Combine(baseDirectory, "Aspose.Total.lic"),
             Path.Combine(baseDirectory, "Aspose.Words.lic"),
             Path.Combine(baseDirectory, "Aspose.Cells.lic"),
             Path.Combine(baseDirectory, "Aspose.Slides.lic"),
             Path.Combine(baseDirectory, "Aspose.Pdf.lic"),
+            Path.Combine(baseDirectory, "Aspose.OCR.lic"),
             Path.Combine(currentDirectory, "Aspose.Total.lic"),
             Path.Combine(currentDirectory, "Aspose.Words.lic"),
             Path.Combine(currentDirectory, "Aspose.Cells.lic"),
             Path.Combine(currentDirectory, "Aspose.Slides.lic"),
-            Path.Combine(currentDirectory, "Aspose.Pdf.lic")
+            Path.Combine(currentDirectory, "Aspose.Pdf.lic"),
+            Path.Combine(currentDirectory, "Aspose.OCR.lic")
         ]);
 
         var searchDirectories = new[] { baseDirectory, currentDirectory };
@@ -246,6 +249,17 @@ public abstract class TestBase : IDisposable
         catch
         {
             // License file might not contain Pdf license
+        }
+
+        try
+        {
+            var ocrLicense = new Aspose.OCR.License();
+            ocrLicense.SetLicense(licensePath);
+            LoadedLicenses.Add(AsposeLibraryType.Ocr);
+        }
+        catch
+        {
+            // License file might not contain OCR license
         }
 
         if (LoadedLicenses.Count > 0)
@@ -470,6 +484,8 @@ public abstract class TestBase : IDisposable
                 AsposeLibraryType.Pdf => !Document.IsLicensed,
                 // Aspose.Slides: License.IsLicensed() is a method on License class
                 AsposeLibraryType.Slides => !new Aspose.Slides.License().IsLicensed(),
+                // Aspose.OCR: No direct IsLicensed API, use HashSet tracking
+                AsposeLibraryType.Ocr => !LoadedLicenses.Contains(AsposeLibraryType.Ocr),
                 _ => !new Aspose.Slides.License().IsLicensed()
             };
         }
@@ -528,6 +544,7 @@ public abstract class TestBase : IDisposable
         Slides,
         Words,
         Cells,
-        Pdf
+        Pdf,
+        Ocr
     }
 }

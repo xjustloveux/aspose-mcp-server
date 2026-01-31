@@ -14,7 +14,8 @@ public class ToolFilterServiceTests
         bool enableWord = false,
         bool enableExcel = false,
         bool enablePowerPoint = false,
-        bool enablePdf = false)
+        bool enablePdf = false,
+        bool enableOcr = false)
     {
         var args = new List<string>();
 
@@ -22,6 +23,7 @@ public class ToolFilterServiceTests
         if (enableExcel) args.Add("--excel");
         if (enablePowerPoint) args.Add("--ppt");
         if (enablePdf) args.Add("--pdf");
+        if (enableOcr) args.Add("--ocr");
 
         // If nothing enabled, we need to enable something to avoid validation error
         // But for testing, we want to test with nothing enabled
@@ -144,6 +146,30 @@ public class ToolFilterServiceTests
 
     #endregion
 
+    #region OCR Tool Tests
+
+    [Fact]
+    public void IsToolEnabled_OcrTool_WhenOcrEnabled_ShouldReturnTrue()
+    {
+        var serverConfig = CreateServerConfig(enableOcr: true);
+        var sessionConfig = new SessionConfig();
+        var service = new ToolFilterService(serverConfig, sessionConfig);
+
+        Assert.True(service.IsToolEnabled("ocr_recognition"));
+    }
+
+    [Fact]
+    public void IsToolEnabled_OcrTool_WhenOcrDisabled_ShouldReturnFalse()
+    {
+        var serverConfig = CreateServerConfig(enableOcr: false);
+        var sessionConfig = new SessionConfig();
+        var service = new ToolFilterService(serverConfig, sessionConfig);
+
+        Assert.False(service.IsToolEnabled("ocr_recognition"));
+    }
+
+    #endregion
+
     #region Session Tool Tests
 
     [Fact]
@@ -217,7 +243,7 @@ public class ToolFilterServiceTests
     [Fact]
     public void GetEnabledCategories_AllEnabled_ShouldReturnAll()
     {
-        var serverConfig = CreateServerConfig(true, true, true, true);
+        var serverConfig = CreateServerConfig(true, true, true, true, true);
         var sessionConfig = new SessionConfig { Enabled = true };
         var service = new ToolFilterService(serverConfig, sessionConfig);
 
@@ -227,6 +253,7 @@ public class ToolFilterServiceTests
         Assert.Contains("Excel", result);
         Assert.Contains("PowerPoint", result);
         Assert.Contains("PDF", result);
+        Assert.Contains("OCR", result);
         Assert.Contains("Session", result);
     }
 

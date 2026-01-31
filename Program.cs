@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Text;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Security;
@@ -7,6 +8,12 @@ using AsposeMcpServer.Core.Transport;
 
 Console.OutputEncoding = Encoding.UTF8;
 Console.InputEncoding = Encoding.UTF8;
+
+if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) &&
+    RuntimeInformation.ProcessArchitecture == Architecture.Arm64)
+    Console.Error.WriteLine(
+        "[WARN] Running on macOS ARM64. Aspose native libraries require Rosetta 2. " +
+        "If you encounter errors, install it via: softwareupdate --install-rosetta");
 
 var config = ServerConfig.LoadFromArgs(args);
 var transportConfig = TransportConfig.LoadFromArgs(args);

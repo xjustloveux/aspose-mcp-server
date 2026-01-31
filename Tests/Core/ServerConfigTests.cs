@@ -18,6 +18,7 @@ public class ServerConfigTests
         Assert.True(config.EnableExcel);
         Assert.True(config.EnablePowerPoint);
         Assert.True(config.EnablePdf);
+        Assert.False(config.EnableOcr);
     }
 
     #endregion
@@ -88,6 +89,19 @@ public class ServerConfigTests
         Assert.True(config.EnableExcel);
         Assert.True(config.EnablePowerPoint);
         Assert.True(config.EnablePdf);
+        Assert.False(config.EnableOcr);
+    }
+
+    [Fact]
+    public void LoadFromArgs_WithOcr_ShouldEnableOnlyOcr()
+    {
+        var config = ServerConfig.LoadFromArgs(["--ocr"]);
+
+        Assert.False(config.EnableWord);
+        Assert.False(config.EnableExcel);
+        Assert.False(config.EnablePowerPoint);
+        Assert.False(config.EnablePdf);
+        Assert.True(config.EnableOcr);
     }
 
     [Fact]
@@ -152,6 +166,17 @@ public class ServerConfigTests
         Assert.Contains("Excel", info);
         Assert.Contains("PowerPoint", info);
         Assert.Contains("PDF", info);
+        Assert.DoesNotContain("OCR", info);
+    }
+
+    [Fact]
+    public void GetEnabledToolsInfo_WithOcr_ShouldContainOcr()
+    {
+        var config = ServerConfig.LoadFromArgs(["--ocr"]);
+
+        var info = config.GetEnabledToolsInfo();
+
+        Assert.Contains("OCR", info);
     }
 
     [Fact]
@@ -204,6 +229,16 @@ public class ServerConfigTests
     public void Validate_SomeEnabled_ShouldNotThrow()
     {
         var config = ServerConfig.LoadFromArgs(["--word"]);
+
+        var ex = Record.Exception(() => config.Validate());
+
+        Assert.Null(ex);
+    }
+
+    [Fact]
+    public void Validate_OnlyOcrEnabled_ShouldNotThrow()
+    {
+        var config = ServerConfig.LoadFromArgs(["--ocr"]);
 
         var ex = Record.Exception(() => config.Validate());
 

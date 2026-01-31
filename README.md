@@ -13,14 +13,14 @@
 [![Aspose Version](https://img.shields.io/badge/Aspose-23.10.0-orange)](https://products.aspose.com/total/net/)
 [![xUnit](https://img.shields.io/badge/xUnit-2.9.2-blue?logo=xunit)](https://xunit.net/)
 
-**格式支援：** ![Word](https://img.shields.io/badge/Word-DOC%2CDOCX-blue) ![Excel](https://img.shields.io/badge/Excel-XLS%2CXLSX-green) ![PowerPoint](https://img.shields.io/badge/PowerPoint-PPT%2CPPTX-orange) ![PDF](https://img.shields.io/badge/PDF-PDF-red)
+**格式支援：** ![Word](https://img.shields.io/badge/Word-DOC%2CDOCX-blue) ![Excel](https://img.shields.io/badge/Excel-XLS%2CXLSX-green) ![PowerPoint](https://img.shields.io/badge/PowerPoint-PPT%2CPPTX-orange) ![PDF](https://img.shields.io/badge/PDF-PDF-red) ![OCR](https://img.shields.io/badge/OCR-PNG%2CJPG%2CPDF-purple)
 
 基於 .NET 8.0 和 Aspose.Total 的 Model Context Protocol (MCP) 伺服器，為 MCP 客戶端提供強大的辦公文檔處理能力。
 
 ## ✨ 特性
 
 ### 核心功能
-- **88 個統一工具** - Word(24)、Excel(25)、PowerPoint(21)、PDF(15)、轉換(2)、Session(1) 已整合
+- **89 個統一工具** - Word(24)、Excel(25)、PowerPoint(21)、PDF(15)、OCR(1)、轉換(2)、Session(1) 已整合
 - **按需啟用** - 只啟用需要的文檔類型，減少資源佔用
 - **跨平台** - Windows、Linux、macOS (Intel + ARM)，單一可執行檔案
 - **開箱即用** - 預編譯版本無需安裝 .NET Runtime
@@ -49,8 +49,8 @@
 
 **開始使用**
 - [🚀 快速開始](#-快速開始) - 下載、配置、啟動
-- [📦 功能概覽](#-功能概覽) - Word、Excel、PowerPoint、PDF、轉換工具
-- [📋 工具列表](#-工具列表) - 88 個工具的詳細說明
+- [📦 功能概覽](#-功能概覽) - Word、Excel、PowerPoint、PDF、OCR、轉換工具
+- [📋 工具列表](#-工具列表) - 89 個工具的詳細說明
 
 **進階配置**
 - [🔌 傳輸模式](#-傳輸模式) - Stdio、HTTP、WebSocket 配置
@@ -91,7 +91,7 @@
 **放置授權檔案：** 將授權檔案放在可執行檔案同一目錄。支援以下方式：
 
 - **總授權**：`Aspose.Total.lic`（包含所有組件）
-- **單一組件授權**：`Aspose.Words.lic`、`Aspose.Cells.lic`、`Aspose.Slides.lic`、`Aspose.Pdf.lic`
+- **單一組件授權**：`Aspose.Words.lic`、`Aspose.Cells.lic`、`Aspose.Slides.lic`、`Aspose.Pdf.lic`、`Aspose.OCR.lic`
 - **自訂檔案名稱**：可透過環境變數或命令列參數指定
 
 **授權檔案配置方式：**
@@ -135,7 +135,8 @@
 - `--excel` - Excel 工具（自動包含轉換功能）
 - `--powerpoint` / `--ppt` - PowerPoint 工具（自動包含轉換功能）
 - `--pdf` - PDF 工具
-- `--all` - 所有工具
+- `--ocr` - OCR 文字辨識工具（圖片/PDF 文字辨識）
+- `--all` - 所有文檔工具（Word、Excel、PowerPoint、PDF，不含 OCR）
 - `--session-enabled` - 啟用 Session 管理（`document_session` 工具）
 - `--license 路徑` - 指定授權檔案路徑（可選）
 
@@ -185,6 +186,12 @@
 **編輯操作**：編輯文字、表格、書籤、註釋、連結、表單欄位、圖片  
 **讀取操作**：提取文字、圖片、讀取頁面資訊、書籤、註釋、連結、表單欄位、附件、簽名、統計資訊  
 **高級功能**：簽名、頁面旋轉、編輯（塗黑）
+
+### OCR 文字辨識 (1個工具)
+
+**文字辨識**：圖片 OCR（PNG/JPG/BMP/TIFF）、掃描 PDF 轉可編輯文件（DOCX/XLSX/PDF/TXT）
+**語言支援**：英文、中文、德文、法文、西班牙文、義大利文、俄文、印地文等多種語言
+**平台限制**：不支援 Linux ARM64；macOS ARM64 需安裝 Rosetta 2
 
 ### 轉換工具 (2個)
 
@@ -249,7 +256,7 @@ AsposeMcpServer.exe --word
 | `ASPOSE_TRANSPORT` | 傳輸模式 (stdio/http/ws) | stdio |
 | `ASPOSE_PORT` | 監聽埠號（1-65535，無效值重設為 3000） | 3000 |
 | `ASPOSE_HOST` | 監聽位址（`localhost`、`0.0.0.0`、`*` 或特定 IP，無效值重設為 localhost） | localhost |
-| `ASPOSE_TOOLS` | 啟用的工具 (all 或 word,excel,pdf,ppt) | all |
+| `ASPOSE_TOOLS` | 啟用的工具 (all 或 word,excel,pdf,ppt,ocr；all 不含 OCR) | all |
 
 > **注意**:
 > - Docker/Kubernetes 部署時需設定 `ASPOSE_HOST=0.0.0.0` 以便容器外部可以訪問
@@ -753,13 +760,15 @@ aspose-mcp-server/
 │   ├── Excel/                25 個工具
 │   ├── PowerPoint/           21 個工具
 │   ├── PDF/                  15 個工具
+│   ├── Ocr/                  1 個工具
 │   ├── Conversion/           2 個工具
 │   └── Session/              1 個工具 (DocumentSessionTool)
 ├── Handlers/                 📁 操作處理器（業務邏輯實作）
 │   ├── Word/                 Word 處理器
 │   ├── Excel/                Excel 處理器
 │   ├── PowerPoint/           PowerPoint 處理器
-│   └── Pdf/                  PDF 處理器
+│   ├── Pdf/                  PDF 處理器
+│   └── Ocr/                  OCR 處理器
 ├── Helpers/                  🛠️ 通用輔助工具
 │   ├── Excel/                Excel 專用 Helper
 │   ├── Word/                 Word 專用 Helper
@@ -770,7 +779,8 @@ aspose-mcp-server/
 │   ├── Word/                 Word 操作結果類型
 │   ├── Excel/                Excel 操作結果類型
 │   ├── PowerPoint/           PowerPoint 操作結果類型
-│   └── Pdf/                  PDF 操作結果類型
+│   ├── Pdf/                  PDF 操作結果類型
+│   └── Ocr/                  OCR 操作結果類型
 ├── Core/                     🔧 MCP 伺服器核心
 │   ├── Handlers/             Handler 基礎架構
 │   ├── Progress/             MCP Progress 支援（文檔處理進度回報）
@@ -893,10 +903,12 @@ pwsh test.ps1 -Verbose -Coverage -Filter "FullyQualifiedName~Word"
   - `Excel/` - Excel Handler 測試
   - `PowerPoint/` - PowerPoint Handler 測試
   - `Pdf/` - PDF Handler 測試
+  - `Ocr/` - OCR Handler 測試
 - `Tests/Tools/Word/` - Word 工具測試（24 個測試類）
 - `Tests/Tools/Excel/` - Excel 工具測試（25 個測試類）
 - `Tests/Tools/PowerPoint/` - PowerPoint 工具測試（21 個測試類）
 - `Tests/Tools/Pdf/` - PDF 工具測試（15 個測試類）
+- `Tests/Tools/Ocr/` - OCR 工具測試（1 個測試類）
 - `Tests/Tools/Conversion/` - 轉換工具測試（2 個測試類）
 - `Tests/Helpers/` - Helper 單元測試（Excel、Word、PowerPoint、PDF Helper 測試）
 - `Tests/Infrastructure/` - 測試基礎設施（TestBase、WordTestBase、ExcelTestBase、PdfTestBase、HandlerTestBase）
@@ -1063,6 +1075,13 @@ pwsh code-quality.ps1 -CleanupCode -InspectCode
 - `ppt_data_operations` - 獲取統計資訊、內容、投影片詳情（3個操作：get_statistics, get_content, get_slide_details）
 - `ppt_properties` - 獲取、設定文檔屬性（2個操作：get, set）
 
+### OCR 文字辨識 (1 個工具)
+
+**文字辨識 (1)**
+- `ocr_recognition` - 圖片/PDF 文字辨識（2個操作：recognize, recognize_pdf）
+  - `recognize`：辨識圖片中的文字（支援 PNG/JPG/BMP/TIFF/PDF），回傳文字、信心度、座標資訊
+  - `recognize_pdf`：將掃描 PDF 轉換為可編輯文件（支援輸出 DOCX/XLSX/PDF/TXT）
+
 ### PDF 檔案處理 (15 個工具)
 
 **檔案操作 (1)**
@@ -1154,9 +1173,24 @@ word_style(path="B.docx", operation="copy_styles", sourceDocument="A.docx")
 
 **技術規格：**
 - .NET 8.0 Runtime（自包含，無需額外安裝）
-- Aspose.Total 23.10.0（包含 Words、Cells、Slides、Pdf、Email）
+- Aspose.Total 23.10.0（包含 Words、Cells、Slides、Pdf）+ Aspose.OCR 23.10.0
 - 單一可執行檔案（PublishSingleFile）
 - 支援 UTF-8 編碼（完整中文支援）
+
+**macOS ARM64 (M1/M2/M3) 注意事項：**
+- PowerPoint 和 OCR 功能依賴 x64 原生庫，需透過 Rosetta 2 運行
+- 安裝 Rosetta 2：`softwareupdate --install-rosetta`
+- 啟動時會自動偵測並提示安裝
+
+**OCR 平台支援：**
+
+| 平台 | 支援狀態 |
+|------|---------|
+| Windows x64 | 完整支援 |
+| Linux x64 | 完整支援 |
+| macOS x64 (Intel) | 完整支援 |
+| macOS ARM64 (M1/M2/M3) | 需 Rosetta 2 |
+| Linux ARM64 | 不支援 |
 
 **獲取方式：**
 - 從 [GitHub Releases](https://github.com/xjustloveux/aspose-mcp-server/releases) 下載預編譯版本
@@ -1173,6 +1207,7 @@ word_style(path="B.docx", operation="copy_styles", sourceDocument="A.docx")
 | PowerPoint | `Aspose.Slides.NET6.CrossPlatform` | 內建 C++ 圖形引擎，無需外部圖形庫 |
 | PDF | `Aspose.PDF.Drawing` | 使用 `Aspose.Drawing` 後端，取代 `System.Drawing.Common` |
 | Word / Excel | `SkiaSharp` | 透過 SkiaSharp 原生資源提供圖形支援 |
+| OCR | `ONNX Runtime` | 使用 ONNX 神經網路模型，不支援 Linux ARM64 |
 
 **字型需求（僅 Linux）：**
 
@@ -1189,6 +1224,25 @@ sudo apt-get install ttf-mscorefonts-installer
 sudo fc-cache -f -v
 ```
 
+**CJK 字型支援（中日韓文件）：**
+
+Docker 映像已內建基本 CJK 字型（文泉驛正黑），如需更完整的 CJK 字型支援：
+
+```bash
+# 安裝完整 Noto CJK 字型（約 300MB）
+sudo apt-get install fonts-noto-cjk
+
+# 或透過 Docker Volume 掛載自訂字型
+# docker run -v ./my-fonts:/usr/share/fonts/custom ...
+```
+
+| 語言 | 字型套件 | 大小 |
+|------|---------|------|
+| 中日韓（基本） | `fonts-wqy-zenhei` | ~17MB |
+| 中日韓（完整） | `fonts-noto-cjk` | ~300MB |
+| 阿拉伯文 | `fonts-noto-core` | ~50MB |
+| 泰文 | `fonts-thai-tlwg` | ~3MB |
+
 > macOS 已內建常用字型，無需額外安裝。
 
 ## 📄 授權
@@ -1204,6 +1258,7 @@ sudo fc-cache -f -v
 - `Aspose.Cells.lic` - Excel 組件授權
 - `Aspose.Slides.lic` - PowerPoint 組件授權
 - `Aspose.Pdf.lic` - PDF 組件授權
+- `Aspose.OCR.lic` - OCR 組件授權
 
 **授權檔案配置方式（按優先順序）：**
 1. **命令列參數**（最高優先級）：`--license 路徑`
@@ -1211,7 +1266,7 @@ sudo fc-cache -f -v
 3. **自動搜尋**（預設）：在可執行檔案同一目錄搜尋常見授權檔案名稱
 
 **授權搜尋順序：**
-1. `Aspose.Words.lic`、`Aspose.Cells.lic`、`Aspose.Slides.lic`、`Aspose.Pdf.lic`（根據啟用的工具）
+1. `Aspose.Words.lic`、`Aspose.Cells.lic`、`Aspose.Slides.lic`、`Aspose.Pdf.lic`、`Aspose.OCR.lic`（根據啟用的工具）
 2. `Aspose.Total.lic`（最後 fallback）
 
 **試用模式：**
@@ -1227,6 +1282,7 @@ sudo fc-cache -f -v
 | **Aspose.Cells** | 多工作表操作受限（如跨工作表存取）；工作簿會包含評估版工作表 |
 | **Aspose.Slides** | 文字替換時可能包含水印文字；投影片可能包含評估版標記 |
 | **Aspose.PDF** | 集合限制為最多 4 個元素（如頁面數限制）；PDF 會包含評估版水印 |
+| **Aspose.OCR** | 辨識結果可能包含限制；部分功能在評估模式下受限 |
 
 **注意事項：**
 - 大部分基本操作（讀取、創建、簡單編輯）在評估模式下仍可正常運行
@@ -1240,7 +1296,7 @@ sudo fc-cache -f -v
 ## ❓ 常見問題
 
 ### Q: 如何確認工具是否正常運行？
-A: 啟動 MCP 客戶端後，檢查工具列表是否包含 `word_*`、`excel_*` 等工具。如果沒有，請檢查：
+A: 啟動 MCP 客戶端後，檢查工具列表是否包含 `word_*`、`excel_*`、`ocr_*` 等工具。如果沒有，請檢查：
 1. 配置檔案路徑是否正確
 2. 可執行檔案是否有執行權限（Linux/macOS）
 3. 授權檔案是否正確配置
@@ -1269,6 +1325,7 @@ A:
 - **Excel**: XLS、XLSX、CSV、ODS、HTML 等
 - **PowerPoint**: PPT、PPTX、ODP、HTML 等
 - **PDF**: PDF（讀寫、編輯、簽名等）
+- **OCR**: PNG、JPG、BMP、TIFF（圖片辨識）；PDF（掃描件轉可編輯文件）
 
 ### Q: 如何在 Linux/macOS 上設置執行權限？
 A: 
