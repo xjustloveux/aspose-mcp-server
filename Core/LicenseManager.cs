@@ -63,9 +63,8 @@ public static class LicenseManager
                 "/usr/share/fonts/truetype/liberation"
             };
 
-            foreach (var dir in fontDirs)
-                if (Directory.Exists(dir))
-                    FontRepository.Sources.Add(new FolderFontSource(dir));
+            foreach (var dir in fontDirs.Where(Directory.Exists))
+                FontRepository.Sources.Add(new FolderFontSource(dir));
 
             var substitutions = new (string original, string replacement)[]
             {

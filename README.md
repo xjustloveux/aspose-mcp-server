@@ -190,6 +190,7 @@
 ### OCR 文字辨識 (1個工具)
 
 **文字辨識**：圖片 OCR（PNG/JPG/BMP/TIFF）、掃描 PDF 轉可編輯文件（DOCX/XLSX/PDF/TXT）
+**文字定位**：`includeWords=true` 可回傳每個辨識單詞的 Bounding Box 座標（X, Y, Width, Height），適用於文字位置分析與版面重建
 **語言支援**：英文、中文、德文、法文、西班牙文、義大利文、俄文、印地文等多種語言
 **平台限制**：不支援 Linux ARM64；macOS ARM64 需安裝 Rosetta 2
 
@@ -1079,8 +1080,8 @@ pwsh code-quality.ps1 -CleanupCode -InspectCode
 
 **文字辨識 (1)**
 - `ocr_recognition` - 圖片/PDF 文字辨識（2個操作：recognize, recognize_pdf）
-  - `recognize`：辨識圖片中的文字（支援 PNG/JPG/BMP/TIFF/PDF），回傳文字、信心度、座標資訊
-  - `recognize_pdf`：將掃描 PDF 轉換為可編輯文件（支援輸出 DOCX/XLSX/PDF/TXT）
+  - `recognize`：辨識圖片中的文字（支援 PNG/JPG/BMP/TIFF/PDF），回傳文字、信心度、座標資訊；`includeWords=true` 可取得每個單詞的 Bounding Box 座標
+  - `recognize_pdf`：將掃描 PDF 轉換為可編輯文件（支援輸出 DOCX/XLSX/PDF/TXT），支援 `language` 參數指定辨識語言
 
 ### PDF 檔案處理 (15 個工具)
 

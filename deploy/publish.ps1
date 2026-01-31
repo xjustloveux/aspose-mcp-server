@@ -73,6 +73,7 @@ function Build-Platform {
         $unnecessaryFiles = @(
             "*.pdb",
             "*.lic",
+            "*.lib",
             "*.json",
             "web.config"
         )
@@ -151,7 +152,7 @@ if ($IIS) {
         Write-Host "  ✓ Build successful: $outputPath" -ForegroundColor Green
 
         # Clean up unnecessary files (keep web.config for IIS)
-        $unnecessaryFiles = @("*.pdb", "*.lic")
+        $unnecessaryFiles = @("*.pdb", "*.lic", "*.lib")
         # Clean JSON files except runtime-essential ones (framework-dependent needs these)
         Get-ChildItem -Path $outputPath -Filter "*.json" -ErrorAction SilentlyContinue |
             Where-Object { $_.Name -notlike '*.runtimeconfig.json' -and $_.Name -notlike '*.deps.json' } |

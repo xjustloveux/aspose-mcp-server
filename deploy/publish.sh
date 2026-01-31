@@ -119,6 +119,7 @@ build_platform() {
         # Clean up unnecessary files for standalone deployment
         rm -f "$output_path"/*.pdb 2>/dev/null || true
         rm -f "$output_path"/*.lic 2>/dev/null || true
+        rm -f "$output_path"/*.lib 2>/dev/null || true
         rm -f "$output_path"/*.json 2>/dev/null || true
         rm -f "$output_path"/web.config 2>/dev/null || true
         rm -rf "$output_path"/deploy 2>/dev/null || true

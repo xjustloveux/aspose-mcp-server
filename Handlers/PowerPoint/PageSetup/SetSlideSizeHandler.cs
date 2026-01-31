@@ -22,24 +22,22 @@ public class SetSlideSizeHandler : OperationHandlerBase<Presentation>
     /// </summary>
     /// <param name="context">The presentation context.</param>
     /// <param name="parameters">
-    ///     Optional: preset (OnScreen16x9, OnScreen16x10, Letter, A4, Banner, Custom),
-    ///     width, height (required when preset=Custom)
+    ///     Optional: preset (OnScreen16x9, Widescreen, OnScreen16x10, Letter, A4, Banner, Custom),
+    ///     width, height (required when preset=Custom),
+    ///     scaleType (EnsureFit, Maximize, DoNotScale; default: EnsureFit).
     /// </param>
     /// <returns>Success message with slide size information.</returns>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when the preset is unsupported, custom size is missing width/height, or scaleType is invalid.
+    /// </exception>
     public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractSetSlideSizeParameters(parameters);
         var presentation = context.Document;
         var slideSize = presentation.SlideSize;
 
-        var type = p.Preset.ToLower() switch
-        {
-            "onscreen16x10" => SlideSizeType.OnScreen16x10,
-            "a4" => SlideSizeType.A4Paper,
-            "banner" => SlideSizeType.Banner,
-            "custom" => SlideSizeType.Custom,
-            _ => SlideSizeType.OnScreen
-        };
+        var type = ParseSlideSizeType(p.Preset);
+        var scaleType = ParseScaleType(p.ScaleType);
 
         if (type == SlideSizeType.Custom)
         {
@@ -47,11 +45,11 @@ public class SetSlideSizeHandler : OperationHandlerBase<Presentation>
                 throw new ArgumentException("Custom size requires width and height.");
 
             ValidateSizeRange(p.Width.Value, p.Height.Value);
-            slideSize.SetSize((float)p.Width.Value, (float)p.Height.Value, SlideSizeScaleType.DoNotScale);
+            slideSize.SetSize((float)p.Width.Value, (float)p.Height.Value, scaleType);
         }
         else
         {
-            slideSize.SetSize(type, SlideSizeScaleType.DoNotScale);
+            slideSize.SetSize(type, scaleType);
         }
 
         MarkModified(context);
@@ -78,13 +76,60 @@ public class SetSlideSizeHandler : OperationHandlerBase<Presentation>
             throw new ArgumentException($"Height must be between {MinSizePoints} and {MaxSizePoints} points.");
     }
 
+    /// <summary>
+    ///     Parses a preset string to a <see cref="SlideSizeType" /> enum value.
+    /// </summary>
+    /// <param name="preset">The preset string (case-insensitive).</param>
+    /// <returns>The parsed SlideSizeType value.</returns>
+    /// <exception cref="ArgumentException">Thrown when the preset string is not recognized.</exception>
+    private static SlideSizeType ParseSlideSizeType(string preset)
+    {
+        return preset.ToLowerInvariant() switch
+        {
+            "onscreen16x9" => SlideSizeType.OnScreen16x9,
+            "widescreen" => SlideSizeType.Widescreen,
+            "onscreen16x10" => SlideSizeType.OnScreen16x10,
+            "letter" => SlideSizeType.LetterPaper,
+            "a4" => SlideSizeType.A4Paper,
+            "banner" => SlideSizeType.Banner,
+            "custom" => SlideSizeType.Custom,
+            _ => throw new ArgumentException(
+                $"Unsupported preset: {preset}. " +
+                "Supported presets: OnScreen16x9, Widescreen, OnScreen16x10, Letter, A4, Banner, Custom.")
+        };
+    }
+
+    /// <summary>
+    ///     Parses a scale type string to a <see cref="SlideSizeScaleType" /> enum value.
+    /// </summary>
+    /// <param name="scaleType">The scale type string (case-insensitive).</param>
+    /// <returns>The parsed SlideSizeScaleType value.</returns>
+    /// <exception cref="ArgumentException">Thrown when the scale type string is not recognized.</exception>
+    private static SlideSizeScaleType ParseScaleType(string scaleType)
+    {
+        return scaleType.ToLowerInvariant() switch
+        {
+            "ensurefit" => SlideSizeScaleType.EnsureFit,
+            "maximize" => SlideSizeScaleType.Maximize,
+            "donotscale" => SlideSizeScaleType.DoNotScale,
+            _ => throw new ArgumentException(
+                $"Unsupported scaleType: {scaleType}. " +
+                "Supported values: EnsureFit, Maximize, DoNotScale.")
+        };
+    }
+
     private static SetSlideSizeParameters ExtractSetSlideSizeParameters(OperationParameters parameters)
     {
         return new SetSlideSizeParameters(
             parameters.GetOptional("preset", "OnScreen16x9"),
             parameters.GetOptional<double?>("width"),
-            parameters.GetOptional<double?>("height"));
+            parameters.GetOptional<double?>("height"),
+            parameters.GetOptional("scaleType", "EnsureFit"));
     }
 
-    private sealed record SetSlideSizeParameters(string Preset, double? Width, double? Height);
+    /// <param name="Preset">The slide size preset.</param>
+    /// <param name="Width">The custom width in points.</param>
+    /// <param name="Height">The custom height in points.</param>
+    /// <param name="ScaleType">The content scale type (EnsureFit, Maximize, DoNotScale).</param>
+    private sealed record SetSlideSizeParameters(string Preset, double? Width, double? Height, string ScaleType);
 }

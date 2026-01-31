@@ -68,6 +68,7 @@ internal static class HostFactory
 
         ConfigureLogging(builder.Logging);
         RegisterCoreServices(builder.Services, transportConfig, sessionConfig, authConfig, trackingConfig);
+        builder.Services.AddSingleton(config);
         builder.Services.AddSingleton<ISessionIdentityAccessor, StdioSessionIdentityAccessor>();
 
         builder.Services.AddMcpServer()
@@ -99,6 +100,7 @@ internal static class HostFactory
         ServerConfig config)
     {
         var builder = CreateWebAppBuilder(args, transportConfig, sessionConfig, authConfig, trackingConfig);
+        builder.Services.AddSingleton(config);
         builder.Services.AddMcpServer()
             .WithHttpTransport()
             .WithFilteredToolsAndSchemas(config, sessionConfig)
@@ -134,6 +136,7 @@ internal static class HostFactory
         ServerConfig config)
     {
         var builder = CreateWebAppBuilder(args, transportConfig, sessionConfig, authConfig, trackingConfig);
+        builder.Services.AddSingleton(config);
         builder.Services.AddMcpServer()
             .WithFilteredToolsAndSchemas(config, sessionConfig)
             .AddCallToolFilter(CreateErrorDetailFilter());

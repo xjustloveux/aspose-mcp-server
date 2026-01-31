@@ -49,7 +49,7 @@ public class FormatPptTextHandlerTests : PptHandlerTestBase
 
         var result = Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("1 slides", result.Message);
+        Assert.Contains("1 slide(s)", result.Message);
         AssertModified(context);
     }
 
@@ -69,7 +69,7 @@ public class FormatPptTextHandlerTests : PptHandlerTestBase
 
         var result = Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("2 slides", result.Message);
+        Assert.Contains("2 slide(s)", result.Message);
     }
 
     [Fact]

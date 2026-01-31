@@ -521,8 +521,8 @@
     <ul class="tool-list">
         <li>
             <span class="tool-name">ocr_recognition</span><span class="tool-desc">- 圖片/PDF 文字辨識</span><span class="tool-ops">（2個操作：recognize, recognize_pdf）</span>
-            <br><small class="small-hint" style="margin-left: 20px;"><code>recognize</code>：辨識圖片中的文字（PNG/JPG/BMP/TIFF/PDF），回傳文字、信心度、座標</small>
-            <br><small class="small-hint" style="margin-left: 20px;"><code>recognize_pdf</code>：掃描 PDF 轉可編輯文件（DOCX/XLSX/PDF/TXT）</small>
+            <br><small class="small-hint" style="margin-left: 20px;"><code>recognize</code>：辨識圖片中的文字（PNG/JPG/BMP/TIFF/PDF），回傳文字、信心度、座標；<code>includeWords=true</code> 可取得每個單詞的 Bounding Box 座標（X, Y, Width, Height）</small>
+            <br><small class="small-hint" style="margin-left: 20px;"><code>recognize_pdf</code>：掃描 PDF 轉可編輯文件（DOCX/XLSX/PDF/TXT），支援 <code>language</code> 參數指定辨識語言</small>
         </li>
     </ul>
 

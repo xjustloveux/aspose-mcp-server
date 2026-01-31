@@ -52,9 +52,16 @@ public class PptPageSetupTool
     /// <param name="path">Presentation file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID for in-memory editing.</param>
     /// <param name="outputPath">Output file path (file mode only).</param>
-    /// <param name="preset">Preset: OnScreen16x9, OnScreen16x10, Letter, A4, Banner, Custom (optional, for set_size).</param>
+    /// <param name="preset">
+    ///     Preset: OnScreen16x9, Widescreen, OnScreen16x10, Letter, A4, Banner, Custom (optional, for
+    ///     set_size).
+    /// </param>
     /// <param name="width">Custom width in points when preset=Custom (1-5000, 1 inch = 72 points).</param>
     /// <param name="height">Custom height in points when preset=Custom (1-5000, 1 inch = 72 points).</param>
+    /// <param name="scaleType">
+    ///     Content scaling when resizing: EnsureFit, Maximize, DoNotScale (default: EnsureFit, for
+    ///     set_size).
+    /// </param>
     /// <param name="orientation">Orientation: Portrait or Landscape (required for set_orientation).</param>
     /// <param name="footerText">Footer text (optional, for set_footer).</param>
     /// <param name="dateText">Date/time text (optional, for set_footer).</param>
@@ -79,7 +86,9 @@ Size unit: 1 inch = 72 points. Valid range: 1-5000 points.
 
 Usage examples:
 - Set slide size: ppt_page_setup(operation='set_size', path='presentation.pptx', preset='OnScreen16x9')
+- Set widescreen: ppt_page_setup(operation='set_size', path='presentation.pptx', preset='Widescreen')
 - Set custom size: ppt_page_setup(operation='set_size', path='presentation.pptx', preset='Custom', width=960, height=720)
+- Set size without scaling: ppt_page_setup(operation='set_size', path='presentation.pptx', preset='OnScreen16x9', scaleType='DoNotScale')
 - Set orientation: ppt_page_setup(operation='set_orientation', path='presentation.pptx', orientation='Portrait')
 - Set footer: ppt_page_setup(operation='set_footer', path='presentation.pptx', footerText='Footer', showSlideNumber=true)
 - Set slide numbering: ppt_page_setup(operation='set_slide_numbering', path='presentation.pptx', showSlideNumber=true, firstNumber=1)")]
@@ -92,12 +101,16 @@ Usage examples:
         string? sessionId = null,
         [Description("Output file path (file mode only)")]
         string? outputPath = null,
-        [Description("Preset: OnScreen16x9, OnScreen16x10, Letter, A4, Banner, Custom (optional, for set_size)")]
+        [Description(
+            "Preset: OnScreen16x9 (720x405), Widescreen (960x540), OnScreen16x10, Letter, A4, Banner, Custom (optional, for set_size)")]
         string? preset = null,
         [Description("Custom width in points when preset=Custom (1-5000, 1 inch = 72 points)")]
         double? width = null,
         [Description("Custom height in points when preset=Custom (1-5000, 1 inch = 72 points)")]
         double? height = null,
+        [Description(
+            "Content scaling when resizing: EnsureFit (scale down to fit), Maximize (scale up to fill), DoNotScale (keep positions, default: EnsureFit, for set_size)")]
+        string? scaleType = null,
         [Description("Orientation: 'Portrait' or 'Landscape' (required for set_orientation)")]
         string? orientation = null,
         [Description("Footer text (optional, for set_footer)")]
@@ -113,7 +126,7 @@ Usage examples:
     {
         using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
-        var parameters = BuildParameters(operation, preset, width, height, orientation,
+        var parameters = BuildParameters(operation, preset, width, height, scaleType, orientation,
             footerText, dateText, showSlideNumber, firstNumber, slideIndices);
 
         var handler = _handlerRegistry.GetHandler(operation);
@@ -146,6 +159,7 @@ Usage examples:
         string? preset,
         double? width,
         double? height,
+        string? scaleType,
         string? orientation,
         string? footerText,
         string? dateText,
@@ -155,7 +169,7 @@ Usage examples:
     {
         return operation.ToLowerInvariant() switch
         {
-            "set_size" => BuildSetSizeParameters(preset, width, height),
+            "set_size" => BuildSetSizeParameters(preset, width, height, scaleType),
             "set_orientation" => BuildSetOrientationParameters(orientation),
             "set_footer" => BuildSetFooterParameters(footerText, dateText, showSlideNumber, slideIndices),
             "set_slide_numbering" => BuildSetSlideNumberingParameters(showSlideNumber, firstNumber),
@@ -166,16 +180,19 @@ Usage examples:
     /// <summary>
     ///     Builds parameters for the set slide size operation.
     /// </summary>
-    /// <param name="preset">The preset size (OnScreen16x9, OnScreen16x10, Letter, A4, Banner, Custom).</param>
+    /// <param name="preset">The preset size (OnScreen16x9, Widescreen, OnScreen16x10, Letter, A4, Banner, Custom).</param>
     /// <param name="width">The custom width in points when preset is Custom.</param>
     /// <param name="height">The custom height in points when preset is Custom.</param>
+    /// <param name="scaleType">The content scale type (EnsureFit, Maximize, DoNotScale).</param>
     /// <returns>OperationParameters configured for setting slide size.</returns>
-    private static OperationParameters BuildSetSizeParameters(string? preset, double? width, double? height)
+    private static OperationParameters BuildSetSizeParameters(string? preset, double? width, double? height,
+        string? scaleType)
     {
         var parameters = new OperationParameters();
         if (preset != null) parameters.Set("preset", preset);
         if (width.HasValue) parameters.Set("width", width.Value);
         if (height.HasValue) parameters.Set("height", height.Value);
+        if (scaleType != null) parameters.Set("scaleType", scaleType);
         return parameters;
     }
 

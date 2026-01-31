@@ -30,7 +30,7 @@ public class PptPageSetupToolTests : PptTestBase
         var data = GetResultData<SuccessResult>(result);
         Assert.StartsWith("Slide size set to", data.Message);
         using var presentation = new Presentation(outputPath);
-        Assert.Equal(SlideSizeType.OnScreen, presentation.SlideSize.Type);
+        Assert.Equal(SlideSizeType.OnScreen16x9, presentation.SlideSize.Type);
     }
 
     [Fact]
@@ -105,7 +105,7 @@ public class PptPageSetupToolTests : PptTestBase
         var data = GetResultData<SuccessResult>(result);
         Assert.StartsWith("Slide size set to", data.Message);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
-        Assert.Equal(SlideSizeType.OnScreen, ppt.SlideSize.Type);
+        Assert.Equal(SlideSizeType.OnScreen16x9, ppt.SlideSize.Type);
     }
 
     [Fact]
