@@ -1,5 +1,6 @@
 ﻿using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
+using AsposeMcpServer.Results;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Results.Pdf.Link;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -54,8 +55,8 @@ public class PdfLinkToolTests : PdfTestBase
         var outputPath = CreateTestFilePath("test_add_output.pdf");
         var result = _tool.Execute("add", pdfPath, outputPath: outputPath,
             pageIndex: 1, x: 100, y: 100, width: 200, height: 30, url: "https://example.com");
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Link added to page 1", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
+        Assert.True(File.Exists(outputPath));
         using var document = new Document(outputPath);
         Assert.True(document.Pages[1].Annotations.Count > 0);
     }
@@ -67,8 +68,8 @@ public class PdfLinkToolTests : PdfTestBase
         var outputPath = CreateTestFilePath("test_delete_output.pdf");
         var result = _tool.Execute("delete", pdfPath, outputPath: outputPath,
             pageIndex: 1, linkIndex: 0);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Link 0 deleted from page", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
+        Assert.True(File.Exists(outputPath));
         using var document = new Document(outputPath);
         Assert.Empty(document.Pages[1].Annotations.OfType<LinkAnnotation>());
     }
@@ -80,9 +81,10 @@ public class PdfLinkToolTests : PdfTestBase
         var outputPath = CreateTestFilePath("test_edit_output.pdf");
         var result = _tool.Execute("edit", pdfPath, outputPath: outputPath,
             pageIndex: 1, linkIndex: 0, url: "https://updated.com");
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Edited link 0", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         Assert.True(File.Exists(outputPath));
+        using var document = new Document(outputPath);
+        Assert.True(document.Pages[1].Annotations.OfType<LinkAnnotation>().Any());
     }
 
     [Fact]
@@ -117,8 +119,10 @@ public class PdfLinkToolTests : PdfTestBase
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.pdf");
         var result = _tool.Execute(operation, pdfPath, outputPath: outputPath,
             pageIndex: 1, x: 100, y: 100, width: 200, height: 30, url: "https://example.com");
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Link added to page", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
+        Assert.True(File.Exists(outputPath));
+        using var document = new Document(outputPath);
+        Assert.True(document.Pages[1].Annotations.Count > 0);
     }
 
     [Fact]
@@ -158,8 +162,7 @@ public class PdfLinkToolTests : PdfTestBase
         var countBefore = docBefore.Pages[1].Annotations.Count;
         var result = _tool.Execute("add", sessionId: sessionId,
             pageIndex: 1, x: 100, y: 100, width: 200, height: 30, url: "https://session.com");
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Link added to page", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         var docAfter = SessionManager.GetDocument<Document>(sessionId);
         Assert.True(docAfter.Pages[1].Annotations.Count > countBefore);
     }
@@ -172,8 +175,7 @@ public class PdfLinkToolTests : PdfTestBase
         var docBefore = SessionManager.GetDocument<Document>(sessionId);
         var countBefore = docBefore.Pages[1].Annotations.Count;
         var result = _tool.Execute("delete", sessionId: sessionId, pageIndex: 1, linkIndex: 0);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Link 0 deleted", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         var docAfter = SessionManager.GetDocument<Document>(sessionId);
         Assert.True(docAfter.Pages[1].Annotations.Count < countBefore);
     }
@@ -185,8 +187,9 @@ public class PdfLinkToolTests : PdfTestBase
         var sessionId = OpenSession(pdfPath);
         var result = _tool.Execute("edit", sessionId: sessionId,
             pageIndex: 1, linkIndex: 0, url: "https://updated.com");
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Edited link", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
+        var document = SessionManager.GetDocument<Document>(sessionId);
+        Assert.True(document.Pages[1].Annotations.OfType<LinkAnnotation>().Any());
     }
 
     [Fact]

@@ -2,6 +2,7 @@
 using System.Drawing.Imaging;
 using System.Runtime.Versioning;
 using Aspose.Cells;
+using AsposeMcpServer.Results;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Results.Excel.Image;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -52,8 +53,7 @@ public class ExcelImageToolTests : ExcelTestBase
         var imagePath = CreateTestImage("test_add_image.png");
         var outputPath = CreateTestFilePath("test_add_output.xlsx");
         var result = _tool.Execute("add", workbookPath, imagePath: imagePath, cell: "A1", outputPath: outputPath);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.Contains("Image added to cell A1", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         using var workbook = new Workbook(outputPath);
         Assert.Single(workbook.Worksheets[0].Pictures);
     }
@@ -64,8 +64,7 @@ public class ExcelImageToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithImage("test_delete.xlsx");
         var outputPath = CreateTestFilePath("test_delete_output.xlsx");
         var result = _tool.Execute("delete", workbookPath, imageIndex: 0, outputPath: outputPath);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.Contains("Image #0 deleted", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         using var workbook = new Workbook(outputPath);
         Assert.Empty(workbook.Worksheets[0].Pictures);
     }
@@ -85,9 +84,9 @@ public class ExcelImageToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithImage("test_extract.xlsx");
         var exportPath = CreateTestFilePath("extracted.png");
         var result = _tool.Execute("extract", workbookPath, imageIndex: 0, exportPath: exportPath);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.Contains("Image #0", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         Assert.True(File.Exists(exportPath));
+        Assert.True(new FileInfo(exportPath).Length > 0);
     }
 
     #endregion
@@ -104,8 +103,9 @@ public class ExcelImageToolTests : ExcelTestBase
         var imagePath = CreateTestImage($"test_case_{operation}_image.png");
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.xlsx");
         var result = _tool.Execute(operation, workbookPath, imagePath: imagePath, cell: "A1", outputPath: outputPath);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.Contains("Image added", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
+        using var workbook = new Workbook(outputPath);
+        Assert.Single(workbook.Worksheets[0].Pictures);
     }
 
     [Fact]
@@ -127,8 +127,6 @@ public class ExcelImageToolTests : ExcelTestBase
         var imagePath = CreateTestImage("test_session_add_image.png");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("add", sessionId: sessionId, imagePath: imagePath, cell: "B2");
-        var data = GetResultData<SuccessResult>(result);
-        Assert.Contains("Image added to cell B2", data.Message);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
@@ -141,8 +139,6 @@ public class ExcelImageToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithImage("test_session_delete.xlsx");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("delete", sessionId: sessionId, imageIndex: 0);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.Contains("Image #0 deleted", data.Message);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);

@@ -1,4 +1,5 @@
 ﻿using Aspose.Words;
+using AsposeMcpServer.Results;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Word;
@@ -73,10 +74,11 @@ public class WordPageToolTests : WordTestBase
         var outputPath = CreateTestFilePath("test_page_setup_output.docx");
         var result = _tool.Execute("set_page_setup", docPath, outputPath: outputPath,
             top: 50.0, bottom: 50.0, orientation: "landscape");
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Page setup updated:", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         var doc = new Document(outputPath);
         Assert.Equal(50.0, doc.Sections[0].PageSetup.TopMargin);
+        Assert.Equal(50.0, doc.Sections[0].PageSetup.BottomMargin);
+        Assert.Equal(Orientation.Landscape, doc.Sections[0].PageSetup.Orientation);
     }
 
     [Fact]
@@ -94,8 +96,7 @@ public class WordPageToolTests : WordTestBase
 
         var pageCountBefore = doc.PageCount;
         var outputPath = CreateTestFilePath("test_delete_page_output.docx");
-        var result = _tool.Execute("delete_page", docPath, outputPath: outputPath, pageIndex: 1);
-        Assert.Contains("deleted successfully", GetResultData<string>(result));
+        _tool.Execute("delete_page", docPath, outputPath: outputPath, pageIndex: 1);
         var resultDoc = new Document(outputPath);
         Assert.True(resultDoc.PageCount < pageCountBefore);
     }
@@ -104,11 +105,13 @@ public class WordPageToolTests : WordTestBase
     public void InsertBlankPage_ShouldInsertPageAndPersistToFile()
     {
         var docPath = CreateWordDocumentWithContent("test_insert_blank.docx", "Existing content");
+        var docBefore = new Document(docPath);
+        var pageCountBefore = docBefore.PageCount;
         var outputPath = CreateTestFilePath("test_insert_blank_output.docx");
-        var result = _tool.Execute("insert_blank_page", docPath, outputPath: outputPath);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Blank page inserted", data.Message);
+        _tool.Execute("insert_blank_page", docPath, outputPath: outputPath);
         Assert.True(File.Exists(outputPath));
+        var resultDoc = new Document(outputPath);
+        Assert.True(resultDoc.PageCount > pageCountBefore);
     }
 
     [Fact]
@@ -117,8 +120,8 @@ public class WordPageToolTests : WordTestBase
         var docPath = CreateWordDocumentWithContent("test_add_page_break.docx", "Content before break");
         var outputPath = CreateTestFilePath("test_add_page_break_output.docx");
         var result = _tool.Execute("add_page_break", docPath, outputPath: outputPath);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Page break added", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
+        Assert.True(File.Exists(outputPath));
     }
 
     #endregion
@@ -133,9 +136,9 @@ public class WordPageToolTests : WordTestBase
     {
         var docPath = CreateWordDocument($"test_case_{operation.Replace("_", "")}.docx");
         var outputPath = CreateTestFilePath($"test_case_{operation.Replace("_", "")}_output.docx");
-        var result = _tool.Execute(operation, docPath, outputPath: outputPath, top: 72.0);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Page margins updated", data.Message);
+        _tool.Execute(operation, docPath, outputPath: outputPath, top: 72.0);
+        var doc = new Document(outputPath);
+        Assert.Equal(72.0, doc.Sections[0].PageSetup.TopMargin);
     }
 
     [Fact]
@@ -220,12 +223,12 @@ public class WordPageToolTests : WordTestBase
         var result = _tool.Execute("set_page_setup", sessionId: sessionId,
             top: 36.0, bottom: 36.0, orientation: "landscape");
 
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Page setup updated:", data.Message);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         Assert.Equal(36.0, sessionDoc.Sections[0].PageSetup.TopMargin);
+        Assert.Equal(36.0, sessionDoc.Sections[0].PageSetup.BottomMargin);
+        Assert.Equal(Orientation.Landscape, sessionDoc.Sections[0].PageSetup.Orientation);
     }
 
     [Fact]
@@ -234,8 +237,6 @@ public class WordPageToolTests : WordTestBase
         var docPath = CreateWordDocumentWithContent("test_session_pagebreak.docx", "Content before break");
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("add_page_break", sessionId: sessionId);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Page break added", data.Message);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
     }
@@ -254,11 +255,15 @@ public class WordPageToolTests : WordTestBase
         doc.Save(docPath);
 
         var sessionId = OpenSession(docPath);
+        var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
+        sessionDoc.UpdatePageLayout();
+        var pageCountBefore = sessionDoc.PageCount;
         var result = _tool.Execute("delete_page", sessionId: sessionId, pageIndex: 1);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.Contains("deleted successfully", data.Message);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
+        sessionDoc = SessionManager.GetDocument<Document>(sessionId);
+        sessionDoc.UpdatePageLayout();
+        Assert.True(sessionDoc.PageCount < pageCountBefore);
     }
 
     [Fact]
@@ -266,11 +271,15 @@ public class WordPageToolTests : WordTestBase
     {
         var docPath = CreateWordDocumentWithContent("test_session_insert_blank.docx", "Content");
         var sessionId = OpenSession(docPath);
+        var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
+        sessionDoc.UpdatePageLayout();
+        var pageCountBefore = sessionDoc.PageCount;
         var result = _tool.Execute("insert_blank_page", sessionId: sessionId);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Blank page inserted", data.Message);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
+        sessionDoc = SessionManager.GetDocument<Document>(sessionId);
+        sessionDoc.UpdatePageLayout();
+        Assert.True(sessionDoc.PageCount > pageCountBefore);
     }
 
     [Fact]

@@ -59,9 +59,17 @@ public class FreezePanesExcelViewHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("frozen", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Cells))
+        {
+            var ws = workbook.Worksheets[0];
+            Assert.Equal(PaneStateType.Frozen, ws.PaneState);
+            ws.GetFreezedPanes(out _, out _, out var frozenRows, out var frozenCols);
+            Assert.Equal(1, frozenRows);
+            Assert.Equal(1, frozenCols);
+        }
+
         AssertModified(context);
     }
 
@@ -77,10 +85,17 @@ public class FreezePanesExcelViewHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("frozen", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("row 2", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Cells))
+        {
+            var ws = workbook.Worksheets[0];
+            Assert.Equal(PaneStateType.Frozen, ws.PaneState);
+            ws.GetFreezedPanes(out _, out _, out var frozenRows, out var frozenCols);
+            Assert.Equal(2, frozenRows);
+            Assert.Equal(0, frozenCols);
+        }
+
         AssertModified(context);
     }
 
@@ -96,9 +111,14 @@ public class FreezePanesExcelViewHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("unfrozen", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Cells))
+        {
+            var ws = workbook.Worksheets[0];
+            Assert.NotEqual(PaneStateType.Frozen, ws.PaneState);
+        }
+
         AssertModified(context);
     }
 
@@ -116,9 +136,16 @@ public class FreezePanesExcelViewHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("frozen", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Cells))
+        {
+            var ws = workbook.Worksheets[1];
+            Assert.Equal(PaneStateType.Frozen, ws.PaneState);
+            ws.GetFreezedPanes(out _, out _, out var frozenRows, out var frozenCols);
+            Assert.Equal(3, frozenRows);
+            Assert.Equal(0, frozenCols);
+        }
     }
 
     #endregion

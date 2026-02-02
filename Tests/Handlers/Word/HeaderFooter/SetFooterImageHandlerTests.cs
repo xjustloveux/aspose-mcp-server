@@ -1,6 +1,9 @@
+using Aspose.Words;
+using Aspose.Words.Drawing;
 using AsposeMcpServer.Handlers.Word.HeaderFooter;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
+using WordShape = Aspose.Words.Drawing.Shape;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.HeaderFooter;
 
@@ -37,10 +40,13 @@ public class SetFooterImageHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("footer image set", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+
+        var footer = doc.FirstSection.HeadersFooters[HeaderFooterType.FooterPrimary];
+        Assert.NotNull(footer);
+        var shapes = footer.GetChildNodes(NodeType.Shape, true).Cast<WordShape>().Where(s => s.HasImage).ToList();
+        Assert.NotEmpty(shapes);
     }
 
     #endregion
@@ -64,10 +70,19 @@ public class SetFooterImageHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("footer image set", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+
+        var expectedType = headerFooterType switch
+        {
+            "first" => HeaderFooterType.FooterFirst,
+            "even" => HeaderFooterType.FooterEven,
+            _ => HeaderFooterType.FooterPrimary
+        };
+        var footer = doc.FirstSection.HeadersFooters[expectedType];
+        Assert.NotNull(footer);
+        var shapes = footer.GetChildNodes(NodeType.Shape, true).Cast<WordShape>().Where(s => s.HasImage).ToList();
+        Assert.NotEmpty(shapes);
     }
 
     #endregion
@@ -88,10 +103,13 @@ public class SetFooterImageHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("footer image set", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+
+        var footer = doc.FirstSection.HeadersFooters[HeaderFooterType.FooterPrimary];
+        Assert.NotNull(footer);
+        var shapes = footer.GetChildNodes(NodeType.Shape, true).Cast<WordShape>().Where(s => s.HasImage).ToList();
+        Assert.NotEmpty(shapes);
     }
 
     #endregion
@@ -111,10 +129,13 @@ public class SetFooterImageHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("footer image set", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+
+        var footer = doc.FirstSection.HeadersFooters[HeaderFooterType.FooterPrimary];
+        Assert.NotNull(footer);
+        var shapes = footer.GetChildNodes(NodeType.Shape, true).Cast<WordShape>().Where(s => s.HasImage).ToList();
+        Assert.NotEmpty(shapes);
     }
 
     [Fact]
@@ -131,9 +152,12 @@ public class SetFooterImageHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("footer image set", result.Message, StringComparison.OrdinalIgnoreCase);
+        var footer = doc.FirstSection.HeadersFooters[HeaderFooterType.FooterPrimary];
+        Assert.NotNull(footer);
+        var shapes = footer.GetChildNodes(NodeType.Shape, true).Cast<WordShape>().Where(s => s.HasImage).ToList();
+        Assert.NotEmpty(shapes);
     }
 
     #endregion
@@ -182,10 +206,14 @@ public class SetFooterImageHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("footer image set", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+
+        var footer = doc.FirstSection.HeadersFooters[HeaderFooterType.FooterPrimary];
+        Assert.NotNull(footer);
+        var shapes = footer.GetChildNodes(NodeType.Shape, true).Cast<WordShape>().Where(s => s.HasImage).ToList();
+        Assert.NotEmpty(shapes);
+        Assert.Equal(100.0, shapes[0].Width, 1);
     }
 
     [Fact]
@@ -202,10 +230,14 @@ public class SetFooterImageHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("footer image set", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+
+        var footer = doc.FirstSection.HeadersFooters[HeaderFooterType.FooterPrimary];
+        Assert.NotNull(footer);
+        var shapes = footer.GetChildNodes(NodeType.Shape, true).Cast<WordShape>().Where(s => s.HasImage).ToList();
+        Assert.NotEmpty(shapes);
+        Assert.Equal(50.0, shapes[0].Height, 1);
     }
 
     [Fact]
@@ -217,16 +249,21 @@ public class SetFooterImageHandlerTests : WordHandlerTestBase
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "imagePath", tempFile },
-            { "imageWidth", 150.0 },
-            { "imageHeight", 75.0 }
+            { "imageWidth", 100.0 },
+            { "imageHeight", 100.0 }
         });
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("footer image set", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+
+        var footer = doc.FirstSection.HeadersFooters[HeaderFooterType.FooterPrimary];
+        Assert.NotNull(footer);
+        var shapes = footer.GetChildNodes(NodeType.Shape, true).Cast<WordShape>().Where(s => s.HasImage).ToList();
+        Assert.NotEmpty(shapes);
+        Assert.Equal(100.0, shapes[0].Width, 1);
+        Assert.Equal(100.0, shapes[0].Height, 1);
     }
 
     #endregion
@@ -247,10 +284,14 @@ public class SetFooterImageHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("floating", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+
+        var footer = doc.FirstSection.HeadersFooters[HeaderFooterType.FooterPrimary];
+        Assert.NotNull(footer);
+        var shapes = footer.GetChildNodes(NodeType.Shape, true).Cast<WordShape>().Where(s => s.HasImage).ToList();
+        Assert.NotEmpty(shapes);
+        Assert.Equal(WrapType.Square, shapes[0].WrapType);
     }
 
     [Theory]
@@ -271,10 +312,14 @@ public class SetFooterImageHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("floating", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+
+        var footer = doc.FirstSection.HeadersFooters[HeaderFooterType.FooterPrimary];
+        Assert.NotNull(footer);
+        var shapes = footer.GetChildNodes(NodeType.Shape, true).Cast<WordShape>().Where(s => s.HasImage).ToList();
+        Assert.NotEmpty(shapes);
+        Assert.Equal(WrapType.Square, shapes[0].WrapType);
     }
 
     #endregion

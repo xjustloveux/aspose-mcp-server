@@ -16,7 +16,6 @@ public class ServerConfigTests
     [Fact]
     public void Config_NoToolsEnabled_ThrowsInvalidOperationException()
     {
-        // Create config that explicitly sets all to false through environment variable
         var originalEnv = Environment.GetEnvironmentVariable("ASPOSE_TOOLS");
         try
         {
@@ -97,7 +96,6 @@ public class ServerConfigTests
         {
             Environment.SetEnvironmentVariable("ASPOSE_TOOLS", "word");
 
-            // Command line should override to excel only
             var config = ServerConfig.LoadFromArgs(["--excel"]);
 
             Assert.False(config.EnableWord);

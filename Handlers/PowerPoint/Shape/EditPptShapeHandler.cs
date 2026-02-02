@@ -21,7 +21,7 @@ public class EditPptShapeHandler : OperationHandlerBase<Presentation>
     /// <param name="context">The presentation context.</param>
     /// <param name="parameters">
     ///     Required: shapeIndex.
-    ///     Optional: slideIndex (default: 0), x, y, width, height, rotation, name, text.
+    ///     Optional: slideIndex (default: 0), x, y, width, height, rotation, name, text, alternativeText.
     /// </param>
     /// <returns>Success message with edit details.</returns>
     public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
@@ -56,6 +56,9 @@ public class EditPptShapeHandler : OperationHandlerBase<Presentation>
         if (!string.IsNullOrEmpty(p.Text) && shape is IAutoShape { TextFrame: not null } autoShape)
             autoShape.TextFrame.Text = p.Text;
 
+        if (p.AlternativeText != null)
+            shape.AlternativeText = p.AlternativeText;
+
         MarkModified(context);
 
         return new SuccessResult { Message = $"Shape {p.ShapeIndex} updated on slide {p.SlideIndex}." };
@@ -77,7 +80,8 @@ public class EditPptShapeHandler : OperationHandlerBase<Presentation>
             parameters.GetOptional<float?>("height"),
             parameters.GetOptional<float?>("rotation"),
             parameters.GetOptional<string?>("name"),
-            parameters.GetOptional<string?>("text"));
+            parameters.GetOptional<string?>("text"),
+            parameters.GetOptional<string?>("alternativeText"));
     }
 
     /// <summary>
@@ -92,6 +96,7 @@ public class EditPptShapeHandler : OperationHandlerBase<Presentation>
     /// <param name="Rotation">The rotation angle.</param>
     /// <param name="Name">The shape name.</param>
     /// <param name="Text">The shape text.</param>
+    /// <param name="AlternativeText">The shape alternative text.</param>
     private sealed record EditPptShapeParameters(
         int SlideIndex,
         int ShapeIndex,
@@ -101,5 +106,6 @@ public class EditPptShapeHandler : OperationHandlerBase<Presentation>
         float? Height,
         float? Rotation,
         string? Name,
-        string? Text);
+        string? Text,
+        string? AlternativeText);
 }

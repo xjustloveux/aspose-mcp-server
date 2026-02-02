@@ -1,6 +1,7 @@
 using Aspose.Words;
 using Aspose.Words.Notes;
 using AsposeMcpServer.Handlers.Word.Note;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 
@@ -63,10 +64,10 @@ public class DeleteWordEndnoteHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("deleted", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2", result.Message);
+        var remainingEndnotes = WordNoteHelper.GetNotesFromDoc(doc, FootnoteType.Endnote);
+        Assert.Empty(remainingEndnotes);
         AssertModified(context);
     }
 
@@ -82,10 +83,12 @@ public class DeleteWordEndnoteHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("deleted", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("1", result.Message);
+        var remainingEndnotes = WordNoteHelper.GetNotesFromDoc(doc, FootnoteType.Endnote);
+        Assert.Single(remainingEndnotes);
+        if (!IsEvaluationMode()) Assert.Contains("Second endnote", remainingEndnotes[0].ToString(SaveFormat.Text));
+        AssertModified(context);
     }
 
     #endregion

@@ -44,6 +44,9 @@ public class InsertRowHandler : OperationHandlerBase<Workbook>
         var rowIndex = parameters.GetRequired<int>("rowIndex");
         var count = parameters.GetOptional("count", 1);
 
+        if (count <= 0)
+            throw new ArgumentException($"Count must be greater than 0, got {count}");
+
         return new InsertRowParameters(sheetIndex, rowIndex, count);
     }
 

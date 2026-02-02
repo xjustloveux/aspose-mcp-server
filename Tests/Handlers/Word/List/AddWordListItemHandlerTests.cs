@@ -1,6 +1,9 @@
+using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.List;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
+using static Aspose.Words.ConvertUtil;
+using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.List;
 
@@ -37,9 +40,17 @@ public class AddWordListItemHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains($"Level: {level}", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+            var addedPara = paragraphs.FirstOrDefault(p => p.GetText().Contains("Item"));
+            Assert.NotNull(addedPara);
+            Assert.Equal("List Paragraph", addedPara.ParagraphFormat.StyleName);
+        }
+
+        AssertModified(context);
     }
 
     #endregion
@@ -59,9 +70,16 @@ public class AddWordListItemHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("List item added successfully", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+            var addedPara = paragraphs.FirstOrDefault(p => p.GetText().Contains("New Item"));
+            Assert.NotNull(addedPara);
+            Assert.Equal("List Paragraph", addedPara.ParagraphFormat.StyleName);
+        }
+
         AssertModified(context);
     }
 
@@ -78,9 +96,17 @@ public class AddWordListItemHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Style: List Paragraph", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+            var addedPara = paragraphs.FirstOrDefault(p => p.GetText().Contains("Item"));
+            Assert.NotNull(addedPara);
+            Assert.Equal("List Paragraph", addedPara.ParagraphFormat.StyleName);
+        }
+
+        AssertModified(context);
     }
 
     [SkippableFact]
@@ -118,9 +144,17 @@ public class AddWordListItemHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Using style-defined indent", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+            var addedPara = paragraphs.FirstOrDefault(p => p.GetText().Contains("Item"));
+            Assert.NotNull(addedPara);
+            Assert.Equal("List Paragraph", addedPara.ParagraphFormat.StyleName);
+        }
+
+        AssertModified(context);
     }
 
     [Fact]
@@ -138,9 +172,17 @@ public class AddWordListItemHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Manually set", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+            var addedPara = paragraphs.FirstOrDefault(p => p.GetText().Contains("Item"));
+            Assert.NotNull(addedPara);
+            Assert.Equal(InchToPoint(0.5 * 2), addedPara.ParagraphFormat.LeftIndent);
+        }
+
+        AssertModified(context);
     }
 
     #endregion

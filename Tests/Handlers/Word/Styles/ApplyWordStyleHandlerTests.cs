@@ -38,9 +38,14 @@ public class ApplyWordStyleHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("applied style", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var para = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().First();
+            Assert.Equal(styleName, para.ParagraphFormat.Style.Name);
+        }
+
         AssertModified(context);
     }
 
@@ -85,9 +90,14 @@ public class ApplyWordStyleHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("applied style", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var para = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().First();
+            Assert.Equal("Heading 1", para.ParagraphFormat.Style.Name);
+        }
+
         AssertModified(context);
     }
 
@@ -104,9 +114,15 @@ public class ApplyWordStyleHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("3", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().ToList();
+            Assert.True(paragraphs.Count >= 3);
+            foreach (var para in paragraphs)
+                Assert.Equal("Normal", para.ParagraphFormat.Style.Name);
+        }
     }
 
     #endregion
@@ -201,9 +217,14 @@ public class ApplyWordStyleHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("applied style", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var table = doc.GetChildNodes(NodeType.Table, true).Cast<Aspose.Words.Tables.Table>().First();
+            Assert.Equal("Table Grid", table.Style.Name);
+        }
+
         AssertModified(context);
     }
 
@@ -239,9 +260,16 @@ public class ApplyWordStyleHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("2", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.Sections[0].Body.GetChildNodes(NodeType.Paragraph, true)
+                .Cast<Aspose.Words.Paragraph>().ToList();
+            Assert.Equal("Normal", paragraphs[0].ParagraphFormat.Style.Name);
+            Assert.Equal("Normal", paragraphs[2].ParagraphFormat.Style.Name);
+        }
+
         AssertModified(context);
     }
 
@@ -258,9 +286,15 @@ public class ApplyWordStyleHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("1", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.Sections[0].Body.GetChildNodes(NodeType.Paragraph, true)
+                .Cast<Aspose.Words.Paragraph>().ToList();
+            Assert.Equal("Normal", paragraphs[0].ParagraphFormat.Style.Name);
+        }
+
         AssertModified(context);
     }
 

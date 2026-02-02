@@ -346,4 +346,56 @@ public class AddFieldExcelPivotTableHandlerTests : ExcelHandlerTestBase
     }
 
     #endregion
+
+    #region Generic Exception Path
+
+    [Fact]
+    public void Execute_WithInvalidFieldType_ThrowsArgumentException()
+    {
+        var workbook = CreateWorkbookWithPivotTable();
+        var context = CreateContext(workbook);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "pivotTableIndex", 0 },
+            { "fieldName", "Category" },
+            { "fieldType", "invalid" }
+        });
+
+        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+        Assert.Contains("field", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Execute_WithNegativePivotTableIndex_ThrowsArgumentException()
+    {
+        var workbook = CreateWorkbookWithPivotTable();
+        var context = CreateContext(workbook);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "pivotTableIndex", -1 },
+            { "fieldName", "Category" },
+            { "fieldType", "row" }
+        });
+
+        Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+    }
+
+    [Fact]
+    public void Execute_WithNegativeSheetIndex_ThrowsArgumentException()
+    {
+        var workbook = CreateWorkbookWithPivotTable();
+        var context = CreateContext(workbook);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "sheetIndex", -1 },
+            { "pivotTableIndex", 0 },
+            { "fieldName", "Category" },
+            { "fieldType", "row" }
+        });
+
+        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+        Assert.Contains("sheet", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    #endregion
 }

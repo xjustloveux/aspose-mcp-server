@@ -210,4 +210,55 @@ public class GetExcelSheetsHandlerTests : ExcelHandlerTestBase
     }
 
     #endregion
+
+    #region API Constraint - Empty Worksheets
+
+    [Fact]
+    public void Execute_WorkbookAlwaysHasAtLeastOneWorksheet()
+    {
+        var workbook = CreateEmptyWorkbook();
+        Assert.True(workbook.Worksheets.Count >= 1);
+        var context = CreateContext(workbook);
+        var parameters = CreateEmptyParameters();
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<GetSheetsResult>(res);
+
+        Assert.True(result.Count >= 1);
+        Assert.NotEmpty(result.Items);
+        Assert.Null(result.Message);
+        AssertNotModified(context);
+    }
+
+    [Fact]
+    public void Execute_WithMultipleSheets_ReturnsAllSheetDetails()
+    {
+        var workbook = CreateEmptyWorkbook();
+        workbook.Worksheets.Add("Sheet2");
+        workbook.Worksheets.Add("Sheet3");
+        var context = CreateContext(workbook);
+        var parameters = CreateEmptyParameters();
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<GetSheetsResult>(res);
+
+        Assert.Equal(3, result.Count);
+        Assert.Equal(3, result.Items.Count);
+
+        Assert.Equal(0, result.Items[0].Index);
+        Assert.Equal("Sheet1", result.Items[0].Name);
+        Assert.Equal("Visible", result.Items[0].Visibility);
+
+        Assert.Equal(1, result.Items[1].Index);
+        Assert.Equal("Sheet2", result.Items[1].Name);
+        Assert.Equal("Visible", result.Items[1].Visibility);
+
+        Assert.Equal(2, result.Items[2].Index);
+        Assert.Equal("Sheet3", result.Items[2].Name);
+        Assert.Equal("Visible", result.Items[2].Visibility);
+    }
+
+    #endregion
 }

@@ -1,5 +1,7 @@
+using System.Drawing;
 using Aspose.Slides;
-using AsposeMcpServer.Core.ShapeDetailProviders;
+using AsposeMcpServer.Core.ShapeDetailProviders.Details;
+using AsposeMcpServer.Core.ShapeDetailProviders.Providers;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Core.ShapeDetailProviders;
@@ -46,8 +48,11 @@ public class ConnectorDetailProviderTests : TestBase
         var connector = slide.Shapes.AddConnector(ShapeType.StraightConnector1, 10, 10, 100, 100);
 
         var details = _provider.GetDetails(connector, presentation);
+        var connectorDetails = Assert.IsType<ConnectorDetails>(details);
 
-        Assert.NotNull(details);
+        Assert.Equal("StraightConnector1", connectorDetails.ConnectorType);
+        Assert.Null(connectorDetails.StartShapeConnectedTo);
+        Assert.Null(connectorDetails.EndShapeConnectedTo);
     }
 
     [Fact]
@@ -60,5 +65,37 @@ public class ConnectorDetailProviderTests : TestBase
         var details = _provider.GetDetails(shape, presentation);
 
         Assert.Null(details);
+    }
+
+    [Fact]
+    public void GetDetails_WithLineFormat_ShouldReturnLineProperties()
+    {
+        using var presentation = new Presentation();
+        var slide = presentation.Slides[0];
+        var connector = slide.Shapes.AddConnector(ShapeType.StraightConnector1, 10, 10, 100, 100);
+        connector.LineFormat.FillFormat.FillType = FillType.Solid;
+        connector.LineFormat.FillFormat.SolidFillColor.Color = Color.Blue;
+        connector.LineFormat.Width = 2.5;
+        connector.LineFormat.DashStyle = LineDashStyle.DashDot;
+
+        var details = _provider.GetDetails(connector, presentation);
+        var connectorDetails = Assert.IsType<ConnectorDetails>(details);
+
+        Assert.Equal("#0000FF", connectorDetails.LineColor);
+        Assert.Equal(2.5, connectorDetails.LineWidth);
+        Assert.Equal("DashDot", connectorDetails.LineDashStyle);
+    }
+
+    [Fact]
+    public void GetDetails_WithDefaultConnector_ShouldNotFailOnLineFormat()
+    {
+        using var presentation = new Presentation();
+        var slide = presentation.Slides[0];
+        var connector = slide.Shapes.AddConnector(ShapeType.StraightConnector1, 10, 10, 100, 100);
+
+        var details = _provider.GetDetails(connector, presentation);
+        var connectorDetails = Assert.IsType<ConnectorDetails>(details);
+
+        Assert.NotNull(connectorDetails);
     }
 }

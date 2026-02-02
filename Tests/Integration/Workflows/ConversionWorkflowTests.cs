@@ -15,6 +15,7 @@ namespace AsposeMcpServer.Tests.Integration.Workflows;
 ///     Integration tests for document conversion workflows.
 /// </summary>
 [Trait("Category", "Integration")]
+[Collection("Workflow")]
 public class ConversionWorkflowTests : TestBase
 {
     private readonly ConvertDocumentTool _convertDocumentTool;
@@ -27,7 +28,7 @@ public class ConversionWorkflowTests : TestBase
     /// </summary>
     public ConversionWorkflowTests()
     {
-        var config = new SessionConfig { Enabled = true };
+        var config = new SessionConfig { Enabled = true, TempDirectory = Path.Combine(TestDir, "temp") };
         _sessionManager = new DocumentSessionManager(config);
         var tempFileManager = new TempFileManager(config);
         _sessionTool = new DocumentSessionTool(_sessionManager, tempFileManager, new StdioSessionIdentityAccessor());
@@ -52,14 +53,11 @@ public class ConversionWorkflowTests : TestBase
     [Fact]
     public void Conversion_ExcelToPdf_Workflow()
     {
-        // Step 1: Create Excel document
         var excelPath = CreateExcelDocument();
         var pdfPath = CreateTestFilePath("excel_to_pdf_output.pdf");
 
-        // Step 2: Convert to PDF
         var result = _convertToPdfTool.Execute(excelPath, outputPath: pdfPath);
 
-        // Step 3: Verify PDF was created
         Assert.True(File.Exists(pdfPath));
         Assert.Equal(pdfPath, result.OutputPath);
     }
@@ -74,14 +72,11 @@ public class ConversionWorkflowTests : TestBase
     [Fact]
     public void Conversion_PowerPointToPdf_Workflow()
     {
-        // Step 1: Create PowerPoint document
         var pptPath = CreatePowerPointDocument();
         var pdfPath = CreateTestFilePath("ppt_to_pdf_output.pdf");
 
-        // Step 2: Convert to PDF
         var result = _convertToPdfTool.Execute(pptPath, outputPath: pdfPath);
 
-        // Step 3: Verify PDF was created
         Assert.True(File.Exists(pdfPath));
         Assert.Equal(pdfPath, result.OutputPath);
     }
@@ -96,7 +91,6 @@ public class ConversionWorkflowTests : TestBase
     [Fact]
     public void Conversion_BatchConvert_Workflow()
     {
-        // Step 1: Create multiple documents
         var wordPath = CreateWordDocument("Word content for batch");
         var excelPath = CreateExcelDocument();
         var pptPath = CreatePowerPointDocument();
@@ -104,7 +98,6 @@ public class ConversionWorkflowTests : TestBase
         var inputFiles = new[] { wordPath, excelPath, pptPath };
         var outputFiles = new List<string>();
 
-        // Step 2: Convert each file to PDF
         foreach (var inputFile in inputFiles)
         {
             var outputPath = CreateTestFilePath($"batch_{Path.GetFileNameWithoutExtension(inputFile)}.pdf");
@@ -112,7 +105,6 @@ public class ConversionWorkflowTests : TestBase
             outputFiles.Add(result.OutputPath);
         }
 
-        // Step 3: Verify all PDFs were created
         Assert.Equal(3, outputFiles.Count);
         foreach (var outputFile in outputFiles) Assert.True(File.Exists(outputFile));
     }
@@ -127,14 +119,11 @@ public class ConversionWorkflowTests : TestBase
     [Fact]
     public void Conversion_WordToPdf_FromPath_Workflow()
     {
-        // Step 1: Create Word document
         var wordPath = CreateWordDocument("Content for PDF conversion");
         var pdfPath = CreateTestFilePath("word_to_pdf_output.pdf");
 
-        // Step 2: Convert to PDF
         var result = _convertToPdfTool.Execute(wordPath, outputPath: pdfPath);
 
-        // Step 3: Verify PDF was created
         Assert.True(File.Exists(pdfPath));
         Assert.Equal(pdfPath, result.OutputPath);
 
@@ -148,20 +137,16 @@ public class ConversionWorkflowTests : TestBase
     [Fact]
     public void Conversion_WordToPdf_FromSession_Workflow()
     {
-        // Step 1: Create and open Word document
         var wordPath = CreateWordDocument("Session content for PDF");
         var openResult = _sessionTool.Execute("open", wordPath);
         var openData = GetResultData<OpenSessionResult>(openResult);
 
-        // Step 2: Convert to PDF using session
         var pdfPath = CreateTestFilePath("session_to_pdf_output.pdf");
         var result = _convertToPdfTool.Execute(sessionId: openData.SessionId, outputPath: pdfPath);
 
-        // Step 3: Verify PDF was created
         Assert.True(File.Exists(pdfPath));
         Assert.Equal(pdfPath, result.OutputPath);
 
-        // Step 4: Close session
         _sessionTool.Execute("close", sessionId: openData.SessionId);
     }
 
@@ -175,14 +160,11 @@ public class ConversionWorkflowTests : TestBase
     [Fact]
     public void Conversion_WordToHtml_Workflow()
     {
-        // Step 1: Create Word document
         var wordPath = CreateWordDocument("Content for HTML conversion");
         var htmlPath = CreateTestFilePath("word_to_html_output.html");
 
-        // Step 2: Convert to HTML
         var result = _convertDocumentTool.Execute(wordPath, outputPath: htmlPath);
 
-        // Step 3: Verify HTML was created
         Assert.True(File.Exists(htmlPath));
         Assert.Equal(htmlPath, result.OutputPath);
 
@@ -196,14 +178,11 @@ public class ConversionWorkflowTests : TestBase
     [Fact]
     public void Conversion_ExcelToHtml_Workflow()
     {
-        // Step 1: Create Excel document
         var excelPath = CreateExcelDocument();
         var htmlPath = CreateTestFilePath("excel_to_html_output.html");
 
-        // Step 2: Convert to HTML
         var result = _convertDocumentTool.Execute(excelPath, outputPath: htmlPath);
 
-        // Step 3: Verify HTML was created
         Assert.True(File.Exists(htmlPath));
         Assert.Equal(htmlPath, result.OutputPath);
     }

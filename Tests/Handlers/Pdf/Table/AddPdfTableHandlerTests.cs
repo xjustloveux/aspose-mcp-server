@@ -34,11 +34,15 @@ public class AddPdfTableHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            var table = document.Pages[1].Paragraphs.OfType<Aspose.Pdf.Table>().FirstOrDefault();
+            Assert.NotNull(table);
+            Assert.Equal(3, table.Rows.Count);
+            Assert.Equal(4, table.Rows[0].Cells.Count);
+        }
 
-        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("3 rows", result.Message);
-        Assert.Contains("4 columns", result.Message);
         AssertModified(context);
     }
 
@@ -62,9 +66,16 @@ public class AddPdfTableHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            var table = document.Pages[1].Paragraphs.OfType<Aspose.Pdf.Table>().FirstOrDefault();
+            Assert.NotNull(table);
+            Assert.Equal(2, table.Rows.Count);
+            Assert.Equal(2, table.Rows[0].Cells.Count);
+        }
 
-        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
+        AssertModified(context);
     }
 
     [SkippableFact]
@@ -83,9 +94,16 @@ public class AddPdfTableHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            var table = document.Pages[1].Paragraphs.OfType<Aspose.Pdf.Table>().FirstOrDefault();
+            Assert.NotNull(table);
+            Assert.Equal(200.0, table.Margin.Left);
+            Assert.Equal(500.0, table.Margin.Top);
+        }
 
-        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
+        AssertModified(context);
     }
 
     [SkippableFact]
@@ -103,9 +121,17 @@ public class AddPdfTableHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            var table = document.Pages[1].Paragraphs.OfType<Aspose.Pdf.Table>().FirstOrDefault();
+            Assert.NotNull(table);
+            Assert.Equal("100 150 200", table.ColumnWidths);
+            Assert.Equal(2, table.Rows.Count);
+            Assert.Equal(3, table.Rows[0].Cells.Count);
+        }
 
-        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
+        AssertModified(context);
     }
 
     [Fact]

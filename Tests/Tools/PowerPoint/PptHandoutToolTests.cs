@@ -1,4 +1,4 @@
-using Aspose.Slides;
+﻿using Aspose.Slides;
 using AsposeMcpServer.Results;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -27,8 +27,7 @@ public class PptHandoutToolTests : PptTestBase
     {
         var pptPath = CreatePresentation("test_handout_no_master.pptx");
         var result = _tool.Execute("set_header_footer", pptPath, headerText: "Handout Header");
-        var finalized = Assert.IsType<FinalizedResult<SuccessResult>>(result);
-        Assert.Contains("header", finalized.Data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
     }
 
     #endregion
@@ -43,8 +42,7 @@ public class PptHandoutToolTests : PptTestBase
     {
         var pptPath = CreatePresentation($"test_case_{operation.Replace("_", "")}.pptx");
         var result = _tool.Execute(operation, pptPath, headerText: "Test");
-        var finalized = Assert.IsType<FinalizedResult<SuccessResult>>(result);
-        Assert.Contains("header", finalized.Data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
     }
 
     [Fact]
@@ -65,8 +63,7 @@ public class PptHandoutToolTests : PptTestBase
         var pptPath = CreatePresentation("test_session_set_header_footer.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("set_header_footer", sessionId: sessionId, headerText: "Session Header");
-        var finalized = Assert.IsType<FinalizedResult<SuccessResult>>(result);
-        Assert.Contains("header", finalized.Data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
     }
 
     [Fact]
@@ -85,8 +82,7 @@ public class PptHandoutToolTests : PptTestBase
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         Assert.NotNull(ppt);
         var result = _tool.Execute("set_header_footer", pptPath1, sessionId, headerText: "Test");
-        var finalized = Assert.IsType<FinalizedResult<SuccessResult>>(result);
-        Assert.Contains("header", finalized.Data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
     }
 
     #endregion

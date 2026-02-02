@@ -48,6 +48,7 @@ public class DeletePdfLinkHandlerTests : PdfHandlerTestBase
     public void Execute_DeletesLink()
     {
         var doc = CreateDocumentWithLinks(2);
+        var initialCount = doc.Pages[1].Annotations.OfType<LinkAnnotation>().Count();
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -57,14 +58,14 @@ public class DeletePdfLinkHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("deleted", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+            Assert.Equal(initialCount - 1, doc.Pages[1].Annotations.OfType<LinkAnnotation>().Count());
         AssertModified(context);
     }
 
     [Fact]
-    public void Execute_ReturnsLinkIndex()
+    public void Execute_DeletesSecondLink()
     {
         var doc = CreateDocumentWithLinks(2);
         var context = CreateContext(doc);
@@ -76,13 +77,20 @@ public class DeletePdfLinkHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            var remainingLinks = doc.Pages[1].Annotations.OfType<LinkAnnotation>().ToList();
+            Assert.Single(remainingLinks);
+            var action = remainingLinks[0].Action as GoToURIAction;
+            Assert.Equal("https://example0.com", action?.URI);
+        }
 
-        Assert.Contains("Link 1", result.Message);
+        AssertModified(context);
     }
 
     [Fact]
-    public void Execute_ReturnsPageIndex()
+    public void Execute_DeletesOnlyLinkOnPage()
     {
         var doc = CreateDocumentWithLinks(1);
         var context = CreateContext(doc);
@@ -94,9 +102,10 @@ public class DeletePdfLinkHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("page 1", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+            Assert.Empty(doc.Pages[1].Annotations.OfType<LinkAnnotation>());
+        AssertModified(context);
     }
 
     [Theory]
@@ -115,9 +124,10 @@ public class DeletePdfLinkHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("deleted", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+            Assert.Equal(2, doc.Pages[1].Annotations.OfType<LinkAnnotation>().Count());
+        AssertModified(context);
     }
 
     [Fact]

@@ -37,10 +37,9 @@ public class RenamePptSectionHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("renamed", result.Message);
+        Assert.IsType<SuccessResult>(res);
         Assert.Equal($"Renamed {sectionIndex}", pres.Sections[sectionIndex].Name);
+        Assert.Equal(3, pres.Sections.Count);
     }
 
     #endregion
@@ -76,10 +75,10 @@ public class RenamePptSectionHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("renamed", result.Message);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+        Assert.Equal("Updated Section", pres.Sections[0].Name);
+        Assert.Equal(3, pres.Sections.Count);
     }
 
     [Fact]
@@ -95,9 +94,10 @@ public class RenamePptSectionHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Section 1", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal("New Name", pres.Sections[1].Name);
+        Assert.Equal("Section 0", pres.Sections[0].Name);
+        Assert.Equal("Section 2", pres.Sections[2].Name);
     }
 
     [Fact]
@@ -113,9 +113,8 @@ public class RenamePptSectionHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Introduction", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal("Introduction", pres.Sections[0].Name);
     }
 
     [Fact]

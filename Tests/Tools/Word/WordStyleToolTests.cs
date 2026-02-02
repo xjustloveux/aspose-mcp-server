@@ -60,6 +60,9 @@ public class WordStyleToolTests : WordTestBase
         _tool.Execute("apply_style", docPath, outputPath: outputPath,
             styleName: "TestStyle", paragraphIndex: 0);
         Assert.True(File.Exists(outputPath));
+        var resultDoc = new Document(outputPath);
+        var paragraphs = resultDoc.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
+        Assert.Equal("TestStyle", paragraphs[0].ParagraphFormat.StyleName);
     }
 
     [Fact]
@@ -160,8 +163,6 @@ public class WordStyleToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("create_style", sessionId: sessionId,
             styleName: "SessionCreatedStyle", styleType: "paragraph", fontSize: 20, bold: true);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.Contains("SessionCreatedStyle", data.Message);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
 
@@ -203,8 +204,6 @@ public class WordStyleToolTests : WordTestBase
         var sessionId = OpenSession(targetPath);
 
         var result = _tool.Execute("copy_styles", sessionId: sessionId, sourceDocument: sourcePath);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Copied", data.Message);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
 

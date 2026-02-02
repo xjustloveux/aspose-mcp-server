@@ -1,3 +1,4 @@
+using Aspose.Slides.SmartArt;
 using AsposeMcpServer.Handlers.PowerPoint.SmartArt;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -24,6 +25,7 @@ public class AddSmartArtHandlerTests : PptHandlerTestBase
     public void Execute_AddsSmartArt()
     {
         var pres = CreateEmptyPresentation();
+        var initialShapeCount = pres.Slides[0].Shapes.Count;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -33,10 +35,10 @@ public class AddSmartArtHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("basicprocess", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        Assert.True(pres.Slides[0].Shapes.Count > initialShapeCount);
+        if (!IsEvaluationMode())
+            Assert.Contains(pres.Slides[0].Shapes, s => s is ISmartArt);
         AssertModified(context);
     }
 
@@ -44,6 +46,7 @@ public class AddSmartArtHandlerTests : PptHandlerTestBase
     public void Execute_WithCustomPosition_AddsSmartArtAtPosition()
     {
         var pres = CreateEmptyPresentation();
+        var initialShapeCount = pres.Slides[0].Shapes.Count;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -57,9 +60,10 @@ public class AddSmartArtHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("hierarchy", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        Assert.True(pres.Slides[0].Shapes.Count > initialShapeCount);
+        if (!IsEvaluationMode())
+            Assert.Contains(pres.Slides[0].Shapes, s => s is ISmartArt);
         AssertModified(context);
     }
 

@@ -85,9 +85,7 @@ public class ClearPptSlideHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Cleared", result.Message);
+        Assert.IsType<SuccessResult>(res);
         Assert.Empty(pres.Slides[0].Shapes);
     }
 
@@ -107,9 +105,8 @@ public class ClearPptSlideHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("3", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Empty(pres.Slides[3].Shapes);
     }
 
     #endregion
@@ -145,9 +142,7 @@ public class ClearPptSlideHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Cleared", result.Message);
+        Assert.IsType<SuccessResult>(res);
         Assert.Empty(pres.Slides[0].Shapes);
         AssertModified(context);
     }
@@ -168,9 +163,7 @@ public class ClearPptSlideHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Cleared", result.Message);
+        Assert.IsType<SuccessResult>(res);
         Assert.Empty(pres.Slides[slideIndex].Shapes);
         AssertModified(context);
     }

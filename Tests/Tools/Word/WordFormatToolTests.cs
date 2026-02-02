@@ -154,8 +154,6 @@ public class WordFormatToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("set_run_format", sessionId: sessionId,
             paragraphIndex: 0, runIndex: 0, bold: true, italic: true, fontSize: 16);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.Contains("updated", data.Message, StringComparison.OrdinalIgnoreCase);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.Equal(sessionId, output.SessionId);
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
@@ -175,13 +173,12 @@ public class WordFormatToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("add_tab_stop", sessionId: sessionId,
             paragraphIndex: 0, tabPosition: 72.0, tabAlignment: "left", tabLeader: "none");
-        var data = GetResultData<SuccessResult>(result);
-        Assert.Contains("added", data.Message, StringComparison.OrdinalIgnoreCase);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.Equal(sessionId, output.SessionId);
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         var paragraphs = GetParagraphs(sessionDoc);
         Assert.True(paragraphs.Count > 0);
+        Assert.True(paragraphs[0].ParagraphFormat.TabStops.Count > 0);
     }
 
     [Fact]
@@ -191,10 +188,11 @@ public class WordFormatToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("set_paragraph_border", sessionId: sessionId,
             paragraphIndex: 0, borderPosition: "all", lineStyle: "single", lineWidth: 1.5);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.Contains("border", data.Message, StringComparison.OrdinalIgnoreCase);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.Equal(sessionId, output.SessionId);
+        var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
+        var paragraphs = GetParagraphs(sessionDoc);
+        Assert.True(paragraphs.Count > 0);
     }
 
     [Fact]
@@ -211,8 +209,6 @@ public class WordFormatToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("clear_tab_stops", sessionId: sessionId, paragraphIndex: 0);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.Contains("Cleared", data.Message, StringComparison.OrdinalIgnoreCase);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.Equal(sessionId, output.SessionId);
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);

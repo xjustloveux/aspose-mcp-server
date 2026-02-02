@@ -78,15 +78,30 @@
 
 ### 1. 下載預編譯版本
 
+**方法 A：從 GitHub Releases 下載**
+
 從 [GitHub Releases](https://github.com/xjustloveux/aspose-mcp-server/releases) 下載最新版本：
 - Windows: `aspose-mcp-server-windows-x64.zip`
-- Linux: `aspose-mcp-server-linux-x64.zip`
-- macOS Intel: `aspose-mcp-server-macos-x64.zip`
-- macOS ARM: `aspose-mcp-server-macos-arm64.zip`
+- Linux: `aspose-mcp-server-linux-x64.tar.gz`
+- macOS Intel: `aspose-mcp-server-macos-x64.tar.gz`
+- macOS ARM: `aspose-mcp-server-macos-arm64.tar.gz`
 
 解壓到任意目錄，例如：
 - Windows: `C:\Tools\aspose-mcp-server\`
 - macOS/Linux: `~/tools/aspose-mcp-server/`
+
+**macOS 首次執行：** 需移除系統隔離標記（僅需一次）：
+```bash
+xattr -d com.apple.quarantine AsposeMcpServer
+```
+
+**方法 B：macOS 使用 Homebrew 安裝（推薦）**
+
+```bash
+brew install xjustloveux/tap/aspose-mcp-server
+```
+
+透過 Homebrew 安裝無需手動處理權限和隔離標記。
 
 **放置授權檔案：** 將授權檔案放在可執行檔案同一目錄。支援以下方式：
 
@@ -1195,6 +1210,7 @@ word_style(path="B.docx", operation="copy_styles", sourceDocument="A.docx")
 
 **獲取方式：**
 - 從 [GitHub Releases](https://github.com/xjustloveux/aspose-mcp-server/releases) 下載預編譯版本
+- macOS：`brew install xjustloveux/tap/aspose-mcp-server`
 - 或使用 `publish.ps1` 腳本本地構建
 
 **注意：** GitHub Actions 會在推送到 main/master 分支時自動構建所有平台版本。
@@ -1329,10 +1345,17 @@ A:
 - **OCR**: PNG、JPG、BMP、TIFF（圖片辨識）；PDF（掃描件轉可編輯文件）
 
 ### Q: 如何在 Linux/macOS 上設置執行權限？
-A: 
+A: 使用 `.tar.gz` 格式下載的版本已包含執行權限。如遇權限問題：
 ```bash
 chmod +x AsposeMcpServer
 ```
+
+macOS 還需移除系統隔離標記（僅需一次）：
+```bash
+xattr -d com.apple.quarantine AsposeMcpServer
+```
+
+或使用 Homebrew 安裝可自動處理：`brew install xjustloveux/tap/aspose-mcp-server`
 
 ### Q: 錯誤訊息顯示路徑無效怎麼辦？
 A: 檢查：

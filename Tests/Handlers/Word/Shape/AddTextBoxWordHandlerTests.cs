@@ -1,4 +1,7 @@
+using Aspose.Words;
+using Aspose.Words.Drawing;
 using AsposeMcpServer.Handlers.Word.Shape;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 
@@ -32,9 +35,17 @@ public class AddTextBoxWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("successfully added textbox", result.Message, StringComparison.OrdinalIgnoreCase);
+        var textboxes = WordShapeHelper.FindAllTextboxes(doc);
+        Assert.NotEmpty(textboxes);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var tb = textboxes[0];
+            Assert.Equal(ShapeType.TextBox, tb.ShapeType);
+            Assert.Contains("Hello World", tb.GetText());
+        }
+
         AssertModified(context);
     }
 
@@ -52,9 +63,16 @@ public class AddTextBoxWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("successfully added textbox", result.Message, StringComparison.OrdinalIgnoreCase);
+        var textboxes = WordShapeHelper.FindAllTextboxes(doc);
+        Assert.NotEmpty(textboxes);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var tb = textboxes[0];
+            Assert.Equal(300.0, tb.Width);
+            Assert.Equal(150.0, tb.Height);
+        }
     }
 
     [Fact]
@@ -71,9 +89,16 @@ public class AddTextBoxWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("successfully added textbox", result.Message, StringComparison.OrdinalIgnoreCase);
+        var textboxes = WordShapeHelper.FindAllTextboxes(doc);
+        Assert.NotEmpty(textboxes);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var tb = textboxes[0];
+            Assert.Equal(200.0, tb.Left);
+            Assert.Equal(300.0, tb.Top);
+        }
     }
 
     [Fact]
@@ -89,9 +114,15 @@ public class AddTextBoxWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("successfully added textbox", result.Message, StringComparison.OrdinalIgnoreCase);
+        var textboxes = WordShapeHelper.FindAllTextboxes(doc);
+        Assert.NotEmpty(textboxes);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var tb = textboxes[0];
+            Assert.True(tb.Fill.Visible);
+        }
     }
 
     [Fact]
@@ -108,9 +139,17 @@ public class AddTextBoxWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("successfully added textbox", result.Message, StringComparison.OrdinalIgnoreCase);
+        var textboxes = WordShapeHelper.FindAllTextboxes(doc);
+        Assert.NotEmpty(textboxes);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var runs = textboxes[0].GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+            Assert.NotEmpty(runs);
+            Assert.Equal(14.0, runs[0].Font.Size);
+            Assert.True(runs[0].Font.Bold);
+        }
     }
 
     [Fact]

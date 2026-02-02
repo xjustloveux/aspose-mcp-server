@@ -10,6 +10,7 @@ namespace AsposeMcpServer.Tests.Integration.Session;
 ///     Integration tests for document session persistence.
 /// </summary>
 [Trait("Category", "Integration")]
+[Collection("Session Integration")]
 public class SessionPersistenceTests : IntegrationTestBase
 {
     private readonly DocumentSessionManager _sessionManager;
@@ -21,7 +22,7 @@ public class SessionPersistenceTests : IntegrationTestBase
     /// </summary>
     public SessionPersistenceTests()
     {
-        var config = new SessionConfig { Enabled = true };
+        var config = new SessionConfig { Enabled = true, TempDirectory = Path.Combine(TestDir, "temp") };
         _sessionManager = new DocumentSessionManager(config);
         var tempFileManager = new TempFileManager(config);
         _sessionTool = new DocumentSessionTool(_sessionManager, tempFileManager, new StdioSessionIdentityAccessor());
@@ -50,16 +51,13 @@ public class SessionPersistenceTests : IntegrationTestBase
         var originalPath = CreateWordDocument();
         var outputPath = CreateTestFilePath("saved_output.docx");
 
-        // Open session and modify
         var openResult = _sessionTool.Execute("open", originalPath);
         var openData = GetResultData<OpenSessionResult>(openResult);
 
         _textTool.Execute("replace", sessionId: openData.SessionId, find: "Test", replace: "Modified");
 
-        // Save to new file
         _sessionTool.Execute("save", sessionId: openData.SessionId, outputPath: outputPath);
 
-        // Verify file exists and contains modified content
         Assert.True(File.Exists(outputPath));
 
         var savedContent = ReadWordDocumentContent(outputPath);
@@ -77,24 +75,19 @@ public class SessionPersistenceTests : IntegrationTestBase
         var originalPath = CreateWordDocument();
         var newPath = CreateTestFilePath("save_as_output.docx");
 
-        // Open session and modify
         var openResult = _sessionTool.Execute("open", originalPath);
         var openData = GetResultData<OpenSessionResult>(openResult);
 
         _textTool.Execute("replace", sessionId: openData.SessionId, find: "Test", replace: "SavedAs");
 
-        // Save to new file
         _sessionTool.Execute("save", sessionId: openData.SessionId, outputPath: newPath);
 
-        // Verify new file exists
         Assert.True(File.Exists(newPath));
 
-        // Verify original file is unchanged
         var originalContent = ReadWordDocumentContent(originalPath);
         Assert.Contains("Test", originalContent);
         Assert.DoesNotContain("SavedAs", originalContent);
 
-        // Verify new file has changes
         var newContent = ReadWordDocumentContent(newPath);
         Assert.Contains("SavedAs", newContent);
     }
@@ -108,18 +101,14 @@ public class SessionPersistenceTests : IntegrationTestBase
         var originalPath = CreateExcelDocument();
         var outputPath = CreateTestFilePath("saved_excel.xlsx");
 
-        // Open session
         var openResult = _sessionTool.Execute("open", originalPath);
         var openData = GetResultData<OpenSessionResult>(openResult);
 
-        // Modify the workbook
         var workbook = _sessionManager.GetDocument<Workbook>(openData.SessionId);
         workbook.Worksheets[0].Cells["B1"].Value = "Modified";
 
-        // Save to new file
         _sessionTool.Execute("save", sessionId: openData.SessionId, outputPath: outputPath);
 
-        // Verify file exists and contains modified content
         Assert.True(File.Exists(outputPath));
 
         var savedValue = ReadExcelCellValue(outputPath, "B1");

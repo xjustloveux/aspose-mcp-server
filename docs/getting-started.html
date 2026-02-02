@@ -114,9 +114,9 @@
             <p style="margin-top: 10px;">訪問 <a href="https://github.com/xjustloveux/aspose-mcp-server/releases" target="_blank">GitHub Releases</a> 下載對應平台的版本：</p>
             <ul class="param-list" style="margin-top: 10px;">
                 <li>Windows: <code>aspose-mcp-server-windows-x64.zip</code></li>
-                <li>Linux: <code>aspose-mcp-server-linux-x64.zip</code></li>
-                <li>macOS Intel: <code>aspose-mcp-server-macos-x64.zip</code></li>
-                <li>macOS ARM: <code>aspose-mcp-server-macos-arm64.zip</code></li>
+                <li>Linux: <code>aspose-mcp-server-linux-x64.tar.gz</code></li>
+                <li>macOS Intel: <code>aspose-mcp-server-macos-x64.tar.gz</code></li>
+                <li>macOS ARM: <code>aspose-mcp-server-macos-arm64.tar.gz</code></li>
             </ul>
         </div>
 
@@ -128,6 +128,15 @@
                 <li>Windows: <code>C:\Tools\aspose-mcp-server\</code></li>
                 <li>macOS/Linux: <code>~/tools/aspose-mcp-server/</code></li>
             </ul>
+            <p style="margin-top: 10px;"><strong>macOS 首次執行：</strong>需移除系統隔離標記（僅需一次）：</p>
+            <pre><code>xattr -d com.apple.quarantine AsposeMcpServer</code></pre>
+        </div>
+
+        <div class="step">
+            <span class="step-number">*</span>
+            <strong>macOS 替代方案：使用 Homebrew 安裝（推薦）</strong>
+            <pre><code>brew install xjustloveux/tap/aspose-mcp-server</code></pre>
+            <p style="margin-top: 10px;">透過 Homebrew 安裝無需手動處理權限和隔離標記。</p>
         </div>
     </div>
 

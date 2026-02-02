@@ -65,7 +65,6 @@ public static class ColorHelper
                 nameof(colorString));
         }
 
-        // If throwOnError is false, fall back to default behavior
         return ParseColor(colorString);
     }
 

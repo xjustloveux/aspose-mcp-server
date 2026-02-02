@@ -20,7 +20,7 @@ public class SystemErrorTests : TestBase
     /// </summary>
     public SystemErrorTests()
     {
-        var config = new SessionConfig { Enabled = true };
+        var config = new SessionConfig { Enabled = true, TempDirectory = Path.Combine(TestDir, "temp") };
         _sessionManager = new DocumentSessionManager(config);
         var tempFileManager = new TempFileManager(config);
         _sessionTool = new DocumentSessionTool(_sessionManager, tempFileManager, new StdioSessionIdentityAccessor());
@@ -43,24 +43,20 @@ public class SystemErrorTests : TestBase
     [Fact]
     public void System_LargeDocument_ProcessesSuccessfully()
     {
-        // Create a document with substantial content
         var path = CreateTestFilePath("large_doc.docx");
         var doc = new Document();
         var builder = new DocumentBuilder(doc);
 
-        // Add multiple paragraphs
         for (var i = 0; i < 100; i++)
             builder.Writeln($"Paragraph {i}: This is some test content to make the document larger.");
 
         doc.Save(path);
 
-        // Open and process
         var openResult = _sessionTool.Execute("open", path);
         var openData = GetResultData<OpenSessionResult>(openResult);
 
         Assert.NotNull(openData.SessionId);
 
-        // Save to new file
         var outputPath = CreateTestFilePath("large_doc_output.docx");
         _sessionTool.Execute("save", sessionId: openData.SessionId, outputPath: outputPath);
 
@@ -114,20 +110,17 @@ public class SystemErrorTests : TestBase
         var openResult = _sessionTool.Execute("open", path);
         var openData = GetResultData<OpenSessionResult>(openResult);
 
-        // Create a read-only file
         var readOnlyFile = CreateTestFilePath("readonly_output.docx");
         File.WriteAllText(readOnlyFile, "existing content");
         File.SetAttributes(readOnlyFile, FileAttributes.ReadOnly);
 
         try
         {
-            // This should throw because the file is read-only
             Assert.ThrowsAny<Exception>(() =>
                 _sessionTool.Execute("save", sessionId: openData.SessionId, outputPath: readOnlyFile));
         }
         finally
         {
-            // Clean up: remove read-only attribute
             File.SetAttributes(readOnlyFile, FileAttributes.Normal);
         }
     }
@@ -146,7 +139,6 @@ public class SystemErrorTests : TestBase
 
         try
         {
-            // Open multiple sessions
             for (var i = 0; i < 10; i++)
             {
                 var path = CreateWordDocument(fileName: $"multi_session_{i}.docx");
@@ -155,17 +147,14 @@ public class SystemErrorTests : TestBase
                 sessions.Add(openData.SessionId);
             }
 
-            // All sessions should be opened successfully
             Assert.Equal(10, sessions.Count);
 
-            // List should show all sessions
             var listResult = _sessionTool.Execute("list");
             var listData = GetResultData<ListSessionsResult>(listResult);
             Assert.True(listData.Sessions.Count >= 10);
         }
         finally
         {
-            // Close all sessions
             foreach (var sessionId in sessions)
                 try
                 {
@@ -189,10 +178,8 @@ public class SystemErrorTests : TestBase
         var openData = GetResultData<OpenSessionResult>(openResult);
         var sessionId = openData.SessionId;
 
-        // Close the session
         _sessionTool.Execute("close", sessionId: sessionId);
 
-        // Try to save - should throw KeyNotFoundException
         Assert.Throws<KeyNotFoundException>(() =>
             _sessionTool.Execute("save", sessionId: sessionId, outputPath: CreateTestFilePath("output.docx")));
     }

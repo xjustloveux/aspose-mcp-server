@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using AsposeMcpServer.Core.ShapeDetailProviders.Details;
 
 namespace AsposeMcpServer.Results.PowerPoint.Shape;
 
@@ -14,44 +15,30 @@ public sealed record GetShapeDetailsResult : GetShapeInfo
     public required bool Hidden { get; init; }
 
     /// <summary>
-    ///     Gets the auto shape type (for AutoShape).
+    ///     Gets the alternative text for the shape.
     /// </summary>
-    [JsonPropertyName("shapeType")]
+    [JsonPropertyName("alternativeText")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? ShapeType { get; init; }
+    public string? AlternativeText { get; init; }
 
     /// <summary>
-    ///     Gets the text content (for AutoShape).
+    ///     Gets whether the shape is flipped horizontally.
     /// </summary>
-    [JsonPropertyName("text")]
+    [JsonPropertyName("flipHorizontal")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Text { get; init; }
+    public bool? FlipHorizontal { get; init; }
 
     /// <summary>
-    ///     Gets the fill type (for AutoShape).
+    ///     Gets whether the shape is flipped vertically.
     /// </summary>
-    [JsonPropertyName("fillType")]
+    [JsonPropertyName("flipVertical")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? FillType { get; init; }
+    public bool? FlipVertical { get; init; }
 
     /// <summary>
-    ///     Gets the row count (for Table).
+    ///     Gets the shape-specific detail information.
     /// </summary>
-    [JsonPropertyName("rows")]
+    [JsonPropertyName("details")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? Rows { get; init; }
-
-    /// <summary>
-    ///     Gets the column count (for Table).
-    /// </summary>
-    [JsonPropertyName("columns")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? Columns { get; init; }
-
-    /// <summary>
-    ///     Gets the shape count (for GroupShape).
-    /// </summary>
-    [JsonPropertyName("shapeCount")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? ShapeCount { get; init; }
+    public ShapeDetails? Details { get; init; }
 }

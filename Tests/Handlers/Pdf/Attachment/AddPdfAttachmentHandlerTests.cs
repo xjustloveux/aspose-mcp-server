@@ -36,10 +36,9 @@ public class AddPdfAttachmentHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("test.txt", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Single(document.EmbeddedFiles);
+        Assert.Equal("test.txt", document.EmbeddedFiles[1].Name);
         AssertModified(context);
     }
 
@@ -60,9 +59,10 @@ public class AddPdfAttachmentHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Single(document.EmbeddedFiles);
+        Assert.Equal("document.txt", document.EmbeddedFiles[1].Name);
+        Assert.Equal("A test document", document.EmbeddedFiles[1].Description);
     }
 
     [Fact]

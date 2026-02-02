@@ -24,14 +24,14 @@ public class CompressPdfFileHandlerTests : PdfHandlerTestBase
     public void Execute_CompressesPdf()
     {
         var doc = CreateDocumentWithText("Test content");
+        var initialPageCount = doc.Pages.Count;
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("compressed", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        AssertPageCount(doc, initialPageCount);
         AssertModified(context);
     }
 
@@ -39,6 +39,7 @@ public class CompressPdfFileHandlerTests : PdfHandlerTestBase
     public void Execute_WithCompressImages_CompressesPdf()
     {
         var doc = CreateDocumentWithText("Test content");
+        var initialPageCount = doc.Pages.Count;
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -47,9 +48,8 @@ public class CompressPdfFileHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("compressed", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        AssertPageCount(doc, initialPageCount);
         AssertModified(context);
     }
 
@@ -57,6 +57,7 @@ public class CompressPdfFileHandlerTests : PdfHandlerTestBase
     public void Execute_WithCompressFonts_CompressesPdf()
     {
         var doc = CreateDocumentWithText("Test content");
+        var initialPageCount = doc.Pages.Count;
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -65,9 +66,8 @@ public class CompressPdfFileHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("compressed", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        AssertPageCount(doc, initialPageCount);
         AssertModified(context);
     }
 
@@ -75,6 +75,7 @@ public class CompressPdfFileHandlerTests : PdfHandlerTestBase
     public void Execute_WithRemoveUnusedObjects_CompressesPdf()
     {
         var doc = CreateDocumentWithText("Test content");
+        var initialPageCount = doc.Pages.Count;
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -83,9 +84,8 @@ public class CompressPdfFileHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("compressed", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        AssertPageCount(doc, initialPageCount);
         AssertModified(context);
     }
 
@@ -93,6 +93,7 @@ public class CompressPdfFileHandlerTests : PdfHandlerTestBase
     public void Execute_WithAllOptionsFalse_CompressesPdf()
     {
         var doc = CreateDocumentWithText("Test content");
+        var initialPageCount = doc.Pages.Count;
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -103,9 +104,8 @@ public class CompressPdfFileHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("compressed", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        AssertPageCount(doc, initialPageCount);
         AssertModified(context);
     }
 

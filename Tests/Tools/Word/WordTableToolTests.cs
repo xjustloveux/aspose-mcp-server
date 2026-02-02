@@ -237,8 +237,6 @@ public class WordTableToolTests : WordTestBase
         var docPath = CreateWordDocument("test_session_create_table.docx");
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("create", sessionId: sessionId, rows: 2, columns: 3);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Successfully created table", data.Message);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
 

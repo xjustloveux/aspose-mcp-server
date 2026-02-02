@@ -49,6 +49,8 @@ public class DeletePptTableRowHandlerTests : PptHandlerTestBase
     public void Execute_DeletesRow()
     {
         var pres = CreatePresentationWithTable(3, 3);
+        var table = pres.Slides[0].Shapes[0] as ITable;
+        var initialRowCount = table!.Rows.Count;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -58,10 +60,10 @@ public class DeletePptTableRowHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("deleted", result.Message);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+
+        Assert.Equal(initialRowCount - 1, table.Rows.Count);
     }
 
     [Fact]
@@ -86,6 +88,7 @@ public class DeletePptTableRowHandlerTests : PptHandlerTestBase
     public void Execute_ReturnsDeletedRowIndex()
     {
         var pres = CreatePresentationWithTable(3, 3);
+        var table = pres.Slides[0].Shapes[0] as ITable;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -95,9 +98,9 @@ public class DeletePptTableRowHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Row 1", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.NotNull(table);
+        Assert.Equal(2, table.Rows.Count);
     }
 
     #endregion
@@ -129,6 +132,7 @@ public class DeletePptTableRowHandlerTests : PptHandlerTestBase
     public void Execute_DeletesFirstRow()
     {
         var pres = CreatePresentationWithTable(3, 3);
+        var table = pres.Slides[0].Shapes[0] as ITable;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -138,15 +142,16 @@ public class DeletePptTableRowHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Row 0", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.NotNull(table);
+        Assert.Equal(2, table.Rows.Count);
     }
 
     [Fact]
     public void Execute_DeletesLastRow()
     {
         var pres = CreatePresentationWithTable(3, 3);
+        var table = pres.Slides[0].Shapes[0] as ITable;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -156,9 +161,9 @@ public class DeletePptTableRowHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Row 2", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.NotNull(table);
+        Assert.Equal(2, table.Rows.Count);
     }
 
     #endregion

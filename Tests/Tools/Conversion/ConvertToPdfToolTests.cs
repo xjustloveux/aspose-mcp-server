@@ -146,7 +146,8 @@ public class ConvertToPdfToolTests : TestBase
         var result = _tool.Execute(sessionId: sessionId, outputPath: outputPath);
 
         Assert.Contains(sessionId, result.SourcePath);
-        Assert.Contains(sessionId, result.Message!);
+        Assert.Equal("PDF", result.TargetFormat);
+        Assert.Equal(outputPath, result.OutputPath);
         Assert.True(File.Exists(outputPath));
 
         using var pdfDoc = new Aspose.Pdf.Document(outputPath);
@@ -163,8 +164,12 @@ public class ConvertToPdfToolTests : TestBase
         var result = _tool.Execute(sessionId: sessionId, outputPath: outputPath);
 
         Assert.Contains(sessionId, result.SourcePath);
-        Assert.Contains(sessionId, result.Message!);
+        Assert.Equal("PDF", result.TargetFormat);
+        Assert.Equal(outputPath, result.OutputPath);
         Assert.True(File.Exists(outputPath));
+
+        using var pdfDoc = new Aspose.Pdf.Document(outputPath);
+        Assert.True(pdfDoc.Pages.Count > 0);
     }
 
     [Fact]
@@ -177,8 +182,12 @@ public class ConvertToPdfToolTests : TestBase
         var result = _tool.Execute(sessionId: sessionId, outputPath: outputPath);
 
         Assert.Contains(sessionId, result.SourcePath);
-        Assert.Contains(sessionId, result.Message!);
+        Assert.Equal("PDF", result.TargetFormat);
+        Assert.Equal(outputPath, result.OutputPath);
         Assert.True(File.Exists(outputPath));
+
+        using var pdfDoc = new Aspose.Pdf.Document(outputPath);
+        Assert.True(pdfDoc.Pages.Count > 0);
     }
 
     [Fact]

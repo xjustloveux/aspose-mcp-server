@@ -1,5 +1,6 @@
 using Aspose.Slides;
-using AsposeMcpServer.Core.ShapeDetailProviders;
+using AsposeMcpServer.Core.ShapeDetailProviders.Details;
+using AsposeMcpServer.Core.ShapeDetailProviders.Providers;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Core.ShapeDetailProviders;
@@ -50,8 +51,7 @@ public class PictureFrameDetailProviderTests : TestBase
         var pictureFrame = slide.Shapes.AddPictureFrame(ShapeType.Rectangle, 10, 10, 100, 100, image);
 
         var details = _provider.GetDetails(pictureFrame, presentation);
-
-        Assert.NotNull(details);
+        Assert.IsType<PictureFrameDetails>(details);
     }
 
     [Fact]
@@ -64,6 +64,37 @@ public class PictureFrameDetailProviderTests : TestBase
         var details = _provider.GetDetails(shape, presentation);
 
         Assert.Null(details);
+    }
+
+    [Fact]
+    public void GetDetails_WithHyperlink_ShouldReturnHyperlink()
+    {
+        using var presentation = new Presentation();
+        var slide = presentation.Slides[0];
+        using var imageStream = new MemoryStream(CreateMinimalPngFile());
+        var image = presentation.Images.AddImage(imageStream);
+        var pictureFrame = slide.Shapes.AddPictureFrame(ShapeType.Rectangle, 10, 10, 100, 100, image);
+        pictureFrame.HyperlinkClick = new Hyperlink("https://example.com");
+
+        var details = _provider.GetDetails(pictureFrame, presentation);
+        var pictureDetails = Assert.IsType<PictureFrameDetails>(details);
+
+        Assert.Equal("https://example.com", pictureDetails.Hyperlink);
+    }
+
+    [Fact]
+    public void GetDetails_WithoutHyperlink_ShouldReturnNullHyperlink()
+    {
+        using var presentation = new Presentation();
+        var slide = presentation.Slides[0];
+        using var imageStream = new MemoryStream(CreateMinimalPngFile());
+        var image = presentation.Images.AddImage(imageStream);
+        slide.Shapes.AddPictureFrame(ShapeType.Rectangle, 10, 10, 100, 100, image);
+
+        var details = _provider.GetDetails(slide.Shapes[0], presentation);
+        var pictureDetails = Assert.IsType<PictureFrameDetails>(details);
+
+        Assert.Null(pictureDetails.Hyperlink);
     }
 
     private static byte[] CreateMinimalPngFile()

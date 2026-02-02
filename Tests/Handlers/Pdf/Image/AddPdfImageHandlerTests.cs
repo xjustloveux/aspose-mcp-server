@@ -47,6 +47,7 @@ public class AddPdfImageHandlerTests : PdfHandlerTestBase
     {
         var imagePath = CreateTestPngImage();
         var doc = CreateEmptyDocument();
+        var initialImageCount = doc.Pages[1].Resources.Images.Count;
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -55,10 +56,9 @@ public class AddPdfImageHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Added image", result.Message);
-        Assert.Contains("page 1", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+            Assert.Equal(initialImageCount + 1, doc.Pages[1].Resources.Images.Count);
         AssertModified(context);
     }
 
@@ -67,6 +67,7 @@ public class AddPdfImageHandlerTests : PdfHandlerTestBase
     {
         var imagePath = CreateTestPngImage();
         var doc = CreateDocumentWithPages(3);
+        var initialImageCount = doc.Pages[2].Resources.Images.Count;
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -76,10 +77,9 @@ public class AddPdfImageHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Added image", result.Message);
-        Assert.Contains("page 2", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+            Assert.Equal(initialImageCount + 1, doc.Pages[2].Resources.Images.Count);
         AssertModified(context);
     }
 
@@ -88,6 +88,7 @@ public class AddPdfImageHandlerTests : PdfHandlerTestBase
     {
         var imagePath = CreateTestPngImage();
         var doc = CreateEmptyDocument();
+        var initialImageCount = doc.Pages[1].Resources.Images.Count;
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -98,9 +99,9 @@ public class AddPdfImageHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Added image", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+            Assert.Equal(initialImageCount + 1, doc.Pages[1].Resources.Images.Count);
         AssertModified(context);
     }
 
@@ -109,6 +110,7 @@ public class AddPdfImageHandlerTests : PdfHandlerTestBase
     {
         var imagePath = CreateTestPngImage();
         var doc = CreateEmptyDocument();
+        var initialImageCount = doc.Pages[1].Resources.Images.Count;
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -119,9 +121,9 @@ public class AddPdfImageHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Added image", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+            Assert.Equal(initialImageCount + 1, doc.Pages[1].Resources.Images.Count);
         AssertModified(context);
     }
 
@@ -174,6 +176,7 @@ public class AddPdfImageHandlerTests : PdfHandlerTestBase
     {
         var imagePath = CreateTestPngImage();
         var doc = CreateDocumentWithPages(2);
+        var initialImageCount = doc.Pages[1].Resources.Images.Count;
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -183,9 +186,9 @@ public class AddPdfImageHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("page 1", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+            Assert.Equal(initialImageCount + 1, doc.Pages[1].Resources.Images.Count);
         AssertModified(context);
     }
 
@@ -194,6 +197,7 @@ public class AddPdfImageHandlerTests : PdfHandlerTestBase
     {
         var imagePath = CreateTestPngImage();
         var doc = CreateDocumentWithPages(2);
+        var initialImageCount = doc.Pages[1].Resources.Images.Count;
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -203,9 +207,9 @@ public class AddPdfImageHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("page 1", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+            Assert.Equal(initialImageCount + 1, doc.Pages[1].Resources.Images.Count);
         AssertModified(context);
     }
 

@@ -239,8 +239,6 @@ public class WordNoteToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("add_footnote", sessionId: sessionId,
             text: "Session footnote text", paragraphIndex: 0);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Footnote added successfully", data.Message);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
 
@@ -256,8 +254,6 @@ public class WordNoteToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("add_endnote", sessionId: sessionId,
             text: "Session endnote text", paragraphIndex: 0);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Endnote added successfully", data.Message);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
 

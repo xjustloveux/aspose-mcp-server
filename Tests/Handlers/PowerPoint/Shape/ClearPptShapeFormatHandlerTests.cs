@@ -37,10 +37,9 @@ public class ClearPptShapeFormatHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("cleared", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+        Assert.Equal(FillType.NoFill, shape.FillFormat.FillType);
     }
 
     #endregion
@@ -48,10 +47,14 @@ public class ClearPptShapeFormatHandlerTests : PptHandlerTestBase
     #region Result Message
 
     [Fact]
-    public void Execute_ReturnsSlideAndShapeIndexInMessage()
+    public void Execute_ClearsFillAndLineOnFirstSlide()
     {
         var pres = CreatePresentationWithSlides(1);
-        pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
+        var shape = pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
+        shape.FillFormat.FillType = FillType.Solid;
+        shape.FillFormat.SolidFillColor.Color = Color.Red;
+        shape.LineFormat.FillFormat.FillType = FillType.Solid;
+        shape.LineFormat.FillFormat.SolidFillColor.Color = Color.Blue;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -60,10 +63,10 @@ public class ClearPptShapeFormatHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("shape 0", result.Message);
-        Assert.Contains("slide 0", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        AssertModified(context);
+        Assert.Equal(FillType.NoFill, shape.FillFormat.FillType);
+        Assert.Equal(FillType.NoFill, shape.LineFormat.FillFormat.FillType);
     }
 
     #endregion
@@ -218,9 +221,8 @@ public class ClearPptShapeFormatHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("1", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        AssertModified(context);
         Assert.Equal(FillType.NoFill, pres.Slides[1].Shapes[0].FillFormat.FillType);
     }
 
@@ -239,9 +241,8 @@ public class ClearPptShapeFormatHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("0", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        AssertModified(context);
         Assert.Equal(FillType.NoFill, pres.Slides[0].Shapes[0].FillFormat.FillType);
     }
 

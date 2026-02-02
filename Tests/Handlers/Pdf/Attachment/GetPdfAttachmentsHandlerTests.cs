@@ -79,7 +79,6 @@ public class GetPdfAttachmentsHandlerTests : PdfHandlerTestBase
         var res = _handler.Execute(context, parameters);
 
         var result = Assert.IsType<GetAttachmentsResult>(res);
-        // Verify the result has the expected structure
         Assert.NotNull(result);
         Assert.NotNull(result.Items);
         // Note: In-memory attachments may not be fully accessible via CollectAttachmentInfo

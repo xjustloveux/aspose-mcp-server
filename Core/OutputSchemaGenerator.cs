@@ -56,7 +56,6 @@ public static class OutputSchemaGenerator
     /// <returns>JSON Schema element for FinalizedResult wrapper.</returns>
     public static JsonElement GenerateForType(Type resultType)
     {
-        // Check if the type has an AllTypes static field/property containing multiple types
         var allTypesField = resultType.GetField("AllTypes", BindingFlags.Public | BindingFlags.Static);
         if (allTypesField?.GetValue(null) is Type[] { Length: > 0 } allTypes)
             return GenerateForTypes(allTypes);

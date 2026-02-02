@@ -1,4 +1,5 @@
 ﻿using Aspose.Words;
+using AsposeMcpServer.Results;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Results.Word.Comment;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -109,8 +110,10 @@ public class WordCommentToolTests : WordTestBase
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.docx");
         var result = _tool.Execute(operation, docPath, outputPath: outputPath,
             text: "Case test comment", author: "Author", paragraphIndex: 0);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Comment added", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
+        var doc = new Document(outputPath);
+        var comments = doc.GetChildNodes(NodeType.Comment, true).Cast<Comment>().ToList();
+        Assert.True(comments.Count > 0);
     }
 
     [Fact]
@@ -140,8 +143,7 @@ public class WordCommentToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("add", sessionId: sessionId, text: "Session comment", author: "Session Author",
             paragraphIndex: 0);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.Contains("comment", data.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
 
         var doc = SessionManager.GetDocument<Document>(sessionId);
         var comments = doc.GetChildNodes(NodeType.Comment, true).Cast<Comment>().ToList();
@@ -201,12 +203,13 @@ public class WordCommentToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("reply", sessionId: sessionId,
             commentIndex: 0, replyText: "Session reply", author: "Reply Author");
-        var data = GetResultData<SuccessResult>(result);
-        Assert.Contains("reply", data.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
 
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         var comments = sessionDoc.GetChildNodes(NodeType.Comment, true).Cast<Comment>().ToList();
-        Assert.True(comments.Count > 0);
+        Assert.True(comments.Count > 1);
+        var allCommentText = string.Join(" ", comments.Select(c => c.GetText()));
+        Assert.Contains("reply", allCommentText, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

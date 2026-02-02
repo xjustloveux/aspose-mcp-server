@@ -20,7 +20,7 @@ public class ValidationErrorTests : IntegrationTestBase
     /// </summary>
     public ValidationErrorTests()
     {
-        var config = new SessionConfig { Enabled = true };
+        var config = new SessionConfig { Enabled = true, TempDirectory = Path.Combine(TestDir, "temp") };
         _sessionManager = new DocumentSessionManager(config);
         var tempFileManager = new TempFileManager(config);
         _sessionTool = new DocumentSessionTool(_sessionManager, tempFileManager, new StdioSessionIdentityAccessor());

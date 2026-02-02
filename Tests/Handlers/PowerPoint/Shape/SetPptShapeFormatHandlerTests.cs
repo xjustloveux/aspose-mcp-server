@@ -26,7 +26,7 @@ public class SetPptShapeFormatHandlerTests : PptHandlerTestBase
     public void Execute_SetsFormat()
     {
         var pres = CreatePresentationWithSlides(1);
-        pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
+        var shape = pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -36,9 +36,10 @@ public class SetPptShapeFormatHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(FillType.Solid, shape.FillFormat.FillType);
+        if (!IsEvaluationMode()) Assert.Equal(Color.FromArgb(255, 0, 0), shape.FillFormat.SolidFillColor.Color);
 
-        Assert.Contains("Format", result.Message);
         AssertModified(context);
     }
 
@@ -121,7 +122,7 @@ public class SetPptShapeFormatHandlerTests : PptHandlerTestBase
     public void Execute_ReturnsSlideAndShapeIndexInMessage()
     {
         var pres = CreatePresentationWithSlides(1);
-        pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
+        var shape = pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -131,10 +132,8 @@ public class SetPptShapeFormatHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("shape 0", result.Message);
-        Assert.Contains("slide 0", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(FillType.Solid, shape.FillFormat.FillType);
     }
 
     #endregion
@@ -167,7 +166,7 @@ public class SetPptShapeFormatHandlerTests : PptHandlerTestBase
     public void Execute_WithVariousFillColors_AppliesColor(string color)
     {
         var pres = CreatePresentationWithSlides(1);
-        pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
+        var shape = pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -177,9 +176,8 @@ public class SetPptShapeFormatHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Format", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(FillType.Solid, shape.FillFormat.FillType);
         AssertModified(context);
     }
 
@@ -233,20 +231,22 @@ public class SetPptShapeFormatHandlerTests : PptHandlerTestBase
     public void Execute_WithSlideIndex_FormatsOnSpecificSlide()
     {
         var pres = CreatePresentationWithSlides(3);
-        pres.Slides[1].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
+        var shape = pres.Slides[1].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
+        var shapeIndex = pres.Slides[1].Shapes.IndexOf(shape);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "slideIndex", 1 },
-            { "shapeIndex", 0 },
+            { "shapeIndex", shapeIndex },
             { "fillColor", "#FF0000" }
         });
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(FillType.Solid, shape.FillFormat.FillType);
+        if (!IsEvaluationMode()) Assert.Equal(Color.FromArgb(255, 0, 0), shape.FillFormat.SolidFillColor.Color);
 
-        Assert.Contains("1", result.Message);
         AssertModified(context);
     }
 
@@ -254,7 +254,7 @@ public class SetPptShapeFormatHandlerTests : PptHandlerTestBase
     public void Execute_DefaultSlideIndex_FormatsOnFirstSlide()
     {
         var pres = CreatePresentationWithSlides(3);
-        pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
+        var shape = pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -264,9 +264,8 @@ public class SetPptShapeFormatHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("0", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(FillType.Solid, shape.FillFormat.FillType);
     }
 
     #endregion

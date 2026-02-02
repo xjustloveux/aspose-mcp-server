@@ -1,6 +1,9 @@
+using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.List;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
+using static Aspose.Words.ConvertUtil;
+using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.List;
 
@@ -36,10 +39,17 @@ public class EditWordListItemHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("edited successfully", result.Message);
-        Assert.Contains($"Paragraph index: {index}", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+            var runs = paragraphs[index].Runs.Cast<Run>().ToList();
+            Assert.Single(runs);
+            Assert.Equal($"Updated {index}", runs[0].Text);
+        }
+
+        AssertModified(context);
     }
 
     #endregion
@@ -59,9 +69,16 @@ public class EditWordListItemHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("List item edited successfully", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+            var runs = paragraphs[1].Runs.Cast<Run>().ToList();
+            Assert.Single(runs);
+            Assert.Equal("Updated Item", runs[0].Text);
+        }
+
         AssertModified(context);
     }
 
@@ -78,9 +95,17 @@ public class EditWordListItemHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Paragraph index: 0", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+            var runs = paragraphs[0].Runs.Cast<Run>().ToList();
+            Assert.Single(runs);
+            Assert.Equal("New Text", runs[0].Text);
+        }
+
+        AssertModified(context);
     }
 
     [Fact]
@@ -96,9 +121,17 @@ public class EditWordListItemHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("New text: Updated Content", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+            var runs = paragraphs[0].Runs.Cast<Run>().ToList();
+            Assert.Single(runs);
+            Assert.Equal("Updated Content", runs[0].Text);
+        }
+
+        AssertModified(context);
     }
 
     [SkippableFact]
@@ -139,9 +172,18 @@ public class EditWordListItemHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains($"Level: {level}", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+            Assert.Equal(InchToPoint(0.5 * level), paragraphs[0].ParagraphFormat.LeftIndent);
+            var runs = paragraphs[0].Runs.Cast<Run>().ToList();
+            Assert.Single(runs);
+            Assert.Equal("Updated", runs[0].Text);
+        }
+
+        AssertModified(context);
     }
 
     [Fact]
@@ -157,9 +199,17 @@ public class EditWordListItemHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.DoesNotContain("Level:", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+            var runs = paragraphs[0].Runs.Cast<Run>().ToList();
+            Assert.Single(runs);
+            Assert.Equal("Updated", runs[0].Text);
+        }
+
+        AssertModified(context);
     }
 
     #endregion

@@ -1,5 +1,6 @@
 ﻿using Aspose.Pdf;
 using Aspose.Pdf.Text;
+using AsposeMcpServer.Results;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Results.Pdf.Text;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -60,9 +61,15 @@ public class PdfTextToolTests : PdfTestBase
         var outputPath = CreateTestFilePath("test_add_output.pdf");
         var result = _tool.Execute("add", pdfPath, pageIndex: 1, outputPath: outputPath,
             text: "Added Text", x: 100, y: 700);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         Assert.True(File.Exists(outputPath));
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Text added to page", data.Message);
+        if (!IsEvaluationMode())
+        {
+            using var doc = new Document(outputPath);
+            var textAbsorber = new TextAbsorber();
+            doc.Pages[1].Accept(textAbsorber);
+            Assert.Contains("Added Text", textAbsorber.Text);
+        }
     }
 
     [SkippableFact]
@@ -73,9 +80,12 @@ public class PdfTextToolTests : PdfTestBase
         var outputPath = CreateTestFilePath("test_edit_output.pdf");
         var result = _tool.Execute("edit", pdfPath, pageIndex: 1, outputPath: outputPath,
             oldText: "Sample PDF Text", newText: "Updated Text", replaceAll: true);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         Assert.True(File.Exists(outputPath));
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Replaced", data.Message);
+        using var doc = new Document(outputPath);
+        var textAbsorber = new TextAbsorber();
+        doc.Pages[1].Accept(textAbsorber);
+        Assert.Contains("Updated Text", textAbsorber.Text);
     }
 
     #endregion
@@ -129,10 +139,15 @@ public class PdfTextToolTests : PdfTestBase
         var sessionId = OpenSession(pdfPath);
         var result = _tool.Execute("add", sessionId: sessionId, pageIndex: 1,
             text: "Session Text", x: 100, y: 700);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Text added to page", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         var document = SessionManager.GetDocument<Document>(sessionId);
         Assert.NotNull(document);
+        if (!IsEvaluationMode())
+        {
+            var textAbsorber = new TextAbsorber();
+            document.Pages[1].Accept(textAbsorber);
+            Assert.Contains("Session Text", textAbsorber.Text);
+        }
     }
 
     [SkippableFact]
@@ -143,8 +158,11 @@ public class PdfTextToolTests : PdfTestBase
         var sessionId = OpenSession(pdfPath);
         var result = _tool.Execute("edit", sessionId: sessionId, pageIndex: 1,
             oldText: "Sample PDF Text", newText: "Updated Session Text", replaceAll: true);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Replaced", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
+        var document = SessionManager.GetDocument<Document>(sessionId);
+        var textAbsorber = new TextAbsorber();
+        document.Pages[1].Accept(textAbsorber);
+        Assert.Contains("Updated Session Text", textAbsorber.Text);
     }
 
     [Fact]

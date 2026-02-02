@@ -1,6 +1,7 @@
 using Aspose.Slides;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Core.ShapeDetailProviders;
 using AsposeMcpServer.Helpers.PowerPoint;
 using AsposeMcpServer.Results.PowerPoint.Shape;
 
@@ -35,45 +36,23 @@ public class GetPptShapeDetailsHandler : OperationHandlerBase<Presentation>
 
         var shape = slide.Shapes[p.ShapeIndex];
 
-        string? shapeType = null;
-        string? text = null;
-        string? fillType = null;
-        int? rows = null;
-        int? columns = null;
-        int? shapeCount = null;
-
-        if (shape is IAutoShape autoShape)
-        {
-            shapeType = autoShape.ShapeType.ToString();
-            text = autoShape.TextFrame?.Text;
-            fillType = autoShape.FillFormat?.FillType.ToString();
-        }
-
-        if (shape is ITable table)
-        {
-            rows = table.Rows.Count;
-            columns = table.Columns.Count;
-        }
-
-        if (shape is IGroupShape groupShape) shapeCount = groupShape.Shapes.Count;
+        var (typeName, details) = ShapeDetailProviderFactory.GetShapeDetails(shape, presentation);
 
         return new GetShapeDetailsResult
         {
             Index = p.ShapeIndex,
             Name = shape.Name,
-            Type = shape.GetType().Name,
+            Type = typeName,
             X = shape.X,
             Y = shape.Y,
             Width = shape.Width,
             Height = shape.Height,
             Rotation = shape.Rotation,
             Hidden = shape.Hidden,
-            ShapeType = shapeType,
-            Text = text,
-            FillType = fillType,
-            Rows = rows,
-            Columns = columns,
-            ShapeCount = shapeCount
+            AlternativeText = string.IsNullOrEmpty(shape.AlternativeText) ? null : shape.AlternativeText,
+            FlipHorizontal = MapNullableBool(shape.Frame.FlipH),
+            FlipVertical = MapNullableBool(shape.Frame.FlipV),
+            Details = details
         };
     }
 
@@ -87,6 +66,21 @@ public class GetPptShapeDetailsHandler : OperationHandlerBase<Presentation>
         return new GetPptShapeDetailsParameters(
             parameters.GetOptional("slideIndex", 0),
             parameters.GetRequired<int>("shapeIndex"));
+    }
+
+    /// <summary>
+    ///     Maps a <see cref="NullableBool" /> value to a nullable boolean.
+    /// </summary>
+    /// <param name="value">The NullableBool value.</param>
+    /// <returns>true, false, or null if not defined.</returns>
+    private static bool? MapNullableBool(NullableBool value)
+    {
+        return value switch
+        {
+            NullableBool.True => true,
+            NullableBool.False => false,
+            _ => null
+        };
     }
 
     /// <summary>

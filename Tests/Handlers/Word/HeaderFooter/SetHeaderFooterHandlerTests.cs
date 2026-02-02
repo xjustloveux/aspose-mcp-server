@@ -1,3 +1,4 @@
+using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.HeaderFooter;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -34,9 +35,11 @@ public class SetHeaderFooterHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("set", result.Message, StringComparison.OrdinalIgnoreCase);
+        var header = doc.FirstSection.HeadersFooters[HeaderFooterType.HeaderPrimary];
+        Assert.NotNull(header);
+        if (!IsEvaluationMode(AsposeLibraryType.Words)) Assert.Contains("Text", header.GetText());
     }
 
     #endregion
@@ -56,9 +59,11 @@ public class SetHeaderFooterHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("set", result.Message, StringComparison.OrdinalIgnoreCase);
+        var header = doc.FirstSection.HeadersFooters[HeaderFooterType.HeaderPrimary];
+        Assert.NotNull(header);
+        if (!IsEvaluationMode(AsposeLibraryType.Words)) Assert.Contains("All Sections", header.GetText());
     }
 
     #endregion
@@ -78,10 +83,18 @@ public class SetHeaderFooterHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("header and footer set", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+
+        var header = doc.FirstSection.HeadersFooters[HeaderFooterType.HeaderPrimary];
+        Assert.NotNull(header);
+        var footer = doc.FirstSection.HeadersFooters[HeaderFooterType.FooterPrimary];
+        Assert.NotNull(footer);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            Assert.Contains("Header Text", header.GetText());
+            Assert.Contains("Footer Text", footer.GetText());
+        }
     }
 
     [Fact]
@@ -96,10 +109,12 @@ public class SetHeaderFooterHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("set", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+
+        var header = doc.FirstSection.HeadersFooters[HeaderFooterType.HeaderPrimary];
+        Assert.NotNull(header);
+        if (!IsEvaluationMode(AsposeLibraryType.Words)) Assert.Contains("Header Only", header.GetText());
     }
 
     [Fact]
@@ -114,10 +129,12 @@ public class SetHeaderFooterHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("set", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+
+        var footer = doc.FirstSection.HeadersFooters[HeaderFooterType.FooterPrimary];
+        Assert.NotNull(footer);
+        if (!IsEvaluationMode(AsposeLibraryType.Words)) Assert.Contains("Footer Only", footer.GetText());
     }
 
     [Fact]
@@ -137,10 +154,24 @@ public class SetHeaderFooterHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("set", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+
+        var header = doc.FirstSection.HeadersFooters[HeaderFooterType.HeaderPrimary];
+        Assert.NotNull(header);
+        var footer = doc.FirstSection.HeadersFooters[HeaderFooterType.FooterPrimary];
+        Assert.NotNull(footer);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var headerText = header.GetText();
+            Assert.Contains("H-Left", headerText);
+            Assert.Contains("H-Center", headerText);
+            Assert.Contains("H-Right", headerText);
+            var footerText = footer.GetText();
+            Assert.Contains("F-Left", footerText);
+            Assert.Contains("F-Center", footerText);
+            Assert.Contains("F-Right", footerText);
+        }
     }
 
     #endregion

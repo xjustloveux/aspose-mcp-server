@@ -170,9 +170,15 @@
     <div class="faq-item">
         <div class="faq-question">Q: 如何在 Linux/macOS 上設置執行權限？</div>
         <div class="faq-answer">
+            <p>使用 <code>.tar.gz</code> 格式下載的版本已包含執行權限。如遇權限問題：</p>
             <div class="code-block">
                 chmod +x AsposeMcpServer
             </div>
+            <p style="margin-top: 10px;">macOS 還需移除系統隔離標記（僅需一次）：</p>
+            <div class="code-block">
+                xattr -d com.apple.quarantine AsposeMcpServer
+            </div>
+            <p style="margin-top: 10px;">或使用 Homebrew 安裝可自動處理：<code>brew install xjustloveux/tap/aspose-mcp-server</code></p>
         </div>
     </div>
 

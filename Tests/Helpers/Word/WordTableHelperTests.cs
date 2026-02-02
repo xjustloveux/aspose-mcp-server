@@ -237,6 +237,8 @@ public class WordTableHelperTests : WordTestBase
         var result = WordTableHelper.GetTables(doc, null);
 
         Assert.Equal(3, result.Count);
+        Assert.All(result, Assert.NotNull);
+        Assert.All(result, table => Assert.True(table.Rows.Count > 0));
     }
 
     [Fact]
@@ -247,6 +249,8 @@ public class WordTableHelperTests : WordTestBase
         var result = WordTableHelper.GetTables(doc, 0);
 
         Assert.Single(result);
+        Assert.True(result[0].Rows.Count > 0);
+        Assert.Contains("Cell in section 0", result[0].GetText());
     }
 
     [Fact]
@@ -284,6 +288,8 @@ public class WordTableHelperTests : WordTestBase
         var result = WordTableHelper.GetTable(doc, 1, null);
 
         Assert.NotNull(result);
+        Assert.True(result.Rows.Count > 0);
+        Assert.Contains("Table 2", result.GetText());
     }
 
     [Fact]
@@ -420,7 +426,12 @@ public class WordTableHelperTests : WordTestBase
 
         WordTableHelper.ApplyMergeCells(table, 2, 1, 0, 0);
 
-        Assert.Equal(CellMerge.None, table.Rows[0].Cells[0].CellFormat.VerticalMerge);
+        for (var r = 0; r < table.Rows.Count; r++)
+        for (var c = 0; c < table.Rows[r].Cells.Count; c++)
+        {
+            Assert.Equal(CellMerge.None, table.Rows[r].Cells[c].CellFormat.VerticalMerge);
+            Assert.Equal(CellMerge.None, table.Rows[r].Cells[c].CellFormat.HorizontalMerge);
+        }
     }
 
     [Fact]
@@ -431,7 +442,12 @@ public class WordTableHelperTests : WordTestBase
 
         WordTableHelper.ApplyMergeCells(table, -1, 1, 0, 1);
 
-        Assert.Equal(CellMerge.None, table.Rows[0].Cells[0].CellFormat.VerticalMerge);
+        for (var r = 0; r < table.Rows.Count; r++)
+        for (var c = 0; c < table.Rows[r].Cells.Count; c++)
+        {
+            Assert.Equal(CellMerge.None, table.Rows[r].Cells[c].CellFormat.VerticalMerge);
+            Assert.Equal(CellMerge.None, table.Rows[r].Cells[c].CellFormat.HorizontalMerge);
+        }
     }
 
     [Fact]
@@ -442,7 +458,12 @@ public class WordTableHelperTests : WordTestBase
 
         WordTableHelper.ApplyMergeCells(table, 0, 10, 0, 1);
 
-        Assert.Equal(CellMerge.None, table.Rows[0].Cells[0].CellFormat.VerticalMerge);
+        for (var r = 0; r < table.Rows.Count; r++)
+        for (var c = 0; c < table.Rows[r].Cells.Count; c++)
+        {
+            Assert.Equal(CellMerge.None, table.Rows[r].Cells[c].CellFormat.VerticalMerge);
+            Assert.Equal(CellMerge.None, table.Rows[r].Cells[c].CellFormat.HorizontalMerge);
+        }
     }
 
     [Fact]

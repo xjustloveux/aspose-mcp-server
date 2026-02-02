@@ -104,6 +104,8 @@ public class TrackingMiddlewareTests
 
         Assert.True(context.Items.ContainsKey("RequestId"));
         Assert.NotNull(context.Items["RequestId"]);
+        var requestId = context.Items["RequestId"]!.ToString();
+        Assert.Equal(12, requestId!.Length);
     }
 
     [Fact]
@@ -132,9 +134,13 @@ public class TrackingMiddlewareTests
 
         await middleware.InvokeAsync(context);
 
-        // Next should not be called for metrics endpoint
         Assert.False(nextCalled);
         Assert.Equal("text/plain; version=0.0.4; charset=utf-8", context.Response.ContentType);
+
+        context.Response.Body.Seek(0, SeekOrigin.Begin);
+        using var reader = new StreamReader(context.Response.Body);
+        var responseBody = await reader.ReadToEndAsync();
+        Assert.NotNull(responseBody);
     }
 
     [Fact]
@@ -191,8 +197,9 @@ public class TrackingMiddlewareTests
 
         await middleware.InvokeAsync(context);
 
-        // Tracking should complete without error
-        Assert.True(true);
+        Assert.True(context.Items.ContainsKey("RequestId"));
+        Assert.NotNull(context.Items["RequestId"]);
+        Assert.Equal(200, context.Response.StatusCode);
     }
 
     [Fact]
@@ -211,8 +218,9 @@ public class TrackingMiddlewareTests
 
         await middleware.InvokeAsync(context);
 
-        // Should complete without error
-        Assert.True(true);
+        Assert.True(context.Items.ContainsKey("RequestId"));
+        Assert.NotNull(context.Items["RequestId"]);
+        Assert.Equal(200, context.Response.StatusCode);
     }
 
     [Fact]
@@ -231,8 +239,9 @@ public class TrackingMiddlewareTests
 
         await middleware.InvokeAsync(context);
 
-        // Should complete without error
-        Assert.True(true);
+        Assert.True(context.Items.ContainsKey("RequestId"));
+        Assert.NotNull(context.Items["RequestId"]);
+        Assert.Equal(200, context.Response.StatusCode);
     }
 
     #endregion
@@ -290,7 +299,6 @@ public class TrackingMiddlewareTests
 
         await middleware.InvokeAsync(context);
 
-        // Verify logging was called (will be warning for failures)
         loggerMock.Verify(
             x => x.Log(
                 It.IsAny<LogLevel>(),
@@ -319,7 +327,6 @@ public class TrackingExtensionsTests
             MetricsEnabled = false
         };
 
-        // This is a simple test to verify the extension method exists and works
         Assert.False(config.LogEnabled);
         Assert.False(config.WebhookEnabled);
         Assert.False(config.MetricsEnabled);

@@ -47,47 +47,14 @@ public class AddPptAnimationHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+        {
+            var animations = pres.Slides[0].Timeline.MainSequence;
+            Assert.True(animations.Count > 0, "Animation should be added");
+        }
 
-        Assert.Contains("Animation", result.Message);
-        Assert.Contains("added", result.Message);
         AssertModified(context);
-    }
-
-    [Fact]
-    public void Execute_ReturnsSlideIndex()
-    {
-        var pres = CreatePresentationWithShape();
-        var context = CreateContext(pres);
-        var parameters = CreateParameters(new Dictionary<string, object?>
-        {
-            { "slideIndex", 0 },
-            { "shapeIndex", 0 }
-        });
-
-        var res = _handler.Execute(context, parameters);
-
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("slide 0", result.Message);
-    }
-
-    [Fact]
-    public void Execute_ReturnsShapeIndex()
-    {
-        var pres = CreatePresentationWithShape();
-        var context = CreateContext(pres);
-        var parameters = CreateParameters(new Dictionary<string, object?>
-        {
-            { "slideIndex", 0 },
-            { "shapeIndex", 0 }
-        });
-
-        var res = _handler.Execute(context, parameters);
-
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("shape 0", result.Message);
     }
 
     [Fact]
@@ -101,12 +68,17 @@ public class AddPptAnimationHandlerTests : PptHandlerTestBase
             { "shapeIndex", 0 }
         });
 
-        _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var slide = pres.Slides[0];
-        var animations = slide.Timeline.MainSequence;
-        Assert.True(animations.Count > 0, "Animation should be added");
-        Assert.Equal(EffectType.Fade, animations[0].Type);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+        {
+            var slide = pres.Slides[0];
+            var animations = slide.Timeline.MainSequence;
+            Assert.True(animations.Count > 0, "Animation should be added");
+            Assert.Equal(EffectType.Fade, animations[0].Type);
+        }
+
         AssertModified(context);
     }
 
@@ -130,11 +102,16 @@ public class AddPptAnimationHandlerTests : PptHandlerTestBase
             { "effectType", effectTypeStr }
         });
 
-        _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        var animations = pres.Slides[0].Timeline.MainSequence;
-        Assert.True(animations.Count > 0, "Animation should be added");
-        Assert.Equal(expectedType, animations[0].Type);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+        {
+            var animations = pres.Slides[0].Timeline.MainSequence;
+            Assert.True(animations.Count > 0, "Animation should be added");
+            Assert.Equal(expectedType, animations[0].Type);
+        }
+
         AssertModified(context);
     }
 
@@ -153,9 +130,13 @@ public class AddPptAnimationHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("added", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+        {
+            var animations = pres.Slides[0].Timeline.MainSequence;
+            Assert.True(animations.Count > 0);
+            Assert.Equal(EffectSubtype.Bottom, animations[0].Subtype);
+        }
     }
 
     [Fact]
@@ -172,9 +153,13 @@ public class AddPptAnimationHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("added", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+        {
+            var animations = pres.Slides[0].Timeline.MainSequence;
+            Assert.True(animations.Count > 0);
+            Assert.Equal(EffectTriggerType.OnClick, animations[0].Timing.TriggerType);
+        }
     }
 
     #endregion
@@ -283,11 +268,12 @@ public class AddPptAnimationHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("added", result.Message);
-        var animations = pres.Slides[0].Timeline.MainSequence;
-        Assert.True(animations.Count > 0, "Animation should be added with default effect type");
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+        {
+            var animations = pres.Slides[0].Timeline.MainSequence;
+            Assert.True(animations.Count > 0, "Animation should be added with default effect type");
+        }
     }
 
     #endregion

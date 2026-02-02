@@ -51,9 +51,15 @@ public class ClearNotesHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+            foreach (var slide in presentation.Slides)
+            {
+                var notesSlide = slide.NotesSlideManager.NotesSlide;
+                Assert.True(notesSlide == null || string.IsNullOrEmpty(notesSlide.NotesTextFrame.Text),
+                    $"Notes should be cleared on slide {presentation.Slides.IndexOf(slide)}");
+            }
 
-        Assert.Contains("cleared", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -69,9 +75,21 @@ public class ClearNotesHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+        {
+            var notes0 = presentation.Slides[0].NotesSlideManager.NotesSlide;
+            Assert.True(notes0 == null || string.IsNullOrEmpty(notes0.NotesTextFrame.Text),
+                "Notes on slide 0 should be cleared");
+            var notes2 = presentation.Slides[2].NotesSlideManager.NotesSlide;
+            Assert.True(notes2 == null || string.IsNullOrEmpty(notes2.NotesTextFrame.Text),
+                "Notes on slide 2 should be cleared");
+            var notes1 = presentation.Slides[1].NotesSlideManager.NotesSlide;
+            Assert.False(string.IsNullOrEmpty(notes1?.NotesTextFrame.Text),
+                "Notes on slide 1 should remain untouched");
+        }
 
-        Assert.Contains("2 targeted", result.Message);
+        AssertModified(context);
     }
 
     [Fact]
@@ -88,7 +106,7 @@ public class ClearNotesHandlerTests : PptHandlerTestBase
     }
 
     [Fact]
-    public void Execute_WithNoNotes_ReportsZeroCleared()
+    public void Execute_WithNoNotes_SlidesRemainWithoutNotes()
     {
         var presentation = CreatePresentationWithSlides(2);
         var context = CreateContext(presentation);
@@ -96,9 +114,13 @@ public class ClearNotesHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("0 slides", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        foreach (var slide in presentation.Slides)
+        {
+            var notesSlide = slide.NotesSlideManager.NotesSlide;
+            Assert.True(notesSlide == null || string.IsNullOrEmpty(notesSlide.NotesTextFrame.Text),
+                "Slides without notes should remain without notes");
+        }
     }
 
     #endregion

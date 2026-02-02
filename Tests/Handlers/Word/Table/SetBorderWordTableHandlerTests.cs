@@ -1,3 +1,4 @@
+using System.Drawing;
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Table;
 using AsposeMcpServer.Results.Common;
@@ -22,25 +23,30 @@ public class SetBorderWordTableHandlerTests : WordHandlerTestBase
     #region Border Style
 
     [Theory]
-    [InlineData("single")]
-    [InlineData("double")]
-    [InlineData("dotted")]
-    [InlineData("dashed")]
-    public void Execute_WithBorderStyle_SetsBorderStyle(string style)
+    [InlineData("single", LineStyle.Single)]
+    [InlineData("double", LineStyle.Double)]
+    [InlineData("dotted", LineStyle.Dot)]
+    [InlineData("dashed", LineStyle.Single)]
+    public void Execute_WithBorderStyle_SetsBorderStyle(string style, LineStyle expected)
     {
         var doc = CreateDocumentWithTable(3, 3);
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
-            { "borderType", "all" },
-            { "borderStyle", style }
+            { "borderTop", true },
+            { "lineStyle", style }
         });
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("border", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var table = doc.Sections[0].Body.Tables[0];
+            var cell = table.Rows[0].Cells[0];
+            Assert.Equal(expected, cell.CellFormat.Borders.Top.LineStyle);
+        }
     }
 
     #endregion
@@ -83,9 +89,15 @@ public class SetBorderWordTableHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("border", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var table = doc.Sections[0].Body.Tables[0];
+            var cell = table.Rows[0].Cells[0];
+            Assert.NotEqual(LineStyle.None, cell.CellFormat.Borders.Top.LineStyle);
+        }
+
         AssertModified(context);
     }
 
@@ -108,9 +120,17 @@ public class SetBorderWordTableHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("border", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var table = doc.Sections[0].Body.Tables[0];
+            var cell = table.Rows[0].Cells[0];
+            if (top) Assert.NotEqual(LineStyle.None, cell.CellFormat.Borders.Top.LineStyle);
+            if (bottom) Assert.NotEqual(LineStyle.None, cell.CellFormat.Borders.Bottom.LineStyle);
+            if (left) Assert.NotEqual(LineStyle.None, cell.CellFormat.Borders.Left.LineStyle);
+            if (right) Assert.NotEqual(LineStyle.None, cell.CellFormat.Borders.Right.LineStyle);
+        }
     }
 
     #endregion
@@ -124,15 +144,20 @@ public class SetBorderWordTableHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
-            { "borderType", "all" },
-            { "width", 2.0 }
+            { "borderTop", true },
+            { "lineWidth", 2.0 }
         });
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("border", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var table = doc.Sections[0].Body.Tables[0];
+            var cell = table.Rows[0].Cells[0];
+            Assert.Equal(2.0, cell.CellFormat.Borders.Top.LineWidth);
+        }
     }
 
     [Fact]
@@ -142,15 +167,21 @@ public class SetBorderWordTableHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
-            { "borderType", "all" },
-            { "color", "#FF0000" }
+            { "borderTop", true },
+            { "lineColor", "FF0000" }
         });
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("border", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var table = doc.Sections[0].Body.Tables[0];
+            var cell = table.Rows[0].Cells[0];
+            Assert.Equal(Color.FromArgb(255, 0, 0).ToArgb(),
+                cell.CellFormat.Borders.Top.Color.ToArgb());
+        }
     }
 
     #endregion

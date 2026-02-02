@@ -25,6 +25,7 @@ public class DeletePptTableHandlerTests : PptHandlerTestBase
     public void Execute_DeletesTable()
     {
         var pres = CreatePresentationWithTable(2, 2);
+        var initialCount = pres.Slides[0].Shapes.Count;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -33,10 +34,10 @@ public class DeletePptTableHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("deleted", result.Message);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+
+        Assert.Equal(initialCount - 1, pres.Slides[0].Shapes.Count);
     }
 
     [Fact]
@@ -59,6 +60,7 @@ public class DeletePptTableHandlerTests : PptHandlerTestBase
     public void Execute_ReturnsSlideIndex()
     {
         var pres = CreatePresentationWithTable(2, 2);
+        var initialCount = pres.Slides[0].Shapes.Count;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -67,9 +69,8 @@ public class DeletePptTableHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("slide 0", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(initialCount - 1, pres.Slides[0].Shapes.Count);
     }
 
     #endregion
@@ -99,6 +100,7 @@ public class DeletePptTableHandlerTests : PptHandlerTestBase
     {
         var pres = CreatePresentationWithSlides(3);
         var tableShapeIndex = AddTableToSlide(pres, 2, 2, 2);
+        var initialCount = pres.Slides[2].Shapes.Count;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -108,9 +110,8 @@ public class DeletePptTableHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("slide 2", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(initialCount - 1, pres.Slides[2].Shapes.Count);
     }
 
     #endregion

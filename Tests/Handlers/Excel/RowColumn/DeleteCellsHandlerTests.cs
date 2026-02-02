@@ -37,9 +37,8 @@ public class DeleteCellsHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains(range, result.Message);
+        Assert.IsType<SuccessResult>(res);
+        AssertModified(context);
     }
 
     #endregion
@@ -59,10 +58,13 @@ public class DeleteCellsHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("deleted", result.Message);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+
+        Assert.Null(GetCellValue(workbook, 0, 0));
+        Assert.Null(GetCellValue(workbook, 0, 1));
+        Assert.Null(GetCellValue(workbook, 1, 0));
+        Assert.Null(GetCellValue(workbook, 1, 1));
     }
 
     [Fact]
@@ -78,9 +80,12 @@ public class DeleteCellsHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("C3:D4", result.Message);
+        AssertCellValue(workbook, 0, 0, "Data 1");
+        AssertCellValue(workbook, 0, 1, "Data 2");
+        AssertCellValue(workbook, 1, 0, "Data 3");
+        AssertCellValue(workbook, 1, 1, "Data 4");
     }
 
     [Fact]
@@ -96,9 +101,12 @@ public class DeleteCellsHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("left", result.Message);
+        Assert.Null(GetCellValue(workbook, 0, 0));
+        Assert.Null(GetCellValue(workbook, 0, 1));
+        Assert.Null(GetCellValue(workbook, 1, 0));
+        Assert.Null(GetCellValue(workbook, 1, 1));
     }
 
     #endregion
@@ -118,9 +126,12 @@ public class DeleteCellsHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("up", result.Message);
+        Assert.Null(GetCellValue(workbook, 0, 0));
+        Assert.Null(GetCellValue(workbook, 1, 0));
+        AssertCellValue(workbook, 0, 1, "Data 2");
+        AssertCellValue(workbook, 1, 1, "Data 4");
     }
 
     [Fact]
@@ -136,9 +147,12 @@ public class DeleteCellsHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("left", result.Message);
+        AssertCellValue(workbook, 0, 0, "Data 2");
+        Assert.Null(GetCellValue(workbook, 0, 1));
+        AssertCellValue(workbook, 1, 0, "Data 4");
+        Assert.Null(GetCellValue(workbook, 1, 1));
     }
 
     [Fact]
@@ -154,9 +168,10 @@ public class DeleteCellsHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("deleted", result.Message);
+        Assert.Null(GetCellValue(workbook, 0, 0));
+        Assert.Null(GetCellValue(workbook, 0, 1));
     }
 
     #endregion
@@ -167,7 +182,8 @@ public class DeleteCellsHandlerTests : ExcelHandlerTestBase
     public void Execute_WithSheetIndex_DeletesFromCorrectSheet()
     {
         var workbook = CreateWorkbookWithSheets(3);
-        workbook.Worksheets[1].Cells["A1"].PutValue("Data");
+        workbook.Worksheets[1].Cells["A1"].PutValue("SheetData1");
+        workbook.Worksheets[1].Cells["A2"].PutValue("SheetData2");
         var context = CreateContext(workbook);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -178,9 +194,10 @@ public class DeleteCellsHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("deleted", result.Message);
+        Assert.Null(workbook.Worksheets[1].Cells[0, 0].Value);
+        Assert.Null(workbook.Worksheets[1].Cells[1, 0].Value);
     }
 
     [Fact]
@@ -196,9 +213,10 @@ public class DeleteCellsHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("deleted", result.Message);
+        Assert.Null(GetCellValue(workbook, 0, 0));
+        Assert.Null(GetCellValue(workbook, 0, 1));
     }
 
     #endregion
@@ -292,9 +310,10 @@ public class DeleteCellsHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("invalid", result.Message);
+        Assert.Null(GetCellValue(workbook, 0, 0));
+        Assert.Null(GetCellValue(workbook, 0, 1));
     }
 
     #endregion

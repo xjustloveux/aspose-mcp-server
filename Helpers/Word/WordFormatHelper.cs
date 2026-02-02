@@ -73,7 +73,6 @@ public static class WordFormatHelper
         if (color is { R: 255, G: 165, B: 0 }) return "Orange";
         if (color is { R: 128, G: 0, B: 128 }) return "Purple";
 
-        // Try to get the named color
         if (color.IsKnownColor)
             return color.Name;
 

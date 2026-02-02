@@ -13,6 +13,7 @@ namespace AsposeMcpServer.Tests.Integration.Workflows;
 ///     Integration tests for PowerPoint presentation workflows.
 /// </summary>
 [Trait("Category", "Integration")]
+[Collection("Workflow")]
 public class PowerPointWorkflowTests : TestBase
 {
     private readonly PptImageTool _imageTool;
@@ -26,7 +27,7 @@ public class PowerPointWorkflowTests : TestBase
     /// </summary>
     public PowerPointWorkflowTests()
     {
-        var config = new SessionConfig { Enabled = true };
+        var config = new SessionConfig { Enabled = true, TempDirectory = Path.Combine(TestDir, "temp") };
         _sessionManager = new DocumentSessionManager(config);
         var tempFileManager = new TempFileManager(config);
         _sessionTool = new DocumentSessionTool(_sessionManager, tempFileManager, new StdioSessionIdentityAccessor());
@@ -52,23 +53,18 @@ public class PowerPointWorkflowTests : TestBase
     [Fact]
     public void PowerPoint_OpenEditSave_Workflow()
     {
-        // Step 1: Create and open presentation
         var originalPath = CreatePowerPointDocument();
         var openResult = _sessionTool.Execute("open", originalPath);
         var openData = GetResultData<OpenSessionResult>(openResult);
 
-        // Step 2: Add a slide
         _slideTool.Execute("add", sessionId: openData.SessionId);
 
-        // Step 3: Save presentation
         var outputPath = CreateTestFilePath("ppt_workflow_output.pptx");
         _sessionTool.Execute("save", sessionId: openData.SessionId, outputPath: outputPath);
 
-        // Step 4: Verify changes persisted
         using var savedPres = new Presentation(outputPath);
         Assert.True(savedPres.Slides.Count >= 2);
 
-        // Step 5: Close session
         _sessionTool.Execute("close", sessionId: openData.SessionId);
     }
 
@@ -82,17 +78,14 @@ public class PowerPointWorkflowTests : TestBase
     [Fact]
     public void PowerPoint_AddSlides_Workflow()
     {
-        // Step 1: Create and open presentation
         var originalPath = CreatePowerPointDocument();
         var openResult = _sessionTool.Execute("open", originalPath);
         var openData = GetResultData<OpenSessionResult>(openResult);
 
-        // Step 2: Add multiple slides
         _slideTool.Execute("add", sessionId: openData.SessionId);
         _slideTool.Execute("add", sessionId: openData.SessionId);
         _slideTool.Execute("add", sessionId: openData.SessionId);
 
-        // Step 3: Save and verify
         var outputPath = CreateTestFilePath("ppt_slides_workflow.pptx");
         _sessionTool.Execute("save", sessionId: openData.SessionId, outputPath: outputPath);
 
@@ -108,15 +101,12 @@ public class PowerPointWorkflowTests : TestBase
     [Fact]
     public void PowerPoint_GetSlideInfo_Workflow()
     {
-        // Step 1: Create and open presentation
         var originalPath = CreatePowerPointDocument();
         var openResult = _sessionTool.Execute("open", originalPath);
         var openData = GetResultData<OpenSessionResult>(openResult);
 
-        // Step 2: Get slide info
         var infoResult = _slideTool.Execute("get_info", sessionId: openData.SessionId, slideIndex: 0);
 
-        // Step 3: Verify result
         Assert.NotNull(infoResult);
 
         _sessionTool.Execute("close", sessionId: openData.SessionId);
@@ -132,15 +122,12 @@ public class PowerPointWorkflowTests : TestBase
     [Fact]
     public void PowerPoint_InsertImages_Workflow()
     {
-        // Step 1: Create a test image
         var imagePath = CreateTestImage();
 
-        // Step 2: Create and open presentation
         var originalPath = CreatePowerPointDocument();
         var openResult = _sessionTool.Execute("open", originalPath);
         var openData = GetResultData<OpenSessionResult>(openResult);
 
-        // Step 3: Add image to slide
         _imageTool.Execute("add",
             sessionId: openData.SessionId,
             slideIndex: 0,
@@ -150,7 +137,6 @@ public class PowerPointWorkflowTests : TestBase
             width: 200,
             height: 150);
 
-        // Step 4: Save and verify
         var outputPath = CreateTestFilePath("ppt_image_workflow.pptx");
         _sessionTool.Execute("save", sessionId: openData.SessionId, outputPath: outputPath);
 
@@ -169,13 +155,11 @@ public class PowerPointWorkflowTests : TestBase
     [Fact]
     public void PowerPoint_ExtractAllImages_Workflow()
     {
-        // Step 1: Create presentation with image
         var imagePath = CreateTestImage();
         var originalPath = CreatePowerPointDocument();
         var openResult = _sessionTool.Execute("open", originalPath);
         var openData = GetResultData<OpenSessionResult>(openResult);
 
-        // Add image first
         _imageTool.Execute("add",
             sessionId: openData.SessionId,
             slideIndex: 0,
@@ -186,7 +170,6 @@ public class PowerPointWorkflowTests : TestBase
         _sessionTool.Execute("save", sessionId: openData.SessionId, outputPath: savedPath);
         _sessionTool.Execute("close", sessionId: openData.SessionId);
 
-        // Step 2: Re-open saved presentation and extract images
         var openResult2 = _sessionTool.Execute("open", savedPath);
         var openData2 = GetResultData<OpenSessionResult>(openResult2);
 
@@ -201,7 +184,6 @@ public class PowerPointWorkflowTests : TestBase
                 openData2.SessionId,
                 outputDir: outputDir);
 
-            // Step 3: Verify extraction result
             Assert.NotNull(extractResult);
         }
         catch (ExternalException ex) when (ex.Message.Contains("GDI+"))
@@ -222,15 +204,12 @@ public class PowerPointWorkflowTests : TestBase
     [Fact]
     public void PowerPoint_GetLayouts_Workflow()
     {
-        // Step 1: Create and open presentation
         var originalPath = CreatePowerPointDocument();
         var openResult = _sessionTool.Execute("open", originalPath);
         var openData = GetResultData<OpenSessionResult>(openResult);
 
-        // Step 2: Get layouts
         var layoutResult = _layoutTool.Execute("get_layouts", sessionId: openData.SessionId);
 
-        // Step 3: Verify result
         Assert.NotNull(layoutResult);
 
         _sessionTool.Execute("close", sessionId: openData.SessionId);
@@ -242,18 +221,15 @@ public class PowerPointWorkflowTests : TestBase
     [Fact]
     public void PowerPoint_SetLayout_Workflow()
     {
-        // Step 1: Create and open presentation
         var originalPath = CreatePowerPointDocument();
         var openResult = _sessionTool.Execute("open", originalPath);
         var openData = GetResultData<OpenSessionResult>(openResult);
 
-        // Step 2: Set layout for slide
         _layoutTool.Execute("set",
             sessionId: openData.SessionId,
             slideIndex: 0,
             layout: "Blank");
 
-        // Step 3: Save and verify
         var outputPath = CreateTestFilePath("ppt_layout_workflow.pptx");
         _sessionTool.Execute("save", sessionId: openData.SessionId, outputPath: outputPath);
 

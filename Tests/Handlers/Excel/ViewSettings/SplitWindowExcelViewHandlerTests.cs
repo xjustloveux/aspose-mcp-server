@@ -60,9 +60,15 @@ public class SplitWindowExcelViewHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("split", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Cells))
+        {
+            var ws = workbook.Worksheets[0];
+            var expectedCell = CellsHelper.CellIndexToName(5, 3);
+            Assert.Equal(expectedCell, ws.ActiveCell);
+        }
+
         AssertModified(context);
     }
 
@@ -78,10 +84,15 @@ public class SplitWindowExcelViewHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("split", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("row 10", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Cells))
+        {
+            var ws = workbook.Worksheets[0];
+            var expectedCell = CellsHelper.CellIndexToName(10, 0);
+            Assert.Equal(expectedCell, ws.ActiveCell);
+        }
+
         AssertModified(context);
     }
 
@@ -97,9 +108,14 @@ public class SplitWindowExcelViewHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("removed", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Cells))
+        {
+            var ws = workbook.Worksheets[0];
+            Assert.NotEqual(PaneStateType.Split, ws.PaneState);
+        }
+
         AssertModified(context);
     }
 
@@ -117,9 +133,14 @@ public class SplitWindowExcelViewHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("split", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Cells))
+        {
+            var ws = workbook.Worksheets[1];
+            var expectedCell = CellsHelper.CellIndexToName(5, 0);
+            Assert.Equal(expectedCell, ws.ActiveCell);
+        }
     }
 
     #endregion

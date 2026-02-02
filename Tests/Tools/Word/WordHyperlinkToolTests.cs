@@ -1,5 +1,6 @@
 ﻿using Aspose.Words;
 using Aspose.Words.Fields;
+using AsposeMcpServer.Results;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Results.Word.Hyperlink;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -96,8 +97,10 @@ public class WordHyperlinkToolTests : WordTestBase
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.docx");
         var result = _tool.Execute(operation, docPath, outputPath: outputPath,
             text: "Link", url: "https://example.com", paragraphIndex: 0);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Hyperlink added", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
+        var doc = new Document(outputPath);
+        var hyperlinks = doc.Range.Fields.Where(f => f.Type == FieldType.FieldHyperlink).ToList();
+        Assert.True(hyperlinks.Count > 0 || doc.GetText().Contains("Link"));
     }
 
     [Fact]
@@ -142,8 +145,7 @@ public class WordHyperlinkToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("add", sessionId: sessionId,
             text: "Session Hyperlink", url: "https://session-link.com", paragraphIndex: 0);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.Contains("Session Hyperlink", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
 
         var doc = SessionManager.GetDocument<Document>(sessionId);
         var hyperlinks = doc.Range.Fields.Where(f => f.Type == FieldType.FieldHyperlink).ToList();

@@ -41,12 +41,14 @@ public class EditPptImageHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+        {
+            var pictureFrame = GetPictureFrames(pres.Slides[0])[0];
+            Assert.Equal(200f, pictureFrame.X);
+            Assert.Equal(300f, pictureFrame.Y);
+        }
 
-        Assert.Contains("updated", result.Message, StringComparison.OrdinalIgnoreCase);
-        var pictureFrame = GetPictureFrames(pres.Slides[0])[0];
-        Assert.Equal(200f, pictureFrame.X);
-        Assert.Equal(300f, pictureFrame.Y);
         AssertModified(context);
     }
 
@@ -65,12 +67,15 @@ public class EditPptImageHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+        {
+            var pictureFrame = GetPictureFrames(pres.Slides[0])[0];
+            Assert.Equal(250f, pictureFrame.Width);
+            Assert.Equal(150f, pictureFrame.Height);
+        }
 
-        Assert.Contains("updated", result.Message, StringComparison.OrdinalIgnoreCase);
-        var pictureFrame = GetPictureFrames(pres.Slides[0])[0];
-        Assert.Equal(250f, pictureFrame.Width);
-        Assert.Equal(150f, pictureFrame.Height);
+        AssertModified(context);
     }
 
     [Fact]
@@ -78,6 +83,7 @@ public class EditPptImageHandlerTests : PptHandlerTestBase
     {
         var tempImagePath = CreateTempImageFile();
         var pres = CreatePresentationWithImage();
+        var originalImage = GetPictureFrames(pres.Slides[0])[0].PictureFormat.Picture.Image;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -88,9 +94,14 @@ public class EditPptImageHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+        {
+            var pictureFrame = GetPictureFrames(pres.Slides[0])[0];
+            Assert.NotEqual(originalImage, pictureFrame.PictureFormat.Picture.Image);
+        }
 
-        Assert.Contains("updated", result.Message, StringComparison.OrdinalIgnoreCase);
+        AssertModified(context);
     }
 
     #endregion

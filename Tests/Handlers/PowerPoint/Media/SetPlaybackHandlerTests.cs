@@ -38,9 +38,7 @@ public class SetPlaybackHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("updated", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
         Assert.Equal(AudioPlayModePreset.Auto, audioFrame.PlayMode);
         Assert.Equal(AudioVolumeMode.Medium, audioFrame.Volume);
         AssertModified(context);
@@ -62,10 +60,9 @@ public class SetPlaybackHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("onclick", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
         Assert.Equal(AudioPlayModePreset.OnClick, audioFrame.PlayMode);
+        AssertModified(context);
     }
 
     [Fact]
@@ -84,10 +81,9 @@ public class SetPlaybackHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("loop=true", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
         Assert.True(audioFrame.PlayLoopMode);
+        AssertModified(context);
     }
 
     [Theory]
@@ -110,10 +106,9 @@ public class SetPlaybackHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains(volumeStr, result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
         Assert.Equal(expectedMode, audioFrame.Volume);
+        AssertModified(context);
     }
 
     #endregion
@@ -162,6 +157,73 @@ public class SetPlaybackHandlerTests : PptHandlerTestBase
 
     #endregion
 
+    #region Video FullScreenMode
+
+    [Fact]
+    public void Execute_WithFullScreenModeTrue_SetsFullScreenOnVideo()
+    {
+        var tempFile = CreateTempVideoFile();
+        var pres = CreatePresentationWithVideo(tempFile);
+        var context = CreateContext(pres);
+        var videoFrame = GetVideoFrame(pres);
+        var shapeIndex = GetShapeIndex(pres.Slides[0], videoFrame);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "shapeIndex", shapeIndex },
+            { "fullScreenMode", true }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        Assert.IsType<SuccessResult>(res);
+        Assert.True(videoFrame.FullScreenMode);
+        AssertModified(context);
+    }
+
+    [Fact]
+    public void Execute_WithFullScreenModeFalse_SetsFullScreenOffOnVideo()
+    {
+        var tempFile = CreateTempVideoFile();
+        var pres = CreatePresentationWithVideo(tempFile);
+        var context = CreateContext(pres);
+        var videoFrame = GetVideoFrame(pres);
+        videoFrame.FullScreenMode = true;
+        var shapeIndex = GetShapeIndex(pres.Slides[0], videoFrame);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "shapeIndex", shapeIndex },
+            { "fullScreenMode", false }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        Assert.IsType<SuccessResult>(res);
+        Assert.False(videoFrame.FullScreenMode);
+        AssertModified(context);
+    }
+
+    [Fact]
+    public void Execute_WithoutFullScreenMode_DoesNotChangeFullScreen()
+    {
+        var tempFile = CreateTempVideoFile();
+        var pres = CreatePresentationWithVideo(tempFile);
+        var context = CreateContext(pres);
+        var videoFrame = GetVideoFrame(pres);
+        var originalValue = videoFrame.FullScreenMode;
+        var shapeIndex = GetShapeIndex(pres.Slides[0], videoFrame);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "shapeIndex", shapeIndex },
+            { "playMode", "auto" }
+        });
+
+        _handler.Execute(context, parameters);
+
+        Assert.Equal(originalValue, videoFrame.FullScreenMode);
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private static Presentation CreatePresentationWithAudio(string audioPath)
@@ -184,6 +246,21 @@ public class SetPlaybackHandlerTests : PptHandlerTestBase
             if (slide.Shapes[i] == shape)
                 return i;
         return -1;
+    }
+
+    private static Presentation CreatePresentationWithVideo(string videoPath)
+    {
+        var pres = new Presentation();
+        var slide = pres.Slides[0];
+        using var videoStream = new FileStream(videoPath, FileMode.Open, FileAccess.Read);
+        var video = pres.Videos.AddVideo(videoStream, LoadingStreamBehavior.ReadStreamAndRelease);
+        slide.Shapes.AddVideoFrame(50, 50, 320, 240, video);
+        return pres;
+    }
+
+    private static IVideoFrame GetVideoFrame(Presentation pres)
+    {
+        return pres.Slides[0].Shapes.OfType<IVideoFrame>().First();
     }
 
     #endregion

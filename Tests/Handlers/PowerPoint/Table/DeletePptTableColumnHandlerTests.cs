@@ -49,6 +49,8 @@ public class DeletePptTableColumnHandlerTests : PptHandlerTestBase
     public void Execute_DeletesColumn()
     {
         var pres = CreatePresentationWithTable(3, 3);
+        var table = pres.Slides[0].Shapes[0] as ITable;
+        var initialColCount = table!.Columns.Count;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -58,10 +60,10 @@ public class DeletePptTableColumnHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("deleted", result.Message);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+
+        Assert.Equal(initialColCount - 1, table.Columns.Count);
     }
 
     [Fact]
@@ -86,6 +88,7 @@ public class DeletePptTableColumnHandlerTests : PptHandlerTestBase
     public void Execute_ReturnsDeletedColumnIndex()
     {
         var pres = CreatePresentationWithTable(3, 3);
+        var table = pres.Slides[0].Shapes[0] as ITable;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -95,9 +98,9 @@ public class DeletePptTableColumnHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Column 1", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.NotNull(table);
+        Assert.Equal(2, table.Columns.Count);
     }
 
     #endregion
@@ -129,6 +132,7 @@ public class DeletePptTableColumnHandlerTests : PptHandlerTestBase
     public void Execute_DeletesFirstColumn()
     {
         var pres = CreatePresentationWithTable(3, 3);
+        var table = pres.Slides[0].Shapes[0] as ITable;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -138,15 +142,16 @@ public class DeletePptTableColumnHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Column 0", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.NotNull(table);
+        Assert.Equal(2, table.Columns.Count);
     }
 
     [Fact]
     public void Execute_DeletesLastColumn()
     {
         var pres = CreatePresentationWithTable(3, 3);
+        var table = pres.Slides[0].Shapes[0] as ITable;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -156,9 +161,9 @@ public class DeletePptTableColumnHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Column 2", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.NotNull(table);
+        Assert.Equal(2, table.Columns.Count);
     }
 
     #endregion

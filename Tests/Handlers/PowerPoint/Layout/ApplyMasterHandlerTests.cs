@@ -25,6 +25,7 @@ public class ApplyMasterHandlerTests : PptHandlerTestBase
     {
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
+        var expectedLayout = pres.Masters[0].LayoutSlides[0];
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "masterIndex", 0 },
@@ -33,9 +34,9 @@ public class ApplyMasterHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode()) Assert.Equal(expectedLayout, pres.Slides[0].LayoutSlide);
 
-        Assert.Contains("applied", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -44,6 +45,7 @@ public class ApplyMasterHandlerTests : PptHandlerTestBase
     {
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
+        var expectedLayout = pres.Masters[0].LayoutSlides[0];
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "masterIndex", 0 },
@@ -53,10 +55,13 @@ public class ApplyMasterHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+        {
+            Assert.Equal(expectedLayout, pres.Slides[0].LayoutSlide);
+            Assert.Equal(expectedLayout, pres.Slides[1].LayoutSlide);
+        }
 
-        Assert.Contains("2", result.Message);
-        Assert.Contains("applied", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 

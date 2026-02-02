@@ -1,6 +1,8 @@
+using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.HeaderFooter;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
+using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.HeaderFooter;
 
@@ -32,9 +34,17 @@ public class SetFooterLineHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("line", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var footer = doc.FirstSection.HeadersFooters[HeaderFooterType.FooterPrimary];
+            Assert.NotNull(footer);
+            var para = footer.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().LastOrDefault();
+            Assert.NotNull(para);
+            Assert.Equal(LineStyle.Single, para.ParagraphFormat.Borders.Top.LineStyle);
+        }
+
         AssertModified(context);
     }
 
@@ -51,9 +61,16 @@ public class SetFooterLineHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("line", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var footer = doc.FirstSection.HeadersFooters[HeaderFooterType.FooterPrimary];
+            Assert.NotNull(footer);
+            var para = footer.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().LastOrDefault();
+            Assert.NotNull(para);
+            Assert.Equal(1.5, para.ParagraphFormat.Borders.Top.LineWidth);
+        }
     }
 
     #endregion

@@ -82,9 +82,21 @@ public class EditPdfTableHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            var tables = page.Paragraphs.OfType<Aspose.Pdf.Table>().ToList();
+            var editedCell = tables[1].Rows[0].Cells[0];
+            var cellText = editedCell.Paragraphs.OfType<TextFragment>().FirstOrDefault();
+            Assert.NotNull(cellText);
+            Assert.Equal("Updated Second Table", cellText.Text);
 
-        Assert.Contains("Edited table 1", result.Message);
+            var untouchedCell = tables[0].Rows[0].Cells[0];
+            var untouchedText = untouchedCell.Paragraphs.OfType<TextFragment>().FirstOrDefault();
+            Assert.NotNull(untouchedText);
+            Assert.Equal("Table 0 Cell 0,0", untouchedText.Text);
+        }
+
         AssertModified(context);
     }
 
@@ -107,9 +119,16 @@ public class EditPdfTableHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            var table = document.Pages[1].Paragraphs.OfType<Aspose.Pdf.Table>().First();
+            var cellText = table.Rows[0].Cells[0].Paragraphs.OfType<TextFragment>().FirstOrDefault();
+            Assert.NotNull(cellText);
+            Assert.Equal("Updated First Cell", cellText.Text);
+        }
 
-        Assert.Contains("Edited table 0", result.Message);
+        AssertModified(context);
     }
 
     #endregion
@@ -132,9 +151,15 @@ public class EditPdfTableHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            var table = document.Pages[1].Paragraphs.OfType<Aspose.Pdf.Table>().First();
+            var cellText = table.Rows[1].Cells[1].Paragraphs.OfType<TextFragment>().FirstOrDefault();
+            Assert.NotNull(cellText);
+            Assert.Equal("Updated Value", cellText.Text);
+        }
 
-        Assert.Contains("edited", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -218,9 +243,14 @@ public class EditPdfTableHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("edited", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            var table = document.Pages[1].Paragraphs.OfType<Aspose.Pdf.Table>().First();
+            var cellText = table.Rows[0].Cells[0].Paragraphs.OfType<TextFragment>().FirstOrDefault();
+            Assert.NotNull(cellText);
+            Assert.Equal("Cell 0,0", cellText.Text);
+        }
     }
 
     [SkippableFact]
@@ -239,9 +269,14 @@ public class EditPdfTableHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("edited", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            var table = document.Pages[1].Paragraphs.OfType<Aspose.Pdf.Table>().First();
+            var cellText = table.Rows[0].Cells[0].Paragraphs.OfType<TextFragment>().FirstOrDefault();
+            Assert.NotNull(cellText);
+            Assert.Equal("Cell 0,0", cellText.Text);
+        }
     }
 
     [SkippableFact]
@@ -259,9 +294,14 @@ public class EditPdfTableHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("edited", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            var table = document.Pages[1].Paragraphs.OfType<Aspose.Pdf.Table>().First();
+            var cellText = table.Rows[0].Cells[0].Paragraphs.OfType<TextFragment>().FirstOrDefault();
+            Assert.NotNull(cellText);
+            Assert.Equal("Cell 0,0", cellText.Text);
+        }
     }
 
     [SkippableFact]
@@ -279,9 +319,14 @@ public class EditPdfTableHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("edited", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            var table = document.Pages[1].Paragraphs.OfType<Aspose.Pdf.Table>().First();
+            var cellText = table.Rows[0].Cells[0].Paragraphs.OfType<TextFragment>().FirstOrDefault();
+            Assert.NotNull(cellText);
+            Assert.Equal("Cell 0,0", cellText.Text);
+        }
     }
 
     #endregion
@@ -332,9 +377,20 @@ public class EditPdfTableHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            var tables = page.Paragraphs.OfType<Aspose.Pdf.Table>().ToList();
+            var lastTableCell = tables[1].Rows[0].Cells[0].Paragraphs.OfType<TextFragment>().FirstOrDefault();
+            Assert.NotNull(lastTableCell);
+            Assert.Equal("Updated Last Table", lastTableCell.Text);
 
-        Assert.Contains("Edited table 1", result.Message);
+            var firstTableCell = tables[0].Rows[0].Cells[0].Paragraphs.OfType<TextFragment>().FirstOrDefault();
+            Assert.NotNull(firstTableCell);
+            Assert.Equal("Table 0", firstTableCell.Text);
+        }
+
+        AssertModified(context);
     }
 
     #endregion

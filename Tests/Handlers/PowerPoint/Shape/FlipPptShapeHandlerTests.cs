@@ -36,9 +36,9 @@ public class FlipPptShapeHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("0", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        var shape = pres.Slides[0].Shapes[0];
+        Assert.Equal(NullableBool.True, shape.Frame.FlipH);
     }
 
     #endregion
@@ -60,10 +60,9 @@ public class FlipPptShapeHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("flipped", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("H=True", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        var shape = pres.Slides[0].Shapes[0];
+        Assert.Equal(NullableBool.True, shape.Frame.FlipH);
         AssertModified(context);
     }
 
@@ -82,10 +81,9 @@ public class FlipPptShapeHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("flipped", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("V=True", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        var shape = pres.Slides[0].Shapes[0];
+        Assert.Equal(NullableBool.True, shape.Frame.FlipV);
         AssertModified(context);
     }
 
@@ -105,10 +103,10 @@ public class FlipPptShapeHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("H=True", result.Message);
-        Assert.Contains("V=True", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        var shape = pres.Slides[0].Shapes[0];
+        Assert.Equal(NullableBool.True, shape.Frame.FlipH);
+        Assert.Equal(NullableBool.True, shape.Frame.FlipV);
         AssertModified(context);
     }
 
@@ -131,9 +129,9 @@ public class FlipPptShapeHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("H=False", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        var shape = pres.Slides[0].Shapes[0];
+        Assert.Equal(NullableBool.False, shape.Frame.FlipH);
         AssertModified(context);
     }
 
@@ -152,9 +150,9 @@ public class FlipPptShapeHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("V=False", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        var shape = pres.Slides[0].Shapes[0];
+        Assert.Equal(NullableBool.False, shape.Frame.FlipV);
         AssertModified(context);
     }
 

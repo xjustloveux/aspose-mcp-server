@@ -1,5 +1,6 @@
 ﻿using Aspose.Words;
 using Aspose.Words.Drawing;
+using AsposeMcpServer.Results;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Results.Word.Shape;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -69,9 +70,11 @@ public class WordShapeToolTests : WordTestBase
         var docPath = CreateWordDocument("test_add_line.docx");
         var outputPath = CreateTestFilePath("test_add_line_output.docx");
         var result = _tool.Execute("add_line", docPath, outputPath: outputPath);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Successfully inserted line", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         Assert.True(File.Exists(outputPath));
+        var doc = new Document(outputPath);
+        var shapes = doc.GetChildNodes(NodeType.Shape, true);
+        Assert.True(shapes.Count > 0);
     }
 
     [Fact]
@@ -80,9 +83,12 @@ public class WordShapeToolTests : WordTestBase
         var docPath = CreateWordDocument("test_add_textbox.docx");
         var outputPath = CreateTestFilePath("test_add_textbox_output.docx");
         var result = _tool.Execute("add_textbox", docPath, outputPath: outputPath, text: "Test TextBox");
-        var data = GetResultData<SuccessResult>(result);
-        Assert.Contains("TextBox", data.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         Assert.True(File.Exists(outputPath));
+        var doc = new Document(outputPath);
+        var textboxes = doc.GetChildNodes(NodeType.Shape, true).Cast<Shape>()
+            .Where(s => s.ShapeType == ShapeType.TextBox).ToList();
+        Assert.True(textboxes.Count > 0);
     }
 
     [Fact]
@@ -92,9 +98,11 @@ public class WordShapeToolTests : WordTestBase
         var outputPath = CreateTestFilePath("test_add_chart_output.docx");
         var chartData = new[] { new[] { "A", "B" }, new[] { "1", "2" } };
         var result = _tool.Execute("add_chart", docPath, outputPath: outputPath, chartType: "column", data: chartData);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Successfully added chart", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         Assert.True(File.Exists(outputPath));
+        var doc = new Document(outputPath);
+        var shapes = doc.GetChildNodes(NodeType.Shape, true);
+        Assert.True(shapes.Count > 0);
     }
 
     #endregion
@@ -155,8 +163,6 @@ public class WordShapeToolTests : WordTestBase
         var docPath = CreateWordDocument("test_session_add_shape.docx");
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("add", sessionId: sessionId, shapeType: "Rectangle", width: 100, height: 50);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.Contains("Rectangle", data.Message, StringComparison.OrdinalIgnoreCase);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
 
@@ -188,8 +194,6 @@ public class WordShapeToolTests : WordTestBase
         var docPath = CreateWordDocument("test_session_add_line.docx");
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("add_line", sessionId: sessionId);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Successfully inserted line", data.Message);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
 
@@ -205,8 +209,6 @@ public class WordShapeToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("add_textbox", sessionId: sessionId, text: "Session TextBox",
             positionX: 100, positionY: 100, textboxWidth: 200, textboxHeight: 100);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.Contains("TextBox", data.Message, StringComparison.OrdinalIgnoreCase);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
 
@@ -225,8 +227,6 @@ public class WordShapeToolTests : WordTestBase
 
         var result = _tool.Execute("add_chart", sessionId: sessionId, chartType: "column", data: chartData);
 
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Successfully added chart", data.Message);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);

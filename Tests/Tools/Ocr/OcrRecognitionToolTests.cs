@@ -159,7 +159,7 @@ public class OcrRecognitionToolTests : TestBase
         Assert.Equal(outputPath, data.OutputPath);
         Assert.Equal("docx", data.TargetFormat);
         Assert.True(data.PageCount >= 0);
-        Assert.NotNull(data.Message);
+        Assert.True(File.Exists(outputPath));
     }
 
     #endregion

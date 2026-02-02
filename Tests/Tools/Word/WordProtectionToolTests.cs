@@ -1,4 +1,5 @@
 ﻿using Aspose.Words;
+using AsposeMcpServer.Results;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Word;
@@ -28,10 +29,9 @@ public class WordProtectionToolTests : WordTestBase
         var outputPath = CreateTestFilePath("test_protect_output.docx");
         var result = _tool.Execute("protect", docPath, outputPath: outputPath,
             password: "test123", protectionType: "ReadOnly");
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         var doc = new Document(outputPath);
         Assert.Equal(ProtectionType.ReadOnly, doc.ProtectionType);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.Contains("ReadOnly", data.Message);
     }
 
     [Fact]
@@ -44,10 +44,9 @@ public class WordProtectionToolTests : WordTestBase
 
         var outputPath = CreateTestFilePath("test_unprotect_output.docx");
         var result = _tool.Execute("unprotect", docPath, outputPath: outputPath, password: "test123");
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         var resultDoc = new Document(outputPath);
         Assert.Equal(ProtectionType.NoProtection, resultDoc.ProtectionType);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Protection removed successfully", data.Message);
     }
 
     [Fact]
@@ -55,8 +54,9 @@ public class WordProtectionToolTests : WordTestBase
     {
         var docPath = CreateWordDocument("test_unprotect_notprotected.docx");
         var result = _tool.Execute("unprotect", docPath);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.Contains("not protected", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
+        var doc = new Document(docPath);
+        Assert.Equal(ProtectionType.NoProtection, doc.ProtectionType);
     }
 
     #endregion
@@ -71,11 +71,11 @@ public class WordProtectionToolTests : WordTestBase
     {
         var docPath = CreateWordDocument($"test_case_{operation}.docx");
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.docx");
-        var result = _tool.Execute(operation, docPath, outputPath: outputPath,
+        _tool.Execute(operation, docPath, outputPath: outputPath,
             password: "test123", protectionType: "ReadOnly");
-        var data = GetResultData<SuccessResult>(result);
-        Assert.Contains("protected", data.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(File.Exists(outputPath));
+        var doc = new Document(outputPath);
+        Assert.Equal(ProtectionType.ReadOnly, doc.ProtectionType);
     }
 
     [Fact]
@@ -98,8 +98,7 @@ public class WordProtectionToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("protect", sessionId: sessionId,
             password: "session123", protectionType: "ReadOnly");
-        var data = GetResultData<SuccessResult>(result);
-        Assert.Contains("ReadOnly", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         Assert.Equal(ProtectionType.ReadOnly, sessionDoc.ProtectionType);
     }
@@ -114,8 +113,7 @@ public class WordProtectionToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("unprotect", sessionId: sessionId, password: "test123");
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Protection removed", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         Assert.Equal(ProtectionType.NoProtection, sessionDoc.ProtectionType);
     }

@@ -1,3 +1,5 @@
+using System.Drawing;
+using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Background;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -32,9 +34,13 @@ public class SetPptBackgroundHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        var slide = pres.Slides[0];
+        Assert.Equal(BackgroundType.OwnBackground, slide.Background.Type);
+        Assert.Equal(FillType.Solid, slide.Background.FillFormat.FillType);
+        if (!IsEvaluationMode())
+            Assert.Equal(Color.FromArgb(255, 0, 0), slide.Background.FillFormat.SolidFillColor.Color);
 
-        Assert.Contains("background", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -51,9 +57,13 @@ public class SetPptBackgroundHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        var slide = pres.Slides[1];
+        Assert.Equal(BackgroundType.OwnBackground, slide.Background.Type);
+        Assert.Equal(FillType.Solid, slide.Background.FillFormat.FillType);
+        if (!IsEvaluationMode())
+            Assert.Equal(Color.FromArgb(0, 255, 0), slide.Background.FillFormat.SolidFillColor.Color);
 
-        Assert.Contains("slide 1", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -70,10 +80,15 @@ public class SetPptBackgroundHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        foreach (var slide in pres.Slides)
+        {
+            Assert.Equal(BackgroundType.OwnBackground, slide.Background.Type);
+            Assert.Equal(FillType.Solid, slide.Background.FillFormat.FillType);
+            if (!IsEvaluationMode())
+                Assert.Equal(Color.FromArgb(0, 0, 255), slide.Background.FillFormat.SolidFillColor.Color);
+        }
 
-        Assert.Contains("all", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("3", result.Message);
         AssertModified(context);
     }
 

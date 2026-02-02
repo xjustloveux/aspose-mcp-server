@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.List;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -39,9 +40,12 @@ public class AddWordListHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains($"Number format: {format}", result.Message);
+        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().ToList();
+        var listPara = paragraphs.First(p => p.ListFormat.IsListItem);
+        Assert.NotNull(listPara.ListFormat.List);
+        AssertModified(context);
     }
 
     #endregion
@@ -65,9 +69,11 @@ public class AddWordListHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Item count: 2", result.Message);
+        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().ToList();
+        var listItems = paragraphs.Where(p => p.ListFormat.IsListItem).ToList();
+        Assert.Equal(2, listItems.Count);
         AssertModified(context);
     }
 
@@ -88,9 +94,11 @@ public class AddWordListHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("List added successfully", result.Message);
+        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().ToList();
+        var listItems = paragraphs.Where(p => p.ListFormat.IsListItem).ToList();
+        Assert.Equal(3, listItems.Count);
         AssertModified(context);
     }
 
@@ -107,9 +115,12 @@ public class AddWordListHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Item count: 2", result.Message);
+        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().ToList();
+        var listItems = paragraphs.Where(p => p.ListFormat.IsListItem).ToList();
+        Assert.Equal(2, listItems.Count);
+        AssertModified(context);
     }
 
     [SkippableFact]
@@ -148,9 +159,12 @@ public class AddWordListHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Type: bullet", result.Message);
+        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().ToList();
+        var listPara = paragraphs.First(p => p.ListFormat.IsListItem);
+        Assert.NotNull(listPara.ListFormat.List);
+        AssertModified(context);
     }
 
     [Fact]
@@ -167,9 +181,12 @@ public class AddWordListHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Type: number", result.Message);
+        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().ToList();
+        var listPara = paragraphs.First(p => p.ListFormat.IsListItem);
+        Assert.NotNull(listPara.ListFormat.List);
+        AssertModified(context);
     }
 
     [Fact]
@@ -187,10 +204,12 @@ public class AddWordListHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Type: custom", result.Message);
-        Assert.Contains("Bullet character: ★", result.Message);
+        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().ToList();
+        var listPara = paragraphs.First(p => p.ListFormat.IsListItem);
+        Assert.NotNull(listPara.ListFormat.List);
+        AssertModified(context);
     }
 
     #endregion
@@ -203,7 +222,6 @@ public class AddWordListHandlerTests : WordHandlerTestBase
         var doc = CreateEmptyDocument();
         var context = CreateContext(doc);
 
-        // First, add an initial list
         var items1 = new JsonArray { "Item 1", "Item 2" };
         var params1 = CreateParameters(new Dictionary<string, object?>
         {
@@ -211,7 +229,6 @@ public class AddWordListHandlerTests : WordHandlerTestBase
         });
         _handler.Execute(context, params1);
 
-        // Then continue with more items
         var items2 = new JsonArray { "Item 3", "Item 4" };
         var params2 = CreateParameters(new Dictionary<string, object?>
         {
@@ -221,9 +238,12 @@ public class AddWordListHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, params2);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("continuing previous list", result.Message);
+        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().ToList();
+        var listItems = paragraphs.Where(p => p.ListFormat.IsListItem).ToList();
+        Assert.Equal(4, listItems.Count);
+        AssertModified(context);
     }
 
     [Fact]
@@ -240,9 +260,12 @@ public class AddWordListHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("List added successfully", result.Message);
+        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().ToList();
+        var listItems = paragraphs.Where(p => p.ListFormat.IsListItem).ToList();
+        Assert.Single(listItems);
+        AssertModified(context);
     }
 
     #endregion

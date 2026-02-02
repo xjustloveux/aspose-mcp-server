@@ -34,9 +34,9 @@ public class SetFooterHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("footer settings updated", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+            Assert.True(presentation.Slides[0].HeaderFooterManager.IsFooterVisible);
         AssertModified(context);
     }
 
@@ -52,9 +52,10 @@ public class SetFooterHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("footer settings updated", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+            Assert.True(presentation.Slides[0].HeaderFooterManager.IsDateTimeVisible);
+        AssertModified(context);
     }
 
     [Fact]
@@ -69,9 +70,10 @@ public class SetFooterHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("footer settings updated", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+            Assert.True(presentation.Slides[0].HeaderFooterManager.IsSlideNumberVisible);
+        AssertModified(context);
     }
 
     [Fact]
@@ -86,9 +88,12 @@ public class SetFooterHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("3 slide", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+            foreach (var slide in presentation.Slides)
+                Assert.True(slide.HeaderFooterManager.IsFooterVisible,
+                    $"Footer should be visible on slide {presentation.Slides.IndexOf(slide)}");
+        AssertModified(context);
     }
 
     [Fact]
@@ -104,9 +109,16 @@ public class SetFooterHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+        {
+            Assert.True(presentation.Slides[0].HeaderFooterManager.IsFooterVisible,
+                "Footer should be visible on slide 0");
+            Assert.True(presentation.Slides[2].HeaderFooterManager.IsFooterVisible,
+                "Footer should be visible on slide 2");
+        }
 
-        Assert.Contains("2 slide", result.Message);
+        AssertModified(context);
     }
 
     #endregion

@@ -38,9 +38,7 @@ public class DuplicatePptSlideHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("duplicated", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
         Assert.Equal(initialCount + 1, pres.Slides.Count);
         AssertModified(context);
     }
@@ -87,10 +85,9 @@ public class DuplicatePptSlideHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("duplicated", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
         Assert.Equal(4, pres.Slides.Count);
+        AssertModified(context);
     }
 
     #endregion
@@ -164,9 +161,9 @@ public class DuplicatePptSlideHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("3", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(6, pres.Slides.Count);
+        AssertModified(context);
     }
 
     [Fact]
@@ -181,9 +178,9 @@ public class DuplicatePptSlideHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("6", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(6, pres.Slides.Count);
+        AssertModified(context);
     }
 
     #endregion

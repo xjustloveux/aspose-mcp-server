@@ -44,6 +44,7 @@ public class SetRowHeightWordTableHandler : OperationHandlerBase<Document>
             throw new ArgumentException($"Row index {p.RowIndex} out of range");
 
         var row = table.Rows[p.RowIndex];
+        var isAuto = p.HeightRule.Equals("auto", StringComparison.OrdinalIgnoreCase);
         row.RowFormat.HeightRule = p.HeightRule.ToLower() switch
         {
             "auto" => HeightRule.Auto,
@@ -51,7 +52,9 @@ public class SetRowHeightWordTableHandler : OperationHandlerBase<Document>
             "exactly" => HeightRule.Exactly,
             _ => HeightRule.AtLeast
         };
-        row.RowFormat.Height = p.RowHeight;
+
+        if (!isAuto)
+            row.RowFormat.Height = p.RowHeight;
 
         MarkModified(context);
 

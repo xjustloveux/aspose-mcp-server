@@ -1,5 +1,6 @@
 using Aspose.Slides;
-using AsposeMcpServer.Core.ShapeDetailProviders;
+using AsposeMcpServer.Core.ShapeDetailProviders.Details;
+using AsposeMcpServer.Core.ShapeDetailProviders.Providers;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Core.ShapeDetailProviders;
@@ -50,8 +51,10 @@ public class VideoFrameDetailProviderTests : TestBase
         var videoFrame = slide.Shapes.AddVideoFrame(10, 10, 100, 100, video);
 
         var details = _provider.GetDetails(videoFrame, presentation);
+        var videoDetails = Assert.IsType<VideoFrameDetails>(details);
 
-        Assert.NotNull(details);
+        Assert.False(string.IsNullOrEmpty(videoDetails.PlayMode));
+        Assert.False(string.IsNullOrEmpty(videoDetails.Volume));
     }
 
     [Fact]

@@ -32,8 +32,8 @@ public class DeletePdfImageHandlerTests : PdfHandlerTestBase
     {
         SkipInEvaluationMode(AsposeLibraryType.Pdf);
         var doc = CreateDocumentWithImage();
-        var imageCount = doc.Pages[1].Resources.Images.Count;
-        Assert.True(imageCount > 0, "Document should have at least one image");
+        var initialImageCount = doc.Pages[1].Resources.Images.Count;
+        Assert.True(initialImageCount > 0, "Document should have at least one image");
 
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -44,10 +44,8 @@ public class DeletePdfImageHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Deleted image", result.Message);
-        Assert.Contains("from page 1", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(initialImageCount - 1, doc.Pages[1].Resources.Images.Count);
         AssertModified(context);
     }
 
@@ -56,15 +54,14 @@ public class DeletePdfImageHandlerTests : PdfHandlerTestBase
     {
         SkipInEvaluationMode(AsposeLibraryType.Pdf);
         var doc = CreateDocumentWithImage();
+        var initialImageCount = doc.Pages[1].Resources.Images.Count;
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Deleted image 1", result.Message);
-        Assert.Contains("page 1", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(initialImageCount - 1, doc.Pages[1].Resources.Images.Count);
         AssertModified(context);
     }
 

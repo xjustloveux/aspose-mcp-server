@@ -1,6 +1,6 @@
-using System.Text.Json;
 using Aspose.Slides;
-using AsposeMcpServer.Core.ShapeDetailProviders;
+using AsposeMcpServer.Core.ShapeDetailProviders.Details;
+using AsposeMcpServer.Core.ShapeDetailProviders.Providers;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Core.ShapeDetailProviders;
@@ -47,8 +47,10 @@ public class GroupShapeDetailProviderTests : TestBase
         var group = slide.Shapes.AddGroupShape();
 
         var details = _provider.GetDetails(group, presentation);
+        var groupDetails = Assert.IsType<GroupShapeDetails>(details);
 
-        Assert.NotNull(details);
+        Assert.Equal(0, groupDetails.ChildCount);
+        Assert.Null(groupDetails.Children);
     }
 
     [Fact]
@@ -85,15 +87,11 @@ public class GroupShapeDetailProviderTests : TestBase
         slide.Shapes.Remove(rect2);
 
         var details = _provider.GetDetails(group, presentation);
-        Assert.NotNull(details);
+        var groupDetails = Assert.IsType<GroupShapeDetails>(details);
 
-        var json = JsonSerializer.Serialize(details);
-        using var doc = JsonDocument.Parse(json);
-        var root = doc.RootElement;
-
-        Assert.Equal(2, root.GetProperty("childCount").GetInt32());
-        Assert.True(root.TryGetProperty("children", out var children));
-        Assert.Equal(2, children.GetArrayLength());
+        Assert.Equal(2, groupDetails.ChildCount);
+        Assert.NotNull(groupDetails.Children);
+        Assert.Equal(2, groupDetails.Children.Count);
     }
 
     [Fact]
@@ -104,13 +102,35 @@ public class GroupShapeDetailProviderTests : TestBase
         var group = slide.Shapes.AddGroupShape();
 
         var details = _provider.GetDetails(group, presentation);
-        Assert.NotNull(details);
+        var groupDetails = Assert.IsType<GroupShapeDetails>(details);
 
-        var json = JsonSerializer.Serialize(details);
-        using var doc = JsonDocument.Parse(json);
-        var root = doc.RootElement;
+        Assert.Equal(0, groupDetails.ChildCount);
+        Assert.Null(groupDetails.Children);
+    }
 
-        Assert.Equal(0, root.GetProperty("childCount").GetInt32());
-        Assert.Equal(JsonValueKind.Null, root.GetProperty("children").ValueKind);
+    [Fact]
+    public void GetDetails_WithNamedChildShapes_ShouldIncludeNames()
+    {
+        using var presentation = new Presentation();
+        var slide = presentation.Slides[0];
+
+        var group = slide.Shapes.AddGroupShape();
+        group.X = 10;
+        group.Y = 10;
+        group.Width = 220;
+        group.Height = 100;
+
+        var rect = slide.Shapes.AddAutoShape(ShapeType.Rectangle, 10, 10, 100, 100);
+        rect.Name = "MyRectangle";
+
+        group.Shapes.AddClone(rect);
+        slide.Shapes.Remove(rect);
+
+        var details = _provider.GetDetails(group, presentation);
+        var groupDetails = Assert.IsType<GroupShapeDetails>(details);
+
+        Assert.NotNull(groupDetails.Children);
+        Assert.Single(groupDetails.Children);
+        Assert.Equal("MyRectangle", groupDetails.Children[0].Name);
     }
 }

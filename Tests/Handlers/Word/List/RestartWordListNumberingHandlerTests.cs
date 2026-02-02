@@ -3,6 +3,7 @@ using Aspose.Words.Lists;
 using AsposeMcpServer.Handlers.Word.List;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
+using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.List;
 
@@ -39,9 +40,14 @@ public class RestartWordListNumberingHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains($"Start at: {startAt}", result.Message);
+        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+        var para = paragraphs[0];
+        Assert.True(para.ListFormat.IsListItem);
+        var level = para.ListFormat.ListLevelNumber;
+        Assert.Equal(startAt, para.ListFormat.List.ListLevels[level].StartAt);
+        AssertModified(context);
     }
 
     #endregion
@@ -61,11 +67,18 @@ public class RestartWordListNumberingHandlerTests : WordHandlerTestBase
             { "paragraphIndex", index }
         });
 
+        var originalListId = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList()[index]
+            .ListFormat.List.ListId;
+
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("restarted successfully", result.Message);
+        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+        var para = paragraphs[index];
+        Assert.True(para.ListFormat.IsListItem);
+        Assert.NotEqual(originalListId, para.ListFormat.List.ListId);
+        AssertModified(context);
     }
 
     #endregion
@@ -103,11 +116,17 @@ public class RestartWordListNumberingHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 1 }
         });
 
+        var originalListId = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList()[1]
+            .ListFormat.List.ListId;
+
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("List numbering restarted successfully", result.Message);
+        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+        var para = paragraphs[1];
+        Assert.True(para.ListFormat.IsListItem);
+        Assert.NotEqual(originalListId, para.ListFormat.List.ListId);
         AssertModified(context);
     }
 
@@ -123,9 +142,12 @@ public class RestartWordListNumberingHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Paragraph index: 1", result.Message);
+        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+        Assert.True(paragraphs[1].ListFormat.IsListItem);
+        Assert.NotNull(paragraphs[1].ListFormat.List);
+        AssertModified(context);
     }
 
     [Fact]
@@ -140,9 +162,13 @@ public class RestartWordListNumberingHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Start at: 1", result.Message);
+        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+        var para = paragraphs[0];
+        var level = para.ListFormat.ListLevelNumber;
+        Assert.Equal(1, para.ListFormat.List.ListLevels[level].StartAt);
+        AssertModified(context);
     }
 
     [Fact]
@@ -157,9 +183,12 @@ public class RestartWordListNumberingHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Paragraphs affected:", result.Message);
+        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+        var listParas = paragraphs.Where(p => p.ListFormat.IsListItem).ToList();
+        Assert.True(listParas.Count > 0);
+        AssertModified(context);
     }
 
     [Fact]
@@ -172,11 +201,16 @@ public class RestartWordListNumberingHandlerTests : WordHandlerTestBase
             { "paragraphIndex", 0 }
         });
 
+        var originalListId = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList()[0]
+            .ListFormat.List.ListId;
+
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("New list ID:", result.Message);
+        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+        Assert.NotEqual(originalListId, paragraphs[0].ListFormat.List.ListId);
+        AssertModified(context);
     }
 
     #endregion

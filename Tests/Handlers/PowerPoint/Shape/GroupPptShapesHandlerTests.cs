@@ -41,10 +41,10 @@ public class GroupPptShapesHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("3", result.Message);
+        Assert.IsType<SuccessResult>(res);
         Assert.Single(pres.Slides[0].Shapes);
+        var groupShape = Assert.IsType<GroupShape>(pres.Slides[0].Shapes[0]);
+        Assert.Equal(3, groupShape.Shapes.Count);
         AssertModified(context);
     }
 
@@ -88,9 +88,9 @@ public class GroupPptShapesHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("shapeIndex", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Single(pres.Slides[0].Shapes);
+        Assert.IsType<GroupShape>(pres.Slides[0].Shapes[0]);
     }
 
     #endregion
@@ -111,10 +111,10 @@ public class GroupPptShapesHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Grouped", result.Message);
-        Assert.Contains("2", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Single(pres.Slides[0].Shapes);
+        var groupShape = Assert.IsType<GroupShape>(pres.Slides[0].Shapes[0]);
+        Assert.Equal(2, groupShape.Shapes.Count);
         AssertModified(context);
     }
 
@@ -160,20 +160,22 @@ public class GroupPptShapesHandlerTests : PptHandlerTestBase
     public void Execute_WithSlideIndex_GroupsOnSpecificSlide()
     {
         var pres = CreatePresentationWithSlides(3);
-        pres.Slides[1].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 100, 100);
-        pres.Slides[1].Shapes.AddAutoShape(ShapeType.Ellipse, 200, 100, 100, 100);
+        var shape1 = pres.Slides[1].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 100, 100);
+        var shape2 = pres.Slides[1].Shapes.AddAutoShape(ShapeType.Ellipse, 200, 100, 100, 100);
+        var idx1 = pres.Slides[1].Shapes.IndexOf(shape1);
+        var idx2 = pres.Slides[1].Shapes.IndexOf(shape2);
+        var countBefore = pres.Slides[1].Shapes.Count;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "slideIndex", 1 },
-            { "shapeIndices", TwoShapeIndices }
+            { "shapeIndices", new[] { idx1, idx2 } }
         });
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Grouped", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(countBefore - 1, pres.Slides[1].Shapes.Count);
         Assert.Contains(pres.Slides[1].Shapes.OfType<IGroupShape>(), s => s != null);
     }
 

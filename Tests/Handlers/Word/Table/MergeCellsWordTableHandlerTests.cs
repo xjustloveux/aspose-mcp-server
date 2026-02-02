@@ -1,4 +1,5 @@
 using Aspose.Words;
+using Aspose.Words.Tables;
 using AsposeMcpServer.Handlers.Word.Table;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -60,9 +61,20 @@ public class MergeCellsWordTableHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("merged", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var table = doc.Sections[0].Body.Tables[0];
+            var topLeft = table.Rows[0].Cells[0];
+            Assert.Equal(CellMerge.First, topLeft.CellFormat.HorizontalMerge);
+            Assert.Equal(CellMerge.First, topLeft.CellFormat.VerticalMerge);
+            var topRight = table.Rows[0].Cells[1];
+            Assert.Equal(CellMerge.Previous, topRight.CellFormat.HorizontalMerge);
+            var bottomLeft = table.Rows[1].Cells[0];
+            Assert.Equal(CellMerge.Previous, bottomLeft.CellFormat.VerticalMerge);
+        }
+
         AssertModified(context);
     }
 
@@ -81,9 +93,15 @@ public class MergeCellsWordTableHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("merged", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var table = doc.Sections[0].Body.Tables[0];
+            Assert.Equal(CellMerge.First, table.Rows[0].Cells[0].CellFormat.HorizontalMerge);
+            Assert.Equal(CellMerge.Previous, table.Rows[0].Cells[1].CellFormat.HorizontalMerge);
+            Assert.Equal(CellMerge.Previous, table.Rows[0].Cells[2].CellFormat.HorizontalMerge);
+        }
     }
 
     [Fact]
@@ -101,9 +119,15 @@ public class MergeCellsWordTableHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("merged", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var table = doc.Sections[0].Body.Tables[0];
+            Assert.Equal(CellMerge.First, table.Rows[0].Cells[0].CellFormat.VerticalMerge);
+            Assert.Equal(CellMerge.Previous, table.Rows[1].Cells[0].CellFormat.VerticalMerge);
+            Assert.Equal(CellMerge.Previous, table.Rows[2].Cells[0].CellFormat.VerticalMerge);
+        }
     }
 
     #endregion

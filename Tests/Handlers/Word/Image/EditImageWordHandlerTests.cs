@@ -32,16 +32,16 @@ public class EditImageWordHandlerTests : WordHandlerTestBase
         {
             { "imageIndex", 0 },
             { "width", 200.0 },
-            { "height", 150.0 }
+            { "height", 100.0 }
         });
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("edited", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("width", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("height", result.Message, StringComparison.OrdinalIgnoreCase);
+        var shape = GetFirstImage(doc);
+        Assert.Equal(200.0, shape.Width, 1);
+        Assert.Equal(100.0, shape.Height, 1);
         AssertModified(context);
     }
 
@@ -59,9 +59,8 @@ public class EditImageWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("alt text", result.Message, StringComparison.OrdinalIgnoreCase);
         var shape = GetFirstImage(doc);
         Assert.Equal("New alt text", shape.AlternativeText);
     }
@@ -80,9 +79,8 @@ public class EditImageWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("title", result.Message, StringComparison.OrdinalIgnoreCase);
         var shape = GetFirstImage(doc);
         Assert.Equal("New title", shape.Title);
     }
@@ -101,9 +99,8 @@ public class EditImageWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("hyperlink", result.Message, StringComparison.OrdinalIgnoreCase);
         var shape = GetFirstImage(doc);
         Assert.Equal("https://example.com", shape.HRef);
     }

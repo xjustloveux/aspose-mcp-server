@@ -23,7 +23,7 @@ public class EvaluationLimitTests : TestBase
     /// </summary>
     public EvaluationLimitTests()
     {
-        var config = new SessionConfig { Enabled = true };
+        var config = new SessionConfig { Enabled = true, TempDirectory = Path.Combine(TestDir, "temp") };
         _sessionManager = new DocumentSessionManager(config);
         var tempFileManager = new TempFileManager(config);
         _sessionTool = new DocumentSessionTool(_sessionManager, tempFileManager, new StdioSessionIdentityAccessor());
@@ -91,7 +91,6 @@ public class EvaluationLimitTests : TestBase
     [Fact]
     public void Evaluation_WordBasicOperations_WorksInEvaluationMode()
     {
-        // Opening and saving documents should work in evaluation mode
         var path = CreateWordDocument();
         var openResult = _sessionTool.Execute("open", path);
         var openData = GetResultData<OpenSessionResult>(openResult);

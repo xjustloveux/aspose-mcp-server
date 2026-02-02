@@ -1,3 +1,4 @@
+using Aspose.Pdf.Annotations;
 using AsposeMcpServer.Handlers.Pdf.Bookmark;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -33,9 +34,10 @@ public class AddPdfBookmarkHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("My Bookmark", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(1, doc.Outlines.Count);
+        Assert.Equal("My Bookmark", doc.Outlines[1].Title);
+        AssertModified(context);
     }
 
     [SkippableFact]
@@ -52,9 +54,12 @@ public class AddPdfBookmarkHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("page 3", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(1, doc.Outlines.Count);
+        Assert.Equal("Chapter", doc.Outlines[1].Title);
+        var action = Assert.IsType<GoToAction>(doc.Outlines[1].Action);
+        Assert.NotNull(action.Destination);
+        AssertModified(context);
     }
 
     [Theory]
@@ -73,9 +78,10 @@ public class AddPdfBookmarkHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Added bookmark", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(1, doc.Outlines.Count);
+        Assert.Equal($"Page {pageIndex}", doc.Outlines[1].Title);
+        AssertModified(context);
     }
 
     [Fact]

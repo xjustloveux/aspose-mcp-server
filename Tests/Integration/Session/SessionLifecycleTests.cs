@@ -8,6 +8,7 @@ namespace AsposeMcpServer.Tests.Integration.Session;
 ///     Integration tests for document session lifecycle management.
 /// </summary>
 [Trait("Category", "Integration")]
+[Collection("Session Integration")]
 public class SessionLifecycleTests : IntegrationTestBase
 {
     private readonly DocumentSessionManager _sessionManager;
@@ -18,7 +19,7 @@ public class SessionLifecycleTests : IntegrationTestBase
     /// </summary>
     public SessionLifecycleTests()
     {
-        var config = new SessionConfig { Enabled = true };
+        var config = new SessionConfig { Enabled = true, TempDirectory = Path.Combine(TestDir, "temp") };
         _sessionManager = new DocumentSessionManager(config);
         var tempFileManager = new TempFileManager(config);
         _sessionTool = new DocumentSessionTool(_sessionManager, tempFileManager, new StdioSessionIdentityAccessor());

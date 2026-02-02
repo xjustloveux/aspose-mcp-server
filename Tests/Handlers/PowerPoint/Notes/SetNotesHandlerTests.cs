@@ -33,9 +33,11 @@ public class SetNotesHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("notes set", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        var notesSlide = presentation.Slides[0].NotesSlideManager.NotesSlide;
+        Assert.NotNull(notesSlide);
+        if (!IsEvaluationMode())
+            Assert.Equal("Test speaker notes", notesSlide.NotesTextFrame.Text);
         AssertModified(context);
     }
 

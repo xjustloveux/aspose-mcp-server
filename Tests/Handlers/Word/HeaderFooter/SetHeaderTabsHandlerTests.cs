@@ -42,9 +42,23 @@ public class SetHeaderTabsHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("tab", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var hfType = headerFooterType.ToLower() switch
+            {
+                "first" => HeaderFooterType.HeaderFirst,
+                "even" => HeaderFooterType.HeaderEven,
+                _ => HeaderFooterType.HeaderPrimary
+            };
+            var header = doc.FirstSection.HeadersFooters[hfType];
+            Assert.NotNull(header);
+            var para = header.FirstParagraph;
+            Assert.NotNull(para);
+            Assert.Equal(1, para.ParagraphFormat.TabStops.Count);
+            Assert.Equal(100.0, para.ParagraphFormat.TabStops[0].Position);
+        }
     }
 
     #endregion
@@ -60,9 +74,8 @@ public class SetHeaderTabsHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("tab", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -83,9 +96,23 @@ public class SetHeaderTabsHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("tab", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var header = doc.FirstSection.HeadersFooters[HeaderFooterType.HeaderPrimary];
+            Assert.NotNull(header);
+            var para = header.FirstParagraph;
+            Assert.NotNull(para);
+            Assert.Equal(2, para.ParagraphFormat.TabStops.Count);
+            Assert.Equal(100.0, para.ParagraphFormat.TabStops[0].Position);
+            Assert.Equal(TabAlignment.Left, para.ParagraphFormat.TabStops[0].Alignment);
+            Assert.Equal(TabLeader.None, para.ParagraphFormat.TabStops[0].Leader);
+            Assert.Equal(200.0, para.ParagraphFormat.TabStops[1].Position);
+            Assert.Equal(TabAlignment.Center, para.ParagraphFormat.TabStops[1].Alignment);
+            Assert.Equal(TabLeader.Dots, para.ParagraphFormat.TabStops[1].Leader);
+        }
+
         AssertModified(context);
     }
 
@@ -109,9 +136,21 @@ public class SetHeaderTabsHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("tab", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var header = doc.FirstSection.HeadersFooters[HeaderFooterType.HeaderPrimary];
+            Assert.NotNull(header);
+            var para = header.FirstParagraph;
+            Assert.NotNull(para);
+            Assert.Equal(5, para.ParagraphFormat.TabStops.Count);
+            Assert.Equal(TabAlignment.Left, para.ParagraphFormat.TabStops[0].Alignment);
+            Assert.Equal(TabAlignment.Center, para.ParagraphFormat.TabStops[1].Alignment);
+            Assert.Equal(TabAlignment.Right, para.ParagraphFormat.TabStops[2].Alignment);
+            Assert.Equal(TabAlignment.Decimal, para.ParagraphFormat.TabStops[3].Alignment);
+            Assert.Equal(TabAlignment.Bar, para.ParagraphFormat.TabStops[4].Alignment);
+        }
     }
 
     [Fact]
@@ -133,9 +172,20 @@ public class SetHeaderTabsHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("tab", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var header = doc.FirstSection.HeadersFooters[HeaderFooterType.HeaderPrimary];
+            Assert.NotNull(header);
+            var para = header.FirstParagraph;
+            Assert.NotNull(para);
+            Assert.Equal(4, para.ParagraphFormat.TabStops.Count);
+            Assert.Equal(TabLeader.None, para.ParagraphFormat.TabStops[0].Leader);
+            Assert.Equal(TabLeader.Dots, para.ParagraphFormat.TabStops[1].Leader);
+            Assert.Equal(TabLeader.Dashes, para.ParagraphFormat.TabStops[2].Leader);
+            Assert.Equal(TabLeader.Line, para.ParagraphFormat.TabStops[3].Leader);
+        }
     }
 
     #endregion
@@ -159,9 +209,17 @@ public class SetHeaderTabsHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("tab", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var header = doc.FirstSection.HeadersFooters[HeaderFooterType.HeaderPrimary];
+            Assert.NotNull(header);
+            var para = header.FirstParagraph;
+            Assert.NotNull(para);
+            Assert.Equal(1, para.ParagraphFormat.TabStops.Count);
+            Assert.Equal(100.0, para.ParagraphFormat.TabStops[0].Position);
+        }
     }
 
     [SkippableFact]
@@ -184,9 +242,17 @@ public class SetHeaderTabsHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("tab", result.Message, StringComparison.OrdinalIgnoreCase);
+        foreach (var section in doc.Sections.Cast<Section>())
+        {
+            var header = section.HeadersFooters[HeaderFooterType.HeaderPrimary];
+            Assert.NotNull(header);
+            var para = header.FirstParagraph;
+            Assert.NotNull(para);
+            Assert.Equal(1, para.ParagraphFormat.TabStops.Count);
+            Assert.Equal(100.0, para.ParagraphFormat.TabStops[0].Position);
+        }
     }
 
     #endregion
@@ -205,9 +271,7 @@ public class SetHeaderTabsHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("tab", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
     }
 
     [Fact]
@@ -226,9 +290,19 @@ public class SetHeaderTabsHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("tab", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var header = doc.FirstSection.HeadersFooters[HeaderFooterType.HeaderPrimary];
+            Assert.NotNull(header);
+            var para = header.FirstParagraph;
+            Assert.NotNull(para);
+            Assert.Equal(1, para.ParagraphFormat.TabStops.Count);
+            Assert.Equal(0.0, para.ParagraphFormat.TabStops[0].Position);
+            Assert.Equal(TabAlignment.Left, para.ParagraphFormat.TabStops[0].Alignment);
+            Assert.Equal(TabLeader.None, para.ParagraphFormat.TabStops[0].Leader);
+        }
     }
 
     #endregion

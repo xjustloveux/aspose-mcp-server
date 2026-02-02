@@ -1,3 +1,4 @@
+using System.Drawing;
 using AsposeMcpServer.Handlers.Excel.ViewSettings;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -46,9 +47,16 @@ public class SetTabColorExcelViewHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("red", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Cells))
+        {
+            var tabColor = workbook.Worksheets[0].TabColor;
+            Assert.Equal(Color.Red.R, tabColor.R);
+            Assert.Equal(Color.Red.G, tabColor.G);
+            Assert.Equal(Color.Red.B, tabColor.B);
+        }
+
         AssertModified(context);
     }
 
@@ -66,9 +74,15 @@ public class SetTabColorExcelViewHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("blue", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Cells))
+        {
+            var tabColor = workbook.Worksheets[1].TabColor;
+            Assert.Equal(Color.Blue.R, tabColor.R);
+            Assert.Equal(Color.Blue.G, tabColor.G);
+            Assert.Equal(Color.Blue.B, tabColor.B);
+        }
     }
 
     [Fact]
@@ -83,9 +97,16 @@ public class SetTabColorExcelViewHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("#FF5733", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Cells))
+        {
+            var tabColor = workbook.Worksheets[0].TabColor;
+            Assert.Equal(0xFF, tabColor.R);
+            Assert.Equal(0x57, tabColor.G);
+            Assert.Equal(0x33, tabColor.B);
+        }
+
         AssertModified(context);
     }
 

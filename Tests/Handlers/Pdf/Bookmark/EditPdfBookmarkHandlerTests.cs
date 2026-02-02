@@ -78,9 +78,9 @@ public class EditPdfBookmarkHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Edited bookmark", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal("New Title", doc.Outlines[1].Title);
+        Assert.Equal(2, doc.Outlines.Count);
         AssertModified(context);
     }
 
@@ -97,9 +97,10 @@ public class EditPdfBookmarkHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("index 1", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal("Updated", doc.Outlines[1].Title);
+        Assert.Equal("Bookmark 2", doc.Outlines[2].Title);
+        AssertModified(context);
     }
 
     #endregion
@@ -119,9 +120,10 @@ public class EditPdfBookmarkHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Edited bookmark", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        var action = Assert.IsType<GoToAction>(doc.Outlines[1].Action);
+        Assert.NotNull(action.Destination);
+        AssertModified(context);
     }
 
     [Theory]
@@ -140,9 +142,10 @@ public class EditPdfBookmarkHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Edited bookmark", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        var action = Assert.IsType<GoToAction>(doc.Outlines[1].Action);
+        Assert.NotNull(action.Destination);
+        AssertModified(context);
     }
 
     #endregion

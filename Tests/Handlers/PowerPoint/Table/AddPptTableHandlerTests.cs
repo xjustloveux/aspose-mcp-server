@@ -34,18 +34,20 @@ public class AddPptTableHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Table added", result.Message);
-        Assert.Contains("3 rows", result.Message);
-        Assert.Contains("4 columns", result.Message);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+
+        var table = pres.Slides[0].Shapes[^1] as ITable;
+        Assert.NotNull(table);
+        Assert.Equal(3, table.Rows.Count);
+        Assert.Equal(4, table.Columns.Count);
     }
 
     [Fact]
     public void Execute_ReturnsShapeIndex()
     {
         var pres = CreateEmptyPresentation();
+        var initialShapeCount = pres.Slides[0].Shapes.Count;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -55,9 +57,11 @@ public class AddPptTableHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("shapeIndex", result.Message);
+        Assert.Equal(initialShapeCount + 1, pres.Slides[0].Shapes.Count);
+        var table = pres.Slides[0].Shapes[^1] as ITable;
+        Assert.NotNull(table);
     }
 
     [Fact]
@@ -104,6 +108,7 @@ public class AddPptTableHandlerTests : PptHandlerTestBase
     public void Execute_WithSlideIndex_AddsToCorrectSlide()
     {
         var pres = CreatePresentationWithSlides(3);
+        var initialShapeCount = pres.Slides[1].Shapes.Count;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -114,15 +119,20 @@ public class AddPptTableHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("slide 1", result.Message);
+        Assert.Equal(initialShapeCount + 1, pres.Slides[1].Shapes.Count);
+        var table = pres.Slides[1].Shapes[^1] as ITable;
+        Assert.NotNull(table);
+        Assert.Equal(2, table.Rows.Count);
+        Assert.Equal(2, table.Columns.Count);
     }
 
     [Fact]
     public void Execute_DefaultSlideIndex_AddsToFirstSlide()
     {
         var pres = CreatePresentationWithSlides(3);
+        var initialShapeCount = pres.Slides[0].Shapes.Count;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -132,9 +142,13 @@ public class AddPptTableHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("slide 0", result.Message);
+        Assert.Equal(initialShapeCount + 1, pres.Slides[0].Shapes.Count);
+        var table = pres.Slides[0].Shapes[^1] as ITable;
+        Assert.NotNull(table);
+        Assert.Equal(2, table.Rows.Count);
+        Assert.Equal(2, table.Columns.Count);
     }
 
     #endregion

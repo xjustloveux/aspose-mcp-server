@@ -1,3 +1,4 @@
+using Aspose.Pdf.Annotations;
 using AsposeMcpServer.Handlers.Pdf.Link;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -37,9 +38,10 @@ public class AddPdfLinkHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Link added", result.Message);
+        Assert.True(doc.Pages[1].Annotations.Count > 0);
+        AssertModified(context);
     }
 
     #endregion
@@ -59,9 +61,9 @@ public class AddPdfLinkHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Link added", result.Message);
+        Assert.True(doc.Pages[1].Annotations.Count > 0);
         AssertModified(context);
     }
 
@@ -78,9 +80,10 @@ public class AddPdfLinkHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("page 1", result.Message);
+        Assert.True(doc.Pages[1].Annotations.Count > 0);
+        AssertModified(context);
     }
 
     [Fact]
@@ -96,9 +99,12 @@ public class AddPdfLinkHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("https://test.com", result.Message);
+        Assert.True(doc.Pages[1].Annotations.Count > 0);
+        var linkAnnotation = doc.Pages[1].Annotations[1] as LinkAnnotation;
+        Assert.NotNull(linkAnnotation);
+        AssertModified(context);
     }
 
     [Fact]
@@ -114,9 +120,13 @@ public class AddPdfLinkHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Page: 2", result.Message);
+        Assert.True(doc.Pages[1].Annotations.Count > 0);
+        var linkAnnotation = doc.Pages[1].Annotations[1] as LinkAnnotation;
+        Assert.NotNull(linkAnnotation);
+        Assert.IsType<GoToAction>(linkAnnotation.Action);
+        AssertModified(context);
     }
 
     [Theory]
@@ -134,9 +144,10 @@ public class AddPdfLinkHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Link added", result.Message);
+        Assert.True(doc.Pages[pageIndex].Annotations.Count > 0);
+        AssertModified(context);
     }
 
     #endregion

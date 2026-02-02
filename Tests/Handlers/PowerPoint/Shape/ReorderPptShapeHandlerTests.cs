@@ -49,22 +49,23 @@ public class ReorderPptShapeHandlerTests : PptHandlerTestBase
     public void Execute_WithSlideIndex_ReordersOnSpecificSlide()
     {
         var pres = CreatePresentationWithSlides(3);
-        pres.Slides[1].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
+        var firstShape = pres.Slides[1].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         pres.Slides[1].Shapes.AddAutoShape(ShapeType.Ellipse, 200, 100, 200, 100);
+        var firstShapeName = firstShape.Name;
+        var fromIndex = pres.Slides[1].Shapes.IndexOf(firstShape);
+        var toIndex = fromIndex + 1;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "slideIndex", 1 },
-            { "shapeIndex", 0 },
-            { "toIndex", 1 }
+            { "shapeIndex", fromIndex },
+            { "toIndex", toIndex }
         });
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("0", result.Message);
-        Assert.Contains("1", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(firstShapeName, pres.Slides[1].Shapes[toIndex].Name);
         AssertModified(context);
     }
 
@@ -76,8 +77,9 @@ public class ReorderPptShapeHandlerTests : PptHandlerTestBase
     public void Execute_ReturnsIndicesInMessage()
     {
         var pres = CreatePresentationWithSlides(1);
-        pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
+        var firstShape = pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Ellipse, 200, 100, 200, 100);
+        var firstShapeName = firstShape.Name;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -88,10 +90,8 @@ public class ReorderPptShapeHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("0", result.Message);
-        Assert.Contains("1", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(firstShapeName, pres.Slides[0].Shapes[1].Name);
     }
 
     #endregion
@@ -102,9 +102,10 @@ public class ReorderPptShapeHandlerTests : PptHandlerTestBase
     public void Execute_ReordersShape()
     {
         var pres = CreatePresentationWithSlides(1);
-        pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
+        var firstShape = pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Ellipse, 200, 100, 200, 100);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Triangle, 300, 100, 200, 100);
+        var firstShapeName = firstShape.Name;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -115,9 +116,9 @@ public class ReorderPptShapeHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Z-order", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(firstShapeName, pres.Slides[0].Shapes[2].Name);
+        Assert.Equal(3, pres.Slides[0].Shapes.Count);
         AssertModified(context);
     }
 
@@ -132,6 +133,7 @@ public class ReorderPptShapeHandlerTests : PptHandlerTestBase
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Ellipse, 200, 100, 200, 100);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Triangle, 300, 100, 200, 100);
+        var movedShapeName = pres.Slides[0].Shapes[from].Name;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -142,10 +144,9 @@ public class ReorderPptShapeHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains(from.ToString(), result.Message);
-        Assert.Contains(to.ToString(), result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(movedShapeName, pres.Slides[0].Shapes[to].Name);
+        Assert.Equal(3, pres.Slides[0].Shapes.Count);
         AssertModified(context);
     }
 

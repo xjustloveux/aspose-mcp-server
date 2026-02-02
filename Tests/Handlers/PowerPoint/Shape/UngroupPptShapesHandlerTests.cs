@@ -38,10 +38,9 @@ public class UngroupPptShapesHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("3", result.Message);
+        Assert.IsType<SuccessResult>(res);
         Assert.Equal(3, pres.Slides[0].Shapes.Count);
+        Assert.DoesNotContain(pres.Slides[0].Shapes.OfType<IGroupShape>(), s => s != null);
     }
 
     #endregion
@@ -56,6 +55,7 @@ public class UngroupPptShapesHandlerTests : PptHandlerTestBase
         groupShape.Shapes.AddAutoShape(ShapeType.Rectangle, 0, 0, 100, 100);
         groupShape.Shapes.AddAutoShape(ShapeType.Ellipse, 100, 0, 100, 100);
         var groupIndex = pres.Slides[1].Shapes.IndexOf(groupShape);
+        var countBefore = pres.Slides[1].Shapes.Count;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -65,9 +65,8 @@ public class UngroupPptShapesHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("slide 1", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(countBefore + 1, pres.Slides[1].Shapes.Count);
         Assert.DoesNotContain(pres.Slides[1].Shapes.OfType<IGroupShape>(), s => s != null);
     }
 
@@ -91,9 +90,9 @@ public class UngroupPptShapesHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("2", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(2, pres.Slides[0].Shapes.Count);
+        Assert.DoesNotContain(pres.Slides[0].Shapes.OfType<IGroupShape>(), s => s != null);
     }
 
     #endregion
@@ -116,10 +115,9 @@ public class UngroupPptShapesHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Ungrouped", result.Message);
-        Assert.Contains("2", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(2, pres.Slides[0].Shapes.Count);
+        Assert.DoesNotContain(pres.Slides[0].Shapes.OfType<IGroupShape>(), s => s != null);
         AssertModified(context);
     }
 

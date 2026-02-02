@@ -1,3 +1,4 @@
+using Aspose.Pdf.Text;
 using AsposeMcpServer.Handlers.Pdf.Text;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -34,9 +35,14 @@ public class AddPdfTextHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            var absorber = new TextFragmentAbsorber("Positioned Text");
+            doc.Pages[1].Accept(absorber);
+            Assert.True(absorber.TextFragments.Count > 0);
+        }
 
-        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -57,10 +63,15 @@ public class AddPdfTextHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            var absorber = new TextFragmentAbsorber("Test Text");
+            doc.Pages[2].Accept(absorber);
+            Assert.True(absorber.TextFragments.Count > 0);
+        }
 
-        Assert.Contains("2", result.Message);
-        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
+        AssertModified(context);
     }
 
     #endregion
@@ -79,10 +90,14 @@ public class AddPdfTextHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            var absorber = new TextFragmentAbsorber("Hello World");
+            doc.Pages[1].Accept(absorber);
+            Assert.True(absorber.TextFragments.Count > 0);
+        }
 
-        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("1", result.Message);
         AssertModified(context);
     }
 
@@ -101,9 +116,14 @@ public class AddPdfTextHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            var absorber = new TextFragmentAbsorber(text);
+            doc.Pages[1].Accept(absorber);
+            Assert.True(absorber.TextFragments.Count > 0);
+        }
 
-        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -124,9 +144,14 @@ public class AddPdfTextHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            var absorber = new TextFragmentAbsorber("Page 2 Text");
+            doc.Pages[2].Accept(absorber);
+            Assert.True(absorber.TextFragments.Count > 0);
+        }
 
-        Assert.Contains("2", result.Message);
         AssertModified(context);
     }
 
@@ -146,9 +171,15 @@ public class AddPdfTextHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            var absorber = new TextFragmentAbsorber("Test");
+            doc.Pages[pageIndex].Accept(absorber);
+            Assert.True(absorber.TextFragments.Count > 0);
+        }
 
-        Assert.Contains(pageIndex.ToString(), result.Message);
+        AssertModified(context);
     }
 
     [Fact]
@@ -163,9 +194,15 @@ public class AddPdfTextHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            var absorber = new TextFragmentAbsorber("First Page");
+            doc.Pages[1].Accept(absorber);
+            Assert.True(absorber.TextFragments.Count > 0);
+        }
 
-        Assert.Contains("1", result.Message);
+        AssertModified(context);
     }
 
     #endregion
@@ -186,9 +223,14 @@ public class AddPdfTextHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            var absorber = new TextFragmentAbsorber("Styled Text");
+            doc.Pages[1].Accept(absorber);
+            Assert.True(absorber.TextFragments.Count > 0);
+        }
 
-        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -205,9 +247,14 @@ public class AddPdfTextHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            var absorber = new TextFragmentAbsorber("Colored Text");
+            doc.Pages[1].Accept(absorber);
+            Assert.True(absorber.TextFragments.Count > 0);
+        }
 
-        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 

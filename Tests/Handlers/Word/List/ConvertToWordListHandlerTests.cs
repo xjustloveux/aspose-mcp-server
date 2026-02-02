@@ -1,6 +1,8 @@
+using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.List;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
+using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.List;
 
@@ -38,9 +40,16 @@ public class ConvertToWordListHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains($"Number format: {format}", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+            Assert.True(paragraphs[0].ListFormat.IsListItem);
+            Assert.True(paragraphs[1].ListFormat.IsListItem);
+        }
+
+        AssertModified(context);
     }
 
     #endregion
@@ -64,9 +73,15 @@ public class ConvertToWordListHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains($"paragraph {start} to {end}", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+            for (var i = start; i <= end; i++) Assert.True(paragraphs[i].ListFormat.IsListItem);
+        }
+
+        AssertModified(context);
     }
 
     #endregion
@@ -86,9 +101,18 @@ public class ConvertToWordListHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("converted to list successfully", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+            for (var i = 0; i <= 2; i++)
+            {
+                Assert.True(paragraphs[i].ListFormat.IsListItem);
+                Assert.Equal(0, paragraphs[i].ListFormat.ListLevelNumber);
+            }
+        }
+
         AssertModified(context);
     }
 
@@ -105,9 +129,16 @@ public class ConvertToWordListHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("paragraph 0 to 2", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+            Assert.True(paragraphs[0].ListFormat.IsListItem);
+            Assert.True(paragraphs[2].ListFormat.IsListItem);
+        }
+
+        AssertModified(context);
     }
 
     [Fact]
@@ -123,9 +154,16 @@ public class ConvertToWordListHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Converted:", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+            var listItemCount = paragraphs.Take(3).Count(p => p.ListFormat.IsListItem);
+            Assert.Equal(3, listItemCount);
+        }
+
+        AssertModified(context);
     }
 
     [Fact]
@@ -141,9 +179,15 @@ public class ConvertToWordListHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("converted to list successfully", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+            Assert.True(paragraphs[0].ListFormat.IsListItem);
+        }
+
+        AssertModified(context);
     }
 
     #endregion
@@ -163,9 +207,16 @@ public class ConvertToWordListHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("List type: bullet", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+            Assert.True(paragraphs[0].ListFormat.IsListItem);
+            Assert.True(paragraphs[1].ListFormat.IsListItem);
+        }
+
+        AssertModified(context);
     }
 
     [Fact]
@@ -182,9 +233,16 @@ public class ConvertToWordListHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("List type: number", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+            Assert.True(paragraphs[0].ListFormat.IsListItem);
+            Assert.True(paragraphs[1].ListFormat.IsListItem);
+        }
+
+        AssertModified(context);
     }
 
     #endregion

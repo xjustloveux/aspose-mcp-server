@@ -47,24 +47,26 @@ public class LicenseManagerTests : IDisposable
     }
 
     [Fact]
-    public void SetLicense_WithDefaultConfig_ShouldNotThrow()
+    public void SetLicense_WithDefaultConfig_ShouldNotThrowAndRestoreConsole()
     {
         var config = ServerConfig.LoadFromArgs([]);
 
         var exception = Record.Exception(() => LicenseManager.SetLicense(config));
 
         Assert.Null(exception);
+        Assert.NotEqual(TextWriter.Null, Console.Out);
     }
 
     [Fact]
-    public void SetLicense_WithAllComponentsEnabled_ShouldSearchForLicenses()
+    public void SetLicense_WithAllComponentsEnabled_ShouldSearchForLicensesAndOutputResult()
     {
         var config = ServerConfig.LoadFromArgs(["--all"]);
 
         var exception = Record.Exception(() => LicenseManager.SetLicense(config));
 
-        // Should not throw even without a license file
         Assert.Null(exception);
+        var errorOutput = _consoleError.ToString();
+        Assert.False(string.IsNullOrEmpty(errorOutput), "Expected license status output on stderr");
     }
 
     [Fact]
@@ -75,50 +77,57 @@ public class LicenseManagerTests : IDisposable
         LicenseManager.SetLicense(config);
 
         var errorOutput = _consoleError.ToString();
-        // Should output something about license - either found or not found
         Assert.True(
             errorOutput.Contains("license", StringComparison.OrdinalIgnoreCase),
             "Expected output to mention 'license'");
     }
 
     [Fact]
-    public void SetLicense_WithWordOnly_ShouldNotThrow()
+    public void SetLicense_WithWordOnly_ShouldOutputLicenseStatus()
     {
         var config = ServerConfig.LoadFromArgs(["--word"]);
 
         var exception = Record.Exception(() => LicenseManager.SetLicense(config));
 
         Assert.Null(exception);
+        var errorOutput = _consoleError.ToString();
+        Assert.False(string.IsNullOrEmpty(errorOutput), "Expected license status output on stderr");
     }
 
     [Fact]
-    public void SetLicense_WithExcelOnly_ShouldNotThrow()
+    public void SetLicense_WithExcelOnly_ShouldOutputLicenseStatus()
     {
         var config = ServerConfig.LoadFromArgs(["--excel"]);
 
         var exception = Record.Exception(() => LicenseManager.SetLicense(config));
 
         Assert.Null(exception);
+        var errorOutput = _consoleError.ToString();
+        Assert.False(string.IsNullOrEmpty(errorOutput), "Expected license status output on stderr");
     }
 
     [Fact]
-    public void SetLicense_WithPowerPointOnly_ShouldNotThrow()
+    public void SetLicense_WithPowerPointOnly_ShouldOutputLicenseStatus()
     {
         var config = ServerConfig.LoadFromArgs(["--powerpoint"]);
 
         var exception = Record.Exception(() => LicenseManager.SetLicense(config));
 
         Assert.Null(exception);
+        var errorOutput = _consoleError.ToString();
+        Assert.False(string.IsNullOrEmpty(errorOutput), "Expected license status output on stderr");
     }
 
     [Fact]
-    public void SetLicense_WithPdfOnly_ShouldNotThrow()
+    public void SetLicense_WithPdfOnly_ShouldOutputLicenseStatus()
     {
         var config = ServerConfig.LoadFromArgs(["--pdf"]);
 
         var exception = Record.Exception(() => LicenseManager.SetLicense(config));
 
         Assert.Null(exception);
+        var errorOutput = _consoleError.ToString();
+        Assert.False(string.IsNullOrEmpty(errorOutput), "Expected license status output on stderr");
     }
 
     #endregion
@@ -135,7 +144,6 @@ public class LicenseManagerTests : IDisposable
 
         LicenseManager.SetLicense(config);
 
-        // Console.Out should be restored after SetLicense
         Assert.Same(_originalConsoleOut, Console.Out);
     }
 
@@ -147,7 +155,6 @@ public class LicenseManagerTests : IDisposable
         LicenseManager.SetLicense(config);
 
         var errorOutput = _consoleError.ToString();
-        // Should mention either license loaded or evaluation mode
         Assert.True(
             errorOutput.Contains("license", StringComparison.OrdinalIgnoreCase) ||
             errorOutput.Contains("evaluation", StringComparison.OrdinalIgnoreCase));

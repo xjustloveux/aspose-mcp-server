@@ -1,6 +1,7 @@
 using Aspose.Words;
 using Aspose.Words.Notes;
 using AsposeMcpServer.Handlers.Word.Note;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 
@@ -34,10 +35,11 @@ public class EditWordFootnoteHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("edited successfully", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Updated footnote text", result.Message);
+        var footnotes = WordNoteHelper.GetNotesFromDoc(doc, FootnoteType.Footnote);
+        Assert.Single(footnotes);
+        if (!IsEvaluationMode()) Assert.Contains("Updated footnote text", footnotes[0].ToString(SaveFormat.Text));
         AssertModified(context);
     }
 
@@ -54,9 +56,17 @@ public class EditWordFootnoteHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("edited successfully", result.Message, StringComparison.OrdinalIgnoreCase);
+        var footnotes = WordNoteHelper.GetNotesFromDoc(doc, FootnoteType.Footnote);
+        Assert.Equal(2, footnotes.Count);
+        if (!IsEvaluationMode())
+        {
+            Assert.Contains("First footnote", footnotes[0].ToString(SaveFormat.Text));
+            Assert.Contains("Edited second footnote", footnotes[1].ToString(SaveFormat.Text));
+        }
+
+        AssertModified(context);
     }
 
     [Fact]
@@ -72,10 +82,12 @@ public class EditWordFootnoteHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("edited successfully", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Edited by reference mark", result.Message);
+        var footnotes = WordNoteHelper.GetNotesFromDoc(doc, FootnoteType.Footnote);
+        Assert.Single(footnotes);
+        Assert.Equal("*", footnotes[0].ReferenceMark);
+        if (!IsEvaluationMode()) Assert.Contains("Edited by reference mark", footnotes[0].ToString(SaveFormat.Text));
         AssertModified(context);
     }
 

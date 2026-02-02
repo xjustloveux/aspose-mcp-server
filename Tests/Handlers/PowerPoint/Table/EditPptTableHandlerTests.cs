@@ -58,10 +58,12 @@ public class EditPptTableHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("updated", result.Message);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+
+        var table = pres.Slides[0].Shapes[0] as ITable;
+        Assert.NotNull(table);
+        Assert.Equal(200.0f, table.X, 0.1);
     }
 
     [Fact]
@@ -77,9 +79,11 @@ public class EditPptTableHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("slide 0", result.Message);
+        var table = pres.Slides[0].Shapes[0] as ITable;
+        Assert.NotNull(table);
+        Assert.Equal(200.0f, table.X, 0.1);
     }
 
     #endregion
@@ -144,10 +148,10 @@ public class EditPptTableHandlerTests : PptHandlerTestBase
 
     #endregion
 
-    #region Size Updates
+    #region Size Updates (Rejected)
 
     [Fact]
-    public void Execute_WithWidth_SetsWidth()
+    public void Execute_WithWidth_ThrowsArgumentException()
     {
         var pres = CreatePresentationWithTable(2, 2);
         var context = CreateContext(pres);
@@ -157,16 +161,12 @@ public class EditPptTableHandlerTests : PptHandlerTestBase
             { "width", 400.0f }
         });
 
-        var res = _handler.Execute(context, parameters);
-
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("updated", result.Message);
-        AssertModified(context);
+        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+        Assert.Contains("column widths", ex.Message);
     }
 
     [Fact]
-    public void Execute_WithHeight_SetsHeight()
+    public void Execute_WithHeight_ThrowsArgumentException()
     {
         var pres = CreatePresentationWithTable(2, 2);
         var context = CreateContext(pres);
@@ -176,16 +176,12 @@ public class EditPptTableHandlerTests : PptHandlerTestBase
             { "height", 200.0f }
         });
 
-        var res = _handler.Execute(context, parameters);
-
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("updated", result.Message);
-        AssertModified(context);
+        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+        Assert.Contains("row heights", ex.Message);
     }
 
     [Fact]
-    public void Execute_WithWidthAndHeight_SetsBothDimensions()
+    public void Execute_WithWidthAndHeight_ThrowsArgumentException()
     {
         var pres = CreatePresentationWithTable(2, 2);
         var context = CreateContext(pres);
@@ -196,12 +192,7 @@ public class EditPptTableHandlerTests : PptHandlerTestBase
             { "height", 180.0f }
         });
 
-        var res = _handler.Execute(context, parameters);
-
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("updated", result.Message);
-        AssertModified(context);
+        Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
     #endregion

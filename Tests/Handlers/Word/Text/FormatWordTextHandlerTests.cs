@@ -37,9 +37,8 @@ public class FormatWordTextHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("formatting", result.Message, StringComparison.OrdinalIgnoreCase);
         var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
         Assert.Equal(r, runs[0].Font.Color.R);
         Assert.Equal(g, runs[0].Font.Color.G);
@@ -121,9 +120,10 @@ public class FormatWordTextHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Run index", result.Message);
+        var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+        Assert.True(runs[runIndex].Font.Bold);
         AssertModified(context);
     }
 
@@ -148,9 +148,8 @@ public class FormatWordTextHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("formatting", result.Message, StringComparison.OrdinalIgnoreCase);
         var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
         Assert.NotEmpty(runs);
         Assert.Equal(bold, runs[0].Font.Bold);
@@ -175,9 +174,8 @@ public class FormatWordTextHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("formatting", result.Message, StringComparison.OrdinalIgnoreCase);
         var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
         Assert.Equal(fontSize, runs[0].Font.Size);
         AssertModified(context);
@@ -199,9 +197,8 @@ public class FormatWordTextHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("formatting", result.Message, StringComparison.OrdinalIgnoreCase);
         var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
         Assert.Equal(fontName, runs[0].Font.Name);
         AssertModified(context);

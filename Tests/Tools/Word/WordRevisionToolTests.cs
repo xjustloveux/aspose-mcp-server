@@ -1,4 +1,5 @@
 ﻿using Aspose.Words;
+using AsposeMcpServer.Results;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Results.Word.Revision;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -55,10 +56,9 @@ public class WordRevisionToolTests : WordTestBase
 
         var outputPath = CreateTestFilePath("test_accept_all_revisions_output.docx");
         var result = _tool.Execute("accept_all", docPath, outputPath: outputPath);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         var resultDoc = new Document(outputPath);
         Assert.Equal(0, resultDoc.Revisions.Count);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Accepted", data.Message);
     }
 
     [Fact]
@@ -74,10 +74,9 @@ public class WordRevisionToolTests : WordTestBase
 
         var outputPath = CreateTestFilePath("test_reject_all_revisions_output.docx");
         var result = _tool.Execute("reject_all", docPath, outputPath: outputPath);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         var resultDoc = new Document(outputPath);
         Assert.Equal(0, resultDoc.Revisions.Count);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Rejected", data.Message);
     }
 
     [Fact]
@@ -92,12 +91,13 @@ public class WordRevisionToolTests : WordTestBase
         doc.StopTrackRevisions();
         doc.Save(docPath);
 
+        var revisionCountBefore = doc.Revisions.Count;
         var outputPath = CreateTestFilePath("test_manage_accept_output.docx");
         var result = _tool.Execute("manage", docPath, outputPath: outputPath,
             revisionIndex: 0, action: "accept");
-        var data = GetResultData<SuccessResult>(result);
-        Assert.Contains("[0]", data.Message);
-        Assert.Contains("accepted", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
+        var resultDoc = new Document(outputPath);
+        Assert.True(resultDoc.Revisions.Count < revisionCountBefore);
     }
 
     [Fact]
@@ -180,8 +180,7 @@ public class WordRevisionToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("accept_all", sessionId: sessionId);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Accepted", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
 
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         Assert.Equal(0, sessionDoc.Revisions.Count);
@@ -200,8 +199,7 @@ public class WordRevisionToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("reject_all", sessionId: sessionId);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Rejected", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
 
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         Assert.Equal(0, sessionDoc.Revisions.Count);
@@ -219,10 +217,12 @@ public class WordRevisionToolTests : WordTestBase
         doc.Save(docPath);
 
         var sessionId = OpenSession(docPath);
+        var sessionDocBefore = SessionManager.GetDocument<Document>(sessionId);
+        var revisionCountBefore = sessionDocBefore.Revisions.Count;
         var result = _tool.Execute("manage", sessionId: sessionId, revisionIndex: 0, action: "accept");
-        var data = GetResultData<SuccessResult>(result);
-        Assert.Contains("[0]", data.Message);
-        Assert.Contains("accepted", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
+        var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
+        Assert.True(sessionDoc.Revisions.Count < revisionCountBefore);
     }
 
     [Fact]

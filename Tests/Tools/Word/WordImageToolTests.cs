@@ -3,6 +3,7 @@ using System.Drawing.Imaging;
 using System.Runtime.Versioning;
 using Aspose.Words;
 using Aspose.Words.Drawing;
+using AsposeMcpServer.Results;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Results.Word.Image;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -144,8 +145,10 @@ public class WordImageToolTests : WordTestBase
         var imagePath = CreateTestImage($"test_case_{operation}.png");
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.docx");
         var result = _tool.Execute(operation, docPath, outputPath: outputPath, imagePath: imagePath);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Image added", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
+        var doc = new Document(outputPath);
+        var shapes = doc.GetChildNodes(NodeType.Shape, true).Cast<Shape>().ToList();
+        Assert.True(shapes.Count > 0);
     }
 
     [Fact]
@@ -191,8 +194,7 @@ public class WordImageToolTests : WordTestBase
         var imagePath = CreateTestImage("test_image_session_add.png");
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("add", sessionId: sessionId, imagePath: imagePath, width: 150);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.Contains("added", data.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
 
         var doc = SessionManager.GetDocument<Document>(sessionId);
         var shapes = doc.GetChildNodes(NodeType.Shape, true).Cast<Shape>().Where(s => s.HasImage).ToList();
@@ -211,8 +213,10 @@ public class WordImageToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("edit", sessionId: sessionId, imageIndex: 0, width: 250, height: 180);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.Contains("Image", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
+        var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
+        var shapes = sessionDoc.GetChildNodes(NodeType.Shape, true).Cast<Shape>().Where(s => s.HasImage).ToList();
+        Assert.True(shapes.Count > 0);
     }
 
     [Fact]
@@ -249,8 +253,10 @@ public class WordImageToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         var newImagePath = CreateTestImage("test_session_replace_new.png");
         var result = _tool.Execute("replace", sessionId: sessionId, imageIndex: 0, newImagePath: newImagePath);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Image #0 replaced", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
+        var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
+        var shapes = sessionDoc.GetChildNodes(NodeType.Shape, true).Cast<Shape>().Where(s => s.HasImage).ToList();
+        Assert.True(shapes.Count > 0);
     }
 
     [Fact]

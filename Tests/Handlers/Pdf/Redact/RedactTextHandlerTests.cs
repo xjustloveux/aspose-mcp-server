@@ -58,9 +58,7 @@ public class RedactTextHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("redacted", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
     }
 
@@ -69,6 +67,7 @@ public class RedactTextHandlerTests : PdfHandlerTestBase
     {
         SkipInEvaluationMode(AsposeLibraryType.Pdf);
         var document = CreatePdfWithTextPersisted("This is a test document.");
+        var initialAnnotationCount = document.Pages[1].Annotations.Count;
         var context = CreateContext(document);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -77,9 +76,10 @@ public class RedactTextHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("no occurrences", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+            Assert.Equal(initialAnnotationCount, document.Pages[1].Annotations.Count);
+        AssertNotModified(context);
     }
 
     [SkippableFact]
@@ -96,9 +96,8 @@ public class RedactTextHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("redacted", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        AssertModified(context);
     }
 
     [SkippableFact]
@@ -115,9 +114,8 @@ public class RedactTextHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("redacted", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        AssertModified(context);
     }
 
     [SkippableFact]
@@ -135,9 +133,8 @@ public class RedactTextHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("redacted", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        AssertModified(context);
     }
 
     [Fact]

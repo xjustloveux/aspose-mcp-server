@@ -1,3 +1,5 @@
+using Aspose.Words;
+using Aspose.Words.Drawing;
 using AsposeMcpServer.Handlers.Word.Shape;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -18,6 +20,18 @@ public class AddLineWordHandlerTests : WordHandlerTestBase
 
     #endregion
 
+    #region Helper Methods
+
+    private static List<Aspose.Words.Drawing.Shape> GetLineShapes(Document doc)
+    {
+        return doc.GetChildNodes(NodeType.Shape, true)
+            .Cast<Aspose.Words.Drawing.Shape>()
+            .Where(s => s.ShapeType == ShapeType.Line)
+            .ToList();
+    }
+
+    #endregion
+
     #region Basic Add Line Operations
 
     [Fact]
@@ -29,10 +43,14 @@ public class AddLineWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("successfully inserted line", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("document body", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var lines = GetLineShapes(doc);
+            Assert.NotEmpty(lines);
+        }
+
         AssertModified(context);
     }
 
@@ -48,10 +66,18 @@ public class AddLineWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("successfully inserted line", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("header", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var header = doc.FirstSection.HeadersFooters[HeaderFooterType.HeaderPrimary];
+            Assert.NotNull(header);
+            var headerShapes = header.GetChildNodes(NodeType.Shape, true)
+                .Cast<Aspose.Words.Drawing.Shape>()
+                .Where(s => s.ShapeType == ShapeType.Line)
+                .ToList();
+            Assert.NotEmpty(headerShapes);
+        }
     }
 
     [Fact]
@@ -66,10 +92,18 @@ public class AddLineWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("successfully inserted line", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("footer", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var footer = doc.FirstSection.HeadersFooters[HeaderFooterType.FooterPrimary];
+            Assert.NotNull(footer);
+            var footerShapes = footer.GetChildNodes(NodeType.Shape, true)
+                .Cast<Aspose.Words.Drawing.Shape>()
+                .Where(s => s.ShapeType == ShapeType.Line)
+                .ToList();
+            Assert.NotEmpty(footerShapes);
+        }
     }
 
     [Fact]
@@ -84,9 +118,18 @@ public class AddLineWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("start position", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var body = doc.FirstSection.Body;
+            var firstPara = body.FirstParagraph;
+            var lineShapes = firstPara.GetChildNodes(NodeType.Shape, true)
+                .Cast<Aspose.Words.Drawing.Shape>()
+                .Where(s => s.ShapeType == ShapeType.Line)
+                .ToList();
+            Assert.NotEmpty(lineShapes);
+        }
     }
 
     [Fact]
@@ -103,9 +146,17 @@ public class AddLineWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("successfully inserted line", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true)
+                .Cast<Aspose.Words.Paragraph>()
+                .ToList();
+            var hasBorderPara = paragraphs.Any(p =>
+                p.ParagraphFormat.Borders.Bottom.LineStyle == LineStyle.Single);
+            Assert.True(hasBorderPara);
+        }
     }
 
     #endregion

@@ -92,10 +92,15 @@ public class EditPptTableCellHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("updated", result.Message);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+
+        if (!IsEvaluationMode())
+        {
+            var table = pres.Slides[0].Shapes[0] as ITable;
+            Assert.NotNull(table);
+            Assert.Equal("New Text", table[0, 0].TextFrame.Text);
+        }
     }
 
     [Fact]
@@ -113,9 +118,14 @@ public class EditPptTableCellHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("[1,2]", result.Message);
+        if (!IsEvaluationMode())
+        {
+            var table = pres.Slides[0].Shapes[0] as ITable;
+            Assert.NotNull(table);
+            Assert.Equal("Test", table[2, 1].TextFrame.Text);
+        }
     }
 
     [SkippableFact]

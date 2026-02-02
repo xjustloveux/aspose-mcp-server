@@ -32,10 +32,14 @@ public class SetSlideNumberingHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("shown", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+        if (!IsEvaluationMode())
+        {
+            Assert.Equal(1, presentation.FirstSlideNumber);
+            foreach (var slide in presentation.Slides)
+                Assert.True(slide.HeaderFooterManager.IsSlideNumberVisible);
+        }
     }
 
     [Fact]
@@ -50,9 +54,13 @@ public class SetSlideNumberingHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("hidden", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+        {
+            Assert.Equal(1, presentation.FirstSlideNumber);
+            foreach (var slide in presentation.Slides)
+                Assert.False(slide.HeaderFooterManager.IsSlideNumberVisible);
+        }
     }
 
     [Fact]
@@ -67,9 +75,7 @@ public class SetSlideNumberingHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("5", result.Message);
+        Assert.IsType<SuccessResult>(res);
         Assert.Equal(5, presentation.FirstSlideNumber);
     }
 
@@ -82,9 +88,11 @@ public class SetSlideNumberingHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("1", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(1, presentation.FirstSlideNumber);
+        if (!IsEvaluationMode())
+            foreach (var slide in presentation.Slides)
+                Assert.True(slide.HeaderFooterManager.IsSlideNumberVisible);
     }
 
     #endregion

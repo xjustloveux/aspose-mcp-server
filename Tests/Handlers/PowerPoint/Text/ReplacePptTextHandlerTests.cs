@@ -1,3 +1,4 @@
+using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Text;
 using AsposeMcpServer.Results.PowerPoint.Text;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -143,6 +144,14 @@ public class ReplacePptTextHandlerTests : PptHandlerTestBase
         var result = Assert.IsType<TextReplaceResult>(res);
 
         Assert.True(result.ReplacementCount > 0);
+
+        if (!IsEvaluationMode())
+        {
+            var shape = pres.Slides[0].Shapes[0] as IAutoShape;
+            Assert.NotNull(shape);
+            Assert.Contains("New", shape.TextFrame.Text);
+            Assert.DoesNotContain("Test", shape.TextFrame.Text);
+        }
     }
 
     #endregion
@@ -166,6 +175,13 @@ public class ReplacePptTextHandlerTests : PptHandlerTestBase
         var result = Assert.IsType<TextReplaceResult>(res);
 
         Assert.True(result.ReplacementCount > 0);
+
+        if (!IsEvaluationMode())
+        {
+            var shape = pres.Slides[0].Shapes[0] as IAutoShape;
+            Assert.NotNull(shape);
+            Assert.Contains("hi", shape.TextFrame.Text);
+        }
     }
 
     [Fact]
@@ -185,6 +201,15 @@ public class ReplacePptTextHandlerTests : PptHandlerTestBase
         var result = Assert.IsType<TextReplaceResult>(res);
 
         Assert.Equal(1, result.ReplacementCount);
+
+        if (!IsEvaluationMode())
+        {
+            var shape = pres.Slides[0].Shapes[0] as IAutoShape;
+            Assert.NotNull(shape);
+            Assert.Contains("Hi", shape.TextFrame.Text);
+            Assert.Contains("HELLO", shape.TextFrame.Text);
+            Assert.Contains("hello", shape.TextFrame.Text);
+        }
     }
 
     [Fact]
@@ -204,6 +229,15 @@ public class ReplacePptTextHandlerTests : PptHandlerTestBase
 
         // Default is case-insensitive, so both TEST and test should be replaced
         Assert.True(result.ReplacementCount > 0);
+
+        if (!IsEvaluationMode())
+        {
+            var shape = pres.Slides[0].Shapes[0] as IAutoShape;
+            Assert.NotNull(shape);
+            Assert.Contains("new", shape.TextFrame.Text);
+            Assert.DoesNotContain("TEST", shape.TextFrame.Text);
+            Assert.DoesNotContain("test", shape.TextFrame.Text);
+        }
     }
 
     #endregion

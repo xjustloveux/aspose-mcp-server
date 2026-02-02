@@ -64,10 +64,13 @@ public class HidePptSlidesHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("2", result.Message);
-        Assert.Contains("slide", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        Assert.True(pres.Slides[0].Hidden);
+        Assert.False(pres.Slides[1].Hidden);
+        Assert.True(pres.Slides[2].Hidden);
+        Assert.False(pres.Slides[3].Hidden);
+        Assert.False(pres.Slides[4].Hidden);
+        AssertModified(context);
     }
 
     #endregion
@@ -113,9 +116,7 @@ public class HidePptSlidesHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("hidden=True", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
         Assert.True(pres.Slides[0].Hidden);
         Assert.True(pres.Slides[1].Hidden);
         Assert.True(pres.Slides[2].Hidden);
@@ -136,9 +137,7 @@ public class HidePptSlidesHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("3", result.Message);
+        Assert.IsType<SuccessResult>(res);
         Assert.True(pres.Slides[0].Hidden);
         Assert.False(pres.Slides[1].Hidden);
         Assert.True(pres.Slides[2].Hidden);
@@ -166,9 +165,7 @@ public class HidePptSlidesHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("hidden=False", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
         Assert.False(pres.Slides[0].Hidden);
         Assert.False(pres.Slides[1].Hidden);
         Assert.False(pres.Slides[2].Hidden);
@@ -232,11 +229,10 @@ public class HidePptSlidesHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("5", result.Message);
+        Assert.IsType<SuccessResult>(res);
         foreach (var slide in pres.Slides)
             Assert.True(slide.Hidden);
+        AssertModified(context);
     }
 
     #endregion

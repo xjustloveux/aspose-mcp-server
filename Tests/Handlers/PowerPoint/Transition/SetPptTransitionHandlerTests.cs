@@ -54,10 +54,7 @@ public class SetPptTransitionHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Transition", result.Message);
-        Assert.Contains("Fade", result.Message);
+        Assert.IsType<SuccessResult>(res);
         Assert.Equal(TransitionType.Fade, pres.Slides[0].SlideShowTransition.Type);
         AssertModified(context);
     }
@@ -128,9 +125,9 @@ public class SetPptTransitionHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("slide 0", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(TransitionType.Fade, pres.Slides[0].SlideShowTransition.Type);
+        AssertModified(context);
     }
 
     #endregion

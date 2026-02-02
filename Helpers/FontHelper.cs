@@ -330,7 +330,6 @@ public static class FontHelper
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 return null;
 
-            // Try to load the font file directly from disk
             if (LinuxFontFilePaths.TryGetValue(fontName, out var fontFilePath) && File.Exists(fontFilePath))
                 try
                 {

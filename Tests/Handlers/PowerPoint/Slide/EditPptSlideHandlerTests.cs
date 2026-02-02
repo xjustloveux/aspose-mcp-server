@@ -33,9 +33,9 @@ public class EditPptSlideHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("3", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(5, pres.Slides.Count);
+        Assert.NotNull(pres.Slides[3]);
     }
 
     #endregion
@@ -69,9 +69,8 @@ public class EditPptSlideHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("updated", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(3, pres.Slides.Count);
         AssertModified(context);
     }
 
@@ -90,9 +89,9 @@ public class EditPptSlideHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("updated", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(3, pres.Slides.Count);
+        Assert.NotNull(pres.Slides[slideIndex]);
         AssertModified(context);
     }
 

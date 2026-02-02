@@ -225,16 +225,23 @@ jobs:
         echo "License files removed from artifacts before creating release archives"
       continue-on-error: true
     
-    - name: Create ZIP archives
+    - name: Create release archives
       shell: bash
       run: |
         cd artifacts
         for dir in */; do
           platform=${dir%/}
-          zip -r "../aspose-mcp-server-${platform}.zip" "$dir"
+          case "$platform" in
+            windows-*|iis)
+              zip -r "../aspose-mcp-server-${platform}.zip" "$dir"
+              ;;
+            *)
+              tar czf "../aspose-mcp-server-${platform}.tar.gz" -C "$dir" .
+              ;;
+          esac
         done
         cd ..
-        ls -lh ./*.zip
+        ls -lh ./aspose-mcp-server-*
     
     - name: Create Release with GitHub CLI
       shell: bash
@@ -242,14 +249,40 @@ jobs:
         GH_TOKEN: ${{ github.token }}
       run: |
         tag_name="${{ steps.next_version.outputs.next_version }}"
-        release_notes=$(cat <<EOF
+        release_notes=$(cat <<'EOF'
         Automated build from commit ${{ github.sha }}
-        
+
         Includes binaries for:
-        - Windows (x64)
-        - Linux (x64)
-        - macOS (x64 + ARM64)
-        
+        - Windows (x64) — `.zip`
+        - Linux (x64) — `.tar.gz`
+        - macOS (x64 + ARM64) — `.tar.gz`
+
+        ### macOS 使用說明
+
+        下載 `.tar.gz` 後執行以下指令：
+
+        ```bash
+        # 解壓縮
+        tar xzf aspose-mcp-server-macos-arm64.tar.gz
+
+        # 移除 macOS 隔離標記（僅需執行一次）
+        xattr -d com.apple.quarantine AsposeMcpServer
+
+        # 執行
+        ./AsposeMcpServer --word
+        ```
+
+        > Intel Mac 請將檔名中的 `arm64` 替換為 `x64`。
+
+        ### Linux 使用說明
+
+        ```bash
+        tar xzf aspose-mcp-server-linux-x64.tar.gz
+        ./AsposeMcpServer --word
+        ```
+
+        ---
+
         **Build Number:** ${{ github.run_number }}
         **Commit:** ${{ github.sha }}
         EOF
@@ -273,10 +306,74 @@ jobs:
           --title "Release $tag_name" \
           --notes "$release_notes" \
           --target "${{ github.sha }}" \
-          aspose-mcp-server-*.zip
+          aspose-mcp-server-*.zip aspose-mcp-server-*.tar.gz
 
         # Output version for downstream jobs
         echo "release_tag=$tag_name" >> $GITHUB_OUTPUT
+
+    - name: Update Homebrew Tap
+      shell: bash
+      continue-on-error: true
+      env:
+        HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+      run: |
+        if [[ -z "$HOMEBREW_TAP_TOKEN" ]]; then
+          echo "HOMEBREW_TAP_TOKEN not set, skipping Homebrew Tap update"
+          exit 0
+        fi
+
+        tag_name="${{ steps.next_version.outputs.next_version }}"
+        version="${tag_name#v}"
+
+        # Calculate sha256 for macOS archives
+        sha256_arm64=$(sha256sum aspose-mcp-server-macos-arm64.tar.gz | awk '{print $1}')
+        sha256_x64=$(sha256sum aspose-mcp-server-macos-x64.tar.gz | awk '{print $1}')
+
+        echo "Version: $version"
+        echo "SHA256 ARM64: $sha256_arm64"
+        echo "SHA256 X64: $sha256_x64"
+
+        # Clone homebrew-tap repo
+        git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/xjustloveux/homebrew-tap.git" homebrew-tap-update
+        cd homebrew-tap-update
+
+        # Generate formula
+        cat > aspose-mcp-server.rb <<FORMULA
+        class AsposeMcpServer < Formula
+          desc "MCP server for office document processing powered by Aspose.Total"
+          homepage "https://github.com/xjustloveux/aspose-mcp-server"
+          license "MIT"
+
+          if Hardware::CPU.arm?
+            url "https://github.com/xjustloveux/aspose-mcp-server/releases/download/v${version}/aspose-mcp-server-macos-arm64.tar.gz"
+            sha256 "${sha256_arm64}"
+          else
+            url "https://github.com/xjustloveux/aspose-mcp-server/releases/download/v${version}/aspose-mcp-server-macos-x64.tar.gz"
+            sha256 "${sha256_x64}"
+          end
+
+          def install
+            bin.install "AsposeMcpServer"
+          end
+
+          test do
+            assert_predicate bin/"AsposeMcpServer", :executable?
+          end
+        end
+        FORMULA
+
+        # Commit and push
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add aspose-mcp-server.rb
+
+        if git diff --cached --quiet; then
+          echo "No changes to formula"
+        else
+          git commit -m "Update aspose-mcp-server to ${version}"
+          git push
+          echo "Homebrew Tap updated to ${version}"
+        fi
 
     outputs:
       release_tag: ${{ steps.next_version.outputs.next_version }}

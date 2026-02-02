@@ -36,9 +36,8 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("updated", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode()) Assert.Equal(EffectType.Fly, pres.Slides[0].Timeline.MainSequence[0].Type);
     }
 
     #endregion
@@ -72,9 +71,8 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("updated", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode()) Assert.Equal(0, pres.Slides[0].Timeline.MainSequence.Count);
     }
 
     #endregion
@@ -96,50 +94,9 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("updated", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode()) Assert.Equal(2.0f, pres.Slides[0].Timeline.MainSequence[0].Timing.Duration);
         AssertModified(context);
-    }
-
-    [Fact]
-    public void Execute_ReturnsSlideIndex()
-    {
-        var pres = CreatePresentationWithAnimation();
-        var context = CreateContext(pres);
-        var parameters = CreateParameters(new Dictionary<string, object?>
-        {
-            { "slideIndex", 0 },
-            { "shapeIndex", 0 },
-            { "animationIndex", 0 },
-            { "duration", 2.0f }
-        });
-
-        var res = _handler.Execute(context, parameters);
-
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("slide 0", result.Message);
-    }
-
-    [Fact]
-    public void Execute_ReturnsShapeIndex()
-    {
-        var pres = CreatePresentationWithAnimation();
-        var context = CreateContext(pres);
-        var parameters = CreateParameters(new Dictionary<string, object?>
-        {
-            { "slideIndex", 0 },
-            { "shapeIndex", 0 },
-            { "animationIndex", 0 },
-            { "duration", 2.0f }
-        });
-
-        var res = _handler.Execute(context, parameters);
-
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("shape 0", result.Message);
     }
 
     #endregion
@@ -164,9 +121,8 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("updated", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode()) Assert.Equal(duration, pres.Slides[0].Timeline.MainSequence[0].Timing.Duration);
     }
 
     [Fact]
@@ -184,9 +140,8 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("updated", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode()) Assert.Equal(1.5f, pres.Slides[0].Timeline.MainSequence[0].Timing.TriggerDelayTime);
     }
 
     #endregion
@@ -211,9 +166,8 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("updated", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode()) Assert.Equal(duration, pres.Slides[0].Timeline.MainSequence[0].Timing.Duration);
     }
 
     [Theory]
@@ -233,9 +187,8 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("updated", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        AssertModified(context);
     }
 
     [Theory]
@@ -256,9 +209,8 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("updated", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode()) Assert.Equal(delay, pres.Slides[0].Timeline.MainSequence[0].Timing.TriggerDelayTime);
     }
 
     [Theory]
@@ -278,9 +230,8 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("updated", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        AssertModified(context);
     }
 
     [Fact]
@@ -426,9 +377,8 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("updated", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode()) Assert.Equal(EffectType.Fly, pres.Slides[0].Timeline.MainSequence[0].Type);
         AssertModified(context);
     }
 
@@ -448,9 +398,8 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("updated", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        AssertModified(context);
     }
 
     [Fact]
@@ -468,9 +417,9 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("updated", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+            Assert.Equal(EffectTriggerType.WithPrevious, pres.Slides[0].Timeline.MainSequence[0].Timing.TriggerType);
     }
 
     [Fact]
@@ -492,9 +441,15 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+        {
+            var effect = pres.Slides[0].Timeline.MainSequence[0];
+            Assert.Equal(1.5f, effect.Timing.Duration);
+            Assert.Equal(0.5f, effect.Timing.TriggerDelayTime);
+        }
 
-        Assert.Contains("updated", result.Message);
+        AssertModified(context);
     }
 
     #endregion

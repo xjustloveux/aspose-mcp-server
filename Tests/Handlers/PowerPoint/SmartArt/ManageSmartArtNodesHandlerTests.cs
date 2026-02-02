@@ -38,6 +38,9 @@ public class ManageSmartArtNodesHandlerTests : PptHandlerTestBase
     public void Execute_AddNode_AddsNewNode()
     {
         var pres = CreatePresentationWithSmartArt();
+        var smartArt = (ISmartArt)pres.Slides[0].Shapes[0];
+        var targetNode = smartArt.AllNodes[0];
+        var initialChildCount = targetNode.ChildNodes.Count;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -50,9 +53,14 @@ public class ManageSmartArtNodesHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+        {
+            Assert.Equal(initialChildCount + 1, targetNode.ChildNodes.Count);
+            var newNode = targetNode.ChildNodes[^1];
+            Assert.Equal("New Node", newNode.TextFrame.Text);
+        }
 
-        Assert.Contains("node added", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -72,9 +80,13 @@ public class ManageSmartArtNodesHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+        {
+            var smartArt = (ISmartArt)pres.Slides[0].Shapes[0];
+            Assert.Equal("Updated Text", smartArt.AllNodes[0].TextFrame.Text);
+        }
 
-        Assert.Contains("edited", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -82,6 +94,8 @@ public class ManageSmartArtNodesHandlerTests : PptHandlerTestBase
     public void Execute_DeleteNode_DeletesNode()
     {
         var pres = CreatePresentationWithSmartArt();
+        var smartArt = (ISmartArt)pres.Slides[0].Shapes[0];
+        var initialNodeCount = smartArt.AllNodes.Count;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -93,9 +107,9 @@ public class ManageSmartArtNodesHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("deleted", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+            Assert.True(smartArt.AllNodes.Count < initialNodeCount);
         AssertModified(context);
     }
 
@@ -243,6 +257,9 @@ public class ManageSmartArtNodesHandlerTests : PptHandlerTestBase
     public void Execute_AddWithPosition_AddsAtPosition()
     {
         var pres = CreatePresentationWithSmartArt();
+        var smartArt = (ISmartArt)pres.Slides[0].Shapes[0];
+        var targetNode = smartArt.AllNodes[0];
+        var initialChildCount = targetNode.ChildNodes.Count;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -256,9 +273,13 @@ public class ManageSmartArtNodesHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+        {
+            Assert.Equal(initialChildCount + 1, targetNode.ChildNodes.Count);
+            Assert.Equal("Positioned Node", targetNode.ChildNodes[0].TextFrame.Text);
+        }
 
-        Assert.Contains("position 0", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 

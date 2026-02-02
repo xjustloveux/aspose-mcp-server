@@ -47,6 +47,7 @@ public class DeletePdfSignatureHandlerTests : PdfHandlerTestBase
     {
         SkipInEvaluationMode(AsposeLibraryType.Pdf);
         var document = CreatePdfWithSignatureFieldPersisted("TestSig");
+        var initialCount = document.Form.Fields.OfType<SignatureField>().Count();
         var context = CreateContext(document);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -55,9 +56,15 @@ public class DeletePdfSignatureHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            var remainingCount = document.Form.Fields.OfType<SignatureField>().Count();
+            Assert.Equal(initialCount - 1, remainingCount);
+            Assert.DoesNotContain(document.Form.Fields.OfType<SignatureField>(),
+                f => f.PartialName == "TestSig");
+        }
 
-        Assert.Contains("deleted", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -66,6 +73,7 @@ public class DeletePdfSignatureHandlerTests : PdfHandlerTestBase
     {
         SkipInEvaluationMode(AsposeLibraryType.Pdf);
         var document = CreatePdfWithSignatureFieldPersisted("TestSig");
+        var initialCount = document.Form.Fields.OfType<SignatureField>().Count();
         var context = CreateContext(document);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -74,9 +82,14 @@ public class DeletePdfSignatureHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            var remainingCount = document.Form.Fields.OfType<SignatureField>().Count();
+            Assert.Equal(initialCount - 1, remainingCount);
+        }
 
-        Assert.Contains("deleted", result.Message, StringComparison.OrdinalIgnoreCase);
+        AssertModified(context);
     }
 
     [Fact]

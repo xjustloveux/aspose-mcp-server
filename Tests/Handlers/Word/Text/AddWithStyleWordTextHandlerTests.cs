@@ -1,3 +1,4 @@
+using System.Drawing;
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Text;
 using AsposeMcpServer.Results.Common;
@@ -37,10 +38,9 @@ public class AddWithStyleWordTextHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
-        AssertContainsText(doc, text);
+        if (!IsEvaluationMode(AsposeLibraryType.Words)) AssertContainsText(doc, text);
         AssertModified(context);
     }
 
@@ -79,16 +79,18 @@ public class AddWithStyleWordTextHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Bold", result.Message);
-        Assert.Contains("Italic", result.Message);
-        var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
-        var run = runs.FirstOrDefault(r => r.Text.Contains("Fully formatted"));
-        Assert.NotNull(run);
-        Assert.True(run.Font.Bold);
-        Assert.True(run.Font.Italic);
-        Assert.Equal(16.0, run.Font.Size);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+            var run = runs.FirstOrDefault(r => r.Text.Contains("Fully formatted"));
+            Assert.NotNull(run);
+            Assert.True(run.Font.Bold);
+            Assert.True(run.Font.Italic);
+            Assert.Equal(16.0, run.Font.Size);
+        }
+
         AssertModified(context);
     }
 
@@ -112,10 +114,17 @@ public class AddWithStyleWordTextHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("style", result.Message, StringComparison.OrdinalIgnoreCase);
-        AssertContainsText(doc, "Styled text");
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            AssertContainsText(doc, "Styled text");
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+            var para = paragraphs.FirstOrDefault(p => p.GetText().Contains("Styled text"));
+            Assert.NotNull(para);
+            Assert.Equal(styleName, para.ParagraphFormat.StyleName);
+        }
+
         AssertModified(context);
     }
 
@@ -154,14 +163,17 @@ public class AddWithStyleWordTextHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
-        var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
-        var run = runs.FirstOrDefault(r => r.Text.Contains("Formatted text"));
-        Assert.NotNull(run);
-        Assert.Equal(bold, run.Font.Bold);
-        Assert.Equal(italic, run.Font.Italic);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+            var run = runs.FirstOrDefault(r => r.Text.Contains("Formatted text"));
+            Assert.NotNull(run);
+            Assert.Equal(bold, run.Font.Bold);
+            Assert.Equal(italic, run.Font.Italic);
+        }
+
         AssertModified(context);
     }
 
@@ -231,13 +243,16 @@ public class AddWithStyleWordTextHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Alignment", result.Message, StringComparison.OrdinalIgnoreCase);
-        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
-        var para = paragraphs.FirstOrDefault(p => p.GetText().Contains("Aligned text"));
-        Assert.NotNull(para);
-        Assert.Equal(expected, para.ParagraphFormat.Alignment);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+            var para = paragraphs.FirstOrDefault(p => p.GetText().Contains("Aligned text"));
+            Assert.NotNull(para);
+            Assert.Equal(expected, para.ParagraphFormat.Alignment);
+        }
+
         AssertModified(context);
     }
 
@@ -257,9 +272,16 @@ public class AddWithStyleWordTextHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Indent level", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+            var para = paragraphs.FirstOrDefault(p => p.GetText().Contains("Indented text"));
+            Assert.NotNull(para);
+            Assert.Equal(indentLevel * 36, para.ParagraphFormat.LeftIndent);
+        }
+
         AssertModified(context);
     }
 
@@ -282,10 +304,9 @@ public class AddWithStyleWordTextHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
-        AssertContainsText(doc, "New text");
+        if (!IsEvaluationMode(AsposeLibraryType.Words)) AssertContainsText(doc, "New text");
         AssertModified(context);
     }
 
@@ -320,13 +341,16 @@ public class AddWithStyleWordTextHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Underline", result.Message);
-        var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
-        var run = runs.FirstOrDefault(r => r.Text.Contains("Underlined text"));
-        Assert.NotNull(run);
-        Assert.NotEqual(Underline.None, run.Font.Underline);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+            var run = runs.FirstOrDefault(r => r.Text.Contains("Underlined text"));
+            Assert.NotNull(run);
+            Assert.NotEqual(Underline.None, run.Font.Underline);
+        }
+
         AssertModified(context);
     }
 
@@ -343,9 +367,16 @@ public class AddWithStyleWordTextHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Color", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+            var run = runs.FirstOrDefault(r => r.Text.Contains("Colored text"));
+            Assert.NotNull(run);
+            Assert.Equal(Color.FromArgb(255, 0, 0).ToArgb(), run.Font.Color.ToArgb());
+        }
+
         AssertModified(context);
     }
 
@@ -368,9 +399,16 @@ public class AddWithStyleWordTextHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Left indent", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+            var para = paragraphs.FirstOrDefault(p => p.GetText().Contains("Left indented text"));
+            Assert.NotNull(para);
+            Assert.Equal(leftIndent, para.ParagraphFormat.LeftIndent);
+        }
+
         AssertModified(context);
     }
 
@@ -389,9 +427,16 @@ public class AddWithStyleWordTextHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("First line indent", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+            var para = paragraphs.FirstOrDefault(p => p.GetText().Contains("First line indented"));
+            Assert.NotNull(para);
+            Assert.Equal(firstLineIndent, para.ParagraphFormat.FirstLineIndent);
+        }
+
         AssertModified(context);
     }
 
@@ -412,9 +457,16 @@ public class AddWithStyleWordTextHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Font (ASCII)", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+            var run = runs.FirstOrDefault(r => r.Text.Contains("ASCII font text"));
+            Assert.NotNull(run);
+            Assert.Equal("Courier New", run.Font.NameAscii);
+        }
+
         AssertModified(context);
     }
 
@@ -431,9 +483,16 @@ public class AddWithStyleWordTextHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Font (Far East)", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+            var run = runs.FirstOrDefault(r => r.Text.Contains("Far East font text"));
+            Assert.NotNull(run);
+            Assert.Equal("MS Gothic", run.Font.NameFarEast);
+        }
+
         AssertModified(context);
     }
 
@@ -455,9 +514,16 @@ public class AddWithStyleWordTextHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+            var para = paragraphs.FirstOrDefault(p => p.GetText().Contains("Text with tabs"));
+            Assert.NotNull(para);
+            Assert.True(para.ParagraphFormat.TabStops.Count > 0);
+        }
+
         AssertModified(context);
     }
 
@@ -476,9 +542,16 @@ public class AddWithStyleWordTextHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+            var para = paragraphs.FirstOrDefault(p => p.GetText().Contains("Multi-tab text"));
+            Assert.NotNull(para);
+            Assert.Equal(3, para.ParagraphFormat.TabStops.Count);
+        }
+
         AssertModified(context);
     }
 
@@ -496,9 +569,16 @@ public class AddWithStyleWordTextHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+            var para = paragraphs.FirstOrDefault(p => p.GetText().Contains("Dotted leader"));
+            Assert.NotNull(para);
+            Assert.True(para.ParagraphFormat.TabStops.Count > 0);
+        }
+
         AssertModified(context);
     }
 

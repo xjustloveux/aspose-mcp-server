@@ -1,4 +1,7 @@
+using Aspose.Words;
+using Aspose.Words.Notes;
 using AsposeMcpServer.Handlers.Word.Note;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 
@@ -32,10 +35,11 @@ public class AddWordEndnoteHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("added successfully", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("This is an endnote", result.Message);
+        var endnotes = WordNoteHelper.GetNotesFromDoc(doc, FootnoteType.Endnote);
+        Assert.Single(endnotes);
+        if (!IsEvaluationMode()) Assert.Contains("This is an endnote", endnotes[0].ToString(SaveFormat.Text));
         AssertModified(context);
     }
 
@@ -52,9 +56,12 @@ public class AddWordEndnoteHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("added successfully", result.Message, StringComparison.OrdinalIgnoreCase);
+        var endnotes = WordNoteHelper.GetNotesFromDoc(doc, FootnoteType.Endnote);
+        Assert.Single(endnotes);
+        if (!IsEvaluationMode()) Assert.Contains("Endnote at paragraph", endnotes[0].ToString(SaveFormat.Text));
+        AssertModified(context);
     }
 
     [Fact]
@@ -70,9 +77,13 @@ public class AddWordEndnoteHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("added successfully", result.Message, StringComparison.OrdinalIgnoreCase);
+        var endnotes = WordNoteHelper.GetNotesFromDoc(doc, FootnoteType.Endnote);
+        Assert.Single(endnotes);
+        Assert.Equal("†", endnotes[0].ReferenceMark);
+        if (!IsEvaluationMode()) Assert.Contains("Custom mark endnote", endnotes[0].ToString(SaveFormat.Text));
+        AssertModified(context);
     }
 
     #endregion

@@ -37,9 +37,13 @@ public class InsertColumnHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains($"{count} column(s)", result.Message);
+        AssertCellValue(workbook, 0, count, "Col A");
+        AssertCellValue(workbook, 0, count + 1, "Col B");
+        AssertCellValue(workbook, 0, count + 2, "Col C");
+        for (var i = 0; i < count; i++)
+            Assert.Null(GetCellValue(workbook, 0, i));
     }
 
     #endregion
@@ -58,10 +62,13 @@ public class InsertColumnHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Inserted", result.Message);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+
+        AssertCellValue(workbook, 0, 0, "Col A");
+        Assert.Null(GetCellValue(workbook, 0, 1));
+        AssertCellValue(workbook, 0, 2, "Col B");
+        AssertCellValue(workbook, 0, 3, "Col C");
     }
 
     [Fact]
@@ -76,9 +83,12 @@ public class InsertColumnHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("column 2", result.Message);
+        AssertCellValue(workbook, 0, 0, "Col A");
+        AssertCellValue(workbook, 0, 1, "Col B");
+        Assert.Null(GetCellValue(workbook, 0, 2));
+        AssertCellValue(workbook, 0, 3, "Col C");
     }
 
     [Fact]
@@ -94,9 +104,13 @@ public class InsertColumnHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("3 column(s)", result.Message);
+        for (var i = 0; i < 3; i++)
+            Assert.Null(GetCellValue(workbook, 0, i));
+        AssertCellValue(workbook, 0, 3, "Col A");
+        AssertCellValue(workbook, 0, 4, "Col B");
+        AssertCellValue(workbook, 0, 5, "Col C");
     }
 
     [Fact]
@@ -111,9 +125,12 @@ public class InsertColumnHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("1 column(s)", result.Message);
+        Assert.Null(GetCellValue(workbook, 0, 0));
+        AssertCellValue(workbook, 0, 1, "Col A");
+        AssertCellValue(workbook, 0, 2, "Col B");
+        AssertCellValue(workbook, 0, 3, "Col C");
     }
 
     #endregion
@@ -124,6 +141,7 @@ public class InsertColumnHandlerTests : ExcelHandlerTestBase
     public void Execute_WithSheetIndex_InsertsOnCorrectSheet()
     {
         var workbook = CreateWorkbookWithSheets(3);
+        workbook.Worksheets[1].Cells["A1"].PutValue("Sheet2Col");
         var context = CreateContext(workbook);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -133,15 +151,17 @@ public class InsertColumnHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Inserted", result.Message);
+        Assert.Null(workbook.Worksheets[1].Cells[0, 0].Value);
+        Assert.Equal("Sheet2Col", workbook.Worksheets[1].Cells[0, 1].Value);
     }
 
     [Fact]
     public void Execute_DefaultSheetIndex_UsesFirstSheet()
     {
         var workbook = CreateWorkbookWithSheets(3);
+        workbook.Worksheets[0].Cells["A1"].PutValue("FirstSheetCol");
         var context = CreateContext(workbook);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -150,9 +170,10 @@ public class InsertColumnHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Inserted", result.Message);
+        Assert.Null(workbook.Worksheets[0].Cells[0, 0].Value);
+        Assert.Equal("FirstSheetCol", workbook.Worksheets[0].Cells[0, 1].Value);
     }
 
     #endregion
@@ -217,7 +238,7 @@ public class InsertColumnHandlerTests : ExcelHandlerTestBase
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    public void Execute_WithZeroOrNegativeCount_AcceptsValue(int count)
+    public void Execute_WithZeroOrNegativeCount_ThrowsArgumentException(int count)
     {
         var workbook = CreateWorkbookWithData();
         var context = CreateContext(workbook);
@@ -227,11 +248,8 @@ public class InsertColumnHandlerTests : ExcelHandlerTestBase
             { "count", count }
         });
 
-        var res = _handler.Execute(context, parameters);
-
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains($"{count} column(s)", result.Message);
+        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+        Assert.Contains("Count must be greater than 0", ex.Message);
     }
 
     [Fact]
@@ -246,10 +264,10 @@ public class InsertColumnHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Inserted", result.Message);
-        Assert.Contains("column 0", result.Message);
+        Assert.Null(GetCellValue(workbook, 0, 0));
+        AssertCellValue(workbook, 0, 1, "Col A");
     }
 
     [Fact]
@@ -265,9 +283,12 @@ public class InsertColumnHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("100 column(s)", result.Message);
+        AssertCellValue(workbook, 0, 100, "Col A");
+        AssertCellValue(workbook, 0, 101, "Col B");
+        AssertCellValue(workbook, 0, 102, "Col C");
+        Assert.Null(GetCellValue(workbook, 0, 0));
     }
 
     #endregion

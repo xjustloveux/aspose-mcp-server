@@ -53,9 +53,8 @@ public class DeletePdfAttachmentHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("deleted", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Empty(document.EmbeddedFiles);
         AssertModified(context);
     }
 

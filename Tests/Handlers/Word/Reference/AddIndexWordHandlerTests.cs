@@ -1,3 +1,4 @@
+using Aspose.Words.Fields;
 using AsposeMcpServer.Handlers.Word.Reference;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -32,10 +33,12 @@ public class AddIndexWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("index entries added", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2", result.Message);
+        var xeFields = doc.Range.Fields.Where(f => f.Type == FieldType.FieldIndexEntry).ToList();
+        var indexFields = doc.Range.Fields.Where(f => f.Type == FieldType.FieldIndex).ToList();
+        if (!IsEvaluationMode(AsposeLibraryType.Words)) Assert.Equal(2, xeFields.Count);
+        Assert.NotEmpty(indexFields);
         AssertModified(context);
     }
 
@@ -51,9 +54,17 @@ public class AddIndexWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("index entries added", result.Message, StringComparison.OrdinalIgnoreCase);
+        var xeFields = doc.Range.Fields.Where(f => f.Type == FieldType.FieldIndexEntry).ToList();
+        Assert.NotEmpty(xeFields);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            Assert.Contains("Animals", xeFields[0].GetFieldCode());
+            Assert.Contains("Dogs", xeFields[0].GetFieldCode());
+        }
+
+        AssertModified(context);
     }
 
     #endregion

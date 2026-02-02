@@ -1,5 +1,6 @@
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Hyperlink;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 
@@ -36,11 +37,13 @@ public class EditWordHyperlinkHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("URL: https://new.com", result.Message);
-        Assert.Contains("Display text: New Text", result.Message);
-        Assert.Contains("Tooltip: New Tooltip", result.Message);
+        var hyperlinks = WordHyperlinkHelper.GetAllHyperlinks(doc);
+        Assert.NotEmpty(hyperlinks);
+        Assert.Equal("https://new.com", hyperlinks[0].Address);
+        Assert.Equal("New Tooltip", hyperlinks[0].ScreenTip);
+        if (!IsEvaluationMode(AsposeLibraryType.Words)) Assert.Equal("New Text", hyperlinks[0].Result);
     }
 
     #endregion
@@ -72,9 +75,11 @@ public class EditWordHyperlinkHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("edited successfully", result.Message);
+        var hyperlinks = WordHyperlinkHelper.GetAllHyperlinks(doc);
+        Assert.NotEmpty(hyperlinks);
+        Assert.Equal("https://newurl.com", hyperlinks[0].Address);
         AssertModified(context);
     }
 
@@ -91,9 +96,14 @@ public class EditWordHyperlinkHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("#0", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var hyperlinks = WordHyperlinkHelper.GetAllHyperlinks(doc);
+            Assert.NotEmpty(hyperlinks);
+            Assert.Equal("New Text", hyperlinks[0].Result);
+        }
     }
 
     #endregion
@@ -113,9 +123,11 @@ public class EditWordHyperlinkHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("URL: https://updated.com", result.Message);
+        var hyperlinks = WordHyperlinkHelper.GetAllHyperlinks(doc);
+        Assert.NotEmpty(hyperlinks);
+        Assert.Equal("https://updated.com", hyperlinks[0].Address);
     }
 
     [Fact]
@@ -131,9 +143,14 @@ public class EditWordHyperlinkHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Display text: Updated Link Text", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var hyperlinks = WordHyperlinkHelper.GetAllHyperlinks(doc);
+            Assert.NotEmpty(hyperlinks);
+            Assert.Equal("Updated Link Text", hyperlinks[0].Result);
+        }
     }
 
     [Fact]
@@ -149,9 +166,11 @@ public class EditWordHyperlinkHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Tooltip: New tooltip", result.Message);
+        var hyperlinks = WordHyperlinkHelper.GetAllHyperlinks(doc);
+        Assert.NotEmpty(hyperlinks);
+        Assert.Equal("New tooltip", hyperlinks[0].ScreenTip);
     }
 
     [Fact]
@@ -167,9 +186,11 @@ public class EditWordHyperlinkHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("SubAddress: Bookmark1", result.Message);
+        var hyperlinks = WordHyperlinkHelper.GetAllHyperlinks(doc);
+        Assert.NotEmpty(hyperlinks);
+        Assert.Equal("Bookmark1", hyperlinks[0].SubAddress);
     }
 
     [Fact]
@@ -184,9 +205,11 @@ public class EditWordHyperlinkHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("No change parameters provided", result.Message);
+        var hyperlinks = WordHyperlinkHelper.GetAllHyperlinks(doc);
+        Assert.NotEmpty(hyperlinks);
+        Assert.Equal("https://original.com", hyperlinks[0].Address);
     }
 
     #endregion

@@ -31,7 +31,7 @@ public class SetPlaybackHandler : OperationHandlerBase<Presentation>
     /// <param name="context">The presentation context.</param>
     /// <param name="parameters">
     ///     Required: shapeIndex
-    ///     Optional: slideIndex, playMode, loop, rewind, volume
+    ///     Optional: slideIndex, playMode, loop, rewind, volume, fullScreenMode (video only)
     /// </param>
     /// <returns>Success message with playback settings details.</returns>
     /// <exception cref="ArgumentException">
@@ -65,6 +65,8 @@ public class SetPlaybackHandler : OperationHandlerBase<Presentation>
             video.Volume = volume;
             video.PlayLoopMode = p.Loop;
             video.RewindVideo = p.Rewind;
+            if (p.FullScreenMode.HasValue)
+                video.FullScreenMode = p.FullScreenMode.Value;
         }
         else
         {
@@ -76,6 +78,7 @@ public class SetPlaybackHandler : OperationHandlerBase<Presentation>
         List<string> settings = [$"playMode={p.PlayMode}", $"volume={p.Volume}"];
         if (p.Loop) settings.Add("loop=true");
         if (p.Rewind && shape is IVideoFrame) settings.Add("rewind=true");
+        if (p.FullScreenMode == true && shape is IVideoFrame) settings.Add("fullScreenMode=true");
 
         return new SuccessResult { Message = $"Playback settings updated ({string.Join(", ", settings)})." };
     }
@@ -93,7 +96,8 @@ public class SetPlaybackHandler : OperationHandlerBase<Presentation>
             parameters.GetOptional("playMode", "auto"),
             parameters.GetOptional("loop", false),
             parameters.GetOptional("rewind", false),
-            parameters.GetOptional("volume", "medium"));
+            parameters.GetOptional("volume", "medium"),
+            parameters.GetOptional<bool?>("fullScreenMode"));
     }
 
     /// <summary>
@@ -105,11 +109,13 @@ public class SetPlaybackHandler : OperationHandlerBase<Presentation>
     /// <param name="Loop">Whether to loop.</param>
     /// <param name="Rewind">Whether to rewind.</param>
     /// <param name="Volume">The volume level.</param>
+    /// <param name="FullScreenMode">Whether to play video in full screen mode (video only).</param>
     private sealed record PlaybackParameters(
         int SlideIndex,
         int? ShapeIndex,
         string PlayMode,
         bool Loop,
         bool Rewind,
-        string Volume);
+        string Volume,
+        bool? FullScreenMode);
 }

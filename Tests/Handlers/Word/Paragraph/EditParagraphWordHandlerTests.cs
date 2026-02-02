@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Paragraph;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -34,9 +35,9 @@ public class EditParagraphWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("0", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words)) AssertContainsText(doc, "Section content");
         AssertModified(context);
     }
 
@@ -57,9 +58,11 @@ public class EditParagraphWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("edited", result.Message, StringComparison.OrdinalIgnoreCase);
+        var para = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().First();
+        Assert.Equal("Normal", para.ParagraphFormat.StyleName);
+        AssertModified(context);
     }
 
     #endregion
@@ -88,6 +91,11 @@ public class EditParagraphWordHandlerTests : WordHandlerTestBase
 
         _handler.Execute(context, parameters);
 
+        var para = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().First();
+        Assert.True(para.ParagraphFormat.TabStops.Count > 0);
+        Assert.Equal(100.0, para.ParagraphFormat.TabStops[0].Position);
+        Assert.Equal(TabAlignment.Center, para.ParagraphFormat.TabStops[0].Alignment);
+        Assert.Equal(TabLeader.Dots, para.ParagraphFormat.TabStops[0].Leader);
         AssertModified(context);
     }
 
@@ -107,9 +115,9 @@ public class EditParagraphWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("edited", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words)) AssertContainsText(doc, "Original text");
         AssertModified(context);
     }
 
@@ -126,10 +134,15 @@ public class EditParagraphWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("text content updated", result.Message, StringComparison.OrdinalIgnoreCase);
-        AssertContainsText(doc, "Updated text");
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            AssertContainsText(doc, "Updated text");
+            AssertDoesNotContainText(doc, "Original text");
+        }
+
+        AssertModified(context);
     }
 
     #endregion
@@ -151,9 +164,10 @@ public class EditParagraphWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains(index.ToString(), result.Message);
+        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().ToList();
+        Assert.True(index < paragraphs.Count);
         AssertModified(context);
     }
 
@@ -191,6 +205,8 @@ public class EditParagraphWordHandlerTests : WordHandlerTestBase
 
         _handler.Execute(context, parameters);
 
+        var para = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().First();
+        Assert.Equal(ParagraphAlignment.Center, para.ParagraphFormat.Alignment);
         AssertModified(context);
     }
 
@@ -207,6 +223,9 @@ public class EditParagraphWordHandlerTests : WordHandlerTestBase
 
         _handler.Execute(context, parameters);
 
+        var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+        Assert.NotEmpty(runs);
+        Assert.True(runs[0].Font.Bold);
         AssertModified(context);
     }
 
@@ -223,6 +242,9 @@ public class EditParagraphWordHandlerTests : WordHandlerTestBase
 
         _handler.Execute(context, parameters);
 
+        var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+        Assert.NotEmpty(runs);
+        Assert.Equal(14.0, runs[0].Font.Size);
         AssertModified(context);
     }
 
@@ -240,6 +262,9 @@ public class EditParagraphWordHandlerTests : WordHandlerTestBase
 
         _handler.Execute(context, parameters);
 
+        var para = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().First();
+        Assert.Equal(36.0, para.ParagraphFormat.LeftIndent);
+        Assert.Equal(18.0, para.ParagraphFormat.RightIndent);
         AssertModified(context);
     }
 
@@ -257,6 +282,9 @@ public class EditParagraphWordHandlerTests : WordHandlerTestBase
 
         _handler.Execute(context, parameters);
 
+        var para = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().First();
+        Assert.Equal(12.0, para.ParagraphFormat.SpaceBefore);
+        Assert.Equal(12.0, para.ParagraphFormat.SpaceAfter);
         AssertModified(context);
     }
 
@@ -273,6 +301,9 @@ public class EditParagraphWordHandlerTests : WordHandlerTestBase
 
         _handler.Execute(context, parameters);
 
+        var para = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().First();
+        Assert.Equal(LineSpacingRule.Multiple, para.ParagraphFormat.LineSpacingRule);
+        Assert.Equal(2.0, para.ParagraphFormat.LineSpacing);
         AssertModified(context);
     }
 
@@ -352,6 +383,9 @@ public class EditParagraphWordHandlerTests : WordHandlerTestBase
 
         _handler.Execute(context, parameters);
 
+        var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+        Assert.NotEmpty(runs);
+        Assert.True(runs[0].Font.Italic);
         AssertModified(context);
     }
 
@@ -368,6 +402,9 @@ public class EditParagraphWordHandlerTests : WordHandlerTestBase
 
         _handler.Execute(context, parameters);
 
+        var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+        Assert.NotEmpty(runs);
+        Assert.Equal(Underline.Single, runs[0].Font.Underline);
         AssertModified(context);
     }
 
@@ -384,6 +421,11 @@ public class EditParagraphWordHandlerTests : WordHandlerTestBase
 
         _handler.Execute(context, parameters);
 
+        var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+        Assert.NotEmpty(runs);
+        Assert.Equal(255, runs[0].Font.Color.R);
+        Assert.Equal(0, runs[0].Font.Color.G);
+        Assert.Equal(0, runs[0].Font.Color.B);
         AssertModified(context);
     }
 
@@ -401,6 +443,10 @@ public class EditParagraphWordHandlerTests : WordHandlerTestBase
 
         _handler.Execute(context, parameters);
 
+        var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+        Assert.NotEmpty(runs);
+        Assert.Equal("Arial", runs[0].Font.NameAscii);
+        Assert.Equal("MS Gothic", runs[0].Font.NameFarEast);
         AssertModified(context);
     }
 
@@ -421,6 +467,8 @@ public class EditParagraphWordHandlerTests : WordHandlerTestBase
 
         _handler.Execute(context, parameters);
 
+        var para = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().First();
+        Assert.Equal(36.0, para.ParagraphFormat.FirstLineIndent);
         AssertModified(context);
     }
 
@@ -438,14 +486,17 @@ public class EditParagraphWordHandlerTests : WordHandlerTestBase
 
         _handler.Execute(context, parameters);
 
+        var para = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().First();
+        Assert.Equal(LineSpacingRule.Exactly, para.ParagraphFormat.LineSpacingRule);
+        Assert.Equal(18.0, para.ParagraphFormat.LineSpacing);
         AssertModified(context);
     }
 
     [Theory]
-    [InlineData("single")]
-    [InlineData("oneandhalf")]
-    [InlineData("double")]
-    public void Execute_WithLineSpacingRuleOnly_AppliesDefaultSpacing(string rule)
+    [InlineData("single", 1.0)]
+    [InlineData("oneandhalf", 1.5)]
+    [InlineData("double", 2.0)]
+    public void Execute_WithLineSpacingRuleOnly_AppliesDefaultSpacing(string rule, double expectedSpacing)
     {
         var doc = CreateDocumentWithParagraphs("Test paragraph");
         var context = CreateContext(doc);
@@ -457,6 +508,9 @@ public class EditParagraphWordHandlerTests : WordHandlerTestBase
 
         _handler.Execute(context, parameters);
 
+        var para = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().First();
+        Assert.Equal(LineSpacingRule.Multiple, para.ParagraphFormat.LineSpacingRule);
+        Assert.Equal(expectedSpacing, para.ParagraphFormat.LineSpacing);
         AssertModified(context);
     }
 

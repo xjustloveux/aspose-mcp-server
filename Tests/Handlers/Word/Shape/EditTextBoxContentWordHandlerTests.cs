@@ -1,6 +1,7 @@
 using Aspose.Words;
 using Aspose.Words.Drawing;
 using AsposeMcpServer.Handlers.Word.Shape;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 using WordParagraph = Aspose.Words.Paragraph;
@@ -60,9 +61,17 @@ public class EditTextBoxContentWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("successfully edited textbox", result.Message, StringComparison.OrdinalIgnoreCase);
+        var textboxes = WordShapeHelper.FindAllTextboxes(doc);
+        Assert.NotEmpty(textboxes);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var runs = textboxes[0].GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+            Assert.NotEmpty(runs);
+            Assert.Equal("New Content", runs[0].Text);
+        }
+
         AssertModified(context);
     }
 
@@ -80,9 +89,16 @@ public class EditTextBoxContentWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("successfully edited textbox", result.Message, StringComparison.OrdinalIgnoreCase);
+        var textboxes = WordShapeHelper.FindAllTextboxes(doc);
+        Assert.NotEmpty(textboxes);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var fullText = textboxes[0].GetText();
+            Assert.Contains("Original content", fullText);
+            Assert.Contains(" Appended", fullText);
+        }
     }
 
     [Fact]
@@ -100,9 +116,18 @@ public class EditTextBoxContentWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("successfully edited textbox", result.Message, StringComparison.OrdinalIgnoreCase);
+        var textboxes = WordShapeHelper.FindAllTextboxes(doc);
+        Assert.NotEmpty(textboxes);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var runs = textboxes[0].GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+            Assert.NotEmpty(runs);
+            Assert.Equal("Formatted", runs[0].Text);
+            Assert.Equal(16.0, runs[0].Font.Size);
+            Assert.True(runs[0].Font.Bold);
+        }
     }
 
     [Fact]

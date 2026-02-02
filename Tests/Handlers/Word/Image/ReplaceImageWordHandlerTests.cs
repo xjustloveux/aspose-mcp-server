@@ -37,9 +37,10 @@ public class ReplaceImageWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("replaced", result.Message, StringComparison.OrdinalIgnoreCase);
+        var shape = GetFirstImage(doc);
+        Assert.True(shape.HasImage);
         AssertModified(context);
     }
 
@@ -58,9 +59,10 @@ public class ReplaceImageWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("replaced", result.Message, StringComparison.OrdinalIgnoreCase);
+        var shape = GetFirstImage(doc);
+        Assert.True(shape.HasImage);
     }
 
     [Fact]
@@ -82,9 +84,8 @@ public class ReplaceImageWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("preserved size", result.Message, StringComparison.OrdinalIgnoreCase);
         var newShape = GetFirstImage(doc);
         Assert.Equal(originalWidth, newShape.Width, 1);
         Assert.Equal(originalHeight, newShape.Height, 1);
@@ -96,6 +97,8 @@ public class ReplaceImageWordHandlerTests : WordHandlerTestBase
         var tempFile1 = CreateTempImageFileWithColor(255, 0, 0);
         var tempFile2 = CreateTempImageFileWithColor(0, 255, 0);
         var doc = CreateDocumentWithImage(tempFile1);
+        var originalShape = GetFirstImage(doc);
+        var originalWrapType = originalShape.WrapType;
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -106,9 +109,10 @@ public class ReplaceImageWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("preserved position", result.Message, StringComparison.OrdinalIgnoreCase);
+        var newShape = GetFirstImage(doc);
+        Assert.Equal(originalWrapType, newShape.WrapType);
     }
 
     [Fact]
@@ -117,6 +121,8 @@ public class ReplaceImageWordHandlerTests : WordHandlerTestBase
         var tempFile1 = CreateTempImageFileWithColor(255, 0, 0);
         var tempFile2 = CreateTempImageFileWithColor(0, 255, 0);
         var doc = CreateDocumentWithImage(tempFile1);
+        var originalShape = GetFirstImage(doc);
+        var originalWidth = originalShape.Width;
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -128,9 +134,11 @@ public class ReplaceImageWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("smart fit", result.Message, StringComparison.OrdinalIgnoreCase);
+        var newShape = GetFirstImage(doc);
+        Assert.Equal(originalWidth, newShape.Width, 1);
+        Assert.True(newShape.Height > 0);
     }
 
     #endregion

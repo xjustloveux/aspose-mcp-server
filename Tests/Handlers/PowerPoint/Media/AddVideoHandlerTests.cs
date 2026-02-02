@@ -1,4 +1,5 @@
 using AsposeMcpServer.Handlers.PowerPoint.Media;
+using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Media;
@@ -13,6 +14,49 @@ public class AddVideoHandlerTests : PptHandlerTestBase
     public void Operation_Returns_AddVideo()
     {
         Assert.Equal("add_video", _handler.Operation);
+    }
+
+    #endregion
+
+    #region Basic Add Operations
+
+    [Fact]
+    public void Execute_AddsVideo()
+    {
+        var tempFile = CreateTempVideoFile();
+        var pres = CreateEmptyPresentation();
+        var initialShapeCount = pres.Slides[0].Shapes.Count;
+        var context = CreateContext(pres);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "videoPath", tempFile }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode()) Assert.True(pres.Slides[0].Shapes.Count > initialShapeCount);
+        AssertModified(context);
+    }
+
+    [Fact]
+    public void Execute_WithSlideIndex_AddsVideoToSlide()
+    {
+        var tempFile = CreateTempVideoFile();
+        var pres = CreateEmptyPresentation();
+        var initialShapeCount = pres.Slides[0].Shapes.Count;
+        var context = CreateContext(pres);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "videoPath", tempFile },
+            { "slideIndex", 0 }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode()) Assert.True(pres.Slides[0].Shapes.Count > initialShapeCount);
+        AssertModified(context);
     }
 
     #endregion

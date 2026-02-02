@@ -48,9 +48,14 @@ public class EditPptHyperlinkHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+        {
+            var shape = pres.Slides[0].Shapes[0];
+            Assert.NotNull(shape.HyperlinkClick);
+            Assert.Equal("https://newurl.com", shape.HyperlinkClick.ExternalUrl);
+        }
 
-        Assert.Contains("updated", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -69,9 +74,14 @@ public class EditPptHyperlinkHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+        {
+            var shape = pres.Slides[0].Shapes[0];
+            Assert.NotNull(shape.HyperlinkClick);
+            Assert.NotNull(shape.HyperlinkClick.TargetSlide);
+        }
 
-        Assert.Contains("updated", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -89,9 +99,13 @@ public class EditPptHyperlinkHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+        {
+            var shape = pres.Slides[0].Shapes[0];
+            Assert.Null(shape.HyperlinkClick);
+        }
 
-        Assert.Contains("updated", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 

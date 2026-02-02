@@ -12,6 +12,7 @@ namespace AsposeMcpServer.Tests.Integration.Workflows;
 ///     Integration tests for PDF document workflows.
 /// </summary>
 [Trait("Category", "Integration")]
+[Collection("Workflow")]
 public class PdfWorkflowTests : TestBase
 {
     private readonly PdfAnnotationTool _annotationTool;
@@ -27,7 +28,7 @@ public class PdfWorkflowTests : TestBase
     /// </summary>
     public PdfWorkflowTests()
     {
-        var config = new SessionConfig { Enabled = true };
+        var config = new SessionConfig { Enabled = true, TempDirectory = Path.Combine(TestDir, "temp") };
         _sessionManager = new DocumentSessionManager(config);
         var tempFileManager = new TempFileManager(config);
         _sessionTool = new DocumentSessionTool(_sessionManager, tempFileManager, new StdioSessionIdentityAccessor());
@@ -55,23 +56,20 @@ public class PdfWorkflowTests : TestBase
     [Fact]
     public void Pdf_OpenEditSave_Workflow()
     {
-        // Step 1: Create and open PDF
         var originalPath = CreatePdfDocument();
         var openResult = _sessionTool.Execute("open", originalPath);
         var openData = GetResultData<OpenSessionResult>(openResult);
+        Assert.False(string.IsNullOrEmpty(openData.SessionId));
 
-        // Step 2: Add a page
         _pageTool.Execute("add", sessionId: openData.SessionId);
 
-        // Step 3: Save PDF
         var outputPath = CreateTestFilePath("pdf_workflow_output.pdf");
         _sessionTool.Execute("save", sessionId: openData.SessionId, outputPath: outputPath);
 
-        // Step 4: Verify changes persisted
+        Assert.True(File.Exists(outputPath));
         var savedDoc = new Document(outputPath);
         Assert.True(savedDoc.Pages.Count >= 2);
 
-        // Step 5: Close session
         _sessionTool.Execute("close", sessionId: openData.SessionId);
     }
 
@@ -85,23 +83,24 @@ public class PdfWorkflowTests : TestBase
     [Fact]
     public void Pdf_AddWatermark_Workflow()
     {
-        // Step 1: Create and open PDF
         var originalPath = CreatePdfDocumentWithContent("Document content");
         var openResult = _sessionTool.Execute("open", originalPath);
         var openData = GetResultData<OpenSessionResult>(openResult);
+        Assert.False(string.IsNullOrEmpty(openData.SessionId));
 
-        // Step 2: Add watermark
         _watermarkTool.Execute("add",
             sessionId: openData.SessionId,
             text: "CONFIDENTIAL",
             opacity: 0.3,
             fontSize: 48);
 
-        // Step 3: Save and verify
         var outputPath = CreateTestFilePath("pdf_watermark_workflow.pdf");
         _sessionTool.Execute("save", sessionId: openData.SessionId, outputPath: outputPath);
 
         Assert.True(File.Exists(outputPath));
+        var savedDoc = new Document(outputPath);
+        Assert.True(savedDoc.Pages.Count >= 1);
+        Assert.True(new FileInfo(outputPath).Length > 0);
 
         _sessionTool.Execute("close", sessionId: openData.SessionId);
     }
@@ -116,19 +115,17 @@ public class PdfWorkflowTests : TestBase
     [Fact]
     public void Pdf_MergeDocuments_Workflow()
     {
-        // Step 1: Create multiple PDFs
         var pdf1Path = CreatePdfDocumentWithContent("First PDF content");
         var pdf2Path = CreatePdfDocumentWithContent("Second PDF content");
         var pdf3Path = CreatePdfDocumentWithContent("Third PDF content");
 
-        // Step 2: Merge PDFs
         var outputPath = CreateTestFilePath("pdf_merged_output.pdf");
         _fileTool.Execute("merge",
             inputPaths: [pdf1Path, pdf2Path, pdf3Path],
             outputPath: outputPath);
 
-        // Step 3: Verify merged PDF
         Assert.True(File.Exists(outputPath));
+        Assert.True(new FileInfo(outputPath).Length > 0);
 
         var mergedDoc = new Document(outputPath);
         Assert.True(mergedDoc.Pages.Count >= 3);
@@ -144,10 +141,8 @@ public class PdfWorkflowTests : TestBase
     [Fact]
     public void Pdf_SplitPages_Workflow()
     {
-        // Step 1: Create a multi-page PDF
         var originalPath = CreateMultiPagePdfDocument(3);
 
-        // Step 2: Split PDF
         var outputDir = CreateTestFilePath("pdf_split_output");
         Directory.CreateDirectory(outputDir);
 
@@ -156,9 +151,9 @@ public class PdfWorkflowTests : TestBase
             outputDir: outputDir,
             pagesPerFile: 1);
 
-        // Step 3: Verify split files exist
         var splitFiles = Directory.GetFiles(outputDir, "*.pdf");
         Assert.True(splitFiles.Length >= 1);
+        foreach (var splitFile in splitFiles) Assert.True(new FileInfo(splitFile).Length > 0);
     }
 
     #endregion
@@ -171,12 +166,11 @@ public class PdfWorkflowTests : TestBase
     [Fact]
     public void Pdf_AddAnnotations_Workflow()
     {
-        // Step 1: Create and open PDF
         var originalPath = CreatePdfDocumentWithContent("Document for annotation");
         var openResult = _sessionTool.Execute("open", originalPath);
         var openData = GetResultData<OpenSessionResult>(openResult);
+        Assert.False(string.IsNullOrEmpty(openData.SessionId));
 
-        // Step 2: Add annotation
         _annotationTool.Execute("add",
             sessionId: openData.SessionId,
             pageIndex: 1,
@@ -184,13 +178,14 @@ public class PdfWorkflowTests : TestBase
             x: 100,
             y: 700);
 
-        // Step 3: Save and verify
         var outputPath = CreateTestFilePath("pdf_annotation_workflow.pdf");
         _sessionTool.Execute("save", sessionId: openData.SessionId, outputPath: outputPath);
 
         Assert.True(File.Exists(outputPath));
+        Assert.True(new FileInfo(outputPath).Length > 0);
 
         var savedDoc = new Document(outputPath);
+        Assert.True(savedDoc.Pages.Count >= 1);
         Assert.True(savedDoc.Pages[1].Annotations.Count > 0);
 
         _sessionTool.Execute("close", sessionId: openData.SessionId);
@@ -206,21 +201,23 @@ public class PdfWorkflowTests : TestBase
     [Fact]
     public void Pdf_AddPages_Workflow()
     {
-        // Step 1: Create and open PDF
         var originalPath = CreatePdfDocument();
+        var originalDoc = new Document(originalPath);
+        var originalPageCount = originalDoc.Pages.Count;
+
         var openResult = _sessionTool.Execute("open", originalPath);
         var openData = GetResultData<OpenSessionResult>(openResult);
+        Assert.False(string.IsNullOrEmpty(openData.SessionId));
 
-        // Step 2: Add multiple pages
         _pageTool.Execute("add", sessionId: openData.SessionId);
         _pageTool.Execute("add", sessionId: openData.SessionId);
 
-        // Step 3: Save and verify
         var outputPath = CreateTestFilePath("pdf_pages_workflow.pdf");
         _sessionTool.Execute("save", sessionId: openData.SessionId, outputPath: outputPath);
 
+        Assert.True(File.Exists(outputPath));
         var savedDoc = new Document(outputPath);
-        Assert.True(savedDoc.Pages.Count >= 3);
+        Assert.True(savedDoc.Pages.Count >= originalPageCount + 2);
 
         _sessionTool.Execute("close", sessionId: openData.SessionId);
     }
@@ -231,16 +228,16 @@ public class PdfWorkflowTests : TestBase
     [Fact]
     public void Pdf_ExtractText_Workflow()
     {
-        // Step 1: Create and open PDF with content
         var originalPath = CreatePdfDocumentWithContent("Sample PDF Content");
         var openResult = _sessionTool.Execute("open", originalPath);
         var openData = GetResultData<OpenSessionResult>(openResult);
+        Assert.False(string.IsNullOrEmpty(openData.SessionId));
 
-        // Step 2: Extract text
         var extractResult = _textTool.Execute("extract", sessionId: openData.SessionId);
 
-        // Step 3: Verify text was extracted
         Assert.NotNull(extractResult);
+        Assert.True(extractResult.GetType().Name.StartsWith("FinalizedResult"),
+            $"Expected FinalizedResult but got {extractResult.GetType().Name}");
 
         _sessionTool.Execute("close", sessionId: openData.SessionId);
     }

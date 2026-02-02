@@ -198,4 +198,76 @@ public class ConvertWorkbookHandlerTests : ExcelHandlerTestBase
     }
 
     #endregion
+
+    #region Additional Format Tests
+
+    [Fact]
+    public void Execute_ConvertsToOds()
+    {
+        var inputPath = CreateInputWorkbook();
+        var outputPath = Path.Combine(TestDir, "output.ods");
+        var workbook = CreateEmptyWorkbook();
+        var context = CreateContext(workbook);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "inputPath", inputPath },
+            { "outputPath", outputPath },
+            { "format", "ods" }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("converted", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.True(File.Exists(outputPath));
+        var fileInfo = new FileInfo(outputPath);
+        Assert.True(fileInfo.Length > 0, "Converted file should have content");
+    }
+
+    [Fact]
+    public void Execute_ConvertsToTxt()
+    {
+        var inputPath = CreateInputWorkbook();
+        var outputPath = Path.Combine(TestDir, "output.txt");
+        var workbook = CreateEmptyWorkbook();
+        var context = CreateContext(workbook);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "inputPath", inputPath },
+            { "outputPath", outputPath },
+            { "format", "txt" }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("converted", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.True(File.Exists(outputPath));
+    }
+
+    [Fact]
+    public void Execute_ConvertsToTsv()
+    {
+        var inputPath = CreateInputWorkbook();
+        var outputPath = Path.Combine(TestDir, "output.tsv");
+        var workbook = CreateEmptyWorkbook();
+        var context = CreateContext(workbook);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "inputPath", inputPath },
+            { "outputPath", outputPath },
+            { "format", "tsv" }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<SuccessResult>(res);
+
+        Assert.Contains("converted", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.True(File.Exists(outputPath));
+    }
+
+    #endregion
 }

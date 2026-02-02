@@ -1,4 +1,5 @@
 using Aspose.Words;
+using Aspose.Words.Fields;
 using AsposeMcpServer.Handlers.Word.Reference;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -48,9 +49,10 @@ public class AddTableOfContentsWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("table of contents added", result.Message, StringComparison.OrdinalIgnoreCase);
+        var tocFields = doc.Range.Fields.Where(f => f.Type == FieldType.FieldTOC).ToList();
+        Assert.NotEmpty(tocFields);
         AssertModified(context);
     }
 
@@ -66,9 +68,11 @@ public class AddTableOfContentsWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("table of contents added", result.Message, StringComparison.OrdinalIgnoreCase);
+        var tocFields = doc.Range.Fields.Where(f => f.Type == FieldType.FieldTOC).ToList();
+        Assert.NotEmpty(tocFields);
+        if (!IsEvaluationMode(AsposeLibraryType.Words)) AssertContainsText(doc, "Contents");
     }
 
     [Fact]
@@ -83,9 +87,11 @@ public class AddTableOfContentsWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
+        var tocFields = doc.Range.Fields.Where(f => f.Type == FieldType.FieldTOC).ToList();
+        Assert.NotEmpty(tocFields);
+        if (!IsEvaluationMode(AsposeLibraryType.Words)) Assert.Contains("1-2", tocFields[0].GetFieldCode());
     }
 
     [Fact]
@@ -100,9 +106,11 @@ public class AddTableOfContentsWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
+        var tocFields = doc.Range.Fields.Where(f => f.Type == FieldType.FieldTOC).ToList();
+        Assert.NotEmpty(tocFields);
+        AssertModified(context);
     }
 
     #endregion

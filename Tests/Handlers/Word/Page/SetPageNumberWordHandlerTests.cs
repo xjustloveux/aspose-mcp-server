@@ -65,9 +65,7 @@ public class SetPageNumberWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("page number settings updated", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
         Assert.Equal(NumberStyle.Arabic, doc.Sections[0].PageSetup.PageNumberStyle);
         AssertModified(context);
     }
@@ -116,9 +114,8 @@ public class SetPageNumberWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("1 section", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(NumberStyle.UppercaseLetter, doc.Sections[1].PageSetup.PageNumberStyle);
     }
 
     #endregion

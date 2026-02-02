@@ -35,10 +35,15 @@ public class EditPdfTextHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            var absorber = new TextFragmentAbsorber("New");
+            doc.Pages[1].Accept(absorber);
+            Assert.True(absorber.TextFragments.Count > 0);
+        }
 
-        Assert.Contains("Replaced", result.Message);
-        Assert.Contains("occurrence", result.Message);
+        AssertModified(context);
     }
 
     #endregion
@@ -70,10 +75,14 @@ public class EditPdfTextHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            var absorber = new TextFragmentAbsorber("Modified");
+            doc.Pages[1].Accept(absorber);
+            Assert.True(absorber.TextFragments.Count > 0);
+        }
 
-        Assert.Contains("Replaced", result.Message);
-        Assert.Contains("1", result.Message);
         AssertModified(context);
     }
 
@@ -94,9 +103,14 @@ public class EditPdfTextHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            var absorber = new TextFragmentAbsorber(newText);
+            doc.Pages[1].Accept(absorber);
+            Assert.True(absorber.TextFragments.Count > 0);
+        }
 
-        Assert.Contains("Replaced", result.Message);
         AssertModified(context);
     }
 
@@ -119,9 +133,14 @@ public class EditPdfTextHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            var absorber = new TextFragmentAbsorber("Found");
+            doc.Pages[2].Accept(absorber);
+            Assert.True(absorber.TextFragments.Count > 0);
+        }
 
-        Assert.Contains("2", result.Message);
         AssertModified(context);
     }
 
@@ -139,9 +158,15 @@ public class EditPdfTextHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            var absorber = new TextFragmentAbsorber("Modified");
+            doc.Pages[1].Accept(absorber);
+            Assert.True(absorber.TextFragments.Count > 0);
+        }
 
-        Assert.Contains("1", result.Message);
+        AssertModified(context);
     }
 
     #endregion
@@ -163,9 +188,15 @@ public class EditPdfTextHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            var changedAbsorber = new TextFragmentAbsorber("Changed");
+            doc.Pages[1].Accept(changedAbsorber);
+            Assert.Single(changedAbsorber.TextFragments);
+        }
 
-        Assert.Contains("1 occurrence", result.Message);
+        AssertModified(context);
     }
 
     [Fact]
@@ -185,9 +216,14 @@ public class EditPdfTextHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            var changedAbsorber = new TextFragmentAbsorber("Changed");
+            doc.Pages[1].Accept(changedAbsorber);
+            Assert.True(changedAbsorber.TextFragments.Count >= 3);
+        }
 
-        Assert.Contains("occurrence", result.Message);
         AssertModified(context);
     }
 

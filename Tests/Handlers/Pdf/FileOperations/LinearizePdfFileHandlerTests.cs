@@ -24,14 +24,14 @@ public class LinearizePdfFileHandlerTests : PdfHandlerTestBase
     public void Execute_LinearizesPdf()
     {
         var doc = CreateDocumentWithText("Test content for web viewing");
+        var initialPageCount = doc.Pages.Count;
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("linearized", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        AssertPageCount(doc, initialPageCount);
         AssertModified(context);
     }
 
@@ -46,9 +46,8 @@ public class LinearizePdfFileHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("linearized", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        AssertPageCount(doc, 5);
         AssertModified(context);
     }
 

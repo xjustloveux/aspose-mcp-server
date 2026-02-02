@@ -1,4 +1,5 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core.ShapeDetailProviders.Details;
 using AsposeMcpServer.Handlers.PowerPoint.Shape;
 using AsposeMcpServer.Results.PowerPoint.Shape;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -120,8 +121,8 @@ public class GetPptShapeDetailsHandlerTests : PptHandlerTestBase
         var res = _handler.Execute(context, parameters);
         var result = Assert.IsType<GetShapeDetailsResult>(res);
 
-        Assert.NotNull(result.ShapeType);
-        Assert.Equal("Ellipse", result.ShapeType);
+        var autoShape = Assert.IsType<AutoShapeDetails>(result.Details);
+        Assert.Equal("Ellipse", autoShape.ShapeType);
     }
 
     [Fact]
@@ -139,8 +140,8 @@ public class GetPptShapeDetailsHandlerTests : PptHandlerTestBase
         var res = _handler.Execute(context, parameters);
         var result = Assert.IsType<GetShapeDetailsResult>(res);
 
-        Assert.NotNull(result.FillType);
-        Assert.Equal("Solid", result.FillType);
+        var autoShape = Assert.IsType<AutoShapeDetails>(result.Details);
+        Assert.Equal("Solid", autoShape.FillType);
     }
 
     #endregion
@@ -181,6 +182,105 @@ public class GetPptShapeDetailsHandlerTests : PptHandlerTestBase
         var result = Assert.IsType<GetShapeDetailsResult>(res);
 
         Assert.True(result.Hidden);
+    }
+
+    #endregion
+
+    #region AlternativeText
+
+    [Fact]
+    public void Execute_ReturnsAlternativeText()
+    {
+        var pres = CreatePresentationWithSlides(1);
+        var shape = pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 200);
+        shape.AlternativeText = "Test alt text";
+        var context = CreateContext(pres);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "shapeIndex", 0 }
+        });
+
+        var res = _handler.Execute(context, parameters);
+        var result = Assert.IsType<GetShapeDetailsResult>(res);
+
+        Assert.Equal("Test alt text", result.AlternativeText);
+    }
+
+    [Fact]
+    public void Execute_WithEmptyAlternativeText_ReturnsNull()
+    {
+        var pres = CreatePresentationWithSlides(1);
+        pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 200);
+        var context = CreateContext(pres);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "shapeIndex", 0 }
+        });
+
+        var res = _handler.Execute(context, parameters);
+        var result = Assert.IsType<GetShapeDetailsResult>(res);
+
+        Assert.Null(result.AlternativeText);
+    }
+
+    #endregion
+
+    #region Flip Properties
+
+    [Fact]
+    public void Execute_WithFlipHorizontal_ReturnsTrue()
+    {
+        var pres = CreatePresentationWithSlides(1);
+        var shape = pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 200);
+        shape.Frame = new ShapeFrame(shape.X, shape.Y, shape.Width, shape.Height, NullableBool.True,
+            shape.Frame.FlipV, shape.Rotation);
+        var context = CreateContext(pres);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "shapeIndex", 0 }
+        });
+
+        var res = _handler.Execute(context, parameters);
+        var result = Assert.IsType<GetShapeDetailsResult>(res);
+
+        Assert.True(result.FlipHorizontal);
+    }
+
+    [Fact]
+    public void Execute_WithFlipVertical_ReturnsTrue()
+    {
+        var pres = CreatePresentationWithSlides(1);
+        var shape = pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 200);
+        shape.Frame = new ShapeFrame(shape.X, shape.Y, shape.Width, shape.Height, shape.Frame.FlipH,
+            NullableBool.True, shape.Rotation);
+        var context = CreateContext(pres);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "shapeIndex", 0 }
+        });
+
+        var res = _handler.Execute(context, parameters);
+        var result = Assert.IsType<GetShapeDetailsResult>(res);
+
+        Assert.True(result.FlipVertical);
+    }
+
+    [Fact]
+    public void Execute_WithNoFlip_ReturnsNullOrFalse()
+    {
+        var pres = CreatePresentationWithSlides(1);
+        pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 200);
+        var context = CreateContext(pres);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "shapeIndex", 0 }
+        });
+
+        var res = _handler.Execute(context, parameters);
+        var result = Assert.IsType<GetShapeDetailsResult>(res);
+
+        Assert.True(result.FlipHorizontal is null or false);
+        Assert.True(result.FlipVertical is null or false);
     }
 
     #endregion

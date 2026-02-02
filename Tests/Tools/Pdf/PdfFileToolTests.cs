@@ -1,5 +1,6 @@
 ﻿using Aspose.Pdf;
 using Aspose.Pdf.Text;
+using AsposeMcpServer.Results;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Pdf;
@@ -41,8 +42,7 @@ public class PdfFileToolTests : PdfTestBase
     {
         var outputPath = CreateTestFilePath("test_create.pdf");
         var result = _tool.Execute("create", outputPath: outputPath);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("PDF document created", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         Assert.True(File.Exists(outputPath));
 
         using var doc = new Document(outputPath);
@@ -58,8 +58,8 @@ public class PdfFileToolTests : PdfTestBase
 
         var result = _tool.Execute("merge", outputPath: outputPath,
             inputPaths: [pdf1Path, pdf2Path]);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Merged 2 PDF documents", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
+        Assert.True(File.Exists(outputPath));
         using var document = new Document(outputPath);
         Assert.Equal(2, document.Pages.Count);
     }
@@ -72,8 +72,7 @@ public class PdfFileToolTests : PdfTestBase
         Directory.CreateDirectory(outputDir);
 
         var result = _tool.Execute("split", pdfPath, outputDir: outputDir, pagesPerFile: 1);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("PDF split into 2 files", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         var files = Directory.GetFiles(outputDir, "*.pdf");
         Assert.Equal(2, files.Length);
 
@@ -90,11 +89,12 @@ public class PdfFileToolTests : PdfTestBase
         var pdfPath = CreateTestPdf("test_compress.pdf");
         var outputPath = CreateTestFilePath("test_compress_output.pdf");
 
-        var result = _tool.Execute("compress", pdfPath, outputPath: outputPath,
+        _tool.Execute("compress", pdfPath, outputPath: outputPath,
             compressImages: true, compressFonts: true, removeUnusedObjects: true);
 
         Assert.True(File.Exists(outputPath));
-        Assert.StartsWith("PDF compressed", GetResultData<string>(result));
+        using var doc = new Document(outputPath);
+        Assert.True(doc.Pages.Count > 0);
     }
 
     [Fact]
@@ -104,8 +104,7 @@ public class PdfFileToolTests : PdfTestBase
         var outputPath = CreateTestFilePath("test_encrypt_output.pdf");
         var result = _tool.Execute("encrypt", pdfPath, outputPath: outputPath,
             userPassword: "user123", ownerPassword: "owner123");
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("PDF encrypted", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         Assert.True(File.Exists(outputPath));
 
         using var decryptedDoc = new Document(outputPath, "user123");
@@ -118,9 +117,10 @@ public class PdfFileToolTests : PdfTestBase
         var pdfPath = CreateTestPdf("test_linearize.pdf");
         var outputPath = CreateTestFilePath("test_linearize_output.pdf");
 
-        var result = _tool.Execute("linearize", pdfPath, outputPath: outputPath);
-        Assert.StartsWith("PDF linearized", GetResultData<string>(result));
+        _tool.Execute("linearize", pdfPath, outputPath: outputPath);
         Assert.True(File.Exists(outputPath));
+        using var doc = new Document(outputPath);
+        Assert.True(doc.Pages.Count > 0);
     }
 
     #endregion
@@ -135,8 +135,8 @@ public class PdfFileToolTests : PdfTestBase
     {
         var outputPath = CreateTestFilePath($"test_case_{operation}.pdf");
         var result = _tool.Execute(operation, outputPath: outputPath);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("PDF document created", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
+        Assert.True(File.Exists(outputPath));
     }
 
     [Fact]
@@ -166,10 +166,11 @@ public class PdfFileToolTests : PdfTestBase
         var sessionId = OpenSession(pdfPath);
 
         var result = _tool.Execute("compress", sessionId: sessionId, compressImages: true);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("PDF compressed", data.Message);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
+        var document = SessionManager.GetDocument<Document>(sessionId);
+        Assert.NotNull(document);
+        Assert.True(document.Pages.Count > 0);
     }
 
     [Fact]
@@ -179,10 +180,11 @@ public class PdfFileToolTests : PdfTestBase
         var sessionId = OpenSession(pdfPath);
 
         var result = _tool.Execute("linearize", sessionId: sessionId);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("PDF linearized", data.Message);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
+        var document = SessionManager.GetDocument<Document>(sessionId);
+        Assert.NotNull(document);
+        Assert.True(document.Pages.Count > 0);
     }
 
     [Fact]
@@ -193,10 +195,10 @@ public class PdfFileToolTests : PdfTestBase
 
         var result = _tool.Execute("encrypt", sessionId: sessionId,
             userPassword: "user", ownerPassword: "owner");
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("PDF encrypted", data.Message);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
+        var document = SessionManager.GetDocument<Document>(sessionId);
+        Assert.NotNull(document);
     }
 
     [Fact]
@@ -209,12 +211,15 @@ public class PdfFileToolTests : PdfTestBase
 
         var result = _tool.Execute("split", sessionId: sessionId,
             outputDir: outputDir, pagesPerFile: 1);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("PDF split into 2 files", data.Message);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
         var files = Directory.GetFiles(outputDir, "*.pdf");
         Assert.Equal(2, files.Length);
+        foreach (var file in files)
+        {
+            using var doc = new Document(file);
+            Assert.Single(doc.Pages);
+        }
     }
 
     [Fact]
@@ -234,8 +239,9 @@ public class PdfFileToolTests : PdfTestBase
         Directory.CreateDirectory(outputDir);
 
         var result = _tool.Execute("split", pdfPath1, sessionId, outputDir: outputDir, pagesPerFile: 1);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("PDF split into 3 files", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
+        var files = Directory.GetFiles(outputDir, "*.pdf");
+        Assert.Equal(3, files.Length);
     }
 
     #endregion

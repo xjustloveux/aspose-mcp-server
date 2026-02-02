@@ -37,9 +37,13 @@ public class InsertRowHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains($"{count} row(s)", result.Message);
+        AssertCellValue(workbook, count, 0, "Data 1");
+        AssertCellValue(workbook, count + 1, 0, "Data 2");
+        AssertCellValue(workbook, count + 2, 0, "Data 3");
+        for (var i = 0; i < count; i++)
+            Assert.Null(GetCellValue(workbook, i, 0));
     }
 
     #endregion
@@ -58,10 +62,13 @@ public class InsertRowHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Inserted", result.Message);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+
+        AssertCellValue(workbook, 0, 0, "Data 1");
+        Assert.Null(GetCellValue(workbook, 1, 0));
+        AssertCellValue(workbook, 2, 0, "Data 2");
+        AssertCellValue(workbook, 3, 0, "Data 3");
     }
 
     [Fact]
@@ -76,9 +83,12 @@ public class InsertRowHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("row 2", result.Message);
+        AssertCellValue(workbook, 0, 0, "Data 1");
+        AssertCellValue(workbook, 1, 0, "Data 2");
+        Assert.Null(GetCellValue(workbook, 2, 0));
+        AssertCellValue(workbook, 3, 0, "Data 3");
     }
 
     [Fact]
@@ -94,9 +104,13 @@ public class InsertRowHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("3 row(s)", result.Message);
+        for (var i = 0; i < 3; i++)
+            Assert.Null(GetCellValue(workbook, i, 0));
+        AssertCellValue(workbook, 3, 0, "Data 1");
+        AssertCellValue(workbook, 4, 0, "Data 2");
+        AssertCellValue(workbook, 5, 0, "Data 3");
     }
 
     [Fact]
@@ -111,9 +125,12 @@ public class InsertRowHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("1 row(s)", result.Message);
+        Assert.Null(GetCellValue(workbook, 0, 0));
+        AssertCellValue(workbook, 1, 0, "Data 1");
+        AssertCellValue(workbook, 2, 0, "Data 2");
+        AssertCellValue(workbook, 3, 0, "Data 3");
     }
 
     #endregion
@@ -124,6 +141,7 @@ public class InsertRowHandlerTests : ExcelHandlerTestBase
     public void Execute_WithSheetIndex_InsertsOnCorrectSheet()
     {
         var workbook = CreateWorkbookWithSheets(3);
+        workbook.Worksheets[1].Cells["A1"].PutValue("Sheet2Data");
         var context = CreateContext(workbook);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -133,15 +151,17 @@ public class InsertRowHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Inserted", result.Message);
+        Assert.Null(workbook.Worksheets[1].Cells[0, 0].Value);
+        Assert.Equal("Sheet2Data", workbook.Worksheets[1].Cells[1, 0].Value);
     }
 
     [Fact]
     public void Execute_DefaultSheetIndex_UsesFirstSheet()
     {
         var workbook = CreateWorkbookWithSheets(3);
+        workbook.Worksheets[0].Cells["A1"].PutValue("FirstSheetData");
         var context = CreateContext(workbook);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -150,9 +170,10 @@ public class InsertRowHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Inserted", result.Message);
+        Assert.Null(workbook.Worksheets[0].Cells[0, 0].Value);
+        Assert.Equal("FirstSheetData", workbook.Worksheets[0].Cells[1, 0].Value);
     }
 
     #endregion
@@ -217,7 +238,7 @@ public class InsertRowHandlerTests : ExcelHandlerTestBase
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    public void Execute_WithZeroOrNegativeCount_AcceptsValue(int count)
+    public void Execute_WithZeroOrNegativeCount_ThrowsArgumentException(int count)
     {
         var workbook = CreateWorkbookWithData();
         var context = CreateContext(workbook);
@@ -227,11 +248,8 @@ public class InsertRowHandlerTests : ExcelHandlerTestBase
             { "count", count }
         });
 
-        var res = _handler.Execute(context, parameters);
-
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains($"{count} row(s)", result.Message);
+        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+        Assert.Contains("Count must be greater than 0", ex.Message);
     }
 
     [Fact]
@@ -246,10 +264,10 @@ public class InsertRowHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Inserted", result.Message);
-        Assert.Contains("row 0", result.Message);
+        Assert.Null(GetCellValue(workbook, 0, 0));
+        AssertCellValue(workbook, 1, 0, "Data 1");
     }
 
     [Fact]
@@ -265,9 +283,12 @@ public class InsertRowHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("100 row(s)", result.Message);
+        AssertCellValue(workbook, 100, 0, "Data 1");
+        AssertCellValue(workbook, 101, 0, "Data 2");
+        AssertCellValue(workbook, 102, 0, "Data 3");
+        Assert.Null(GetCellValue(workbook, 0, 0));
     }
 
     #endregion

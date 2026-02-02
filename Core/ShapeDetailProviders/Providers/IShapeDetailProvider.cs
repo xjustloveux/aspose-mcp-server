@@ -1,6 +1,7 @@
 using Aspose.Slides;
+using AsposeMcpServer.Core.ShapeDetailProviders.Details;
 
-namespace AsposeMcpServer.Core.ShapeDetailProviders;
+namespace AsposeMcpServer.Core.ShapeDetailProviders.Providers;
 
 /// <summary>
 ///     Interface for extracting type-specific properties from PowerPoint shapes
@@ -24,6 +25,6 @@ public interface IShapeDetailProvider
     /// </summary>
     /// <param name="shape">The shape to extract properties from</param>
     /// <param name="presentation">The presentation containing the shape (for context like slide references)</param>
-    /// <returns>An object containing type-specific properties, or null if no properties to extract</returns>
-    object? GetDetails(IShape shape, IPresentation presentation);
+    /// <returns>A strongly-typed detail record, or null if no properties to extract</returns>
+    ShapeDetails? GetDetails(IShape shape, IPresentation presentation);
 }

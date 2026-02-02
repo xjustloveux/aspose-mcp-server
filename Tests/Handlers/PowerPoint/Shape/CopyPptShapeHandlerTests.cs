@@ -45,10 +45,11 @@ public class CopyPptShapeHandlerTests : PptHandlerTestBase
     #region Result Message
 
     [Fact]
-    public void Execute_ReturnsSlideIndicesInMessage()
+    public void Execute_CopyAddsShapeToTargetSlide()
     {
         var pres = CreatePresentationWithSlides(2);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
+        var targetInitialCount = pres.Slides[1].Shapes.Count;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -59,10 +60,9 @@ public class CopyPptShapeHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("0", result.Message);
-        Assert.Contains("1", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        AssertModified(context);
+        Assert.Equal(targetInitialCount + 1, pres.Slides[1].Shapes.Count);
     }
 
     #endregion
@@ -85,11 +85,9 @@ public class CopyPptShapeHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("copied", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal(targetInitialCount + 1, pres.Slides[1].Shapes.Count);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+        Assert.Equal(targetInitialCount + 1, pres.Slides[1].Shapes.Count);
     }
 
     [Theory]

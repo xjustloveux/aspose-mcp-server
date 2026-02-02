@@ -11,6 +11,7 @@ namespace AsposeMcpServer.Tests.Integration.Workflows;
 ///     Integration tests for Excel workbook workflows.
 /// </summary>
 [Trait("Category", "Integration")]
+[Collection("Workflow")]
 public class ExcelWorkflowTests : TestBase
 {
     private readonly ExcelCellTool _cellTool;
@@ -25,7 +26,7 @@ public class ExcelWorkflowTests : TestBase
     /// </summary>
     public ExcelWorkflowTests()
     {
-        var config = new SessionConfig { Enabled = true };
+        var config = new SessionConfig { Enabled = true, TempDirectory = Path.Combine(TestDir, "temp") };
         _sessionManager = new DocumentSessionManager(config);
         var tempFileManager = new TempFileManager(config);
         _sessionTool = new DocumentSessionTool(_sessionManager, tempFileManager, new StdioSessionIdentityAccessor());
@@ -52,23 +53,18 @@ public class ExcelWorkflowTests : TestBase
     [Fact]
     public void Excel_OpenEditSave_Workflow()
     {
-        // Step 1: Create and open workbook
         var originalPath = CreateExcelDocument();
         var openResult = _sessionTool.Execute("open", originalPath);
         var openData = GetResultData<OpenSessionResult>(openResult);
 
-        // Step 2: Edit workbook - edit cell value
         _cellTool.Execute("edit", sessionId: openData.SessionId, cell: "B1", value: "Modified");
 
-        // Step 3: Save workbook
         var outputPath = CreateTestFilePath("excel_workflow_output.xlsx");
         _sessionTool.Execute("save", sessionId: openData.SessionId, outputPath: outputPath);
 
-        // Step 4: Verify changes persisted
         using var savedWorkbook = new Workbook(outputPath);
         Assert.Equal("Modified", savedWorkbook.Worksheets[0].Cells["B1"].StringValue);
 
-        // Step 5: Close session
         _sessionTool.Execute("close", sessionId: openData.SessionId);
     }
 
@@ -82,18 +78,14 @@ public class ExcelWorkflowTests : TestBase
     [Fact]
     public void Excel_AddFormulaCalculate_Workflow()
     {
-        // Step 1: Create workbook with data
         var originalPath = CreateExcelDocumentWithData();
         var openResult = _sessionTool.Execute("open", originalPath);
         var openData = GetResultData<OpenSessionResult>(openResult);
 
-        // Step 2: Add formula
         _formulaTool.Execute("add", sessionId: openData.SessionId, cell: "C1", formula: "=A1+B1");
 
-        // Step 3: Calculate formulas
         _formulaTool.Execute("calculate", sessionId: openData.SessionId);
 
-        // Step 4: Save and verify
         var outputPath = CreateTestFilePath("formula_workflow.xlsx");
         _sessionTool.Execute("save", sessionId: openData.SessionId, outputPath: outputPath);
 
@@ -115,12 +107,10 @@ public class ExcelWorkflowTests : TestBase
     [Fact]
     public void Excel_ImportData_Workflow()
     {
-        // Step 1: Create and open empty workbook
         var originalPath = CreateEmptyExcelDocument();
         var openResult = _sessionTool.Execute("open", originalPath);
         var openData = GetResultData<OpenSessionResult>(openResult);
 
-        // Step 2: Edit multiple cell values
         _cellTool.Execute("edit", sessionId: openData.SessionId, cell: "A1", value: "Product");
         _cellTool.Execute("edit", sessionId: openData.SessionId, cell: "B1", value: "Price");
         _cellTool.Execute("edit", sessionId: openData.SessionId, cell: "A2", value: "Apple");
@@ -128,7 +118,6 @@ public class ExcelWorkflowTests : TestBase
         _cellTool.Execute("edit", sessionId: openData.SessionId, cell: "A3", value: "Banana");
         _cellTool.Execute("edit", sessionId: openData.SessionId, cell: "B3", value: "0.75");
 
-        // Step 3: Save and verify
         var outputPath = CreateTestFilePath("import_data_workflow.xlsx");
         _sessionTool.Execute("save", sessionId: openData.SessionId, outputPath: outputPath);
 
@@ -150,18 +139,15 @@ public class ExcelWorkflowTests : TestBase
     [Fact]
     public void Excel_CreatePivotTable_Workflow()
     {
-        // Step 1: Create workbook with data for pivot table
         var originalPath = CreateExcelDocumentWithPivotData();
         var openResult = _sessionTool.Execute("open", originalPath);
         var openData = GetResultData<OpenSessionResult>(openResult);
 
-        // Step 2: Add pivot table
         _pivotTableTool.Execute("add",
             sessionId: openData.SessionId,
             sourceRange: "A1:C5",
             destCell: "E1");
 
-        // Step 3: Save and verify
         var outputPath = CreateTestFilePath("pivot_table_workflow.xlsx");
         _sessionTool.Execute("save", sessionId: openData.SessionId, outputPath: outputPath);
 
@@ -183,19 +169,16 @@ public class ExcelWorkflowTests : TestBase
     [Fact]
     public void Excel_CreateChart_Workflow()
     {
-        // Step 1: Create workbook with data for chart
         var originalPath = CreateExcelDocumentWithChartData();
         var openResult = _sessionTool.Execute("open", originalPath);
         var openData = GetResultData<OpenSessionResult>(openResult);
 
-        // Step 2: Add chart
         _chartTool.Execute("add",
             sessionId: openData.SessionId,
             chartType: "Column",
             dataRange: "A1:B4",
             title: "Sales Chart");
 
-        // Step 3: Save and verify
         var outputPath = CreateTestFilePath("chart_workflow.xlsx");
         _sessionTool.Execute("save", sessionId: openData.SessionId, outputPath: outputPath);
 

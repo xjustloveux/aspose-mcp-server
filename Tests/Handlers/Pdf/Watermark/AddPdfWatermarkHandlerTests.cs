@@ -45,10 +45,11 @@ public class AddPdfWatermarkHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("watermark added", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("1 page", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        var page = document.Pages[1];
+        Assert.True(page.Artifacts.Count > 0, "Page should have at least one artifact after adding watermark");
+        var watermark = page.Artifacts.OfType<WatermarkArtifact>().First();
+        Assert.NotNull(watermark);
         AssertModified(context);
     }
 
@@ -69,9 +70,12 @@ public class AddPdfWatermarkHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("watermark added", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        var page = document.Pages[1];
+        var watermark = page.Artifacts.OfType<WatermarkArtifact>().First();
+        Assert.Equal(0.5, watermark.Opacity);
+        Assert.Equal(30.0, watermark.Rotation);
+        Assert.True(page.Artifacts.Count > 0, "Page should have at least one artifact after adding watermark");
     }
 
     [SkippableFact]
@@ -89,9 +93,11 @@ public class AddPdfWatermarkHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("watermark added", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        var page = document.Pages[1];
+        var watermark = page.Artifacts.OfType<WatermarkArtifact>().First();
+        Assert.Equal(HorizontalAlignment.Left, watermark.ArtifactHorizontalAlignment);
+        Assert.Equal(VerticalAlignment.Top, watermark.ArtifactVerticalAlignment);
     }
 
     [SkippableFact]
@@ -108,9 +114,10 @@ public class AddPdfWatermarkHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("watermark added", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        var page = document.Pages[1];
+        var watermark = page.Artifacts.OfType<WatermarkArtifact>().First();
+        Assert.True(watermark.IsBackground, "Watermark should be set as background");
     }
 
     [SkippableFact]
@@ -126,9 +133,13 @@ public class AddPdfWatermarkHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("3 page", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        for (var i = 1; i <= 3; i++)
+        {
+            var page = document.Pages[i];
+            Assert.True(page.Artifacts.OfType<WatermarkArtifact>().Any(),
+                $"Page {i} should have a watermark artifact");
+        }
     }
 
     [SkippableFact]
@@ -145,9 +156,20 @@ public class AddPdfWatermarkHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        for (var i = 1; i <= 3; i++)
+        {
+            var page = document.Pages[i];
+            Assert.True(page.Artifacts.OfType<WatermarkArtifact>().Any(),
+                $"Page {i} should have a watermark artifact");
+        }
 
-        Assert.Contains("3 page", result.Message, StringComparison.OrdinalIgnoreCase);
+        for (var i = 4; i <= 5; i++)
+        {
+            var page = document.Pages[i];
+            Assert.False(page.Artifacts.OfType<WatermarkArtifact>().Any(),
+                $"Page {i} should not have a watermark artifact");
+        }
     }
 
     [Fact]

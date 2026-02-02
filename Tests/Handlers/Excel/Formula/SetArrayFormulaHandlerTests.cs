@@ -276,4 +276,82 @@ public class SetArrayFormulaHandlerTests : ExcelHandlerTestBase
     }
 
     #endregion
+
+    #region Validation and Fallback Tests
+
+    [Fact]
+    public void Execute_WithInvalidRange_ThrowsArgumentException()
+    {
+        var workbook = CreateEmptyWorkbook();
+        var context = CreateContext(workbook);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "range", "INVALID_RANGE!!!" },
+            { "formula", "=A1:A3*2" }
+        });
+
+        Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+    }
+
+    [Fact]
+    public void Execute_WithEmptyRange_ThrowsArgumentException()
+    {
+        var workbook = CreateEmptyWorkbook();
+        var context = CreateContext(workbook);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "range", "" },
+            { "formula", "=A1:A3*2" }
+        });
+
+        Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+    }
+
+    [Fact]
+    public void Execute_WithComplexFormula_SetsSuccessfully()
+    {
+        var workbook = CreateWorkbookWithData(new object[,]
+        {
+            { 1 },
+            { 2 },
+            { 3 }
+        });
+        var context = CreateContext(workbook);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "range", "B1:B3" },
+            { "formula", "=IF(A1:A3>0,A1:A3*2,0)" }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<SuccessResult>(res);
+        Assert.Contains("B1:B3", result.Message);
+        AssertModified(context);
+    }
+
+    [Fact]
+    public void Execute_WithFormulaStartingWithoutEquals_AddsEqualsAndSucceeds()
+    {
+        var workbook = CreateWorkbookWithData(new object[,]
+        {
+            { 1 },
+            { 2 },
+            { 3 }
+        });
+        var context = CreateContext(workbook);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "range", "B1:B3" },
+            { "formula", "SUM(A1:A3)" }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<SuccessResult>(res);
+        Assert.Contains("B1:B3", result.Message);
+        AssertModified(context);
+    }
+
+    #endregion
 }

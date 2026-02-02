@@ -81,14 +81,19 @@ public class EditPdfLinkHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            var link = doc.Pages[1].Annotations.OfType<LinkAnnotation>().First();
+            var action = link.Action as GoToURIAction;
+            Assert.Equal("https://newurl.com", action?.URI);
+        }
 
-        Assert.Contains("Edited link", result.Message);
         AssertModified(context);
     }
 
     [Fact]
-    public void Execute_ReturnsLinkIndex()
+    public void Execute_EditsSecondLink()
     {
         var doc = CreateDocumentWithLinks(2);
         var context = CreateContext(doc);
@@ -101,13 +106,21 @@ public class EditPdfLinkHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            var links = doc.Pages[1].Annotations.OfType<LinkAnnotation>().ToList();
+            var firstAction = links[0].Action as GoToURIAction;
+            Assert.Equal("https://example0.com", firstAction?.URI);
+            var secondAction = links[1].Action as GoToURIAction;
+            Assert.Equal("https://newurl.com", secondAction?.URI);
+        }
 
-        Assert.Contains("link 1", result.Message);
+        AssertModified(context);
     }
 
     [Fact]
-    public void Execute_ReturnsPageIndex()
+    public void Execute_EditsLinkUrlOnPage()
     {
         var doc = CreateDocumentWithLinks(1);
         var context = CreateContext(doc);
@@ -120,9 +133,15 @@ public class EditPdfLinkHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            var link = doc.Pages[1].Annotations.OfType<LinkAnnotation>().First();
+            var action = link.Action as GoToURIAction;
+            Assert.Equal("https://newurl.com", action?.URI);
+        }
 
-        Assert.Contains("page 1", result.Message);
+        AssertModified(context);
     }
 
     #endregion
@@ -164,9 +183,15 @@ public class EditPdfLinkHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            var links = doc.Pages[1].Annotations.OfType<LinkAnnotation>().ToList();
+            var action = links[linkIndex].Action as GoToURIAction;
+            Assert.Equal("https://newurl.com", action?.URI);
+        }
 
-        Assert.Contains("Edited link", result.Message);
+        AssertModified(context);
     }
 
     #endregion

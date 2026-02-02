@@ -1,4 +1,6 @@
+using System.Drawing;
 using Aspose.Words;
+using Aspose.Words.Tables;
 using AsposeMcpServer.Handlers.Word.Table;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -58,10 +60,15 @@ public class EditCellFormatWordTableHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("entire table", result.Message);
-        Assert.Contains("9 cells", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var table = doc.Sections[0].Body.Tables[0];
+            foreach (var row in table.Rows.Cast<Row>())
+            foreach (var cell in row.Cells.Cast<Cell>())
+                Assert.NotEqual(Color.Empty, cell.CellFormat.Shading.BackgroundPatternColor);
+        }
     }
 
     #endregion
@@ -85,9 +92,16 @@ public class EditCellFormatWordTableHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("format", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var cell = doc.Sections[0].Body.Tables[0].Rows[0].Cells[0];
+            Assert.Equal(10.0, cell.CellFormat.TopPadding);
+            Assert.Equal(8.0, cell.CellFormat.BottomPadding);
+            Assert.Equal(5.0, cell.CellFormat.LeftPadding);
+            Assert.Equal(5.0, cell.CellFormat.RightPadding);
+        }
     }
 
     #endregion
@@ -108,9 +122,14 @@ public class EditCellFormatWordTableHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("format", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var cell = doc.Sections[0].Body.Tables[0].Rows[0].Cells[0];
+            Assert.Equal(Color.FromArgb(255, 0, 0).ToArgb(), cell.CellFormat.Shading.BackgroundPatternColor.ToArgb());
+        }
+
         AssertModified(context);
     }
 
@@ -131,9 +150,13 @@ public class EditCellFormatWordTableHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("format", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var cell = doc.Sections[0].Body.Tables[0].Rows[rowIndex].Cells[colIndex];
+            Assert.Equal(Color.FromArgb(0, 255, 0).ToArgb(), cell.CellFormat.Shading.BackgroundPatternColor.ToArgb());
+        }
     }
 
     #endregion
@@ -154,9 +177,13 @@ public class EditCellFormatWordTableHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("format", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var cell = doc.Sections[0].Body.Tables[0].Rows[0].Cells[0];
+            Assert.Equal(Color.FromArgb(0, 0, 255).ToArgb(), cell.CellFormat.Shading.BackgroundPatternColor.ToArgb());
+        }
     }
 
     [Fact]
@@ -168,14 +195,18 @@ public class EditCellFormatWordTableHandlerTests : WordHandlerTestBase
         {
             { "rowIndex", 0 },
             { "columnIndex", 0 },
-            { "verticalAlignment", "center" }
+            { "verticalAlignmentFormat", "center" }
         });
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("format", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var cell = doc.Sections[0].Body.Tables[0].Rows[0].Cells[0];
+            Assert.Equal(CellVerticalAlignment.Center, cell.CellFormat.VerticalAlignment);
+        }
     }
 
     [Fact]
@@ -187,17 +218,24 @@ public class EditCellFormatWordTableHandlerTests : WordHandlerTestBase
         {
             { "rowIndex", 0 },
             { "columnIndex", 0 },
-            { "topPadding", 5.0 },
-            { "bottomPadding", 5.0 },
-            { "leftPadding", 5.0 },
-            { "rightPadding", 5.0 }
+            { "paddingTop", 5.0 },
+            { "paddingBottom", 5.0 },
+            { "paddingLeft", 5.0 },
+            { "paddingRight", 5.0 }
         });
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("format", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var cell = doc.Sections[0].Body.Tables[0].Rows[0].Cells[0];
+            Assert.Equal(5.0, cell.CellFormat.TopPadding);
+            Assert.Equal(5.0, cell.CellFormat.BottomPadding);
+            Assert.Equal(5.0, cell.CellFormat.LeftPadding);
+            Assert.Equal(5.0, cell.CellFormat.RightPadding);
+        }
     }
 
     #endregion
@@ -321,10 +359,14 @@ public class EditCellFormatWordTableHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("row 1", result.Message);
-        Assert.Contains("3 cells", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var row = doc.Sections[0].Body.Tables[0].Rows[1];
+            foreach (var cell in row.Cells.Cast<Cell>())
+                Assert.NotEqual(Color.Empty, cell.CellFormat.Shading.BackgroundPatternColor);
+        }
     }
 
     [Fact]
@@ -376,10 +418,17 @@ public class EditCellFormatWordTableHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("column 1", result.Message);
-        Assert.Contains("3 cells", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var table = doc.Sections[0].Body.Tables[0];
+            foreach (var row in table.Rows.Cast<Row>())
+            {
+                var cell = row.Cells[1];
+                Assert.NotEqual(Color.Empty, cell.CellFormat.Shading.BackgroundPatternColor);
+            }
+        }
     }
 
     [Fact]
@@ -415,9 +464,14 @@ public class EditCellFormatWordTableHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("format", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var cell = doc.Sections[0].Body.Tables[0].Rows[0].Cells[0];
+            var runs = cell.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+            Assert.All(runs, run => Assert.Equal("Arial", run.Font.Name));
+        }
     }
 
     [Fact]
@@ -434,9 +488,14 @@ public class EditCellFormatWordTableHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("format", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var cell = doc.Sections[0].Body.Tables[0].Rows[0].Cells[0];
+            var runs = cell.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+            Assert.All(runs, run => Assert.Equal(14.0, run.Font.Size));
+        }
     }
 
     [Fact]
@@ -454,9 +513,17 @@ public class EditCellFormatWordTableHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("format", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var cell = doc.Sections[0].Body.Tables[0].Rows[0].Cells[0];
+            foreach (var run in cell.GetChildNodes(NodeType.Run, true).Cast<Run>())
+            {
+                Assert.True(run.Font.Bold);
+                Assert.True(run.Font.Italic);
+            }
+        }
     }
 
     [Fact]
@@ -473,9 +540,15 @@ public class EditCellFormatWordTableHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("format", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var cell = doc.Sections[0].Body.Tables[0].Rows[0].Cells[0];
+            var runs = cell.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+            Assert.All(runs,
+                run => Assert.Equal(Color.FromArgb(255, 0, 0).ToArgb(), run.Font.Color.ToArgb()));
+        }
     }
 
     [Fact]
@@ -493,9 +566,17 @@ public class EditCellFormatWordTableHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("format", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var cell = doc.Sections[0].Body.Tables[0].Rows[0].Cells[0];
+            foreach (var run in cell.GetChildNodes(NodeType.Run, true).Cast<Run>())
+            {
+                Assert.Equal("Arial", run.Font.NameAscii);
+                Assert.Equal("MS Gothic", run.Font.NameFarEast);
+            }
+        }
     }
 
     #endregion
@@ -503,11 +584,11 @@ public class EditCellFormatWordTableHandlerTests : WordHandlerTestBase
     #region Alignment Options
 
     [Theory]
-    [InlineData("left")]
-    [InlineData("center")]
-    [InlineData("right")]
-    [InlineData("justify")]
-    public void Execute_WithAlignment_SetsHorizontalAlignment(string alignment)
+    [InlineData("left", ParagraphAlignment.Left)]
+    [InlineData("center", ParagraphAlignment.Center)]
+    [InlineData("right", ParagraphAlignment.Right)]
+    [InlineData("justify", ParagraphAlignment.Justify)]
+    public void Execute_WithAlignment_SetsHorizontalAlignment(string alignment, ParagraphAlignment expected)
     {
         var doc = CreateDocumentWithTable(3, 3);
         var context = CreateContext(doc);
@@ -520,16 +601,23 @@ public class EditCellFormatWordTableHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("format", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var cell = doc.Sections[0].Body.Tables[0].Rows[0].Cells[0];
+            var paragraphs = cell.GetChildNodes(NodeType.Paragraph, true)
+                .Cast<Aspose.Words.Paragraph>().ToList();
+            Assert.All(paragraphs, para => Assert.Equal(expected, para.ParagraphFormat.Alignment));
+        }
     }
 
     [Theory]
-    [InlineData("top")]
-    [InlineData("center")]
-    [InlineData("bottom")]
-    public void Execute_WithVerticalAlignmentFormat_SetsVerticalAlignment(string alignment)
+    [InlineData("top", CellVerticalAlignment.Top)]
+    [InlineData("center", CellVerticalAlignment.Center)]
+    [InlineData("bottom", CellVerticalAlignment.Bottom)]
+    public void Execute_WithVerticalAlignmentFormat_SetsVerticalAlignment(string alignment,
+        CellVerticalAlignment expected)
     {
         var doc = CreateDocumentWithTable(3, 3);
         var context = CreateContext(doc);
@@ -542,9 +630,13 @@ public class EditCellFormatWordTableHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("format", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var cell = doc.Sections[0].Body.Tables[0].Rows[0].Cells[0];
+            Assert.Equal(expected, cell.CellFormat.VerticalAlignment);
+        }
     }
 
     #endregion

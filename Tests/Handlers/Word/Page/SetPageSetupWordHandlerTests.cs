@@ -67,9 +67,7 @@ public class SetPageSetupWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("page setup updated", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
         Assert.Equal(72.0, doc.Sections[0].PageSetup.TopMargin);
         Assert.Equal(72.0, doc.Sections[0].PageSetup.BottomMargin);
         Assert.Equal(Orientation.Landscape, doc.Sections[0].PageSetup.Orientation);
@@ -110,9 +108,8 @@ public class SetPageSetupWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("top margin: 100", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(100.0, doc.Sections[1].PageSetup.TopMargin);
     }
 
     #endregion

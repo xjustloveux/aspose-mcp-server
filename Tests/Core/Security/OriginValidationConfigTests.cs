@@ -89,4 +89,81 @@ public class OriginValidationConfigTests
         Assert.NotNull(config.AllowedOrigins);
         Assert.Single(config.AllowedOrigins);
     }
+
+    [Fact]
+    public void LoadFromArgs_WithEqualsFormat_ParsesCorrectly()
+    {
+        var args = new[] { "--allowed-origins=https://a.com,https://b.com" };
+
+        var config = OriginValidationConfig.LoadFromArgs(args);
+
+        Assert.NotNull(config.AllowedOrigins);
+        Assert.Equal(2, config.AllowedOrigins.Length);
+        Assert.Contains("https://a.com", config.AllowedOrigins);
+        Assert.Contains("https://b.com", config.AllowedOrigins);
+    }
+
+    [Fact]
+    public void LoadFromArgs_WithSeparateArgFormat_ParsesCorrectly()
+    {
+        var args = new[] { "--allowed-origins", "https://x.com,https://y.com" };
+
+        var config = OriginValidationConfig.LoadFromArgs(args);
+
+        Assert.NotNull(config.AllowedOrigins);
+        Assert.Equal(2, config.AllowedOrigins.Length);
+        Assert.Contains("https://x.com", config.AllowedOrigins);
+        Assert.Contains("https://y.com", config.AllowedOrigins);
+    }
+
+    [Fact]
+    public void LoadFromArgs_WithEnvironmentVariables_ParsesAllOptions()
+    {
+        var envVars = new Dictionary<string, string?>
+        {
+            { "ASPOSE_ORIGIN_VALIDATION", "false" },
+            { "ASPOSE_ALLOW_LOCALHOST", "false" },
+            { "ASPOSE_ALLOW_MISSING_ORIGIN", "false" },
+            { "ASPOSE_ALLOWED_ORIGINS", "https://env1.com,https://env2.com" }
+        };
+
+        try
+        {
+            foreach (var kv in envVars)
+                Environment.SetEnvironmentVariable(kv.Key, kv.Value);
+
+            var config = OriginValidationConfig.LoadFromArgs([]);
+
+            Assert.False(config.Enabled);
+            Assert.False(config.AllowLocalhost);
+            Assert.False(config.AllowMissingOrigin);
+            Assert.NotNull(config.AllowedOrigins);
+            Assert.Equal(2, config.AllowedOrigins.Length);
+        }
+        finally
+        {
+            foreach (var kv in envVars)
+                Environment.SetEnvironmentVariable(kv.Key, null);
+        }
+    }
+
+    [Fact]
+    public void LoadFromArgs_ArgsOverrideEnvironmentVariables()
+    {
+        try
+        {
+            Environment.SetEnvironmentVariable("ASPOSE_ALLOWED_ORIGINS", "https://env.com");
+
+            var args = new[] { "--allowed-origins:https://arg.com" };
+            var config = OriginValidationConfig.LoadFromArgs(args);
+
+            Assert.NotNull(config.AllowedOrigins);
+            Assert.Single(config.AllowedOrigins);
+            Assert.Contains("https://arg.com", config.AllowedOrigins);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("ASPOSE_ALLOWED_ORIGINS", null);
+        }
+    }
 }

@@ -27,6 +27,8 @@ public class ExcelRangeHelperTests : ExcelTestBase
 
         Assert.NotNull(result);
         Assert.Equal(2, result.Count);
+        Assert.Equal(2, result[0]!.AsArray().Count);
+        Assert.Equal(2, result[1]!.AsArray().Count);
     }
 
     [Fact]
@@ -113,10 +115,10 @@ public class ExcelRangeHelperTests : ExcelTestBase
 
         ExcelRangeHelper.Write2DArrayData(workbook, worksheet, 0, 0, dataArray);
 
-        Assert.NotNull(worksheet.Cells["A1"].Value);
-        Assert.NotNull(worksheet.Cells["B1"].Value);
-        Assert.NotNull(worksheet.Cells["A2"].Value);
-        Assert.NotNull(worksheet.Cells["B2"].Value);
+        Assert.Equal("A", worksheet.Cells["A1"].Value?.ToString());
+        Assert.Equal("B", worksheet.Cells["B1"].Value?.ToString());
+        Assert.Equal("C", worksheet.Cells["A2"].Value?.ToString());
+        Assert.Equal("D", worksheet.Cells["B2"].Value?.ToString());
     }
 
     [Fact]

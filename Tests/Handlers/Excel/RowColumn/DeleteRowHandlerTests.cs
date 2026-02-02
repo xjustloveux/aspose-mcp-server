@@ -37,9 +37,21 @@ public class DeleteRowHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains($"{count} row(s)", result.Message);
+        if (count == 1)
+        {
+            AssertCellValue(workbook, 0, 0, "Data 2");
+            AssertCellValue(workbook, 1, 0, "Data 3");
+        }
+        else if (count == 2)
+        {
+            AssertCellValue(workbook, 0, 0, "Data 3");
+        }
+        else if (count == 3)
+        {
+            Assert.Null(GetCellValue(workbook, 0, 0));
+        }
     }
 
     #endregion
@@ -58,10 +70,12 @@ public class DeleteRowHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Deleted", result.Message);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+
+        AssertCellValue(workbook, 0, 0, "Data 1");
+        AssertCellValue(workbook, 1, 0, "Data 3");
+        Assert.Null(GetCellValue(workbook, 2, 0));
     }
 
     [Fact]
@@ -76,9 +90,11 @@ public class DeleteRowHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("row 2", result.Message);
+        AssertCellValue(workbook, 0, 0, "Data 1");
+        AssertCellValue(workbook, 1, 0, "Data 2");
+        Assert.Null(GetCellValue(workbook, 2, 0));
     }
 
     [Fact]
@@ -94,9 +110,10 @@ public class DeleteRowHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("2 row(s)", result.Message);
+        AssertCellValue(workbook, 0, 0, "Data 3");
+        Assert.Null(GetCellValue(workbook, 1, 0));
     }
 
     [Fact]
@@ -111,9 +128,11 @@ public class DeleteRowHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("1 row(s)", result.Message);
+        AssertCellValue(workbook, 0, 0, "Data 2");
+        AssertCellValue(workbook, 1, 0, "Data 3");
+        Assert.Null(GetCellValue(workbook, 2, 0));
     }
 
     #endregion
@@ -124,7 +143,8 @@ public class DeleteRowHandlerTests : ExcelHandlerTestBase
     public void Execute_WithSheetIndex_DeletesFromCorrectSheet()
     {
         var workbook = CreateWorkbookWithSheets(3);
-        workbook.Worksheets[1].Cells["A1"].PutValue("Data");
+        workbook.Worksheets[1].Cells["A1"].PutValue("Sheet2Row1");
+        workbook.Worksheets[1].Cells["A2"].PutValue("Sheet2Row2");
         var context = CreateContext(workbook);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -134,9 +154,10 @@ public class DeleteRowHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Deleted", result.Message);
+        Assert.Equal("Sheet2Row2", workbook.Worksheets[1].Cells[0, 0].Value);
+        Assert.Null(workbook.Worksheets[1].Cells[1, 0].Value);
     }
 
     [Fact]
@@ -151,9 +172,10 @@ public class DeleteRowHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Deleted", result.Message);
+        AssertCellValue(workbook, 0, 0, "Data 2");
+        AssertCellValue(workbook, 1, 0, "Data 3");
     }
 
     #endregion
@@ -230,9 +252,11 @@ public class DeleteRowHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains($"{count} row(s)", result.Message);
+        AssertCellValue(workbook, 0, 0, "Data 1");
+        AssertCellValue(workbook, 1, 0, "Data 2");
+        AssertCellValue(workbook, 2, 0, "Data 3");
     }
 
     [Fact]
@@ -247,10 +271,10 @@ public class DeleteRowHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Deleted", result.Message);
-        Assert.Contains("row 0", result.Message);
+        AssertCellValue(workbook, 0, 0, "Data 2");
+        AssertCellValue(workbook, 1, 0, "Data 3");
     }
 
     #endregion

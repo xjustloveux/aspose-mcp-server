@@ -32,9 +32,14 @@ public class SetNotesHeaderFooterHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+        {
+            var notesMaster = presentation.MasterNotesSlideManager.MasterNotesSlide;
+            Assert.NotNull(notesMaster);
+            Assert.True(notesMaster.HeaderFooterManager.IsHeaderVisible);
+        }
 
-        Assert.Contains("header", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -50,9 +55,15 @@ public class SetNotesHeaderFooterHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+        {
+            var notesMaster = presentation.MasterNotesSlideManager.MasterNotesSlide;
+            Assert.NotNull(notesMaster);
+            Assert.True(notesMaster.HeaderFooterManager.IsFooterVisible);
+        }
 
-        Assert.Contains("footer", result.Message, StringComparison.OrdinalIgnoreCase);
+        AssertModified(context);
     }
 
     [Fact]
@@ -67,9 +78,15 @@ public class SetNotesHeaderFooterHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+        {
+            var notesMaster = presentation.MasterNotesSlideManager.MasterNotesSlide;
+            Assert.NotNull(notesMaster);
+            Assert.True(notesMaster.HeaderFooterManager.IsDateTimeVisible);
+        }
 
-        Assert.Contains("date", result.Message, StringComparison.OrdinalIgnoreCase);
+        AssertModified(context);
     }
 
     [Fact]
@@ -84,9 +101,15 @@ public class SetNotesHeaderFooterHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+        {
+            var notesMaster = presentation.MasterNotesSlideManager.MasterNotesSlide;
+            Assert.NotNull(notesMaster);
+            Assert.False(notesMaster.HeaderFooterManager.IsSlideNumberVisible);
+        }
 
-        Assert.Contains("page number hidden", result.Message, StringComparison.OrdinalIgnoreCase);
+        AssertModified(context);
     }
 
     [Fact]
@@ -104,11 +127,19 @@ public class SetNotesHeaderFooterHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+        {
+            var notesMaster = presentation.MasterNotesSlideManager.MasterNotesSlide;
+            Assert.NotNull(notesMaster);
+            var manager = notesMaster.HeaderFooterManager;
+            Assert.True(manager.IsHeaderVisible);
+            Assert.True(manager.IsFooterVisible);
+            Assert.True(manager.IsDateTimeVisible);
+            Assert.True(manager.IsSlideNumberVisible);
+        }
 
-        Assert.Contains("header", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("footer", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("date", result.Message, StringComparison.OrdinalIgnoreCase);
+        AssertModified(context);
     }
 
     #endregion

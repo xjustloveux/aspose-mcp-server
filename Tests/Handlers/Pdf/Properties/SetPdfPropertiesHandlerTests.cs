@@ -32,9 +32,10 @@ public class SetPdfPropertiesHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("updated", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+            Assert.Equal("John Doe", doc.Info.Author);
+        AssertModified(context);
     }
 
     #endregion
@@ -53,9 +54,10 @@ public class SetPdfPropertiesHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("updated", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+            Assert.Equal("Test Subject", doc.Info.Subject);
+        AssertModified(context);
     }
 
     #endregion
@@ -74,9 +76,10 @@ public class SetPdfPropertiesHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("updated", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+            Assert.Equal("test, pdf, keywords", doc.Info.Keywords);
+        AssertModified(context);
     }
 
     #endregion
@@ -95,9 +98,10 @@ public class SetPdfPropertiesHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("updated", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+            Assert.Equal("Test Application", doc.Info.Creator);
+        AssertModified(context);
     }
 
     #endregion
@@ -116,9 +120,10 @@ public class SetPdfPropertiesHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("updated", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+            Assert.Equal("Test Producer", doc.Info.Producer);
+        AssertModified(context);
     }
 
     #endregion
@@ -137,14 +142,14 @@ public class SetPdfPropertiesHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("updated", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+            Assert.Equal("New Title", doc.Info.Title);
         AssertModified(context);
     }
 
     [Fact]
-    public void Execute_ReturnsSuccessMessage()
+    public void Execute_SetsAuthorProperty()
     {
         var doc = CreateDocumentWithPages(1);
         var context = CreateContext(doc);
@@ -155,9 +160,10 @@ public class SetPdfPropertiesHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("properties", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+            Assert.Equal("New Author", doc.Info.Author);
+        AssertModified(context);
     }
 
     [Fact]
@@ -169,9 +175,8 @@ public class SetPdfPropertiesHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("updated", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        AssertModified(context);
     }
 
     #endregion
@@ -190,9 +195,10 @@ public class SetPdfPropertiesHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("updated", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+            Assert.Equal("Document Title", doc.Info.Title);
+        AssertModified(context);
     }
 
     [Fact]
@@ -229,9 +235,15 @@ public class SetPdfPropertiesHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            Assert.Equal("My Document", doc.Info.Title);
+            Assert.Equal("Jane Smith", doc.Info.Author);
+            Assert.Equal("Document Subject", doc.Info.Subject);
+            Assert.Equal("key1, key2, key3", doc.Info.Keywords);
+        }
 
-        Assert.Contains("updated", result.Message);
         AssertModified(context);
     }
 
@@ -252,9 +264,18 @@ public class SetPdfPropertiesHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+        {
+            Assert.Equal("Full Title", doc.Info.Title);
+            Assert.Equal("Full Author", doc.Info.Author);
+            Assert.Equal("Full Subject", doc.Info.Subject);
+            Assert.Equal("Full Keywords", doc.Info.Keywords);
+            Assert.Equal("Full Creator", doc.Info.Creator);
+            Assert.Equal("Full Producer", doc.Info.Producer);
+        }
 
-        Assert.Contains("updated", result.Message);
+        AssertModified(context);
     }
 
     #endregion
@@ -265,6 +286,7 @@ public class SetPdfPropertiesHandlerTests : PdfHandlerTestBase
     public void Execute_WithEmptyTitle_DoesNotFail()
     {
         var doc = CreateDocumentWithPages(1);
+        var originalTitle = doc.Info.Title;
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -273,15 +295,17 @@ public class SetPdfPropertiesHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("updated", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+            Assert.Equal(originalTitle, doc.Info.Title);
+        AssertModified(context);
     }
 
     [Fact]
     public void Execute_WithNullTitle_DoesNotFail()
     {
         var doc = CreateDocumentWithPages(1);
+        var originalTitle = doc.Info.Title;
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -290,9 +314,10 @@ public class SetPdfPropertiesHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("updated", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+            Assert.Equal(originalTitle, doc.Info.Title);
+        AssertModified(context);
     }
 
     #endregion

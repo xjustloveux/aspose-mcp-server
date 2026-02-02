@@ -37,13 +37,14 @@ public class DocumentSessionManagerIsolationTests : IDisposable
         }
     }
 
-    private static DocumentSessionManager CreateManager(SessionIsolationMode mode)
+    private DocumentSessionManager CreateManager(SessionIsolationMode mode)
     {
         var config = new SessionConfig
         {
             Enabled = true,
             MaxSessions = 10,
-            IsolationMode = mode
+            IsolationMode = mode,
+            TempDirectory = Path.Combine(_testDir, "temp")
         };
         return new DocumentSessionManager(config);
     }
@@ -60,10 +61,8 @@ public class DocumentSessionManagerIsolationTests : IDisposable
 
         var sessionId = manager.OpenDocument(_testFilePath, owner);
 
-        // Other group should not be able to close
         Assert.Throws<KeyNotFoundException>(() => manager.CloseDocument(sessionId, other, true));
 
-        // Owner should be able to close
         manager.CloseDocument(sessionId, owner, true);
     }
 
@@ -81,7 +80,6 @@ public class DocumentSessionManagerIsolationTests : IDisposable
 
         var sessionId = manager.OpenDocument(_testFilePath, owner);
 
-        // Other group should not be able to save
         Assert.Throws<KeyNotFoundException>(() => manager.SaveDocument(sessionId, other));
 
         manager.CloseDocument(sessionId, owner, true);
@@ -98,21 +96,19 @@ public class DocumentSessionManagerIsolationTests : IDisposable
         {
             Enabled = true,
             MaxSessions = 2,
-            IsolationMode = SessionIsolationMode.Group
+            IsolationMode = SessionIsolationMode.Group,
+            TempDirectory = Path.Combine(_testDir, "temp")
         };
         using var manager = new DocumentSessionManager(config);
 
         var group1 = new SessionIdentity { GroupId = "group1", UserId = "user1" };
         var group2 = new SessionIdentity { GroupId = "group2", UserId = "user2" };
 
-        // Group1 can open 2 sessions
         manager.OpenDocument(_testFilePath, group1);
         manager.OpenDocument(_testFilePath, group1);
 
-        // Group1 cannot open a 3rd
         Assert.Throws<InvalidOperationException>(() => manager.OpenDocument(_testFilePath, group1));
 
-        // But group2 can still open sessions
         manager.OpenDocument(_testFilePath, group2);
         manager.OpenDocument(_testFilePath, group2);
     }
@@ -167,7 +163,6 @@ public class DocumentSessionManagerIsolationTests : IDisposable
 
         var sessionId = manager.OpenDocument(_testFilePath, user1);
 
-        // Same group, different user should access
         var session = manager.TryGetSession(sessionId, user2);
         Assert.NotNull(session);
 
@@ -184,7 +179,6 @@ public class DocumentSessionManagerIsolationTests : IDisposable
 
         var sessionId = manager.OpenDocument(_testFilePath, group1);
 
-        // Different group should NOT access
         var session = manager.TryGetSession(sessionId, group2);
         Assert.Null(session);
 
@@ -204,11 +198,9 @@ public class DocumentSessionManagerIsolationTests : IDisposable
         manager.OpenDocument(_testFilePath, group1User2);
         manager.OpenDocument(_testFilePath, group2);
 
-        // Group1 users should see 2 sessions
         var group1Sessions = manager.ListSessions(group1User1).ToList();
         Assert.Equal(2, group1Sessions.Count);
 
-        // Group2 should see 1 session
         var group2Sessions = manager.ListSessions(group2).ToList();
         Assert.Single(group2Sessions);
     }
@@ -222,7 +214,6 @@ public class DocumentSessionManagerIsolationTests : IDisposable
 
         var sessionId = manager.OpenDocument(_testFilePath, user);
 
-        // Same user should access
         var session = manager.TryGetSession(sessionId, user);
         Assert.NotNull(session);
 

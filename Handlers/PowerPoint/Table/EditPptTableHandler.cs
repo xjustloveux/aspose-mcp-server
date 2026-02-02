@@ -21,7 +21,8 @@ public class EditPptTableHandler : OperationHandlerBase<Presentation>
     /// <param name="context">The presentation context.</param>
     /// <param name="parameters">
     ///     Required: shapeIndex.
-    ///     Optional: slideIndex (default: 0), x, y, width, height.
+    ///     Optional: slideIndex (default: 0), x, y.
+    ///     Rejected: width, height (table dimensions are determined by column/row sizes).
     /// </param>
     /// <returns>Success message with edit details.</returns>
     public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
@@ -39,10 +40,12 @@ public class EditPptTableHandler : OperationHandlerBase<Presentation>
             table.Y = editParams.Y.Value;
 
         if (editParams.Width.HasValue)
-            table.Width = editParams.Width.Value;
+            throw new ArgumentException(
+                "Table width cannot be set directly. Adjust individual column widths instead.");
 
         if (editParams.Height.HasValue)
-            table.Height = editParams.Height.Value;
+            throw new ArgumentException(
+                "Table height cannot be set directly. Adjust individual row heights instead.");
 
         MarkModified(context);
 

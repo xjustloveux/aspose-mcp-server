@@ -52,7 +52,7 @@ public abstract class TestBase : IDisposable
     /// <summary>
     ///     Gets the shared session config
     /// </summary>
-    private static SessionConfig SessionConfig => new() { Enabled = true };
+    private SessionConfig SessionConfig => new() { Enabled = true, TempDirectory = Path.Combine(TestDir, "temp") };
 
     /// <summary>
     ///     Gets the shared session manager (creates if not exists)

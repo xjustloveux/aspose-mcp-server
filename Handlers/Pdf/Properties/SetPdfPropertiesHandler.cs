@@ -35,8 +35,8 @@ public class SetPdfPropertiesHandler : OperationHandlerBase<Document>
             SetPropertyWithFallback(document, "Author", p.Author, v => docInfo.Author = v);
             SetPropertyWithFallback(document, "Subject", p.Subject, v => docInfo.Subject = v);
             SetPropertyWithFallback(document, "Keywords", p.Keywords, v => docInfo.Keywords = v);
-            SetPropertyWithFallback(document, "Creator", p.Creator, null);
-            SetPropertyWithFallback(document, "Producer", p.Producer, null);
+            SetPropertyWithFallback(document, "Creator", p.Creator, v => docInfo.Creator = v);
+            SetPropertyWithFallback(document, "Producer", p.Producer, v => docInfo.Producer = v);
         }
         catch (ArgumentException)
         {

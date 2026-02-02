@@ -92,10 +92,11 @@ public class AlignPptShapesHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("3", result.Message);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+        Assert.Equal(100, pres.Slides[0].Shapes[0].Y);
+        Assert.Equal(100, pres.Slides[0].Shapes[1].Y);
+        Assert.Equal(100, pres.Slides[0].Shapes[2].Y);
     }
 
     #endregion
@@ -103,7 +104,7 @@ public class AlignPptShapesHandlerTests : PptHandlerTestBase
     #region Result Message
 
     [Fact]
-    public void Execute_ReturnsShapeCountAndAlignmentInMessage()
+    public void Execute_AlignCenter_CentersShapesHorizontally()
     {
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
@@ -118,10 +119,9 @@ public class AlignPptShapesHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("2", result.Message);
-        Assert.Contains("center", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        AssertModified(context);
+        Assert.Equal(pres.Slides[0].Shapes[0].X, pres.Slides[0].Shapes[1].X);
     }
 
     #endregion
@@ -144,11 +144,10 @@ public class AlignPptShapesHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Aligned", result.Message);
-        Assert.Contains("2", result.Message);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+        Assert.Equal(100, pres.Slides[0].Shapes[0].X);
+        Assert.Equal(100, pres.Slides[0].Shapes[1].X);
     }
 
     [Theory]
@@ -173,10 +172,23 @@ public class AlignPptShapesHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains(align, result.Message);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+        var shape0 = pres.Slides[0].Shapes[0];
+        var shape1 = pres.Slides[0].Shapes[1];
+        switch (align)
+        {
+            case "left":
+            case "center":
+            case "right":
+                Assert.Equal(shape0.X, shape1.X);
+                break;
+            case "top":
+            case "middle":
+            case "bottom":
+                Assert.Equal(shape0.Y, shape1.Y);
+                break;
+        }
     }
 
     #endregion

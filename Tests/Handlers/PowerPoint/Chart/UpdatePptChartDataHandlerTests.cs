@@ -60,9 +60,12 @@ public class UpdatePptChartDataHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        var chart = pres.Slides[0].Shapes.OfType<IChart>().First();
+        Assert.Equal(3, chart.ChartData.Categories.Count);
+        Assert.Single(chart.ChartData.Series);
+        if (!IsEvaluationMode()) Assert.Equal(3, chart.ChartData.Series[0].DataPoints.Count);
 
-        Assert.Contains("updated", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -78,8 +81,12 @@ public class UpdatePptChartDataHandlerTests : PptHandlerTestBase
             { "clearExisting", true }
         });
 
-        _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
+        Assert.IsType<SuccessResult>(res);
+        var chart = pres.Slides[0].Shapes.OfType<IChart>().First();
+        Assert.Empty(chart.ChartData.Series);
+        Assert.Empty(chart.ChartData.Categories);
         AssertModified(context);
     }
 
@@ -88,6 +95,9 @@ public class UpdatePptChartDataHandlerTests : PptHandlerTestBase
     {
         var pres = CreatePresentationWithChart();
         var context = CreateContext(pres);
+        var chart = pres.Slides[0].Shapes.OfType<IChart>().First();
+        var originalSeriesCount = chart.ChartData.Series.Count;
+        var originalCategoriesCount = chart.ChartData.Categories.Count;
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "slideIndex", 0 },
@@ -96,9 +106,10 @@ public class UpdatePptChartDataHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("no changes", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(originalSeriesCount, chart.ChartData.Series.Count);
+        Assert.Equal(originalCategoriesCount, chart.ChartData.Categories.Count);
+        AssertNotModified(context);
     }
 
     #endregion

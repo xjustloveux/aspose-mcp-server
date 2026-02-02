@@ -415,7 +415,6 @@ public class FontHelperTests : TestBase
 
         FontHelper.Ppt.ApplyFontSettings(portion.PortionFormat);
 
-        // Font should not be changed
         Assert.Equal(originalFont, portion.PortionFormat.LatinFont);
     }
 

@@ -37,9 +37,21 @@ public class DeleteColumnHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains($"{count} column(s)", result.Message);
+        if (count == 1)
+        {
+            AssertCellValue(workbook, 0, 0, "Col B");
+            AssertCellValue(workbook, 0, 1, "Col C");
+        }
+        else if (count == 2)
+        {
+            AssertCellValue(workbook, 0, 0, "Col C");
+        }
+        else if (count == 3)
+        {
+            Assert.Null(GetCellValue(workbook, 0, 0));
+        }
     }
 
     #endregion
@@ -58,10 +70,12 @@ public class DeleteColumnHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Deleted", result.Message);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+
+        AssertCellValue(workbook, 0, 0, "Col A");
+        AssertCellValue(workbook, 0, 1, "Col C");
+        Assert.Null(GetCellValue(workbook, 0, 2));
     }
 
     [Fact]
@@ -76,9 +90,11 @@ public class DeleteColumnHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("column 2", result.Message);
+        AssertCellValue(workbook, 0, 0, "Col A");
+        AssertCellValue(workbook, 0, 1, "Col B");
+        Assert.Null(GetCellValue(workbook, 0, 2));
     }
 
     [Fact]
@@ -94,9 +110,10 @@ public class DeleteColumnHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("2 column(s)", result.Message);
+        AssertCellValue(workbook, 0, 0, "Col C");
+        Assert.Null(GetCellValue(workbook, 0, 1));
     }
 
     [Fact]
@@ -111,9 +128,11 @@ public class DeleteColumnHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("1 column(s)", result.Message);
+        AssertCellValue(workbook, 0, 0, "Col B");
+        AssertCellValue(workbook, 0, 1, "Col C");
+        Assert.Null(GetCellValue(workbook, 0, 2));
     }
 
     #endregion
@@ -124,7 +143,8 @@ public class DeleteColumnHandlerTests : ExcelHandlerTestBase
     public void Execute_WithSheetIndex_DeletesFromCorrectSheet()
     {
         var workbook = CreateWorkbookWithSheets(3);
-        workbook.Worksheets[1].Cells["A1"].PutValue("Data");
+        workbook.Worksheets[1].Cells["A1"].PutValue("Sheet2Col1");
+        workbook.Worksheets[1].Cells["B1"].PutValue("Sheet2Col2");
         var context = CreateContext(workbook);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -134,9 +154,10 @@ public class DeleteColumnHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Deleted", result.Message);
+        Assert.Equal("Sheet2Col2", workbook.Worksheets[1].Cells[0, 0].Value);
+        Assert.Null(workbook.Worksheets[1].Cells[0, 1].Value);
     }
 
     [Fact]
@@ -151,9 +172,10 @@ public class DeleteColumnHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Deleted", result.Message);
+        AssertCellValue(workbook, 0, 0, "Col B");
+        AssertCellValue(workbook, 0, 1, "Col C");
     }
 
     #endregion
@@ -230,9 +252,11 @@ public class DeleteColumnHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains($"{count} column(s)", result.Message);
+        AssertCellValue(workbook, 0, 0, "Col A");
+        AssertCellValue(workbook, 0, 1, "Col B");
+        AssertCellValue(workbook, 0, 2, "Col C");
     }
 
     [Fact]
@@ -247,10 +271,10 @@ public class DeleteColumnHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Deleted", result.Message);
-        Assert.Contains("column 0", result.Message);
+        AssertCellValue(workbook, 0, 0, "Col B");
+        AssertCellValue(workbook, 0, 1, "Col C");
     }
 
     #endregion

@@ -1,6 +1,8 @@
+using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.HeaderFooter;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
+using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.HeaderFooter;
 
@@ -32,9 +34,17 @@ public class SetHeaderLineHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("line", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var header = doc.FirstSection.HeadersFooters[HeaderFooterType.HeaderPrimary];
+            Assert.NotNull(header);
+            var para = header.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().LastOrDefault();
+            Assert.NotNull(para);
+            Assert.Equal(LineStyle.Single, para.ParagraphFormat.Borders.Bottom.LineStyle);
+        }
+
         AssertModified(context);
     }
 
@@ -51,9 +61,16 @@ public class SetHeaderLineHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("line", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var header = doc.FirstSection.HeadersFooters[HeaderFooterType.HeaderPrimary];
+            Assert.NotNull(header);
+            var para = header.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().LastOrDefault();
+            Assert.NotNull(para);
+            Assert.Equal(2.0, para.ParagraphFormat.Borders.Bottom.LineWidth);
+        }
     }
 
     [Fact]
@@ -69,9 +86,16 @@ public class SetHeaderLineHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("line", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var header = doc.FirstSection.HeadersFooters[HeaderFooterType.HeaderPrimary];
+            Assert.NotNull(header);
+            var para = header.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().LastOrDefault();
+            Assert.NotNull(para);
+            Assert.Equal(LineStyle.Single, para.ParagraphFormat.Borders.Bottom.LineStyle);
+        }
     }
 
     #endregion

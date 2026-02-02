@@ -1,5 +1,7 @@
 ﻿using System.Text.Json.Nodes;
 using Aspose.Words;
+using Aspose.Words.Fields;
+using AsposeMcpServer.Results;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Word;
@@ -35,9 +37,11 @@ public class WordReferenceToolTests : WordTestBase
         var outputPath = CreateTestFilePath("test_add_toc_output.docx");
         var result = _tool.Execute("add_table_of_contents", docPath, outputPath: outputPath,
             title: "Table of Contents", maxLevel: 3);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Table of contents added", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         Assert.True(File.Exists(outputPath));
+        var resultDoc = new Document(outputPath);
+        var tocFields = resultDoc.Range.Fields.Where(f => f.Type == FieldType.FieldTOC).ToList();
+        Assert.True(tocFields.Count > 0);
     }
 
     [Fact]
@@ -54,9 +58,11 @@ public class WordReferenceToolTests : WordTestBase
 
         var outputPath = CreateTestFilePath("test_update_toc_output.docx");
         var result = _tool.Execute("update_table_of_contents", docPath, outputPath: outputPath);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Updated", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         Assert.True(File.Exists(outputPath));
+        var resultDoc = new Document(outputPath);
+        var tocFields = resultDoc.Range.Fields.Where(f => f.Type == FieldType.FieldTOC).ToList();
+        Assert.True(tocFields.Count > 0);
     }
 
     [Fact]
@@ -71,9 +77,11 @@ public class WordReferenceToolTests : WordTestBase
         };
         var result = _tool.Execute("add_index", docPath, outputPath: outputPath,
             indexEntries: indexEntries.ToJsonString());
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         Assert.True(File.Exists(outputPath));
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Index entries added", data.Message);
+        var resultDoc = new Document(outputPath);
+        var xeFields = resultDoc.Range.Fields.Where(f => f.Type == FieldType.FieldIndexEntry).ToList();
+        Assert.True(xeFields.Count > 0);
     }
 
     [Fact]
@@ -91,9 +99,11 @@ public class WordReferenceToolTests : WordTestBase
         var outputPath = CreateTestFilePath("test_cross_reference_output.docx");
         var result = _tool.Execute("add_cross_reference", docPath, outputPath: outputPath,
             referenceType: "Bookmark", targetName: "Chapter1", referenceText: "See ");
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         Assert.True(File.Exists(outputPath));
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Cross-reference added", data.Message);
+        var resultDoc = new Document(outputPath);
+        var refFields = resultDoc.Range.Fields.Where(f => f.Type == FieldType.FieldRef).ToList();
+        Assert.True(refFields.Count > 0);
     }
 
     #endregion
@@ -108,9 +118,10 @@ public class WordReferenceToolTests : WordTestBase
     {
         var docPath = CreateWordDocumentWithContent($"test_toc_{operation.Replace("_", "")}.docx", "Content");
         var outputPath = CreateTestFilePath($"test_toc_{operation.Replace("_", "")}_output.docx");
-        var result = _tool.Execute(operation, docPath, outputPath: outputPath);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Table of contents added", data.Message);
+        _tool.Execute(operation, docPath, outputPath: outputPath);
+        var resultDoc = new Document(outputPath);
+        var tocFields = resultDoc.Range.Fields.Where(f => f.Type == FieldType.FieldTOC).ToList();
+        Assert.True(tocFields.Count > 0);
     }
 
     [Fact]
@@ -137,10 +148,10 @@ public class WordReferenceToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("add_table_of_contents", sessionId: sessionId, title: "TOC");
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Table of contents added", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
-        Assert.NotNull(sessionDoc);
+        var tocFields = sessionDoc.Range.Fields.Where(f => f.Type == FieldType.FieldTOC).ToList();
+        Assert.True(tocFields.Count > 0);
     }
 
     [Fact]
@@ -154,10 +165,10 @@ public class WordReferenceToolTests : WordTestBase
         };
         var result = _tool.Execute("add_index", sessionId: sessionId,
             indexEntries: indexEntries.ToJsonString());
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Index entries added", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
-        Assert.NotNull(sessionDoc);
+        var xeFields = sessionDoc.Range.Fields.Where(f => f.Type == FieldType.FieldIndexEntry).ToList();
+        Assert.True(xeFields.Count > 0);
     }
 
     [Fact]
@@ -174,10 +185,10 @@ public class WordReferenceToolTests : WordTestBase
         var docPath2 = CreateWordDocumentWithContent("test_session_ref.docx", "Session document");
         var sessionId = OpenSession(docPath2);
         var result = _tool.Execute("add_table_of_contents", docPath1, sessionId, title: "Test");
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Table of contents added", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
-        Assert.NotNull(sessionDoc);
+        var tocFields = sessionDoc.Range.Fields.Where(f => f.Type == FieldType.FieldTOC).ToList();
+        Assert.True(tocFields.Count > 0);
     }
 
     #endregion

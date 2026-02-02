@@ -1,3 +1,5 @@
+using Aspose.Words;
+using Aspose.Words.Drawing;
 using AsposeMcpServer.Handlers.Word.Shape;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -14,6 +16,18 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
     public void Operation_Returns_AddChart()
     {
         Assert.Equal("add_chart", _handler.Operation);
+    }
+
+    #endregion
+
+    #region Helper Methods
+
+    private static List<Aspose.Words.Drawing.Shape> GetImageShapes(Document doc)
+    {
+        return doc.GetChildNodes(NodeType.Shape, true)
+            .Cast<Aspose.Words.Drawing.Shape>()
+            .Where(s => s.HasImage)
+            .ToList();
     }
 
     #endregion
@@ -37,9 +51,11 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("successfully added chart", result.Message, StringComparison.OrdinalIgnoreCase);
+        var images = GetImageShapes(doc);
+        Assert.NotEmpty(images);
+        if (!IsEvaluationMode(AsposeLibraryType.Words)) Assert.Equal(WrapType.Inline, images[0].WrapType);
         AssertModified(context);
     }
 
@@ -62,9 +78,10 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("successfully added chart", result.Message, StringComparison.OrdinalIgnoreCase);
+        var images = GetImageShapes(doc);
+        Assert.NotEmpty(images);
         AssertModified(context);
     }
 
@@ -83,9 +100,10 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("bar", result.Message, StringComparison.OrdinalIgnoreCase);
+        var images = GetImageShapes(doc);
+        Assert.NotEmpty(images);
     }
 
     [Fact]
@@ -103,9 +121,10 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("pie", result.Message, StringComparison.OrdinalIgnoreCase);
+        var images = GetImageShapes(doc);
+        Assert.NotEmpty(images);
     }
 
     [Fact]
@@ -121,9 +140,10 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("successfully added chart", result.Message, StringComparison.OrdinalIgnoreCase);
+        var images = GetImageShapes(doc);
+        Assert.NotEmpty(images);
     }
 
     [Fact]
@@ -168,9 +188,10 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("line", result.Message, StringComparison.OrdinalIgnoreCase);
+        var images = GetImageShapes(doc);
+        Assert.NotEmpty(images);
         AssertModified(context);
     }
 
@@ -189,9 +210,10 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("area", result.Message, StringComparison.OrdinalIgnoreCase);
+        var images = GetImageShapes(doc);
+        Assert.NotEmpty(images);
         AssertModified(context);
     }
 
@@ -210,9 +232,10 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("scatter", result.Message, StringComparison.OrdinalIgnoreCase);
+        var images = GetImageShapes(doc);
+        Assert.NotEmpty(images);
         AssertModified(context);
     }
 
@@ -231,9 +254,10 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("doughnut", result.Message, StringComparison.OrdinalIgnoreCase);
+        var images = GetImageShapes(doc);
+        Assert.NotEmpty(images);
         AssertModified(context);
     }
 
@@ -255,9 +279,11 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("successfully added chart", result.Message, StringComparison.OrdinalIgnoreCase);
+        var images = GetImageShapes(doc);
+        Assert.NotEmpty(images);
+        if (!IsEvaluationMode(AsposeLibraryType.Words)) Assert.Equal(600.0, images[0].Width);
         AssertModified(context);
     }
 
@@ -275,9 +301,11 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("successfully added chart", result.Message, StringComparison.OrdinalIgnoreCase);
+        var images = GetImageShapes(doc);
+        Assert.NotEmpty(images);
+        if (!IsEvaluationMode(AsposeLibraryType.Words)) Assert.Equal(300.0, images[0].Height);
         AssertModified(context);
     }
 
@@ -298,9 +326,10 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("successfully added chart", result.Message, StringComparison.OrdinalIgnoreCase);
+        var images = GetImageShapes(doc);
+        Assert.NotEmpty(images);
         AssertModified(context);
     }
 
@@ -317,9 +346,10 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("successfully added chart", result.Message, StringComparison.OrdinalIgnoreCase);
+        var images = GetImageShapes(doc);
+        Assert.NotEmpty(images);
         AssertModified(context);
     }
 

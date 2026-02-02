@@ -89,8 +89,12 @@ public class EditImageWordHandler : OperationHandlerBase<Document>
     /// <param name="p">The image edit parameters.</param>
     private static void ApplySizeProperties(WordShape shape, ImageEditParameters p)
     {
+        if (p is { Width: not null, Height: not null })
+            shape.AspectRatioLocked = false;
+
         if (p.Width.HasValue) shape.Width = p.Width.Value;
         if (p.Height.HasValue) shape.Height = p.Height.Value;
+
         if (p.AspectRatioLocked.HasValue) shape.AspectRatioLocked = p.AspectRatioLocked.Value;
     }
 

@@ -84,24 +84,30 @@ public class TempFileManagerTests : IDisposable
     [Fact]
     public void CleanupExpiredFiles_NonExpiredFiles_ShouldNotDelete()
     {
-        CreateTempFile("sess_test1234", DateTime.UtcNow);
+        var (docPath, metaPath) = CreateTempFile("sess_test1234", DateTime.UtcNow);
 
         var result = _manager.CleanupExpiredFiles();
 
         Assert.Equal(1, result.ScannedCount);
         Assert.Equal(0, result.DeletedCount);
+        Assert.Equal(0, result.ErrorCount);
+        Assert.True(File.Exists(docPath));
+        Assert.True(File.Exists(metaPath));
     }
 
     [Fact]
     public void CleanupExpiredFiles_ExpiredFiles_ShouldDelete()
     {
         var expiredTime = DateTime.UtcNow.AddHours(-(_config.TempRetentionHours + 1));
-        CreateTempFile("sess_expired12", expiredTime);
+        var (docPath, metaPath) = CreateTempFile("sess_expired12", expiredTime);
 
         var result = _manager.CleanupExpiredFiles();
 
         Assert.Equal(1, result.ScannedCount);
         Assert.Equal(1, result.DeletedCount);
+        Assert.Equal(0, result.ErrorCount);
+        Assert.False(File.Exists(docPath));
+        Assert.False(File.Exists(metaPath));
     }
 
     [Fact]
@@ -287,37 +293,39 @@ public class TempFileManagerTests : IDisposable
     #region IHostedService Tests
 
     [Fact]
-    public async Task StartAsync_ShouldComplete()
+    public async Task StartAsync_ShouldCompleteAndPerformInitialCleanup()
     {
+        var expiredTime = DateTime.UtcNow.AddHours(-(_config.TempRetentionHours + 1));
+        var (docPath, metaPath) = CreateTempFile("sess_startup1", expiredTime);
         var manager = new TempFileManager(_config);
 
-        var exception = await Record.ExceptionAsync(async () =>
-        {
-            await manager.StartAsync(CancellationToken.None);
-            await manager.StopAsync(CancellationToken.None);
-        });
+        await manager.StartAsync(CancellationToken.None);
 
-        Assert.Null(exception);
+        Assert.False(File.Exists(docPath));
+        Assert.False(File.Exists(metaPath));
+
+        await manager.StopAsync(CancellationToken.None);
         manager.Dispose();
     }
 
     [Fact]
-    public async Task StartAsync_WhenDisabled_ShouldSkip()
+    public async Task StartAsync_WhenDisabled_ShouldSkipCleanup()
     {
         var disabledConfig = new SessionConfig
         {
             Enabled = false,
             TempDirectory = _tempDir
         };
+        var expiredTime = DateTime.UtcNow.AddHours(-(_config.TempRetentionHours + 1));
+        var (docPath, metaPath) = CreateTempFile("sess_disabled", expiredTime);
         var manager = new TempFileManager(disabledConfig);
 
-        var exception = await Record.ExceptionAsync(async () =>
-        {
-            await manager.StartAsync(CancellationToken.None);
-            await manager.StopAsync(CancellationToken.None);
-        });
+        await manager.StartAsync(CancellationToken.None);
 
-        Assert.Null(exception);
+        Assert.True(File.Exists(docPath));
+        Assert.True(File.Exists(metaPath));
+
+        await manager.StopAsync(CancellationToken.None);
         manager.Dispose();
     }
 
@@ -528,7 +536,11 @@ public class TempFileManagerTests : IDisposable
 
         var result = _manager.CleanupExpiredFiles();
 
+        Assert.Equal(1, result.ScannedCount);
         Assert.Equal(1, result.DeletedCount);
+        Assert.Equal(0, result.ErrorCount);
+        Assert.True(File.Exists(docPath));
+        Assert.False(File.Exists(metaPath));
     }
 
     [Fact]
@@ -644,6 +656,8 @@ public class TempFileManagerTests : IDisposable
         var result = _manager.DeleteTempSession("sess_delbad");
 
         Assert.True(result);
+        Assert.True(File.Exists(docPath));
+        Assert.False(File.Exists(metaPath));
     }
 
     [Fact]

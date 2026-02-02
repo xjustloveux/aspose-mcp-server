@@ -56,10 +56,9 @@ public class AddPdfFormFieldHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Added", result.Message);
-        Assert.Contains("textbox", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Single(doc.Form);
+        Assert.IsType<TextBoxField>(doc.Form["txtName"]);
         AssertModified(context);
     }
 
@@ -81,9 +80,8 @@ public class AddPdfFormFieldHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("MyField", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.NotNull(doc.Form["MyField"]);
     }
 
     [Fact]
@@ -129,9 +127,9 @@ public class AddPdfFormFieldHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("checkbox", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Single(doc.Form);
+        Assert.IsType<CheckboxField>(doc.Form["chkAgree"]);
     }
 
     [Fact]
@@ -152,9 +150,9 @@ public class AddPdfFormFieldHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("radiobutton", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Single(doc.Form);
+        Assert.IsType<RadioButtonField>(doc.Form["rdoChoice"]);
     }
 
     [Fact]

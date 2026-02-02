@@ -37,9 +37,7 @@ public class RotatePdfPageHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("3", result.Message);
+        Assert.IsType<SuccessResult>(res);
         Assert.Equal(Rotation.on180, doc.Pages[1].Rotate);
         Assert.Equal(Rotation.None, doc.Pages[2].Rotate);
         Assert.Equal(Rotation.on180, doc.Pages[3].Rotate);
@@ -65,9 +63,9 @@ public class RotatePdfPageHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Rotated", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        for (var i = 1; i <= 3; i++)
+            Assert.Equal(Rotation.None, doc.Pages[i].Rotate);
     }
 
     #endregion
@@ -75,11 +73,11 @@ public class RotatePdfPageHandlerTests : PdfHandlerTestBase
     #region Basic Rotation
 
     [Theory]
-    [InlineData(0)]
-    [InlineData(90)]
-    [InlineData(180)]
-    [InlineData(270)]
-    public void Execute_WithValidRotation_RotatesPage(int rotation)
+    [InlineData(0, Rotation.None)]
+    [InlineData(90, Rotation.on90)]
+    [InlineData(180, Rotation.on180)]
+    [InlineData(270, Rotation.on270)]
+    public void Execute_WithValidRotation_RotatesPage(int rotation, Rotation expectedRotation)
     {
         var doc = CreateDocumentWithPages(1);
         var context = CreateContext(doc);
@@ -90,10 +88,8 @@ public class RotatePdfPageHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Rotated", result.Message);
-        Assert.Contains(rotation.ToString(), result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(expectedRotation, doc.Pages[1].Rotate);
         AssertModified(context);
     }
 
@@ -109,9 +105,7 @@ public class RotatePdfPageHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("3", result.Message);
+        Assert.IsType<SuccessResult>(res);
         Assert.Equal(Rotation.on90, doc.Pages[1].Rotate);
         Assert.Equal(Rotation.on90, doc.Pages[2].Rotate);
         Assert.Equal(Rotation.on90, doc.Pages[3].Rotate);
@@ -138,9 +132,7 @@ public class RotatePdfPageHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("1", result.Message);
+        Assert.IsType<SuccessResult>(res);
         Assert.Equal(Rotation.on90, doc.Pages[pageIndex].Rotate);
         AssertModified(context);
     }

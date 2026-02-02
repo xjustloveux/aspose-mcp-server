@@ -32,10 +32,8 @@ public class SetPptPropertiesHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Title", result.Message);
-        Assert.Equal("New Title", pres.DocumentProperties.Title);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode()) Assert.Equal("New Title", pres.DocumentProperties.Title);
         AssertModified(context);
     }
 
@@ -51,10 +49,9 @@ public class SetPptPropertiesHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Subject", result.Message);
-        Assert.Equal("New Subject", pres.DocumentProperties.Subject);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode()) Assert.Equal("New Subject", pres.DocumentProperties.Subject);
+        AssertModified(context);
     }
 
     [Fact]
@@ -69,10 +66,9 @@ public class SetPptPropertiesHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Author", result.Message);
-        Assert.Equal("New Author", pres.DocumentProperties.Author);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode()) Assert.Equal("New Author", pres.DocumentProperties.Author);
+        AssertModified(context);
     }
 
     [Fact]
@@ -87,10 +83,9 @@ public class SetPptPropertiesHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Keywords", result.Message);
-        Assert.Equal("keyword1, keyword2", pres.DocumentProperties.Keywords);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode()) Assert.Equal("keyword1, keyword2", pres.DocumentProperties.Keywords);
+        AssertModified(context);
     }
 
     [Fact]
@@ -105,10 +100,9 @@ public class SetPptPropertiesHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Comments", result.Message);
-        Assert.Equal("New Comments", pres.DocumentProperties.Comments);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode()) Assert.Equal("New Comments", pres.DocumentProperties.Comments);
+        AssertModified(context);
     }
 
     [Fact]
@@ -123,10 +117,9 @@ public class SetPptPropertiesHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Category", result.Message);
-        Assert.Equal("New Category", pres.DocumentProperties.Category);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode()) Assert.Equal("New Category", pres.DocumentProperties.Category);
+        AssertModified(context);
     }
 
     [Fact]
@@ -141,10 +134,9 @@ public class SetPptPropertiesHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Company", result.Message);
-        Assert.Equal("New Company", pres.DocumentProperties.Company);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode()) Assert.Equal("New Company", pres.DocumentProperties.Company);
+        AssertModified(context);
     }
 
     [Fact]
@@ -159,10 +151,9 @@ public class SetPptPropertiesHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Manager", result.Message);
-        Assert.Equal("New Manager", pres.DocumentProperties.Manager);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode()) Assert.Equal("New Manager", pres.DocumentProperties.Manager);
+        AssertModified(context);
     }
 
     [Fact]
@@ -179,14 +170,15 @@ public class SetPptPropertiesHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+        {
+            Assert.Equal("Multi Title", pres.DocumentProperties.Title);
+            Assert.Equal("Multi Author", pres.DocumentProperties.Author);
+            Assert.Equal("Multi Company", pres.DocumentProperties.Company);
+        }
 
-        Assert.Contains("Title", result.Message);
-        Assert.Contains("Author", result.Message);
-        Assert.Contains("Company", result.Message);
-        Assert.Equal("Multi Title", pres.DocumentProperties.Title);
-        Assert.Equal("Multi Author", pres.DocumentProperties.Author);
-        Assert.Equal("Multi Company", pres.DocumentProperties.Company);
+        AssertModified(context);
     }
 
     [Fact]
@@ -205,10 +197,9 @@ public class SetPptPropertiesHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("CustomProperties", result.Message);
-        Assert.Equal("CustomValue", pres.DocumentProperties["CustomKey"]);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode()) Assert.Equal("CustomValue", pres.DocumentProperties["CustomKey"]);
+        AssertModified(context);
     }
 
     #endregion
@@ -224,9 +215,7 @@ public class SetPptPropertiesHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("updated", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
     }
 

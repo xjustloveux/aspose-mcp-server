@@ -11,6 +11,7 @@ namespace AsposeMcpServer.Tests.Integration.Session;
 ///     Integration tests for document session isolation.
 /// </summary>
 [Trait("Category", "Integration")]
+[Collection("Session Integration")]
 public class SessionIsolationTests : IntegrationTestBase
 {
     private readonly DocumentSessionManager _sessionManager;
@@ -22,7 +23,7 @@ public class SessionIsolationTests : IntegrationTestBase
     /// </summary>
     public SessionIsolationTests()
     {
-        var config = new SessionConfig { Enabled = true };
+        var config = new SessionConfig { Enabled = true, TempDirectory = Path.Combine(TestDir, "temp") };
         _sessionManager = new DocumentSessionManager(config);
         var tempFileManager = new TempFileManager(config);
         _sessionTool = new DocumentSessionTool(_sessionManager, tempFileManager, new StdioSessionIdentityAccessor());
@@ -67,17 +68,14 @@ public class SessionIsolationTests : IntegrationTestBase
 
         var path = CreateWordDocument();
 
-        // Open two sessions for the same document
         var result1 = _sessionTool.Execute("open", path);
         var result2 = _sessionTool.Execute("open", path);
 
         var data1 = GetResultData<OpenSessionResult>(result1);
         var data2 = GetResultData<OpenSessionResult>(result2);
 
-        // Modify session 1
         _textTool.Execute("replace", sessionId: data1.SessionId, find: "Test", replace: "Modified");
 
-        // Verify session 2 is not affected
         var doc2 = _sessionManager.GetDocument<Document>(data2.SessionId);
         var text2 = doc2.GetText();
 
@@ -100,10 +98,8 @@ public class SessionIsolationTests : IntegrationTestBase
         var wordData = GetResultData<OpenSessionResult>(wordResult);
         var excelData = GetResultData<OpenSessionResult>(excelResult);
 
-        // Verify both sessions exist and are different
         Assert.NotEqual(wordData.SessionId, excelData.SessionId);
 
-        // Verify documents can be retrieved with correct types
         var wordDoc = _sessionManager.GetDocument<Document>(wordData.SessionId);
         var excelDoc = _sessionManager.GetDocument<Workbook>(excelData.SessionId);
 

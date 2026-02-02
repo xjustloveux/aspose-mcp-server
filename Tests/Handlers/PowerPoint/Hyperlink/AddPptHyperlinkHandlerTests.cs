@@ -1,3 +1,4 @@
+using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Hyperlink;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -33,9 +34,14 @@ public class AddPptHyperlinkHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+        {
+            var shape = (IAutoShape)pres.Slides[0].Shapes[^1];
+            Assert.NotNull(shape.HyperlinkClick);
+            Assert.Equal("https://example.com", shape.HyperlinkClick.ExternalUrl);
+        }
 
-        Assert.Contains("hyperlink added", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -52,9 +58,14 @@ public class AddPptHyperlinkHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+        {
+            var shape = (IAutoShape)pres.Slides[0].Shapes[^1];
+            Assert.NotNull(shape.HyperlinkClick);
+            Assert.NotNull(shape.HyperlinkClick.TargetSlide);
+        }
 
-        Assert.Contains("hyperlink added", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -73,9 +84,18 @@ public class AddPptHyperlinkHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+        {
+            var shape = (IAutoShape)pres.Slides[0].Shapes[^1];
+            var paragraph = shape.TextFrame.Paragraphs[0];
+            Assert.True(paragraph.Portions.Count >= 2);
+            var linkPortion = paragraph.Portions
+                .First(p => p.Text == "here");
+            Assert.NotNull(linkPortion.PortionFormat.HyperlinkClick);
+            Assert.Equal("https://example.com", linkPortion.PortionFormat.HyperlinkClick.ExternalUrl);
+        }
 
-        Assert.Contains("hyperlink added", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 

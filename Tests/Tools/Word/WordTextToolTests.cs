@@ -1,4 +1,5 @@
 ﻿using Aspose.Words;
+using AsposeMcpServer.Results;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Results.Word.Text;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -30,8 +31,7 @@ public class WordTextToolTests : WordTestBase
 
         var result = _tool.Execute("add", docPath, outputPath: outputPath, text: "Hello World");
 
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Text added to document successfully", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         var doc = new Document(outputPath);
         var paragraphs = GetParagraphs(doc);
         Assert.True(paragraphs.Count > 0);
@@ -160,8 +160,12 @@ public class WordTextToolTests : WordTestBase
 
         var result = _tool.Execute(operation, docPath, text: "Test");
 
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Text added to document successfully", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
+        if (!IsEvaluationMode())
+        {
+            var doc = new Document(docPath);
+            Assert.Contains("Test", doc.GetText());
+        }
     }
 
     [Theory]
@@ -188,8 +192,7 @@ public class WordTextToolTests : WordTestBase
 
         var result = _tool.Execute("add", sessionId: sessionId, text: "Session Text");
 
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Text added to document successfully", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
 
         var doc = SessionManager.GetDocument<Document>(sessionId);
         var text = doc.GetText();

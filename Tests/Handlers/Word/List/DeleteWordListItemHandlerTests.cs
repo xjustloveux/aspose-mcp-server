@@ -1,3 +1,4 @@
+using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.List;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -24,6 +25,7 @@ public class DeleteWordListItemHandlerTests : WordHandlerTestBase
     public void Execute_DeletesListItem()
     {
         var doc = CreateDocumentWithParagraphs("Item 1", "Item 2", "Item 3");
+        var countBefore = doc.GetChildNodes(NodeType.Paragraph, true).Count;
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -32,9 +34,10 @@ public class DeleteWordListItemHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("deleted successfully", result.Message);
+        var countAfter = doc.GetChildNodes(NodeType.Paragraph, true).Count;
+        Assert.Equal(countBefore - 1, countAfter);
         AssertModified(context);
     }
 
@@ -42,6 +45,7 @@ public class DeleteWordListItemHandlerTests : WordHandlerTestBase
     public void Execute_ReturnsDeletedItemIndex()
     {
         var doc = CreateDocumentWithParagraphs("Item 1", "Item 2");
+        var countBefore = doc.GetChildNodes(NodeType.Paragraph, true).Count;
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -50,9 +54,11 @@ public class DeleteWordListItemHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("#1", result.Message);
+        var countAfter = doc.GetChildNodes(NodeType.Paragraph, true).Count;
+        Assert.Equal(countBefore - 1, countAfter);
+        AssertModified(context);
     }
 
     [Fact]
@@ -67,9 +73,15 @@ public class DeleteWordListItemHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Remaining paragraphs:", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var remaining = doc.GetChildNodes(NodeType.Paragraph, true).Count;
+            Assert.Equal(2, remaining);
+        }
+
+        AssertModified(context);
     }
 
     [SkippableFact]
@@ -101,6 +113,7 @@ public class DeleteWordListItemHandlerTests : WordHandlerTestBase
     public void Execute_DeletesVariousParagraphs(int index)
     {
         var doc = CreateDocumentWithParagraphs("Item 0", "Item 1", "Item 2");
+        var countBefore = doc.GetChildNodes(NodeType.Paragraph, true).Count;
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -109,9 +122,11 @@ public class DeleteWordListItemHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("deleted successfully", result.Message);
+        var countAfter = doc.GetChildNodes(NodeType.Paragraph, true).Count;
+        Assert.Equal(countBefore - 1, countAfter);
+        AssertModified(context);
     }
 
     [Fact]
@@ -126,9 +141,15 @@ public class DeleteWordListItemHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("#0", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            AssertDoesNotContainText(doc, "First");
+            AssertContainsText(doc, "Second");
+        }
+
+        AssertModified(context);
     }
 
     [Fact]
@@ -143,9 +164,15 @@ public class DeleteWordListItemHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("#2", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            AssertDoesNotContainText(doc, "Third");
+            AssertContainsText(doc, "First");
+        }
+
+        AssertModified(context);
     }
 
     #endregion

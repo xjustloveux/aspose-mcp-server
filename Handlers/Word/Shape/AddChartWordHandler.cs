@@ -184,6 +184,7 @@ public class AddChartWordHandler : OperationHandlerBase<Document>
         builder.ParagraphFormat.Alignment = WordShapeHelper.ParseAlignment(chartParams.Alignment);
 
         var shape = builder.InsertImage(imagePath);
+        shape.AspectRatioLocked = false;
         shape.Width = chartParams.ChartWidth;
         shape.Height = chartParams.ChartHeight;
         shape.WrapType = WrapType.Inline;

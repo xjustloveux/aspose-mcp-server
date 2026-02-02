@@ -27,6 +27,7 @@ public class AddPptSectionHandlerTests : PptHandlerTestBase
     public void Execute_AddsSectionAtVariousSlideIndices(int slideIndex)
     {
         var pres = CreatePresentationWithSlides(3);
+        var initialCount = pres.Sections.Count;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -36,9 +37,17 @@ public class AddPptSectionHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        Assert.True(pres.Sections.Count > initialCount);
+        var found = false;
+        foreach (var section in pres.Sections)
+        {
+            if (section.Name != $"Section at {slideIndex}") continue;
+            found = true;
+            break;
+        }
 
-        Assert.Contains("added", result.Message);
+        Assert.True(found);
     }
 
     #endregion
@@ -83,11 +92,10 @@ public class AddPptSectionHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Section", result.Message);
-        Assert.Contains("added", result.Message);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+        var section = Assert.Single(pres.Sections);
+        Assert.Equal("New Section", section.Name);
     }
 
     [Fact]
@@ -103,15 +111,16 @@ public class AddPptSectionHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Introduction", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        var section = Assert.Single(pres.Sections);
+        Assert.Equal("Introduction", section.Name);
     }
 
     [Fact]
     public void Execute_ReturnsSlideIndex()
     {
         var pres = CreatePresentationWithSlides(3);
+        var initialCount = pres.Sections.Count;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -121,9 +130,16 @@ public class AddPptSectionHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        Assert.True(pres.Sections.Count > initialCount);
+        foreach (var section in pres.Sections)
+        {
+            if (section.Name != "Section") continue;
+            Assert.Equal(pres.Slides[1], section.StartedFromSlide);
+            return;
+        }
 
-        Assert.Contains("slide 1", result.Message);
+        Assert.Fail("Section not found");
     }
 
     [Fact]

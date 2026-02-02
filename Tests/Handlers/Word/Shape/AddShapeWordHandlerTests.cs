@@ -1,3 +1,5 @@
+using Aspose.Words;
+using Aspose.Words.Drawing;
 using AsposeMcpServer.Handlers.Word.Shape;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -18,6 +20,17 @@ public class AddShapeWordHandlerTests : WordHandlerTestBase
 
     #endregion
 
+    #region Helper Methods
+
+    private static List<Aspose.Words.Drawing.Shape> GetAllShapes(Document doc)
+    {
+        return doc.GetChildNodes(NodeType.Shape, true)
+            .Cast<Aspose.Words.Drawing.Shape>()
+            .ToList();
+    }
+
+    #endregion
+
     #region Basic Add Shape Operations
 
     [Fact]
@@ -34,9 +47,18 @@ public class AddShapeWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("successfully added", result.Message, StringComparison.OrdinalIgnoreCase);
+        var shapes = GetAllShapes(doc);
+        Assert.NotEmpty(shapes);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            Assert.Contains(shapes, s => s.ShapeType == ShapeType.Rectangle);
+            var rect = shapes.First(s => s.ShapeType == ShapeType.Rectangle);
+            Assert.Equal(100.0, rect.Width);
+            Assert.Equal(50.0, rect.Height);
+        }
+
         AssertModified(context);
     }
 
@@ -54,9 +76,17 @@ public class AddShapeWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("successfully added", result.Message, StringComparison.OrdinalIgnoreCase);
+        var shapes = GetAllShapes(doc);
+        Assert.NotEmpty(shapes);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            Assert.Contains(shapes, s => s.ShapeType == ShapeType.Ellipse);
+            var ellipse = shapes.First(s => s.ShapeType == ShapeType.Ellipse);
+            Assert.Equal(80.0, ellipse.Width);
+            Assert.Equal(60.0, ellipse.Height);
+        }
     }
 
     [Fact]
@@ -75,9 +105,16 @@ public class AddShapeWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("successfully added", result.Message, StringComparison.OrdinalIgnoreCase);
+        var shapes = GetAllShapes(doc);
+        Assert.NotEmpty(shapes);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var shape = shapes.First(s => s.ShapeType == ShapeType.Rectangle);
+            Assert.Equal(150.0, shape.Left);
+            Assert.Equal(200.0, shape.Top);
+        }
     }
 
     [Fact]

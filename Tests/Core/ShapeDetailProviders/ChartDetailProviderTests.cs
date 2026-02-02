@@ -1,6 +1,7 @@
 using Aspose.Slides;
 using Aspose.Slides.Charts;
-using AsposeMcpServer.Core.ShapeDetailProviders;
+using AsposeMcpServer.Core.ShapeDetailProviders.Details;
+using AsposeMcpServer.Core.ShapeDetailProviders.Providers;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Core.ShapeDetailProviders;
@@ -47,8 +48,11 @@ public class ChartDetailProviderTests : TestBase
         var chart = slide.Shapes.AddChart(ChartType.ClusteredColumn, 10, 10, 400, 300);
 
         var details = _provider.GetDetails(chart, presentation);
+        var chartDetails = Assert.IsType<ChartDetails>(details);
 
-        Assert.NotNull(details);
+        Assert.Equal("ClusteredColumn", chartDetails.ChartType);
+        Assert.True(chartDetails.SeriesCount >= 0);
+        Assert.True(chartDetails.CategoryCount >= 0);
     }
 
     [Fact]
@@ -61,5 +65,35 @@ public class ChartDetailProviderTests : TestBase
         var details = _provider.GetDetails(shape, presentation);
 
         Assert.Null(details);
+    }
+
+    [Fact]
+    public void GetDetails_WithLegend_ShouldReturnLegendPosition()
+    {
+        using var presentation = new Presentation();
+        var slide = presentation.Slides[0];
+        var chart = slide.Shapes.AddChart(ChartType.ClusteredColumn, 10, 10, 400, 300);
+        chart.HasLegend = true;
+
+        var details = _provider.GetDetails(chart, presentation);
+        var chartDetails = Assert.IsType<ChartDetails>(details);
+
+        Assert.True(chartDetails.HasLegend);
+        Assert.NotNull(chartDetails.LegendPosition);
+    }
+
+    [Fact]
+    public void GetDetails_WithoutLegend_ShouldReturnNullLegendPosition()
+    {
+        using var presentation = new Presentation();
+        var slide = presentation.Slides[0];
+        var chart = slide.Shapes.AddChart(ChartType.ClusteredColumn, 10, 10, 400, 300);
+        chart.HasLegend = false;
+
+        var details = _provider.GetDetails(chart, presentation);
+        var chartDetails = Assert.IsType<ChartDetails>(details);
+
+        Assert.False(chartDetails.HasLegend);
+        Assert.Null(chartDetails.LegendPosition);
     }
 }

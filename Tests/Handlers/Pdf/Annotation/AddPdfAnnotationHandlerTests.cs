@@ -34,10 +34,10 @@ public class AddPdfAnnotationHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Added", result.Message);
-        Assert.Contains("page 1", result.Message);
+        Assert.Single(doc.Pages[1].Annotations);
+        AssertModified(context);
     }
 
     #endregion
@@ -57,9 +57,8 @@ public class AddPdfAnnotationHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Added", result.Message);
         Assert.Single(doc.Pages[1].Annotations);
         AssertModified(context);
     }
@@ -146,10 +145,10 @@ public class AddPdfAnnotationHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains($"page {pageIndex}", result.Message);
         Assert.Single(doc.Pages[pageIndex].Annotations);
+        AssertModified(context);
     }
 
     [Fact]

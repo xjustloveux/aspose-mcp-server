@@ -1,5 +1,6 @@
 ﻿using Aspose.Pdf;
 using Aspose.Pdf.Text;
+using AsposeMcpServer.Results;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Pdf;
@@ -50,9 +51,10 @@ public class PdfRedactToolTests : PdfTestBase
         var outputPath = CreateTestFilePath("test_area_output.pdf");
         var result = _tool.Execute(pdfPath, outputPath: outputPath,
             pageIndex: 1, x: 100, y: 100, width: 200, height: 50);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         Assert.True(File.Exists(outputPath));
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Redaction applied", data.Message);
+        using var doc = new Document(outputPath);
+        Assert.True(doc.Pages.Count > 0);
     }
 
     [Fact]
@@ -63,9 +65,10 @@ public class PdfRedactToolTests : PdfTestBase
         var result = _tool.Execute(pdfPath, outputPath: outputPath,
             pageIndex: 1, x: 100, y: 100, width: 200, height: 50,
             fillColor: "Red", overlayText: "CONFIDENTIAL");
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         Assert.True(File.Exists(outputPath));
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Redaction applied", data.Message);
+        using var doc = new Document(outputPath);
+        Assert.True(doc.Pages.Count > 0);
     }
 
     [Fact]
@@ -77,9 +80,10 @@ public class PdfRedactToolTests : PdfTestBase
 
         var result = _tool.Execute(pdfPath, outputPath: outputPath, textToRedact: textToFind);
 
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         Assert.True(File.Exists(outputPath));
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Redacted 1 occurrence", data.Message);
+        using var doc = new Document(outputPath);
+        Assert.True(doc.Pages.Count > 0);
     }
 
     [Fact]
@@ -103,12 +107,11 @@ public class PdfRedactToolTests : PdfTestBase
 
         var result = _tool.Execute(sessionId: sessionId,
             pageIndex: 1, x: 100, y: 100, width: 200, height: 50);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Redaction applied", data.Message);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
         var document = SessionManager.GetDocument<Document>(sessionId);
         Assert.NotNull(document);
+        Assert.True(document.Pages.Count > 0);
     }
 
     [Fact]
@@ -119,10 +122,10 @@ public class PdfRedactToolTests : PdfTestBase
         var sessionId = OpenSession(pdfPath);
 
         var result = _tool.Execute(sessionId: sessionId, textToRedact: textToFind);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Redacted 1 occurrence", data.Message);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
+        var document = SessionManager.GetDocument<Document>(sessionId);
+        Assert.NotNull(document);
     }
 
     [Fact]

@@ -1,3 +1,4 @@
+using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Paragraph;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -24,6 +25,7 @@ public class InsertParagraphWordHandlerTests : WordHandlerTestBase
     public void Execute_ReturnsParagraphCountInMessage()
     {
         var doc = CreateDocumentWithParagraphs("Existing");
+        var initialCount = doc.GetChildNodes(NodeType.Paragraph, true).Count;
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -32,9 +34,11 @@ public class InsertParagraphWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("paragraph count", result.Message, StringComparison.OrdinalIgnoreCase);
+        var newCount = doc.GetChildNodes(NodeType.Paragraph, true).Count;
+        Assert.Equal(initialCount + 1, newCount);
+        AssertModified(context);
     }
 
     #endregion
@@ -45,6 +49,7 @@ public class InsertParagraphWordHandlerTests : WordHandlerTestBase
     public void Execute_InsertsParagraph()
     {
         var doc = CreateDocumentWithParagraphs("Existing");
+        var initialCount = doc.GetChildNodes(NodeType.Paragraph, true).Count;
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -53,10 +58,11 @@ public class InsertParagraphWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("inserted", result.Message, StringComparison.OrdinalIgnoreCase);
-        AssertContainsText(doc, "New paragraph");
+        var newCount = doc.GetChildNodes(NodeType.Paragraph, true).Count;
+        Assert.Equal(initialCount + 1, newCount);
+        if (!IsEvaluationMode(AsposeLibraryType.Words)) AssertContainsText(doc, "New paragraph");
         AssertModified(context);
     }
 
@@ -95,9 +101,15 @@ public class InsertParagraphWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("beginning", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().ToList();
+            Assert.Contains(paragraphs, p => p.GetText().Contains("New at beginning"));
+            Assert.Contains("New at beginning", paragraphs[0].GetText());
+        }
+
         AssertModified(context);
     }
 
@@ -114,9 +126,15 @@ public class InsertParagraphWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("after paragraph #0", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().ToList();
+            Assert.Equal(3, paragraphs.Count);
+            Assert.Contains("Inserted after first", paragraphs[1].GetText());
+        }
+
         AssertModified(context);
     }
 
@@ -132,10 +150,16 @@ public class InsertParagraphWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("end of document", result.Message, StringComparison.OrdinalIgnoreCase);
-        AssertContainsText(doc, "At end");
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().ToList();
+            var lastPara = paragraphs[^1];
+            Assert.Contains("At end", lastPara.GetText());
+        }
+
+        AssertModified(context);
     }
 
     #endregion
@@ -155,9 +179,16 @@ public class InsertParagraphWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Heading 1", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().ToList();
+            var styledPara = paragraphs.FirstOrDefault(p => p.GetText().Contains("Styled paragraph"));
+            Assert.NotNull(styledPara);
+            Assert.Equal("Heading 1", styledPara.ParagraphFormat.StyleName);
+        }
+
         AssertModified(context);
     }
 
@@ -174,9 +205,16 @@ public class InsertParagraphWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("center", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().ToList();
+            var centeredPara = paragraphs.FirstOrDefault(p => p.GetText().Contains("Centered paragraph"));
+            Assert.NotNull(centeredPara);
+            Assert.Equal(ParagraphAlignment.Center, centeredPara.ParagraphFormat.Alignment);
+        }
+
         AssertModified(context);
     }
 
@@ -193,7 +231,14 @@ public class InsertParagraphWordHandlerTests : WordHandlerTestBase
 
         _handler.Execute(context, parameters);
 
-        AssertContainsText(doc, "Indented paragraph");
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().ToList();
+            var indentedPara = paragraphs.FirstOrDefault(p => p.GetText().Contains("Indented paragraph"));
+            Assert.NotNull(indentedPara);
+            Assert.Equal(36.0, indentedPara.ParagraphFormat.LeftIndent);
+        }
+
         AssertModified(context);
     }
 
@@ -211,7 +256,15 @@ public class InsertParagraphWordHandlerTests : WordHandlerTestBase
 
         _handler.Execute(context, parameters);
 
-        AssertContainsText(doc, "Spaced paragraph");
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().ToList();
+            var spacedPara = paragraphs.FirstOrDefault(p => p.GetText().Contains("Spaced paragraph"));
+            Assert.NotNull(spacedPara);
+            Assert.Equal(12.0, spacedPara.ParagraphFormat.SpaceBefore);
+            Assert.Equal(12.0, spacedPara.ParagraphFormat.SpaceAfter);
+        }
+
         AssertModified(context);
     }
 

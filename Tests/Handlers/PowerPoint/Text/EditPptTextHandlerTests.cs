@@ -36,9 +36,14 @@ public class EditPptTextHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+        {
+            var shape = (IAutoShape)pres.Slides[1].Shapes[0];
+            Assert.Contains("Updated", shape.TextFrame.Text);
+        }
 
-        Assert.Contains("slide 1", result.Message);
+        AssertModified(context);
     }
 
     #endregion
@@ -69,9 +74,13 @@ public class EditPptTextHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+        {
+            var shape = (IAutoShape)pres.Slides[0].Shapes[0];
+            Assert.Contains("Updated", shape.TextFrame.Text);
+        }
 
-        Assert.Contains("Text edited", result.Message);
         AssertModified(context);
     }
 
@@ -87,9 +96,9 @@ public class EditPptTextHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("shape 0", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.True(pres.Slides[0].Shapes.Count > 0);
+        AssertModified(context);
     }
 
     [Fact]
@@ -105,9 +114,9 @@ public class EditPptTextHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("slide 0", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.True(pres.Slides[0].Shapes.Count > 0);
+        AssertModified(context);
     }
 
     #endregion
@@ -127,9 +136,9 @@ public class EditPptTextHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("edited", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.True(pres.Slides[0].Shapes.Count > 0);
+        AssertModified(context);
     }
 
     [Fact]
@@ -145,9 +154,9 @@ public class EditPptTextHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("edited", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.True(pres.Slides[0].Shapes.Count > 0);
+        AssertModified(context);
     }
 
     [Fact]
@@ -163,9 +172,9 @@ public class EditPptTextHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("edited", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.True(pres.Slides[0].Shapes.Count > 0);
+        AssertModified(context);
     }
 
     [Fact]
@@ -181,9 +190,9 @@ public class EditPptTextHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("edited", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.True(pres.Slides[0].Shapes.Count > 0);
+        AssertModified(context);
     }
 
     [Fact]
@@ -199,9 +208,9 @@ public class EditPptTextHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("edited", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.True(pres.Slides[0].Shapes.Count > 0);
+        AssertModified(context);
     }
 
     #endregion

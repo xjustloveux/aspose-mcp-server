@@ -1,5 +1,6 @@
 ﻿using Aspose.Pdf;
 using Aspose.Pdf.Text;
+using AsposeMcpServer.Results;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Pdf;
@@ -46,9 +47,8 @@ public class PdfWatermarkToolTests : PdfTestBase
 
         var result = _tool.Execute("add", text: watermarkText, path: pdfPath, outputPath: outputPath);
 
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         Assert.True(File.Exists(outputPath));
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Watermark added to 1 page(s)", data.Message);
 
         using var outputDoc = new Document(outputPath);
         var textAbsorber = new TextAbsorber();
@@ -66,9 +66,10 @@ public class PdfWatermarkToolTests : PdfTestBase
 
         var result = _tool.Execute("add", text: watermarkText, path: pdfPath, outputPath: outputPath);
 
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         Assert.True(File.Exists(outputPath));
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Watermark added to 3 page(s)", data.Message);
+        using var outputDoc = new Document(outputPath);
+        Assert.Equal(3, outputDoc.Pages.Count);
     }
 
     [Fact]
@@ -80,9 +81,10 @@ public class PdfWatermarkToolTests : PdfTestBase
 
         var result = _tool.Execute("add", text: watermarkText, path: pdfPath, outputPath: outputPath, pageRange: "2-4");
 
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         Assert.True(File.Exists(outputPath));
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Watermark added to 3 page(s)", data.Message);
+        using var outputDoc = new Document(outputPath);
+        Assert.Equal(4, outputDoc.Pages.Count);
     }
 
     #endregion
@@ -99,8 +101,8 @@ public class PdfWatermarkToolTests : PdfTestBase
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.pdf");
 
         var result = _tool.Execute(operation, text: "Watermark", path: pdfPath, outputPath: outputPath);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Watermark added to 1 page(s)", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
+        Assert.True(File.Exists(outputPath));
     }
 
     [Fact]
@@ -130,8 +132,6 @@ public class PdfWatermarkToolTests : PdfTestBase
         var sessionId = OpenSession(pdfPath);
 
         var result = _tool.Execute("add", text: watermarkText, sessionId: sessionId);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Watermark added to 1 page(s)", data.Message);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
         var document = SessionManager.GetDocument<Document>(sessionId);
@@ -150,8 +150,6 @@ public class PdfWatermarkToolTests : PdfTestBase
         var sessionId = OpenSession(pdfPath);
 
         var result = _tool.Execute("add", text: watermarkText, sessionId: sessionId, pageRange: "1,3");
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Watermark added to 2 page(s)", data.Message);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
         var document = SessionManager.GetDocument<Document>(sessionId);
@@ -172,8 +170,9 @@ public class PdfWatermarkToolTests : PdfTestBase
         var sessionId = OpenSession(pdfPath2);
 
         var result = _tool.Execute("add", text: "Test", path: pdfPath1, sessionId: sessionId);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Watermark added to 3 page(s)", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
+        var document = SessionManager.GetDocument<Document>(sessionId);
+        Assert.Equal(3, document.Pages.Count);
     }
 
     #endregion

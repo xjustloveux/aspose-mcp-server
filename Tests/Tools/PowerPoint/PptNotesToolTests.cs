@@ -1,5 +1,6 @@
 ﻿using Aspose.Slides;
 using Aspose.Slides.Export;
+using AsposeMcpServer.Results;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Results.PowerPoint.Notes;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -41,11 +42,13 @@ public class PptNotesToolTests : PptTestBase
         var outputPath = CreateTestFilePath("test_set_output.pptx");
         var result = _tool.Execute("set", pptPath, slideIndex: 0, notes: "Speaker notes for this slide",
             outputPath: outputPath);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Notes set for slide", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
+        Assert.True(File.Exists(outputPath));
         using var presentation = new Presentation(outputPath);
         var notesSlide = presentation.Slides[0].NotesSlideManager.NotesSlide;
         Assert.NotNull(notesSlide);
+        if (!IsEvaluationMode())
+            Assert.Contains("Speaker notes for this slide", notesSlide.NotesTextFrame.Text);
     }
 
     [Fact]
@@ -64,8 +67,8 @@ public class PptNotesToolTests : PptTestBase
         var pptPath = CreatePresentationWithNotes("test_clear.pptx", "Notes to clear");
         var outputPath = CreateTestFilePath("test_clear_output.pptx");
         var result = _tool.Execute("clear", pptPath, slideIndices: [0], outputPath: outputPath);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Cleared speaker notes for", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
+        Assert.True(File.Exists(outputPath));
     }
 
     [Fact]
@@ -75,8 +78,8 @@ public class PptNotesToolTests : PptTestBase
         var outputPath = CreateTestFilePath("test_hf_output.pptx");
         var result = _tool.Execute("set_header_footer", pptPath, headerText: "Notes Header", footerText: "Notes Footer",
             outputPath: outputPath);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Notes master header/footer updated", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
+        Assert.True(File.Exists(outputPath));
     }
 
     #endregion
@@ -92,8 +95,8 @@ public class PptNotesToolTests : PptTestBase
         var pptPath = CreatePresentation($"test_case_set_{operation}.pptx");
         var outputPath = CreateTestFilePath($"test_case_set_{operation}_output.pptx");
         var result = _tool.Execute(operation, pptPath, slideIndex: 0, notes: "Test", outputPath: outputPath);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Notes set for slide", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
+        Assert.True(File.Exists(outputPath));
     }
 
     [Fact]
@@ -128,12 +131,12 @@ public class PptNotesToolTests : PptTestBase
         var sessionId = OpenSession(pptPath);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var result = _tool.Execute("set", sessionId: sessionId, slideIndex: 0, notes: "Session speaker notes");
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Notes set for slide", data.Message);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
         var notesSlide = ppt.Slides[0].NotesSlideManager.NotesSlide;
         Assert.NotNull(notesSlide);
+        if (!IsEvaluationMode())
+            Assert.Contains("Session speaker notes", notesSlide.NotesTextFrame.Text);
     }
 
     [Fact]
@@ -142,8 +145,6 @@ public class PptNotesToolTests : PptTestBase
         var pptPath = CreatePresentationWithNotes("test_session_clear.pptx", "Notes to clear in session");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("clear", sessionId: sessionId, slideIndices: [0]);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Cleared speaker notes for", data.Message);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
     }

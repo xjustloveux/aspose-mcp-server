@@ -57,9 +57,9 @@ public class DeletePdfBookmarkHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Deleted bookmark", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(1, doc.Outlines.Count);
+        Assert.Equal("Bookmark 2", doc.Outlines[1].Title);
         AssertModified(context);
     }
 
@@ -81,9 +81,9 @@ public class DeletePdfBookmarkHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("ToDelete", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(0, doc.Outlines.Count);
+        AssertModified(context);
     }
 
     [Fact]
@@ -98,9 +98,11 @@ public class DeletePdfBookmarkHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("index 2", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(2, doc.Outlines.Count);
+        Assert.Equal("Bookmark 1", doc.Outlines[1].Title);
+        Assert.Equal("Bookmark 3", doc.Outlines[2].Title);
+        AssertModified(context);
     }
 
     [Theory]
@@ -118,9 +120,9 @@ public class DeletePdfBookmarkHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Deleted bookmark", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(2, doc.Outlines.Count);
+        AssertModified(context);
     }
 
     #endregion

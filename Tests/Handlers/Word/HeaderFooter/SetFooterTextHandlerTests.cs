@@ -1,3 +1,4 @@
+using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.HeaderFooter;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -51,11 +52,12 @@ public class SetFooterTextHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("footer text set", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("left", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+
+        var footer = doc.FirstSection.HeadersFooters[HeaderFooterType.FooterPrimary];
+        Assert.NotNull(footer);
+        if (!IsEvaluationMode(AsposeLibraryType.Words)) Assert.Contains("Left Text", footer.GetText());
     }
 
     [Fact]
@@ -70,10 +72,12 @@ public class SetFooterTextHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("center", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+
+        var footer = doc.FirstSection.HeadersFooters[HeaderFooterType.FooterPrimary];
+        Assert.NotNull(footer);
+        if (!IsEvaluationMode(AsposeLibraryType.Words)) Assert.Contains("Center Text", footer.GetText());
     }
 
     [Fact]
@@ -88,10 +92,12 @@ public class SetFooterTextHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("right", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+
+        var footer = doc.FirstSection.HeadersFooters[HeaderFooterType.FooterPrimary];
+        Assert.NotNull(footer);
+        if (!IsEvaluationMode(AsposeLibraryType.Words)) Assert.Contains("Right Text", footer.GetText());
     }
 
     [Fact]
@@ -108,11 +114,17 @@ public class SetFooterTextHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("left", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("center", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("right", result.Message, StringComparison.OrdinalIgnoreCase);
+        var footer = doc.FirstSection.HeadersFooters[HeaderFooterType.FooterPrimary];
+        Assert.NotNull(footer);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var footerText = footer.GetText();
+            Assert.Contains("Left", footerText);
+            Assert.Contains("Center", footerText);
+            Assert.Contains("Right", footerText);
+        }
     }
 
     #endregion
@@ -132,9 +144,11 @@ public class SetFooterTextHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("section 0", result.Message, StringComparison.OrdinalIgnoreCase);
+        var footer = doc.FirstSection.HeadersFooters[HeaderFooterType.FooterPrimary];
+        Assert.NotNull(footer);
+        if (!IsEvaluationMode(AsposeLibraryType.Words)) Assert.Contains("Test", footer.GetText());
     }
 
     [Fact]
@@ -150,9 +164,11 @@ public class SetFooterTextHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("all sections", result.Message, StringComparison.OrdinalIgnoreCase);
+        var footer = doc.FirstSection.HeadersFooters[HeaderFooterType.FooterPrimary];
+        Assert.NotNull(footer);
+        if (!IsEvaluationMode(AsposeLibraryType.Words)) Assert.Contains("Test", footer.GetText());
     }
 
     #endregion

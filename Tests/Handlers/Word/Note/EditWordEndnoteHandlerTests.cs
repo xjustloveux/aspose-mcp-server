@@ -1,6 +1,7 @@
 using Aspose.Words;
 using Aspose.Words.Notes;
 using AsposeMcpServer.Handlers.Word.Note;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 
@@ -34,10 +35,11 @@ public class EditWordEndnoteHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("edited successfully", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Updated endnote text", result.Message);
+        var endnotes = WordNoteHelper.GetNotesFromDoc(doc, FootnoteType.Endnote);
+        Assert.Single(endnotes);
+        if (!IsEvaluationMode()) Assert.Contains("Updated endnote text", endnotes[0].ToString(SaveFormat.Text));
         AssertModified(context);
     }
 
@@ -54,9 +56,17 @@ public class EditWordEndnoteHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("edited successfully", result.Message, StringComparison.OrdinalIgnoreCase);
+        var endnotes = WordNoteHelper.GetNotesFromDoc(doc, FootnoteType.Endnote);
+        Assert.Equal(2, endnotes.Count);
+        if (!IsEvaluationMode())
+        {
+            Assert.Contains("First endnote", endnotes[0].ToString(SaveFormat.Text));
+            Assert.Contains("Edited second endnote", endnotes[1].ToString(SaveFormat.Text));
+        }
+
+        AssertModified(context);
     }
 
     #endregion

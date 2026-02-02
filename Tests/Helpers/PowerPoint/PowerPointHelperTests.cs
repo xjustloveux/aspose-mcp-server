@@ -43,7 +43,6 @@ public class PowerPointHelperTests : TestBase
 
         Assert.NotNull(thumbnail);
         Assert.NotEmpty(thumbnail);
-        // Should be valid base64
         var bytes = Convert.FromBase64String(thumbnail);
         Assert.True(bytes.Length > 0);
     }

@@ -1,3 +1,4 @@
+using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Layout;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -33,10 +34,9 @@ public class SetLayoutHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode()) Assert.Equal(SlideLayoutType.Title, pres.Slides[0].LayoutSlide.LayoutType);
 
-        Assert.Contains("layout", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("set", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -53,9 +53,9 @@ public class SetLayoutHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode()) Assert.Equal(SlideLayoutType.Blank, pres.Slides[0].LayoutSlide.LayoutType);
 
-        Assert.Contains("blank", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 

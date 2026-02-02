@@ -34,18 +34,17 @@ public class AddAudioHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Audio embedded", result.Message);
-        Assert.True(pres.Slides[0].Shapes.Count > initialShapeCount);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode()) Assert.True(pres.Slides[0].Shapes.Count > initialShapeCount);
         AssertModified(context);
     }
 
     [Fact]
-    public void Execute_ReturnsSlideIndex()
+    public void Execute_WithSlideIndex_AddsAudioToSlide()
     {
         var tempFile = CreateTempAudioFile();
         var pres = CreateEmptyPresentation();
+        var initialShapeCount = pres.Slides[0].Shapes.Count;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -55,16 +54,17 @@ public class AddAudioHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("slide 0", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode()) Assert.True(pres.Slides[0].Shapes.Count > initialShapeCount);
+        AssertModified(context);
     }
 
     [Fact]
-    public void Execute_ReturnsPosition()
+    public void Execute_WithPosition_AddsAudioAtPosition()
     {
         var tempFile = CreateTempAudioFile();
         var pres = CreateEmptyPresentation();
+        var initialShapeCount = pres.Slides[0].Shapes.Count;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -75,10 +75,16 @@ public class AddAudioHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+        {
+            Assert.True(pres.Slides[0].Shapes.Count > initialShapeCount);
+            var lastShape = pres.Slides[0].Shapes[^1];
+            Assert.Equal(200f, lastShape.X);
+            Assert.Equal(150f, lastShape.Y);
+        }
 
-        Assert.Contains("200", result.Message);
-        Assert.Contains("150", result.Message);
+        AssertModified(context);
     }
 
     #endregion

@@ -133,6 +133,8 @@ public class GetPptTransitionHandlerTests : PptHandlerTestBase
 
         Assert.Equal("Fade", result.Type);
         Assert.True(result.HasTransition);
+        Assert.Equal(0, result.SlideIndex);
+        Assert.NotNull(result.Speed);
     }
 
     [Fact]
@@ -161,9 +163,11 @@ public class GetPptTransitionHandlerTests : PptHandlerTestBase
         var result = Assert.IsType<GetTransitionResult>(res);
 
         Assert.NotNull(result);
-        Assert.True(result.AdvanceOnClick || !result.AdvanceOnClick);
-        Assert.True(result.AdvanceAfter || !result.AdvanceAfter);
-        Assert.True(result.AdvanceAfterSeconds >= 0 || result.AdvanceAfterSeconds < 0);
+        Assert.Equal(0, result.SlideIndex);
+        Assert.Equal("None", result.Type);
+        Assert.False(result.HasTransition);
+        Assert.False(result.AdvanceAfter);
+        Assert.Equal(0.0, result.AdvanceAfterSeconds);
     }
 
     #endregion

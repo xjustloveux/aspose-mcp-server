@@ -59,9 +59,14 @@ public class SplitCellWordTableHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("split", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var table = doc.Sections[0].Body.Tables[0];
+            Assert.True(table.Rows.Count > 3);
+        }
+
         AssertModified(context);
     }
 
@@ -80,9 +85,13 @@ public class SplitCellWordTableHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("split", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var table = doc.Sections[0].Body.Tables[0];
+            Assert.True(table.Rows[0].Cells.Count > 3);
+        }
     }
 
     [Fact]
@@ -99,9 +108,13 @@ public class SplitCellWordTableHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("split", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var table = doc.Sections[0].Body.Tables[0];
+            Assert.True(table.Rows.Count > 3);
+        }
     }
 
     #endregion

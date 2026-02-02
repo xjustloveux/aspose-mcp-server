@@ -1,6 +1,6 @@
-using System.Text.Json;
 using Aspose.Slides;
-using AsposeMcpServer.Core.ShapeDetailProviders;
+using AsposeMcpServer.Core.ShapeDetailProviders.Details;
+using AsposeMcpServer.Core.ShapeDetailProviders.Providers;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Core.ShapeDetailProviders;
@@ -47,8 +47,12 @@ public class TableDetailProviderTests : TestBase
         var table = slide.Shapes.AddTable(10, 10, [50, 50], [30, 30]);
 
         var details = _provider.GetDetails(table, presentation);
+        var tableDetails = Assert.IsType<TableDetails>(details);
 
-        Assert.NotNull(details);
+        Assert.Equal(2, tableDetails.Rows);
+        Assert.Equal(2, tableDetails.Columns);
+        Assert.Equal(4, tableDetails.TotalCells);
+        Assert.Equal(0, tableDetails.MergedCellCount);
     }
 
     [Fact]
@@ -71,15 +75,11 @@ public class TableDetailProviderTests : TestBase
         var table = slide.Shapes.AddTable(10, 10, [50, 50, 50], [30, 30]);
 
         var details = _provider.GetDetails(table, presentation);
-        Assert.NotNull(details);
+        var tableDetails = Assert.IsType<TableDetails>(details);
 
-        var json = JsonSerializer.Serialize(details);
-        using var doc = JsonDocument.Parse(json);
-        var root = doc.RootElement;
-
-        Assert.Equal(2, root.GetProperty("rows").GetInt32());
-        Assert.Equal(3, root.GetProperty("columns").GetInt32());
-        Assert.Equal(6, root.GetProperty("totalCells").GetInt32());
+        Assert.Equal(2, tableDetails.Rows);
+        Assert.Equal(3, tableDetails.Columns);
+        Assert.Equal(6, tableDetails.TotalCells);
     }
 
     [Fact]
@@ -92,15 +92,10 @@ public class TableDetailProviderTests : TestBase
         table.MergeCells(table[0, 0], table[1, 0], false);
 
         var details = _provider.GetDetails(table, presentation);
-        Assert.NotNull(details);
+        var tableDetails = Assert.IsType<TableDetails>(details);
 
-        var json = JsonSerializer.Serialize(details);
-        using var doc = JsonDocument.Parse(json);
-        var root = doc.RootElement;
-
-        Assert.True(root.GetProperty("mergedCellCount").GetInt32() > 0);
-        Assert.True(root.TryGetProperty("mergedCells", out var mergedCells));
-        Assert.NotEqual(JsonValueKind.Null, mergedCells.ValueKind);
+        Assert.True(tableDetails.MergedCellCount > 0);
+        Assert.NotNull(tableDetails.MergedCells);
     }
 
     [Fact]
@@ -111,13 +106,42 @@ public class TableDetailProviderTests : TestBase
         var table = slide.Shapes.AddTable(10, 10, [50, 50], [30, 30]);
 
         var details = _provider.GetDetails(table, presentation);
-        Assert.NotNull(details);
+        var tableDetails = Assert.IsType<TableDetails>(details);
 
-        var json = JsonSerializer.Serialize(details);
-        using var doc = JsonDocument.Parse(json);
-        var root = doc.RootElement;
+        Assert.Equal(0, tableDetails.MergedCellCount);
+        Assert.Null(tableDetails.MergedCells);
+    }
 
-        Assert.Equal(0, root.GetProperty("mergedCellCount").GetInt32());
-        Assert.Equal(JsonValueKind.Null, root.GetProperty("mergedCells").ValueKind);
+    [Fact]
+    public void GetDetails_WithTable_ShouldIncludeStyleFlags()
+    {
+        using var presentation = new Presentation();
+        var slide = presentation.Slides[0];
+        var table = slide.Shapes.AddTable(10, 10, [50, 50], [30, 30]);
+        table.FirstRow = true;
+        table.FirstCol = true;
+        table.LastRow = false;
+        table.LastCol = false;
+        var details = _provider.GetDetails(table, presentation);
+        var tableDetails = Assert.IsType<TableDetails>(details);
+
+        Assert.True(tableDetails.FirstRow);
+        Assert.True(tableDetails.FirstCol);
+        Assert.False(tableDetails.LastRow);
+        Assert.False(tableDetails.LastCol);
+    }
+
+    [Fact]
+    public void GetDetails_WithTable_ShouldIncludeStylePreset()
+    {
+        using var presentation = new Presentation();
+        var slide = presentation.Slides[0];
+        var table = slide.Shapes.AddTable(10, 10, [50, 50], [30, 30]);
+
+        var details = _provider.GetDetails(table, presentation);
+        var tableDetails = Assert.IsType<TableDetails>(details);
+
+        // StylePreset is either a valid preset name or null (when "None")
+        Assert.True(tableDetails.StylePreset == null || !string.IsNullOrEmpty(tableDetails.StylePreset));
     }
 }

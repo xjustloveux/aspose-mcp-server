@@ -3,6 +3,8 @@ using Aspose.Words.Lists;
 using AsposeMcpServer.Handlers.Word.List;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
+using static Aspose.Words.ConvertUtil;
+using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Tests.Handlers.Word.List;
 
@@ -38,9 +40,11 @@ public class SetWordListFormatHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains($"Indent level: {level}", result.Message);
+        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+        Assert.Equal(InchToPoint(0.5 * level), paragraphs[0].ParagraphFormat.LeftIndent);
+        AssertModified(context);
     }
 
     #endregion
@@ -63,9 +67,11 @@ public class SetWordListFormatHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains($"Left indent: {indent}", result.Message);
+        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+        Assert.Equal(indent, paragraphs[0].ParagraphFormat.LeftIndent);
+        AssertModified(context);
     }
 
     #endregion
@@ -88,9 +94,11 @@ public class SetWordListFormatHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains($"First line indent: {indent}", result.Message);
+        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+        Assert.Equal(indent, paragraphs[0].ParagraphFormat.FirstLineIndent);
+        AssertModified(context);
     }
 
     #endregion
@@ -111,10 +119,12 @@ public class SetWordListFormatHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Left indent:", result.Message);
-        Assert.Contains("First line indent:", result.Message);
+        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+        Assert.Equal(36.0, paragraphs[0].ParagraphFormat.LeftIndent);
+        Assert.Equal(18.0, paragraphs[0].ParagraphFormat.FirstLineIndent);
+        AssertModified(context);
     }
 
     #endregion
@@ -151,9 +161,7 @@ public class SetWordListFormatHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("List format set successfully", result.Message);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
     }
 
@@ -169,9 +177,8 @@ public class SetWordListFormatHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Paragraph index: 0", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        AssertModified(context);
     }
 
     [Fact]
@@ -189,6 +196,7 @@ public class SetWordListFormatHandlerTests : WordHandlerTestBase
         var result = Assert.IsType<SuccessResult>(res);
 
         Assert.Contains("No change parameters provided", result.Message);
+        AssertModified(context);
     }
 
     #endregion
@@ -208,17 +216,22 @@ public class SetWordListFormatHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Number style: roman", result.Message);
+        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+        var para = paragraphs[0];
+        Assert.True(para.ListFormat.IsListItem);
+        var level = para.ListFormat.ListLevelNumber;
+        Assert.Equal(NumberStyle.UppercaseRoman, para.ListFormat.List.ListLevels[level].NumberStyle);
+        AssertModified(context);
     }
 
     [Theory]
-    [InlineData("arabic")]
-    [InlineData("roman")]
-    [InlineData("letter")]
-    [InlineData("bullet")]
-    public void Execute_WithVariousNumberStyles_ReturnsStyleInfo(string style)
+    [InlineData("arabic", NumberStyle.Arabic)]
+    [InlineData("roman", NumberStyle.UppercaseRoman)]
+    [InlineData("letter", NumberStyle.UppercaseLetter)]
+    [InlineData("bullet", NumberStyle.Bullet)]
+    public void Execute_WithVariousNumberStyles_ReturnsStyleInfo(string style, NumberStyle expected)
     {
         var doc = CreateDocumentWithList();
         var context = CreateContext(doc);
@@ -230,9 +243,14 @@ public class SetWordListFormatHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains($"Number style: {style}", result.Message);
+        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+        var para = paragraphs[0];
+        Assert.True(para.ListFormat.IsListItem);
+        var level = para.ListFormat.ListLevelNumber;
+        Assert.Equal(expected, para.ListFormat.List.ListLevels[level].NumberStyle);
+        AssertModified(context);
     }
 
     #endregion

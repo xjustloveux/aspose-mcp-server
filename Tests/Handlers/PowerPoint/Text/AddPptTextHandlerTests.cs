@@ -1,3 +1,4 @@
+using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Text;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -33,9 +34,14 @@ public class AddPptTextHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+        {
+            var shape = (IAutoShape)pres.Slides[0].Shapes[0];
+            Assert.Contains("Updated Text", shape.TextFrame.Text);
+        }
 
-        Assert.Contains("Text added", result.Message);
+        AssertModified(context);
     }
 
     #endregion
@@ -54,16 +60,20 @@ public class AddPptTextHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Text added", result.Message);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+        if (!IsEvaluationMode())
+        {
+            var shape = (IAutoShape)pres.Slides[0].Shapes[^1];
+            Assert.Contains("Hello World", shape.TextFrame.Text);
+        }
     }
 
     [Fact]
     public void Execute_ReturnsSlideIndex()
     {
         var pres = CreatePresentationWithSlides(3);
+        var initialShapeCount = pres.Slides[1].Shapes.Count;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -73,9 +83,9 @@ public class AddPptTextHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("slide 1", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(initialShapeCount + 1, pres.Slides[1].Shapes.Count);
+        AssertModified(context);
     }
 
     [Fact]
@@ -102,6 +112,7 @@ public class AddPptTextHandlerTests : PptHandlerTestBase
     public void Execute_WithPosition_CreatesShapeAtPosition()
     {
         var pres = CreatePresentationWithSlides(1);
+        var initialShapeCount = pres.Slides[0].Shapes.Count;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -112,15 +123,16 @@ public class AddPptTextHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Text added", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(initialShapeCount + 1, pres.Slides[0].Shapes.Count);
+        AssertModified(context);
     }
 
     [Fact]
     public void Execute_WithSize_CreatesShapeWithSize()
     {
         var pres = CreatePresentationWithSlides(1);
+        var initialShapeCount = pres.Slides[0].Shapes.Count;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -131,9 +143,9 @@ public class AddPptTextHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Text added", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(initialShapeCount + 1, pres.Slides[0].Shapes.Count);
+        AssertModified(context);
     }
 
     #endregion
@@ -144,6 +156,7 @@ public class AddPptTextHandlerTests : PptHandlerTestBase
     public void Execute_WithFontName_AppliesFont()
     {
         var pres = CreatePresentationWithSlides(1);
+        var initialShapeCount = pres.Slides[0].Shapes.Count;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -153,15 +166,22 @@ public class AddPptTextHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(initialShapeCount + 1, pres.Slides[0].Shapes.Count);
+        if (!IsEvaluationMode())
+        {
+            var shape = (IAutoShape)pres.Slides[0].Shapes[^1];
+            Assert.Contains("Formatted", shape.TextFrame.Text);
+        }
 
-        Assert.Contains("Text added", result.Message);
+        AssertModified(context);
     }
 
     [Fact]
     public void Execute_WithFontSize_AppliesSize()
     {
         var pres = CreatePresentationWithSlides(1);
+        var initialShapeCount = pres.Slides[0].Shapes.Count;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -171,15 +191,22 @@ public class AddPptTextHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(initialShapeCount + 1, pres.Slides[0].Shapes.Count);
+        if (!IsEvaluationMode())
+        {
+            var shape = (IAutoShape)pres.Slides[0].Shapes[^1];
+            Assert.Contains("Large Text", shape.TextFrame.Text);
+        }
 
-        Assert.Contains("Text added", result.Message);
+        AssertModified(context);
     }
 
     [Fact]
     public void Execute_WithBold_AppliesBold()
     {
         var pres = CreatePresentationWithSlides(1);
+        var initialShapeCount = pres.Slides[0].Shapes.Count;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -189,15 +216,22 @@ public class AddPptTextHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(initialShapeCount + 1, pres.Slides[0].Shapes.Count);
+        if (!IsEvaluationMode())
+        {
+            var shape = (IAutoShape)pres.Slides[0].Shapes[^1];
+            Assert.Contains("Bold Text", shape.TextFrame.Text);
+        }
 
-        Assert.Contains("Text added", result.Message);
+        AssertModified(context);
     }
 
     [Fact]
     public void Execute_WithItalic_AppliesItalic()
     {
         var pres = CreatePresentationWithSlides(1);
+        var initialShapeCount = pres.Slides[0].Shapes.Count;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -207,15 +241,22 @@ public class AddPptTextHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(initialShapeCount + 1, pres.Slides[0].Shapes.Count);
+        if (!IsEvaluationMode())
+        {
+            var shape = (IAutoShape)pres.Slides[0].Shapes[^1];
+            Assert.Contains("Italic Text", shape.TextFrame.Text);
+        }
 
-        Assert.Contains("Text added", result.Message);
+        AssertModified(context);
     }
 
     [Fact]
     public void Execute_WithColor_AppliesColor()
     {
         var pres = CreatePresentationWithSlides(1);
+        var initialShapeCount = pres.Slides[0].Shapes.Count;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -225,9 +266,15 @@ public class AddPptTextHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(initialShapeCount + 1, pres.Slides[0].Shapes.Count);
+        if (!IsEvaluationMode())
+        {
+            var shape = (IAutoShape)pres.Slides[0].Shapes[^1];
+            Assert.Contains("Colored Text", shape.TextFrame.Text);
+        }
 
-        Assert.Contains("Text added", result.Message);
+        AssertModified(context);
     }
 
     #endregion

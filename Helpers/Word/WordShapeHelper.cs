@@ -20,12 +20,10 @@ public static class WordShapeHelper
         List<Shape> textboxes = [];
         foreach (var section in doc.Sections.Cast<Section>())
         {
-            // Search in main body
             var bodyShapes = section.Body.GetChildNodes(NodeType.Shape, true).Cast<Shape>()
                 .Where(s => s.ShapeType == ShapeType.TextBox);
             textboxes.AddRange(bodyShapes);
 
-            // Search in headers and footers
             foreach (var header in section.HeadersFooters.Cast<WordHeaderFooter>())
             {
                 var headerShapes = header.GetChildNodes(NodeType.Shape, true).Cast<Shape>()

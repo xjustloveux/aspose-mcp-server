@@ -32,10 +32,11 @@ public class SetSlideOrientationHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("portrait", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+        var size = presentation.SlideSize.Size;
+        Assert.True(size.Height > size.Width,
+            $"Portrait orientation should have height ({size.Height}) > width ({size.Width})");
     }
 
     [Fact]
@@ -50,9 +51,10 @@ public class SetSlideOrientationHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("landscape", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        var size = presentation.SlideSize.Size;
+        Assert.True(size.Width > size.Height,
+            $"Landscape orientation should have width ({size.Width}) > height ({size.Height})");
     }
 
     [Fact]
@@ -67,9 +69,12 @@ public class SetSlideOrientationHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("x", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        var size = presentation.SlideSize.Size;
+        Assert.True(size.Width > 0, "Slide width should be positive");
+        Assert.True(size.Height > 0, "Slide height should be positive");
+        Assert.True(size.Height > size.Width,
+            $"Portrait orientation should have height ({size.Height}) > width ({size.Width})");
     }
 
     #endregion

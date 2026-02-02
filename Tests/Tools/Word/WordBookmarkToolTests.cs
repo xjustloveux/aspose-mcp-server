@@ -1,4 +1,5 @@
 ﻿using Aspose.Words;
+using AsposeMcpServer.Results;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Results.Word.Bookmark;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -116,8 +117,9 @@ public class WordBookmarkToolTests : WordTestBase
         var docPath = CreateWordDocumentWithContent($"test_case_{operation}.docx", "Test");
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.docx");
         var result = _tool.Execute(operation, docPath, outputPath: outputPath, name: $"BM_{operation}", text: "Text");
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Bookmark added successfully", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
+        var doc = new Document(outputPath);
+        Assert.NotNull(doc.Range.Bookmarks[$"BM_{operation}"]);
     }
 
     [Fact]
@@ -145,8 +147,6 @@ public class WordBookmarkToolTests : WordTestBase
         var docPath = CreateWordDocumentWithContent("test_session_add.docx", "Test content");
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("add", sessionId: sessionId, name: "SessionBookmark", text: "Session text");
-        var data = GetResultData<SuccessResult>(result);
-        Assert.Contains("SessionBookmark", data.Message);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
 

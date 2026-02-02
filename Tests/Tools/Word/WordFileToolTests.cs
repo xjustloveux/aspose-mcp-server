@@ -1,5 +1,6 @@
 ﻿using System.Text.Json.Nodes;
 using Aspose.Words;
+using AsposeMcpServer.Results;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Word;
@@ -26,10 +27,12 @@ public class WordFileToolTests : WordTestBase
     public void CreateDocument_ShouldCreateNewDocument()
     {
         var outputPath = CreateTestFilePath("test_create_document.docx");
-        _tool.Execute("create", outputPath: outputPath);
+        var result = _tool.Execute("create", outputPath: outputPath);
         Assert.True(File.Exists(outputPath));
         var doc = new Document(outputPath);
         Assert.NotNull(doc);
+        Assert.True(new FileInfo(outputPath).Length > 0);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
     }
 
     [Fact]
@@ -58,6 +61,7 @@ public class WordFileToolTests : WordTestBase
         var outputPath = CreateTestFilePath("test_convert_output.pdf");
         _tool.Execute("convert", path: docPath, outputPath: outputPath, format: "pdf");
         Assert.True(File.Exists(outputPath));
+        Assert.True(new FileInfo(outputPath).Length > 0);
     }
 
     [Fact]
@@ -105,8 +109,8 @@ public class WordFileToolTests : WordTestBase
         var outputPath = CreateTestFilePath($"test_case_{operation}.docx");
         var result = _tool.Execute(operation, outputPath: outputPath);
         Assert.True(File.Exists(outputPath));
-        var data = GetResultData<SuccessResult>(result);
-        Assert.Contains("created", data.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.True(new FileInfo(outputPath).Length > 0);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
     }
 
     [Fact]

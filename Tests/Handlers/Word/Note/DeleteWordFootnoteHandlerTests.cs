@@ -1,6 +1,7 @@
 using Aspose.Words;
 using Aspose.Words.Notes;
 using AsposeMcpServer.Handlers.Word.Note;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 
@@ -72,10 +73,10 @@ public class DeleteWordFootnoteHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("deleted", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("2", result.Message);
+        var remainingFootnotes = WordNoteHelper.GetNotesFromDoc(doc, FootnoteType.Footnote);
+        Assert.Empty(remainingFootnotes);
         AssertModified(context);
     }
 
@@ -91,10 +92,12 @@ public class DeleteWordFootnoteHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("deleted", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("1", result.Message);
+        var remainingFootnotes = WordNoteHelper.GetNotesFromDoc(doc, FootnoteType.Footnote);
+        Assert.Single(remainingFootnotes);
+        if (!IsEvaluationMode()) Assert.Contains("Second footnote", remainingFootnotes[0].ToString(SaveFormat.Text));
+        AssertModified(context);
     }
 
     [Fact]
@@ -109,10 +112,10 @@ public class DeleteWordFootnoteHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("deleted", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("1", result.Message);
+        var remainingFootnotes = WordNoteHelper.GetNotesFromDoc(doc, FootnoteType.Footnote);
+        Assert.Empty(remainingFootnotes);
         AssertModified(context);
     }
 

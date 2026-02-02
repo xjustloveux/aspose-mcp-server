@@ -1,6 +1,7 @@
 ﻿using Aspose.Slides;
 using Aspose.Slides.Export;
 using Aspose.Slides.SlideShow;
+using AsposeMcpServer.Results;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Results.PowerPoint.Transition;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -95,8 +96,8 @@ public class PptTransitionToolTests : PptTestBase
         var pptPath = CreatePresentation($"test_case_set_{operation}.pptx");
         var outputPath = CreateTestFilePath($"test_case_set_{operation}_output.pptx");
         var result = _tool.Execute(operation, pptPath, slideIndex: 0, transitionType: "Fade", outputPath: outputPath);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Transition 'Fade' set", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
+        Assert.True(File.Exists(outputPath));
     }
 
     [Fact]
@@ -119,8 +120,7 @@ public class PptTransitionToolTests : PptTestBase
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("set", sessionId: sessionId, slideIndex: 0, transitionType: "Push",
             advanceAfterSeconds: 2.5);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Transition 'Push' set for slide 0", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         Assert.NotNull(SessionManager.GetSessionStatus(sessionId));
 
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
@@ -160,8 +160,7 @@ public class PptTransitionToolTests : PptTestBase
 
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("delete", sessionId: sessionId, slideIndex: 0);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Transition removed", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         Assert.NotNull(SessionManager.GetSessionStatus(sessionId));
 
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);

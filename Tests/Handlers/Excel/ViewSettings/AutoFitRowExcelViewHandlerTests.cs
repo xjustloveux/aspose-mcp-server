@@ -40,6 +40,7 @@ public class AutoFitRowExcelViewHandlerTests : ExcelHandlerTestBase
     public void Execute_AutoFitsRow()
     {
         var workbook = CreateWorkbookWithData();
+        var heightBefore = workbook.Worksheets[0].Cells.GetRowHeight(0);
         var context = CreateContext(workbook);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -48,9 +49,15 @@ public class AutoFitRowExcelViewHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("auto-fitted", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Cells))
+        {
+            var heightAfter = workbook.Worksheets[0].Cells.GetRowHeight(0);
+            Assert.True(heightAfter > heightBefore,
+                $"Row height should increase after auto-fit with wrapped text. Before: {heightBefore}, After: {heightAfter}");
+        }
+
         AssertModified(context);
     }
 
@@ -58,6 +65,7 @@ public class AutoFitRowExcelViewHandlerTests : ExcelHandlerTestBase
     public void Execute_WithColumnRange_AutoFitsRow()
     {
         var workbook = CreateWorkbookWithData();
+        var heightBefore = workbook.Worksheets[0].Cells.GetRowHeight(0);
         var context = CreateContext(workbook);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -68,9 +76,15 @@ public class AutoFitRowExcelViewHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("auto-fitted", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Cells))
+        {
+            var heightAfter = workbook.Worksheets[0].Cells.GetRowHeight(0);
+            Assert.True(heightAfter > heightBefore,
+                $"Row height should increase after auto-fit with column range. Before: {heightBefore}, After: {heightAfter}");
+        }
+
         AssertModified(context);
     }
 
@@ -79,7 +93,11 @@ public class AutoFitRowExcelViewHandlerTests : ExcelHandlerTestBase
     {
         var workbook = CreateWorkbookWithData();
         workbook.Worksheets.Add("Sheet2");
-        workbook.Worksheets[1].Cells["A1"].PutValue("Long text for auto fit row");
+        var style = workbook.Worksheets[1].Cells["A1"].GetStyle();
+        style.IsTextWrapped = true;
+        workbook.Worksheets[1].Cells["A1"].SetStyle(style);
+        workbook.Worksheets[1].Cells["A1"].PutValue("Long text\nwith multiple lines\nfor auto fit row");
+        var heightBefore = workbook.Worksheets[1].Cells.GetRowHeight(0);
         var context = CreateContext(workbook);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -89,9 +107,14 @@ public class AutoFitRowExcelViewHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("row 0", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Cells))
+        {
+            var heightAfter = workbook.Worksheets[1].Cells.GetRowHeight(0);
+            Assert.True(heightAfter > heightBefore,
+                $"Row height on Sheet2 should increase after auto-fit. Before: {heightBefore}, After: {heightAfter}");
+        }
     }
 
     #endregion

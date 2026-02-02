@@ -178,8 +178,8 @@ public class ConvertDocumentToolTests : TestBase
         var result = _tool.Execute(sessionId: sessionId, outputPath: outputPath);
 
         Assert.Contains(sessionId, result.SourcePath);
-        Assert.Contains(sessionId, result.Message!);
         Assert.True(File.Exists(outputPath));
+        Assert.Equal("PDF", result.TargetFormat);
     }
 
     [Fact]
@@ -192,8 +192,8 @@ public class ConvertDocumentToolTests : TestBase
         var result = _tool.Execute(sessionId: sessionId, outputPath: outputPath);
 
         Assert.Contains(sessionId, result.SourcePath);
-        Assert.Contains(sessionId, result.Message!);
         Assert.True(File.Exists(outputPath));
+        Assert.Equal("CSV", result.TargetFormat);
     }
 
     [Fact]
@@ -206,8 +206,8 @@ public class ConvertDocumentToolTests : TestBase
         var result = _tool.Execute(sessionId: sessionId, outputPath: outputPath);
 
         Assert.Contains(sessionId, result.SourcePath);
-        Assert.Contains(sessionId, result.Message!);
         Assert.True(File.Exists(outputPath));
+        Assert.Equal("PDF", result.TargetFormat);
     }
 
     [Fact]
@@ -236,6 +236,128 @@ public class ConvertDocumentToolTests : TestBase
 
         var csvContent = File.ReadAllText(outputPath);
         Assert.Contains("Session Data", csvContent);
+    }
+
+    #endregion
+
+    #region Unsupported Output Format Tests Per Document Type
+
+    [Fact]
+    public void Execute_ExcelToUnsupportedFormat_ThrowsArgumentException()
+    {
+        var xlsxPath = CreateExcelWorkbook("test_excel_unsupported.xlsx");
+        var outputPath = CreateTestFilePath("test_excel_unsupported.xyz");
+
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute(xlsxPath, outputPath: outputPath));
+        Assert.Contains("Unsupported output format for Excel", ex.Message);
+    }
+
+    [Fact]
+    public void Execute_PowerPointToUnsupportedFormat_ThrowsArgumentException()
+    {
+        var pptxPath = CreatePowerPointPresentation("test_ppt_unsupported.pptx");
+        var outputPath = CreateTestFilePath("test_ppt_unsupported.xyz");
+
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute(pptxPath, outputPath: outputPath));
+        Assert.Contains("Unsupported output format for PowerPoint", ex.Message);
+    }
+
+    [Fact]
+    public void Execute_PdfToUnsupportedFormat_ThrowsArgumentException()
+    {
+        var docPath = CreateWordDocument("test_pdf_source.docx");
+        var pdfPath = CreateTestFilePath("test_pdf_source.pdf");
+        _tool.Execute(docPath, outputPath: pdfPath);
+
+        var outputPath = CreateTestFilePath("test_pdf_unsupported.xyz");
+
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute(pdfPath, outputPath: outputPath));
+        Assert.Contains("Unsupported output format for PDF", ex.Message);
+    }
+
+    #endregion
+
+    #region Additional Format Conversion Tests
+
+    [Fact]
+    public void Convert_WordToRtf_ShouldSucceed()
+    {
+        var docPath = CreateWordDocument("test_word_to_rtf.docx", "Word to RTF");
+        var outputPath = CreateTestFilePath("test_word_to_rtf_output.rtf");
+
+        var result = _tool.Execute(docPath, outputPath: outputPath);
+
+        Assert.Equal("RTF", result.TargetFormat);
+        Assert.True(File.Exists(outputPath));
+        Assert.True(new FileInfo(outputPath).Length > 0);
+    }
+
+    [Fact]
+    public void Convert_WordToTxt_ShouldSucceed()
+    {
+        var docPath = CreateWordDocument("test_word_to_txt.docx", "Word to TXT");
+        var outputPath = CreateTestFilePath("test_word_to_txt_output.txt");
+
+        var result = _tool.Execute(docPath, outputPath: outputPath);
+
+        Assert.Equal("TXT", result.TargetFormat);
+        Assert.True(File.Exists(outputPath));
+        var content = File.ReadAllText(outputPath);
+        Assert.Contains("Word to TXT", content);
+    }
+
+    [SkippableFact]
+    public void Convert_ExcelToHtml_ShouldSucceed()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Cells);
+        var xlsxPath = CreateExcelWorkbook("test_excel_to_html.xlsx", "Excel HTML Data");
+        var outputPath = CreateTestFilePath("test_excel_to_html_output.html");
+
+        var result = _tool.Execute(xlsxPath, outputPath: outputPath);
+
+        Assert.Equal("HTML", result.TargetFormat);
+        Assert.True(File.Exists(outputPath));
+    }
+
+    [Fact]
+    public void Convert_PowerPointToHtml_ShouldSucceed()
+    {
+        var pptxPath = CreatePowerPointPresentation("test_ppt_to_html.pptx");
+        var outputPath = CreateTestFilePath("test_ppt_to_html_output.html");
+
+        var result = _tool.Execute(pptxPath, outputPath: outputPath);
+
+        Assert.Equal("HTML", result.TargetFormat);
+        Assert.True(File.Exists(outputPath));
+    }
+
+    [Fact]
+    public void Convert_PdfToDocx_ShouldSucceed()
+    {
+        var docPath = CreateWordDocument("test_pdf_source_docx.docx", "PDF to DOCX");
+        var pdfPath = CreateTestFilePath("test_pdf_source_docx.pdf");
+        _tool.Execute(docPath, outputPath: pdfPath);
+
+        var outputPath = CreateTestFilePath("test_pdf_to_docx_output.docx");
+
+        var result = _tool.Execute(pdfPath, outputPath: outputPath);
+
+        Assert.Equal("DOCX", result.TargetFormat);
+        Assert.True(File.Exists(outputPath));
+        Assert.True(new FileInfo(outputPath).Length > 0);
+    }
+
+    [Fact]
+    public void Convert_ExcelToOds_ShouldSucceed()
+    {
+        var xlsxPath = CreateExcelWorkbook("test_excel_to_ods.xlsx", "Excel ODS Data");
+        var outputPath = CreateTestFilePath("test_excel_to_ods_output.ods");
+
+        var result = _tool.Execute(xlsxPath, outputPath: outputPath);
+
+        Assert.Equal("ODS", result.TargetFormat);
+        Assert.True(File.Exists(outputPath));
+        Assert.True(new FileInfo(outputPath).Length > 0);
     }
 
     #endregion

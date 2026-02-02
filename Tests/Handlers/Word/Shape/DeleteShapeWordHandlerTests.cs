@@ -1,6 +1,7 @@
 using Aspose.Words;
 using Aspose.Words.Drawing;
 using AsposeMcpServer.Handlers.Word.Shape;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 
@@ -38,6 +39,7 @@ public class DeleteShapeWordHandlerTests : WordHandlerTestBase
     public void Execute_DeletesShape()
     {
         var doc = CreateDocumentWithShape();
+        var shapeCountBefore = WordShapeHelper.GetAllShapes(doc).Count;
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -46,9 +48,11 @@ public class DeleteShapeWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("successfully deleted", result.Message, StringComparison.OrdinalIgnoreCase);
+        var shapeCountAfter = WordShapeHelper.GetAllShapes(doc).Count;
+        Assert.Equal(shapeCountBefore - 1, shapeCountAfter);
+        if (!IsEvaluationMode(AsposeLibraryType.Words)) Assert.Equal(0, shapeCountAfter);
         AssertModified(context);
     }
 

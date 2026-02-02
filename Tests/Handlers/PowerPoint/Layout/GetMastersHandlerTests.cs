@@ -133,4 +133,47 @@ public class GetMastersHandlerTests : PptHandlerTestBase
     }
 
     #endregion
+
+    #region API Constraint - Empty Masters
+
+    [Fact]
+    public void Execute_PresentationAlwaysHasAtLeastOneMaster()
+    {
+        var pres = CreateEmptyPresentation();
+        Assert.True(pres.Masters.Count >= 1);
+        var context = CreateContext(pres);
+        var parameters = CreateEmptyParameters();
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<GetMastersResult>(res);
+
+        Assert.True(result.Count >= 1);
+        Assert.NotEmpty(result.Masters);
+        Assert.Null(result.Message);
+        AssertNotModified(context);
+    }
+
+    [Fact]
+    public void Execute_ReturnsAllMasterDetails()
+    {
+        var pres = CreateEmptyPresentation();
+        var context = CreateContext(pres);
+        var parameters = CreateEmptyParameters();
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<GetMastersResult>(res);
+
+        for (var i = 0; i < result.Masters.Count; i++)
+        {
+            var master = result.Masters[i];
+            Assert.Equal(i, master.Index);
+            Assert.IsType<GetMasterInfo>(master);
+            Assert.True(master.LayoutCount >= 0);
+            Assert.NotNull(master.Layouts);
+        }
+    }
+
+    #endregion
 }

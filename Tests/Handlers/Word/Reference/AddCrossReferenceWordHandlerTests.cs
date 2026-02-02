@@ -1,4 +1,5 @@
 using Aspose.Words;
+using Aspose.Words.Fields;
 using AsposeMcpServer.Handlers.Word.Reference;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -48,9 +49,11 @@ public class AddCrossReferenceWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("cross-reference added", result.Message, StringComparison.OrdinalIgnoreCase);
+        var refFields = doc.Range.Fields.Where(f => f.Type == FieldType.FieldRef).ToList();
+        Assert.NotEmpty(refFields);
+        if (!IsEvaluationMode(AsposeLibraryType.Words)) Assert.Contains("MyBookmark", refFields[0].GetFieldCode());
         AssertModified(context);
     }
 
@@ -68,9 +71,17 @@ public class AddCrossReferenceWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("heading", result.Message, StringComparison.OrdinalIgnoreCase);
+        var refFields = doc.Range.Fields.Where(f => f.Type == FieldType.FieldRef).ToList();
+        Assert.NotEmpty(refFields);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            Assert.Contains("Chapter1", refFields[0].GetFieldCode());
+            AssertContainsText(doc, "See ");
+        }
+
+        AssertModified(context);
     }
 
     [Fact]
@@ -87,9 +98,17 @@ public class AddCrossReferenceWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
+        var refFields = doc.Range.Fields.Where(f => f.Type == FieldType.FieldRef).ToList();
+        Assert.NotEmpty(refFields);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            Assert.Contains("Figure1", refFields[0].GetFieldCode());
+            AssertContainsText(doc, "(above)");
+        }
+
+        AssertModified(context);
     }
 
     #endregion

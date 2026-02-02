@@ -93,6 +93,7 @@ public class EditPdfImageHandlerTests : PdfHandlerTestBase
     public void Execute_WithNegativePageIndex_UsesPageOne()
     {
         var doc = CreateDocumentWithImage();
+        var initialImageCount = doc.Pages[1].Resources.Images.Count;
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -102,9 +103,9 @@ public class EditPdfImageHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Moved", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+            Assert.Equal(initialImageCount, doc.Pages[1].Resources.Images.Count);
         AssertModified(context);
     }
 
@@ -118,6 +119,7 @@ public class EditPdfImageHandlerTests : PdfHandlerTestBase
         SkipInEvaluationMode(AsposeLibraryType.Pdf, "Evaluation mode limits image operations");
 
         var doc = CreateDocumentWithImage();
+        var initialImageCount = doc.Pages[1].Resources.Images.Count;
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -129,9 +131,8 @@ public class EditPdfImageHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Moved", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(initialImageCount, doc.Pages[1].Resources.Images.Count);
         AssertModified(context);
     }
 
@@ -141,6 +142,7 @@ public class EditPdfImageHandlerTests : PdfHandlerTestBase
         SkipInEvaluationMode(AsposeLibraryType.Pdf, "Evaluation mode limits image operations");
 
         var doc = CreateDocumentWithImage();
+        var initialImageCount = doc.Pages[1].Resources.Images.Count;
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -152,9 +154,8 @@ public class EditPdfImageHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Moved", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(initialImageCount, doc.Pages[1].Resources.Images.Count);
         AssertModified(context);
     }
 
@@ -168,6 +169,7 @@ public class EditPdfImageHandlerTests : PdfHandlerTestBase
         SkipInEvaluationMode(AsposeLibraryType.Pdf, "Evaluation mode limits image operations");
 
         var doc = CreateDocumentWithImage();
+        var initialImageCount = doc.Pages[1].Resources.Images.Count;
         var imagePath = CreateTestImageFile();
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -179,9 +181,8 @@ public class EditPdfImageHandlerTests : PdfHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Replaced", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(initialImageCount, doc.Pages[1].Resources.Images.Count);
         AssertModified(context);
     }
 

@@ -1,6 +1,7 @@
 using Aspose.Slides;
 using Aspose.Slides.SmartArt;
-using AsposeMcpServer.Core.ShapeDetailProviders;
+using AsposeMcpServer.Core.ShapeDetailProviders.Details;
+using AsposeMcpServer.Core.ShapeDetailProviders.Providers;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Core.ShapeDetailProviders;
@@ -47,8 +48,12 @@ public class SmartArtDetailProviderTests : TestBase
         var smartArt = slide.Shapes.AddSmartArt(10, 10, 400, 300, SmartArtLayoutType.BasicBlockList);
 
         var details = _provider.GetDetails(smartArt, presentation);
+        var smartArtDetails = Assert.IsType<SmartArtDetails>(details);
 
-        Assert.NotNull(details);
+        Assert.Equal("BasicBlockList", smartArtDetails.Layout);
+        Assert.False(string.IsNullOrEmpty(smartArtDetails.QuickStyle));
+        Assert.False(string.IsNullOrEmpty(smartArtDetails.ColorStyle));
+        Assert.True(smartArtDetails.NodeCount >= 0);
     }
 
     [Fact]

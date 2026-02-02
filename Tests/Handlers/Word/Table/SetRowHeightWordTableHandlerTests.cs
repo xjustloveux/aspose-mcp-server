@@ -19,32 +19,6 @@ public class SetRowHeightWordTableHandlerTests : WordHandlerTestBase
 
     #endregion
 
-    #region Height Rule
-
-    [Theory]
-    [InlineData("auto")]
-    [InlineData("atLeast")]
-    [InlineData("exactly")]
-    public void Execute_WithHeightRule_SetsHeightRule(string rule)
-    {
-        var doc = CreateDocumentWithTable(3, 3);
-        var context = CreateContext(doc);
-        var parameters = CreateParameters(new Dictionary<string, object?>
-        {
-            { "rowIndex", 0 },
-            { "rowHeight", 30.0 },
-            { "heightRule", rule }
-        });
-
-        var res = _handler.Execute(context, parameters);
-
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("height", result.Message, StringComparison.OrdinalIgnoreCase);
-    }
-
-    #endregion
-
     #region Helper Methods
 
     private static Document CreateDocumentWithTable(int rows, int cols)
@@ -69,6 +43,59 @@ public class SetRowHeightWordTableHandlerTests : WordHandlerTestBase
 
     #endregion
 
+    #region Height Rule
+
+    [Theory]
+    [InlineData("atLeast", HeightRule.AtLeast)]
+    [InlineData("exactly", HeightRule.Exactly)]
+    public void Execute_WithHeightRule_SetsHeightRule(string rule, HeightRule expected)
+    {
+        var doc = CreateDocumentWithTable(3, 3);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "rowIndex", 0 },
+            { "rowHeight", 30.0 },
+            { "heightRule", rule }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        Assert.IsType<SuccessResult>(res);
+
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var row = doc.Sections[0].Body.Tables[0].Rows[0];
+            Assert.Equal(expected, row.RowFormat.HeightRule);
+            Assert.Equal(30.0, row.RowFormat.Height);
+        }
+    }
+
+    [Fact]
+    public void Execute_WithAutoHeightRule_SetsAutoWithoutExplicitHeight()
+    {
+        var doc = CreateDocumentWithTable(3, 3);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "rowIndex", 0 },
+            { "rowHeight", 30.0 },
+            { "heightRule", "auto" }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        Assert.IsType<SuccessResult>(res);
+
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var row = doc.Sections[0].Body.Tables[0].Rows[0];
+            Assert.Equal(HeightRule.Auto, row.RowFormat.HeightRule);
+        }
+    }
+
+    #endregion
+
     #region Basic Set Height Operations
 
     [Fact]
@@ -84,9 +111,14 @@ public class SetRowHeightWordTableHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("height", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var row = doc.Sections[0].Body.Tables[0].Rows[1];
+            Assert.Equal(30.0, row.RowFormat.Height);
+        }
+
         AssertModified(context);
     }
 
@@ -106,9 +138,13 @@ public class SetRowHeightWordTableHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("height", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var row = doc.Sections[0].Body.Tables[0].Rows[rowIndex];
+            Assert.Equal(40.0, row.RowFormat.Height);
+        }
     }
 
     [Theory]
@@ -127,9 +163,13 @@ public class SetRowHeightWordTableHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains($"{height}", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var row = doc.Sections[0].Body.Tables[0].Rows[0];
+            Assert.Equal(height, row.RowFormat.Height);
+        }
     }
 
     #endregion

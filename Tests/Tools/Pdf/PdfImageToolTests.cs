@@ -2,6 +2,7 @@
 using System.Drawing.Imaging;
 using System.Runtime.Versioning;
 using Aspose.Pdf;
+using AsposeMcpServer.Results;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Results.Pdf.Image;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -74,8 +75,8 @@ public class PdfImageToolTests : PdfTestBase
         var outputPath = CreateTestFilePath("test_add_output.pdf");
         var result = _tool.Execute("add", pdfPath, outputPath: outputPath,
             pageIndex: 1, imagePath: imagePath, x: 100, y: 100);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Added image", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
+        Assert.True(File.Exists(outputPath));
         using var document = new Document(outputPath);
         Assert.True(document.Pages[1].Resources.Images.Count > 0);
     }
@@ -87,8 +88,8 @@ public class PdfImageToolTests : PdfTestBase
         var outputPath = CreateTestFilePath("test_delete_output.pdf");
         var result = _tool.Execute("delete", pdfPath, outputPath: outputPath,
             pageIndex: 1, imageIndex: 1);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Deleted image", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
+        Assert.True(File.Exists(outputPath));
         using var document = new Document(outputPath);
         Assert.Empty(document.Pages[1].Resources.Images);
     }
@@ -100,9 +101,9 @@ public class PdfImageToolTests : PdfTestBase
         var outputImagePath = CreateTestFilePath("test_extracted.png");
         var result = _tool.Execute("extract", pdfPath,
             outputPath: outputImagePath, pageIndex: 1, imageIndex: 1);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Extracted image", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
         Assert.True(File.Exists(outputImagePath));
+        Assert.True(new FileInfo(outputImagePath).Length > 0);
     }
 
     [Fact]
@@ -130,8 +131,10 @@ public class PdfImageToolTests : PdfTestBase
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.pdf");
         var result = _tool.Execute(operation, pdfPath, outputPath: outputPath,
             pageIndex: 1, imagePath: imagePath, x: 100, y: 100);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Added", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
+        Assert.True(File.Exists(outputPath));
+        using var document = new Document(outputPath);
+        Assert.True(document.Pages[1].Resources.Images.Count > 0);
     }
 
     [Fact]
@@ -164,10 +167,10 @@ public class PdfImageToolTests : PdfTestBase
         var imagePath = CreateTestImage("test_session_add.png");
         var result = _tool.Execute("add", sessionId: sessionId,
             pageIndex: 1, imagePath: imagePath, x: 100, y: 100);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Added image", data.Message);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
+        var document = SessionManager.GetDocument<Document>(sessionId);
+        Assert.True(document.Pages[1].Resources.Images.Count > 0);
     }
 
     [Fact]
@@ -177,10 +180,10 @@ public class PdfImageToolTests : PdfTestBase
         var sessionId = OpenSession(pdfPath);
         var result = _tool.Execute("delete", sessionId: sessionId,
             pageIndex: 1, imageIndex: 1);
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Deleted", data.Message);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
+        var document = SessionManager.GetDocument<Document>(sessionId);
+        Assert.Empty(document.Pages[1].Resources.Images);
     }
 
     [Fact]

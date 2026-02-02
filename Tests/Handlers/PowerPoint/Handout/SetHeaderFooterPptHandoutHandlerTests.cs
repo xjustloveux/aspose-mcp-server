@@ -32,8 +32,15 @@ public class SetHeaderFooterPptHandoutHandlerTests : PptHandlerTestBase
 
         var result = _handler.Execute(context, parameters);
 
-        var success = Assert.IsType<SuccessResult>(result);
-        Assert.Contains("header", success.Message);
+        Assert.IsType<SuccessResult>(result);
+        if (!IsEvaluationMode())
+        {
+            var handoutMaster = presentation.MasterHandoutSlideManager.MasterHandoutSlide;
+            Assert.NotNull(handoutMaster);
+            Assert.True(handoutMaster.HeaderFooterManager.IsHeaderVisible);
+        }
+
+        AssertModified(context);
     }
 
     [Fact]
@@ -48,8 +55,15 @@ public class SetHeaderFooterPptHandoutHandlerTests : PptHandlerTestBase
 
         var result = _handler.Execute(context, parameters);
 
-        var success = Assert.IsType<SuccessResult>(result);
-        Assert.Contains("footer", success.Message);
+        Assert.IsType<SuccessResult>(result);
+        if (!IsEvaluationMode())
+        {
+            var handoutMaster = presentation.MasterHandoutSlideManager.MasterHandoutSlide;
+            Assert.NotNull(handoutMaster);
+            Assert.True(handoutMaster.HeaderFooterManager.IsFooterVisible);
+        }
+
+        AssertModified(context);
     }
 
     [Fact]
@@ -64,8 +78,15 @@ public class SetHeaderFooterPptHandoutHandlerTests : PptHandlerTestBase
 
         var result = _handler.Execute(context, parameters);
 
-        var success = Assert.IsType<SuccessResult>(result);
-        Assert.Contains("date", success.Message);
+        Assert.IsType<SuccessResult>(result);
+        if (!IsEvaluationMode())
+        {
+            var handoutMaster = presentation.MasterHandoutSlideManager.MasterHandoutSlide;
+            Assert.NotNull(handoutMaster);
+            Assert.True(handoutMaster.HeaderFooterManager.IsDateTimeVisible);
+        }
+
+        AssertModified(context);
     }
 
     [Fact]
@@ -83,11 +104,19 @@ public class SetHeaderFooterPptHandoutHandlerTests : PptHandlerTestBase
 
         var result = _handler.Execute(context, parameters);
 
-        var success = Assert.IsType<SuccessResult>(result);
-        Assert.Contains("header", success.Message);
-        Assert.Contains("footer", success.Message);
-        Assert.Contains("date", success.Message);
-        Assert.Contains("page number shown", success.Message);
+        Assert.IsType<SuccessResult>(result);
+        if (!IsEvaluationMode())
+        {
+            var handoutMaster = presentation.MasterHandoutSlideManager.MasterHandoutSlide;
+            Assert.NotNull(handoutMaster);
+            var manager = handoutMaster.HeaderFooterManager;
+            Assert.True(manager.IsHeaderVisible);
+            Assert.True(manager.IsFooterVisible);
+            Assert.True(manager.IsDateTimeVisible);
+            Assert.True(manager.IsSlideNumberVisible);
+        }
+
+        AssertModified(context);
     }
 
     #endregion

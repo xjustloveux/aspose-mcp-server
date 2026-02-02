@@ -36,9 +36,11 @@ public class EditPptChartHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        var chart = pres.Slides[0].Shapes.OfType<IChart>().First();
+        Assert.True(chart.HasTitle);
+        if (!IsEvaluationMode()) Assert.Equal("Updated Title", chart.ChartTitle.TextFrameForOverriding.Text);
 
-        Assert.Contains("updated", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -130,9 +132,9 @@ public class EditPptChartHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("updated", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        var chart = pres.Slides[0].Shapes.OfType<IChart>().First();
+        Assert.Equal(ChartType.Pie, chart.Type);
         AssertModified(context);
     }
 
@@ -151,9 +153,12 @@ public class EditPptChartHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        var chart = pres.Slides[0].Shapes.OfType<IChart>().First();
+        Assert.Equal(ChartType.Line, chart.Type);
+        Assert.True(chart.HasTitle);
+        if (!IsEvaluationMode()) Assert.Equal("New Title", chart.ChartTitle.TextFrameForOverriding.Text);
 
-        Assert.Contains("updated", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -170,9 +175,9 @@ public class EditPptChartHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("updated", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        var chart = pres.Slides[0].Shapes.OfType<IChart>().First();
+        Assert.Equal(ChartType.ClusteredColumn, chart.Type);
     }
 
     #endregion

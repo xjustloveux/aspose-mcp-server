@@ -44,11 +44,13 @@ public class AddPptImageHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+        {
+            var pictureFrames = GetPictureFrames(pres.Slides[0]);
+            Assert.True(pictureFrames.Count > 0);
+        }
 
-        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
-        var pictureFrames = GetPictureFrames(pres.Slides[0]);
-        Assert.True(pictureFrames.Count > 0);
         AssertModified(context);
     }
 
@@ -68,13 +70,16 @@ public class AddPptImageHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+        {
+            var pictureFrames = GetPictureFrames(pres.Slides[0]);
+            Assert.True(pictureFrames.Count > 0);
+            Assert.Equal(150f, pictureFrames[0].X);
+            Assert.Equal(200f, pictureFrames[0].Y);
+        }
 
-        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
-        var pictureFrames = GetPictureFrames(pres.Slides[0]);
-        Assert.True(pictureFrames.Count > 0);
-        Assert.Equal(150f, pictureFrames[0].X);
-        Assert.Equal(200f, pictureFrames[0].Y);
+        AssertModified(context);
     }
 
     [Fact]
@@ -93,13 +98,16 @@ public class AddPptImageHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+        {
+            var pictureFrames = GetPictureFrames(pres.Slides[0]);
+            Assert.True(pictureFrames.Count > 0);
+            Assert.Equal(300f, pictureFrames[0].Width);
+            Assert.Equal(200f, pictureFrames[0].Height);
+        }
 
-        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
-        var pictureFrames = GetPictureFrames(pres.Slides[0]);
-        Assert.True(pictureFrames.Count > 0);
-        Assert.Equal(300f, pictureFrames[0].Width);
-        Assert.Equal(200f, pictureFrames[0].Height);
+        AssertModified(context);
     }
 
     #endregion

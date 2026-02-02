@@ -63,6 +63,7 @@ public class ApplyThemeHandlerTests : PptHandlerTestBase
             }
 
             var pres = CreateEmptyPresentation();
+            var originalMasterCount = pres.Masters.Count;
             var context = CreateContext(pres);
             var parameters = CreateParameters(new Dictionary<string, object?>
             {
@@ -71,10 +72,9 @@ public class ApplyThemeHandlerTests : PptHandlerTestBase
 
             var res = _handler.Execute(context, parameters);
 
-            var result = Assert.IsType<SuccessResult>(res);
-
-            Assert.Contains("Theme applied", result.Message);
-            Assert.Contains("master", result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.IsType<SuccessResult>(res);
+            Assert.True(pres.Masters.Count > originalMasterCount,
+                "Master slide count should increase after applying theme");
             AssertModified(context);
         }
         finally
@@ -99,6 +99,7 @@ public class ApplyThemeHandlerTests : PptHandlerTestBase
             var pres = CreateEmptyPresentation();
             pres.Slides.AddEmptySlide(pres.LayoutSlides[0]);
             pres.Slides.AddEmptySlide(pres.LayoutSlides[0]);
+            var originalMasterCount = pres.Masters.Count;
             var context = CreateContext(pres);
             var parameters = CreateParameters(new Dictionary<string, object?>
             {
@@ -107,10 +108,12 @@ public class ApplyThemeHandlerTests : PptHandlerTestBase
 
             var res = _handler.Execute(context, parameters);
 
-            var result = Assert.IsType<SuccessResult>(res);
-
-            Assert.Contains("Theme applied", result.Message);
-            Assert.Contains("layout applied to all slides", result.Message);
+            Assert.IsType<SuccessResult>(res);
+            Assert.True(pres.Masters.Count > originalMasterCount,
+                "Master slide count should increase after applying theme");
+            var newMaster = pres.Masters[^1];
+            var expectedLayout = newMaster.LayoutSlides[0];
+            foreach (var slide in pres.Slides) Assert.Equal(expectedLayout, slide.LayoutSlide);
         }
         finally
         {

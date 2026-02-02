@@ -39,6 +39,7 @@ public class AutoFitColumnExcelViewHandlerTests : ExcelHandlerTestBase
     public void Execute_AutoFitsColumn()
     {
         var workbook = CreateWorkbookWithData();
+        var widthBefore = workbook.Worksheets[0].Cells.GetColumnWidth(0);
         var context = CreateContext(workbook);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -47,9 +48,15 @@ public class AutoFitColumnExcelViewHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("auto-fitted", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Cells))
+        {
+            var widthAfter = workbook.Worksheets[0].Cells.GetColumnWidth(0);
+            Assert.True(widthAfter > widthBefore,
+                $"Column width should increase after auto-fit. Before: {widthBefore}, After: {widthAfter}");
+        }
+
         AssertModified(context);
     }
 
@@ -57,6 +64,7 @@ public class AutoFitColumnExcelViewHandlerTests : ExcelHandlerTestBase
     public void Execute_WithRowRange_AutoFitsColumn()
     {
         var workbook = CreateWorkbookWithData();
+        var widthBefore = workbook.Worksheets[0].Cells.GetColumnWidth(0);
         var context = CreateContext(workbook);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -67,9 +75,15 @@ public class AutoFitColumnExcelViewHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("auto-fitted", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Cells))
+        {
+            var widthAfter = workbook.Worksheets[0].Cells.GetColumnWidth(0);
+            Assert.True(widthAfter > widthBefore,
+                $"Column width should increase after auto-fit with row range. Before: {widthBefore}, After: {widthAfter}");
+        }
+
         AssertModified(context);
     }
 
@@ -79,6 +93,7 @@ public class AutoFitColumnExcelViewHandlerTests : ExcelHandlerTestBase
         var workbook = CreateWorkbookWithData();
         workbook.Worksheets.Add("Sheet2");
         workbook.Worksheets[1].Cells["A1"].PutValue("Long text for auto fit");
+        var widthBefore = workbook.Worksheets[1].Cells.GetColumnWidth(0);
         var context = CreateContext(workbook);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -88,9 +103,14 @@ public class AutoFitColumnExcelViewHandlerTests : ExcelHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("column 0", result.Message, StringComparison.OrdinalIgnoreCase);
+        if (!IsEvaluationMode(AsposeLibraryType.Cells))
+        {
+            var widthAfter = workbook.Worksheets[1].Cells.GetColumnWidth(0);
+            Assert.True(widthAfter > widthBefore,
+                $"Column width on Sheet2 should increase after auto-fit. Before: {widthBefore}, After: {widthAfter}");
+        }
     }
 
     #endregion

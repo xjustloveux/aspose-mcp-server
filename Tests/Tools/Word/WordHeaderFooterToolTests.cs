@@ -1,4 +1,5 @@
 ﻿using Aspose.Words;
+using AsposeMcpServer.Results;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Results.Word.HeaderFooter;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -116,8 +117,10 @@ public class WordHeaderFooterToolTests : WordTestBase
         var docPath = CreateWordDocument($"test_case_{operation.Replace("_", "")}.docx");
         var outputPath = CreateTestFilePath($"test_case_{operation.Replace("_", "")}_output.docx");
         var result = _tool.Execute(operation, docPath, outputPath: outputPath, headerLeft: "Test");
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Header text set successfully", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
+        var doc = new Document(outputPath);
+        var header = doc.FirstSection.HeadersFooters[HeaderFooterType.HeaderPrimary];
+        Assert.NotNull(header);
     }
 
     [Fact]
@@ -146,8 +149,7 @@ public class WordHeaderFooterToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("set_header_text", sessionId: sessionId,
             headerLeft: "Session Left", headerCenter: "Session Center");
-        var data = GetResultData<SuccessResult>(result);
-        Assert.Contains("Header", data.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
 
         var doc = SessionManager.GetDocument<Document>(sessionId);
         var header = doc.FirstSection.HeadersFooters[HeaderFooterType.HeaderPrimary];
@@ -162,12 +164,13 @@ public class WordHeaderFooterToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("set_footer_text", sessionId: sessionId,
             footerLeft: "Session Footer", footerRight: "{PAGE}");
-        var data = GetResultData<SuccessResult>(result);
-        Assert.Contains("Footer", data.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
 
         var doc = SessionManager.GetDocument<Document>(sessionId);
         var footer = doc.FirstSection.HeadersFooters[HeaderFooterType.FooterPrimary];
         Assert.NotNull(footer);
+        if (!IsEvaluationMode())
+            Assert.Contains("Session Footer", footer.GetText());
     }
 
     [SkippableFact]
@@ -195,8 +198,7 @@ public class WordHeaderFooterToolTests : WordTestBase
         var docPath = CreateWordDocument("test_session_header_line.docx");
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("set_header_line", sessionId: sessionId, lineStyle: "double");
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Header line set", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
 
         var doc = SessionManager.GetDocument<Document>(sessionId);
         Assert.NotNull(doc.FirstSection.HeadersFooters[HeaderFooterType.HeaderPrimary]);
@@ -208,8 +210,7 @@ public class WordHeaderFooterToolTests : WordTestBase
         var docPath = CreateWordDocument("test_session_footer_line.docx");
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("set_footer_line", sessionId: sessionId, lineStyle: "thick");
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Footer line set", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
 
         var doc = SessionManager.GetDocument<Document>(sessionId);
         Assert.NotNull(doc.FirstSection.HeadersFooters[HeaderFooterType.FooterPrimary]);
@@ -222,8 +223,7 @@ public class WordHeaderFooterToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("set_header_footer", sessionId: sessionId,
             headerCenter: "Session Header", footerCenter: "Session Footer");
-        var data = GetResultData<SuccessResult>(result);
-        Assert.StartsWith("Header and footer set", data.Message);
+        Assert.IsType<FinalizedResult<SuccessResult>>(result);
 
         var doc = SessionManager.GetDocument<Document>(sessionId);
         Assert.NotNull(doc.FirstSection.HeadersFooters[HeaderFooterType.HeaderPrimary]);

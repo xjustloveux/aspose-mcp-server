@@ -1,3 +1,4 @@
+using Aspose.Slides.Charts;
 using AsposeMcpServer.Handlers.PowerPoint.Chart;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -33,10 +34,11 @@ public class AddPptChartHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("column", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        var slide = pres.Slides[0];
+        var chart = slide.Shapes.OfType<IChart>().FirstOrDefault();
+        Assert.NotNull(chart);
+        Assert.Equal(ChartType.ClusteredColumn, chart.Type);
         AssertModified(context);
     }
 
@@ -54,10 +56,14 @@ public class AddPptChartHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
+        var slide = pres.Slides[0];
+        var chart = slide.Shapes.OfType<IChart>().FirstOrDefault();
+        Assert.NotNull(chart);
+        Assert.Equal(ChartType.Pie, chart.Type);
+        Assert.True(chart.HasTitle);
+        if (!IsEvaluationMode()) Assert.Equal("My Chart", chart.ChartTitle.TextFrameForOverriding.Text);
 
-        Assert.Contains("pie", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("added", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertModified(context);
     }
 
@@ -78,9 +84,15 @@ public class AddPptChartHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("line", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        var slide = pres.Slides[0];
+        var chart = slide.Shapes.OfType<IChart>().FirstOrDefault();
+        Assert.NotNull(chart);
+        Assert.Equal(ChartType.Line, chart.Type);
+        Assert.Equal(100f, chart.X);
+        Assert.Equal(100f, chart.Y);
+        Assert.Equal(400f, chart.Width);
+        Assert.Equal(300f, chart.Height);
         AssertModified(context);
     }
 

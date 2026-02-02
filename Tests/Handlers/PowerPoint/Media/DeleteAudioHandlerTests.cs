@@ -49,29 +49,30 @@ public class DeleteAudioHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("deleted", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
         Assert.Equal(initialShapeCount - 1, pres.Slides[0].Shapes.Count);
+        Assert.DoesNotContain(pres.Slides[0].Shapes, s => s is IAudioFrame);
         AssertModified(context);
     }
 
     [Fact]
-    public void Execute_ReturnsSlideIndex()
+    public void Execute_DeletesAudioFromSpecificSlide()
     {
         var tempFile = CreateTempAudioFile();
         var pres = CreatePresentationWithAudio(tempFile);
+        var initialShapeCount = pres.Slides[0].Shapes.Count;
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
+            { "slideIndex", 0 },
             { "shapeIndex", 0 }
         });
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("slide 0", result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(initialShapeCount - 1, pres.Slides[0].Shapes.Count);
+        Assert.DoesNotContain(pres.Slides[0].Shapes, s => s is IAudioFrame);
     }
 
     #endregion

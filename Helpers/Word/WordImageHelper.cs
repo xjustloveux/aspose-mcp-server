@@ -123,7 +123,6 @@ public static class WordImageHelper
         builder.InsertField("SEQ Figure \\* ARABIC");
         builder.Write(": " + caption);
         builder.Writeln();
-        // Reset to normal style after caption
         builder.ParagraphFormat.StyleIdentifier = StyleIdentifier.Normal;
         builder.ParagraphFormat.Alignment = ParagraphAlignment.Left;
     }

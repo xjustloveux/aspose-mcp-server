@@ -1,4 +1,6 @@
+using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Hyperlink;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 
@@ -34,9 +36,11 @@ public class AddWordHyperlinkHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("Tooltip:", result.Message);
+        var hyperlinks = WordHyperlinkHelper.GetAllHyperlinks(doc);
+        Assert.NotEmpty(hyperlinks);
+        Assert.Equal("This is a tooltip", hyperlinks[^1].ScreenTip);
     }
 
     #endregion
@@ -56,9 +60,12 @@ public class AddWordHyperlinkHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("added successfully", result.Message);
+        var hyperlinks = WordHyperlinkHelper.GetAllHyperlinks(doc);
+        Assert.NotEmpty(hyperlinks);
+        Assert.Equal("https://example.com", hyperlinks[^1].Address);
+        if (!IsEvaluationMode(AsposeLibraryType.Words)) Assert.Equal("Click here", hyperlinks[^1].Result);
         AssertModified(context);
     }
 
@@ -75,9 +82,14 @@ public class AddWordHyperlinkHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("My Link", result.Message);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var hyperlinks = WordHyperlinkHelper.GetAllHyperlinks(doc);
+            Assert.NotEmpty(hyperlinks);
+            Assert.Equal("My Link", hyperlinks[^1].Result);
+        }
     }
 
     [Fact]
@@ -93,9 +105,11 @@ public class AddWordHyperlinkHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("https://example.com", result.Message);
+        var hyperlinks = WordHyperlinkHelper.GetAllHyperlinks(doc);
+        Assert.NotEmpty(hyperlinks);
+        Assert.Equal("https://example.com", hyperlinks[^1].Address);
     }
 
     #endregion
@@ -115,9 +129,11 @@ public class AddWordHyperlinkHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("URL:", result.Message);
+        var hyperlinks = WordHyperlinkHelper.GetAllHyperlinks(doc);
+        Assert.NotEmpty(hyperlinks);
+        Assert.Equal("https://external.com", hyperlinks[^1].Address);
     }
 
     [Fact]
@@ -133,9 +149,11 @@ public class AddWordHyperlinkHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("SubAddress", result.Message);
+        var hyperlinks = WordHyperlinkHelper.GetAllHyperlinks(doc);
+        Assert.NotEmpty(hyperlinks);
+        Assert.Equal("MyBookmark", hyperlinks[^1].SubAddress);
     }
 
     #endregion
@@ -146,6 +164,7 @@ public class AddWordHyperlinkHandlerTests : WordHandlerTestBase
     public void Execute_WithParagraphIndex_InsertsAtPosition()
     {
         var doc = CreateDocumentWithParagraphs("First", "Second", "Third");
+        var paragraphCountBefore = doc.GetChildNodes(NodeType.Paragraph, true).Count;
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -156,9 +175,13 @@ public class AddWordHyperlinkHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("after paragraph #1", result.Message);
+        var hyperlinks = WordHyperlinkHelper.GetAllHyperlinks(doc);
+        Assert.NotEmpty(hyperlinks);
+        Assert.Equal("https://example.com", hyperlinks[^1].Address);
+        var paragraphCountAfter = doc.GetChildNodes(NodeType.Paragraph, true).Count;
+        Assert.True(paragraphCountAfter > paragraphCountBefore);
     }
 
     [Fact]
@@ -175,9 +198,12 @@ public class AddWordHyperlinkHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("beginning of document", result.Message);
+        var hyperlinks = WordHyperlinkHelper.GetAllHyperlinks(doc);
+        Assert.NotEmpty(hyperlinks);
+        Assert.Equal("https://example.com", hyperlinks[^1].Address);
+        if (!IsEvaluationMode(AsposeLibraryType.Words)) AssertContainsText(doc, "Start Link");
     }
 
     [Fact]
@@ -193,9 +219,12 @@ public class AddWordHyperlinkHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("end of document", result.Message);
+        var hyperlinks = WordHyperlinkHelper.GetAllHyperlinks(doc);
+        Assert.NotEmpty(hyperlinks);
+        Assert.Equal("https://example.com", hyperlinks[^1].Address);
+        if (!IsEvaluationMode(AsposeLibraryType.Words)) Assert.Equal("End Link", hyperlinks[^1].Result);
     }
 
     #endregion

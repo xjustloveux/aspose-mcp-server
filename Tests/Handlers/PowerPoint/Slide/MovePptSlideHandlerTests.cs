@@ -29,6 +29,7 @@ public class MovePptSlideHandlerTests : PptHandlerTestBase
     public void Execute_MovesToVariousPositions(int totalSlides, int fromIndex, int toIndex)
     {
         var pres = CreatePresentationWithSlides(totalSlides);
+        pres.Slides[fromIndex].Shapes.AddAutoShape(ShapeType.Rectangle, 10, 10, 50, 50);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -38,10 +39,9 @@ public class MovePptSlideHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("moved", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
         Assert.Equal(totalSlides, pres.Slides.Count);
+        Assert.True(pres.Slides[toIndex].Shapes.Count > 0);
         AssertModified(context);
     }
 
@@ -62,9 +62,9 @@ public class MovePptSlideHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("moved", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(3, pres.Slides.Count);
+        AssertModified(context);
     }
 
     #endregion
@@ -78,6 +78,7 @@ public class MovePptSlideHandlerTests : PptHandlerTestBase
     public void Execute_ReturnsFromAndToInMessage(int fromIndex, int toIndex)
     {
         var pres = CreatePresentationWithSlides(5);
+        pres.Slides[fromIndex].Shapes.AddAutoShape(ShapeType.Ellipse, 10, 10, 50, 50);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -87,10 +88,10 @@ public class MovePptSlideHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains(fromIndex.ToString(), result.Message);
-        Assert.Contains(toIndex.ToString(), result.Message);
+        Assert.IsType<SuccessResult>(res);
+        Assert.Equal(5, pres.Slides.Count);
+        Assert.True(pres.Slides[toIndex].Shapes.Count > 0);
+        AssertModified(context);
     }
 
     #endregion

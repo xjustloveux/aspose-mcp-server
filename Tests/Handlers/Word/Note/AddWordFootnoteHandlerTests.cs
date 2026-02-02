@@ -1,4 +1,7 @@
+using Aspose.Words;
+using Aspose.Words.Notes;
 using AsposeMcpServer.Handlers.Word.Note;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 
@@ -32,10 +35,11 @@ public class AddWordFootnoteHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("added successfully", result.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("This is a footnote", result.Message);
+        var footnotes = WordNoteHelper.GetNotesFromDoc(doc, FootnoteType.Footnote);
+        Assert.Single(footnotes);
+        if (!IsEvaluationMode()) Assert.Contains("This is a footnote", footnotes[0].ToString(SaveFormat.Text));
         AssertModified(context);
     }
 
@@ -52,9 +56,12 @@ public class AddWordFootnoteHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("added successfully", result.Message, StringComparison.OrdinalIgnoreCase);
+        var footnotes = WordNoteHelper.GetNotesFromDoc(doc, FootnoteType.Footnote);
+        Assert.Single(footnotes);
+        if (!IsEvaluationMode()) Assert.Contains("Footnote at paragraph", footnotes[0].ToString(SaveFormat.Text));
+        AssertModified(context);
     }
 
     [Fact]
@@ -70,9 +77,13 @@ public class AddWordFootnoteHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("added successfully", result.Message, StringComparison.OrdinalIgnoreCase);
+        var footnotes = WordNoteHelper.GetNotesFromDoc(doc, FootnoteType.Footnote);
+        Assert.Single(footnotes);
+        Assert.Equal("*", footnotes[0].ReferenceMark);
+        if (!IsEvaluationMode()) Assert.Contains("Custom mark footnote", footnotes[0].ToString(SaveFormat.Text));
+        AssertModified(context);
     }
 
     #endregion

@@ -44,6 +44,9 @@ public class InsertColumnHandler : OperationHandlerBase<Workbook>
         var columnIndex = parameters.GetRequired<int>("columnIndex");
         var count = parameters.GetOptional("count", 1);
 
+        if (count <= 0)
+            throw new ArgumentException($"Count must be greater than 0, got {count}");
+
         return new InsertColumnParameters(sheetIndex, columnIndex, count);
     }
 

@@ -76,10 +76,15 @@ public class InsertPptTableRowHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("Row inserted", result.Message);
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
+
+        if (!IsEvaluationMode())
+        {
+            var table = pres.Slides[0].Shapes[0] as ITable;
+            Assert.NotNull(table);
+            Assert.Equal(4, table.Rows.Count);
+        }
     }
 
     [Fact]
@@ -112,9 +117,14 @@ public class InsertPptTableRowHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("index 1", result.Message);
+        if (!IsEvaluationMode())
+        {
+            var table = pres.Slides[0].Shapes[0] as ITable;
+            Assert.NotNull(table);
+            Assert.Equal(4, table.Rows.Count);
+        }
     }
 
     #endregion
@@ -133,9 +143,14 @@ public class InsertPptTableRowHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("index 3", result.Message);
+        if (!IsEvaluationMode())
+        {
+            var table = pres.Slides[0].Shapes[0] as ITable;
+            Assert.NotNull(table);
+            Assert.Equal(4, table.Rows.Count);
+        }
     }
 
     [Theory]
@@ -154,9 +169,14 @@ public class InsertPptTableRowHandlerTests : PptHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains($"index {rowIndex}", result.Message);
+        if (!IsEvaluationMode())
+        {
+            var table = pres.Slides[0].Shapes[0] as ITable;
+            Assert.NotNull(table);
+            Assert.Equal(4, table.Rows.Count);
+        }
     }
 
     [Fact]

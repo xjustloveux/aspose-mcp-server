@@ -4,7 +4,9 @@ namespace AsposeMcpServer.Results.Word.Field;
 
 /// <summary>
 ///     Base information for a form field.
+///     Uses JSON polymorphism to serialize/deserialize derived types with a type discriminator.
 /// </summary>
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
 [JsonDerivedType(typeof(TextFormFieldInfo), "text")]
 [JsonDerivedType(typeof(CheckBoxFormFieldInfo), "checkbox")]
 [JsonDerivedType(typeof(DropDownFormFieldInfo), "dropdown")]

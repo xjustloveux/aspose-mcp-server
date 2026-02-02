@@ -1,6 +1,7 @@
-using System.Text.Json;
+using System.Drawing;
 using Aspose.Slides;
-using AsposeMcpServer.Core.ShapeDetailProviders;
+using AsposeMcpServer.Core.ShapeDetailProviders.Details;
+using AsposeMcpServer.Core.ShapeDetailProviders.Providers;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Core.ShapeDetailProviders;
@@ -39,17 +40,22 @@ public class AutoShapeDetailProviderTests : TestBase
         Assert.False(result);
     }
 
-    [Fact]
+    [SkippableFact]
     public void GetDetails_WithAutoShape_ShouldReturnDetails()
     {
+        SkipInEvaluationMode(AsposeLibraryType.Slides, "Text content is truncated in evaluation mode");
         using var presentation = new Presentation();
         var slide = presentation.Slides[0];
         var shape = slide.Shapes.AddAutoShape(ShapeType.Rectangle, 10, 10, 100, 100);
         shape.TextFrame.Text = "Sample Text";
 
         var details = _provider.GetDetails(shape, presentation);
+        var autoShape = Assert.IsType<AutoShapeDetails>(details);
 
-        Assert.NotNull(details);
+        Assert.Equal("Rectangle", autoShape.ShapeType);
+        Assert.Equal("Sample Text", autoShape.Text);
+        Assert.True(autoShape.HasTextFrame);
+        Assert.True(autoShape.ParagraphCount >= 1);
     }
 
     [Fact]
@@ -72,8 +78,10 @@ public class AutoShapeDetailProviderTests : TestBase
         var shape = slide.Shapes.AddAutoShape(ShapeType.Rectangle, 10, 10, 100, 100);
 
         var details = _provider.GetDetails(shape, presentation);
+        var autoShape = Assert.IsType<AutoShapeDetails>(details);
 
-        Assert.NotNull(details);
+        Assert.Equal("Rectangle", autoShape.ShapeType);
+        Assert.True(autoShape.HasTextFrame);
     }
 
     [Fact]
@@ -85,13 +93,9 @@ public class AutoShapeDetailProviderTests : TestBase
         shape.HyperlinkClick = new Hyperlink("https://example.com");
 
         var details = _provider.GetDetails(shape, presentation);
-        Assert.NotNull(details);
+        var autoShape = Assert.IsType<AutoShapeDetails>(details);
 
-        var json = JsonSerializer.Serialize(details);
-        using var doc = JsonDocument.Parse(json);
-        var root = doc.RootElement;
-
-        Assert.Equal("https://example.com", root.GetProperty("hyperlink").GetString());
+        Assert.Equal("https://example.com", autoShape.Hyperlink);
     }
 
     [Fact]
@@ -105,14 +109,10 @@ public class AutoShapeDetailProviderTests : TestBase
         shape.HyperlinkClick = new Hyperlink(slide2);
 
         var details = _provider.GetDetails(shape, presentation);
-        Assert.NotNull(details);
+        var autoShape = Assert.IsType<AutoShapeDetails>(details);
 
-        var json = JsonSerializer.Serialize(details);
-        using var doc = JsonDocument.Parse(json);
-        var root = doc.RootElement;
-
-        var hyperlink = root.GetProperty("hyperlink").GetString();
-        Assert.Contains("Slide", hyperlink);
+        Assert.NotNull(autoShape.Hyperlink);
+        Assert.Contains("Slide", autoShape.Hyperlink);
     }
 
     [Fact]
@@ -123,15 +123,10 @@ public class AutoShapeDetailProviderTests : TestBase
         var shape = slide.Shapes.AddAutoShape(ShapeType.RoundCornerRectangle, 10, 10, 100, 100);
 
         var details = _provider.GetDetails(shape, presentation);
-        Assert.NotNull(details);
+        var autoShape = Assert.IsType<AutoShapeDetails>(details);
 
-        var json = JsonSerializer.Serialize(details);
-        using var doc = JsonDocument.Parse(json);
-        var root = doc.RootElement;
-
-        if (root.TryGetProperty("adjustments", out var adjustments) &&
-            adjustments.ValueKind != JsonValueKind.Null)
-            Assert.True(adjustments.GetArrayLength() > 0);
+        if (autoShape.Adjustments != null)
+            Assert.True(autoShape.Adjustments.Count > 0);
     }
 
     [Fact]
@@ -143,13 +138,89 @@ public class AutoShapeDetailProviderTests : TestBase
         shape.TextFrame.Text = "Test Text";
 
         var details = _provider.GetDetails(shape, presentation);
-        Assert.NotNull(details);
+        var autoShape = Assert.IsType<AutoShapeDetails>(details);
 
-        var json = JsonSerializer.Serialize(details);
-        using var doc = JsonDocument.Parse(json);
-        var root = doc.RootElement;
+        Assert.True(autoShape.HasTextFrame);
+        Assert.True(autoShape.ParagraphCount >= 1);
+    }
 
-        Assert.True(root.GetProperty("hasTextFrame").GetBoolean());
-        Assert.True(root.GetProperty("paragraphCount").GetInt32() >= 1);
+    [Fact]
+    public void GetDetails_WithSolidFill_ShouldReturnFillColor()
+    {
+        using var presentation = new Presentation();
+        var slide = presentation.Slides[0];
+        var shape = slide.Shapes.AddAutoShape(ShapeType.Rectangle, 10, 10, 100, 100);
+        shape.FillFormat.FillType = FillType.Solid;
+        shape.FillFormat.SolidFillColor.Color = Color.FromArgb(255, 0, 128);
+
+        var details = _provider.GetDetails(shape, presentation);
+        var autoShape = Assert.IsType<AutoShapeDetails>(details);
+
+        Assert.Equal("#FF0080", autoShape.FillColor);
+        Assert.Null(autoShape.Transparency);
+    }
+
+    [Fact]
+    public void GetDetails_WithSolidFillAndTransparency_ShouldReturnTransparency()
+    {
+        using var presentation = new Presentation();
+        var slide = presentation.Slides[0];
+        var shape = slide.Shapes.AddAutoShape(ShapeType.Rectangle, 10, 10, 100, 100);
+        shape.FillFormat.FillType = FillType.Solid;
+        shape.FillFormat.SolidFillColor.Color = Color.FromArgb(128, 255, 0, 0);
+
+        var details = _provider.GetDetails(shape, presentation);
+        var autoShape = Assert.IsType<AutoShapeDetails>(details);
+
+        Assert.NotNull(autoShape.FillColor);
+        Assert.NotNull(autoShape.Transparency);
+        Assert.True(autoShape.Transparency > 0);
+    }
+
+    [Fact]
+    public void GetDetails_WithNoSolidFill_ShouldReturnNullFillColor()
+    {
+        using var presentation = new Presentation();
+        var slide = presentation.Slides[0];
+        var shape = slide.Shapes.AddAutoShape(ShapeType.Rectangle, 10, 10, 100, 100);
+        shape.FillFormat.FillType = FillType.NoFill;
+
+        var details = _provider.GetDetails(shape, presentation);
+        var autoShape = Assert.IsType<AutoShapeDetails>(details);
+
+        Assert.Null(autoShape.FillColor);
+        Assert.Null(autoShape.Transparency);
+    }
+
+    [Fact]
+    public void GetDetails_WithLineFormat_ShouldReturnLineProperties()
+    {
+        using var presentation = new Presentation();
+        var slide = presentation.Slides[0];
+        var shape = slide.Shapes.AddAutoShape(ShapeType.Rectangle, 10, 10, 100, 100);
+        shape.LineFormat.FillFormat.FillType = FillType.Solid;
+        shape.LineFormat.FillFormat.SolidFillColor.Color = Color.Red;
+        shape.LineFormat.Width = 3.0;
+        shape.LineFormat.DashStyle = LineDashStyle.Dash;
+
+        var details = _provider.GetDetails(shape, presentation);
+        var autoShape = Assert.IsType<AutoShapeDetails>(details);
+
+        Assert.Equal("#FF0000", autoShape.LineColor);
+        Assert.Equal(3.0, autoShape.LineWidth);
+        Assert.Equal("Dash", autoShape.LineDashStyle);
+    }
+
+    [Fact]
+    public void GetDetails_WithDefaultShape_ShouldNotFailOnLineFormat()
+    {
+        using var presentation = new Presentation();
+        var slide = presentation.Slides[0];
+        slide.Shapes.AddAutoShape(ShapeType.Rectangle, 10, 10, 100, 100);
+
+        var details = _provider.GetDetails(slide.Shapes[0], presentation);
+        var autoShape = Assert.IsType<AutoShapeDetails>(details);
+
+        Assert.NotNull(autoShape);
     }
 }

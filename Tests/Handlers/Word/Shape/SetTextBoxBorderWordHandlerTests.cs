@@ -1,6 +1,8 @@
+using System.Drawing;
 using Aspose.Words;
 using Aspose.Words.Drawing;
 using AsposeMcpServer.Handlers.Word.Shape;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 using WordParagraph = Aspose.Words.Paragraph;
@@ -60,9 +62,17 @@ public class SetTextBoxBorderWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("successfully", result.Message, StringComparison.OrdinalIgnoreCase);
+        var textboxes = WordShapeHelper.FindAllTextboxes(doc);
+        Assert.NotEmpty(textboxes);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var stroke = textboxes[0].Stroke;
+            Assert.True(stroke.Visible);
+            Assert.Equal(Color.FromArgb(255, 0, 0).ToArgb(), stroke.Color.ToArgb());
+        }
+
         AssertModified(context);
     }
 
@@ -79,9 +89,16 @@ public class SetTextBoxBorderWordHandlerTests : WordHandlerTestBase
 
         var res = _handler.Execute(context, parameters);
 
-        var result = Assert.IsType<SuccessResult>(res);
+        Assert.IsType<SuccessResult>(res);
 
-        Assert.Contains("successfully", result.Message, StringComparison.OrdinalIgnoreCase);
+        var textboxes = WordShapeHelper.FindAllTextboxes(doc);
+        Assert.NotEmpty(textboxes);
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var stroke = textboxes[0].Stroke;
+            Assert.True(stroke.Visible);
+            Assert.Equal(2.0, stroke.Weight);
+        }
     }
 
     [Fact]
