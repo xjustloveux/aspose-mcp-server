@@ -166,11 +166,11 @@ Usage examples:
         return operation.ToLowerInvariant() switch
         {
             "create" => BuildCreateParameters(parameters, range, hasHeaders, name),
-            "get" => BuildGetParameters(parameters, tableIndex),
+            "get" => BuildTableIndexParameters(parameters, tableIndex),
             "delete" => BuildDeleteParameters(parameters, tableIndex, keepData),
             "set_style" => BuildSetStyleParameters(parameters, tableIndex, styleName),
             "add_total_row" => BuildAddTotalRowParameters(parameters, tableIndex, columnIndex, totalFunction),
-            "convert_to_range" => BuildConvertToRangeParameters(parameters, tableIndex),
+            "convert_to_range" => BuildTableIndexParameters(parameters, tableIndex),
             _ => parameters
         };
     }
@@ -193,12 +193,12 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds parameters for the get operation.
+    ///     Builds parameters for operations that only require tableIndex.
     /// </summary>
     /// <param name="parameters">Base parameters with sheet index.</param>
     /// <param name="tableIndex">Optional specific table index.</param>
-    /// <returns>OperationParameters configured for getting tables.</returns>
-    private static OperationParameters BuildGetParameters(OperationParameters parameters, int? tableIndex)
+    /// <returns>OperationParameters configured with table index.</returns>
+    private static OperationParameters BuildTableIndexParameters(OperationParameters parameters, int? tableIndex)
     {
         if (tableIndex.HasValue) parameters.Set("tableIndex", tableIndex.Value);
         return parameters;
@@ -248,18 +248,6 @@ Usage examples:
         if (tableIndex.HasValue) parameters.Set("tableIndex", tableIndex.Value);
         if (columnIndex.HasValue) parameters.Set("columnIndex", columnIndex.Value);
         if (totalFunction != null) parameters.Set("totalFunction", totalFunction);
-        return parameters;
-    }
-
-    /// <summary>
-    ///     Builds parameters for the convert_to_range operation.
-    /// </summary>
-    /// <param name="parameters">Base parameters with sheet index.</param>
-    /// <param name="tableIndex">The table index.</param>
-    /// <returns>OperationParameters configured for converting table to range.</returns>
-    private static OperationParameters BuildConvertToRangeParameters(OperationParameters parameters, int? tableIndex)
-    {
-        if (tableIndex.HasValue) parameters.Set("tableIndex", tableIndex.Value);
         return parameters;
     }
 }

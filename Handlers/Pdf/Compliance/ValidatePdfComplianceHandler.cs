@@ -37,7 +37,7 @@ public class ValidatePdfComplianceHandler : OperationHandlerBase<Document>
         if (logPath != null)
             SecurityHelper.ValidateFilePath(logPath, "logPath", true);
 
-        var tempLog = logPath ?? Path.GetTempFileName();
+        var tempLog = logPath ?? Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         var isCompliant = document.Validate(tempLog, pdfFormat);
 
         var errorCount = 0;

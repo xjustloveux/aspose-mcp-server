@@ -29,14 +29,8 @@ public class RemoveEmbeddedPptFontHandler : OperationHandlerBase<Presentation>
 
         var presentation = context.Document;
         var embeddedFonts = presentation.FontsManager.GetEmbeddedFonts();
-        IFontData? targetFont = null;
-
-        foreach (var font in embeddedFonts)
-            if (font.FontName.Equals(fontName, StringComparison.OrdinalIgnoreCase))
-            {
-                targetFont = font;
-                break;
-            }
+        var targetFont =
+            embeddedFonts.FirstOrDefault(f => f.FontName.Equals(fontName, StringComparison.OrdinalIgnoreCase));
 
         if (targetFont == null)
             throw new ArgumentException($"Font '{fontName}' is not embedded in the presentation.");

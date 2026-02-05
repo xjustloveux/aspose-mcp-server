@@ -92,11 +92,10 @@ public class EditWordContentControlHandler : OperationHandlerBase<Document>
 
         if (!string.IsNullOrEmpty(tag))
         {
-            foreach (var sdt in sdtNodes.Cast<StructuredDocumentTag>())
-                if (string.Equals(sdt.Tag, tag, StringComparison.OrdinalIgnoreCase))
-                    return sdt;
+            var foundSdt = sdtNodes.Cast<StructuredDocumentTag>()
+                .FirstOrDefault(sdt => string.Equals(sdt.Tag, tag, StringComparison.OrdinalIgnoreCase));
 
-            throw new ArgumentException($"Content control with tag '{tag}' not found");
+            return foundSdt ?? throw new ArgumentException($"Content control with tag '{tag}' not found");
         }
 
         throw new ArgumentException("Either 'index' or 'tag' is required to identify the content control");

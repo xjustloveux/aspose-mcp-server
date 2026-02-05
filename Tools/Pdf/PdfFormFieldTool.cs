@@ -183,8 +183,8 @@ Usage examples:
             "delete" => BuildDeleteParameters(fieldName),
             "edit" => BuildEditParameters(fieldName, value, checkedValue),
             "get" => BuildGetParameters(limit),
-            "export" => BuildExportParameters(dataPath, format),
-            "import" => BuildImportParameters(dataPath, format),
+            "export" => BuildDataParameters(dataPath, format),
+            "import" => BuildDataParameters(dataPath, format),
             _ => new OperationParameters()
         };
     }
@@ -257,26 +257,12 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds parameters for the export form data operation.
+    ///     Builds parameters for the export/import form data operation.
     /// </summary>
-    /// <param name="dataPath">The output file path for exported data.</param>
-    /// <param name="format">The export format (fdf, xfdf, xml).</param>
-    /// <returns>OperationParameters configured for exporting form data.</returns>
-    private static OperationParameters BuildExportParameters(string? dataPath, string? format)
-    {
-        var parameters = new OperationParameters();
-        if (dataPath != null) parameters.Set("dataPath", dataPath);
-        if (format != null) parameters.Set("format", format);
-        return parameters;
-    }
-
-    /// <summary>
-    ///     Builds parameters for the import form data operation.
-    /// </summary>
-    /// <param name="dataPath">The input data file path.</param>
-    /// <param name="format">The import format (fdf, xfdf, xml), or null for auto-detect.</param>
-    /// <returns>OperationParameters configured for importing form data.</returns>
-    private static OperationParameters BuildImportParameters(string? dataPath, string? format)
+    /// <param name="dataPath">The data file path for export/import.</param>
+    /// <param name="format">The data format (fdf, xfdf, xml).</param>
+    /// <returns>OperationParameters configured for export/import form data.</returns>
+    private static OperationParameters BuildDataParameters(string? dataPath, string? format)
     {
         var parameters = new OperationParameters();
         if (dataPath != null) parameters.Set("dataPath", dataPath);

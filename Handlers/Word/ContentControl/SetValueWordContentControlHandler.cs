@@ -1,3 +1,4 @@
+using System.Globalization;
 using Aspose.Words;
 using Aspose.Words.Markup;
 using AsposeMcpServer.Core;
@@ -79,7 +80,7 @@ public class SetValueWordContentControlHandler : OperationHandlerBase<Document>
                 break;
 
             case SdtType.Date:
-                if (!DateTime.TryParse(value, out var dateValue))
+                if (!DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateValue))
                     throw new ArgumentException(
                         $"Invalid date value: '{value}'. Use ISO 8601 format (e.g., '2024-01-15').");
                 sdt.FullDate = dateValue;
@@ -110,13 +111,16 @@ public class SetValueWordContentControlHandler : OperationHandlerBase<Document>
     /// <exception cref="ArgumentException">Thrown when the item is not found in the list.</exception>
     private static void SelectListItem(StructuredDocumentTag sdt, string value)
     {
-        foreach (var item in sdt.ListItems)
-            if (string.Equals(item.Value, value, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(item.DisplayText, value, StringComparison.OrdinalIgnoreCase))
-            {
-                sdt.ListItems.SelectedValue = item;
-                return;
-            }
+        var matchingItem = sdt.ListItems
+            .FirstOrDefault(item =>
+                string.Equals(item.Value, value, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(item.DisplayText, value, StringComparison.OrdinalIgnoreCase));
+
+        if (matchingItem != null)
+        {
+            sdt.ListItems.SelectedValue = matchingItem;
+            return;
+        }
 
         var availableItems = string.Join(", ",
             sdt.ListItems.Select(i => i.Value));

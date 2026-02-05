@@ -36,7 +36,7 @@ public class ConvertPdfComplianceHandler : OperationHandlerBase<Document>
         if (logPath != null)
             SecurityHelper.ValidateFilePath(logPath, "logPath", true);
 
-        var tempLog = logPath ?? Path.GetTempFileName();
+        var tempLog = logPath ?? Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         var success = document.Convert(tempLog, pdfFormat, ConvertErrorAction.Delete);
 
         if (logPath == null && File.Exists(tempLog))

@@ -32,25 +32,17 @@ public class EmbedPptFontHandler : OperationHandlerBase<Presentation>
 
         var presentation = context.Document;
         var allFonts = presentation.FontsManager.GetFonts();
-        IFontData? targetFont = null;
-
-        foreach (var font in allFonts)
-            if (font.FontName.Equals(fontName, StringComparison.OrdinalIgnoreCase))
-            {
-                targetFont = font;
-                break;
-            }
+        var targetFont = allFonts.FirstOrDefault(f => f.FontName.Equals(fontName, StringComparison.OrdinalIgnoreCase));
 
         if (targetFont == null)
             throw new ArgumentException(
                 $"Font '{fontName}' not found in presentation. Use get_used to list available fonts.");
 
         var embeddedFonts = presentation.FontsManager.GetEmbeddedFonts();
-        foreach (var embedded in embeddedFonts)
-            if (embedded.FontName.Equals(fontName, StringComparison.OrdinalIgnoreCase))
-                return new SuccessResult { Message = $"Font '{fontName}' is already embedded." };
+        if (embeddedFonts.Any(f => f.FontName.Equals(fontName, StringComparison.OrdinalIgnoreCase)))
+            return new SuccessResult { Message = $"Font '{fontName}' is already embedded." };
 
-        var rule = embedMode.ToLowerInvariant() == "subset"
+        var rule = string.Equals(embedMode, "subset", StringComparison.OrdinalIgnoreCase)
             ? EmbedFontCharacters.OnlyUsed
             : EmbedFontCharacters.All;
 

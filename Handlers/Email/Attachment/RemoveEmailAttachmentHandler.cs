@@ -30,7 +30,7 @@ public class RemoveEmailAttachmentHandler : OperationHandlerBase<object>
     {
         var path = parameters.GetRequired<string>("path");
         var outputPath = parameters.GetRequired<string>("outputPath");
-        var index = parameters.GetRequired<int>("index");
+        var idx = parameters.GetRequired<int>("index");
 
         SecurityHelper.ValidateFilePath(path, "path", true);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
@@ -40,18 +40,19 @@ public class RemoveEmailAttachmentHandler : OperationHandlerBase<object>
 
         var message = MailMessage.Load(path);
 
-        if (index < 0 || index >= message.Attachments.Count)
+        if (idx < 0 || idx >= message.Attachments.Count)
+            // ReSharper disable once NotResolvedInText
             throw new ArgumentOutOfRangeException(
-                nameof(index),
-                $"Attachment index {index} is out of range. Email has {message.Attachments.Count} attachment(s).");
+                "index",
+                $"Attachment index {idx} is out of range. Email has {message.Attachments.Count} attachment(s).");
 
-        var removedName = message.Attachments[index].Name;
-        message.Attachments.RemoveAt(index);
+        var removedName = message.Attachments[idx].Name;
+        message.Attachments.RemoveAt(idx);
         message.Save(outputPath, EmailFormatHelper.DetermineEmailSaveFormat(outputPath));
 
         return new SuccessResult
         {
-            Message = $"Attachment '{removedName}' (index {index}) removed successfully. " +
+            Message = $"Attachment '{removedName}' (index {idx}) removed successfully. " +
                       $"Email now has {message.Attachments.Count} attachment(s)."
         };
     }

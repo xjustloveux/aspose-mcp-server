@@ -42,14 +42,12 @@ public class GetUsedPptFontsHandler : OperationHandlerBase<Presentation>
         var embeddedSet =
             new HashSet<string>(embeddedFonts.Select(f => f.FontName), StringComparer.OrdinalIgnoreCase);
 
-        var fontInfos = new List<PptFontInfo>();
-        foreach (var font in allFonts)
-            fontInfos.Add(new PptFontInfo
-            {
-                FontName = font.FontName,
-                IsEmbedded = embeddedSet.Contains(font.FontName),
-                IsCustom = !IsSystemFont(font.FontName)
-            });
+        var fontInfos = allFonts.Select(font => new PptFontInfo
+        {
+            FontName = font.FontName,
+            IsEmbedded = embeddedSet.Contains(font.FontName),
+            IsCustom = !IsSystemFont(font.FontName)
+        }).ToList();
 
         var embeddedCount = fontInfos.Count(f => f.IsEmbedded);
 

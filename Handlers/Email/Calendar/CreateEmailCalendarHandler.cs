@@ -1,3 +1,4 @@
+using System.Globalization;
 using Aspose.Email;
 using Aspose.Email.Calendar;
 using AsposeMcpServer.Core;
@@ -39,8 +40,12 @@ public class CreateEmailCalendarHandler : OperationHandlerBase<object>
 
         SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
-        var start = string.IsNullOrEmpty(startDate) ? DateTime.Now : DateTime.Parse(startDate);
-        var end = string.IsNullOrEmpty(endDate) ? start.AddHours(1) : DateTime.Parse(endDate);
+        var start = string.IsNullOrEmpty(startDate)
+            ? DateTime.Now
+            : DateTime.Parse(startDate, CultureInfo.InvariantCulture);
+        var end = string.IsNullOrEmpty(endDate)
+            ? start.AddHours(1)
+            : DateTime.Parse(endDate, CultureInfo.InvariantCulture);
 
         var appointment = new Appointment(
             location ?? "",

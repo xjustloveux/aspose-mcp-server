@@ -51,10 +51,8 @@ public class RemovePdfStampHandler : OperationHandlerBase<Document>
             };
         }
 
-        var stampsToRemove = new List<Aspose.Pdf.Annotations.Annotation>();
-        foreach (var annotation in page.Annotations)
-            if (annotation is StampAnnotation)
-                stampsToRemove.Add(annotation);
+        var stampsToRemove = page.Annotations.OfType<StampAnnotation>().Cast<Aspose.Pdf.Annotations.Annotation>()
+            .ToList();
 
         if (stampsToRemove.Count == 0)
             return new SuccessResult { Message = $"No stamp annotations found on page {p.PageIndex}." };

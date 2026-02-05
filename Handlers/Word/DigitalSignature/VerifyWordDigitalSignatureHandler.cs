@@ -33,11 +33,7 @@ public class VerifyWordDigitalSignatureHandler : OperationHandlerBase<Document>
         var validCount = signatures.Count(s => s.IsValid);
         var allValid = totalCount > 0 && validCount == totalCount;
 
-        var message = totalCount == 0
-            ? "No digital signatures found in the document."
-            : allValid
-                ? $"All {totalCount} digital signature(s) are valid."
-                : $"{validCount} of {totalCount} digital signature(s) are valid.";
+        var message = BuildVerificationMessage(totalCount, validCount, allValid);
 
         return new VerifySignaturesResult
         {
@@ -46,5 +42,22 @@ public class VerifyWordDigitalSignatureHandler : OperationHandlerBase<Document>
             TotalCount = totalCount,
             ValidCount = validCount
         };
+    }
+
+    /// <summary>
+    ///     Builds a human-readable verification message based on signature counts.
+    /// </summary>
+    /// <param name="totalCount">Total number of signatures.</param>
+    /// <param name="validCount">Number of valid signatures.</param>
+    /// <param name="allValid">Whether all signatures are valid.</param>
+    /// <returns>A descriptive message about the verification result.</returns>
+    private static string BuildVerificationMessage(int totalCount, int validCount, bool allValid)
+    {
+        if (totalCount == 0)
+            return "No digital signatures found in the document.";
+
+        return allValid
+            ? $"All {totalCount} digital signature(s) are valid."
+            : $"{validCount} of {totalCount} digital signature(s) are valid.";
     }
 }

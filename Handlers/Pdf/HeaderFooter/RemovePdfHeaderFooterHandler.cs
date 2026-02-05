@@ -37,10 +37,8 @@ public class RemovePdfHeaderFooterHandler : OperationHandlerBase<Document>
         {
             var page = document.Pages[pageIdx];
 
-            var stampsToRemove = new List<Aspose.Pdf.Annotations.Annotation>();
-            foreach (var annotation in page.Annotations)
-                if (annotation is StampAnnotation)
-                    stampsToRemove.Add(annotation);
+            var stampsToRemove = page.Annotations.OfType<StampAnnotation>().Cast<Aspose.Pdf.Annotations.Annotation>()
+                .ToList();
 
             foreach (var stamp in stampsToRemove)
             {

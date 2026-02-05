@@ -25,19 +25,18 @@ public class RemovePptWatermarkHandler : OperationHandlerBase<Presentation>
         var presentation = context.Document;
         var removedCount = 0;
 
-        foreach (var slide in presentation.Slides)
-        {
-            var shapesToRemove = new List<IShape>();
-            foreach (var shape in slide.Shapes)
-                if (shape.Name != null &&
-                    shape.Name.StartsWith(AddTextPptWatermarkHandler.WatermarkPrefix, StringComparison.Ordinal))
-                    shapesToRemove.Add(shape);
+        var allWatermarks = presentation.Slides
+            .SelectMany(slide => slide.Shapes
+                .Where(shape => shape.Name != null &&
+                                shape.Name.StartsWith(AddTextPptWatermarkHandler.WatermarkPrefix,
+                                    StringComparison.Ordinal))
+                .Select(shape => new { Slide = slide, Shape = shape }))
+            .ToList();
 
-            foreach (var shape in shapesToRemove)
-            {
-                slide.Shapes.Remove(shape);
-                removedCount++;
-            }
+        foreach (var item in allWatermarks)
+        {
+            item.Slide.Shapes.Remove(item.Shape);
+            removedCount++;
         }
 
         if (removedCount > 0)

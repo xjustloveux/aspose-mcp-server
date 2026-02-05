@@ -161,10 +161,10 @@ Usage examples:
         {
             "add" => BuildAddParameters(parameters, shapeType, text, upperLeftRow, upperLeftColumn, width, height),
             "add_textbox" => BuildAddTextBoxParameters(parameters, text, upperLeftRow, upperLeftColumn, width, height),
-            "get" => BuildGetParameters(parameters, shapeIndex),
+            "get" => BuildShapeIndexParameters(parameters, shapeIndex),
             "edit" => BuildEditParameters(parameters, shapeIndex, text, name, width, height, upperLeftRow,
                 upperLeftColumn),
-            "delete" => BuildDeleteParameters(parameters, shapeIndex),
+            "delete" => BuildShapeIndexParameters(parameters, shapeIndex),
             _ => parameters
         };
     }
@@ -199,9 +199,9 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds parameters for the get operation.
+    ///     Builds parameters for operations that only require shapeIndex.
     /// </summary>
-    private static OperationParameters BuildGetParameters(OperationParameters parameters, int? shapeIndex)
+    private static OperationParameters BuildShapeIndexParameters(OperationParameters parameters, int? shapeIndex)
     {
         if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
         return parameters;
@@ -220,15 +220,6 @@ Usage examples:
         if (height.HasValue) parameters.Set("height", height.Value);
         if (upperLeftRow.HasValue) parameters.Set("upperLeftRow", upperLeftRow.Value);
         if (upperLeftColumn.HasValue) parameters.Set("upperLeftColumn", upperLeftColumn.Value);
-        return parameters;
-    }
-
-    /// <summary>
-    ///     Builds parameters for the delete operation.
-    /// </summary>
-    private static OperationParameters BuildDeleteParameters(OperationParameters parameters, int? shapeIndex)
-    {
-        if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
         return parameters;
     }
 }

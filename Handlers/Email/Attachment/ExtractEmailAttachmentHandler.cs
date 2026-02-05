@@ -30,7 +30,7 @@ public class ExtractEmailAttachmentHandler : OperationHandlerBase<object>
     {
         var path = parameters.GetRequired<string>("path");
         var outputDir = parameters.GetRequired<string>("outputDir");
-        var index = parameters.GetRequired<int>("index");
+        var idx = parameters.GetRequired<int>("index");
 
         SecurityHelper.ValidateFilePath(path, "path", true);
         SecurityHelper.ValidateFilePath(outputDir, "outputDir", true);
@@ -40,14 +40,15 @@ public class ExtractEmailAttachmentHandler : OperationHandlerBase<object>
 
         var message = MailMessage.Load(path);
 
-        if (index < 0 || index >= message.Attachments.Count)
+        if (idx < 0 || idx >= message.Attachments.Count)
+            // ReSharper disable once NotResolvedInText
             throw new ArgumentOutOfRangeException(
-                nameof(index),
-                $"Attachment index {index} is out of range. Email has {message.Attachments.Count} attachment(s).");
+                "index",
+                $"Attachment index {idx} is out of range. Email has {message.Attachments.Count} attachment(s).");
 
         Directory.CreateDirectory(outputDir);
 
-        var attachment = message.Attachments[index];
+        var attachment = message.Attachments[idx];
         var fileName = SecurityHelper.SanitizeFileName(attachment.Name);
         var outputPath = Path.Combine(outputDir, fileName);
         attachment.Save(outputPath);
