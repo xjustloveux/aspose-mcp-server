@@ -41,10 +41,13 @@ public class RemoveEmailAttachmentHandler : OperationHandlerBase<object>
         var message = MailMessage.Load(path);
 
         if (idx < 0 || idx >= message.Attachments.Count)
+            // CA2208, S3928, NotResolvedInText - 'index' is a dynamic parameter from the parameters dictionary, not a method parameter
             // ReSharper disable once NotResolvedInText
+#pragma warning disable CA2208, S3928
             throw new ArgumentOutOfRangeException(
                 "index",
                 $"Attachment index {idx} is out of range. Email has {message.Attachments.Count} attachment(s).");
+#pragma warning restore CA2208, S3928
 
         var removedName = message.Attachments[idx].Name;
         message.Attachments.RemoveAt(idx);

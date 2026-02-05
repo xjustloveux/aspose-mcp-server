@@ -101,10 +101,13 @@
     <div class="structure-tree">
         aspose-mcp-server/
         ├── Tools/ 📁 工具原始碼（MCP Tool 入口點）
-        │ ├── Word/ 24 個工具
-        │ ├── Excel/ 25 個工具
-        │ ├── PowerPoint/ 21 個工具
-        │ ├── PDF/ 15 個工具
+        │ ├── Word/ 27 個工具
+        │ ├── Excel/ 31 個工具
+        │ ├── PowerPoint/ 25 個工具
+        │ ├── PDF/ 19 個工具
+        │ ├── OCR/ 2 個工具
+        │ ├── Email/ 6 個工具
+        │ ├── BarCode/ 2 個工具
         │ ├── Conversion/ 2 個工具
         │ └── Session/ 1 個工具
         ├── Handlers/ 📁 操作處理器（業務邏輯實作）
@@ -313,7 +316,7 @@ cd aspose-mcp-server">
     <ul style="margin-top: 15px; padding-left: 25px;">
         <li><strong>測試類</strong>: 730+ 個測試類（含 Core、Security、Session 測試）</li>
         <li><strong>測試用例</strong>: 9,000+ 個測試用例</li>
-        <li><strong>測試框架</strong>: xUnit 2.9.2</li>
+        <li><strong>測試框架</strong>: xUnit 2.9.3</li>
     </ul>
 
     <h3>運行測試</h3>
@@ -366,7 +369,7 @@ cd aspose-mcp-server">
     <ul style="margin-top: 15px; padding-left: 25px;">
         <li><code>Tests/Core/</code> - 核心功能測試（Handlers、Helpers、Security、Session、Tracking）</li>
         <li>
-            <code>Tests/Handlers/</code> - Handler 測試（524 個測試類）
+            <code>Tests/Handlers/</code> - Handler 測試（531 個測試類）
             <ul style="margin-top: 5px; padding-left: 20px;">
                 <li><code>Word/</code> - Word Handler 測試</li>
                 <li><code>Excel/</code> - Excel Handler 測試</li>
@@ -452,7 +455,7 @@ cd aspose-mcp-server">
     <p>Handler 基礎架構：IOperationHandler（介面）、OperationHandlerBase（基類）、OperationContext（上下文）、OperationParameters（參數）、HandlerRegistry（註冊器）。實現 Tool 與業務邏輯的分離。</p>
 
     <h3>Handlers/</h3>
-    <p>操作處理器：524 個 Handler 實作業務邏輯。每個 Handler 對應一個操作（如 AddWordBookmarkHandler），並透過 HandlerRegistry 註冊。100% 單元測試覆蓋（524 個測試類）。</p>
+    <p>操作處理器：531 個 Handler 實作業務邏輯。每個 Handler 對應一個操作（如 AddWordBookmarkHandler），並透過 HandlerRegistry 註冊。100% 單元測試覆蓋（531 個測試類）。</p>
 
     <h3>Helpers/</h3>
     <p>通用輔助工具：SecurityHelper（安全驗證）、ColorHelper（顏色處理）、FontHelper（字型設定）、ValueHelper（值轉換）等。包含各文檔類型的專用 Helper（Excel/、Word/、PowerPoint/、Pdf/）。</p>

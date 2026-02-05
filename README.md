@@ -11,7 +11,7 @@
 [![MCP Version](https://img.shields.io/badge/MCP-2025--11--25-blue)](https://modelcontextprotocol.io/)
 [![MCP SDK](https://img.shields.io/badge/MCP%20SDK-0.6.0-purple)](https://github.com/modelcontextprotocol/csharp-sdk)
 [![Aspose Version](https://img.shields.io/badge/Aspose-23.10.0-orange)](https://products.aspose.com/total/net/)
-[![xUnit](https://img.shields.io/badge/xUnit-2.9.2-blue?logo=xunit)](https://xunit.net/)
+[![xUnit](https://img.shields.io/badge/xUnit-2.9.3-blue?logo=xunit)](https://xunit.net/)
 
 **格式支援：** ![Word](https://img.shields.io/badge/Word-DOC%2CDOCX-blue) ![Excel](https://img.shields.io/badge/Excel-XLS%2CXLSX-green) ![PowerPoint](https://img.shields.io/badge/PowerPoint-PPT%2CPPTX-orange) ![PDF](https://img.shields.io/badge/PDF-PDF-red) ![OCR](https://img.shields.io/badge/OCR-PNG%2CJPG%2CPDF-purple) ![Email](https://img.shields.io/badge/Email-EML%2CMSG-teal) ![BarCode](https://img.shields.io/badge/BarCode-QR%2CCode128-brown)
 
@@ -124,7 +124,7 @@ brew install xjustloveux/tap/aspose-mcp-server
 |------|------|------|---------|
 | **Stdio**（預設） | `AsposeMcpServer.exe --word` | - | 本地 MCP 客戶端 |
 | **HTTP** | `AsposeMcpServer.exe --http --port 3000 --word` | `http://localhost:3000/mcp` | 網頁應用 |
-| **WebSocket** | `AsposeMcpServer.exe --ws --port 3000 --word` | `ws://localhost:3000/ws` | 即時互動 |
+| **WebSocket** | `AsposeMcpServer.exe --ws --port 3000 --word` | `ws://localhost:3000/mcp` | 即時互動 |
 
 **環境變數：**
 

@@ -144,7 +144,7 @@
   "_範例12": "========================================",
   "_範例12說明": "WebSocket 模式（雙向通訊）",
   "_範例12適用": "即時互動應用",
-  "_範例12端點": "ws://localhost:3000/ws",
+  "_範例12端點": "ws://localhost:3000/mcp",
   "mcpServers_example12_websocket": {
     "aspose-all": {
       "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",

@@ -46,20 +46,11 @@ public abstract class OcrPreprocessingHandlerBase : OperationHandlerBase<AsposeO
             {
                 Directory.Delete(tempDir, true);
             }
-            catch (Exception) when (IsIgnorableTempCleanupException())
+            catch
             {
                 // Intentionally ignored: temp directory cleanup failure is non-critical
             }
         }
-    }
-
-    /// <summary>
-    ///     Determines if the exception is an ignorable temp cleanup exception.
-    /// </summary>
-    /// <returns>Always returns true as all exceptions during temp cleanup are non-critical.</returns>
-    private static bool IsIgnorableTempCleanupException()
-    {
-        return true;
     }
 
     /// <summary>

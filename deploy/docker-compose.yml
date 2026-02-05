@@ -13,7 +13,7 @@ services:
       - ASPOSE_HOST=0.0.0.0
 
       # === Tools (Required) ===
-      - ASPOSE_TOOLS=all                  # all, or comma-separated: word,excel,pdf,ppt
+      - ASPOSE_TOOLS=all                  # all, or comma-separated: word,excel,ppt,pdf,ocr,email,barcode
 
       # === License (Optional) ===
       # - ASPOSE_LICENSE_PATH=/app/license/Aspose.Total.lic

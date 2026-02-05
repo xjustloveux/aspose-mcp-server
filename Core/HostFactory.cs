@@ -107,7 +107,7 @@ internal static class HostFactory
             .AddCallToolFilter(CreateErrorDetailFilter());
         var app = builder.Build();
 
-        LogServerStartup($"HTTP server listening on http://{transportConfig.Host}:{transportConfig.Port}");
+        LogServerStartup($"HTTP server listening on http://{transportConfig.Host}:{transportConfig.Port}/mcp");
         ConfigureMiddleware(app, authConfig, trackingConfig, originConfig);
         MapHealthEndpoints(app);
         app.MapMcp("/mcp");
@@ -142,7 +142,7 @@ internal static class HostFactory
             .AddCallToolFilter(CreateErrorDetailFilter());
         var app = builder.Build();
 
-        LogServerStartup($"WebSocket server listening on ws://{transportConfig.Host}:{transportConfig.Port}");
+        LogServerStartup($"WebSocket server listening on ws://{transportConfig.Host}:{transportConfig.Port}/mcp");
         ConfigureMiddleware(app, authConfig, trackingConfig, originConfig);
 
         app.UseWebSockets();
@@ -377,7 +377,7 @@ internal static class HostFactory
         var handler = new WebSocketConnectionHandler(executablePath, toolArgs,
             app.Services.GetService<ILoggerFactory>());
 
-        app.Map("/ws", async context =>
+        app.Map("/mcp", async context =>
         {
             if (context.WebSockets.IsWebSocketRequest)
             {

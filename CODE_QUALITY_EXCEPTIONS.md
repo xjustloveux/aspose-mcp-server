@@ -282,7 +282,7 @@ public class NoParameterlessCtorHandler(string requiredValue) : OperationHandler
 
 | 檔案 | 行號 | 成員 |
 |------|------|------|
-| `Tests/Infrastructure/TestBase.cs` | 526 | `AsposeLibraryType` enum |
+| `Tests/Infrastructure/TestBase.cs` | 574 | `AsposeLibraryType` enum |
 
 ### 問題描述
 
@@ -430,7 +430,7 @@ public string Host { get; init; } = "localhost";  // 會導致反序列化失敗
 | `Tests/Infrastructure/WordTestBase.cs` | 62 | `AssertParagraphStyle()` |
 | `Tests/Infrastructure/PdfTestBase.cs` | 11 | `IsEvaluationMode()` |
 | `Core/Session/DocumentSession.cs` | 226 | `GetDocumentAsync()` |
-| `Core/Session/DocumentSessionManager.cs` | 467 | `OnServerShutdown()` |
+| `Core/Session/DocumentSessionManager.cs` | 480 | `OnServerShutdown()` |
 | `Core/Tracking/TrackingExtensions.cs` | 14 | `UseTracking()` |
 
 ### 問題描述
@@ -602,13 +602,13 @@ var builder = new DocumentBuilder(doc)
 | **級別** | Note |
 | **數量** | 2 |
 | **訊息** | Collection expression can be converted to a UTF-8 string literal |
-| **處理方式** | 已添加 `// ReSharper disable` / `// ReSharper restore` 註解對 (行 72-82) |
+| **處理方式** | 已添加 `// ReSharper disable UseUtf8StringLiteral` / `// ReSharper restore UseUtf8StringLiteral` 註解對 (行 103-113) |
 
 ### 受影響檔案
 
 | 檔案 | 行號 | 說明 |
 |------|------|------|
-| `Tests/Core/ShapeDetailProviders/PictureFrameDetailProviderTests.cs` | 73-81 | 誤判 (PNG 二進制數據) |
+| `Tests/Core/ShapeDetailProviders/PictureFrameDetailProviderTests.cs` | 103-113 | 誤判 (PNG 二進制數據) |
 
 ### 問題描述
 

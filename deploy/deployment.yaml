@@ -36,7 +36,7 @@ spec:
 
             # === Tools (Required) ===
             - name: ASPOSE_TOOLS
-              value: "all"                # all, or comma-separated: word,excel,pdf,ppt
+              value: "all"                # all, or comma-separated: word,excel,ppt,pdf,ocr,email,barcode
 
             # === License (Optional) ===
             # - name: ASPOSE_LICENSE_PATH

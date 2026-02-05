@@ -105,188 +105,235 @@
 </div>
 
 <div class="container">
-    <div class="section">
-        <h2>步驟 1：下載預編譯版本</h2>
+<div class="section">
+    <h2>步驟 1：下載預編譯版本</h2>
 
-        <div class="step">
-            <span class="step-number">1</span>
-            <strong>從 GitHub Releases 下載</strong>
-            <p style="margin-top: 10px;">訪問 <a href="https://github.com/xjustloveux/aspose-mcp-server/releases" target="_blank">GitHub Releases</a> 下載對應平台的版本：</p>
-            <ul class="param-list" style="margin-top: 10px;">
-                <li>Windows: <code>aspose-mcp-server-windows-x64.zip</code></li>
-                <li>Linux: <code>aspose-mcp-server-linux-x64.tar.gz</code></li>
-                <li>macOS Intel: <code>aspose-mcp-server-macos-x64.tar.gz</code></li>
-                <li>macOS ARM: <code>aspose-mcp-server-macos-arm64.tar.gz</code></li>
-            </ul>
-        </div>
-
-        <div class="step">
-            <span class="step-number">2</span>
-            <strong>解壓到任意目錄</strong>
-            <p style="margin-top: 10px;">解壓縮下載的檔案到任意目錄，例如：</p>
-            <ul class="param-list" style="margin-top: 10px;">
-                <li>Windows: <code>C:\Tools\aspose-mcp-server\</code></li>
-                <li>macOS/Linux: <code>~/tools/aspose-mcp-server/</code></li>
-            </ul>
-            <p style="margin-top: 10px;"><strong>macOS 首次執行：</strong>需移除系統隔離標記（僅需一次）：</p>
-            <pre><code>xattr -d com.apple.quarantine AsposeMcpServer</code></pre>
-        </div>
-
-        <div class="step">
-            <span class="step-number">*</span>
-            <strong>macOS 替代方案：使用 Homebrew 安裝（推薦）</strong>
-            <pre><code>brew install xjustloveux/tap/aspose-mcp-server</code></pre>
-            <p style="margin-top: 10px;">透過 Homebrew 安裝無需手動處理權限和隔離標記。</p>
-        </div>
+    <div class="step">
+        <span class="step-number">1</span>
+        <strong>從 GitHub Releases 下載</strong>
+        <p style="margin-top: 10px;">訪問 <a href="https://github.com/xjustloveux/aspose-mcp-server/releases" target="_blank">GitHub Releases</a> 下載對應平台的版本：</p>
+        <ul class="param-list" style="margin-top: 10px;">
+            <li>Windows: <code>aspose-mcp-server-windows-x64.zip</code></li>
+            <li>Linux: <code>aspose-mcp-server-linux-x64.tar.gz</code></li>
+            <li>macOS Intel: <code>aspose-mcp-server-macos-x64.tar.gz</code></li>
+            <li>macOS ARM: <code>aspose-mcp-server-macos-arm64.tar.gz</code></li>
+        </ul>
     </div>
 
-    <div class="section">
-        <h2>步驟 2：配置授權檔案</h2>
-
-        <div class="success-box">
-            <strong>📄 源代碼授權</strong>
-            <p style="margin-top: 8px; margin-bottom: 0;">本專案的源代碼採用 <a href="https://github.com/xjustloveux/aspose-mcp-server/blob/master/LICENSE" target="_blank">MIT License</a> 授權，您可以自由使用、修改和分發源代碼。</p>
-        </div>
-
-        <div class="info-box" style="margin-top: 20px;">
-            <strong>📋 Aspose 授權檔案類型</strong>
-            <p class="hint-text" style="margin-top: 8px; margin-bottom: 8px;">⚠️ 注意：使用本專案需要有效的 Aspose 授權檔案才能正常運行。</p>
-            <ul class="param-list" style="margin-top: 10px;">
-                <li><strong>總授權</strong>：<code>Aspose.Total.lic</code>（包含所有組件）</li>
-                <li><strong>單一組件授權</strong>：<code>Aspose.Words.lic</code>、<code>Aspose.Cells.lic</code>、<code>Aspose.Slides.lic</code>、<code>Aspose.Pdf.lic</code></li>
-                <li><strong>自訂檔案名稱</strong>：可透過環境變數或命令列參數指定</li>
-            </ul>
-        </div>
-
-        <h3>配置方式（三選一）</h3>
-
-        <div class="step">
-            <span class="step-number">1</span>
-            <strong>自動搜尋（推薦）</strong>
-            <p style="margin-top: 10px;">將授權檔案放在可執行檔案同一目錄，系統會自動搜尋。</p>
-        </div>
-
-        <div class="step">
-            <span class="step-number">2</span>
-            <strong>環境變數</strong>
-            <p style="margin-top: 10px;">設定 <code>ASPOSE_LICENSE_PATH</code> 環境變數指向授權檔案路徑。</p>
-        </div>
-
-        <div class="step">
-            <span class="step-number">3</span>
-            <strong>命令列參數</strong>
-            <p style="margin-top: 10px;">使用 <code>--license:路徑</code> 或 <code>--license=路徑</code> 指定授權檔案。</p>
-        </div>
-
-        <div class="warning-box">
-            <strong>⚠️ 注意</strong>：如果找不到授權檔案，系統會以試用模式運行（會有試用版標記）。
-        </div>
+    <div class="step">
+        <span class="step-number">2</span>
+        <strong>解壓到任意目錄</strong>
+        <p style="margin-top: 10px;">解壓縮下載的檔案到任意目錄，例如：</p>
+        <ul class="param-list" style="margin-top: 10px;">
+            <li>Windows: <code>C:\Tools\aspose-mcp-server\</code></li>
+            <li>macOS/Linux: <code>~/tools/aspose-mcp-server/</code></li>
+        </ul>
+        <p style="margin-top: 10px;"><strong>macOS 首次執行：</strong>需移除系統隔離標記（僅需一次）：</p>
+        <pre><code>xattr -d com.apple.quarantine AsposeMcpServer</code></pre>
     </div>
 
-    <div class="section">
-        <h2>步驟 3：配置 MCP 客戶端</h2>
+    <div class="step">
+        <span class="step-number">*</span>
+        <strong>macOS 替代方案：使用 Homebrew 安裝（推薦）</strong>
+        <pre><code>brew install xjustloveux/tap/aspose-mcp-server</code></pre>
+        <p style="margin-top: 10px;">透過 Homebrew 安裝無需手動處理權限和隔離標記。</p>
+    </div>
+</div>
 
-        <div class="step">
-            <span class="step-number">1</span>
-            <strong>編輯配置檔案</strong>
-            <p style="margin-top: 10px;">根據您使用的 MCP 客戶端，編輯對應的配置檔案。配置檔案通常位於應用程式的設定目錄中，請參考您使用的客戶端文檔以確認具體路徑。</p>
-        </div>
+<div class="section">
+    <h2>步驟 2：配置授權檔案</h2>
 
-        <div class="step">
-            <span class="step-number">2</span>
-            <strong>添加配置</strong>
-            <p style="margin-top: 10px;">在配置檔案中添加以下內容：</p>
-            <div class="code-wrapper">
-                <div class="code-block" id="config-code">
-                    {
-                    "mcpServers": {
-                    "aspose-word": {
-                    "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",
-                    "args": ["--word"]
-                    }
-                    }
-                    }
-                </div>
-                <button class="copy-button" onclick="copyConfigCode()" title="複製配置">
-                    <span id="copy-icon">📋</span>
-                    <span id="copy-text">複製</span>
-                </button>
+    <div class="success-box">
+        <strong>📄 源代碼授權</strong>
+        <p style="margin-top: 8px; margin-bottom: 0;">本專案的源代碼採用 <a href="https://github.com/xjustloveux/aspose-mcp-server/blob/master/LICENSE" target="_blank">MIT License</a> 授權，您可以自由使用、修改和分發源代碼。</p>
+    </div>
+
+    <div class="info-box" style="margin-top: 20px;">
+        <strong>📋 Aspose 授權檔案類型</strong>
+        <p class="hint-text" style="margin-top: 8px; margin-bottom: 8px;">⚠️ 注意：使用本專案需要有效的 Aspose 授權檔案才能正常運行。</p>
+        <ul class="param-list" style="margin-top: 10px;">
+            <li><strong>總授權</strong>：<code>Aspose.Total.lic</code>（包含所有組件）</li>
+            <li><strong>單一組件授權</strong>：<code>Aspose.Words.lic</code>、<code>Aspose.Cells.lic</code>、<code>Aspose.Slides.lic</code>、<code>Aspose.Pdf.lic</code></li>
+            <li><strong>自訂檔案名稱</strong>：可透過環境變數或命令列參數指定</li>
+        </ul>
+    </div>
+
+    <h3>配置方式（三選一）</h3>
+
+    <div class="step">
+        <span class="step-number">1</span>
+        <strong>自動搜尋（推薦）</strong>
+        <p style="margin-top: 10px;">將授權檔案放在可執行檔案同一目錄，系統會自動搜尋。</p>
+    </div>
+
+    <div class="step">
+        <span class="step-number">2</span>
+        <strong>環境變數</strong>
+        <p style="margin-top: 10px;">設定 <code>ASPOSE_LICENSE_PATH</code> 環境變數指向授權檔案路徑。</p>
+    </div>
+
+    <div class="step">
+        <span class="step-number">3</span>
+        <strong>命令列參數</strong>
+        <p style="margin-top: 10px;">使用 <code>--license:路徑</code> 或 <code>--license=路徑</code> 指定授權檔案。</p>
+    </div>
+
+    <div class="warning-box">
+        <strong>⚠️ 注意</strong>：如果找不到授權檔案，系統會以試用模式運行（會有試用版標記）。
+    </div>
+</div>
+
+<div class="section">
+    <h2>步驟 3：配置 MCP 客戶端</h2>
+
+    <div class="step">
+        <span class="step-number">1</span>
+        <strong>編輯配置檔案</strong>
+        <p style="margin-top: 10px;">根據您使用的 MCP 客戶端，編輯對應的配置檔案。配置檔案通常位於應用程式的設定目錄中，請參考您使用的客戶端文檔以確認具體路徑。</p>
+    </div>
+
+    <div class="step">
+        <span class="step-number">2</span>
+        <strong>添加配置</strong>
+        <p style="margin-top: 10px;">在配置檔案中添加以下內容：</p>
+        <div class="code-wrapper">
+            <div class="code-block" id="config-code">
+                {
+                "mcpServers": {
+                "aspose-word": {
+                "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",
+                "args": ["--word"]
+                }
+                }
+                }
             </div>
+            <button class="copy-button" onclick="copyConfigCode()" title="複製配置">
+                <span id="copy-icon">📋</span>
+                <span id="copy-text">複製</span>
+            </button>
         </div>
+    </div>
 
-        <h3>可用參數</h3>
-        <p>不帶任何工具參數時，預設啟用所有工具。指定工具參數時，只啟用指定的工具：</p>
-        <ul class="param-list">
-            <li><code>--word</code> - Word 工具（自動包含轉換功能）</li>
-            <li><code>--excel</code> - Excel 工具（自動包含轉換功能）</li>
-            <li><code>--powerpoint</code> / <code>--ppt</code> - PowerPoint 工具（自動包含轉換功能）</li>
-            <li><code>--pdf</code> - PDF 工具</li>
-            <li><code>--ocr</code> - OCR 文字辨識工具</li>
-            <li><code>--email</code> - Email 工具（郵件、日曆、聯絡人）</li>
-            <li><code>--barcode</code> - BarCode 工具（條碼產生與辨識）</li>
-            <li><code>--all</code> - 所有工具（等同不帶工具參數）</li>
-            <li><code>--session-enabled</code> - 啟用 Session 管理功能（可選）</li>
-            <li><code>--license:路徑</code> 或 <code>--license=路徑</code> - 指定授權檔案路徑（可選）</li>
+    <h3>可用參數</h3>
+    <p>不帶任何工具參數時，預設啟用所有工具。指定工具參數時，只啟用指定的工具：</p>
+    <ul class="param-list">
+        <li><code>--word</code> - Word 工具（自動包含轉換功能）</li>
+        <li><code>--excel</code> - Excel 工具（自動包含轉換功能）</li>
+        <li><code>--powerpoint</code> / <code>--ppt</code> - PowerPoint 工具（自動包含轉換功能）</li>
+        <li><code>--pdf</code> - PDF 工具</li>
+        <li><code>--ocr</code> - OCR 文字辨識工具</li>
+        <li><code>--email</code> - Email 工具（郵件、日曆、聯絡人）</li>
+        <li><code>--barcode</code> - BarCode 工具（條碼產生與辨識）</li>
+        <li><code>--all</code> - 所有工具（等同不帶工具參數）</li>
+        <li><code>--session-enabled</code> - 啟用 Session 管理功能（可選）</li>
+        <li><code>--license:路徑</code> 或 <code>--license=路徑</code> - 指定授權檔案路徑（可選）</li>
+    </ul>
+
+    <div class="info-box" style="margin-top: 15px;">
+        <strong>🔧 工具過濾機制</strong>
+        <p style="margin-top: 8px; margin-bottom: 0;">MCP 工具列表會根據您啟用的參數動態調整。例如只啟用 <code>--word</code> 時，只會顯示 Word 相關工具，不會出現 Excel、PDF 等其他工具。</p>
+    </div>
+
+    <h3>傳輸模式</h3>
+    <p>支援三種傳輸模式，可透過命令列參數或環境變數切換：</p>
+    <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+        <thead>
+        <tr style="background: var(--card-bg);">
+            <th style="padding: 12px; border: 1px solid var(--border-color); text-align: left;">模式</th>
+            <th style="padding: 12px; border: 1px solid var(--border-color); text-align: left;">命令範例</th>
+            <th style="padding: 12px; border: 1px solid var(--border-color); text-align: left;">端點</th>
+            <th style="padding: 12px; border: 1px solid var(--border-color); text-align: left;">適用場景</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td style="padding: 10px; border: 1px solid var(--border-color);"><strong>Stdio</strong>（預設）</td>
+            <td style="padding: 10px; border: 1px solid var(--border-color);">
+                <code>AsposeMcpServer.exe --word</code>
+            </td>
+            <td style="padding: 10px; border: 1px solid var(--border-color);">-</td>
+            <td style="padding: 10px; border: 1px solid var(--border-color);">本地 MCP 客戶端</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid var(--border-color);">
+                <strong>HTTP</strong>
+            </td>
+            <td style="padding: 10px; border: 1px solid var(--border-color);">
+                <code>AsposeMcpServer.exe --http --port 3000 --word</code>
+            </td>
+            <td style="padding: 10px; border: 1px solid var(--border-color);">
+                <code>http://localhost:3000/mcp</code>
+            </td>
+            <td style="padding: 10px; border: 1px solid var(--border-color);">網頁應用</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid var(--border-color);">
+                <strong>WebSocket</strong>
+            </td>
+            <td style="padding: 10px; border: 1px solid var(--border-color);">
+                <code>AsposeMcpServer.exe --ws --port 3000 --word</code>
+            </td>
+            <td style="padding: 10px; border: 1px solid var(--border-color);">
+                <code>ws://localhost:3000/mcp</code>
+            </td>
+            <td style="padding: 10px; border: 1px solid var(--border-color);">即時互動</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <h3>環境變數配置（Docker/Kubernetes 適用）</h3>
+    <p>除了命令列參數外，也可以使用環境變數配置：</p>
+    <ul class="param-list">
+        <li><code>ASPOSE_TOOLS</code> - 啟用的工具：<code>all</code>（全部）或 <code>word,excel,pdf,ppt,ocr,email,barcode</code></li>
+        <li><code>ASPOSE_TRANSPORT</code> - 傳輸模式：<code>stdio</code>、<code>http</code>、<code>ws</code></li>
+        <li><code>ASPOSE_PORT</code> - 監聽埠號（預設：3000）</li>
+        <li><code>ASPOSE_HOST</code> - 監聯位址（預設：localhost，容器用 0.0.0.0）</li>
+        <li><code>ASPOSE_SESSION_ENABLED</code> - 啟用 Session 管理：<code>true</code> 或 <code>false</code></li>
+        <li><code>ASPOSE_SESSION_ISOLATION</code> - Session 隔離模式：<code>none</code>（無隔離）、<code>group</code>（群組級，預設）</li>
+        <li><code>ASPOSE_SESSION_AUTO_SAVE_INTERVAL</code> - 自動暫存間隔（分鐘，0 = 停用，預設：0）</li>
+    </ul>
+
+    <div class="info-box">
+        <strong>💡 轉換功能說明</strong>
+        <ul class="param-list" style="margin-top: 10px;">
+            <li>啟用任何文檔工具（<code>--word</code>、<code>--excel</code>、<code>--ppt</code>）時，自動包含 <code>convert_to_pdf</code>（轉換為PDF）</li>
+            <li>啟用兩個或以上文檔工具時，自動包含 <code>convert_document</code>（跨格式轉換，如Word轉Excel）</li>
         </ul>
+    </div>
+</div>
 
-        <div class="info-box" style="margin-top: 15px;">
-            <strong>🔧 工具過濾機制</strong>
-            <p style="margin-top: 8px; margin-bottom: 0;">MCP 工具列表會根據您啟用的參數動態調整。例如只啟用 <code>--word</code> 時，只會顯示 Word 相關工具，不會出現 Excel、PDF 等其他工具。</p>
-        </div>
+<div class="section">
+    <h2>步驟 4：重啟 MCP 客戶端</h2>
+    <p>完成配置後，重啟您使用的 MCP 客戶端即可開始使用。</p>
+    <div class="info-box" style="margin-top: 20px;">
+        <strong>✅ 完成！</strong> 現在您可以在 MCP 客戶端中使用 Aspose MCP Server 的所有工具了。
+    </div>
+</div>
 
-        <h3>環境變數配置（Docker/Kubernetes 適用）</h3>
-        <p>除了命令列參數外，也可以使用環境變數配置：</p>
-        <ul class="param-list">
-            <li><code>ASPOSE_TOOLS</code> - 啟用的工具：<code>all</code>（全部）或 <code>word,excel,pdf,ppt,ocr,email,barcode</code></li>
-            <li><code>ASPOSE_TRANSPORT</code> - 傳輸模式：<code>stdio</code>、<code>http</code>、<code>ws</code></li>
-            <li><code>ASPOSE_PORT</code> - 監聽埠號（預設：3000）</li>
-            <li><code>ASPOSE_HOST</code> - 監聯位址（預設：localhost，容器用 0.0.0.0）</li>
-            <li><code>ASPOSE_SESSION_ENABLED</code> - 啟用 Session 管理：<code>true</code> 或 <code>false</code></li>
-            <li><code>ASPOSE_SESSION_ISOLATION</code> - Session 隔離模式：<code>none</code>（無隔離）、<code>group</code>（群組級，預設）</li>
-            <li><code>ASPOSE_SESSION_AUTO_SAVE_INTERVAL</code> - 自動暫存間隔（分鐘，0 = 停用，預設：0）</li>
-        </ul>
+<div class="section">
+    <h2>📝 使用範例</h2>
 
-        <div class="info-box">
-            <strong>💡 轉換功能說明</strong>
-            <ul class="param-list" style="margin-top: 10px;">
-                <li>啟用任何文檔工具（<code>--word</code>、<code>--excel</code>、<code>--ppt</code>）時，自動包含 <code>convert_to_pdf</code>（轉換為PDF）</li>
-                <li>啟用兩個或以上文檔工具時，自動包含 <code>convert_document</code>（跨格式轉換，如Word轉Excel）</li>
-            </ul>
-        </div>
+    <h3>從A文檔複製格式到B文檔</h3>
+
+    <h4>複製段落格式：</h4>
+    <div class="code-block">
+        1. word_paragraph(path="A.docx", operation="get_format", paragraphIndex=0)
+        2. 使用返回的格式資訊
+        3. word_paragraph(path="B.docx", operation="edit", paragraphIndex=0, ...)
     </div>
 
-    <div class="section">
-        <h2>步驟 4：重啟 MCP 客戶端</h2>
-        <p>完成配置後，重啟您使用的 MCP 客戶端即可開始使用。</p>
-        <div class="info-box" style="margin-top: 20px;">
-            <strong>✅ 完成！</strong> 現在您可以在 MCP 客戶端中使用 Aspose MCP Server 的所有工具了。
-        </div>
+    <h4>複製表格結構：</h4>
+    <div class="code-block">
+        1. word_table(path="A.docx", operation="get_structure", tableIndex=0)
+        2. 參考返回的結構資訊
+        3. word_table(path="B.docx", operation="create", ...) 創建相同結構
     </div>
 
-    <div class="section">
-        <h2>📝 使用範例</h2>
-
-        <h3>從A文檔複製格式到B文檔</h3>
-
-        <h4>複製段落格式：</h4>
-        <div class="code-block">
-            1. word_paragraph(path="A.docx", operation="get_format", paragraphIndex=0)
-            2. 使用返回的格式資訊
-            3. word_paragraph(path="B.docx", operation="edit", paragraphIndex=0, ...)
-        </div>
-
-        <h4>複製表格結構：</h4>
-        <div class="code-block">
-            1. word_table(path="A.docx", operation="get_structure", tableIndex=0)
-            2. 參考返回的結構資訊
-            3. word_table(path="B.docx", operation="create", ...) 創建相同結構
-        </div>
-
-        <h4>複製樣式：</h4>
-        <div class="code-block">
-            word_style(path="B.docx", operation="copy_styles", sourceDocument="A.docx")
-        </div>
+    <h4>複製樣式：</h4>
+    <div class="code-block">
+        word_style(path="B.docx", operation="copy_styles", sourceDocument="A.docx")
     </div>
+</div>
 </div>
 
 <footer>
