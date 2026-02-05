@@ -1,4 +1,5 @@
 using Aspose.Slides;
+using Aspose.Slides.Export;
 using AsposeMcpServer.Core.Handlers;
 
 namespace AsposeMcpServer.Tests.Infrastructure;
@@ -32,16 +33,21 @@ public abstract class PptHandlerTestBase : HandlerTestBase<Presentation>
 
     /// <summary>
     ///     Creates a PowerPoint presentation with a text shape.
+    ///     The presentation is saved and reloaded via MemoryStream to materialize font metadata,
+    ///     ensuring FontsManager.GetFonts() returns the actual fonts used.
     /// </summary>
     /// <param name="text">The text content.</param>
     /// <returns>A Presentation with a text shape on the first slide.</returns>
     protected static Presentation CreatePresentationWithText(string text)
     {
-        var pres = new Presentation();
-        var slide = pres.Slides[0];
+        using var tempPres = new Presentation();
+        var slide = tempPres.Slides[0];
         var shape = slide.Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 400, 100);
         shape.TextFrame.Text = text;
-        return pres;
+
+        using var ms = new MemoryStream();
+        tempPres.Save(ms, SaveFormat.Pptx);
+        return new Presentation(new MemoryStream(ms.ToArray()));
     }
 
     /// <summary>

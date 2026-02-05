@@ -15,8 +15,13 @@ public class PdfProgressAdapterTests
     {
         var adapter = new PdfProgressAdapter(null);
 
-        adapter.ReportProgress(0, 10, "test");
-        adapter.ReportPercentage(50, "test");
+        var exception = Record.Exception(() =>
+        {
+            adapter.ReportProgress(0, 10, "test");
+            adapter.ReportPercentage(50, "test");
+        });
+
+        Assert.Null(exception);
     }
 
     #endregion

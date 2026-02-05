@@ -15,7 +15,9 @@ public class ToolFilterServiceTests
         bool enableExcel = false,
         bool enablePowerPoint = false,
         bool enablePdf = false,
-        bool enableOcr = false)
+        bool enableOcr = false,
+        bool enableEmail = false,
+        bool enableBarCode = false)
     {
         var args = new List<string>();
 
@@ -24,6 +26,8 @@ public class ToolFilterServiceTests
         if (enablePowerPoint) args.Add("--ppt");
         if (enablePdf) args.Add("--pdf");
         if (enableOcr) args.Add("--ocr");
+        if (enableEmail) args.Add("--email");
+        if (enableBarCode) args.Add("--barcode");
 
         // If nothing enabled, we need to enable something to avoid validation error
         // But for testing, we want to test with nothing enabled
@@ -170,6 +174,59 @@ public class ToolFilterServiceTests
 
     #endregion
 
+    #region Email Tool Tests
+
+    [Fact]
+    public void IsToolEnabled_EmailTool_WhenEmailEnabled_ShouldReturnTrue()
+    {
+        var serverConfig = CreateServerConfig(enableEmail: true);
+        var sessionConfig = new SessionConfig();
+        var service = new ToolFilterService(serverConfig, sessionConfig);
+
+        Assert.True(service.IsToolEnabled("email_file"));
+        Assert.True(service.IsToolEnabled("email_content"));
+        Assert.True(service.IsToolEnabled("email_attachment"));
+    }
+
+    [Fact]
+    public void IsToolEnabled_EmailTool_WhenEmailDisabled_ShouldReturnFalse()
+    {
+        var serverConfig = CreateServerConfig(enableEmail: false);
+        var sessionConfig = new SessionConfig();
+        var service = new ToolFilterService(serverConfig, sessionConfig);
+
+        Assert.False(service.IsToolEnabled("email_file"));
+        Assert.False(service.IsToolEnabled("email_content"));
+    }
+
+    #endregion
+
+    #region BarCode Tool Tests
+
+    [Fact]
+    public void IsToolEnabled_BarCodeTool_WhenBarCodeEnabled_ShouldReturnTrue()
+    {
+        var serverConfig = CreateServerConfig(enableBarCode: true);
+        var sessionConfig = new SessionConfig();
+        var service = new ToolFilterService(serverConfig, sessionConfig);
+
+        Assert.True(service.IsToolEnabled("barcode_generate"));
+        Assert.True(service.IsToolEnabled("barcode_recognize"));
+    }
+
+    [Fact]
+    public void IsToolEnabled_BarCodeTool_WhenBarCodeDisabled_ShouldReturnFalse()
+    {
+        var serverConfig = CreateServerConfig(enableBarCode: false);
+        var sessionConfig = new SessionConfig();
+        var service = new ToolFilterService(serverConfig, sessionConfig);
+
+        Assert.False(service.IsToolEnabled("barcode_generate"));
+        Assert.False(service.IsToolEnabled("barcode_recognize"));
+    }
+
+    #endregion
+
     #region Session Tool Tests
 
     [Fact]
@@ -207,9 +264,19 @@ public class ToolFilterServiceTests
     }
 
     [Fact]
-    public void IsToolEnabled_ConvertToPdf_WhenOnlyPdfEnabled_ShouldReturnFalse()
+    public void IsToolEnabled_ConvertToPdf_WhenOnlyPdfEnabled_ShouldReturnTrue()
     {
         var serverConfig = CreateServerConfig(enablePdf: true);
+        var sessionConfig = new SessionConfig();
+        var service = new ToolFilterService(serverConfig, sessionConfig);
+
+        Assert.True(service.IsToolEnabled("convert_to_pdf"));
+    }
+
+    [Fact]
+    public void IsToolEnabled_ConvertToPdf_WhenNoneEnabled_ShouldReturnFalse()
+    {
+        var serverConfig = CreateServerConfig();
         var sessionConfig = new SessionConfig();
         var service = new ToolFilterService(serverConfig, sessionConfig);
 
@@ -236,6 +303,16 @@ public class ToolFilterServiceTests
         Assert.False(service.IsToolEnabled("convert_document"));
     }
 
+    [Fact]
+    public void IsToolEnabled_ConvertDocument_WhenWordAndEmailEnabled_ShouldReturnTrue()
+    {
+        var serverConfig = CreateServerConfig(true, enableEmail: true);
+        var sessionConfig = new SessionConfig();
+        var service = new ToolFilterService(serverConfig, sessionConfig);
+
+        Assert.True(service.IsToolEnabled("convert_document"));
+    }
+
     #endregion
 
     #region GetEnabledCategories Tests
@@ -243,7 +320,7 @@ public class ToolFilterServiceTests
     [Fact]
     public void GetEnabledCategories_AllEnabled_ShouldReturnAll()
     {
-        var serverConfig = CreateServerConfig(true, true, true, true, true);
+        var serverConfig = CreateServerConfig(true, true, true, true, true, true, true);
         var sessionConfig = new SessionConfig { Enabled = true };
         var service = new ToolFilterService(serverConfig, sessionConfig);
 
@@ -254,6 +331,8 @@ public class ToolFilterServiceTests
         Assert.Contains("PowerPoint", result);
         Assert.Contains("PDF", result);
         Assert.Contains("OCR", result);
+        Assert.Contains("Email", result);
+        Assert.Contains("BarCode", result);
         Assert.Contains("Session", result);
     }
 

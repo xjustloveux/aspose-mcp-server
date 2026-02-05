@@ -9,7 +9,7 @@ using ModelContextProtocol.Server;
 namespace AsposeMcpServer.Tools.Pdf;
 
 /// <summary>
-///     Tool for managing form fields in PDF documents (add, delete, edit, get)
+///     Tool for managing form fields in PDF documents (add, delete, edit, get, export, import, flatten)
 /// </summary>
 [ToolHandlerMapping("AsposeMcpServer.Handlers.Pdf.FormField")]
 [McpServerToolType]
@@ -44,9 +44,9 @@ public class PdfFormFieldTool
     }
 
     /// <summary>
-    ///     Executes a PDF form field operation (add, delete, edit, get).
+    ///     Executes a PDF form field operation (add, delete, edit, get, export, import, flatten).
     /// </summary>
-    /// <param name="operation">The operation to perform: add, delete, edit, get.</param>
+    /// <param name="operation">The operation to perform: add, delete, edit, get, export, import, flatten.</param>
     /// <param name="path">PDF file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID for in-memory editing.</param>
     /// <param name="outputPath">Output file path (file mode only).</param>
@@ -61,7 +61,9 @@ public class PdfFormFieldTool
     /// <param name="value">Field value (for edit).</param>
     /// <param name="checkedValue">Checked state (for CheckBox, RadioButton).</param>
     /// <param name="limit">Maximum number of fields to return (for get, default: 100).</param>
-    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <param name="dataPath">Data file path for export/import (FDF, XFDF, or XML).</param>
+    /// <param name="format">Data format for export/import: fdf, xfdf, xml (default: xfdf for export, auto-detect for import).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get/export operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(
         Name = "pdf_form_field",
@@ -71,20 +73,26 @@ public class PdfFormFieldTool
         OpenWorld = false,
         ReadOnly = false,
         UseStructuredContent = true)]
-    [Description(@"Manage form fields in PDF documents. Supports 4 operations: add, delete, edit, get.
+    [Description(
+        @"Manage form fields in PDF documents. Supports 7 operations: add, delete, edit, get, export, import, flatten.
 
 Usage examples:
 - Add form field: pdf_form_field(operation='add', path='doc.pdf', pageIndex=1, fieldType='TextBox', fieldName='name', x=100, y=100, width=200, height=20)
 - Delete form field: pdf_form_field(operation='delete', path='doc.pdf', fieldName='name')
 - Edit form field: pdf_form_field(operation='edit', path='doc.pdf', fieldName='name', value='New Value')
 - Get form fields: pdf_form_field(operation='get', path='doc.pdf')
-- Get form fields with limit: pdf_form_field(operation='get', path='doc.pdf', limit=50)")]
+- Export form data: pdf_form_field(operation='export', path='doc.pdf', dataPath='data.xfdf', format='xfdf')
+- Import form data: pdf_form_field(operation='import', path='doc.pdf', dataPath='data.xfdf')
+- Flatten form fields: pdf_form_field(operation='flatten', path='doc.pdf')")]
     public object Execute(
         [Description(@"Operation to perform.
 - 'add': Add a form field (required params: path, pageIndex, fieldType, fieldName, x, y, width, height)
 - 'delete': Delete a form field (required params: path, fieldName)
 - 'edit': Edit form field value (required params: path, fieldName)
-- 'get': Get form field info (required params: path, fieldName)")]
+- 'get': Get form field info (required params: path)
+- 'export': Export form data to file (required params: path, dataPath; optional: format)
+- 'import': Import form data from file (required params: path, dataPath; optional: format)
+- 'flatten': Flatten all form fields to static content (required params: path)")]
         string operation,
         [Description("PDF file path (required if no sessionId)")]
         string? path = null,
@@ -113,12 +121,17 @@ Usage examples:
         [Description("Checked state (for CheckBox, RadioButton)")]
         bool? checkedValue = null,
         [Description("Maximum number of fields to return (for get, default: 100)")]
-        int limit = 100)
+        int limit = 100,
+        [Description("Data file path for export/import (FDF, XFDF, or XML file)")]
+        string? dataPath = null,
+        [Description(
+            "Data format for export/import: fdf, xfdf, xml (default: xfdf for export, auto-detect for import)")]
+        string? format = null)
     {
         using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         var parameters = BuildParameters(operation, pageIndex, fieldType, fieldName, x, y, width, height,
-            defaultValue, value, checkedValue, limit);
+            defaultValue, value, checkedValue, limit, dataPath, format);
 
         var handler = _handlerRegistry.GetHandler(operation);
 
@@ -134,7 +147,7 @@ Usage examples:
 
         var result = handler.Execute(operationContext, parameters);
 
-        if (string.Equals(operation, "get", StringComparison.OrdinalIgnoreCase))
+        if (operation.ToLowerInvariant() is "get" or "export")
             return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
@@ -160,7 +173,9 @@ Usage examples:
         string? defaultValue,
         string? value,
         bool? checkedValue,
-        int limit)
+        int limit,
+        string? dataPath,
+        string? format)
     {
         return operation.ToLowerInvariant() switch
         {
@@ -168,6 +183,8 @@ Usage examples:
             "delete" => BuildDeleteParameters(fieldName),
             "edit" => BuildEditParameters(fieldName, value, checkedValue),
             "get" => BuildGetParameters(limit),
+            "export" => BuildExportParameters(dataPath, format),
+            "import" => BuildImportParameters(dataPath, format),
             _ => new OperationParameters()
         };
     }
@@ -236,6 +253,34 @@ Usage examples:
     {
         var parameters = new OperationParameters();
         parameters.Set("limit", limit);
+        return parameters;
+    }
+
+    /// <summary>
+    ///     Builds parameters for the export form data operation.
+    /// </summary>
+    /// <param name="dataPath">The output file path for exported data.</param>
+    /// <param name="format">The export format (fdf, xfdf, xml).</param>
+    /// <returns>OperationParameters configured for exporting form data.</returns>
+    private static OperationParameters BuildExportParameters(string? dataPath, string? format)
+    {
+        var parameters = new OperationParameters();
+        if (dataPath != null) parameters.Set("dataPath", dataPath);
+        if (format != null) parameters.Set("format", format);
+        return parameters;
+    }
+
+    /// <summary>
+    ///     Builds parameters for the import form data operation.
+    /// </summary>
+    /// <param name="dataPath">The input data file path.</param>
+    /// <param name="format">The import format (fdf, xfdf, xml), or null for auto-detect.</param>
+    /// <returns>OperationParameters configured for importing form data.</returns>
+    private static OperationParameters BuildImportParameters(string? dataPath, string? format)
+    {
+        var parameters = new OperationParameters();
+        if (dataPath != null) parameters.Set("dataPath", dataPath);
+        if (format != null) parameters.Set("format", format);
         return parameters;
     }
 }

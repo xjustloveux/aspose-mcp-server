@@ -136,7 +136,7 @@
     <div class="faq-item">
         <div class="faq-question">Q: 可以同時啟用多個工具類型嗎？</div>
         <div class="faq-answer">
-            <p>可以。使用 <code>--all</code> 參數或同時指定多個參數，例如：</p>
+            <p>可以。不帶任何工具參數時，預設啟用所有工具。也可以使用 <code>--all</code> 達到相同效果，或指定多個參數只啟用部分工具：</p>
             <div class="code-block">
                 {
                 "args": ["--word", "--excel", "--pdf"]
@@ -163,6 +163,8 @@
                 <li><strong>Excel</strong>: XLS、XLSX、CSV、ODS、HTML 等</li>
                 <li><strong>PowerPoint</strong>: PPT、PPTX、ODP、HTML 等</li>
                 <li><strong>PDF</strong>: PDF（讀寫、編輯、簽名等）</li>
+                <li><strong>Email</strong>: EML、MSG、EMLX、MHT、ICS、VCF 等</li>
+                <li><strong>BarCode</strong>: QR、Code128、EAN13、DataMatrix、PDF417 等（產生與辨識）</li>
             </ul>
         </div>
     </div>

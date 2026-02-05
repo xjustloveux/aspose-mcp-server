@@ -1,8 +1,8 @@
 ﻿using System.ComponentModel;
 using Aspose.Cells;
+using Aspose.Pdf;
 using Aspose.Slides;
 using Aspose.Slides.Export;
-using Aspose.Words;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Progress;
 using AsposeMcpServer.Core.Session;
@@ -10,13 +10,15 @@ using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Results.Conversion;
 using ModelContextProtocol;
 using ModelContextProtocol.Server;
+using Document = Aspose.Words.Document;
+using HtmlLoadOptions = Aspose.Pdf.HtmlLoadOptions;
 using PdfSaveOptions = Aspose.Words.Saving.PdfSaveOptions;
 using SaveFormat = Aspose.Slides.Export.SaveFormat;
 
 namespace AsposeMcpServer.Tools.Conversion;
 
 /// <summary>
-///     Tool for converting documents (Word, Excel, PowerPoint) to PDF format.
+///     Tool for converting documents (Word, Excel, PowerPoint, HTML, EPUB, Markdown, SVG, XPS, LaTeX, MHT) to PDF format.
 /// </summary>
 [McpServerToolType]
 public class ConvertToPdfTool
@@ -44,16 +46,19 @@ public class ConvertToPdfTool
     }
 
     /// <summary>
-    ///     Converts a document (Word, Excel, PowerPoint) to PDF format.
+    ///     Converts a document (Word, Excel, PowerPoint, HTML, EPUB, Markdown, SVG, XPS, LaTeX, MHT) to PDF format.
     /// </summary>
-    /// <param name="inputPath">Input file path (required if no sessionId).</param>
+    /// <param name="inputPath">
+    ///     Input file path supporting Word, Excel, PowerPoint, HTML, EPUB, Markdown, SVG, XPS, LaTeX, MHT
+    ///     formats (required if no sessionId).
+    /// </param>
     /// <param name="sessionId">Session ID to convert document from session.</param>
     /// <param name="outputPath">Output PDF file path (required).</param>
     /// <param name="progress">Optional progress reporter for long-running operations.</param>
     /// <returns>A ConversionResult indicating the conversion result with output path information.</returns>
     /// <exception cref="ArgumentException">
     ///     Thrown when outputPath is not provided, neither inputPath nor sessionId is provided,
-    ///     or when attempting to convert PDF to PDF.
+    ///     when attempting to convert PDF to PDF, or when the file format is not supported.
     /// </exception>
     /// <exception cref="InvalidOperationException">Thrown when session management is not enabled but sessionId is provided.</exception>
     /// <exception cref="KeyNotFoundException">Thrown when the specified session is not found or access is denied.</exception>
@@ -66,12 +71,16 @@ public class ConvertToPdfTool
         ReadOnly = false,
         UseStructuredContent = true)]
     [OutputSchema(typeof(ConversionResult))]
-    [Description(@"Convert any document (Word, Excel, PowerPoint) to PDF.
+    [Description(@"Convert any document (Word, Excel, PowerPoint, HTML, EPUB, Markdown, SVG, XPS, LaTeX, MHT) to PDF.
 
 Usage examples:
 - Convert Word to PDF: convert_to_pdf(inputPath='doc.docx', outputPath='doc.pdf')
 - Convert Excel to PDF: convert_to_pdf(inputPath='book.xlsx', outputPath='book.pdf')
 - Convert PowerPoint to PDF: convert_to_pdf(inputPath='presentation.pptx', outputPath='presentation.pdf')
+- Convert HTML to PDF: convert_to_pdf(inputPath='page.html', outputPath='page.pdf')
+- Convert EPUB to PDF: convert_to_pdf(inputPath='book.epub', outputPath='book.pdf')
+- Convert Markdown to PDF: convert_to_pdf(inputPath='doc.md', outputPath='doc.pdf')
+- Convert SVG to PDF: convert_to_pdf(inputPath='image.svg', outputPath='image.pdf')
 - Convert from session: convert_to_pdf(sessionId='sess_xxx', outputPath='doc.pdf')")]
     public ConversionResult Execute(
         [Description("Input file path (required if no sessionId)")]
@@ -227,6 +236,71 @@ Usage examples:
                 }
 
                 sourceFormat = "PowerPoint";
+                break;
+
+            case ".html":
+            case ".htm":
+                using (var pdfDoc = new Aspose.Pdf.Document(inputPath, new HtmlLoadOptions()))
+                {
+                    pdfDoc.Save(outputPath);
+                }
+
+                sourceFormat = "HTML";
+                break;
+
+            case ".epub":
+                using (var pdfDoc = new Aspose.Pdf.Document(inputPath, new EpubLoadOptions()))
+                {
+                    pdfDoc.Save(outputPath);
+                }
+
+                sourceFormat = "EPUB";
+                break;
+
+            case ".md":
+                using (var pdfDoc = new Aspose.Pdf.Document(inputPath, new MdLoadOptions()))
+                {
+                    pdfDoc.Save(outputPath);
+                }
+
+                sourceFormat = "Markdown";
+                break;
+
+            case ".svg":
+                using (var pdfDoc = new Aspose.Pdf.Document(inputPath, new SvgLoadOptions()))
+                {
+                    pdfDoc.Save(outputPath);
+                }
+
+                sourceFormat = "SVG";
+                break;
+
+            case ".xps":
+                using (var pdfDoc = new Aspose.Pdf.Document(inputPath, new XpsLoadOptions()))
+                {
+                    pdfDoc.Save(outputPath);
+                }
+
+                sourceFormat = "XPS";
+                break;
+
+            case ".tex":
+                using (var pdfDoc = new Aspose.Pdf.Document(inputPath, new TeXLoadOptions()))
+                {
+                    pdfDoc.Save(outputPath);
+                }
+
+                sourceFormat = "LaTeX";
+                break;
+
+            case ".mht":
+            case ".mhtml":
+                using (var pdfDoc = new Aspose.Pdf.Document(inputPath, new MhtLoadOptions()))
+                {
+                    pdfDoc.Save(outputPath);
+                }
+
+                sourceFormat = "MHT";
                 break;
 
             default:

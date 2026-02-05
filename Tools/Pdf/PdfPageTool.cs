@@ -43,9 +43,9 @@ public class PdfPageTool
     }
 
     /// <summary>
-    ///     Executes a PDF page operation (add, delete, rotate, get_details, get_info).
+    ///     Executes a PDF page operation (add, delete, rotate, crop, resize, get_details, get_info).
     /// </summary>
-    /// <param name="operation">The operation to perform: add, delete, rotate, get_details, get_info.</param>
+    /// <param name="operation">The operation to perform: add, delete, rotate, crop, resize, get_details, get_info.</param>
     /// <param name="path">PDF file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID for in-memory editing.</param>
     /// <param name="outputPath">Output file path (optional, defaults to overwrite input).</param>
@@ -53,6 +53,8 @@ public class PdfPageTool
     /// <param name="insertAt">Position to insert pages (1-based, for add, optional).</param>
     /// <param name="width">Page width in points (for add, optional).</param>
     /// <param name="height">Page height in points (for add, optional).</param>
+    /// <param name="x">X position in points (for crop, lower-left corner).</param>
+    /// <param name="y">Y position in points (for crop, lower-left corner).</param>
     /// <param name="pageIndex">Page index (1-based, required for delete, rotate, get_details).</param>
     /// <param name="rotation">Rotation angle in degrees: 0, 90, 180, 270 (for rotate, required).</param>
     /// <param name="pageIndices">Array of page indices to rotate (1-based, for rotate, optional).</param>
@@ -66,12 +68,15 @@ public class PdfPageTool
         OpenWorld = false,
         ReadOnly = false,
         UseStructuredContent = true)]
-    [Description(@"Manage pages in PDF documents. Supports 5 operations: add, delete, rotate, get_details, get_info.
+    [Description(
+        @"Manage pages in PDF documents. Supports 7 operations: add, delete, rotate, crop, resize, get_details, get_info.
 
 Usage examples:
 - Add page: pdf_page(operation='add', path='doc.pdf', count=1)
 - Delete page: pdf_page(operation='delete', path='doc.pdf', pageIndex=1)
 - Rotate page: pdf_page(operation='rotate', path='doc.pdf', pageIndex=1, rotation=90)
+- Crop page: pdf_page(operation='crop', path='doc.pdf', pageIndex=1, x=50, y=50, width=400, height=600)
+- Resize page: pdf_page(operation='resize', path='doc.pdf', pageIndex=1, width=595, height=842)
 - Get page details: pdf_page(operation='get_details', path='doc.pdf', pageIndex=1)
 - Get page info: pdf_page(operation='get_info', path='doc.pdf')")]
     public object Execute(
@@ -79,6 +84,8 @@ Usage examples:
 - 'add': Add page(s) (required params: path)
 - 'delete': Delete a page (required params: path, pageIndex)
 - 'rotate': Rotate a page (required params: path, pageIndex, rotation)
+- 'crop': Crop a page (required params: path, pageIndex, x, y, width, height)
+- 'resize': Resize a page (required params: path, pageIndex, width, height)
 - 'get_details': Get page details (required params: path, pageIndex)
 - 'get_info': Get all pages info (required params: path)")]
         string operation,
@@ -92,11 +99,15 @@ Usage examples:
         int count = 1,
         [Description("Position to insert pages (1-based, for add, optional, default: append at end)")]
         int? insertAt = null,
-        [Description("Page width in points (for add, optional)")]
+        [Description("Page width in points (for add, crop, resize)")]
         double? width = null,
-        [Description("Page height in points (for add, optional)")]
+        [Description("Page height in points (for add, crop, resize)")]
         double? height = null,
-        [Description("Page index (1-based, required for delete, rotate, get_details)")]
+        [Description("X position in points (for crop, lower-left corner)")]
+        double? x = null,
+        [Description("Y position in points (for crop, lower-left corner)")]
+        double? y = null,
+        [Description("Page index (1-based, required for delete, rotate, crop, resize, get_details)")]
         int pageIndex = 0,
         [Description("Rotation angle in degrees: 0, 90, 180, 270 (for rotate, required)")]
         int rotation = 0,
@@ -105,7 +116,8 @@ Usage examples:
     {
         using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
-        var parameters = BuildParameters(operation, count, insertAt, width, height, pageIndex, rotation, pageIndices);
+        var parameters = BuildParameters(operation, count, insertAt, width, height, x, y, pageIndex, rotation,
+            pageIndices);
 
         var handler = _handlerRegistry.GetHandler(operation);
 
@@ -141,6 +153,8 @@ Usage examples:
         int? insertAt,
         double? width,
         double? height,
+        double? x,
+        double? y,
         int pageIndex,
         int rotation,
         int[]? pageIndices)
@@ -150,6 +164,8 @@ Usage examples:
             "add" => BuildAddParameters(count, insertAt, width, height),
             "delete" => BuildDeleteParameters(pageIndex),
             "rotate" => BuildRotateParameters(pageIndex, rotation, pageIndices),
+            "crop" => BuildCropParameters(pageIndex, x, y, width, height),
+            "resize" => BuildResizeParameters(pageIndex, width, height),
             "get_details" => BuildGetDetailsParameters(pageIndex),
             _ => new OperationParameters()
         };
@@ -198,6 +214,43 @@ Usage examples:
         parameters.Set("pageIndex", pageIndex);
         parameters.Set("rotation", rotation);
         if (pageIndices != null) parameters.Set("pageIndices", pageIndices);
+        return parameters;
+    }
+
+    /// <summary>
+    ///     Builds parameters for the crop page operation.
+    /// </summary>
+    /// <param name="pageIndex">The page index (1-based) to crop.</param>
+    /// <param name="x">The lower-left X coordinate.</param>
+    /// <param name="y">The lower-left Y coordinate.</param>
+    /// <param name="width">The crop width.</param>
+    /// <param name="height">The crop height.</param>
+    /// <returns>OperationParameters configured for cropping a page.</returns>
+    private static OperationParameters BuildCropParameters(int pageIndex, double? x, double? y, double? width,
+        double? height)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("pageIndex", pageIndex);
+        if (x.HasValue) parameters.Set("x", x.Value);
+        if (y.HasValue) parameters.Set("y", y.Value);
+        if (width.HasValue) parameters.Set("width", width.Value);
+        if (height.HasValue) parameters.Set("height", height.Value);
+        return parameters;
+    }
+
+    /// <summary>
+    ///     Builds parameters for the resize page operation.
+    /// </summary>
+    /// <param name="pageIndex">The page index (1-based) to resize.</param>
+    /// <param name="width">The new page width in points.</param>
+    /// <param name="height">The new page height in points.</param>
+    /// <returns>OperationParameters configured for resizing a page.</returns>
+    private static OperationParameters BuildResizeParameters(int pageIndex, double? width, double? height)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("pageIndex", pageIndex);
+        if (width.HasValue) parameters.Set("width", width.Value);
+        if (height.HasValue) parameters.Set("height", height.Value);
         return parameters;
     }
 

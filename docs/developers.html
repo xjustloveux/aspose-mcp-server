@@ -311,8 +311,8 @@ cd aspose-mcp-server">
 
     <h3>測試統計</h3>
     <ul style="margin-top: 15px; padding-left: 25px;">
-        <li><strong>測試類</strong>: 100+ 個測試類（含 Core、Security、Session 測試）</li>
-        <li><strong>測試用例</strong>: 7,000+ 個測試用例</li>
+        <li><strong>測試類</strong>: 730+ 個測試類（含 Core、Security、Session 測試）</li>
+        <li><strong>測試用例</strong>: 9,000+ 個測試用例</li>
         <li><strong>測試框架</strong>: xUnit 2.9.2</li>
     </ul>
 
@@ -366,18 +366,24 @@ cd aspose-mcp-server">
     <ul style="margin-top: 15px; padding-left: 25px;">
         <li><code>Tests/Core/</code> - 核心功能測試（Handlers、Helpers、Security、Session、Tracking）</li>
         <li>
-            <code>Tests/Handlers/</code> - Handler 測試（408 個測試類）
+            <code>Tests/Handlers/</code> - Handler 測試（524 個測試類）
             <ul style="margin-top: 5px; padding-left: 20px;">
                 <li><code>Word/</code> - Word Handler 測試</li>
                 <li><code>Excel/</code> - Excel Handler 測試</li>
                 <li><code>PowerPoint/</code> - PowerPoint Handler 測試</li>
                 <li><code>Pdf/</code> - PDF Handler 測試</li>
+                <li><code>Ocr/</code> - OCR Handler 測試</li>
+                <li><code>Email/</code> - Email Handler 測試</li>
+                <li><code>BarCode/</code> - BarCode Handler 測試</li>
             </ul>
         </li>
-        <li><code>Tests/Tools/Word/</code> - Word 工具測試（24 個測試類）</li>
-        <li><code>Tests/Tools/Excel/</code> - Excel 工具測試（25 個測試類）</li>
-        <li><code>Tests/Tools/PowerPoint/</code> - PowerPoint 工具測試（21 個測試類）</li>
-        <li><code>Tests/Tools/Pdf/</code> - PDF 工具測試（15 個測試類）</li>
+        <li><code>Tests/Tools/Word/</code> - Word 工具測試（27 個測試類）</li>
+        <li><code>Tests/Tools/Excel/</code> - Excel 工具測試（31 個測試類）</li>
+        <li><code>Tests/Tools/PowerPoint/</code> - PowerPoint 工具測試（25 個測試類）</li>
+        <li><code>Tests/Tools/Pdf/</code> - PDF 工具測試（19 個測試類）</li>
+        <li><code>Tests/Tools/Ocr/</code> - OCR 工具測試（2 個測試類）</li>
+        <li><code>Tests/Tools/Email/</code> - Email 工具測試（6 個測試類）</li>
+        <li><code>Tests/Tools/BarCode/</code> - BarCode 工具測試（2 個測試類）</li>
         <li><code>Tests/Tools/Conversion/</code> - 轉換工具測試（2 個測試類）</li>
         <li><code>Tests/Helpers/</code> - Helper 單元測試（Excel、Word、PowerPoint、PDF Helper 測試）</li>
         <li><code>Tests/Infrastructure/</code> - 測試基礎設施（TestBase、WordTestBase、ExcelTestBase、PdfTestBase、HandlerTestBase）</li>
@@ -446,7 +452,7 @@ cd aspose-mcp-server">
     <p>Handler 基礎架構：IOperationHandler（介面）、OperationHandlerBase（基類）、OperationContext（上下文）、OperationParameters（參數）、HandlerRegistry（註冊器）。實現 Tool 與業務邏輯的分離。</p>
 
     <h3>Handlers/</h3>
-    <p>操作處理器：407 個 Handler 實作業務邏輯。每個 Handler 對應一個操作（如 AddWordBookmarkHandler），並透過 HandlerRegistry 註冊。100% 單元測試覆蓋（408 個測試類）。</p>
+    <p>操作處理器：524 個 Handler 實作業務邏輯。每個 Handler 對應一個操作（如 AddWordBookmarkHandler），並透過 HandlerRegistry 註冊。100% 單元測試覆蓋（524 個測試類）。</p>
 
     <h3>Helpers/</h3>
     <p>通用輔助工具：SecurityHelper（安全驗證）、ColorHelper（顏色處理）、FontHelper（字型設定）、ValueHelper（值轉換）等。包含各文檔類型的專用 Helper（Excel/、Word/、PowerPoint/、Pdf/）。</p>

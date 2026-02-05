@@ -1,19 +1,15 @@
-using Aspose.Cells;
-using Aspose.Cells.Charts;
 using Aspose.Words;
-using Aspose.Words.Drawing;
+using Aspose.Words.Drawing.Charts;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
-using ImageType = Aspose.Cells.Drawing.ImageType;
-using IOFile = System.IO.File;
 
 namespace AsposeMcpServer.Handlers.Word.Shape;
 
 /// <summary>
-///     Handler for adding charts to Word documents.
+///     Handler for adding charts to Word documents using native Aspose.Words chart API.
 /// </summary>
 [ResultType(typeof(SuccessResult))]
 public class AddChartWordHandler : OperationHandlerBase<Document>
@@ -36,25 +32,82 @@ public class AddChartWordHandler : OperationHandlerBase<Document>
         var tableData = ParseChartData(chartParams.Data);
 
         var doc = context.Document;
-        var tempExcelPath = Path.Combine(Path.GetTempPath(), $"chart_{Guid.NewGuid()}.xlsx");
-        try
-        {
-            var tempImagePath = CreateChartImage(tableData, chartParams, tempExcelPath);
-            InsertChartInDocument(doc, tempImagePath, chartParams);
-            CleanupTempFile(tempImagePath);
+        var builder = new DocumentBuilder(doc);
 
-            MarkModified(context);
-            return new SuccessResult
-                { Message = $"Successfully added chart. Type: {chartParams.ChartType}, Data rows: {tableData.Count}." };
-        }
-        catch (Exception ex)
+        MoveToInsertPosition(builder, doc, chartParams.ParagraphIndex);
+        builder.ParagraphFormat.Alignment = WordShapeHelper.ParseAlignment(chartParams.Alignment);
+
+        var chartType = ParseChartType(chartParams.ChartType);
+        var shape = builder.InsertChart(chartType, chartParams.ChartWidth, chartParams.ChartHeight);
+        var chart = shape.Chart;
+
+        if (!string.IsNullOrEmpty(chartParams.ChartTitle))
+            chart.Title.Text = chartParams.ChartTitle;
+
+        chart.Series.Clear();
+        PopulateChartSeries(chart, tableData, chartType);
+
+        MarkModified(context);
+        return new SuccessResult
+            { Message = $"Successfully added chart. Type: {chartParams.ChartType}, Data rows: {tableData.Count}." };
+    }
+
+    /// <summary>
+    ///     Populates chart series from the parsed table data.
+    /// </summary>
+    /// <param name="chart">The chart to populate.</param>
+    /// <param name="tableData">The table data (first row = headers, subsequent rows = data).</param>
+    /// <param name="chartType">The chart type for scatter-specific handling.</param>
+    private static void PopulateChartSeries(Chart chart, List<List<string>> tableData, ChartType chartType)
+    {
+        if (tableData.Count < 2 || tableData[0].Count < 2)
+            return;
+
+        var headers = tableData[0];
+        var dataRows = tableData.Skip(1).ToList();
+
+        if (chartType == ChartType.Scatter)
         {
-            throw new InvalidOperationException($"Error creating chart: {ex.Message}", ex);
+            PopulateScatterSeries(chart, headers, dataRows);
+            return;
         }
-        finally
+
+        var categories = dataRows.Select(r => r[0]).ToArray();
+
+        for (var col = 1; col < headers.Count; col++)
         {
-            CleanupTempFile(tempExcelPath);
+            var seriesName = headers[col];
+            var values = dataRows.Select(r => col < r.Count ? ParseDouble(r[col]) : 0.0).ToArray();
+            chart.Series.Add(seriesName, categories, values);
         }
+    }
+
+    /// <summary>
+    ///     Populates scatter chart series with numeric X and Y values.
+    /// </summary>
+    /// <param name="chart">The chart to populate.</param>
+    /// <param name="headers">The header row.</param>
+    /// <param name="dataRows">The data rows.</param>
+    private static void PopulateScatterSeries(Chart chart, List<string> headers, List<List<string>> dataRows)
+    {
+        var xValues = dataRows.Select(r => ParseDouble(r[0])).ToArray();
+
+        for (var col = 1; col < headers.Count; col++)
+        {
+            var seriesName = headers[col];
+            var yValues = dataRows.Select(r => col < r.Count ? ParseDouble(r[col]) : 0.0).ToArray();
+            chart.Series.Add(seriesName, xValues, yValues);
+        }
+    }
+
+    /// <summary>
+    ///     Parses a string value to double, returning 0 if parsing fails.
+    /// </summary>
+    /// <param name="value">The string value to parse.</param>
+    /// <returns>The parsed double value, or 0 if parsing fails.</returns>
+    private static double ParseDouble(string value)
+    {
+        return double.TryParse(value, out var result) ? result : 0.0;
     }
 
     /// <summary>
@@ -90,69 +143,6 @@ public class AddChartWordHandler : OperationHandlerBase<Document>
     }
 
     /// <summary>
-    ///     Creates a chart image from the data.
-    /// </summary>
-    /// <param name="tableData">The table data.</param>
-    /// <param name="chartParams">The chart parameters.</param>
-    /// <param name="tempExcelPath">The temporary Excel file path.</param>
-    /// <returns>The path to the created chart image.</returns>
-    private static string CreateChartImage(List<List<string>> tableData, ChartParameters chartParams,
-        string tempExcelPath)
-    {
-        var workbook = new Workbook();
-        var worksheet = workbook.Worksheets[0];
-
-        PopulateWorksheet(worksheet, tableData);
-        var chart = CreateChart(worksheet, tableData, chartParams);
-        workbook.Save(tempExcelPath);
-
-        var tempImagePath = Path.Combine(Path.GetTempPath(), $"chart_{Guid.NewGuid()}.png");
-        chart.ToImage(tempImagePath, ImageType.Png);
-        return tempImagePath;
-    }
-
-    /// <summary>
-    ///     Populates an Excel worksheet with the table data.
-    /// </summary>
-    /// <param name="worksheet">The worksheet.</param>
-    /// <param name="tableData">The table data.</param>
-    private static void PopulateWorksheet(Worksheet worksheet, List<List<string>> tableData)
-    {
-        for (var i = 0; i < tableData.Count; i++)
-        for (var j = 0; j < tableData[i].Count; j++)
-        {
-            var cellValue = tableData[i][j];
-            if (double.TryParse(cellValue, out var numValue) && i > 0)
-                worksheet.Cells[i, j].PutValue(numValue);
-            else
-                worksheet.Cells[i, j].PutValue(cellValue);
-        }
-    }
-
-    /// <summary>
-    ///     Creates a chart in the worksheet.
-    /// </summary>
-    /// <param name="worksheet">The worksheet.</param>
-    /// <param name="tableData">The table data.</param>
-    /// <param name="chartParams">The chart parameters.</param>
-    /// <returns>The created chart.</returns>
-    private static Chart CreateChart(Worksheet worksheet, List<List<string>> tableData, ChartParameters chartParams)
-    {
-        var maxCol = tableData.Max(r => r.Count);
-        var dataRange = $"A1:{Convert.ToChar(64 + maxCol)}{tableData.Count}";
-        var chartTypeEnum = ParseChartType(chartParams.ChartType);
-
-        var chartIndex = worksheet.Charts.Add(chartTypeEnum, 0, tableData.Count + 2, 20, 10);
-        var chart = worksheet.Charts[chartIndex];
-        chart.SetChartDataRange(dataRange, true);
-
-        if (!string.IsNullOrEmpty(chartParams.ChartTitle))
-            chart.Title.Text = chartParams.ChartTitle;
-
-        return chart;
-    }
-
-    /// <summary>
     ///     Parses chart type string to ChartType enum.
     /// </summary>
     /// <param name="chartType">The chart type string.</param>
@@ -169,25 +159,6 @@ public class AddChartWordHandler : OperationHandlerBase<Document>
             "doughnut" => ChartType.Doughnut,
             _ => ChartType.Column
         };
-    }
-
-    /// <summary>
-    ///     Inserts the chart image into the document.
-    /// </summary>
-    /// <param name="doc">The Word document.</param>
-    /// <param name="imagePath">The chart image path.</param>
-    /// <param name="chartParams">The chart parameters.</param>
-    private static void InsertChartInDocument(Document doc, string imagePath, ChartParameters chartParams)
-    {
-        var builder = new DocumentBuilder(doc);
-        MoveToInsertPosition(builder, doc, chartParams.ParagraphIndex);
-        builder.ParagraphFormat.Alignment = WordShapeHelper.ParseAlignment(chartParams.Alignment);
-
-        var shape = builder.InsertImage(imagePath);
-        shape.AspectRatioLocked = false;
-        shape.Width = chartParams.ChartWidth;
-        shape.Height = chartParams.ChartHeight;
-        shape.WrapType = WrapType.Inline;
     }
 
     /// <summary>
@@ -221,23 +192,6 @@ public class AddChartWordHandler : OperationHandlerBase<Document>
             builder.MoveTo(targetPara);
         else
             throw new ArgumentException($"Cannot find paragraph at index {paragraphIndex.Value}");
-    }
-
-    /// <summary>
-    ///     Cleans up a temporary file.
-    /// </summary>
-    /// <param name="filePath">The file path to delete.</param>
-    private static void CleanupTempFile(string filePath)
-    {
-        if (!IOFile.Exists(filePath)) return;
-        try
-        {
-            IOFile.Delete(filePath);
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"[WARN] Error deleting temp file: {ex.Message}");
-        }
     }
 
     /// <summary>

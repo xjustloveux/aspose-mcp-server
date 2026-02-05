@@ -130,6 +130,30 @@ public class LicenseManagerTests : IDisposable
         Assert.False(string.IsNullOrEmpty(errorOutput), "Expected license status output on stderr");
     }
 
+    [Fact]
+    public void SetLicense_WithEmailOnly_ShouldOutputLicenseStatus()
+    {
+        var config = ServerConfig.LoadFromArgs(["--email"]);
+
+        var exception = Record.Exception(() => LicenseManager.SetLicense(config));
+
+        Assert.Null(exception);
+        var errorOutput = _consoleError.ToString();
+        Assert.False(string.IsNullOrEmpty(errorOutput), "Expected license status output on stderr");
+    }
+
+    [Fact]
+    public void SetLicense_WithBarCodeOnly_ShouldOutputLicenseStatus()
+    {
+        var config = ServerConfig.LoadFromArgs(["--barcode"]);
+
+        var exception = Record.Exception(() => LicenseManager.SetLicense(config));
+
+        Assert.Null(exception);
+        var errorOutput = _consoleError.ToString();
+        Assert.False(string.IsNullOrEmpty(errorOutput), "Expected license status output on stderr");
+    }
+
     #endregion
 
     #region Console Output Tests

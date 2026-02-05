@@ -162,6 +162,10 @@ dotnet_diagnostic.S1075.severity = none
 # S3011: Reflection should not be used to increase accessibility
 dotnet_diagnostic.S3011.severity = none
 
+# GetHeadersEmailContentHandlerTests.cs - Assert.All() lambda parameter used only for assertions
+[Tests/Handlers/Email/Content/GetHeadersEmailContentHandlerTests.cs]
+resharper_parameter_only_used_for_precondition_check_local_highlighting = none
+
 # XML and config files
 [*.{xml,config,json,yml,yaml}]
 indent_size = 2

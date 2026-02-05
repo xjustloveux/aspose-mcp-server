@@ -1,5 +1,4 @@
 using Aspose.Words;
-using Aspose.Words.Drawing;
 using AsposeMcpServer.Handlers.Word.Shape;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -22,11 +21,11 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
 
     #region Helper Methods
 
-    private static List<Aspose.Words.Drawing.Shape> GetImageShapes(Document doc)
+    private static List<Aspose.Words.Drawing.Shape> GetChartShapes(Document doc)
     {
         return doc.GetChildNodes(NodeType.Shape, true)
             .Cast<Aspose.Words.Drawing.Shape>()
-            .Where(s => s.HasImage)
+            .Where(s => s.HasChart)
             .ToList();
     }
 
@@ -53,9 +52,8 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
 
         Assert.IsType<SuccessResult>(res);
 
-        var images = GetImageShapes(doc);
-        Assert.NotEmpty(images);
-        if (!IsEvaluationMode(AsposeLibraryType.Words)) Assert.Equal(WrapType.Inline, images[0].WrapType);
+        var charts = GetChartShapes(doc);
+        Assert.NotEmpty(charts);
         AssertModified(context);
     }
 
@@ -80,8 +78,8 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
 
         Assert.IsType<SuccessResult>(res);
 
-        var images = GetImageShapes(doc);
-        Assert.NotEmpty(images);
+        var charts = GetChartShapes(doc);
+        Assert.NotEmpty(charts);
         AssertModified(context);
     }
 
@@ -102,8 +100,8 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
 
         Assert.IsType<SuccessResult>(res);
 
-        var images = GetImageShapes(doc);
-        Assert.NotEmpty(images);
+        var charts = GetChartShapes(doc);
+        Assert.NotEmpty(charts);
     }
 
     [Fact]
@@ -123,8 +121,8 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
 
         Assert.IsType<SuccessResult>(res);
 
-        var images = GetImageShapes(doc);
-        Assert.NotEmpty(images);
+        var charts = GetChartShapes(doc);
+        Assert.NotEmpty(charts);
     }
 
     [Fact]
@@ -142,8 +140,11 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
 
         Assert.IsType<SuccessResult>(res);
 
-        var images = GetImageShapes(doc);
-        Assert.NotEmpty(images);
+        var charts = GetChartShapes(doc);
+        Assert.NotEmpty(charts);
+
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+            Assert.Equal("My Chart", charts[0].Chart.Title.Text);
     }
 
     [Fact]
@@ -190,8 +191,8 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
 
         Assert.IsType<SuccessResult>(res);
 
-        var images = GetImageShapes(doc);
-        Assert.NotEmpty(images);
+        var charts = GetChartShapes(doc);
+        Assert.NotEmpty(charts);
         AssertModified(context);
     }
 
@@ -212,8 +213,8 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
 
         Assert.IsType<SuccessResult>(res);
 
-        var images = GetImageShapes(doc);
-        Assert.NotEmpty(images);
+        var charts = GetChartShapes(doc);
+        Assert.NotEmpty(charts);
         AssertModified(context);
     }
 
@@ -234,8 +235,8 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
 
         Assert.IsType<SuccessResult>(res);
 
-        var images = GetImageShapes(doc);
-        Assert.NotEmpty(images);
+        var charts = GetChartShapes(doc);
+        Assert.NotEmpty(charts);
         AssertModified(context);
     }
 
@@ -256,8 +257,8 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
 
         Assert.IsType<SuccessResult>(res);
 
-        var images = GetImageShapes(doc);
-        Assert.NotEmpty(images);
+        var charts = GetChartShapes(doc);
+        Assert.NotEmpty(charts);
         AssertModified(context);
     }
 
@@ -281,9 +282,9 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
 
         Assert.IsType<SuccessResult>(res);
 
-        var images = GetImageShapes(doc);
-        Assert.NotEmpty(images);
-        if (!IsEvaluationMode(AsposeLibraryType.Words)) Assert.Equal(600.0, images[0].Width);
+        var charts = GetChartShapes(doc);
+        Assert.NotEmpty(charts);
+        if (!IsEvaluationMode(AsposeLibraryType.Words)) Assert.Equal(600.0, charts[0].Width);
         AssertModified(context);
     }
 
@@ -303,9 +304,9 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
 
         Assert.IsType<SuccessResult>(res);
 
-        var images = GetImageShapes(doc);
-        Assert.NotEmpty(images);
-        if (!IsEvaluationMode(AsposeLibraryType.Words)) Assert.Equal(300.0, images[0].Height);
+        var charts = GetChartShapes(doc);
+        Assert.NotEmpty(charts);
+        if (!IsEvaluationMode(AsposeLibraryType.Words)) Assert.Equal(300.0, charts[0].Height);
         AssertModified(context);
     }
 
@@ -328,8 +329,8 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
 
         Assert.IsType<SuccessResult>(res);
 
-        var images = GetImageShapes(doc);
-        Assert.NotEmpty(images);
+        var charts = GetChartShapes(doc);
+        Assert.NotEmpty(charts);
         AssertModified(context);
     }
 
@@ -348,8 +349,8 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
 
         Assert.IsType<SuccessResult>(res);
 
-        var images = GetImageShapes(doc);
-        Assert.NotEmpty(images);
+        var charts = GetChartShapes(doc);
+        Assert.NotEmpty(charts);
         AssertModified(context);
     }
 

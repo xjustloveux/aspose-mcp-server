@@ -42,6 +42,42 @@ public class OcrRecognitionToolTests : TestBase
         return pdfPath;
     }
 
+    /// <summary>
+    ///     Creates a simple BMP image file for testing.
+    /// </summary>
+    /// <returns>The full path to the created image file.</returns>
+    private string CreateTestImageFile()
+    {
+        var width = 10;
+        var height = 10;
+        var bmp = new byte[width * height * 3 + 54];
+        bmp[0] = 0x42;
+        bmp[1] = 0x4D;
+        var fileSize = bmp.Length;
+        bmp[2] = (byte)(fileSize & 0xFF);
+        bmp[3] = (byte)((fileSize >> 8) & 0xFF);
+        bmp[4] = (byte)((fileSize >> 16) & 0xFF);
+        bmp[5] = (byte)((fileSize >> 24) & 0xFF);
+        bmp[10] = 54;
+        bmp[14] = 40;
+        bmp[18] = (byte)(width & 0xFF);
+        bmp[19] = (byte)((width >> 8) & 0xFF);
+        bmp[22] = (byte)(height & 0xFF);
+        bmp[23] = (byte)((height >> 8) & 0xFF);
+        bmp[26] = 1;
+        bmp[28] = 24;
+        for (var i = 54; i < bmp.Length; i += 3)
+        {
+            bmp[i] = 255;
+            bmp[i + 1] = 0;
+            bmp[i + 2] = 0;
+        }
+
+        var filePath = CreateTestFilePath($"test_image_{Guid.NewGuid()}.bmp");
+        File.WriteAllBytes(filePath, bmp);
+        return filePath;
+    }
+
     #region Operation Routing
 
     [Fact]
@@ -76,6 +112,42 @@ public class OcrRecognitionToolTests : TestBase
         Assert.Throws<FileNotFoundException>(() =>
             _tool.Execute(operation, tempFile, CreateTestFilePath("output.docx"),
                 targetFormat: "docx"));
+    }
+
+    [Theory]
+    [InlineData("RECOGNIZE_RECEIPT")]
+    [InlineData("Recognize_Receipt")]
+    [InlineData("recognize_receipt")]
+    public void Execute_OperationIsCaseInsensitive_RecognizeReceipt(string operation)
+    {
+        var tempFile = Path.Combine(TestDir, "nonexistent_receipt.jpg");
+
+        Assert.Throws<FileNotFoundException>(() =>
+            _tool.Execute(operation, tempFile));
+    }
+
+    [Theory]
+    [InlineData("RECOGNIZE_ID_CARD")]
+    [InlineData("Recognize_Id_Card")]
+    [InlineData("recognize_id_card")]
+    public void Execute_OperationIsCaseInsensitive_RecognizeIdCard(string operation)
+    {
+        var tempFile = Path.Combine(TestDir, "nonexistent_id_card.jpg");
+
+        Assert.Throws<FileNotFoundException>(() =>
+            _tool.Execute(operation, tempFile));
+    }
+
+    [Theory]
+    [InlineData("RECOGNIZE_PASSPORT")]
+    [InlineData("Recognize_Passport")]
+    [InlineData("recognize_passport")]
+    public void Execute_OperationIsCaseInsensitive_RecognizePassport(string operation)
+    {
+        var tempFile = Path.Combine(TestDir, "nonexistent_passport.jpg");
+
+        Assert.Throws<FileNotFoundException>(() =>
+            _tool.Execute(operation, tempFile));
     }
 
     #endregion
@@ -127,6 +199,27 @@ public class OcrRecognitionToolTests : TestBase
         Assert.Contains("Unsupported target format", ex.Message);
     }
 
+    [Fact]
+    public void Execute_RecognizeReceipt_WithNonexistentFile_ShouldThrowFileNotFoundException()
+    {
+        Assert.Throws<FileNotFoundException>(() =>
+            _tool.Execute("recognize_receipt", Path.Combine(TestDir, "nonexistent_receipt.jpg")));
+    }
+
+    [Fact]
+    public void Execute_RecognizeIdCard_WithNonexistentFile_ShouldThrowFileNotFoundException()
+    {
+        Assert.Throws<FileNotFoundException>(() =>
+            _tool.Execute("recognize_id_card", Path.Combine(TestDir, "nonexistent_id_card.jpg")));
+    }
+
+    [Fact]
+    public void Execute_RecognizePassport_WithNonexistentFile_ShouldThrowFileNotFoundException()
+    {
+        Assert.Throws<FileNotFoundException>(() =>
+            _tool.Execute("recognize_passport", Path.Combine(TestDir, "nonexistent_passport.jpg")));
+    }
+
     #endregion
 
     #region Happy Path
@@ -160,6 +253,45 @@ public class OcrRecognitionToolTests : TestBase
         Assert.Equal("docx", data.TargetFormat);
         Assert.True(data.PageCount >= 0);
         Assert.True(File.Exists(outputPath));
+    }
+
+    [SkippableFact]
+    public void Execute_RecognizeReceipt_WithValidImage_ShouldReturnRecognitionResult()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Ocr, "OCR recognition requires a valid license");
+        var tempImage = CreateTestImageFile();
+
+        var result = _tool.Execute("recognize_receipt", tempImage);
+
+        var data = GetResultData<OcrRecognitionResult>(result);
+        Assert.NotNull(data.Text);
+        Assert.NotNull(data.Pages);
+    }
+
+    [SkippableFact]
+    public void Execute_RecognizeIdCard_WithValidImage_ShouldReturnRecognitionResult()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Ocr, "OCR recognition requires a valid license");
+        var tempImage = CreateTestImageFile();
+
+        var result = _tool.Execute("recognize_id_card", tempImage);
+
+        var data = GetResultData<OcrRecognitionResult>(result);
+        Assert.NotNull(data.Text);
+        Assert.NotNull(data.Pages);
+    }
+
+    [SkippableFact]
+    public void Execute_RecognizePassport_WithValidImage_ShouldReturnRecognitionResult()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Ocr, "OCR recognition requires a valid license");
+        var tempImage = CreateTestImageFile();
+
+        var result = _tool.Execute("recognize_passport", tempImage);
+
+        var data = GetResultData<OcrRecognitionResult>(result);
+        Assert.NotNull(data.Text);
+        Assert.NotNull(data.Pages);
     }
 
     #endregion

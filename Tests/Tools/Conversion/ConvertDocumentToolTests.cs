@@ -1,4 +1,5 @@
 using Aspose.Cells;
+using Aspose.Pdf.Text;
 using Aspose.Slides;
 using Aspose.Words;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -48,6 +49,16 @@ public class ConvertDocumentToolTests : TestBase
         var shape = slide.Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 300, 100);
         shape.TextFrame.Text = "Test Slide Content";
         presentation.Save(filePath, SlidesSaveFormat.Pptx);
+        return filePath;
+    }
+
+    private string CreatePdfDocument(string fileName, string content = "Test PDF Content")
+    {
+        var filePath = CreateTestFilePath(fileName);
+        using var pdfDoc = new Aspose.Pdf.Document();
+        var page = pdfDoc.Pages.Add();
+        page.Paragraphs.Add(new TextFragment(content));
+        pdfDoc.Save(filePath);
         return filePath;
     }
 
@@ -356,6 +367,126 @@ public class ConvertDocumentToolTests : TestBase
         var result = _tool.Execute(xlsxPath, outputPath: outputPath);
 
         Assert.Equal("ODS", result.TargetFormat);
+        Assert.True(File.Exists(outputPath));
+        Assert.True(new FileInfo(outputPath).Length > 0);
+    }
+
+    #endregion
+
+    #region PDF to New Format Conversion Tests
+
+    /// <summary>
+    ///     Tests that PDF can be converted to EPUB format.
+    /// </summary>
+    [Fact]
+    public void Convert_PdfToEpub_ShouldSucceed()
+    {
+        var pdfPath = CreatePdfDocument("test_pdf_to_epub.pdf", "PDF to EPUB content");
+        var outputPath = CreateTestFilePath("test_pdf_to_epub_output.epub");
+
+        var result = _tool.Execute(pdfPath, outputPath: outputPath);
+
+        Assert.Equal("EPUB", result.TargetFormat);
+        Assert.Equal("PDF", result.SourceFormat);
+        Assert.True(File.Exists(outputPath));
+        Assert.True(new FileInfo(outputPath).Length > 0);
+    }
+
+    /// <summary>
+    ///     Tests that PDF can be converted to SVG format.
+    /// </summary>
+    [Fact]
+    public void Convert_PdfToSvg_ShouldSucceed()
+    {
+        var pdfPath = CreatePdfDocument("test_pdf_to_svg.pdf", "PDF to SVG content");
+        var outputPath = CreateTestFilePath("test_pdf_to_svg_output.svg");
+
+        var result = _tool.Execute(pdfPath, outputPath: outputPath);
+
+        Assert.Equal("SVG", result.TargetFormat);
+        Assert.Equal("PDF", result.SourceFormat);
+        Assert.True(File.Exists(outputPath));
+    }
+
+    /// <summary>
+    ///     Tests that PDF can be converted to XPS format.
+    /// </summary>
+    [Fact]
+    public void Convert_PdfToXps_ShouldSucceed()
+    {
+        var pdfPath = CreatePdfDocument("test_pdf_to_xps.pdf", "PDF to XPS content");
+        var outputPath = CreateTestFilePath("test_pdf_to_xps_output.xps");
+
+        var result = _tool.Execute(pdfPath, outputPath: outputPath);
+
+        Assert.Equal("XPS", result.TargetFormat);
+        Assert.Equal("PDF", result.SourceFormat);
+        Assert.True(File.Exists(outputPath));
+        Assert.True(new FileInfo(outputPath).Length > 0);
+    }
+
+    /// <summary>
+    ///     Tests that PDF-to-XML format is accepted and does not throw "Unsupported output format".
+    ///     XML conversion requires a tagged PDF, so an Aspose PdfException is expected
+    ///     for standard (non-tagged) PDF files.
+    /// </summary>
+    [Fact]
+    public void Convert_PdfToXml_AcceptsFormatButRequiresTaggedPdf()
+    {
+        var pdfPath = CreatePdfDocument("test_pdf_to_xml.pdf", "PDF to XML content");
+        var outputPath = CreateTestFilePath("test_pdf_to_xml_output.xml");
+
+        var ex = Assert.ThrowsAny<Exception>(() => _tool.Execute(pdfPath, outputPath: outputPath));
+        Assert.DoesNotContain("Unsupported output format", ex.Message);
+    }
+
+    /// <summary>
+    ///     Tests that PDF can be converted to PNG image format.
+    /// </summary>
+    [Fact]
+    public void Convert_PdfToPng_ShouldProduceImageFile()
+    {
+        var pdfPath = CreatePdfDocument("test_pdf_to_png.pdf", "PDF to PNG content");
+        var outputPath = CreateTestFilePath("test_pdf_to_png_output.png");
+
+        var result = _tool.Execute(pdfPath, outputPath: outputPath);
+
+        Assert.Equal("PNG", result.TargetFormat);
+        Assert.Equal("PDF", result.SourceFormat);
+        Assert.True(File.Exists(outputPath));
+        Assert.True(new FileInfo(outputPath).Length > 0);
+    }
+
+    /// <summary>
+    ///     Tests that PDF can be converted to JPEG image format.
+    /// </summary>
+    [Fact]
+    public void Convert_PdfToJpeg_ShouldProduceImageFile()
+    {
+        var pdfPath = CreatePdfDocument("test_pdf_to_jpeg.pdf", "PDF to JPEG content");
+        var outputPath = CreateTestFilePath("test_pdf_to_jpeg_output.jpg");
+
+        var result = _tool.Execute(pdfPath, outputPath: outputPath);
+
+        Assert.Equal("JPG", result.TargetFormat);
+        Assert.Equal("PDF", result.SourceFormat);
+        Assert.True(File.Exists(outputPath));
+        Assert.True(new FileInfo(outputPath).Length > 0);
+    }
+
+    /// <summary>
+    ///     Tests that PDF can be converted to TIFF image format.
+    /// </summary>
+    [Fact]
+    public void Convert_PdfToTiff_ShouldProduceImageFile()
+    {
+        var pdfPath = CreatePdfDocument("test_pdf_to_tiff.pdf", "PDF to TIFF content");
+        var outputPath = CreateTestFilePath("test_pdf_to_tiff_output.tiff");
+
+        var result = _tool.Execute(pdfPath, outputPath: outputPath);
+
+        Assert.Equal("TIFF", result.TargetFormat);
+        Assert.Equal("PDF", result.SourceFormat);
         Assert.True(File.Exists(outputPath));
         Assert.True(new FileInfo(outputPath).Length > 0);
     }

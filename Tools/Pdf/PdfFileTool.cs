@@ -44,12 +44,15 @@ public class PdfFileTool
     }
 
     /// <summary>
-    ///     Executes a PDF file operation (create, merge, split, compress, encrypt, linearize).
+    ///     Executes a PDF file operation (create, merge, split, compress, encrypt, decrypt, linearize).
     /// </summary>
-    /// <param name="operation">The operation to perform: create, merge, split, compress, encrypt, linearize.</param>
-    /// <param name="path">Input file path (required for split, compress, encrypt, and linearize operations).</param>
+    /// <param name="operation">The operation to perform: create, merge, split, compress, encrypt, decrypt, linearize.</param>
+    /// <param name="path">Input file path (required for split, compress, encrypt, decrypt, and linearize operations).</param>
     /// <param name="sessionId">Session ID for in-memory editing.</param>
-    /// <param name="outputPath">Output file path (required for create, merge, compress, encrypt, and linearize operations).</param>
+    /// <param name="outputPath">
+    ///     Output file path (required for create, merge, compress, encrypt, decrypt, and linearize
+    ///     operations).
+    /// </param>
     /// <param name="inputPaths">Array of input file paths to merge (required for merge).</param>
     /// <param name="outputDir">Output directory for split files (required for split).</param>
     /// <param name="pagesPerFile">Number of pages per file (for split, default: 1).</param>
@@ -60,6 +63,7 @@ public class PdfFileTool
     /// <param name="removeUnusedObjects">Remove unused objects (for compress, default: true).</param>
     /// <param name="userPassword">User password for opening PDF (required for encrypt).</param>
     /// <param name="ownerPassword">Owner password for permissions control (required for encrypt).</param>
+    /// <param name="password">Password to open an encrypted PDF (required for decrypt).</param>
     /// <param name="progress">Optional progress reporter for long-running operations.</param>
     /// <returns>A message indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
@@ -72,7 +76,7 @@ public class PdfFileTool
         ReadOnly = false,
         UseStructuredContent = true)]
     [Description(
-        @"Perform file operations on PDF documents. Supports 6 operations: create, merge, split, compress, encrypt, linearize.
+        @"Perform file operations on PDF documents. Supports 7 operations: create, merge, split, compress, encrypt, decrypt, linearize.
 
 Usage examples:
 - Create PDF: pdf_file(operation='create', outputPath='new.pdf')
@@ -81,6 +85,7 @@ Usage examples:
 - Split PDF (page range): pdf_file(operation='split', path='doc.pdf', outputDir='output/', startPage=2, endPage=5)
 - Compress PDF: pdf_file(operation='compress', path='doc.pdf', outputPath='compressed.pdf', compressImages=true)
 - Encrypt PDF: pdf_file(operation='encrypt', path='doc.pdf', outputPath='encrypted.pdf', userPassword='user', ownerPassword='owner')
+- Decrypt PDF: pdf_file(operation='decrypt', path='encrypted.pdf', outputPath='decrypted.pdf', password='user')
 - Linearize PDF: pdf_file(operation='linearize', path='doc.pdf', outputPath='linearized.pdf')")]
     public object Execute(
         [Description(@"Operation to perform.
@@ -89,6 +94,7 @@ Usage examples:
 - 'split': Split PDF into multiple files (required params: path, outputDir; optional: startPage, endPage, pagesPerFile)
 - 'compress': Compress PDF file (required params: path, outputPath)
 - 'encrypt': Encrypt PDF file (required params: path, outputPath, userPassword, ownerPassword)
+- 'decrypt': Remove password protection (required params: path, outputPath, password)
 - 'linearize': Optimize PDF for fast web view (required params: path, outputPath)")]
         string operation,
         [Description("Input file path (required for split, compress, encrypt, and linearize operations)")]
@@ -117,6 +123,8 @@ Usage examples:
         string? userPassword = null,
         [Description("Owner password for permissions control (required for encrypt)")]
         string? ownerPassword = null,
+        [Description("Password to open an encrypted PDF (required for decrypt)")]
+        string? password = null,
         IProgress<ProgressNotificationValue>? progress = null)
     {
         var lowerOperation = operation.ToLowerInvariant();
@@ -128,7 +136,8 @@ Usage examples:
         }
 
         var result = ExecuteWithContext(lowerOperation, path, sessionId, outputPath, outputDir, pagesPerFile, startPage,
-            endPage, compressImages, compressFonts, removeUnusedObjects, userPassword, ownerPassword, progress);
+            endPage, compressImages, compressFonts, removeUnusedObjects, userPassword, ownerPassword, password,
+            progress);
         return ResultHelper.FinalizeResult((dynamic)result, outputPath, sessionId);
     }
 
@@ -190,10 +199,10 @@ Usage examples:
     /// </summary>
     private object ExecuteWithContext(string operation, string? path, string? sessionId, string? outputPath,
         string? outputDir, int pagesPerFile, int? startPage, int? endPage, bool compressImages, bool compressFonts,
-        bool removeUnusedObjects, string? userPassword, string? ownerPassword,
+        bool removeUnusedObjects, string? userPassword, string? ownerPassword, string? password,
         IProgress<ProgressNotificationValue>? progress)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor, password);
 
         var parameters = BuildParameters(operation, outputDir, pagesPerFile, startPage, endPage,
             compressImages, compressFonts, removeUnusedObjects, userPassword, ownerPassword,

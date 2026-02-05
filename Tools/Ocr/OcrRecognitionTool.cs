@@ -36,9 +36,13 @@ public class OcrRecognitionTool
     }
 
     /// <summary>
-    ///     Executes an OCR recognition operation (recognize, recognize_pdf).
+    ///     Executes an OCR recognition operation (recognize, recognize_pdf, recognize_receipt, recognize_id_card,
+    ///     recognize_passport).
     /// </summary>
-    /// <param name="operation">The operation to perform: recognize, recognize_pdf.</param>
+    /// <param name="operation">
+    ///     The operation to perform: recognize, recognize_pdf, recognize_receipt, recognize_id_card,
+    ///     recognize_passport.
+    /// </param>
     /// <param name="path">Input file path (image or PDF).</param>
     /// <param name="outputPath">Output file path (required for recognize_pdf).</param>
     /// <param name="language">
@@ -62,15 +66,16 @@ public class OcrRecognitionTool
         OpenWorld = false,
         ReadOnly = true,
         UseStructuredContent = true)]
-    [Description(@"Recognize text from images and PDF files using OCR. Supports 2 operations: recognize, recognize_pdf.
+    [Description(
+        @"Perform OCR text recognition on images and PDFs. Supports 5 operations: recognize, recognize_pdf, recognize_receipt, recognize_id_card, recognize_passport.
 
 Usage examples:
-- Recognize text from image: ocr_recognition(operation='recognize', path='image.png')
-- Recognize text with language: ocr_recognition(operation='recognize', path='image.png', language='Chi')
-- Recognize with word details: ocr_recognition(operation='recognize', path='image.png', includeWords=true)
-- Convert scanned PDF to DOCX: ocr_recognition(operation='recognize_pdf', path='scan.pdf', outputPath='output.docx', targetFormat='docx', language='Eng')
-- Convert scanned PDF with Chinese: ocr_recognition(operation='recognize_pdf', path='scan.pdf', outputPath='output.docx', targetFormat='docx', language='Chi')
-- Convert with DOCX validation: ocr_recognition(operation='recognize_pdf', path='scan.pdf', outputPath='output.docx', targetFormat='docx', validate=true)
+- Recognize text: ocr_recognition(operation='recognize', path='image.png')
+- Recognize in French: ocr_recognition(operation='recognize', path='image.png', language='Fra')
+- Convert PDF to Word: ocr_recognition(operation='recognize_pdf', path='scan.pdf', outputPath='doc.docx')
+- Recognize receipt: ocr_recognition(operation='recognize_receipt', path='receipt.jpg')
+- Recognize ID card: ocr_recognition(operation='recognize_id_card', path='id_card.jpg')
+- Recognize passport: ocr_recognition(operation='recognize_passport', path='passport.jpg')
 
 Supported image formats: PNG, JPG, BMP, TIFF, GIF
 Supported output formats (recognize_pdf): docx, xlsx, pdf, txt, xml, json, html, epub, rtf, pdfnoimg
@@ -80,7 +85,10 @@ Note: OCR requires ONNX Runtime and is not supported on Linux ARM64.")]
     public object Execute(
         [Description(@"Operation to perform.
 - 'recognize': Recognize text from an image or PDF file (required params: path; optional: language, includeWords)
-- 'recognize_pdf': Convert scanned PDF to editable document (required params: path, outputPath, targetFormat; optional: language)")]
+- 'recognize_pdf': Convert scanned PDF to editable document (required params: path, outputPath, targetFormat; optional: language)
+- 'recognize_receipt': Recognize text from a receipt image (required params: path; optional: language)
+- 'recognize_id_card': Recognize text from an ID card image (required params: path; optional: language)
+- 'recognize_passport': Recognize text from a passport image (required params: path; optional: language)")]
         string operation,
         [Description("Input file path (image file for recognize, PDF file for recognize_pdf)")]
         string path,

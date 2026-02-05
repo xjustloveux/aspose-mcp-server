@@ -167,18 +167,24 @@ public abstract class TestBase : IDisposable
             "Aspose.Slides.lic",
             "Aspose.Pdf.lic",
             "Aspose.OCR.lic",
+            "Aspose.Email.lic",
+            "Aspose.BarCode.lic",
             Path.Combine(baseDirectory, "Aspose.Total.lic"),
             Path.Combine(baseDirectory, "Aspose.Words.lic"),
             Path.Combine(baseDirectory, "Aspose.Cells.lic"),
             Path.Combine(baseDirectory, "Aspose.Slides.lic"),
             Path.Combine(baseDirectory, "Aspose.Pdf.lic"),
             Path.Combine(baseDirectory, "Aspose.OCR.lic"),
+            Path.Combine(baseDirectory, "Aspose.Email.lic"),
+            Path.Combine(baseDirectory, "Aspose.BarCode.lic"),
             Path.Combine(currentDirectory, "Aspose.Total.lic"),
             Path.Combine(currentDirectory, "Aspose.Words.lic"),
             Path.Combine(currentDirectory, "Aspose.Cells.lic"),
             Path.Combine(currentDirectory, "Aspose.Slides.lic"),
             Path.Combine(currentDirectory, "Aspose.Pdf.lic"),
-            Path.Combine(currentDirectory, "Aspose.OCR.lic")
+            Path.Combine(currentDirectory, "Aspose.OCR.lic"),
+            Path.Combine(currentDirectory, "Aspose.Email.lic"),
+            Path.Combine(currentDirectory, "Aspose.BarCode.lic")
         ]);
 
         var searchDirectories = new[] { baseDirectory, currentDirectory };
@@ -260,6 +266,28 @@ public abstract class TestBase : IDisposable
         catch
         {
             // License file might not contain OCR license
+        }
+
+        try
+        {
+            var emailLicense = new Aspose.Email.License();
+            emailLicense.SetLicense(licensePath);
+            LoadedLicenses.Add(AsposeLibraryType.Email);
+        }
+        catch
+        {
+            // License file might not contain Email license
+        }
+
+        try
+        {
+            var barCodeLicense = new Aspose.BarCode.License();
+            barCodeLicense.SetLicense(licensePath);
+            LoadedLicenses.Add(AsposeLibraryType.BarCode);
+        }
+        catch
+        {
+            // License file might not contain BarCode license
         }
 
         if (LoadedLicenses.Count > 0)
@@ -486,6 +514,10 @@ public abstract class TestBase : IDisposable
                 AsposeLibraryType.Slides => !new Aspose.Slides.License().IsLicensed(),
                 // Aspose.OCR: No direct IsLicensed API, use HashSet tracking
                 AsposeLibraryType.Ocr => !LoadedLicenses.Contains(AsposeLibraryType.Ocr),
+                // Aspose.Email: No direct IsLicensed API, use HashSet tracking
+                AsposeLibraryType.Email => !LoadedLicenses.Contains(AsposeLibraryType.Email),
+                // Aspose.BarCode: No direct IsLicensed API, use HashSet tracking
+                AsposeLibraryType.BarCode => !LoadedLicenses.Contains(AsposeLibraryType.BarCode),
                 _ => !new Aspose.Slides.License().IsLicensed()
             };
         }
@@ -545,6 +577,8 @@ public abstract class TestBase : IDisposable
         Words,
         Cells,
         Pdf,
-        Ocr
+        Ocr,
+        Email,
+        BarCode
     }
 }

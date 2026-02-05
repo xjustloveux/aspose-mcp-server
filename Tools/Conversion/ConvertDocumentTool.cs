@@ -1,8 +1,9 @@
 ﻿using System.ComponentModel;
 using Aspose.Cells;
+using Aspose.Pdf;
+using Aspose.Pdf.Devices;
 using Aspose.Slides;
 using Aspose.Slides.Export;
-using Aspose.Words;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Progress;
 using AsposeMcpServer.Core.Session;
@@ -18,6 +19,8 @@ namespace AsposeMcpServer.Tools.Conversion;
 /// <summary>
 ///     Tool for converting documents between various formats with automatic source type detection.
 ///     Supports Word, Excel, PowerPoint, and PDF documents.
+///     PDF output includes document formats (DOCX, HTML, XLSX, PPTX, EPUB, SVG, XPS, XML)
+///     and image formats (PNG, JPEG, TIFF) with per-page rendering.
 /// </summary>
 [McpServerToolType]
 public class ConvertDocumentTool
@@ -77,6 +80,9 @@ Usage examples:
 - Convert PDF to Word: convert_document(inputPath='document.pdf', outputPath='document.docx')
 - Convert PDF to Excel: convert_document(inputPath='data.pdf', outputPath='data.xlsx')
 - Convert PDF to PowerPoint: convert_document(inputPath='slides.pdf', outputPath='slides.pptx')
+- Convert PDF to images: convert_document(inputPath='doc.pdf', outputPath='page.png')
+- Convert PDF to EPUB: convert_document(inputPath='doc.pdf', outputPath='doc.epub')
+- Convert PDF to SVG: convert_document(inputPath='doc.pdf', outputPath='doc.svg')
 - Convert from session: convert_document(sessionId='sess_xxx', outputPath='doc.pdf')")]
     public ConversionResult Execute(
         [Description("Input file path (required if no sessionId)")]
@@ -130,7 +136,7 @@ Usage examples:
         switch (session.Type)
         {
             case DocumentType.Word:
-                var wordDoc = _sessionManager.GetDocument<Document>(sessionId, identity);
+                var wordDoc = _sessionManager.GetDocument<Aspose.Words.Document>(sessionId, identity);
                 var wordFormat = GetWordSaveFormat(outputExtension);
                 if (outputExtension == ".pdf")
                 {
@@ -187,9 +193,17 @@ Usage examples:
                 break;
 
             case DocumentType.Pdf:
-                var pdfDoc = _sessionManager.GetDocument<Aspose.Pdf.Document>(sessionId, identity);
-                var pdfFormat = GetPdfSaveFormat(outputExtension);
-                pdfDoc.Save(outputPath, pdfFormat);
+                var pdfDoc = _sessionManager.GetDocument<Document>(sessionId, identity);
+                if (IsImageExtension(outputExtension))
+                {
+                    ConvertPdfToImages(pdfDoc, outputPath, outputExtension);
+                }
+                else
+                {
+                    var pdfFormat = GetPdfSaveFormat(outputExtension);
+                    pdfDoc.Save(outputPath, pdfFormat);
+                }
+
                 sourceType = "PDF";
                 break;
 
@@ -225,7 +239,7 @@ Usage examples:
 
         if (IsWordDocument(inputExtension))
         {
-            var doc = new Document(inputPath);
+            var doc = new Aspose.Words.Document(inputPath);
             if (outputExtension == ".pdf")
             {
                 var wordSaveOptions = new PdfSaveOptions
@@ -282,9 +296,17 @@ Usage examples:
         }
         else if (IsPdfDocument(inputExtension))
         {
-            using var pdfDoc = new Aspose.Pdf.Document(inputPath);
-            var pdfFormat = GetPdfSaveFormat(outputExtension);
-            pdfDoc.Save(outputPath, pdfFormat);
+            if (IsImageExtension(outputExtension))
+            {
+                ConvertPdfToImages(inputPath, outputPath, outputExtension);
+            }
+            else
+            {
+                using var pdfDoc = new Document(inputPath);
+                var pdfFormat = GetPdfSaveFormat(outputExtension);
+                pdfDoc.Save(outputPath, pdfFormat);
+            }
+
             sourceFormat = "PDF";
         }
         else
@@ -341,6 +363,70 @@ Usage examples:
     private static bool IsPdfDocument(string extension)
     {
         return extension is ".pdf";
+    }
+
+    /// <summary>
+    ///     Determines whether the specified extension represents an image format.
+    /// </summary>
+    /// <param name="extension">The file extension to check.</param>
+    /// <returns><c>true</c> if the extension is an image format; otherwise, <c>false</c>.</returns>
+    private static bool IsImageExtension(string extension)
+    {
+        return extension is ".png" or ".jpg" or ".jpeg" or ".tiff" or ".tif";
+    }
+
+    /// <summary>
+    ///     Converts a PDF file to images, one per page.
+    /// </summary>
+    /// <param name="inputPath">The input PDF file path.</param>
+    /// <param name="outputPath">The output image file path (page number will be appended for multi-page).</param>
+    /// <param name="extension">The target image extension.</param>
+    private static void ConvertPdfToImages(string inputPath, string outputPath, string extension)
+    {
+        using var pdfDoc = new Document(inputPath);
+        ConvertPdfToImages(pdfDoc, outputPath, extension);
+    }
+
+    /// <summary>
+    ///     Converts a PDF document to images, one per page.
+    ///     TIFF format uses <see cref="Aspose.Pdf.Devices.TiffDevice" /> which produces a single multi-page file.
+    ///     PNG and JPEG formats use per-page devices, producing one file per page.
+    /// </summary>
+    /// <param name="pdfDoc">The PDF document to convert.</param>
+    /// <param name="outputPath">The output image file path (page number will be appended for multi-page PNG/JPEG).</param>
+    /// <param name="extension">The target image extension.</param>
+    private static void ConvertPdfToImages(Document pdfDoc, string outputPath, string extension)
+    {
+        var resolution = new Resolution(150);
+
+        if (extension is ".tiff" or ".tif")
+        {
+            var tiffDevice = new TiffDevice(resolution);
+            using var stream = new FileStream(outputPath, FileMode.Create);
+            tiffDevice.Process(pdfDoc, stream);
+            return;
+        }
+
+        var dir = Path.GetDirectoryName(outputPath) ?? ".";
+        var nameWithoutExt = Path.GetFileNameWithoutExtension(outputPath);
+        var ext = Path.GetExtension(outputPath);
+
+        for (var i = 1; i <= pdfDoc.Pages.Count; i++)
+        {
+            var pagePath = pdfDoc.Pages.Count == 1
+                ? outputPath
+                : Path.Combine(dir, $"{nameWithoutExt}_{i}{ext}");
+
+            using var stream = new FileStream(pagePath, FileMode.Create);
+            PageDevice device = extension switch
+            {
+                ".png" => new PngDevice(resolution),
+                ".jpg" or ".jpeg" => new JpegDevice(resolution),
+                _ => throw new ArgumentException($"Unsupported image format: {extension}")
+            };
+
+            device.Process(pdfDoc.Pages[i], stream);
+        }
     }
 
     /// <summary>
@@ -419,6 +505,10 @@ Usage examples:
             ".xlsx" => Aspose.Pdf.SaveFormat.Excel,
             ".pptx" => Aspose.Pdf.SaveFormat.Pptx,
             ".txt" => Aspose.Pdf.SaveFormat.TeX,
+            ".epub" => Aspose.Pdf.SaveFormat.Epub,
+            ".svg" => Aspose.Pdf.SaveFormat.Svg,
+            ".xps" => Aspose.Pdf.SaveFormat.Xps,
+            ".xml" => Aspose.Pdf.SaveFormat.Xml,
             _ => throw new ArgumentException($"Unsupported output format for PDF: {extension}")
         };
     }

@@ -53,6 +53,7 @@
     <PackageReference Include="Aspose.Slides.NET6.CrossPlatform" Version="23.10.0" />
     <PackageReference Include="Aspose.PDF.Drawing" Version="23.10.0" />
     <PackageReference Include="Aspose.Email" Version="23.10.0" />
+    <PackageReference Include="Aspose.BarCode" Version="23.10.0" />
     <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="2.88.6" />
     <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="2.88.6" />
     <PackageReference Include="Aspose.Drawing.Common" Version="23.10.0" />

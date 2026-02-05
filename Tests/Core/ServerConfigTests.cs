@@ -18,7 +18,9 @@ public class ServerConfigTests
         Assert.True(config.EnableExcel);
         Assert.True(config.EnablePowerPoint);
         Assert.True(config.EnablePdf);
-        Assert.False(config.EnableOcr);
+        Assert.True(config.EnableOcr);
+        Assert.True(config.EnableEmail);
+        Assert.True(config.EnableBarCode);
     }
 
     #endregion
@@ -34,6 +36,8 @@ public class ServerConfigTests
         Assert.False(config.EnableExcel);
         Assert.False(config.EnablePowerPoint);
         Assert.False(config.EnablePdf);
+        Assert.False(config.EnableEmail);
+        Assert.False(config.EnableBarCode);
     }
 
     [Fact]
@@ -89,7 +93,9 @@ public class ServerConfigTests
         Assert.True(config.EnableExcel);
         Assert.True(config.EnablePowerPoint);
         Assert.True(config.EnablePdf);
-        Assert.False(config.EnableOcr);
+        Assert.True(config.EnableOcr);
+        Assert.True(config.EnableEmail);
+        Assert.True(config.EnableBarCode);
     }
 
     [Fact]
@@ -102,6 +108,36 @@ public class ServerConfigTests
         Assert.False(config.EnablePowerPoint);
         Assert.False(config.EnablePdf);
         Assert.True(config.EnableOcr);
+        Assert.False(config.EnableEmail);
+        Assert.False(config.EnableBarCode);
+    }
+
+    [Fact]
+    public void LoadFromArgs_WithEmail_ShouldEnableOnlyEmail()
+    {
+        var config = ServerConfig.LoadFromArgs(["--email"]);
+
+        Assert.False(config.EnableWord);
+        Assert.False(config.EnableExcel);
+        Assert.False(config.EnablePowerPoint);
+        Assert.False(config.EnablePdf);
+        Assert.False(config.EnableOcr);
+        Assert.True(config.EnableEmail);
+        Assert.False(config.EnableBarCode);
+    }
+
+    [Fact]
+    public void LoadFromArgs_WithBarCode_ShouldEnableOnlyBarCode()
+    {
+        var config = ServerConfig.LoadFromArgs(["--barcode"]);
+
+        Assert.False(config.EnableWord);
+        Assert.False(config.EnableExcel);
+        Assert.False(config.EnablePowerPoint);
+        Assert.False(config.EnablePdf);
+        Assert.False(config.EnableOcr);
+        Assert.False(config.EnableEmail);
+        Assert.True(config.EnableBarCode);
     }
 
     [Fact]
@@ -166,7 +202,9 @@ public class ServerConfigTests
         Assert.Contains("Excel", info);
         Assert.Contains("PowerPoint", info);
         Assert.Contains("PDF", info);
-        Assert.DoesNotContain("OCR", info);
+        Assert.Contains("OCR", info);
+        Assert.Contains("Email", info);
+        Assert.Contains("BarCode", info);
     }
 
     [Fact]
@@ -177,6 +215,26 @@ public class ServerConfigTests
         var info = config.GetEnabledToolsInfo();
 
         Assert.Contains("OCR", info);
+    }
+
+    [Fact]
+    public void GetEnabledToolsInfo_WithEmail_ShouldContainEmail()
+    {
+        var config = ServerConfig.LoadFromArgs(["--email"]);
+
+        var info = config.GetEnabledToolsInfo();
+
+        Assert.Contains("Email", info);
+    }
+
+    [Fact]
+    public void GetEnabledToolsInfo_WithBarCode_ShouldContainBarCode()
+    {
+        var config = ServerConfig.LoadFromArgs(["--barcode"]);
+
+        var info = config.GetEnabledToolsInfo();
+
+        Assert.Contains("BarCode", info);
     }
 
     [Fact]
@@ -262,6 +320,26 @@ public class ServerConfigTests
         {
             Environment.SetEnvironmentVariable("ASPOSE_TOOLS", originalValue);
         }
+    }
+
+    [Fact]
+    public void Validate_OnlyEmailEnabled_ShouldNotThrow()
+    {
+        var config = ServerConfig.LoadFromArgs(["--email"]);
+
+        var ex = Record.Exception(() => config.Validate());
+
+        Assert.Null(ex);
+    }
+
+    [Fact]
+    public void Validate_OnlyBarCodeEnabled_ShouldNotThrow()
+    {
+        var config = ServerConfig.LoadFromArgs(["--barcode"]);
+
+        var ex = Record.Exception(() => config.Validate());
+
+        Assert.Null(ex);
     }
 
     #endregion

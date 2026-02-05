@@ -22,6 +22,8 @@
     <PackageReference Include="Aspose.PDF.Drawing" Version="23.10.0" />
     <PackageReference Include="Aspose.Slides.NET6.CrossPlatform" Version="23.10.0" />
     <PackageReference Include="Aspose.Drawing.Common" Version="23.10.0" />
+    <PackageReference Include="Aspose.Email" Version="23.10.0" />
+    <PackageReference Include="Aspose.BarCode" Version="23.10.0" />
     <!-- Extern alias to resolve type conflicts with Aspose.Slides.NET6.CrossPlatform -->
     <PackageReference Include="System.Drawing.Common" Version="7.0.0" Aliases="SysDrawing" />
   </ItemGroup>

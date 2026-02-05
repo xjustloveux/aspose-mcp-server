@@ -149,7 +149,7 @@ public class RecognizeHandler : OperationHandlerBase<AsposeOcr>
     /// <param name="results">The list of recognition results (one per page/image).</param>
     /// <param name="includeWords">Whether to include word-level details with bounding boxes.</param>
     /// <returns>The structured recognition result.</returns>
-    private static OcrRecognitionResult BuildRecognitionResult(List<RecognitionResult> results, bool includeWords)
+    internal static OcrRecognitionResult BuildRecognitionResult(List<RecognitionResult> results, bool includeWords)
     {
         var pages = new List<OcrPageResult>();
         var allText = new StringBuilder();

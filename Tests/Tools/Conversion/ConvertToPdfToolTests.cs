@@ -134,6 +134,126 @@ public class ConvertToPdfToolTests : TestBase
 
     #endregion
 
+    #region New Format Conversion Tests
+
+    /// <summary>
+    ///     Tests that HTML files are accepted and converted to PDF.
+    /// </summary>
+    [Fact]
+    public void Convert_HtmlToPdf_ShouldSucceed()
+    {
+        var htmlPath = CreateTestFilePath("test_html_to_pdf.html");
+        File.WriteAllText(htmlPath, "<html><body><h1>Test</h1><p>HTML content</p></body></html>");
+        var outputPath = CreateTestFilePath("test_html_to_pdf_output.pdf");
+
+        var result = _tool.Execute(htmlPath, outputPath: outputPath);
+
+        Assert.Equal("PDF", result.TargetFormat);
+        Assert.Equal("HTML", result.SourceFormat);
+        Assert.Equal(outputPath, result.OutputPath);
+        Assert.True(File.Exists(outputPath));
+        Assert.True(new FileInfo(outputPath).Length > 0);
+    }
+
+    /// <summary>
+    ///     Tests that .htm extension files are accepted and converted to PDF.
+    /// </summary>
+    [Fact]
+    public void Convert_HtmToPdf_ShouldSucceed()
+    {
+        var htmPath = CreateTestFilePath("test_htm_to_pdf.htm");
+        File.WriteAllText(htmPath, "<html><body><h1>Test</h1><p>HTM content</p></body></html>");
+        var outputPath = CreateTestFilePath("test_htm_to_pdf_output.pdf");
+
+        var result = _tool.Execute(htmPath, outputPath: outputPath);
+
+        Assert.Equal("PDF", result.TargetFormat);
+        Assert.Equal("HTML", result.SourceFormat);
+        Assert.Equal(outputPath, result.OutputPath);
+        Assert.True(File.Exists(outputPath));
+        Assert.True(new FileInfo(outputPath).Length > 0);
+    }
+
+    /// <summary>
+    ///     Tests that Markdown files are accepted and converted to PDF.
+    /// </summary>
+    [Fact]
+    public void Convert_MarkdownToPdf_ShouldSucceed()
+    {
+        var mdPath = CreateTestFilePath("test_md_to_pdf.md");
+        File.WriteAllText(mdPath, "# Test\n\nParagraph content for testing.");
+        var outputPath = CreateTestFilePath("test_md_to_pdf_output.pdf");
+
+        var result = _tool.Execute(mdPath, outputPath: outputPath);
+
+        Assert.Equal("PDF", result.TargetFormat);
+        Assert.Equal("Markdown", result.SourceFormat);
+        Assert.Equal(outputPath, result.OutputPath);
+        Assert.True(File.Exists(outputPath));
+        Assert.True(new FileInfo(outputPath).Length > 0);
+    }
+
+    /// <summary>
+    ///     Tests that SVG files are accepted and converted to PDF.
+    /// </summary>
+    [Fact]
+    public void Convert_SvgToPdf_ShouldSucceed()
+    {
+        var svgPath = CreateTestFilePath("test_svg_to_pdf.svg");
+        File.WriteAllText(svgPath,
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"200\" height=\"200\"><rect width=\"100\" height=\"100\" fill=\"blue\"/><text x=\"10\" y=\"50\" fill=\"white\">Test</text></svg>");
+        var outputPath = CreateTestFilePath("test_svg_to_pdf_output.pdf");
+
+        var result = _tool.Execute(svgPath, outputPath: outputPath);
+
+        Assert.Equal("PDF", result.TargetFormat);
+        Assert.Equal("SVG", result.SourceFormat);
+        Assert.Equal(outputPath, result.OutputPath);
+        Assert.True(File.Exists(outputPath));
+        Assert.True(new FileInfo(outputPath).Length > 0);
+    }
+
+    /// <summary>
+    ///     Tests that new formats do not throw "Unsupported file format" ArgumentException.
+    ///     Format-specific Aspose exceptions are acceptable since these formats may require
+    ///     special file structures, but they must not fail at format validation.
+    /// </summary>
+    [Theory]
+    [InlineData(".html", "HTML")]
+    [InlineData(".htm", "HTML")]
+    [InlineData(".epub", "EPUB")]
+    [InlineData(".md", "Markdown")]
+    [InlineData(".svg", "SVG")]
+    [InlineData(".xps", "XPS")]
+    [InlineData(".tex", "LaTeX")]
+    [InlineData(".mht", "MHT")]
+    [InlineData(".mhtml", "MHT")]
+    public void Execute_NewFormats_DoesNotThrowUnsupportedFormatException(string extension,
+        string expectedSourceFormat)
+    {
+        var inputPath = CreateTestFilePath($"test_format_validation{extension}");
+        File.WriteAllText(inputPath, "<html><body>Test</body></html>");
+        var outputPath = CreateTestFilePath($"test_format_validation{extension}.pdf");
+
+        try
+        {
+            var result = _tool.Execute(inputPath, outputPath: outputPath);
+            Assert.Equal("PDF", result.TargetFormat);
+            Assert.Equal(expectedSourceFormat, result.SourceFormat);
+        }
+        catch (ArgumentException ex) when (ex.Message.Contains("Unsupported file format"))
+        {
+            Assert.Fail(
+                $"Extension '{extension}' should be accepted but threw: {ex.Message}");
+        }
+        catch (Exception)
+        {
+            // Aspose-level exceptions (e.g., invalid file content for format) are acceptable
+        }
+    }
+
+    #endregion
+
     #region Session Management
 
     [Fact]

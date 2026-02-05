@@ -56,8 +56,15 @@ public class ToolFilterService
         if (toolName.StartsWith("ocr_", StringComparison.OrdinalIgnoreCase))
             return _serverConfig.EnableOcr;
 
+        if (toolName.StartsWith("email_", StringComparison.OrdinalIgnoreCase))
+            return _serverConfig.EnableEmail;
+
+        if (toolName.StartsWith("barcode_", StringComparison.OrdinalIgnoreCase))
+            return _serverConfig.EnableBarCode;
+
         if (toolName == "convert_to_pdf")
-            return _serverConfig.EnableWord || _serverConfig.EnableExcel || _serverConfig.EnablePowerPoint;
+            return _serverConfig.EnableWord || _serverConfig.EnableExcel || _serverConfig.EnablePowerPoint ||
+                   _serverConfig.EnablePdf;
 
         if (toolName == "convert_document")
         {
@@ -66,6 +73,7 @@ public class ToolFilterService
             if (_serverConfig.EnableExcel) enabledCount++;
             if (_serverConfig.EnablePowerPoint) enabledCount++;
             if (_serverConfig.EnablePdf) enabledCount++;
+            if (_serverConfig.EnableEmail) enabledCount++;
             return enabledCount >= 2;
         }
 
@@ -85,6 +93,8 @@ public class ToolFilterService
         if (_serverConfig.EnablePowerPoint) categories.Add("PowerPoint");
         if (_serverConfig.EnablePdf) categories.Add("PDF");
         if (_serverConfig.EnableOcr) categories.Add("OCR");
+        if (_serverConfig.EnableEmail) categories.Add("Email");
+        if (_serverConfig.EnableBarCode) categories.Add("BarCode");
         if (_sessionConfig.Enabled) categories.Add("Session");
 
         return categories.Count > 0 ? string.Join(", ", categories) : "None";

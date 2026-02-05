@@ -104,7 +104,7 @@ services:
       - ASPOSE_HOST=0.0.0.0
 
       # === Tools (Required) ===
-      - ASPOSE_TOOLS=all                  # all (excludes OCR), or comma-separated: word,excel,pdf,ppt,ocr
+      - ASPOSE_TOOLS=all                  # all (excludes OCR, BarCode), or comma-separated: word,excel,pdf,ppt,ocr,email,barcode
 
       # === License (Optional) ===
       # - ASPOSE_LICENSE_PATH=/app/license/Aspose.Total.lic
@@ -588,9 +588,9 @@ kubectl get pods -l app=aspose-mcp</pre>
                 <code>ASPOSE_TOOLS</code>
             </td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-                <code>--word/--excel/--pdf/--ppt/--ocr/--all</code>
+                <code>--word/--excel/--pdf/--ppt/--ocr/--email/--barcode/--all</code>
             </td>
-            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">啟用的工具（all 不含 OCR）</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">啟用的工具（all 包含所有工具）</td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">all</td>
         </tr>
         <tr>

@@ -27,11 +27,11 @@ public static class LicenseManager
             Console.SetOut(TextWriter.Null);
 
             var globalLicensePath = ResolveGlobalLicensePath(config);
-            var loadedLicenses = LoadLicenses(config, globalLicensePath);
+            var (loadedLicenses, enabledComponents) = LoadLicenses(config, globalLicensePath);
 
             Console.SetOut(originalOut);
             ConfigureFontSubstitutions(config);
-            LogLicenseResult(loadedLicenses);
+            LogLicenseResult(loadedLicenses, enabledComponents);
         }
         catch (Exception ex)
         {
@@ -157,10 +157,22 @@ public static class LicenseManager
     /// </summary>
     /// <param name="config">The server configuration.</param>
     /// <param name="globalLicensePath">The global license path from --license flag, or null.</param>
-    /// <returns>A list of successfully loaded license names.</returns>
-    private static List<string> LoadLicenses(ServerConfig config, string? globalLicensePath)
+    /// <returns>
+    ///     A tuple containing:
+    ///     <list type="bullet">
+    ///         <item>
+    ///             <description>A list of successfully loaded license names.</description>
+    ///         </item>
+    ///         <item>
+    ///             <description>A list of all enabled component names.</description>
+    ///         </item>
+    ///     </list>
+    /// </returns>
+    private static (List<string> loadedLicenses, List<string> enabledComponents) LoadLicenses(
+        ServerConfig config, string? globalLicensePath)
     {
         List<string> loadedLicenses = [];
+        List<string> enabledComponents = [];
 
         var loaders = new (bool enabled, string name, string componentLic, Action<string> loader)[]
         {
@@ -173,12 +185,17 @@ public static class LicenseManager
             (config.EnablePdf, "Pdf", "Aspose.Pdf.lic",
                 p => new Aspose.Pdf.License().SetLicense(p)),
             (config.EnableOcr, "OCR", "Aspose.OCR.lic",
-                p => new Aspose.OCR.License().SetLicense(p))
+                p => new Aspose.OCR.License().SetLicense(p)),
+            (config.EnableEmail, "Email", "Aspose.Email.lic",
+                p => new Aspose.Email.License().SetLicense(p)),
+            (config.EnableBarCode, "BarCode", "Aspose.BarCode.lic",
+                p => new Aspose.BarCode.License().SetLicense(p))
         };
 
         foreach (var (enabled, name, componentLic, loader) in loaders)
         {
             if (!enabled) continue;
+            enabledComponents.Add(name);
             var licensePath = ResolveComponentLicense(componentLic, globalLicensePath);
             if (licensePath == null) continue;
             try
@@ -192,18 +209,24 @@ public static class LicenseManager
             }
         }
 
-        return loadedLicenses;
+        return (loadedLicenses, enabledComponents);
     }
 
     /// <summary>
-    ///     Logs the license loading result.
+    ///     Logs the license loading result, including which enabled components lack a license.
     /// </summary>
     /// <param name="loadedLicenses">The list of successfully loaded licenses.</param>
-    private static void LogLicenseResult(List<string> loadedLicenses)
+    /// <param name="enabledComponents">The list of all enabled component names.</param>
+    private static void LogLicenseResult(List<string> loadedLicenses, List<string> enabledComponents)
     {
         if (loadedLicenses.Count > 0)
         {
             Console.Error.WriteLine($"[INFO] Aspose licenses loaded: {string.Join(", ", loadedLicenses)}");
+
+            var unlicensed = enabledComponents.Except(loadedLicenses).ToList();
+            if (unlicensed.Count > 0)
+                Console.Error.WriteLine(
+                    $"[WARN] Components without license (evaluation mode): {string.Join(", ", unlicensed)}");
         }
         else
         {

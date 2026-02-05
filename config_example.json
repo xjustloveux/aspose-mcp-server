@@ -45,8 +45,8 @@
   },
 
   "_範例4": "========================================",
-  "_範例4說明": "啟用所有工具（包含所有轉換功能）",
-  "_範例4適用": "需要完整功能時",
+  "_範例4說明": "啟用所有工具（等同不帶參數，Word、Excel、PowerPoint、PDF、OCR、Email、BarCode）",
+  "_範例4適用": "明確表示啟用所有工具時",
   "mcpServers_example4_all": {
     "aspose-all": {
       "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",
@@ -245,7 +245,10 @@
     "--excel": "啟用 Excel 工具（自動包含轉換功能）",
     "--powerpoint 或 --ppt": "啟用 PowerPoint 工具（自動包含轉換功能）",
     "--pdf": "啟用 PDF 工具",
-    "--all": "啟用所有工具",
+    "--ocr": "啟用 OCR 文字辨識工具",
+    "--email": "啟用 Email 工具（郵件、日曆、聯絡人）",
+    "--barcode": "啟用 BarCode 工具（條碼產生與辨識）",
+    "--all": "啟用所有工具（Word、Excel、PowerPoint、PDF、OCR、Email、BarCode）",
     "--license 路徑": "指定授權文件路徑（可選）"
   },
   "_參數列表_傳輸": {

@@ -54,6 +54,13 @@ public class WordFileTool
     /// <param name="templatePath">Template file path (for create_from_template).</param>
     /// <param name="dataJson">JSON data for template rendering (for create_from_template).</param>
     /// <param name="format">Output format: pdf, html, docx, txt, rtf, odt, epub, xps (for convert).</param>
+    /// <param name="pdfCompliance">
+    ///     PDF compliance standard for convert to PDF: Pdf17, PdfA1a, PdfA1b, PdfA2a, PdfA2u, PdfA4,
+    ///     PdfUa1.
+    /// </param>
+    /// <param name="pdfPassword">Password to protect the output PDF (for convert to PDF).</param>
+    /// <param name="embedFonts">Embed all fonts in the output PDF (for convert to PDF, default: false).</param>
+    /// <param name="downsampleDpi">Downsample images to specified DPI in PDF output (for convert to PDF).</param>
     /// <param name="inputPaths">Array of input file paths to merge (for merge).</param>
     /// <param name="importFormatMode">
     ///     Format mode when merging: KeepSourceFormatting, UseDestinationStyles,
@@ -119,6 +126,15 @@ Template syntax (LINQ Reporting Engine, use 'ds' as data source prefix):
         string? dataJson = null,
         [Description("Output format: pdf, html, docx, txt, rtf, odt, epub, xps (for convert)")]
         string? format = null,
+        [Description(
+            "PDF compliance standard (for convert to PDF): Pdf17, PdfA1a, PdfA1b, PdfA2a, PdfA2u, PdfA4, PdfUa1")]
+        string? pdfCompliance = null,
+        [Description("Password to protect the output PDF (for convert to PDF)")]
+        string? pdfPassword = null,
+        [Description("Embed all fonts in the output PDF (for convert to PDF, default: false)")]
+        bool embedFonts = false,
+        [Description("Downsample images to specified DPI in PDF output (for convert to PDF, 0 = no downsampling)")]
+        int downsampleDpi = 0,
         [Description("Array of input file paths to merge (for merge)")]
         string[]? inputPaths = null,
         [Description(
@@ -159,7 +175,7 @@ Template syntax (LINQ Reporting Engine, use 'ds' as data source prefix):
         var parameters = BuildParameters(operation, sessionId, path, outputPath, templatePath, dataJson, format,
             inputPaths, importFormatMode, unlinkHeadersFooters, outputDir, splitBy, content, skipInitialContent,
             marginTop, marginBottom, marginLeft, marginRight, compatibilityMode, paperSize, pageWidth, pageHeight,
-            headerDistance, footerDistance);
+            headerDistance, footerDistance, pdfCompliance, pdfPassword, embedFonts, downsampleDpi);
 
         var handler = _handlerRegistry.GetHandler(operation);
 
@@ -208,7 +224,11 @@ Template syntax (LINQ Reporting Engine, use 'ds' as data source prefix):
         double? pageWidth,
         double? pageHeight,
         double headerDistance,
-        double footerDistance)
+        double footerDistance,
+        string? pdfCompliance,
+        string? pdfPassword,
+        bool embedFonts,
+        int downsampleDpi)
     {
         return operation.ToLower() switch
         {
@@ -216,7 +236,8 @@ Template syntax (LINQ Reporting Engine, use 'ds' as data source prefix):
                 marginLeft, marginRight, compatibilityMode, paperSize, pageWidth, pageHeight, headerDistance,
                 footerDistance),
             "create_from_template" => BuildCreateFromTemplateParameters(templatePath, sessionId, outputPath, dataJson),
-            "convert" => BuildConvertParameters(path, sessionId, outputPath, format),
+            "convert" => BuildConvertParameters(path, sessionId, outputPath, format, pdfCompliance, pdfPassword,
+                embedFonts, downsampleDpi),
             "merge" => BuildMergeParameters(inputPaths, outputPath, importFormatMode, unlinkHeadersFooters),
             "split" => BuildSplitParameters(path, sessionId, outputDir, splitBy),
             _ => new OperationParameters()
@@ -288,15 +309,23 @@ Template syntax (LINQ Reporting Engine, use 'ds' as data source prefix):
     /// <param name="sessionId">The session ID for document from session.</param>
     /// <param name="outputPath">The output file path.</param>
     /// <param name="format">The output format: pdf, html, docx, txt, rtf, odt, epub, xps.</param>
+    /// <param name="pdfCompliance">The PDF compliance standard.</param>
+    /// <param name="pdfPassword">The password for the output PDF.</param>
+    /// <param name="embedFonts">Whether to embed all fonts in the PDF.</param>
+    /// <param name="downsampleDpi">The DPI for downsampling images in PDF output.</param>
     /// <returns>OperationParameters configured for converting a document.</returns>
     private static OperationParameters BuildConvertParameters(string? path, string? sessionId, string? outputPath,
-        string? format)
+        string? format, string? pdfCompliance, string? pdfPassword, bool embedFonts, int downsampleDpi)
     {
         var parameters = new OperationParameters();
         if (path != null) parameters.Set("path", path);
         if (sessionId != null) parameters.Set("sessionId", sessionId);
         if (outputPath != null) parameters.Set("outputPath", outputPath);
         if (format != null) parameters.Set("format", format);
+        if (pdfCompliance != null) parameters.Set("pdfCompliance", pdfCompliance);
+        if (pdfPassword != null) parameters.Set("pdfPassword", pdfPassword);
+        if (embedFonts) parameters.Set("embedFonts", true);
+        if (downsampleDpi > 0) parameters.Set("downsampleDpi", downsampleDpi);
         return parameters;
     }
 

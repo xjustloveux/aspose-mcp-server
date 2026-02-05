@@ -7,30 +7,45 @@ public class ServerConfig
 {
     /// <summary>
     ///     Gets a value indicating whether Word document tools are enabled.
+    ///     Enabled by default. Use specific tool arguments (e.g. <c>--word</c>) to enable only selected tools.
     /// </summary>
     public bool EnableWord { get; private set; } = true;
 
     /// <summary>
     ///     Gets a value indicating whether Excel spreadsheet tools are enabled.
+    ///     Enabled by default. Use specific tool arguments (e.g. <c>--excel</c>) to enable only selected tools.
     /// </summary>
     public bool EnableExcel { get; private set; } = true;
 
     /// <summary>
     ///     Gets a value indicating whether PowerPoint presentation tools are enabled.
+    ///     Enabled by default. Use specific tool arguments (e.g. <c>--powerpoint</c>) to enable only selected tools.
     /// </summary>
     public bool EnablePowerPoint { get; private set; } = true;
 
     /// <summary>
     ///     Gets a value indicating whether PDF document tools are enabled.
+    ///     Enabled by default. Use specific tool arguments (e.g. <c>--pdf</c>) to enable only selected tools.
     /// </summary>
     public bool EnablePdf { get; private set; } = true;
 
     /// <summary>
     ///     Gets a value indicating whether OCR text recognition tools are enabled.
-    ///     Defaults to false because OCR requires a separate Aspose.OCR license
-    ///     and adds ONNX Runtime overhead.
+    ///     Enabled by default. Use specific tool arguments (e.g. <c>--ocr</c>) to enable only selected tools.
     /// </summary>
-    public bool EnableOcr { get; private set; }
+    public bool EnableOcr { get; private set; } = true;
+
+    /// <summary>
+    ///     Gets a value indicating whether Email tools are enabled.
+    ///     Enabled by default. Use specific tool arguments (e.g. <c>--email</c>) to enable only selected tools.
+    /// </summary>
+    public bool EnableEmail { get; private set; } = true;
+
+    /// <summary>
+    ///     Gets a value indicating whether BarCode tools are enabled.
+    ///     Enabled by default. Use specific tool arguments (e.g. <c>--barcode</c>) to enable only selected tools.
+    /// </summary>
+    public bool EnableBarCode { get; private set; } = true;
 
     /// <summary>
     ///     Gets the license file path or filename. Can be absolute path, relative path, or just filename.
@@ -76,6 +91,8 @@ public class ServerConfig
         EnablePowerPoint = false;
         EnablePdf = false;
         EnableOcr = false;
+        EnableEmail = false;
+        EnableBarCode = false;
 
         var toolList = tools.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         foreach (var tool in toolList)
@@ -86,6 +103,9 @@ public class ServerConfig
                     EnableExcel = true;
                     EnablePowerPoint = true;
                     EnablePdf = true;
+                    EnableOcr = true;
+                    EnableEmail = true;
+                    EnableBarCode = true;
                     break;
                 case "word":
                     EnableWord = true;
@@ -102,6 +122,12 @@ public class ServerConfig
                     break;
                 case "ocr":
                     EnableOcr = true;
+                    break;
+                case "email":
+                    EnableEmail = true;
+                    break;
+                case "barcode":
+                    EnableBarCode = true;
                     break;
             }
     }
@@ -121,6 +147,8 @@ public class ServerConfig
             a.Equals("--ppt", StringComparison.OrdinalIgnoreCase) ||
             a.Equals("--pdf", StringComparison.OrdinalIgnoreCase) ||
             a.Equals("--ocr", StringComparison.OrdinalIgnoreCase) ||
+            a.Equals("--email", StringComparison.OrdinalIgnoreCase) ||
+            a.Equals("--barcode", StringComparison.OrdinalIgnoreCase) ||
             a.Equals("--all", StringComparison.OrdinalIgnoreCase));
 
         if (hasToolArg)
@@ -130,6 +158,8 @@ public class ServerConfig
             EnablePowerPoint = false;
             EnablePdf = false;
             EnableOcr = false;
+            EnableEmail = false;
+            EnableBarCode = false;
         }
 
         for (var i = 0; i < args.Length; i++)
@@ -154,11 +184,20 @@ public class ServerConfig
                 case "--ocr":
                     EnableOcr = true;
                     break;
+                case "--email":
+                    EnableEmail = true;
+                    break;
+                case "--barcode":
+                    EnableBarCode = true;
+                    break;
                 case "--all":
                     EnableWord = true;
                     EnableExcel = true;
                     EnablePowerPoint = true;
                     EnablePdf = true;
+                    EnableOcr = true;
+                    EnableEmail = true;
+                    EnableBarCode = true;
                     break;
                 default:
                     if (arg == "--license" && i + 1 < args.Length)
@@ -192,6 +231,8 @@ public class ServerConfig
         if (EnablePowerPoint) enabled.Add("PowerPoint");
         if (EnablePdf) enabled.Add("PDF");
         if (EnableOcr) enabled.Add("OCR");
+        if (EnableEmail) enabled.Add("Email");
+        if (EnableBarCode) enabled.Add("BarCode");
 
         return enabled.Count > 0 ? string.Join(", ", enabled) : "None";
     }
@@ -202,8 +243,9 @@ public class ServerConfig
     /// <exception cref="InvalidOperationException">Thrown when no tool category is enabled.</exception>
     public void Validate()
     {
-        if (!EnableWord && !EnableExcel && !EnablePowerPoint && !EnablePdf && !EnableOcr)
+        if (!EnableWord && !EnableExcel && !EnablePowerPoint && !EnablePdf && !EnableOcr && !EnableEmail &&
+            !EnableBarCode)
             throw new InvalidOperationException(
-                "At least one tool category must be enabled. Use --word, --excel, --powerpoint, --pdf, --ocr, or --all");
+                "At least one tool category must be enabled. Use --word, --excel, --powerpoint, --pdf, --ocr, --email, --barcode, or --all");
     }
 }

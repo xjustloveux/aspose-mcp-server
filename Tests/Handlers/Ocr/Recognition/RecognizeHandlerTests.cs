@@ -65,25 +65,6 @@ public class RecognizeHandlerTests : HandlerTestBase<AsposeOcr>
 
     #endregion
 
-    #region Read-Only Verification
-
-    [Fact]
-    public void Execute_ShouldNotModifyContext()
-    {
-        var tempImage = CreateTempImageFile();
-        var context = CreateContext(new AsposeOcr());
-        var parameters = CreateParameters(new Dictionary<string, object?>
-        {
-            { "path", tempImage }
-        });
-
-        _ = Record.Exception(() => _handler.Execute(context, parameters));
-
-        AssertNotModified(context);
-    }
-
-    #endregion
-
     /// <summary>
     ///     Creates a simple PDF file with text content for OCR testing.
     /// </summary>
@@ -170,6 +151,7 @@ public class RecognizeHandlerTests : HandlerTestBase<AsposeOcr>
         var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
 
         Assert.Contains("path", ex.Message, StringComparison.OrdinalIgnoreCase);
+        AssertNotModified(context);
     }
 
     [Fact]

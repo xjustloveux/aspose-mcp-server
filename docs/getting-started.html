@@ -215,13 +215,16 @@
         </div>
 
         <h3>可用參數</h3>
+        <p>不帶任何工具參數時，預設啟用所有工具。指定工具參數時，只啟用指定的工具：</p>
         <ul class="param-list">
             <li><code>--word</code> - Word 工具（自動包含轉換功能）</li>
             <li><code>--excel</code> - Excel 工具（自動包含轉換功能）</li>
             <li><code>--powerpoint</code> / <code>--ppt</code> - PowerPoint 工具（自動包含轉換功能）</li>
             <li><code>--pdf</code> - PDF 工具</li>
             <li><code>--ocr</code> - OCR 文字辨識工具</li>
-            <li><code>--all</code> - 所有文檔工具（Word、Excel、PowerPoint、PDF，不含 OCR）</li>
+            <li><code>--email</code> - Email 工具（郵件、日曆、聯絡人）</li>
+            <li><code>--barcode</code> - BarCode 工具（條碼產生與辨識）</li>
+            <li><code>--all</code> - 所有工具（等同不帶工具參數）</li>
             <li><code>--session-enabled</code> - 啟用 Session 管理功能（可選）</li>
             <li><code>--license:路徑</code> 或 <code>--license=路徑</code> - 指定授權檔案路徑（可選）</li>
         </ul>
@@ -234,7 +237,7 @@
         <h3>環境變數配置（Docker/Kubernetes 適用）</h3>
         <p>除了命令列參數外，也可以使用環境變數配置：</p>
         <ul class="param-list">
-            <li><code>ASPOSE_TOOLS</code> - 啟用的工具：<code>all</code>（不含 OCR）或 <code>word,excel,pdf,ppt,ocr</code></li>
+            <li><code>ASPOSE_TOOLS</code> - 啟用的工具：<code>all</code>（全部）或 <code>word,excel,pdf,ppt,ocr,email,barcode</code></li>
             <li><code>ASPOSE_TRANSPORT</code> - 傳輸模式：<code>stdio</code>、<code>http</code>、<code>ws</code></li>
             <li><code>ASPOSE_PORT</code> - 監聽埠號（預設：3000）</li>
             <li><code>ASPOSE_HOST</code> - 監聯位址（預設：localhost，容器用 0.0.0.0）</li>
