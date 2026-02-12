@@ -62,6 +62,28 @@ spec:
             # - name: ASPOSE_SESSION_AUTO_SAVE_INTERVAL
             #   value: "0"                  # Auto-save interval in minutes (0 = disabled, default: 0)
 
+            # === Extension Settings (Optional, requires Session) ===
+            # - name: ASPOSE_EXTENSION_ENABLED
+            #   value: "true"               # Enable extension system
+            # - name: ASPOSE_EXTENSION_CONFIG
+            #   value: "/app/extensions/extensions.json"  # Extension config file path
+            # - name: ASPOSE_EXTENSION_TEMP_DIR
+            #   value: "/tmp/extensions"    # Snapshot temp directory
+            # - name: ASPOSE_EXTENSION_TRANSPORT_MODE
+            #   value: "stdin"              # Default transport: mmap, stdin, file (default: stdin)
+            # - name: ASPOSE_EXTENSION_IDLE_TIMEOUT_DEFAULT
+            #   value: "30"                 # Extension idle timeout in minutes (0 = never if allowed, default: 30)
+            # - name: ASPOSE_EXTENSION_SNAPSHOT_TTL_DEFAULT
+            #   value: "30"                 # Snapshot TTL in seconds (default: 30)
+            # - name: ASPOSE_EXTENSION_MAX_RESTARTS
+            #   value: "3"                  # Max restart attempts (default: 3)
+            # - name: ASPOSE_EXTENSION_HEALTH_INTERVAL
+            #   value: "30"                 # Health check interval in seconds (default: 30)
+            # - name: ASPOSE_EXTENSION_DEBOUNCE_DELAY_DEFAULT
+            #   value: "100"                # Debounce delay in milliseconds (default: 100)
+            # - name: ASPOSE_EXTENSION_FRAME_INTERVAL_DEFAULT
+            #   value: "100"                # Frame interval in milliseconds (default: 100)
+
             # === API Key Authentication (Optional) ===
             # - name: ASPOSE_AUTH_APIKEY_ENABLED
             #   value: "true"
@@ -87,8 +109,8 @@ spec:
             #   value: "key"
             # - name: ASPOSE_AUTH_APIKEY_CUSTOM_URL
             #   value: "https://auth.example.com/validate"
-            # - name: ASPOSE_AUTH_APIKEY_CUSTOM_TIMEOUT
-            #   value: "5"
+            # - name: ASPOSE_AUTH_APIKEY_TIMEOUT
+            #   value: "5"                  # External validation timeout in seconds (default: 5)
 
             # === JWT Authentication (Optional) ===
             # - name: ASPOSE_AUTH_JWT_ENABLED
@@ -125,8 +147,8 @@ spec:
             #   value: "your-client-secret"
             # - name: ASPOSE_AUTH_JWT_CUSTOM_URL
             #   value: "https://auth.example.com/validate"
-            # - name: ASPOSE_AUTH_JWT_CUSTOM_TIMEOUT
-            #   value: "5"
+            # - name: ASPOSE_AUTH_JWT_TIMEOUT
+            #   value: "5"                  # External validation timeout in seconds (default: 5)
 
             # === Logging (Optional) ===
             # - name: ASPOSE_LOG_ENABLED
@@ -161,6 +183,9 @@ spec:
           #   - name: license
           #     mountPath: /app/license
           #     readOnly: true
+          #   - name: extensions
+          #     mountPath: /app/extensions
+          #     readOnly: true
 
           # === Liveness Probe (Optional) ===
           # livenessProbe:
@@ -183,4 +208,8 @@ spec:
       #   - name: license
       #     secret:
       #       secretName: aspose-license
+      #       optional: true
+      #   - name: extensions
+      #     configMap:
+      #       name: aspose-extensions
       #       optional: true

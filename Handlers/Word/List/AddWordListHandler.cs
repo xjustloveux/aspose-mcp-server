@@ -11,6 +11,13 @@ using WordParagraph = Aspose.Words.Paragraph;
 namespace AsposeMcpServer.Handlers.Word.List;
 
 /// <summary>
+///     Represents the result of getting or creating a list.
+/// </summary>
+/// <param name="List">The list instance.</param>
+/// <param name="IsContinuing">Whether this continues a previous list.</param>
+internal record ListResult(WordList List, bool IsContinuing);
+
+/// <summary>
 ///     Handler for adding lists to Word documents.
 /// </summary>
 [ResultType(typeof(SuccessResult))]
@@ -40,16 +47,17 @@ public class AddWordListHandler : OperationHandlerBase<Document>
         var builder = new DocumentBuilder(doc);
         builder.MoveToDocumentEnd();
 
-        var (list, isContinuing) = GetOrCreateList(doc, p.ContinuePrevious, p.ListType, p.BulletChar, p.NumberFormat);
+        var listResult = GetOrCreateList(doc, p.ContinuePrevious, p.ListType, p.BulletChar, p.NumberFormat);
 
-        WriteListItems(builder, list, parsedItems);
+        WriteListItems(builder, listResult.List, parsedItems);
 
         builder.ListFormat.RemoveNumbers();
         MarkModified(context);
 
         return new SuccessResult
         {
-            Message = BuildResultMessage(isContinuing, p.ListType, p.BulletChar, p.NumberFormat, list,
+            Message = BuildResultMessage(listResult.IsContinuing, p.ListType, p.BulletChar, p.NumberFormat,
+                listResult.List,
                 parsedItems.Count)
         };
     }
@@ -78,19 +86,19 @@ public class AddWordListHandler : OperationHandlerBase<Document>
     /// <param name="listType">The list type (bullet, number, custom).</param>
     /// <param name="bulletChar">The bullet character for custom lists.</param>
     /// <param name="numberFormat">The number format for numbered lists.</param>
-    /// <returns>A tuple containing the list and whether it's continuing a previous list.</returns>
-    private static (WordList list, bool isContinuing) GetOrCreateList(Document doc, bool continuePrevious,
+    /// <returns>A <see cref="ListResult" /> containing the list and continuation status.</returns>
+    private static ListResult GetOrCreateList(Document doc, bool continuePrevious,
         string listType, string bulletChar, string numberFormat)
     {
         if (continuePrevious && doc.Lists.Count > 0)
         {
             var existingList = FindExistingList(doc);
             if (existingList != null)
-                return (existingList, true);
+                return new ListResult(existingList, true);
         }
 
         var newList = CreateNewList(doc, listType, bulletChar, numberFormat);
-        return (newList, false);
+        return new ListResult(newList, false);
     }
 
     /// <summary>
@@ -155,14 +163,13 @@ public class AddWordListHandler : OperationHandlerBase<Document>
     /// <param name="builder">The document builder.</param>
     /// <param name="list">The list to write items to.</param>
     /// <param name="parsedItems">The parsed list items.</param>
-    private static void WriteListItems(DocumentBuilder builder, WordList list,
-        List<(string text, int level)> parsedItems)
+    private static void WriteListItems(DocumentBuilder builder, WordList list, List<ListItemInfo> parsedItems)
     {
         foreach (var item in parsedItems)
         {
             builder.ListFormat.List = list;
-            builder.ListFormat.ListLevelNumber = Math.Min(item.level, 8);
-            builder.Writeln(item.text);
+            builder.ListFormat.ListLevelNumber = Math.Min(item.Level, 8);
+            builder.Writeln(item.Text);
         }
     }
 

@@ -1,4 +1,5 @@
 using System.Reflection;
+using AsposeMcpServer.Core.Extension;
 using AsposeMcpServer.Core.Session;
 using ModelContextProtocol.Server;
 
@@ -57,9 +58,11 @@ public static class McpServerBuilderExtensions
     /// <param name="toolType">The tool type to register.</param>
     private static void RegisterToolType(IMcpServerBuilder builder, Type toolType)
     {
+#pragma warning disable S3011 // Reflection should not be used to increase accessibility - Required to call private generic method
         var withToolsMethod = typeof(McpServerBuilderExtensions)
             .GetMethod(nameof(RegisterToolGeneric), BindingFlags.NonPublic | BindingFlags.Static)?
             .MakeGenericMethod(toolType);
+#pragma warning restore S3011
 
         withToolsMethod?.Invoke(null, [builder]);
     }
@@ -100,7 +103,27 @@ public static class McpServerBuilderExtensions
         ServerConfig serverConfig,
         SessionConfig sessionConfig)
     {
-        var filterService = new ToolFilterService(serverConfig, sessionConfig);
+        return WithFilteredToolsAndSchemas(builder, serverConfig, sessionConfig, new ExtensionConfig());
+    }
+
+    /// <summary>
+    ///     Registers tools with custom OutputSchema support including extension tools.
+    ///     This method creates tools programmatically to allow schema customization.
+    ///     Uses deferred service resolution to avoid requiring IServiceProvider at configuration time.
+    /// </summary>
+    /// <param name="builder">The MCP server builder.</param>
+    /// <param name="serverConfig">The server configuration for tool filtering.</param>
+    /// <param name="sessionConfig">The session configuration for session tool filtering.</param>
+    /// <param name="extensionConfig">The extension configuration for extension tool filtering.</param>
+    /// <returns>The builder for method chaining.</returns>
+    // ReSharper disable once UnusedMethodReturnValue.Global - Fluent API design, return value is optional for chaining
+    public static IMcpServerBuilder WithFilteredToolsAndSchemas(
+        this IMcpServerBuilder builder,
+        ServerConfig serverConfig,
+        SessionConfig sessionConfig,
+        ExtensionConfig extensionConfig)
+    {
+        var filterService = new ToolFilterService(serverConfig, sessionConfig, extensionConfig);
         var assembly = Assembly.GetExecutingAssembly();
 
         var toolTypes = assembly.GetTypes()

@@ -83,10 +83,10 @@ public class PptHyperlinkHelperTests
     {
         using var presentation = new Presentation();
 
-        var (hyperlink, description) = PptHyperlinkHelper.CreateHyperlink(presentation, "https://example.com", null);
+        var result = PptHyperlinkHelper.CreateHyperlink(presentation, "https://example.com", null);
 
-        Assert.NotNull(hyperlink);
-        Assert.Equal("https://example.com", description);
+        Assert.NotNull(result.Hyperlink);
+        Assert.Equal("https://example.com", result.Description);
     }
 
     [Fact]
@@ -95,10 +95,10 @@ public class PptHyperlinkHelperTests
         using var presentation = new Presentation();
         presentation.Slides.AddEmptySlide(presentation.LayoutSlides[0]);
 
-        var (hyperlink, description) = PptHyperlinkHelper.CreateHyperlink(presentation, null, 1);
+        var result = PptHyperlinkHelper.CreateHyperlink(presentation, null, 1);
 
-        Assert.NotNull(hyperlink);
-        Assert.Equal("Slide 1", description);
+        Assert.NotNull(result.Hyperlink);
+        Assert.Equal("Slide 1", result.Description);
     }
 
     [Fact]

@@ -55,16 +55,6 @@ public class WordFileToolTests : WordTestBase
     }
 
     [Fact]
-    public void ConvertDocument_ShouldConvertToPdf()
-    {
-        var docPath = CreateWordDocumentWithContent("test_convert.docx", "Test content");
-        var outputPath = CreateTestFilePath("test_convert_output.pdf");
-        _tool.Execute("convert", path: docPath, outputPath: outputPath, format: "pdf");
-        Assert.True(File.Exists(outputPath));
-        Assert.True(new FileInfo(outputPath).Length > 0);
-    }
-
-    [Fact]
     public void MergeDocuments_ShouldMergeMultipleDocuments()
     {
         var doc1Path = CreateWordDocumentWithContent("test_merge1.docx", "First document");
@@ -126,18 +116,6 @@ public class WordFileToolTests : WordTestBase
     #region Session Management
 
     [Fact]
-    public void ConvertDocument_WithSessionId_ShouldConvert()
-    {
-        var docPath = CreateWordDocumentWithContent("test_session_convert.docx", "Session content");
-        var sessionId = OpenSession(docPath);
-        var outputPath = CreateTestFilePath("test_session_convert_output.pdf");
-        var result = _tool.Execute("convert", sessionId, outputPath: outputPath, format: "pdf");
-        Assert.True(File.Exists(outputPath));
-        var output = GetResultOutput<SuccessResult>(result);
-        Assert.True(output.IsSession);
-    }
-
-    [Fact]
     public void SplitDocument_WithSessionId_ShouldSplit()
     {
         var docPath = CreateWordDocument("test_session_split.docx");
@@ -183,9 +161,10 @@ public class WordFileToolTests : WordTestBase
     [Fact]
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
-        var outputPath = CreateTestFilePath("test_invalid_session.pdf");
+        var outputDir = CreateTestFilePath("test_invalid_session_split");
+        Directory.CreateDirectory(outputDir);
         Assert.Throws<KeyNotFoundException>(() =>
-            _tool.Execute("convert", "invalid_session_id", outputPath: outputPath, format: "pdf"));
+            _tool.Execute("split", "invalid_session_id", outputDir: outputDir, splitBy: "section"));
     }
 
     #endregion

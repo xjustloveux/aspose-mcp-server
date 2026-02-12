@@ -84,7 +84,11 @@ public sealed class JwtAuthenticationMiddleware : IMiddleware, IDisposable
         }
 
         if (config.Mode == JwtMode.Local)
-            (_validationParameters, _cryptoKey) = BuildValidationParameters();
+        {
+            var validationResult = BuildValidationParameters();
+            _validationParameters = validationResult.Parameters;
+            _cryptoKey = validationResult.CryptoKey;
+        }
 
         if (config.CacheEnabled &&
             (config.Mode == JwtMode.Introspection || config.Mode == JwtMode.Custom))
@@ -145,10 +149,10 @@ public sealed class JwtAuthenticationMiddleware : IMiddleware, IDisposable
     }
 
     /// <summary>
-    ///     Builds token validation parameters from configuration
+    ///     Builds token validation parameters from configuration.
     /// </summary>
-    /// <returns>Token validation parameters and disposable crypto key (if any)</returns>
-    private (TokenValidationParameters?, IDisposable?) BuildValidationParameters()
+    /// <returns>A <see cref="ValidationParametersResult" /> containing validation parameters and crypto key.</returns>
+    private ValidationParametersResult BuildValidationParameters()
     {
         SecurityKey? signingKey = null;
         IDisposable? cryptoKey = null;
@@ -179,10 +183,10 @@ public sealed class JwtAuthenticationMiddleware : IMiddleware, IDisposable
         if (signingKey == null)
         {
             _logger.LogWarning("JWT Local mode: No valid signing key configured");
-            return (null, null);
+            return new ValidationParametersResult(null, null);
         }
 
-        return (new TokenValidationParameters
+        return new ValidationParametersResult(new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = signingKey,

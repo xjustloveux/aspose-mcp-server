@@ -9,6 +9,13 @@ using WordShape = Aspose.Words.Drawing.Shape;
 namespace AsposeMcpServer.Handlers.Word.Paragraph;
 
 /// <summary>
+///     Represents location information for a paragraph.
+/// </summary>
+/// <param name="Location">The location type (Body, Comment, TextBox, etc.).</param>
+/// <param name="CommentInfo">Comment information if the paragraph is in a comment.</param>
+internal record ParagraphLocation(string Location, string? CommentInfo);
+
+/// <summary>
 ///     Handler for getting paragraphs from Word documents.
 /// </summary>
 [ResultType(typeof(GetParagraphsWordResult))]
@@ -120,16 +127,16 @@ public class GetParagraphsWordHandler : OperationHandlerBase<Document>
         {
             var para = paragraphs[i];
             var text = para.GetText().Trim();
-            var (location, commentInfo) = DetermineLocation(para);
+            var paragraphLocation = DetermineLocation(para);
 
             var paraInfo = new ParagraphInfo
             {
                 Index = i,
-                Location = location,
+                Location = paragraphLocation.Location,
                 Style = para.ParagraphFormat.Style?.Name,
                 Text = text.Length > 100 ? text[..100] + "..." : text,
                 TextLength = text.Length,
-                CommentInfo = commentInfo
+                CommentInfo = paragraphLocation.CommentInfo
             };
 
             paragraphList.Add(paraInfo);
@@ -138,10 +145,10 @@ public class GetParagraphsWordHandler : OperationHandlerBase<Document>
         return paragraphList;
     }
 
-    private static (string location, string? commentInfo) DetermineLocation(Aspose.Words.Paragraph para)
+    private static ParagraphLocation DetermineLocation(Aspose.Words.Paragraph para)
     {
         if (para.ParentNode == null)
-            return ("Body", null);
+            return new ParagraphLocation("Body", null);
 
         var commentAncestor = para.GetAncestor(NodeType.Comment);
         if (commentAncestor != null)
@@ -149,21 +156,21 @@ public class GetParagraphsWordHandler : OperationHandlerBase<Document>
             var commentInfo = commentAncestor is WordComment comment
                 ? $"ID: {comment.Id}, Author: {comment.Author}"
                 : null;
-            return ("Comment", commentInfo);
+            return new ParagraphLocation("Comment", commentInfo);
         }
 
         var shapeAncestor = para.GetAncestor(NodeType.Shape);
         if (shapeAncestor != null)
         {
             var location = shapeAncestor is WordShape { ShapeType: ShapeType.TextBox } ? "TextBox" : "Shape";
-            return (location, null);
+            return new ParagraphLocation(location, null);
         }
 
         var bodyAncestor = para.GetAncestor(NodeType.Body);
         if (bodyAncestor == null || para.ParentNode.NodeType != NodeType.Body)
-            return (para.ParentNode.NodeType.ToString(), null);
+            return new ParagraphLocation(para.ParentNode.NodeType.ToString(), null);
 
-        return ("Body", null);
+        return new ParagraphLocation("Body", null);
     }
 
     /// <summary>

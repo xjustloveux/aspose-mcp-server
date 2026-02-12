@@ -136,12 +136,13 @@ public static class PptHyperlinkHelper
     /// <param name="presentation">The presentation object.</param>
     /// <param name="url">The external URL (optional).</param>
     /// <param name="slideTargetIndex">The target slide index for internal link (optional).</param>
-    /// <returns>A tuple containing the hyperlink and its description.</returns>
+    /// <returns>A <see cref="HyperlinkCreationResult" /> with the hyperlink and description.</returns>
     /// <exception cref="ArgumentException">Thrown when neither url nor slideTargetIndex is provided.</exception>
-    public static (IHyperlink hyperlink, string description) CreateHyperlink(
+    public static HyperlinkCreationResult CreateHyperlink(
         IPresentation presentation, string? url, int? slideTargetIndex)
     {
-        if (!string.IsNullOrEmpty(url)) return (new Hyperlink(url), url);
+        if (!string.IsNullOrEmpty(url))
+            return new HyperlinkCreationResult(new Hyperlink(url), url);
 
         if (slideTargetIndex.HasValue)
         {
@@ -149,7 +150,7 @@ public static class PptHyperlinkHelper
                 throw new ArgumentException(
                     $"slideTargetIndex must be between 0 and {presentation.Slides.Count - 1}");
 
-            return (new Hyperlink(presentation.Slides[slideTargetIndex.Value]),
+            return new HyperlinkCreationResult(new Hyperlink(presentation.Slides[slideTargetIndex.Value]),
                 $"Slide {slideTargetIndex.Value}");
         }
 

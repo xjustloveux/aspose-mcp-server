@@ -9,6 +9,13 @@ using WordParagraph = Aspose.Words.Paragraph;
 namespace AsposeMcpServer.Handlers.Word.Text;
 
 /// <summary>
+///     Represents the result of setting up builder position.
+/// </summary>
+/// <param name="TargetParagraph">The target paragraph, or null if moving to end.</param>
+/// <param name="WarningMessage">Any warning message generated.</param>
+internal record BuilderPositionResult(WordParagraph? TargetParagraph, string WarningMessage);
+
+/// <summary>
 ///     Handler for adding text with style to Word documents.
 /// </summary>
 [ResultType(typeof(SuccessResult))]
@@ -40,16 +47,16 @@ public class AddWithStyleWordTextHandler : OperationHandlerBase<Document>
         if (!string.IsNullOrEmpty(p.TabStopsJson))
             tabStops = JsonNode.Parse(p.TabStopsJson) as JsonArray;
 
-        var (targetPara, warningMessage) = SetupBuilderPosition(doc, builder, p.ParagraphIndex);
+        var positionResult = SetupBuilderPosition(doc, builder, p.ParagraphIndex);
 
         var para = CreateStyledParagraph(doc, p, tabStops);
 
-        InsertParagraph(builder, para, targetPara, p.ParagraphIndex);
+        InsertParagraph(builder, para, positionResult.TargetParagraph, p.ParagraphIndex);
         FixEmptyParagraphStyles(doc, para);
 
         MarkModified(context);
 
-        return BuildResultMessage(p, warningMessage);
+        return BuildResultMessage(p, positionResult.WarningMessage);
     }
 
     /// <summary>
@@ -84,10 +91,10 @@ public class AddWithStyleWordTextHandler : OperationHandlerBase<Document>
     /// <param name="doc">The document.</param>
     /// <param name="builder">The document builder.</param>
     /// <param name="paragraphIndex">The optional paragraph index.</param>
-    /// <returns>Tuple of target paragraph and warning message.</returns>
+    /// <returns>A <see cref="BuilderPositionResult" /> with target paragraph and warning message.</returns>
     /// <exception cref="ArgumentException">Thrown when paragraph index is out of range.</exception>
     /// <exception cref="InvalidOperationException">Thrown when paragraph cannot be found.</exception>
-    private static (WordParagraph? targetPara, string warningMessage) SetupBuilderPosition(Document doc,
+    private static BuilderPositionResult SetupBuilderPosition(Document doc,
         DocumentBuilder builder, int? paragraphIndex)
     {
         WordParagraph? targetPara = null;
@@ -96,7 +103,7 @@ public class AddWithStyleWordTextHandler : OperationHandlerBase<Document>
         if (!paragraphIndex.HasValue)
         {
             builder.MoveToDocumentEnd();
-            return (targetPara, warningMessage);
+            return new BuilderPositionResult(targetPara, warningMessage);
         }
 
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
@@ -126,7 +133,7 @@ public class AddWithStyleWordTextHandler : OperationHandlerBase<Document>
                 $"Paragraph index {paragraphIndex.Value} is out of range (document has {paragraphs.Count} paragraphs)");
         }
 
-        return (targetPara, warningMessage);
+        return new BuilderPositionResult(targetPara, warningMessage);
     }
 
     /// <summary>

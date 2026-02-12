@@ -239,6 +239,37 @@
     }
   },
 
+  "_範例18": "========================================",
+  "_範例18說明": "啟用擴充功能系統（Extension）",
+  "_範例18適用": "需要即時預覽、雲端同步等第三方擴充功能時",
+  "_範例18注意": "擴充功能需要 Session 支援，會自動啟用 Session",
+  "mcpServers_example18_extension": {
+    "aspose-all": {
+      "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",
+      "args": [
+        "--all",
+        "--session-enabled",
+        "--extension-config", "C:/Tools/aspose-mcp-server/extensions.json"
+      ]
+    }
+  },
+
+  "_範例19": "========================================",
+  "_範例19說明": "擴充功能 + HTTP 模式",
+  "_範例19適用": "網頁應用需要擴充功能時",
+  "mcpServers_example19_extension_http": {
+    "aspose-all": {
+      "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",
+      "args": [
+        "--all",
+        "--http",
+        "--port", "3000",
+        "--session-enabled",
+        "--extension-config", "C:/Tools/aspose-mcp-server/extensions.json"
+      ]
+    }
+  },
+
   "_參數說明": "========================================",
   "_參數列表_工具": {
     "--word": "啟用 Word 工具（自動包含轉換功能）",
@@ -318,6 +349,27 @@
     "--metrics-enabled": "啟用 Prometheus Metrics",
     "--metrics-disabled": "停用 Prometheus Metrics",
     "--metrics-path path": "Metrics 路徑（預設：/metrics）"
+  },
+  "_參數列表_擴充功能": {
+    "--extension-enabled": "啟用擴充功能系統",
+    "--extension-disabled": "停用擴充功能系統",
+    "--extension-config path": "擴充功能配置檔案路徑（extensions.json）",
+    "--extension-temp-dir path": "快照暫存目錄（預設：系統暫存目錄）",
+    "--extension-transport-mode mode": "預設傳輸模式（mmap/stdin/file，預設：stdin）",
+    "--extension-idle-timeout N": "閒置逾時分鐘（0=不卸載，預設：30）",
+    "--extension-snapshot-ttl N": "快照存活時間秒（預設：30）",
+    "--extension-max-restarts N": "最大重啟次數（預設：3）",
+    "--extension-health-interval N": "健康檢查間隔秒（預設：30）"
+  },
+  "_參數列表_擴充功能_環境變數": {
+    "ASPOSE_EXTENSION_ENABLED": "true/false - 啟用或停用擴充功能系統",
+    "ASPOSE_EXTENSION_CONFIG": "擴充功能配置檔案路徑",
+    "ASPOSE_EXTENSION_TEMP_DIR": "快照暫存目錄",
+    "ASPOSE_EXTENSION_TRANSPORT_MODE": "預設傳輸模式（mmap/stdin/file，預設：stdin）",
+    "ASPOSE_EXTENSION_IDLE_TIMEOUT_DEFAULT": "閒置逾時分鐘（預設：30）",
+    "ASPOSE_EXTENSION_SNAPSHOT_TTL_DEFAULT": "快照存活時間秒（預設：30）",
+    "ASPOSE_EXTENSION_MAX_RESTARTS": "最大重啟次數（預設：3）",
+    "ASPOSE_EXTENSION_HEALTH_INTERVAL": "健康檢查間隔秒（預設：30）"
   },
   "_參數列表_Origin驗證": {
     "--no-origin-validation": "停用 Origin 驗證",

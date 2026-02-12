@@ -1,3 +1,4 @@
+using AsposeMcpServer.Core.Extension;
 using AsposeMcpServer.Core.Session;
 
 namespace AsposeMcpServer.Core;
@@ -7,6 +8,11 @@ namespace AsposeMcpServer.Core;
 /// </summary>
 public class ToolFilterService
 {
+    /// <summary>
+    ///     The extension configuration for extension tool filtering.
+    /// </summary>
+    private readonly ExtensionConfig _extensionConfig;
+
     /// <summary>
     ///     The server configuration containing tool category enablement settings.
     /// </summary>
@@ -23,9 +29,21 @@ public class ToolFilterService
     /// <param name="serverConfig">The server configuration.</param>
     /// <param name="sessionConfig">The session configuration.</param>
     public ToolFilterService(ServerConfig serverConfig, SessionConfig sessionConfig)
+        : this(serverConfig, sessionConfig, new ExtensionConfig())
+    {
+    }
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="ToolFilterService" /> class.
+    /// </summary>
+    /// <param name="serverConfig">The server configuration.</param>
+    /// <param name="sessionConfig">The session configuration.</param>
+    /// <param name="extensionConfig">The extension configuration.</param>
+    public ToolFilterService(ServerConfig serverConfig, SessionConfig sessionConfig, ExtensionConfig extensionConfig)
     {
         _serverConfig = serverConfig;
         _sessionConfig = sessionConfig;
+        _extensionConfig = extensionConfig;
     }
 
     /// <summary>
@@ -40,6 +58,9 @@ public class ToolFilterService
 
         if (toolName == "document_session")
             return _sessionConfig.Enabled;
+
+        if (toolName == "extension")
+            return _extensionConfig.Enabled;
 
         if (toolName.StartsWith("word_", StringComparison.OrdinalIgnoreCase))
             return _serverConfig.EnableWord;
@@ -62,20 +83,9 @@ public class ToolFilterService
         if (toolName.StartsWith("barcode_", StringComparison.OrdinalIgnoreCase))
             return _serverConfig.EnableBarCode;
 
-        if (toolName == "convert_to_pdf")
+        if (toolName == "convert_document")
             return _serverConfig.EnableWord || _serverConfig.EnableExcel || _serverConfig.EnablePowerPoint ||
                    _serverConfig.EnablePdf;
-
-        if (toolName == "convert_document")
-        {
-            var enabledCount = 0;
-            if (_serverConfig.EnableWord) enabledCount++;
-            if (_serverConfig.EnableExcel) enabledCount++;
-            if (_serverConfig.EnablePowerPoint) enabledCount++;
-            if (_serverConfig.EnablePdf) enabledCount++;
-            if (_serverConfig.EnableEmail) enabledCount++;
-            return enabledCount >= 2;
-        }
 
         return true;
     }
@@ -96,6 +106,7 @@ public class ToolFilterService
         if (_serverConfig.EnableEmail) categories.Add("Email");
         if (_serverConfig.EnableBarCode) categories.Add("BarCode");
         if (_sessionConfig.Enabled) categories.Add("Session");
+        if (_extensionConfig.Enabled) categories.Add("Extension");
 
         return categories.Count > 0 ? string.Join(", ", categories) : "None";
     }

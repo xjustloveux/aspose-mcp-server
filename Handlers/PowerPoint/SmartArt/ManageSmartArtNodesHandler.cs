@@ -10,6 +10,13 @@ using AsposeMcpServer.Results.Common;
 namespace AsposeMcpServer.Handlers.PowerPoint.SmartArt;
 
 /// <summary>
+///     Represents the navigation result to a SmartArt node.
+/// </summary>
+/// <param name="TargetNode">The target SmartArt node.</param>
+/// <param name="RootIndex">The root index in the path.</param>
+internal record SmartArtNodeTarget(ISmartArtNode TargetNode, int RootIndex);
+
+/// <summary>
 ///     Handler for managing SmartArt nodes (add, edit, delete).
 /// </summary>
 [ResultType(typeof(SuccessResult))]
@@ -35,9 +42,9 @@ public class ManageSmartArtNodesHandler : OperationHandlerBase<Presentation>
         var slide = PowerPointHelper.GetSlide(presentation, nodeParams.SlideIndex);
         var smartArt = GetSmartArtShape(slide, nodeParams.ShapeIndex);
         var targetPathArray = ParseTargetPath(nodeParams.TargetPath);
-        var (targetNode, rootIndex) = NavigateToTargetNode(smartArt, targetPathArray);
+        var nodeTarget = NavigateToTargetNode(smartArt, targetPathArray);
 
-        var actionContext = new ActionContext(smartArt, targetNode, targetPathArray, rootIndex);
+        var actionContext = new ActionContext(smartArt, nodeTarget.TargetNode, targetPathArray, nodeTarget.RootIndex);
         var message = ExecuteAction(nodeParams, actionContext);
 
         MarkModified(context);
@@ -80,9 +87,9 @@ public class ManageSmartArtNodesHandler : OperationHandlerBase<Presentation>
     /// </summary>
     /// <param name="smartArt">The SmartArt shape.</param>
     /// <param name="targetPath">The target path array.</param>
-    /// <returns>A tuple containing the target node and root index.</returns>
+    /// <returns>A <see cref="SmartArtNodeTarget" /> with the target node and root index.</returns>
     /// <exception cref="ArgumentException">Thrown when a path index is out of range.</exception>
-    private static (ISmartArtNode targetNode, int rootIndex) NavigateToTargetNode(ISmartArt smartArt, int[] targetPath)
+    private static SmartArtNodeTarget NavigateToTargetNode(ISmartArt smartArt, int[] targetPath)
     {
         var rootIndex = targetPath[0];
         if (rootIndex < 0 || rootIndex >= smartArt.AllNodes.Count)
@@ -99,7 +106,7 @@ public class ManageSmartArtNodesHandler : OperationHandlerBase<Presentation>
             currentNode = currentNode.ChildNodes[childIndex];
         }
 
-        return (currentNode, rootIndex);
+        return new SmartArtNodeTarget(currentNode, rootIndex);
     }
 
     /// <summary>

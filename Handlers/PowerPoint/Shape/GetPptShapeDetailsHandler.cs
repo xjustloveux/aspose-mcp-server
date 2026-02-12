@@ -36,13 +36,13 @@ public class GetPptShapeDetailsHandler : OperationHandlerBase<Presentation>
 
         var shape = slide.Shapes[p.ShapeIndex];
 
-        var (typeName, details) = ShapeDetailProviderFactory.GetShapeDetails(shape, presentation);
+        var shapeInfo = ShapeDetailProviderFactory.GetShapeDetails(shape, presentation);
 
         return new GetShapeDetailsResult
         {
             Index = p.ShapeIndex,
             Name = shape.Name,
-            Type = typeName,
+            Type = shapeInfo.TypeName,
             X = shape.X,
             Y = shape.Y,
             Width = shape.Width,
@@ -52,7 +52,7 @@ public class GetPptShapeDetailsHandler : OperationHandlerBase<Presentation>
             AlternativeText = string.IsNullOrEmpty(shape.AlternativeText) ? null : shape.AlternativeText,
             FlipHorizontal = MapNullableBool(shape.Frame.FlipH),
             FlipVertical = MapNullableBool(shape.Frame.FlipV),
-            Details = details
+            Details = shapeInfo.Details
         };
     }
 

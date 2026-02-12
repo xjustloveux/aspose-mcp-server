@@ -73,18 +73,112 @@ public static class WordHeaderFooterHelper
 
     /// <summary>
     ///     Inserts text or a field code (like PAGE, DATE) into the document.
+    ///     Supports mixed content like "Page {PAGE} of {NUMPAGES}".
     /// </summary>
     /// <param name="builder">The document builder.</param>
-    /// <param name="text">The text to insert. Field codes start with { and end with }.</param>
+    /// <param name="text">
+    ///     The text to insert. Field codes are enclosed in braces (e.g., {PAGE}, {DATE}).
+    ///     Use {{ and }} for literal braces.
+    /// </param>
     /// <param name="fontSettings">The font settings to apply.</param>
     public static void InsertTextOrField(DocumentBuilder builder, string text, FontSettings fontSettings)
     {
         ApplyFontSettings(builder, fontSettings);
 
-        if (IsFieldCode(text))
-            InsertField(builder, text);
-        else
+        if (!text.Contains('{') && !text.Contains('}'))
+        {
             builder.Write(text);
+            return;
+        }
+
+        InsertMixedContent(builder, text);
+    }
+
+    /// <summary>
+    ///     Parses and inserts mixed content containing text and field codes.
+    /// </summary>
+    /// <param name="builder">The document builder.</param>
+    /// <param name="text">The text containing potential field codes.</param>
+    private static void InsertMixedContent(DocumentBuilder builder, string text)
+    {
+        var i = 0;
+        while (i < text.Length)
+            if (text[i] == '{')
+            {
+                if (i + 1 < text.Length && text[i + 1] == '{')
+                {
+                    builder.Write("{");
+                    i += 2;
+                    continue;
+                }
+
+                var closingIndex = text.IndexOf('}', i + 1);
+                if (closingIndex == -1)
+                {
+                    builder.Write(text[i..]);
+                    break;
+                }
+
+                var fieldCode = text[(i + 1)..closingIndex].Trim();
+                if (!string.IsNullOrEmpty(fieldCode))
+                    InsertFieldByCode(builder, fieldCode);
+
+                i = closingIndex + 1;
+            }
+            else if (text[i] == '}')
+            {
+                if (i + 1 < text.Length && text[i + 1] == '}')
+                {
+                    builder.Write("}");
+                    i += 2;
+                    continue;
+                }
+
+                builder.Write("}");
+                i++;
+            }
+            else
+            {
+                var nextBraceIndex = FindNextBraceIndex(text, i);
+                if (nextBraceIndex == -1)
+                {
+                    builder.Write(text[i..]);
+                    break;
+                }
+
+                builder.Write(text[i..nextBraceIndex]);
+                i = nextBraceIndex;
+            }
+    }
+
+    /// <summary>
+    ///     Finds the index of the next brace character.
+    /// </summary>
+    /// <param name="text">The text to search.</param>
+    /// <param name="startIndex">The starting index.</param>
+    /// <returns>The index of the next brace, or -1 if not found.</returns>
+    private static int FindNextBraceIndex(string text, int startIndex)
+    {
+        for (var i = startIndex; i < text.Length; i++)
+            if (text[i] == '{' || text[i] == '}')
+                return i;
+
+        return -1;
+    }
+
+    /// <summary>
+    ///     Inserts a field by its code name.
+    /// </summary>
+    /// <param name="builder">The document builder.</param>
+    /// <param name="fieldCode">The field code (e.g., PAGE, DATE).</param>
+    private static void InsertFieldByCode(DocumentBuilder builder, string fieldCode)
+    {
+        var code = fieldCode.ToUpper();
+
+        if (FieldCodeMap.TryGetValue(code, out var fieldType))
+            builder.InsertField(fieldType, true);
+        else
+            builder.InsertField($" {code} ", null);
     }
 
     /// <summary>
@@ -105,30 +199,5 @@ public static class WordHeaderFooterHelper
 
         if (fontSettings.FontSize.HasValue)
             builder.Font.Size = fontSettings.FontSize.Value;
-    }
-
-    /// <summary>
-    ///     Checks if the text is a field code (enclosed in braces).
-    /// </summary>
-    /// <param name="text">The text to check.</param>
-    /// <returns>True if the text is a field code.</returns>
-    private static bool IsFieldCode(string text)
-    {
-        return text.StartsWith('{') && text.EndsWith('}');
-    }
-
-    /// <summary>
-    ///     Inserts a field based on the field code.
-    /// </summary>
-    /// <param name="builder">The document builder.</param>
-    /// <param name="fieldCode">The field code (e.g., {PAGE}, {DATE}).</param>
-    private static void InsertField(DocumentBuilder builder, string fieldCode)
-    {
-        var code = fieldCode.Trim('{', '}', ' ').ToUpper();
-
-        if (FieldCodeMap.TryGetValue(code, out var fieldType))
-            builder.InsertField(fieldType, true);
-        else
-            builder.InsertField($" {code} ", null);
     }
 }

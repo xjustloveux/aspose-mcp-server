@@ -6,22 +6,22 @@
     <title>工具列表 - Aspose MCP Server</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="alternate icon" href="favicon.ico">
-    <meta name="description" content="Aspose MCP Server 完整的工具列表：Word 27個、Excel 31個、PowerPoint 25個、PDF 19個、OCR 2個、Email 6個、BarCode 2個、轉換 2個、Session 1個。">
-    <meta name="keywords" content="Aspose, MCP, 工具列表, Word, Excel, PowerPoint, PDF, OCR, Email, BarCode, 115個工具">
+    <meta name="description" content="Aspose MCP Server 完整的工具列表：Word 27個、Excel 31個、PowerPoint 25個、PDF 19個、OCR 2個、Email 6個、BarCode 2個、轉換 1個、Session 1個、擴充功能 1個。">
+    <meta name="keywords" content="Aspose, MCP, 工具列表, Word, Excel, PowerPoint, PDF, OCR, Email, BarCode, 擴充功能, 115個工具">
     <link rel="canonical" href="https://xjustloveux.github.io/aspose-mcp-server/tools.html">
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://xjustloveux.github.io/aspose-mcp-server/tools.html">
     <meta property="og:title" content="工具列表 - Aspose MCP Server">
-    <meta property="og:description" content="Aspose MCP Server 完整的工具列表：Word 27個、Excel 31個、PowerPoint 25個、PDF 19個、OCR 2個、Email 6個、BarCode 2個、轉換 2個、Session 1個。">
+    <meta property="og:description" content="Aspose MCP Server 完整的工具列表：Word 27個、Excel 31個、PowerPoint 25個、PDF 19個、OCR 2個、Email 6個、BarCode 2個、轉換 1個、Session 1個、擴充功能 1個。">
     <meta property="og:site_name" content="Aspose MCP Server">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary">
     <meta property="twitter:url" content="https://xjustloveux.github.io/aspose-mcp-server/tools.html">
     <meta property="twitter:title" content="工具列表 - Aspose MCP Server">
-    <meta property="twitter:description" content="Aspose MCP Server 完整的工具列表：Word 27個、Excel 31個、PowerPoint 25個、PDF 19個、OCR 2個、Email 6個、BarCode 2個、轉換 2個、Session 1個。">
+    <meta property="twitter:description" content="Aspose MCP Server 完整的工具列表：Word 27個、Excel 31個、PowerPoint 25個、PDF 19個、OCR 2個、Email 6個、BarCode 2個、轉換 1個、Session 1個、擴充功能 1個。">
     <link rel="stylesheet" href="theme.css">
     <script src="theme.js"></script>
     <style>
@@ -116,6 +116,12 @@
                 </li>
                 <li>
                     <a href="developers.html">開發者指南</a>
+                </li>
+                <li>
+                    <a href="extensions.html">擴充功能開發</a>
+                </li>
+                <li>
+                    <a href="configuration.html">配置參考</a>
                 </li>
                 <li>
                     <a href="deployment.html">部署指南</a>
@@ -660,15 +666,12 @@
 </div>
 
 <div class="section">
-    <h2>🔄 轉換工具 (2 個)</h2>
+    <h2>🔄 轉換工具 (1 個)</h2>
     <ul class="tool-list">
         <li>
-            <span class="tool-name">convert_to_pdf</span><span class="tool-desc">- 將任何文檔轉換為PDF（啟用任何文檔工具時自動可用）</span>
-            <br><small class="small-hint" style="margin-left: 20px;">支援格式：Word、Excel、PowerPoint、HTML、EPUB、Markdown、SVG、XPS、LaTeX、MHT</small>
-        </li>
-        <li>
-            <span class="tool-name">convert_document</span><span class="tool-desc">- 跨格式轉換（啟用兩個或以上文檔工具時自動可用）</span>
-            <br><small class="small-hint" style="margin-left: 20px;">支援 PDF→圖片（PNG/JPEG/TIFF 逐頁）、PDF→EPUB/SVG/XPS 等擴充格式</small>
+            <span class="tool-name">convert_document</span><span class="tool-desc">- 跨格式轉換（啟用任何文檔工具時自動可用）</span>
+            <br><small class="small-hint" style="margin-left: 20px;">支援輸入：Word、Excel、PowerPoint、PDF、HTML、EPUB、Markdown、SVG、XPS、LaTeX、MHT</small>
+            <br><small class="small-hint" style="margin-left: 20px;">支援輸出：Word/Excel/PDF→圖片（PNG/JPEG/TIFF/BMP/SVG，支援 pageIndex 單頁輸出）、跨格式轉換</small>
         </li>
     </ul>
 </div>
@@ -762,6 +765,98 @@
     <div class="info-box" style="margin-top: 15px;">
         <strong>💡 Session 說明</strong>
         <p style="margin-top: 8px; margin-bottom: 0;">Session 功能讓您在多次操作之間保持文檔狀態，避免重複讀取和儲存。當 Session 因閒置逾時而結束時，變更會儲存到暫存檔，可透過暫存檔操作恢復。需要透過 <code>--session-enabled</code> 參數或 <code>ASPOSE_SESSION_ENABLED=true</code> 環境變數啟用。</p>
+    </div>
+</div>
+
+<div class="section">
+    <h2 id="extension-擴充功能">🔌 擴充功能 (1 個)</h2>
+
+    <h3>擴展操作</h3>
+    <ul class="tool-list">
+        <li>
+            <span class="tool-name">extension</span><span class="tool-desc">- 管理外部擴展程序訂閱 Session 變更（需要啟用 <code>--session-enabled</code> 和 <code>--extension-enabled</code>）</span><span class="tool-ops">（7個操作：list, bind, unbind, status, set_format, bindings, command）</span>
+        </li>
+    </ul>
+
+    <h3>操作說明</h3>
+    <table class="tool-detail-table" style="margin-bottom: 15px;">
+        <tr>
+            <th style="width: 120px;">操作</th>
+            <th>說明</th>
+        </tr>
+        <tr>
+            <td>
+                <code>list</code>
+            </td>
+            <td>列出所有已註冊的擴展</td>
+        </tr>
+        <tr>
+            <td>
+                <code>bind</code>
+            </td>
+            <td>將 Session 綁定到擴展，開始接收變更通知</td>
+        </tr>
+        <tr>
+            <td>
+                <code>unbind</code>
+            </td>
+            <td>解除 Session 與擴展的綁定</td>
+        </tr>
+        <tr>
+            <td>
+                <code>status</code>
+            </td>
+            <td>查詢擴展狀態（Running、Stopped、Error 等）</td>
+        </tr>
+        <tr>
+            <td>
+                <code>set_format</code>
+            </td>
+            <td>設定快照輸出格式（PDF、HTML、PNG 等）</td>
+        </tr>
+        <tr>
+            <td>
+                <code>bindings</code>
+            </td>
+            <td>列出 Session 的所有擴展綁定</td>
+        </tr>
+        <tr>
+            <td>
+                <code>command</code>
+            </td>
+            <td>向綁定的擴展發送命令（如 highlight、goto）</td>
+        </tr>
+    </table>
+
+    <h3>傳輸模式</h3>
+    <table class="tool-detail-table" style="margin-bottom: 15px;">
+        <tr>
+            <th style="width: 120px;">模式</th>
+            <th>說明</th>
+        </tr>
+        <tr>
+            <td>
+                <code>mmap</code>
+            </td>
+            <td>Memory-Mapped File - 適合大檔案，Windows 專用</td>
+        </tr>
+        <tr>
+            <td>
+                <code>stdin</code>
+            </td>
+            <td>標準輸入二進位 - 跨平台、低延遲（預設）</td>
+        </tr>
+        <tr>
+            <td>
+                <code>file</code>
+            </td>
+            <td>臨時檔案 - 實作簡單，適合除錯測試</td>
+        </tr>
+    </table>
+
+    <div class="info-box" style="margin-top: 15px;">
+        <strong>💡 擴充功能說明</strong>
+        <p style="margin-top: 8px; margin-bottom: 0;">擴充功能讓外部程序訂閱 Session 文件變更事件，開發者可實現預覽、整合、自動化處理等應用。需要透過 <code>--extension-enabled</code> 參數或 <code>ASPOSE_EXTENSION_ENABLED=true</code> 環境變數啟用，並需要 Session 功能。詳細開發指南請參考 <a href="extensions.html">擴充功能開發指南</a>。</p>
     </div>
 </div>
 

@@ -44,9 +44,9 @@ public class AddPptImageHandler : OperationHandlerBase<Presentation>
             pixelHeight = pictureImage.Height;
         }
 
-        var (finalWidth, finalHeight) = PptImageHelper.CalculateDimensions(p.Width, p.Height, pixelWidth, pixelHeight);
+        var dimensions = PptImageHelper.CalculateDimensions(p.Width, p.Height, pixelWidth, pixelHeight);
 
-        slide.Shapes.AddPictureFrame(ShapeType.Rectangle, p.X, p.Y, finalWidth, finalHeight, pictureImage);
+        slide.Shapes.AddPictureFrame(ShapeType.Rectangle, p.X, p.Y, dimensions.Width, dimensions.Height, pictureImage);
 
         MarkModified(context);
 

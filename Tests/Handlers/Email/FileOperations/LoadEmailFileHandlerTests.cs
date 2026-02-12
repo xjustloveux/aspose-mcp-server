@@ -108,9 +108,11 @@ public class LoadEmailFileHandlerTests : HandlerTestBase<object>
 
     #region Basic Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsEmailFileInfo()
     {
+        SkipInEvaluationMode(AsposeLibraryType.Email, "Evaluation mode appends watermark to subject");
+
         var path = CreateEmlFile("test_load.eml");
         var context = CreateContext(new object());
         var parameters = CreateParameters(new Dictionary<string, object?>

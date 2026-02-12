@@ -1,5 +1,4 @@
 using Aspose.Slides;
-using AsposeMcpServer.Core.ShapeDetailProviders.Details;
 using AsposeMcpServer.Core.ShapeDetailProviders.Providers;
 
 namespace AsposeMcpServer.Core.ShapeDetailProviders;
@@ -36,16 +35,16 @@ public static class ShapeDetailProviderFactory
     }
 
     /// <summary>
-    ///     Gets shape details using the appropriate provider
+    ///     Gets shape details using the appropriate provider.
     /// </summary>
-    /// <param name="shape">The shape to extract details from</param>
-    /// <param name="presentation">The presentation containing the shape</param>
-    /// <returns>A tuple containing (typeName, details)</returns>
-    public static (string TypeName, ShapeDetails? Details) GetShapeDetails(IShape shape, IPresentation presentation)
+    /// <param name="shape">The shape to extract details from.</param>
+    /// <param name="presentation">The presentation containing the shape.</param>
+    /// <returns>A <see cref="ShapeTypeInfo" /> containing type name and details.</returns>
+    public static ShapeTypeInfo GetShapeDetails(IShape shape, IPresentation presentation)
     {
         var provider = GetProvider(shape);
-        if (provider != null) return (provider.TypeName, provider.GetDetails(shape, presentation));
+        if (provider != null) return new ShapeTypeInfo(provider.TypeName, provider.GetDetails(shape, presentation));
 
-        return (shape.GetType().Name, null);
+        return new ShapeTypeInfo(shape.GetType().Name, null);
     }
 }

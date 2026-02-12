@@ -65,6 +65,7 @@
     <PackageReference Include="ModelContextProtocol" Version="0.6.0-preview.1" />
     <PackageReference Include="ModelContextProtocol.AspNetCore" Version="0.6.0-preview.1" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.2" />
+    <PackageReference Include="System.IO.Hashing" Version="9.0.0" />
   </ItemGroup>
 
   <ItemGroup>

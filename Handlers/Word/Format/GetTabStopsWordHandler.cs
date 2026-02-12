@@ -7,6 +7,13 @@ using WordParagraph = Aspose.Words.Paragraph;
 namespace AsposeMcpServer.Handlers.Word.Format;
 
 /// <summary>
+///     Represents the target paragraphs and location description for tab stop operations.
+/// </summary>
+/// <param name="Paragraphs">The list of target paragraphs.</param>
+/// <param name="LocationDescription">The description of the location.</param>
+internal record TabStopTarget(List<WordParagraph> Paragraphs, string LocationDescription);
+
+/// <summary>
 ///     Handler for getting tab stops in Word documents.
 /// </summary>
 [ResultType(typeof(GetTabStopsWordResult))]
@@ -35,8 +42,10 @@ public class GetTabStopsWordHandler : OperationHandlerBase<Document>
                 $"Section index {p.SectionIndex} out of range (total sections: {doc.Sections.Count})");
 
         var section = doc.Sections[p.SectionIndex];
-        var (targetParagraphs, locationDesc) =
+        var tabStopTarget =
             GetTargetParagraphs(section, p.Location, p.ParagraphIndex, p.AllParagraphs);
+        var targetParagraphs = tabStopTarget.Paragraphs;
+        var locationDesc = tabStopTarget.LocationDescription;
 
         if (targetParagraphs.Count == 0)
             throw new InvalidOperationException("No target paragraphs found");
@@ -76,8 +85,8 @@ public class GetTabStopsWordHandler : OperationHandlerBase<Document>
     /// <param name="location">The location type (body, header, footer).</param>
     /// <param name="paragraphIndex">The paragraph index for body location.</param>
     /// <param name="allParagraphs">Whether to get all paragraphs.</param>
-    /// <returns>A tuple containing the list of paragraphs and location description.</returns>
-    private static (List<WordParagraph> paragraphs, string locationDesc) GetTargetParagraphs(
+    /// <returns>A TabStopTarget containing the list of paragraphs and location description.</returns>
+    private static TabStopTarget GetTargetParagraphs(
         Section section, string location, int paragraphIndex, bool allParagraphs)
     {
         return location.ToLower() switch
@@ -93,9 +102,9 @@ public class GetTabStopsWordHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="section">The document section.</param>
     /// <param name="allParagraphs">Whether to get all paragraphs.</param>
-    /// <returns>A tuple containing the list of paragraphs and location description.</returns>
+    /// <returns>A TabStopTarget containing the list of paragraphs and location description.</returns>
     /// <exception cref="InvalidOperationException">Thrown when header is not found.</exception>
-    private static (List<WordParagraph>, string) GetHeaderParagraphs(Section section, bool allParagraphs)
+    private static TabStopTarget GetHeaderParagraphs(Section section, bool allParagraphs)
     {
         var header = section.HeadersFooters[HeaderFooterType.HeaderPrimary];
         if (header == null)
@@ -103,7 +112,7 @@ public class GetTabStopsWordHandler : OperationHandlerBase<Document>
 
         var headerParas = header.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
         var paragraphs = GetParagraphsToProcess(headerParas, allParagraphs);
-        return (paragraphs, "Header");
+        return new TabStopTarget(paragraphs, "Header");
     }
 
     /// <summary>
@@ -111,9 +120,9 @@ public class GetTabStopsWordHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="section">The document section.</param>
     /// <param name="allParagraphs">Whether to get all paragraphs.</param>
-    /// <returns>A tuple containing the list of paragraphs and location description.</returns>
+    /// <returns>A TabStopTarget containing the list of paragraphs and location description.</returns>
     /// <exception cref="InvalidOperationException">Thrown when footer is not found.</exception>
-    private static (List<WordParagraph>, string) GetFooterParagraphs(Section section, bool allParagraphs)
+    private static TabStopTarget GetFooterParagraphs(Section section, bool allParagraphs)
     {
         var footer = section.HeadersFooters[HeaderFooterType.FooterPrimary];
         if (footer == null)
@@ -121,7 +130,7 @@ public class GetTabStopsWordHandler : OperationHandlerBase<Document>
 
         var footerParas = footer.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
         var paragraphs = GetParagraphsToProcess(footerParas, allParagraphs);
-        return (paragraphs, "Footer");
+        return new TabStopTarget(paragraphs, "Footer");
     }
 
     /// <summary>
@@ -142,21 +151,21 @@ public class GetTabStopsWordHandler : OperationHandlerBase<Document>
     /// <param name="section">The document section.</param>
     /// <param name="paragraphIndex">The paragraph index.</param>
     /// <param name="allParagraphs">Whether to get all paragraphs.</param>
-    /// <returns>A tuple containing the list of paragraphs and location description.</returns>
+    /// <returns>A TabStopTarget containing the list of paragraphs and location description.</returns>
     /// <exception cref="ArgumentException">Thrown when paragraph index is out of range.</exception>
-    private static (List<WordParagraph>, string) GetBodyParagraphs(Section section, int paragraphIndex,
+    private static TabStopTarget GetBodyParagraphs(Section section, int paragraphIndex,
         bool allParagraphs)
     {
         var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
 
         if (allParagraphs)
-            return (paragraphs, "Body");
+            return new TabStopTarget(paragraphs, "Body");
 
         if (paragraphIndex >= paragraphs.Count)
             throw new ArgumentException(
                 $"Paragraph index {paragraphIndex} out of range (total paragraphs: {paragraphs.Count})");
 
-        return ([paragraphs[paragraphIndex]], $"Body Paragraph {paragraphIndex}");
+        return new TabStopTarget([paragraphs[paragraphIndex]], $"Body Paragraph {paragraphIndex}");
     }
 
     /// <summary>

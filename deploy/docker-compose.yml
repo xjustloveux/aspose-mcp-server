@@ -29,6 +29,18 @@ services:
       # - ASPOSE_SESSION_ISOLATION=group    # Isolation mode: none (no isolation), group (group-level, default)
       # - ASPOSE_SESSION_AUTO_SAVE_INTERVAL=0  # Auto-save interval in minutes (0 = disabled, default: 0)
 
+      # === Extension Settings (Optional, requires Session) ===
+      # - ASPOSE_EXTENSION_ENABLED=true     # Enable extension system
+      # - ASPOSE_EXTENSION_CONFIG=/app/extensions/extensions.json  # Extension config file path
+      # - ASPOSE_EXTENSION_TEMP_DIR=/tmp/extensions  # Snapshot temp directory
+      # - ASPOSE_EXTENSION_TRANSPORT_MODE=stdin  # Default transport: mmap, stdin, file (default: stdin)
+      # - ASPOSE_EXTENSION_IDLE_TIMEOUT_DEFAULT=30   # Extension idle timeout in minutes (0 = never if allowed, default: 30)
+      # - ASPOSE_EXTENSION_SNAPSHOT_TTL_DEFAULT=30  # Snapshot TTL in seconds (default: 30)
+      # - ASPOSE_EXTENSION_MAX_RESTARTS=3   # Max restart attempts (default: 3)
+      # - ASPOSE_EXTENSION_HEALTH_INTERVAL=30  # Health check interval in seconds (default: 30)
+      # - ASPOSE_EXTENSION_DEBOUNCE_DELAY_DEFAULT=100  # Debounce delay in milliseconds (default: 100)
+      # - ASPOSE_EXTENSION_FRAME_INTERVAL_DEFAULT=100  # Frame interval in milliseconds (default: 100)
+
       # === API Key Authentication (Optional) ===
       # - ASPOSE_AUTH_APIKEY_ENABLED=true
       # - ASPOSE_AUTH_APIKEY_MODE=local    # local, gateway, introspection, custom
@@ -42,7 +54,7 @@ services:
       # - ASPOSE_AUTH_APIKEY_INTROSPECTION_AUTH=Bearer token
       # - ASPOSE_AUTH_APIKEY_INTROSPECTION_FIELD=key
       # - ASPOSE_AUTH_APIKEY_CUSTOM_URL=https://auth.example.com/validate
-      # - ASPOSE_AUTH_APIKEY_CUSTOM_TIMEOUT=5
+      # - ASPOSE_AUTH_APIKEY_TIMEOUT=5  # External validation timeout in seconds (default: 5)
 
       # === JWT Authentication (Optional) ===
       # - ASPOSE_AUTH_JWT_ENABLED=true
@@ -55,7 +67,6 @@ services:
       # - ASPOSE_AUTH_JWT_USER_CLAIM=sub
       # - ASPOSE_AUTH_JWT_GROUP_HEADER=X-Group-Id
       # - ASPOSE_AUTH_JWT_USER_HEADER=X-User-Id
-      # - ASPOSE_AUTH_JWT_USER_HEADER=X-User-Id
       # - ASPOSE_AUTH_JWT_CACHE_ENABLED=true
       # - ASPOSE_AUTH_JWT_CACHE_TTL=300
       # - ASPOSE_AUTH_JWT_CACHE_MAX_SIZE=10000
@@ -63,7 +74,7 @@ services:
       # - ASPOSE_AUTH_JWT_CLIENT_ID=your-client-id
       # - ASPOSE_AUTH_JWT_CLIENT_SECRET=your-client-secret
       # - ASPOSE_AUTH_JWT_CUSTOM_URL=https://auth.example.com/validate
-      # - ASPOSE_AUTH_JWT_CUSTOM_TIMEOUT=5
+      # - ASPOSE_AUTH_JWT_TIMEOUT=5  # External validation timeout in seconds (default: 5)
 
       # === Logging (Optional) ===
       # - ASPOSE_LOG_ENABLED=true
@@ -87,6 +98,7 @@ services:
     # volumes:
     #   - ./license:/app/license:ro
     #   - ./documents:/app/documents
+    #   - ./extensions:/app/extensions:ro    # Extension config and binaries
 
     # === Restart Policy (Optional) ===
     # restart: unless-stopped

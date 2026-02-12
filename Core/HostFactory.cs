@@ -1,8 +1,11 @@
 using System.Net;
+using AsposeMcpServer.Core.Conversion;
+using AsposeMcpServer.Core.Extension;
 using AsposeMcpServer.Core.Security;
 using AsposeMcpServer.Core.Session;
 using AsposeMcpServer.Core.Tracking;
 using AsposeMcpServer.Core.Transport;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -14,6 +17,23 @@ namespace AsposeMcpServer.Core;
 internal static class HostFactory
 {
     /// <summary>
+    ///     Server name for MCP protocol identification.
+    /// </summary>
+    private const string ServerName = "AsposeMcpServer";
+
+    /// <summary>
+    ///     Server description for MCP protocol identification.
+    /// </summary>
+    private const string ServerDescription =
+        "MCP server for document processing with Aspose libraries. " +
+        "Supports Word, Excel, PowerPoint, PDF, Email, OCR, and BarCode operations.";
+
+    /// <summary>
+    ///     Server website URL for MCP protocol identification.
+    /// </summary>
+    private const string ServerWebsiteUrl = "https://xjustloveux.github.io/aspose-mcp-server";
+
+    /// <summary>
     ///     Creates an appropriate host based on the transport configuration.
     /// </summary>
     /// <param name="args">Command line arguments.</param>
@@ -23,6 +43,7 @@ internal static class HostFactory
     /// <param name="authConfig">Authentication configuration.</param>
     /// <param name="trackingConfig">Tracking configuration.</param>
     /// <param name="originConfig">Origin validation configuration.</param>
+    /// <param name="extensionConfig">Extension configuration.</param>
     /// <returns>The configured host instance.</returns>
     /// <exception cref="ArgumentException">Thrown when transport mode is unknown.</exception>
     public static IHost CreateHost(
@@ -32,16 +53,17 @@ internal static class HostFactory
         SessionConfig sessionConfig,
         AuthConfig authConfig,
         TrackingConfig trackingConfig,
-        OriginValidationConfig originConfig)
+        OriginValidationConfig originConfig,
+        ExtensionConfig extensionConfig)
     {
         return transportConfig.Mode switch
         {
             TransportMode.Stdio => CreateStdioHost(args, transportConfig, sessionConfig, authConfig, trackingConfig,
-                config),
+                extensionConfig, config),
             TransportMode.Http => CreateHttpHost(args, transportConfig, sessionConfig, authConfig, trackingConfig,
-                originConfig, config),
+                originConfig, extensionConfig, config),
             TransportMode.WebSocket => CreateWebSocketHost(args, transportConfig, sessionConfig, authConfig,
-                trackingConfig, originConfig, config),
+                trackingConfig, originConfig, extensionConfig, config),
             _ => throw new ArgumentException($"Unknown transport mode: {transportConfig.Mode}")
         };
     }
@@ -54,6 +76,7 @@ internal static class HostFactory
     /// <param name="sessionConfig">Session configuration.</param>
     /// <param name="authConfig">Authentication configuration.</param>
     /// <param name="trackingConfig">Tracking configuration.</param>
+    /// <param name="extensionConfig">Extension configuration.</param>
     /// <param name="config">Server configuration.</param>
     /// <returns>The configured stdio host instance.</returns>
     private static IHost CreateStdioHost(
@@ -62,18 +85,20 @@ internal static class HostFactory
         SessionConfig sessionConfig,
         AuthConfig authConfig,
         TrackingConfig trackingConfig,
+        ExtensionConfig extensionConfig,
         ServerConfig config)
     {
         var builder = Host.CreateApplicationBuilder(args);
 
         ConfigureLogging(builder.Logging);
-        RegisterCoreServices(builder.Services, transportConfig, sessionConfig, authConfig, trackingConfig);
+        RegisterCoreServices(builder.Services, transportConfig, sessionConfig, authConfig, trackingConfig,
+            extensionConfig);
         builder.Services.AddSingleton(config);
         builder.Services.AddSingleton<ISessionIdentityAccessor, StdioSessionIdentityAccessor>();
 
-        builder.Services.AddMcpServer()
+        builder.Services.AddMcpServer(ConfigureServerOptions)
             .WithStdioServerTransport()
-            .WithFilteredToolsAndSchemas(config, sessionConfig)
+            .WithFilteredToolsAndSchemas(config, sessionConfig, extensionConfig)
             .AddCallToolFilter(CreateErrorDetailFilter());
 
         return builder.Build();
@@ -88,6 +113,7 @@ internal static class HostFactory
     /// <param name="authConfig">Authentication configuration.</param>
     /// <param name="trackingConfig">Tracking configuration.</param>
     /// <param name="originConfig">Origin validation configuration.</param>
+    /// <param name="extensionConfig">Extension configuration.</param>
     /// <param name="config">Server configuration.</param>
     /// <returns>The configured HTTP host instance.</returns>
     private static IHost CreateHttpHost(
@@ -97,13 +123,15 @@ internal static class HostFactory
         AuthConfig authConfig,
         TrackingConfig trackingConfig,
         OriginValidationConfig originConfig,
+        ExtensionConfig extensionConfig,
         ServerConfig config)
     {
-        var builder = CreateWebAppBuilder(args, transportConfig, sessionConfig, authConfig, trackingConfig);
+        var builder = CreateWebAppBuilder(args, transportConfig, sessionConfig, authConfig, trackingConfig,
+            extensionConfig);
         builder.Services.AddSingleton(config);
-        builder.Services.AddMcpServer()
+        builder.Services.AddMcpServer(ConfigureServerOptions)
             .WithHttpTransport()
-            .WithFilteredToolsAndSchemas(config, sessionConfig)
+            .WithFilteredToolsAndSchemas(config, sessionConfig, extensionConfig)
             .AddCallToolFilter(CreateErrorDetailFilter());
         var app = builder.Build();
 
@@ -124,6 +152,7 @@ internal static class HostFactory
     /// <param name="authConfig">Authentication configuration.</param>
     /// <param name="trackingConfig">Tracking configuration.</param>
     /// <param name="originConfig">Origin validation configuration.</param>
+    /// <param name="extensionConfig">Extension configuration.</param>
     /// <param name="config">Server configuration.</param>
     /// <returns>The configured WebSocket host instance.</returns>
     private static IHost CreateWebSocketHost(
@@ -133,12 +162,14 @@ internal static class HostFactory
         AuthConfig authConfig,
         TrackingConfig trackingConfig,
         OriginValidationConfig originConfig,
+        ExtensionConfig extensionConfig,
         ServerConfig config)
     {
-        var builder = CreateWebAppBuilder(args, transportConfig, sessionConfig, authConfig, trackingConfig);
+        var builder = CreateWebAppBuilder(args, transportConfig, sessionConfig, authConfig, trackingConfig,
+            extensionConfig);
         builder.Services.AddSingleton(config);
-        builder.Services.AddMcpServer()
-            .WithFilteredToolsAndSchemas(config, sessionConfig)
+        builder.Services.AddMcpServer(ConfigureServerOptions)
+            .WithFilteredToolsAndSchemas(config, sessionConfig, extensionConfig)
             .AddCallToolFilter(CreateErrorDetailFilter());
         var app = builder.Build();
 
@@ -160,18 +191,21 @@ internal static class HostFactory
     /// <param name="sessionConfig">Session configuration.</param>
     /// <param name="authConfig">Authentication configuration.</param>
     /// <param name="trackingConfig">Tracking configuration.</param>
+    /// <param name="extensionConfig">Extension configuration.</param>
     /// <returns>The configured web application builder.</returns>
     private static WebApplicationBuilder CreateWebAppBuilder(
         string[] args,
         TransportConfig transportConfig,
         SessionConfig sessionConfig,
         AuthConfig authConfig,
-        TrackingConfig trackingConfig)
+        TrackingConfig trackingConfig,
+        ExtensionConfig extensionConfig)
     {
         var builder = WebApplication.CreateBuilder(args);
         ConfigureKestrel(builder, transportConfig);
         ConfigureLogging(builder.Logging);
-        RegisterCoreServices(builder.Services, transportConfig, sessionConfig, authConfig, trackingConfig);
+        RegisterCoreServices(builder.Services, transportConfig, sessionConfig, authConfig, trackingConfig,
+            extensionConfig);
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddSingleton<ISessionIdentityAccessor, HttpContextSessionIdentityAccessor>();
         builder.Services.AddHttpClient();
@@ -239,12 +273,14 @@ internal static class HostFactory
     /// <param name="sessionConfig">Session configuration.</param>
     /// <param name="authConfig">Authentication configuration.</param>
     /// <param name="trackingConfig">Tracking configuration.</param>
+    /// <param name="extensionConfig">Extension configuration.</param>
     private static void RegisterCoreServices(
         IServiceCollection services,
         TransportConfig transportConfig,
         SessionConfig sessionConfig,
         AuthConfig authConfig,
-        TrackingConfig trackingConfig)
+        TrackingConfig trackingConfig,
+        ExtensionConfig extensionConfig)
     {
         services.AddSingleton(transportConfig);
         services.AddSingleton(sessionConfig);
@@ -252,10 +288,18 @@ internal static class HostFactory
         services.AddSingleton(authConfig.ApiKey);
         services.AddSingleton(authConfig.Jwt);
         services.AddSingleton(trackingConfig);
+        services.AddSingleton(extensionConfig);
         services.AddSingleton<DocumentSessionManager>();
         services.AddSingleton<TempFileManager>();
         services.AddHostedService(sp => sp.GetRequiredService<TempFileManager>());
         services.AddHostedService<SessionLifetimeService>();
+
+        services.AddSingleton<DocumentConversionService>();
+        services.AddSingleton<SnapshotManager>();
+        services.AddSingleton<ExtensionManager>();
+        services.AddSingleton<ExtensionSessionBridge>();
+        services.AddHostedService(sp => sp.GetRequiredService<SnapshotManager>());
+        services.AddHostedService(sp => sp.GetRequiredService<ExtensionManager>());
     }
 
     /// <summary>
@@ -391,5 +435,20 @@ internal static class HostFactory
                 context.Response.StatusCode = 400;
             }
         });
+    }
+
+    /// <summary>
+    ///     Configures MCP server options with server identification information.
+    /// </summary>
+    /// <param name="options">The MCP server options to configure.</param>
+    private static void ConfigureServerOptions(McpServerOptions options)
+    {
+        options.ServerInfo = new Implementation
+        {
+            Name = ServerName,
+            Version = VersionHelper.GetVersion(),
+            Description = ServerDescription,
+            WebsiteUrl = ServerWebsiteUrl
+        };
     }
 }

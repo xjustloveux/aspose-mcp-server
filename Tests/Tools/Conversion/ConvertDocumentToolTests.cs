@@ -492,4 +492,163 @@ public class ConvertDocumentToolTests : TestBase
     }
 
     #endregion
+
+    #region HTML Options Tests
+
+    [SkippableFact]
+    public void Convert_ExcelToHtml_WithEmbedImagesTrue_ShouldContainBase64()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Cells);
+        var xlsxPath = CreateExcelWorkbook("test_excel_html_base64.xlsx", "Data");
+        var outputPath = CreateTestFilePath("test_excel_html_base64_output.html");
+
+        var result = _tool.Execute(xlsxPath, outputPath: outputPath, htmlEmbedImages: true);
+
+        Assert.Equal("HTML", result.TargetFormat);
+        Assert.True(File.Exists(outputPath));
+        var htmlContent = File.ReadAllText(outputPath);
+        Assert.Contains("<html", htmlContent, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [SkippableFact]
+    public void Convert_ExcelToHtml_WithSingleFileTrue_ShouldProduceSingleFile()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Cells);
+        var xlsxPath = CreateExcelWorkbook("test_excel_html_single.xlsx", "Single File Data");
+        var outputPath = CreateTestFilePath("test_excel_html_single_output.html");
+
+        var result = _tool.Execute(xlsxPath, outputPath: outputPath, htmlSingleFile: true);
+
+        Assert.Equal("HTML", result.TargetFormat);
+        Assert.True(File.Exists(outputPath));
+
+        var outputDir = Path.GetDirectoryName(outputPath)!;
+        var relatedFiles = Directory.GetFiles(outputDir, "test_excel_html_single_output*");
+        Assert.Single(relatedFiles);
+    }
+
+    #endregion
+
+    #region CSV Separator Tests
+
+    [Fact]
+    public void Convert_ExcelToCsv_WithSemicolonSeparator_ShouldUseSemicolon()
+    {
+        var xlsxPath = CreateTestFilePath("test_excel_csv_semicolon.xlsx");
+        var workbook = new Workbook();
+        workbook.Worksheets[0].Cells["A1"].Value = "Col1";
+        workbook.Worksheets[0].Cells["B1"].Value = "Col2";
+        workbook.Worksheets[0].Cells["A2"].Value = "Data1";
+        workbook.Worksheets[0].Cells["B2"].Value = "Data2";
+        workbook.Save(xlsxPath);
+
+        var outputPath = CreateTestFilePath("test_excel_csv_semicolon_output.csv");
+
+        var result = _tool.Execute(xlsxPath, outputPath: outputPath, csvSeparator: ";");
+
+        Assert.Equal("CSV", result.TargetFormat);
+        Assert.True(File.Exists(outputPath));
+        var csvContent = File.ReadAllText(outputPath);
+        Assert.Contains(";", csvContent);
+    }
+
+    [Fact]
+    public void Convert_ExcelToCsv_WithTabSeparator_ShouldUseTab()
+    {
+        var xlsxPath = CreateTestFilePath("test_excel_csv_tab.xlsx");
+        var workbook = new Workbook();
+        workbook.Worksheets[0].Cells["A1"].Value = "Header1";
+        workbook.Worksheets[0].Cells["B1"].Value = "Header2";
+        workbook.Save(xlsxPath);
+
+        var outputPath = CreateTestFilePath("test_excel_csv_tab_output.csv");
+
+        var result = _tool.Execute(xlsxPath, outputPath: outputPath, csvSeparator: "\t");
+
+        Assert.Equal("CSV", result.TargetFormat);
+        Assert.True(File.Exists(outputPath));
+        var csvContent = File.ReadAllText(outputPath);
+        Assert.Contains("\t", csvContent);
+    }
+
+    #endregion
+
+    #region JPEG Quality Tests
+
+    [Fact]
+    public void Convert_WordToJpeg_WithHighQuality_ShouldSucceed()
+    {
+        var docPath = CreateWordDocument("test_word_jpeg_high.docx", "High Quality JPEG Test");
+        var outputPath = CreateTestFilePath("test_word_jpeg_high_output.jpg");
+
+        var result = _tool.Execute(docPath, outputPath: outputPath, jpegQuality: 100);
+
+        Assert.Equal("JPG", result.TargetFormat);
+        Assert.True(File.Exists(outputPath));
+        Assert.True(new FileInfo(outputPath).Length > 0);
+    }
+
+    [Fact]
+    public void Convert_WordToJpeg_WithLowQuality_ShouldProduceSmallerFile()
+    {
+        var docPath = CreateWordDocument("test_word_jpeg_quality.docx",
+            "Quality comparison test with some content that will affect file size.");
+
+        var highQualityPath = CreateTestFilePath("test_word_jpeg_high_q.jpg");
+        var lowQualityPath = CreateTestFilePath("test_word_jpeg_low_q.jpg");
+
+        _tool.Execute(docPath, outputPath: highQualityPath, jpegQuality: 95);
+        _tool.Execute(docPath, outputPath: lowQualityPath, jpegQuality: 20);
+
+        Assert.True(File.Exists(highQualityPath));
+        Assert.True(File.Exists(lowQualityPath));
+
+        var highSize = new FileInfo(highQualityPath).Length;
+        var lowSize = new FileInfo(lowQualityPath).Length;
+
+        Assert.True(lowSize <= highSize, "Low quality should produce smaller or equal file size");
+    }
+
+    [Fact]
+    public void Convert_WordToJpeg_WithQualityOutOfRange_ShouldClamp()
+    {
+        var docPath = CreateWordDocument("test_word_jpeg_clamp.docx", "Clamp test");
+        var outputPath = CreateTestFilePath("test_word_jpeg_clamp_output.jpg");
+
+        var result = _tool.Execute(docPath, outputPath: outputPath, jpegQuality: 150);
+
+        Assert.Equal("JPG", result.TargetFormat);
+        Assert.True(File.Exists(outputPath));
+    }
+
+    #endregion
+
+    #region PDF Compliance Tests
+
+    [Fact]
+    public void Convert_WordToPdf_WithPdfA1bCompliance_ShouldSucceed()
+    {
+        var docPath = CreateWordDocument("test_word_pdfa1b.docx", "PDF/A-1b Test");
+        var outputPath = CreateTestFilePath("test_word_pdfa1b_output.pdf");
+
+        var result = _tool.Execute(docPath, outputPath: outputPath, pdfCompliance: "PDFA1B");
+
+        Assert.Equal("PDF", result.TargetFormat);
+        Assert.True(File.Exists(outputPath));
+        Assert.True(new FileInfo(outputPath).Length > 0);
+    }
+
+    [Fact]
+    public void Convert_WordToPdf_WithInvalidCompliance_ShouldUseDefault()
+    {
+        var docPath = CreateWordDocument("test_word_pdf_invalid.docx", "Invalid compliance test");
+        var outputPath = CreateTestFilePath("test_word_pdf_invalid_output.pdf");
+
+        var result = _tool.Execute(docPath, outputPath: outputPath, pdfCompliance: "INVALID");
+
+        Assert.Equal("PDF", result.TargetFormat);
+        Assert.True(File.Exists(outputPath));
+    }
+
+    #endregion
 }

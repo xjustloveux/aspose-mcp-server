@@ -1,0 +1,197 @@
+{
+  "_comment": "========================================",
+  "_comment2": "Aspose MCP Server - Extension 配置範例",
+  "_comment3": "擴充功能系統讓外部程序訂閱 Session 變更",
+  "_comment4": "========================================",
+  "_comment5": "將此檔案路徑傳給 --extension-config 參數",
+  "_comment6": "或設定環境變數 ASPOSE_EXTENSION_CONFIG",
+
+  "_使用說明": "========================================",
+  "_說明1": "extensions 物件以 ID 為 key 定義各擴充功能",
+  "_說明2": "擴充功能啟動時會進行握手交換元資料（name、version 等）",
+  "_說明3": "擴充功能啟動後會自動接收綁定的 Session 快照",
+  "_說明4": "支援的傳輸模式：mmap（記憶體映射）、stdin（標準輸入）、file（臨時檔案）",
+
+  "_完整範例": "========================================",
+  "extensions": {
+    "pdf-viewer": {
+      "_註解": "PDF 即時預覽器（Node.js 範例）",
+      "command": {
+        "type": "node",
+        "executable": "C:/tools/pdf-viewer/index.js",
+        "arguments": "--port 8080",
+        "workingDirectory": "C:/tools/pdf-viewer",
+        "environment": {
+          "NODE_ENV": "production"
+        }
+      },
+      "inputFormats": ["pdf"],
+      "supportedDocumentTypes": ["word", "excel", "powerpoint", "pdf"],
+      "transportModes": ["mmap", "stdin", "file"],
+      "preferredTransportMode": "file",
+      "capabilities": {
+        "supportsHeartbeat": true,
+        "frameIntervalMs": 100
+      }
+    },
+    "cloud-sync": {
+      "_註解": "雲端同步服務（Python 範例）",
+      "command": {
+        "type": "python",
+        "executable": "C:/tools/cloud-sync/main.py",
+        "arguments": "--config config.yaml",
+        "workingDirectory": "C:/tools/cloud-sync",
+        "environment": {
+          "PYTHONUNBUFFERED": "1",
+          "CLOUD_API_KEY": "${CLOUD_API_KEY}"
+        }
+      },
+      "inputFormats": ["pdf", "html"],
+      "supportedDocumentTypes": ["word", "excel"],
+      "transportModes": ["file"],
+      "preferredTransportMode": "file",
+      "capabilities": {
+        "supportsHeartbeat": true,
+        "snapshotTtlSeconds": 60
+      }
+    },
+    "compliance-checker": {
+      "_註解": "合規檢查器（可執行檔範例）",
+      "command": {
+        "type": "executable",
+        "executable": "C:/tools/compliance/checker.exe",
+        "arguments": "--strict --format json",
+        "workingDirectory": "C:/tools/compliance",
+        "environment": {}
+      },
+      "inputFormats": ["pdf"],
+      "supportedDocumentTypes": ["word", "pdf"],
+      "transportModes": ["stdin", "file"],
+      "preferredTransportMode": "stdin",
+      "capabilities": {
+        "supportsHeartbeat": false
+      }
+    },
+    "html-preview": {
+      "_註解": "HTML 預覽器（npx 全域套件範例）",
+      "command": {
+        "type": "npx",
+        "executable": "my-html-preview-package",
+        "arguments": "--port 3000"
+      },
+      "inputFormats": ["html"],
+      "supportedDocumentTypes": ["word", "excel"],
+      "transportModes": ["file"],
+      "preferredTransportMode": "file",
+      "capabilities": {
+        "supportsHeartbeat": true
+      }
+    },
+    "doc-analyzer": {
+      "_註解": "文件分析器（pipx 全域套件範例）",
+      "command": {
+        "type": "pipx",
+        "executable": "my-doc-analyzer-package",
+        "arguments": "--output json"
+      },
+      "inputFormats": ["pdf"],
+      "supportedDocumentTypes": ["word", "pdf"],
+      "transportModes": ["file"],
+      "preferredTransportMode": "file",
+      "capabilities": {
+        "supportsHeartbeat": true
+      }
+    },
+    "resident-service": {
+      "_註解": "常駐服務（idleTimeoutMinutes=0 表示永不卸載）",
+      "command": {
+        "type": "node",
+        "executable": "C:/tools/resident/service.js"
+      },
+      "inputFormats": ["pdf", "html", "png"],
+      "supportedDocumentTypes": ["word", "excel", "powerpoint", "pdf"],
+      "transportModes": ["file"],
+      "preferredTransportMode": "file",
+      "capabilities": {
+        "supportsHeartbeat": true,
+        "idleTimeoutMinutes": 0
+      }
+    }
+  },
+
+  "_欄位說明": "========================================",
+  "_欄位_extensions": "物件格式，key 為擴充功能 ID（必須唯一，不可含冒號）",
+  "_欄位_command": {
+    "type": "命令類型：executable / node / python / dotnet / npx / pipx / custom",
+    "executable": "可執行檔、腳本路徑或套件名稱",
+    "arguments": "命令列參數",
+    "workingDirectory": "工作目錄",
+    "environment": "環境變數（支援 ${VAR} 引用系統環境變數）"
+  },
+  "_欄位_inputFormats": "接受的輸入格式陣列：pdf / html / png",
+  "_欄位_supportedDocumentTypes": "支援的文檔類型：word / excel / powerpoint / pdf",
+  "_欄位_transportModes": "支援的傳輸模式陣列：mmap / stdin / file",
+  "_欄位_preferredTransportMode": "偏好的傳輸模式",
+  "_欄位_capabilities": {
+    "supportsHeartbeat": "是否支援心跳檢測（預設：true）",
+    "frameIntervalMs": "快照傳輸間隔毫秒數（預設：100，範圍：10-5000）",
+    "snapshotTtlSeconds": "未確認快照的 TTL 秒數（預設：30，範圍：5-300）",
+    "maxMissedHeartbeats": "最大連續心跳失敗次數（預設：3，範圍：1-20）",
+    "idleTimeoutMinutes": "閒置卸載超時分鐘數（預設：30，範圍：1-1440，0=常駐模式）"
+  },
+
+  "_握手協議說明": "========================================",
+  "_握手說明1": "擴充功能啟動後必須回應握手協議",
+  "_握手說明2": "伺服器發送: {\"type\":\"initialize\",\"protocolVersion\":\"1.0\"}",
+  "_握手說明3": "擴充功能回應: {\"type\":\"initialize_response\",\"name\":\"...\",\"version\":\"...\"}",
+  "_握手說明4": "伺服器確認: {\"type\":\"initialized\"}",
+  "_握手欄位": {
+    "name": "擴充功能顯示名稱（必填）",
+    "version": "版本號（必填，建議使用 semver）",
+    "title": "本地化標題（選填）",
+    "description": "說明（選填）",
+    "author": "作者（選填）",
+    "websiteUrl": "網站 URL（選填）"
+  },
+
+  "_傳輸模式說明": "========================================",
+  "_傳輸_mmap": "Memory-Mapped File - 適合大檔案，跨平台支援",
+  "_傳輸_stdin": "標準輸入二進位 - 跨平台，適合中小型檔案",
+  "_傳輸_file": "臨時檔案 - 最簡單，適合所有場景（推薦）",
+
+  "_命令類型說明": "========================================",
+  "_命令_executable": "直接執行 - 直接執行可執行檔（跨平台）",
+  "_命令_node": "Node.js - 使用 node 執行 JavaScript 檔案",
+  "_命令_python": "Python - 使用 python/python3 執行 Python 腳本",
+  "_命令_dotnet": ".NET - 使用 dotnet 執行 DLL",
+  "_命令_npx": "npx - 執行全域安裝的 Node.js 套件（executable 為套件名稱）",
+  "_命令_pipx": "pipx - 執行全域安裝的 Python 套件（executable 為套件名稱）",
+  "_命令_custom": "自訂 - 使用完整路徑指定解釋器",
+
+  "_路徑說明": "========================================",
+  "_絕對路徑": "直接使用完整路徑",
+  "_相對路徑": "相對於 extensions.json 所在目錄解析",
+
+  "_macOS_Linux範例": "========================================",
+  "_unix_node": "/usr/local/bin/node /opt/extensions/pdf-viewer/index.js",
+  "_unix_python": "/usr/bin/python3 /opt/extensions/cloud-sync/main.py",
+  "_unix_executable": "/opt/extensions/checker/compliance-checker",
+
+  "_簡化範例": "========================================",
+  "_簡化說明": "只需要基本功能時的最小配置",
+  "extensions_minimal": {
+    "simple-viewer": {
+      "command": {
+        "type": "node",
+        "executable": "C:/tools/viewer/index.js"
+      },
+      "inputFormats": ["pdf"],
+      "supportedDocumentTypes": ["word"],
+      "transportModes": ["file"],
+      "preferredTransportMode": "file",
+      "capabilities": {
+        "supportsHeartbeat": true
+      }
+    }
+  }
+}

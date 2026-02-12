@@ -76,6 +76,12 @@
                     <a href="developers.html" class="active">開發者指南</a>
                 </li>
                 <li>
+                    <a href="extensions.html">擴充功能開發</a>
+                </li>
+                <li>
+                    <a href="configuration.html">配置參考</a>
+                </li>
+                <li>
                     <a href="deployment.html">部署指南</a>
                 </li>
                 <li>
@@ -109,7 +115,8 @@
         │ ├── Email/ 6 個工具
         │ ├── BarCode/ 2 個工具
         │ ├── Conversion/ 2 個工具
-        │ └── Session/ 1 個工具
+        │ ├── Session/ 1 個工具
+        │ └── Extension/ 1 個工具
         ├── Handlers/ 📁 操作處理器（業務邏輯實作）
         │ ├── Word/ Word 處理器
         │ ├── Excel/ Excel 處理器
@@ -133,6 +140,9 @@
         │ ├── Progress/ 📊 MCP Progress 支援（文檔處理進度回報）
         │ ├── Tracking/ 追蹤模組
         │ ├── Transport/ 傳輸層模組
+        │ ├── Extension/ 擴展系統模組（24 類別）
+        │ │ └── Transport/ 傳輸層（mmap、stdin、file）
+        │ ├── Conversion/ 文件轉換模組
         │ └── ShapeDetailProviders/ PowerPoint 形狀詳細資訊提供者
         ├── Tests/ 🧪 單元測試與整合測試
         │ ├── Core/ 核心功能測試
@@ -367,7 +377,7 @@ cd aspose-mcp-server">
 
     <h3>測試結構</h3>
     <ul style="margin-top: 15px; padding-left: 25px;">
-        <li><code>Tests/Core/</code> - 核心功能測試（Handlers、Helpers、Security、Session、Tracking）</li>
+        <li><code>Tests/Core/</code> - 核心功能測試（Handlers、Helpers、Security、Session、Tracking、Extension）</li>
         <li>
             <code>Tests/Handlers/</code> - Handler 測試（531 個測試類）
             <ul style="margin-top: 5px; padding-left: 20px;">
@@ -471,6 +481,12 @@ cd aspose-mcp-server">
 
     <h3>Core/Session/</h3>
     <p>Session 管理模組：DocumentSession（會話生命週期）、DocumentSessionManager（並發管理）、SessionConfig（配置）等。</p>
+
+    <h3>Core/Extension/</h3>
+    <p>擴展系統模組：ExtensionManager（擴展實例管理）、ExtensionSessionBridge（Session 橋接）、SnapshotManager（快照管理），支援 mmap、stdin、file 三種傳輸方式。</p>
+
+    <h3>Core/Conversion/</h3>
+    <p>文件轉換模組：DocumentConversionService（統一轉換服務），支援 Word、Excel、PowerPoint、PDF 之間的文件格式轉換。</p>
 
     <h3>ServerConfig.cs</h3>
     <p>伺服器配置管理，處理命令行參數和環境變數，支援三種傳輸模式。</p>

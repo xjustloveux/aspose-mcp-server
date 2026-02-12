@@ -53,14 +53,16 @@ public abstract class ExcelPivotTableFieldHandlerBase : OperationHandlerBase<Wor
 
             var pivotTable = pivotTables[p.PivotTableIndex];
 
-            var (sourceSheet, sourceRangeObj) = ExcelPivotTableHelper.ParseDataSource(
+            var dataSource = ExcelPivotTableHelper.ParseDataSource(
                 workbook, pivotTable, p.SheetIndex, p.PivotTableIndex, worksheet.Name);
 
-            var fieldIndex = ExcelPivotTableHelper.FindFieldIndex(sourceSheet, sourceRangeObj, p.FieldName);
+            var fieldIndex =
+                ExcelPivotTableHelper.FindFieldIndex(dataSource.SourceSheet, dataSource.SourceRange, p.FieldName);
 
             if (fieldIndex < 0)
             {
-                var availableFields = ExcelPivotTableHelper.GetAvailableFieldNames(sourceSheet, sourceRangeObj);
+                var availableFields =
+                    ExcelPivotTableHelper.GetAvailableFieldNames(dataSource.SourceSheet, dataSource.SourceRange);
                 var availableFieldsStr = availableFields.Count > 0
                     ? $" Available fields in header row: {string.Join(", ", availableFields)}"
                     : " No field names found in header row.";

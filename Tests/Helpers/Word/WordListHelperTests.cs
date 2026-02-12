@@ -27,10 +27,10 @@ public class WordListHelperTests
         var result = WordListHelper.ParseItems(items);
 
         Assert.Equal(3, result.Count);
-        Assert.All(result, item => Assert.Equal(0, item.level));
-        Assert.Equal("Item 1", result[0].text);
-        Assert.Equal("Item 2", result[1].text);
-        Assert.Equal("Item 3", result[2].text);
+        Assert.All(result, item => Assert.Equal(0, item.Level));
+        Assert.Equal("Item 1", result[0].Text);
+        Assert.Equal("Item 2", result[1].Text);
+        Assert.Equal("Item 3", result[2].Text);
     }
 
     [Fact]
@@ -41,8 +41,8 @@ public class WordListHelperTests
         var result = WordListHelper.ParseItems(items);
 
         Assert.Equal(2, result.Count);
-        Assert.Equal("Item 1", result[0].text);
-        Assert.Equal("Item 3", result[1].text);
+        Assert.Equal("Item 1", result[0].Text);
+        Assert.Equal("Item 3", result[1].Text);
     }
 
     [Fact]
@@ -66,12 +66,12 @@ public class WordListHelperTests
         var result = WordListHelper.ParseItems(items);
 
         Assert.Equal(3, result.Count);
-        Assert.Equal("Level 0 item", result[0].text);
-        Assert.Equal(0, result[0].level);
-        Assert.Equal("Level 1 item", result[1].text);
-        Assert.Equal(1, result[1].level);
-        Assert.Equal("Level 2 item", result[2].text);
-        Assert.Equal(2, result[2].level);
+        Assert.Equal("Level 0 item", result[0].Text);
+        Assert.Equal(0, result[0].Level);
+        Assert.Equal("Level 1 item", result[1].Text);
+        Assert.Equal(1, result[1].Level);
+        Assert.Equal("Level 2 item", result[2].Text);
+        Assert.Equal(2, result[2].Level);
     }
 
     [Fact]
@@ -95,7 +95,7 @@ public class WordListHelperTests
         var result = WordListHelper.ParseItems(items);
 
         Assert.Single(result);
-        Assert.Equal(8, result[0].level);
+        Assert.Equal(8, result[0].Level);
     }
 
     [Fact]
@@ -108,7 +108,7 @@ public class WordListHelperTests
         var result = WordListHelper.ParseItems(items);
 
         Assert.Single(result);
-        Assert.Equal(0, result[0].level);
+        Assert.Equal(0, result[0].Level);
     }
 
     [Fact]
@@ -121,8 +121,8 @@ public class WordListHelperTests
         var result = WordListHelper.ParseItems(items);
 
         Assert.Single(result);
-        Assert.Equal("No level", result[0].text);
-        Assert.Equal(0, result[0].level);
+        Assert.Equal("No level", result[0].Text);
+        Assert.Equal(0, result[0].Level);
     }
 
     [Fact]
@@ -136,10 +136,10 @@ public class WordListHelperTests
         var result = WordListHelper.ParseItems(items);
 
         Assert.Equal(2, result.Count);
-        Assert.Equal("Simple string", result[0].text);
-        Assert.Equal(0, result[0].level);
-        Assert.Equal("Object item", result[1].text);
-        Assert.Equal(2, result[1].level);
+        Assert.Equal("Simple string", result[0].Text);
+        Assert.Equal(0, result[0].Level);
+        Assert.Equal("Object item", result[1].Text);
+        Assert.Equal(2, result[1].Level);
     }
 
     #endregion

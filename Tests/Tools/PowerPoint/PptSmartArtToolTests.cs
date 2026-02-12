@@ -9,6 +9,13 @@ using AsposeMcpServer.Tools.PowerPoint;
 namespace AsposeMcpServer.Tests.Tools.PowerPoint;
 
 /// <summary>
+///     Represents test SmartArt creation information.
+/// </summary>
+/// <param name="Path">The file path.</param>
+/// <param name="ShapeIndex">The SmartArt shape index.</param>
+internal record SmartArtTestInfo(string Path, int ShapeIndex);
+
+/// <summary>
 ///     Integration tests for PptSmartArtTool.
 ///     Focuses on session management, file I/O, and operation routing.
 ///     Detailed parameter validation and business logic tests are in Handler tests.
@@ -22,7 +29,7 @@ public class PptSmartArtToolTests : PptTestBase
         _tool = new PptSmartArtTool(SessionManager);
     }
 
-    private (string path, int shapeIndex) CreatePresentationWithSmartArt(string fileName)
+    private SmartArtTestInfo CreatePresentationWithSmartArt(string fileName)
     {
         var filePath = CreateTestFilePath(fileName);
         using var presentation = new Presentation();
@@ -30,7 +37,7 @@ public class PptSmartArtToolTests : PptTestBase
         slide.Shapes.AddSmartArt(100, 100, 400, 300, SmartArtLayoutType.BasicProcess);
         var shapeIndex = slide.Shapes.Count - 1;
         presentation.Save(filePath, SaveFormat.Pptx);
-        return (filePath, shapeIndex);
+        return new SmartArtTestInfo(filePath, shapeIndex);
     }
 
     #region File I/O Smoke Tests
@@ -53,22 +60,23 @@ public class PptSmartArtToolTests : PptTestBase
     [Fact]
     public void ManageNodes_DeleteNode_ShouldDeleteNode()
     {
-        var (pptPath, shapeIndex) = CreatePresentationWithSmartArt("test_delete_node.pptx");
+        var smartArtInfo = CreatePresentationWithSmartArt("test_delete_node.pptx");
         int initialNodeCount;
-        using (var ppt = new Presentation(pptPath))
+        using (var ppt = new Presentation(smartArtInfo.Path))
         {
-            var smartArt = ppt.Slides[0].Shapes[shapeIndex] as ISmartArt;
+            var smartArt = ppt.Slides[0].Shapes[smartArtInfo.ShapeIndex] as ISmartArt;
             initialNodeCount = smartArt!.AllNodes.Count;
         }
 
         var outputPath = CreateTestFilePath("test_delete_node_output.pptx");
         var targetPathJson = JsonSerializer.Serialize(new[] { 0 });
-        var result = _tool.Execute("manage_nodes", pptPath, slideIndex: 0, shapeIndex: shapeIndex,
+        var result = _tool.Execute("manage_nodes", smartArtInfo.Path, slideIndex: 0,
+            shapeIndex: smartArtInfo.ShapeIndex,
             action: "delete", targetPath: targetPathJson, outputPath: outputPath);
         var data = GetResultData<SuccessResult>(result);
         Assert.Contains("deleted", data.Message, StringComparison.OrdinalIgnoreCase);
         using var resultPpt = new Presentation(outputPath);
-        var resultSmartArt = resultPpt.Slides[0].Shapes[shapeIndex] as ISmartArt;
+        var resultSmartArt = resultPpt.Slides[0].Shapes[smartArtInfo.ShapeIndex] as ISmartArt;
         Assert.NotNull(resultSmartArt);
         Assert.True(resultSmartArt.AllNodes.Count < initialNodeCount);
     }
@@ -127,14 +135,15 @@ public class PptSmartArtToolTests : PptTestBase
     [Fact]
     public void ManageNodes_DeleteNodeWithSessionId_ShouldDeleteInMemory()
     {
-        var (pptPath, shapeIndex) = CreatePresentationWithSmartArt("test_session_delete.pptx");
-        var sessionId = OpenSession(pptPath);
+        var smartArtInfo = CreatePresentationWithSmartArt("test_session_delete.pptx");
+        var sessionId = OpenSession(smartArtInfo.Path);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
-        var smartArt = ppt.Slides[0].Shapes[shapeIndex] as ISmartArt;
+        var smartArt = ppt.Slides[0].Shapes[smartArtInfo.ShapeIndex] as ISmartArt;
         var initialNodeCount = smartArt!.AllNodes.Count;
 
         var targetPathJson = JsonSerializer.Serialize(new[] { 0 });
-        var result = _tool.Execute("manage_nodes", sessionId: sessionId, slideIndex: 0, shapeIndex: shapeIndex,
+        var result = _tool.Execute("manage_nodes", sessionId: sessionId, slideIndex: 0,
+            shapeIndex: smartArtInfo.ShapeIndex,
             action: "delete", targetPath: targetPathJson);
         var data = GetResultData<SuccessResult>(result);
         Assert.Contains("deleted", data.Message);

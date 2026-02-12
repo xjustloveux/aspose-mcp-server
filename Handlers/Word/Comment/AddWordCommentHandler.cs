@@ -7,6 +7,13 @@ using WordParagraph = Aspose.Words.Paragraph;
 namespace AsposeMcpServer.Handlers.Word.Comment;
 
 /// <summary>
+///     Represents a range of runs in a paragraph for comment placement.
+/// </summary>
+/// <param name="StartRun">The starting run.</param>
+/// <param name="EndRun">The ending run.</param>
+internal record RunRange(Run StartRun, Run EndRun);
+
+/// <summary>
 ///     Handler for adding comments to Word documents.
 /// </summary>
 [ResultType(typeof(SuccessResult))]
@@ -34,12 +41,12 @@ public class AddWordCommentHandler : OperationHandlerBase<Document>
         var doc = context.Document;
         var paragraphs = GetAllParagraphs(doc);
         var targetPara = GetTargetParagraph(doc, paragraphs, p.ParagraphIndex);
-        var (startRun, endRun) = GetCommentRunRange(doc, targetPara, p.StartRunIndex, p.EndRunIndex);
+        var runRange = GetCommentRunRange(doc, targetPara, p.StartRunIndex, p.EndRunIndex);
 
-        var para = GetContainingParagraph(startRun);
+        var para = GetContainingParagraph(runRange.StartRun);
         var comment = CreateComment(doc, p.Text, p.Author, p.AuthorInitial);
 
-        InsertCommentNodes(doc, comment, startRun, endRun, para);
+        InsertCommentNodes(doc, comment, runRange.StartRun, runRange.EndRun, para);
 
         doc.EnsureMinimum();
         MarkModified(context);
@@ -113,8 +120,8 @@ public class AddWordCommentHandler : OperationHandlerBase<Document>
     /// <param name="targetPara">The target paragraph.</param>
     /// <param name="startRunIndex">The start run index.</param>
     /// <param name="endRunIndex">The end run index.</param>
-    /// <returns>A tuple containing the start and end runs.</returns>
-    private static (Run startRun, Run endRun) GetCommentRunRange(Document doc, WordParagraph targetPara,
+    /// <returns>A <see cref="RunRange" /> containing the start and end runs.</returns>
+    private static RunRange GetCommentRunRange(Document doc, WordParagraph targetPara,
         int? startRunIndex, int? endRunIndex)
     {
         var runs = targetPara.GetChildNodes(NodeType.Run, false);
@@ -123,7 +130,7 @@ public class AddWordCommentHandler : OperationHandlerBase<Document>
         {
             var placeholderRun = new Run(doc, " ");
             targetPara.AppendChild(placeholderRun);
-            return (placeholderRun, placeholderRun);
+            return new RunRange(placeholderRun, placeholderRun);
         }
 
         if (startRunIndex.HasValue && endRunIndex.HasValue)
@@ -134,7 +141,7 @@ public class AddWordCommentHandler : OperationHandlerBase<Document>
 
         var start = runs[0] as Run ?? throw new InvalidOperationException(UnableToDetermineCommentRange);
         var end = runs[^1] as Run ?? throw new InvalidOperationException(UnableToDetermineCommentRange);
-        return (start, end);
+        return new RunRange(start, end);
     }
 
     /// <summary>
@@ -143,10 +150,9 @@ public class AddWordCommentHandler : OperationHandlerBase<Document>
     /// <param name="runs">The collection of runs.</param>
     /// <param name="startIndex">The start run index.</param>
     /// <param name="endIndex">The end run index.</param>
-    /// <returns>A tuple containing the start and end runs.</returns>
+    /// <returns>A <see cref="RunRange" /> containing the start and end runs.</returns>
     /// <exception cref="ArgumentException">Thrown when run index is out of range.</exception>
-    private static (Run startRun, Run endRun) GetRunRangeWithBothIndices(NodeCollection runs, int startIndex,
-        int endIndex)
+    private static RunRange GetRunRangeWithBothIndices(NodeCollection runs, int startIndex, int endIndex)
     {
         if (startIndex < 0 || startIndex >= runs.Count ||
             endIndex < 0 || endIndex >= runs.Count ||
@@ -156,7 +162,7 @@ public class AddWordCommentHandler : OperationHandlerBase<Document>
         var startRun = runs[startIndex] as Run ??
                        throw new InvalidOperationException(UnableToDetermineCommentRange);
         var endRun = runs[endIndex] as Run ?? throw new InvalidOperationException(UnableToDetermineCommentRange);
-        return (startRun, endRun);
+        return new RunRange(startRun, endRun);
     }
 
     /// <summary>
@@ -164,16 +170,16 @@ public class AddWordCommentHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="runs">The collection of runs.</param>
     /// <param name="startIndex">The start run index.</param>
-    /// <returns>A tuple containing the same run as both start and end.</returns>
+    /// <returns>A <see cref="RunRange" /> containing the same run as both start and end.</returns>
     /// <exception cref="ArgumentException">Thrown when run index is out of range.</exception>
-    private static (Run startRun, Run endRun) GetRunRangeWithStartIndex(NodeCollection runs, int startIndex)
+    private static RunRange GetRunRangeWithStartIndex(NodeCollection runs, int startIndex)
     {
         if (startIndex < 0 || startIndex >= runs.Count)
             throw new ArgumentException($"Run index is out of range (paragraph has {runs.Count} Runs)");
 
         var startRun = runs[startIndex] as Run ??
                        throw new InvalidOperationException(UnableToDetermineCommentRange);
-        return (startRun, startRun);
+        return new RunRange(startRun, startRun);
     }
 
     /// <summary>

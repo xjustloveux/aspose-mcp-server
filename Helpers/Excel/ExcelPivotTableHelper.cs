@@ -118,15 +118,15 @@ public static class ExcelPivotTableHelper
     }
 
     /// <summary>
-    ///     Parses the data source to get range string.
+    ///     Parses the data source to get the source worksheet and range.
     /// </summary>
     /// <param name="workbook">The workbook containing the pivot table.</param>
     /// <param name="pivotTable">The pivot table.</param>
     /// <param name="sheetIndex">The sheet index for resolving the source range.</param>
     /// <param name="pivotTableIndex">The pivot table index for error messages.</param>
     /// <param name="worksheetName">The worksheet name for error messages.</param>
-    /// <returns>The clean source range string.</returns>
-    public static (Worksheet sourceSheet, Range sourceRangeObj) ParseDataSource(
+    /// <returns>A <see cref="PivotTableDataSource" /> with the source worksheet and range.</returns>
+    public static PivotTableDataSource ParseDataSource(
         Workbook workbook,
         PivotTable pivotTable,
         int sheetIndex,
@@ -166,7 +166,7 @@ public static class ExcelPivotTableHelper
                 $"Failed to parse pivot table data source range '{rangeStr}' from source '{sourceRangeStr}': {rangeEx.Message}");
         }
 
-        return (sourceSheet, sourceRangeObj);
+        return new PivotTableDataSource(sourceSheet, sourceRangeObj);
     }
 
     /// <summary>

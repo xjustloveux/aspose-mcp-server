@@ -65,10 +65,10 @@ public class ShapeDetailProviderFactoryTests : TestBase
         var shape = slide.Shapes.AddAutoShape(ShapeType.Rectangle, 10, 10, 100, 100);
         shape.TextFrame.Text = "Test Text";
 
-        var (typeName, details) = ShapeDetailProviderFactory.GetShapeDetails(shape, presentation);
+        var shapeInfo = ShapeDetailProviderFactory.GetShapeDetails(shape, presentation);
 
-        Assert.Equal("AutoShape", typeName);
-        var autoShape = Assert.IsType<AutoShapeDetails>(details);
+        Assert.Equal("AutoShape", shapeInfo.TypeName);
+        var autoShape = Assert.IsType<AutoShapeDetails>(shapeInfo.Details);
 
         Assert.Equal("Rectangle", autoShape.ShapeType);
         Assert.Equal("Test Text", autoShape.Text);
@@ -83,10 +83,10 @@ public class ShapeDetailProviderFactoryTests : TestBase
         var slide = presentation.Slides[0];
         var table = slide.Shapes.AddTable(10, 10, [50, 50], [30, 30]);
 
-        var (typeName, details) = ShapeDetailProviderFactory.GetShapeDetails(table, presentation);
+        var shapeInfo = ShapeDetailProviderFactory.GetShapeDetails(table, presentation);
 
-        Assert.Equal("Table", typeName);
-        var tableDetails = Assert.IsType<TableDetails>(details);
+        Assert.Equal("Table", shapeInfo.TypeName);
+        var tableDetails = Assert.IsType<TableDetails>(shapeInfo.Details);
 
         Assert.Equal(2, tableDetails.Rows);
         Assert.Equal(2, tableDetails.Columns);

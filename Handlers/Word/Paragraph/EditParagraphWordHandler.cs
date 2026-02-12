@@ -9,6 +9,13 @@ using AsposeMcpServer.Results.Common;
 namespace AsposeMcpServer.Handlers.Word.Paragraph;
 
 /// <summary>
+///     Represents the target paragraph and its resolved index.
+/// </summary>
+/// <param name="Paragraph">The target paragraph.</param>
+/// <param name="ResolvedIndex">The resolved paragraph index.</param>
+internal record ParagraphTarget(Aspose.Words.Paragraph Paragraph, int ResolvedIndex);
+
+/// <summary>
 ///     Handler for editing paragraphs in Word documents.
 /// </summary>
 [ResultType(typeof(SuccessResult))]
@@ -36,8 +43,10 @@ public class EditParagraphWordHandler : OperationHandlerBase<Document>
             throw new ArgumentException("paragraphIndex parameter is required for edit operation");
 
         var doc = context.Document;
-        var (para, resolvedIndex) =
+        var target =
             GetTargetParagraph(doc, editParams.ParagraphIndex.Value, editParams.SectionIndex ?? 0);
+        var para = target.Paragraph;
+        var resolvedIndex = target.ResolvedIndex;
 
         var builder = new DocumentBuilder(doc);
         builder.MoveTo(para.FirstChild ?? para);
@@ -71,9 +80,9 @@ public class EditParagraphWordHandler : OperationHandlerBase<Document>
     /// <param name="doc">The Word document.</param>
     /// <param name="paragraphIndex">The paragraph index (-1 for last).</param>
     /// <param name="sectionIndex">The section index.</param>
-    /// <returns>A tuple containing the paragraph and resolved index.</returns>
+    /// <returns>A ParagraphTarget containing the paragraph and resolved index.</returns>
     /// <exception cref="ArgumentException">Thrown when indices are out of range.</exception>
-    private static (Aspose.Words.Paragraph para, int resolvedIndex) GetTargetParagraph(Document doc, int paragraphIndex,
+    private static ParagraphTarget GetTargetParagraph(Document doc, int paragraphIndex,
         int sectionIndex)
     {
         var secIdx = sectionIndex;
@@ -101,7 +110,7 @@ public class EditParagraphWordHandler : OperationHandlerBase<Document>
             throw new ArgumentException(
                 $"Paragraph index {paraIdx} out of range (total paragraphs: {paragraphs.Count}, valid range: 0-{paragraphs.Count - 1})");
 
-        return (paragraphs[paraIdx], paraIdx);
+        return new ParagraphTarget(paragraphs[paraIdx], paraIdx);
     }
 
     /// <summary>

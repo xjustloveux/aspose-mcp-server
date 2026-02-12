@@ -175,9 +175,10 @@ public class ConvertEmailFileHandlerTests : HandlerTestBase<object>
         Assert.True(File.Exists(outputPath));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ConvertsEmlToEml()
     {
+        SkipInEvaluationMode(AsposeLibraryType.Email, "Evaluation mode appends watermark to subject");
         var sourcePath = CreateEmlFile("source_to_eml.eml");
         var outputPath = CreateTestFilePath("output_copy.eml");
         var context = CreateContext(new object());

@@ -30,17 +30,16 @@ public class DeletePdfAttachmentHandler : OperationHandlerBase<Document>
         var document = context.Document;
         var embeddedFiles = document.EmbeddedFiles;
 
-        var (found, actualName, attachmentNames) =
-            PdfAttachmentHelper.FindAttachment(embeddedFiles, deleteParams.AttachmentName);
+        var searchResult = PdfAttachmentHelper.FindAttachment(embeddedFiles, deleteParams.AttachmentName);
 
-        if (!found)
+        if (!searchResult.Found)
         {
-            var availableNames = string.Join(", ", attachmentNames);
+            var availableNames = string.Join(", ", searchResult.AllNames);
             throw new ArgumentException(
                 $"Attachment '{deleteParams.AttachmentName}' not found. Available attachments: {(string.IsNullOrEmpty(availableNames) ? "(none)" : availableNames)}");
         }
 
-        embeddedFiles.Delete(actualName);
+        embeddedFiles.Delete(searchResult.ActualName);
 
         MarkModified(context);
 

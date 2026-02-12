@@ -20,7 +20,7 @@
 ## ✨ 特性
 
 ### 核心功能
-- **115 個統一工具** - Word(27)、Excel(31)、PowerPoint(25)、PDF(19)、OCR(2)、Email(6)、BarCode(2)、轉換(2)、Session(1) 已整合
+- **115 個統一工具** - Word(27)、Excel(31)、PowerPoint(25)、PDF(19)、OCR(2)、Email(6)、BarCode(2)、轉換(1)、Session(1)、Extension(1) 已整合
 - **按需啟用** - 只啟用需要的文檔類型，減少資源佔用
 - **跨平台** - Windows、Linux、macOS (Intel + ARM)，單一可執行檔案
 - **開箱即用** - 預編譯版本無需安裝 .NET Runtime
@@ -33,6 +33,7 @@
 
 ### 進階功能
 - **Session 管理** - 在記憶體中編輯文件，支援 open/save/close 操作，支援多租戶隔離
+- **擴充功能系統** - 外部程序訂閱 Session 變更，實現即時預覽、雲端同步、合規檢查等
 - **認證機制** - 可選的 API Key 和 JWT 認證（4 種驗證模式）
 - **追蹤系統** - 結構化日誌、Webhook 通知、Prometheus Metrics
 - **Origin 驗證** - 防止 DNS 重綁定攻擊（HTTP/WebSocket 模式）
@@ -89,13 +90,14 @@ brew install xjustloveux/tap/aspose-mcp-server
 - `--barcode` - BarCode 工具
 - `--all` - 所有工具（等同不帶工具參數）
 - `--session-enabled` - 啟用 Session 管理（`document_session` 工具）
+- `--extension-enabled` - 啟用擴充功能系統（需搭配 `--session-enabled`）
+- `--extension-config 路徑` - 指定擴充功能配置檔案路徑（`extension` 工具）
 - `--license 路徑` - 指定授權檔案路徑（可選）
 
 > **工具過濾**：指定工具參數時，只有啟用的工具類別會出現在 MCP 工具列表中。例如使用 `--word` 時，只會顯示 `word_*` 相關工具。
 
 **轉換功能說明**：
-- 啟用任何文檔工具（`--word`、`--excel`、`--ppt`）或 `--pdf` 時，自動包含 `convert_to_pdf`（轉換為PDF）
-- 啟用兩個或以上文檔工具時，自動包含 `convert_document`（跨格式轉換，如Word轉Excel）
+- 啟用任何文檔工具（`--word`、`--excel`、`--ppt`、`--pdf`）時，自動包含 `convert_document`（跨格式轉換，支援 Word/Excel/PDF 轉圖片、特殊格式轉 PDF）
 
 📋 **更多配置範例：** `config_example.json`（配置格式適用於所有 MCP 客戶端）
 
@@ -114,7 +116,8 @@ brew install xjustloveux/tap/aspose-mcp-server
 | **OCR** | 2 | 影像前處理（校正/降噪/對比/縮放）、文字辨識（圖片/PDF/收據/身分證/護照） |
 | **Email** | 6 | 郵件建立/讀取/轉換、內容編輯、附件管理、日曆事件、聯絡人、格式轉換（EML↔MSG↔HTML） |
 | **BarCode** | 2 | 條碼產生（QR/Code128/EAN13 等）、條碼辨識（自動偵測/指定類型） |
-| **轉換** | 2 | `convert_to_pdf`（Word/Excel/PPT/HTML/EPUB/Markdown/SVG→PDF）、`convert_document`（跨格式轉換） |
+| **轉換** | 1 | `convert_document`（跨格式轉換：Word/Excel/PDF→圖片、HTML/EPUB/Markdown/SVG→PDF） |
+| **Extension** | 1 | 擴充功能管理（list/bind/unbind/status/set_format/bindings/command），即時文檔快照推送 |
 
 > 📖 完整工具列表與操作說明請參閱 [工具列表](https://xjustloveux.github.io/aspose-mcp-server/tools.html)
 
@@ -224,7 +227,7 @@ word_style(path="B.docx", operation="copy_styles", sourceDocument="A.docx")
 | 類別 | 連結 |
 |------|------|
 | **完整文檔** | [GitHub Pages](https://xjustloveux.github.io/aspose-mcp-server/) — 功能特性、工具列表、快速開始、開發者指南、部署指南、FAQ |
-| **配置範例** | [config_example.json](config_example.json) |
+| **配置範例** | [config_example.json](config_example.json) · [extensions_example.json](extensions_example.json) |
 | **Aspose** | [Aspose.Total for .NET](https://products.aspose.com/total/net/) |
 | **MCP** | [MCP 官方網站](https://modelcontextprotocol.io/) · [.NET MCP SDK](https://github.com/modelcontextprotocol/csharp-sdk) |
 | **MCP 客戶端** | [Claude Desktop](https://claude.ai/download) · [Cursor](https://cursor.sh/) · [Continue](https://continue.dev/) |

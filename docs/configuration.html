@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>配置參考 - Aspose MCP Server</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="alternate icon" href="favicon.ico">
+    <meta name="description" content="Aspose MCP Server 完整配置參考：所有環境變數與命令行參數的詳細說明。">
+    <meta name="keywords" content="Aspose, MCP, 配置, 環境變數, 命令行參數, 設定">
+    <link rel="canonical" href="https://xjustloveux.github.io/aspose-mcp-server/configuration.html">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://xjustloveux.github.io/aspose-mcp-server/configuration.html">
+    <meta property="og:title" content="配置參考 - Aspose MCP Server">
+    <meta property="og:description" content="Aspose MCP Server 完整配置參考：所有環境變數與命令行參數的詳細說明。">
+    <meta property="og:site_name" content="Aspose MCP Server">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary">
+    <meta property="twitter:url" content="https://xjustloveux.github.io/aspose-mcp-server/configuration.html">
+    <meta property="twitter:title" content="配置參考 - Aspose MCP Server">
+    <meta property="twitter:description" content="Aspose MCP Server 完整配置參考：所有環境變數與命令行參數的詳細說明。">
+    <link rel="stylesheet" href="theme.css">
+    <script src="theme.js"></script>
+    <style>
+        /* Page-specific styles */
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        .config-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            min-width: 700px;
+        }
+
+        .config-table th {
+            background: var(--bg-hover);
+            padding: 12px;
+            text-align: left;
+            border-bottom: 2px solid var(--accent-color);
+        }
+
+        .config-table td {
+            padding: 10px;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: top;
+        }
+
+        .config-table tr:hover {
+            background: var(--bg-hover);
+        }
+
+        .config-table code {
+            background: var(--bg-step);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.9em;
+        }
+
+        .section-nav {
+            background: var(--bg-step);
+            padding: 15px 20px;
+            border-radius: 5px;
+            margin-bottom: 30px;
+        }
+
+        .section-nav ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .section-nav li {
+            margin: 0;
+        }
+
+        .section-nav a {
+            display: inline-block;
+            padding: 5px 12px;
+            background: var(--bg-hover);
+            border-radius: 3px;
+            text-decoration: none;
+            color: var(--text-color);
+            font-size: 0.9em;
+        }
+
+        .section-nav a:hover {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        .var-count {
+            font-size: 0.8em;
+            color: var(--text-muted);
+            margin-left: 5px;
+        }
+
+        /* Page-specific RWD */
+        @media (max-width: 768px) {
+            .table-wrapper {
+                margin: 0 -15px;
+                padding: 0 15px;
+            }
+
+            .section-nav ul {
+                flex-direction: column;
+                gap: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+<nav>
+    <div class="nav-container">
+        <div class="nav-header">
+            <a href="index.html" class="nav-logo"><img src="favicon.svg" alt="Aspose MCP Server"> Aspose MCP Server</a>
+            <ul class="nav-menu" id="navMenu">
+                <li>
+                    <a href="index.html">首頁</a>
+                </li>
+                <li>
+                    <a href="features.html">功能特性</a>
+                </li>
+                <li>
+                    <a href="tools.html">工具列表</a>
+                </li>
+                <li>
+                    <a href="getting-started.html">快速開始</a>
+                </li>
+                <li>
+                    <a href="developers.html">開發者指南</a>
+                </li>
+                <li>
+                    <a href="extensions.html">擴充功能開發</a>
+                </li>
+                <li>
+                    <a href="configuration.html" class="active">配置參考</a>
+                </li>
+                <li>
+                    <a href="deployment.html">部署指南</a>
+                </li>
+                <li>
+                    <a href="faq.html">常見問答</a>
+                </li>
+            </ul>
+            <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme" title="切換亮/暗色主題">🌙</button>
+            <button class="menu-toggle" aria-label="Toggle menu">☰</button>
+        </div>
+    </div>
+</nav>
+
+<div class="page-header">
+    <div class="container">
+        <h1>⚙️ 配置參考</h1>
+        <p>所有環境變數與命令行參數的完整說明</p>
+    </div>
+</div>
+
+<div class="container">
+
+<div class="section-nav">
+    <strong>快速導航：</strong>
+    <ul>
+        <li>
+            <a href="#server">伺服器設定</a><span class="var-count">(2)</span>
+        </li>
+        <li>
+            <a href="#transport">傳輸設定</a><span class="var-count">(3)</span>
+        </li>
+        <li>
+            <a href="#session">Session 設定</a><span class="var-count">(11)</span>
+        </li>
+        <li>
+            <a href="#origin">Origin 驗證</a><span class="var-count">(4)</span>
+        </li>
+        <li>
+            <a href="#apikey">API Key 認證</a><span class="var-count">(13)</span>
+        </li>
+        <li>
+            <a href="#jwt">JWT 認證</a><span class="var-count">(18)</span>
+        </li>
+        <li>
+            <a href="#tracking">追蹤設定</a><span class="var-count">(8)</span>
+        </li>
+        <li>
+            <a href="#extension">擴充功能設定</a><span class="var-count">(26)</span>
+        </li>
+    </ul>
+</div>
+
+<div class="info-box" style="margin-bottom: 30px;">
+    <strong>💡 配置優先順序</strong>
+    <p style="margin-top: 8px; margin-bottom: 0;">命令行參數優先於環境變數。所有配置項都支援環境變數和命令行參數兩種方式設定。</p>
+</div>
+
+<div class="section" id="server">
+    <h2>🖥️ 伺服器設定</h2>
+    <p>基本伺服器配置，包括工具啟用和授權設定。</p>
+
+    <div class="table-wrapper">
+        <table class="config-table">
+            <thead>
+            <tr>
+                <th style="width: 280px;">環境變數</th>
+                <th style="width: 200px;">命令行參數</th>
+                <th>說明</th>
+                <th style="width: 100px;">預設值</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>
+                    <code>ASPOSE_TOOLS</code>
+                </td>
+                <td>
+                    <code>--word/--excel/--pdf/--ppt/--ocr/--email/--barcode/--all</code>
+                </td>
+                <td>啟用的工具類型。可用值：<code>all</code>（全部）、<code>word</code>、<code>excel</code>、<code>powerpoint</code>/<code>ppt</code>、<code>pdf</code>、<code>ocr</code>、<code>email</code>、<code>barcode</code>。多個工具用逗號分隔。</td>
+                <td>all</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_LICENSE_PATH</code>
+                </td>
+                <td>
+                    <code>--license path</code>
+                </td>
+                <td>License 檔案路徑。可以是絕對路徑、相對路徑或僅檔案名稱。若未指定，將自動搜尋常見的 License 檔案名稱。</td>
+                <td>-</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="section" id="transport">
+    <h2>📡 傳輸設定</h2>
+    <p>MCP 傳輸模式配置。</p>
+
+    <div class="table-wrapper">
+        <table class="config-table">
+            <thead>
+            <tr>
+                <th style="width: 280px;">環境變數</th>
+                <th style="width: 200px;">命令行參數</th>
+                <th>說明</th>
+                <th style="width: 100px;">預設值</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>
+                    <code>ASPOSE_TRANSPORT</code>
+                </td>
+                <td>
+                    <code>--stdio/--http/--ws/--websocket</code>
+                </td>
+                <td>傳輸模式。可用值：<code>stdio</code>（標準輸入輸出）、<code>http</code>（HTTP SSE）、<code>ws</code>/<code>websocket</code>（WebSocket）。</td>
+                <td>stdio</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_PORT</code>
+                </td>
+                <td>
+                    <code>--port N</code>
+                </td>
+                <td>HTTP/WebSocket 模式的監聽埠號。有效範圍：1-65535。無效值將重設為預設值。</td>
+                <td>3000</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_HOST</code>
+                </td>
+                <td>
+                    <code>--host addr</code>
+                </td>
+                <td>HTTP/WebSocket 模式的監聽位址。可用值：<code>localhost</code>、<code>0.0.0.0</code>、<code>*</code> 或特定 IP 位址。無效值將重設為預設值。</td>
+                <td>localhost</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="section" id="session">
+    <h2>📂 Session 設定</h2>
+    <p>文件 Session 管理配置。啟用 Session 後可使用 <code>document_session</code> 工具進行多步驟編輯操作。</p>
+
+    <div class="table-wrapper">
+        <table class="config-table">
+            <thead>
+            <tr>
+                <th style="width: 280px;">環境變數</th>
+                <th style="width: 200px;">命令行參數</th>
+                <th>說明</th>
+                <th style="width: 100px;">預設值</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>
+                    <code>ASPOSE_SESSION_ENABLED</code>
+                </td>
+                <td>
+                    <code>--session-enabled/--session-disabled</code>
+                </td>
+                <td>是否啟用 Session 管理功能。</td>
+                <td>false</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_SESSION_MAX</code>
+                </td>
+                <td>
+                    <code>--session-max N</code>
+                </td>
+                <td>最大同時 Session 數量。最小值：1。</td>
+                <td>10</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_SESSION_TIMEOUT</code>
+                </td>
+                <td>
+                    <code>--session-timeout N</code>
+                </td>
+                <td>Session 閒置超時時間（分鐘）。0 表示永不超時。</td>
+                <td>30</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_SESSION_MAX_FILE_SIZE_MB</code>
+                </td>
+                <td>
+                    <code>--session-max-file-size N</code>
+                </td>
+                <td>Session 模式下的最大檔案大小（MB）。最小值：1。</td>
+                <td>100</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_SESSION_TEMP_DIR</code>
+                </td>
+                <td>
+                    <code>--session-temp-dir path</code>
+                </td>
+                <td>Session 暫存檔案目錄。</td>
+                <td>系統臨時目錄</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_SESSION_TEMP_RETENTION_HOURS</code>
+                </td>
+                <td>
+                    <code>--session-temp-retention-hours N</code>
+                </td>
+                <td>暫存檔保留時間（小時）。超過此時間的檔案將被清理。最小值：1。</td>
+                <td>24</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_SESSION_ON_DISCONNECT</code>
+                </td>
+                <td>
+                    <code>--session-on-disconnect behavior</code>
+                </td>
+                <td>客戶端斷線時的處理方式。可用值：<code>AutoSave</code>（自動儲存）、<code>Discard</code>（丟棄）、<code>SaveToTemp</code>（存到暫存）、<code>PromptOnReconnect</code>（重連時提示）。</td>
+                <td>SaveToTemp</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_SESSION_ISOLATION</code>
+                </td>
+                <td>
+                    <code>--session-isolation mode</code>
+                </td>
+                <td>Session 隔離模式。<code>none</code>：無隔離，所有用戶可存取所有 session；<code>group</code>：群組級隔離，同群組內用戶可相互存取 session。</td>
+                <td>group</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_SESSION_AUTO_SAVE_INTERVAL</code>
+                </td>
+                <td>
+                    <code>--session-auto-save N</code>
+                </td>
+                <td>自動暫存間隔（分鐘）。大於 0 時，系統會定期將有變更的 Session 暫存到臨時目錄。0 表示停用。</td>
+                <td>0</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_SESSION_GROUP_ID</code>
+                </td>
+                <td>-</td>
+                <td>Stdio 模式下的群組識別符。用於 Session 隔離。</td>
+                <td>-</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_SESSION_USER_ID</code>
+                </td>
+                <td>-</td>
+                <td>Stdio 模式下的用戶識別符。用於 Session 隔離。</td>
+                <td>-</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="section" id="origin">
+    <h2>🛡️ Origin 驗證</h2>
+    <p>HTTP/WebSocket 模式的 Origin 標頭驗證，用於防止 DNS 重綁定攻擊。</p>
+
+    <div class="table-wrapper">
+        <table class="config-table">
+            <thead>
+            <tr>
+                <th style="width: 280px;">環境變數</th>
+                <th style="width: 200px;">命令行參數</th>
+                <th>說明</th>
+                <th style="width: 100px;">預設值</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>
+                    <code>ASPOSE_ORIGIN_VALIDATION</code>
+                </td>
+                <td>
+                    <code>--no-origin-validation</code>
+                </td>
+                <td>是否啟用 Origin 標頭驗證。環境變數設為 <code>false</code> 或使用命令行參數停用。</td>
+                <td>true</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_ALLOW_LOCALHOST</code>
+                </td>
+                <td>
+                    <code>--no-localhost</code>
+                </td>
+                <td>是否允許 localhost 來源。適用於開發環境。</td>
+                <td>true</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_ALLOW_MISSING_ORIGIN</code>
+                </td>
+                <td>
+                    <code>--require-origin</code>
+                </td>
+                <td>是否允許無 Origin 標頭的請求（如 curl、Postman、伺服器對伺服器請求）。</td>
+                <td>true</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_ALLOWED_ORIGINS</code>
+                </td>
+                <td>
+                    <code>--allowed-origins origins</code>
+                </td>
+                <td>允許的來源域名清單，逗號分隔。例如：<code>https://app1.com,https://app2.com</code>。</td>
+                <td>-</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="info-box" style="margin-top: 15px;">
+        <strong>💡 排除路徑</strong>
+        <p style="margin-top: 8px; margin-bottom: 0;">健康檢查端點 <code>/health</code> 和 <code>/ready</code> 自動排除 Origin 驗證。</p>
+    </div>
+</div>
+
+<div class="section" id="apikey">
+    <h2>🔑 API Key 認證</h2>
+    <p>API Key 認證配置。支援本地驗證、閘道模式、Introspection 端點和自訂驗證端點。</p>
+
+    <div class="table-wrapper">
+        <table class="config-table">
+            <thead>
+            <tr>
+                <th style="width: 280px;">環境變數</th>
+                <th style="width: 200px;">命令行參數</th>
+                <th>說明</th>
+                <th style="width: 100px;">預設值</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>
+                    <code>ASPOSE_AUTH_APIKEY_ENABLED</code>
+                </td>
+                <td>
+                    <code>--auth-apikey-enabled/--auth-apikey-disabled</code>
+                </td>
+                <td>是否啟用 API Key 認證。</td>
+                <td>false</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_AUTH_APIKEY_MODE</code>
+                </td>
+                <td>
+                    <code>--auth-apikey-mode mode</code>
+                </td>
+                <td>驗證模式。可用值：<code>local</code>（本地驗證）、<code>gateway</code>（信任閘道）、<code>introspection</code>（遠端 Introspection）、<code>custom</code>（自訂端點）。</td>
+                <td>local</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_AUTH_APIKEY_KEYS</code>
+                </td>
+                <td>
+                    <code>--auth-apikey-keys keys</code>
+                </td>
+                <td>API Key 列表（Local 模式必填）。格式：<code>key1:group1,key2:group2</code>。</td>
+                <td>-</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_AUTH_APIKEY_HEADER</code>
+                </td>
+                <td>
+                    <code>--auth-apikey-header name</code>
+                </td>
+                <td>API Key 的 HTTP Header 名稱。</td>
+                <td>X-API-Key</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_AUTH_APIKEY_GROUP_HEADER</code>
+                </td>
+                <td>
+                    <code>--auth-apikey-group-header name</code>
+                </td>
+                <td>群組識別符的 HTTP Header 名稱（Gateway 模式使用）。</td>
+                <td>X-Group-Id</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_AUTH_APIKEY_INTROSPECTION_URL</code>
+                </td>
+                <td>
+                    <code>--auth-apikey-introspection-url url</code>
+                </td>
+                <td>Introspection 端點 URL（Introspection 模式必填）。</td>
+                <td>-</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_AUTH_APIKEY_INTROSPECTION_AUTH</code>
+                </td>
+                <td>
+                    <code>--auth-apikey-introspection-auth value</code>
+                </td>
+                <td>Introspection 請求的 Authorization Header 值。</td>
+                <td>-</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_AUTH_APIKEY_INTROSPECTION_FIELD</code>
+                </td>
+                <td>
+                    <code>--auth-apikey-introspection-field name</code>
+                </td>
+                <td>Introspection 請求中 API Key 的欄位名稱。</td>
+                <td>key</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_AUTH_APIKEY_CUSTOM_URL</code>
+                </td>
+                <td>
+                    <code>--auth-apikey-custom-url url</code>
+                </td>
+                <td>自訂驗證端點 URL（Custom 模式必填）。</td>
+                <td>-</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_AUTH_APIKEY_TIMEOUT</code>
+                </td>
+                <td>
+                    <code>--auth-apikey-timeout N</code>
+                </td>
+                <td>外部驗證請求超時時間（秒）。有效範圍：1-300。</td>
+                <td>5</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_AUTH_APIKEY_CACHE_ENABLED</code>
+                </td>
+                <td>
+                    <code>--auth-apikey-cache-enabled/--auth-apikey-cache-disabled</code>
+                </td>
+                <td>是否啟用認證結果快取。</td>
+                <td>true</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_AUTH_APIKEY_CACHE_TTL</code>
+                </td>
+                <td>
+                    <code>--auth-apikey-cache-ttl N</code>
+                </td>
+                <td>快取存活時間（秒）。</td>
+                <td>300</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_AUTH_APIKEY_CACHE_MAX_SIZE</code>
+                </td>
+                <td>
+                    <code>--auth-apikey-cache-max-size N</code>
+                </td>
+                <td>快取最大項目數。</td>
+                <td>10000</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="info-box" style="margin-top: 15px;">
+        <strong>Introspection 回應格式</strong>
+        <p style="margin-top: 8px; margin-bottom: 0;">
+            <code>{"active": true, "group_id": "..."}</code>
+        </p>
+    </div>
+</div>
+
+<div class="section" id="jwt">
+<h2>🎫 JWT 認證</h2>
+<p>JWT 認證配置。支援本地驗證（HMAC/RSA/ECDSA）、閘道模式、OAuth Introspection 和自訂驗證端點。</p>
+
+<div class="table-wrapper">
+    <table class="config-table">
+        <thead>
+        <tr>
+            <th style="width: 280px;">環境變數</th>
+            <th style="width: 200px;">命令行參數</th>
+            <th>說明</th>
+            <th style="width: 100px;">預設值</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td>
+                <code>ASPOSE_AUTH_JWT_ENABLED</code>
+            </td>
+            <td>
+                <code>--auth-jwt-enabled/--auth-jwt-disabled</code>
+            </td>
+            <td>是否啟用 JWT 認證。</td>
+            <td>false</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_AUTH_JWT_MODE</code>
+            </td>
+            <td>
+                <code>--auth-jwt-mode mode</code>
+            </td>
+            <td>驗證模式。可用值：<code>local</code>（本地驗證）、<code>gateway</code>（信任閘道）、<code>introspection</code>（OAuth Introspection）、<code>custom</code>（自訂端點）。</td>
+            <td>local</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_AUTH_JWT_SECRET</code>
+            </td>
+            <td>
+                <code>--auth-jwt-secret value</code>
+            </td>
+            <td>HMAC 對稱密鑰（Local 模式，與 PUBLIC_KEY_PATH 二選一）。</td>
+            <td>-</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_AUTH_JWT_PUBLIC_KEY_PATH</code>
+            </td>
+            <td>
+                <code>--auth-jwt-public-key-path path</code>
+            </td>
+            <td>RSA/ECDSA 公鑰檔案路徑（Local 模式，與 SECRET 二選一）。</td>
+            <td>-</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_AUTH_JWT_ISSUER</code>
+            </td>
+            <td>
+                <code>--auth-jwt-issuer value</code>
+            </td>
+            <td>JWT 發行者（iss claim 驗證）。</td>
+            <td>-</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_AUTH_JWT_AUDIENCE</code>
+            </td>
+            <td>
+                <code>--auth-jwt-audience value</code>
+            </td>
+            <td>JWT 受眾（aud claim 驗證）。</td>
+            <td>-</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_AUTH_JWT_GROUP_CLAIM</code>
+            </td>
+            <td>
+                <code>--auth-jwt-group-claim name</code>
+            </td>
+            <td>群組識別符的 Claim 名稱（如 tenant_id, team_id, org_id）。</td>
+            <td>tenant_id</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_AUTH_JWT_USER_CLAIM</code>
+            </td>
+            <td>
+                <code>--auth-jwt-user-claim name</code>
+            </td>
+            <td>用戶識別符的 Claim 名稱。</td>
+            <td>sub</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_AUTH_JWT_GROUP_HEADER</code>
+            </td>
+            <td>
+                <code>--auth-jwt-group-header name</code>
+            </td>
+            <td>群組識別符的 HTTP Header 名稱（Gateway 模式使用）。</td>
+            <td>X-Group-Id</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_AUTH_JWT_USER_HEADER</code>
+            </td>
+            <td>
+                <code>--auth-jwt-user-header name</code>
+            </td>
+            <td>用戶識別符的 HTTP Header 名稱（Gateway 模式使用）。</td>
+            <td>X-User-Id</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_AUTH_JWT_INTROSPECTION_URL</code>
+            </td>
+            <td>
+                <code>--auth-jwt-introspection-url url</code>
+            </td>
+            <td>OAuth Introspection 端點 URL（Introspection 模式必填）。</td>
+            <td>-</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_AUTH_JWT_CLIENT_ID</code>
+            </td>
+            <td>
+                <code>--auth-jwt-client-id value</code>
+            </td>
+            <td>OAuth Client ID（Introspection 模式使用）。</td>
+            <td>-</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_AUTH_JWT_CLIENT_SECRET</code>
+            </td>
+            <td>
+                <code>--auth-jwt-client-secret value</code>
+            </td>
+            <td>OAuth Client Secret（Introspection 模式使用）。</td>
+            <td>-</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_AUTH_JWT_CUSTOM_URL</code>
+            </td>
+            <td>
+                <code>--auth-jwt-custom-url url</code>
+            </td>
+            <td>自訂驗證端點 URL（Custom 模式必填）。</td>
+            <td>-</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_AUTH_JWT_TIMEOUT</code>
+            </td>
+            <td>
+                <code>--auth-jwt-timeout N</code>
+            </td>
+            <td>外部驗證請求超時時間（秒）。有效範圍：1-300。</td>
+            <td>5</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_AUTH_JWT_CACHE_ENABLED</code>
+            </td>
+            <td>
+                <code>--auth-jwt-cache-enabled/--auth-jwt-cache-disabled</code>
+            </td>
+            <td>是否啟用認證結果快取。</td>
+            <td>true</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_AUTH_JWT_CACHE_TTL</code>
+            </td>
+            <td>
+                <code>--auth-jwt-cache-ttl N</code>
+            </td>
+            <td>快取存活時間（秒）。</td>
+            <td>300</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_AUTH_JWT_CACHE_MAX_SIZE</code>
+            </td>
+            <td>
+                <code>--auth-jwt-cache-max-size N</code>
+            </td>
+            <td>快取最大項目數。</td>
+            <td>10000</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="info-box" style="margin-top: 15px;">
+    <strong>同時啟用多種認證</strong>
+    <p style="margin-top: 8px; margin-bottom: 0;">若同時啟用 API Key 和 JWT 認證，請求必須<strong>依序通過兩者驗證</strong>才算成功。</p>
+</div>
+</div>
+
+<div class="section" id="tracking">
+    <h2>📊 追蹤設定</h2>
+    <p>日誌、Webhook 和 Metrics 配置。</p>
+
+    <div class="table-wrapper">
+        <table class="config-table">
+            <thead>
+            <tr>
+                <th style="width: 280px;">環境變數</th>
+                <th style="width: 200px;">命令行參數</th>
+                <th>說明</th>
+                <th style="width: 100px;">預設值</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>
+                    <code>ASPOSE_LOG_ENABLED</code>
+                </td>
+                <td>
+                    <code>--log-enabled/--log-disabled</code>
+                </td>
+                <td>是否啟用結構化日誌。</td>
+                <td>true</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_LOG_TARGETS</code>
+                </td>
+                <td>
+                    <code>--log-targets targets</code>
+                </td>
+                <td>日誌輸出目標，逗號分隔。可用值：<code>Console</code>、<code>EventLog</code>（僅 Windows）。</td>
+                <td>Console</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_WEBHOOK_ENABLED</code>
+                </td>
+                <td>
+                    <code>--webhook-enabled/--webhook-disabled</code>
+                </td>
+                <td>是否啟用 Webhook 通知。設定 WEBHOOK_URL 時會自動啟用。</td>
+                <td>false</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_WEBHOOK_URL</code>
+                </td>
+                <td>
+                    <code>--webhook-url url</code>
+                </td>
+                <td>Webhook 接收端點 URL。</td>
+                <td>-</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_WEBHOOK_AUTH_HEADER</code>
+                </td>
+                <td>
+                    <code>--webhook-auth-header value</code>
+                </td>
+                <td>Webhook 請求的 Authorization Header 值。</td>
+                <td>-</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_WEBHOOK_TIMEOUT</code>
+                </td>
+                <td>
+                    <code>--webhook-timeout N</code>
+                </td>
+                <td>Webhook 請求超時時間（秒）。有效範圍：1-300。</td>
+                <td>5</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_METRICS_ENABLED</code>
+                </td>
+                <td>
+                    <code>--metrics-enabled/--metrics-disabled</code>
+                </td>
+                <td>是否啟用 Prometheus Metrics 端點。</td>
+                <td>false</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_METRICS_PATH</code>
+                </td>
+                <td>
+                    <code>--metrics-path path</code>
+                </td>
+                <td>Metrics 端點路徑。</td>
+                <td>/metrics</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="section" id="extension">
+<h2>🔌 擴充功能設定</h2>
+<p>擴充功能系統配置。擴充功能系統需要同時啟用 Session 功能。</p>
+
+<h3>系統級設定</h3>
+<p>這些設定適用於整個擴充功能系統，無法由個別擴展覆寫。</p>
+
+<div class="table-wrapper">
+    <table class="config-table">
+        <thead>
+        <tr>
+            <th style="width: 280px;">環境變數</th>
+            <th style="width: 200px;">命令行參數</th>
+            <th>說明</th>
+            <th style="width: 100px;">預設值</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td>
+                <code>ASPOSE_EXTENSION_ENABLED</code>
+            </td>
+            <td>
+                <code>--extension-enabled/--extension-disabled</code>
+            </td>
+            <td>是否啟用擴充功能系統。需要同時啟用 Session。</td>
+            <td>false</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_EXTENSION_CONFIG</code>
+            </td>
+            <td>
+                <code>--extension-config path</code>
+            </td>
+            <td>擴展配置檔案路徑（extensions.json）。</td>
+            <td>-</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_EXTENSION_TEMP_DIR</code>
+            </td>
+            <td>
+                <code>--extension-temp-dir path</code>
+            </td>
+            <td>快照檔案暫存目錄。</td>
+            <td>系統臨時目錄</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_EXTENSION_TRANSPORT_MODE</code>
+            </td>
+            <td>
+                <code>--extension-transport-mode mode</code>
+            </td>
+            <td>預設傳輸模式。可用值：<code>stdin</code>（標準輸入）、<code>mmap</code>（記憶體映射）、<code>file</code>（臨時檔案）。</td>
+            <td>stdin</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_EXTENSION_HEALTH_INTERVAL</code>
+            </td>
+            <td>
+                <code>--extension-health-interval N</code>
+            </td>
+            <td>健康檢查間隔（秒）。有效範圍：1-3600。</td>
+            <td>30</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_EXTENSION_MAX_RESTARTS</code>
+            </td>
+            <td>
+                <code>--extension-max-restarts N</code>
+            </td>
+            <td>擴展崩潰時的最大重啟次數。有效範圍：0-100。</td>
+            <td>3</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_EXTENSION_RESTART_COOLDOWN</code>
+            </td>
+            <td>-</td>
+            <td>重啟嘗試之間的冷卻時間（秒）。</td>
+            <td>5</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_EXTENSION_GRACEFUL_SHUTDOWN_TIMEOUT</code>
+            </td>
+            <td>
+                <code>--extension-graceful-shutdown-timeout N</code>
+            </td>
+            <td>優雅關閉超時時間（秒）。</td>
+            <td>5</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_EXTENSION_MAX_SNAPSHOT_SIZE</code>
+            </td>
+            <td>
+                <code>--extension-max-snapshot-size N</code>
+            </td>
+            <td>最大快照大小（位元組）。超過此大小的快照將被拒絕。有效範圍：1MB-1GB。</td>
+            <td>104857600 (100MB)</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_EXTENSION_MIN_FREE_DISK_SPACE</code>
+            </td>
+            <td>
+                <code>--extension-min-free-disk-space N</code>
+            </td>
+            <td>寫入快照前所需的最小可用磁碟空間（位元組）。</td>
+            <td>524288000 (500MB)</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<h3>可覆寫設定（含約束）</h3>
+<p>這些設定定義了預設值和允許範圍，個別擴展可在 extensions.json 中覆寫（需在 Floor-Ceiling 範圍內）。</p>
+
+<div class="table-wrapper">
+    <table class="config-table">
+        <thead>
+        <tr>
+            <th style="width: 280px;">環境變數</th>
+            <th style="width: 200px;">命令行參數</th>
+            <th>說明</th>
+            <th style="width: 100px;">預設值</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td>
+                <code>ASPOSE_EXTENSION_FRAME_INTERVAL_DEFAULT</code>
+            </td>
+            <td>
+                <code>--extension-frame-interval N</code>
+            </td>
+            <td>快照傳輸間隔預設值（毫秒）。</td>
+            <td>100</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_EXTENSION_FRAME_INTERVAL_FLOOR</code>
+            </td>
+            <td>
+                <code>--extension-frame-interval-floor N</code>
+            </td>
+            <td>快照傳輸間隔下限（毫秒）。</td>
+            <td>10</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_EXTENSION_FRAME_INTERVAL_CEILING</code>
+            </td>
+            <td>
+                <code>--extension-frame-interval-ceiling N</code>
+            </td>
+            <td>快照傳輸間隔上限（毫秒）。</td>
+            <td>5000</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_EXTENSION_SNAPSHOT_TTL_DEFAULT</code>
+            </td>
+            <td>
+                <code>--extension-snapshot-ttl N</code>
+            </td>
+            <td>未確認快照的 TTL 預設值（秒）。</td>
+            <td>30</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_EXTENSION_SNAPSHOT_TTL_FLOOR</code>
+            </td>
+            <td>
+                <code>--extension-snapshot-ttl-floor N</code>
+            </td>
+            <td>未確認快照的 TTL 下限（秒）。</td>
+            <td>5</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_EXTENSION_SNAPSHOT_TTL_CEILING</code>
+            </td>
+            <td>
+                <code>--extension-snapshot-ttl-ceiling N</code>
+            </td>
+            <td>未確認快照的 TTL 上限（秒）。</td>
+            <td>300</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_EXTENSION_MAX_MISSED_HEARTBEATS_DEFAULT</code>
+            </td>
+            <td>
+                <code>--extension-max-missed-heartbeats N</code>
+            </td>
+            <td>最大連續心跳失敗次數預設值。</td>
+            <td>3</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_EXTENSION_MAX_MISSED_HEARTBEATS_FLOOR</code>
+            </td>
+            <td>
+                <code>--extension-max-missed-heartbeats-floor N</code>
+            </td>
+            <td>最大連續心跳失敗次數下限。</td>
+            <td>1</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_EXTENSION_MAX_MISSED_HEARTBEATS_CEILING</code>
+            </td>
+            <td>
+                <code>--extension-max-missed-heartbeats-ceiling N</code>
+            </td>
+            <td>最大連續心跳失敗次數上限。</td>
+            <td>20</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_EXTENSION_DEBOUNCE_DELAY_DEFAULT</code>
+            </td>
+            <td>
+                <code>--extension-debounce-delay N</code>
+            </td>
+            <td>Session 修改事件防抖延遲預設值（毫秒）。</td>
+            <td>100</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_EXTENSION_DEBOUNCE_DELAY_FLOOR</code>
+            </td>
+            <td>
+                <code>--extension-debounce-delay-floor N</code>
+            </td>
+            <td>Session 修改事件防抖延遲下限（毫秒）。</td>
+            <td>0</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_EXTENSION_DEBOUNCE_DELAY_CEILING</code>
+            </td>
+            <td>
+                <code>--extension-debounce-delay-ceiling N</code>
+            </td>
+            <td>Session 修改事件防抖延遲上限（毫秒）。</td>
+            <td>1000</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_EXTENSION_IDLE_TIMEOUT_DEFAULT</code>
+            </td>
+            <td>
+                <code>--extension-idle-timeout N</code>
+            </td>
+            <td>閒置超時預設值（分鐘）。0 表示永不卸載。</td>
+            <td>30</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_EXTENSION_IDLE_TIMEOUT_FLOOR</code>
+            </td>
+            <td>
+                <code>--extension-idle-timeout-floor N</code>
+            </td>
+            <td>閒置超時下限（分鐘）。</td>
+            <td>1</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_EXTENSION_IDLE_TIMEOUT_CEILING</code>
+            </td>
+            <td>
+                <code>--extension-idle-timeout-ceiling N</code>
+            </td>
+            <td>閒置超時上限（分鐘）。</td>
+            <td>1440 (24小時)</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_EXTENSION_IDLE_TIMEOUT_SPECIAL_ALLOWED</code>
+            </td>
+            <td>
+                <code>--extension-idle-timeout-special-allowed/--extension-idle-timeout-special-disallowed</code>
+            </td>
+            <td>是否允許擴展使用特殊值 0（永不卸載）。</td>
+            <td>true</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="info-box" style="margin-top: 15px;">
+    <strong>更多資訊</strong>
+    <p style="margin-top: 8px; margin-bottom: 0;">擴充功能開發詳情請參考 <a href="extensions.html">擴充功能開發指南</a>。</p>
+</div>
+</div>
+
+</div>
+
+<footer>
+    <div class="container">
+        <p>基於 .NET 8.0、Aspose.Total 23.10.0 和 MCP SDK 0.6.0 構建</p>
+        <p class="footer-links" style="margin-top: 10px;">
+            <a href="https://github.com/xjustloveux/aspose-mcp-server" target="_blank">GitHub</a> |
+            <a href="https://www.aspose.com/" target="_blank">Aspose</a> |
+            <a href="https://modelcontextprotocol.io/" target="_blank">MCP Protocol</a> |
+            <a href="https://github.com/modelcontextprotocol/csharp-sdk" target="_blank">.NET MCP SDK</a>
+        </p>
+        <p class="copyright-text" style="margin-top: 20px; font-size: 0.9em;">
+            © 2025 JaJa. All rights reserved. | MIT License
+        </p>
+    </div>
+</footer>
+
+</body>
+</html>

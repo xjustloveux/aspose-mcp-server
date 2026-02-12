@@ -157,14 +157,29 @@ dotnet_diagnostic.S1854.severity = none
 # S1075: Refactor your code not to use hardcoded absolute paths or URIs
 dotnet_diagnostic.S1075.severity = none
 
-# McpServerBuilderExtensions.cs - Reflection usage
-[Core/McpServerBuilderExtensions.cs]
-# S3011: Reflection should not be used to increase accessibility
-dotnet_diagnostic.S3011.severity = none
 
-# GetHeadersEmailContentHandlerTests.cs - Assert.All() lambda parameter used only for assertions
-[Tests/Handlers/Email/Content/GetHeadersEmailContentHandlerTests.cs]
-resharper_parameter_only_used_for_precondition_check_local_highlighting = none
+
+# ===== Extension System File-Specific Rules =====
+
+# ProcessCleanupManager.cs - Windows P/Invoke uses standard Windows API naming convention
+[Core/Extension/ProcessCleanupManager.cs]
+# InconsistentNaming: IO_COUNTERS, JOBOBJECT_*, JOB_OBJECT_LIMIT_* match Windows SDK naming
+resharper_inconsistent_naming_highlighting = none
+
+# StdinTransport.cs - Windows error codes use standard naming convention
+[Core/Extension/Transport/StdinTransport.cs]
+# InconsistentNaming: ERROR_NO_DATA, ERROR_BROKEN_PIPE are standard Windows error codes
+resharper_inconsistent_naming_highlighting = none
+
+# Extension.cs - Empty catch in cleanup/dispose paths (best-effort cleanup)
+[Core/Extension/Extension.cs]
+# EmptyGeneralCatchClause: Intentional silent failure in cleanup paths
+resharper_empty_general_catch_clause_highlighting = none
+
+# FileTransport.cs - Empty catch in cleanup path (2 locations: CleanupFailedFile, IsOrphanedDirectory)
+[Core/Extension/Transport/FileTransport.cs]
+# EmptyGeneralCatchClause: Best-effort file cleanup
+resharper_empty_general_catch_clause_highlighting = none
 
 # XML and config files
 [*.{xml,config,json,yml,yaml}]

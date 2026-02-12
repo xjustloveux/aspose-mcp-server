@@ -204,5 +204,115 @@ public class WordHeaderFooterHelperTests : WordTestBase
         Assert.True(fields.Count > 0);
     }
 
+    [Fact]
+    public void InsertTextOrField_WithMixedContent_InsertsTextAndFields()
+    {
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        var fontSettings = new FontSettings(null, null, null, null);
+
+        WordHeaderFooterHelper.InsertTextOrField(builder, "Page {PAGE} of {NUMPAGES}", fontSettings);
+
+        var text = doc.GetText();
+        Assert.Contains("Page", text);
+        Assert.Contains("of", text);
+
+        var fields = doc.Range.Fields;
+        Assert.Equal(2, fields.Count);
+    }
+
+    [Fact]
+    public void InsertTextOrField_WithEscapedBraces_InsertsLiteralBraces()
+    {
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        var fontSettings = new FontSettings(null, null, null, null);
+
+        WordHeaderFooterHelper.InsertTextOrField(builder, "Value: {{100}}", fontSettings);
+
+        var text = doc.GetText();
+        Assert.Contains("{100}", text);
+
+        var fields = doc.Range.Fields;
+        Assert.Equal(0, fields.Count);
+    }
+
+    [Fact]
+    public void InsertTextOrField_WithUnclosedBrace_TreatsAsText()
+    {
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        var fontSettings = new FontSettings(null, null, null, null);
+
+        WordHeaderFooterHelper.InsertTextOrField(builder, "Text {PAGE", fontSettings);
+
+        var text = doc.GetText();
+        Assert.Contains("Text {PAGE", text);
+
+        var fields = doc.Range.Fields;
+        Assert.Equal(0, fields.Count);
+    }
+
+    [Fact]
+    public void InsertTextOrField_WithEmptyFieldCode_SkipsEmptyField()
+    {
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        var fontSettings = new FontSettings(null, null, null, null);
+
+        WordHeaderFooterHelper.InsertTextOrField(builder, "Before {} After", fontSettings);
+
+        var text = doc.GetText();
+        Assert.Contains("Before", text);
+        Assert.Contains("After", text);
+
+        var fields = doc.Range.Fields;
+        Assert.Equal(0, fields.Count);
+    }
+
+    [Fact]
+    public void InsertTextOrField_WithConsecutiveFields_InsertsAllFields()
+    {
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        var fontSettings = new FontSettings(null, null, null, null);
+
+        WordHeaderFooterHelper.InsertTextOrField(builder, "{PAGE}{NUMPAGES}{DATE}", fontSettings);
+
+        var fields = doc.Range.Fields;
+        Assert.Equal(3, fields.Count);
+    }
+
+    [Fact]
+    public void InsertTextOrField_WithStandaloneClosingBrace_TreatsAsText()
+    {
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        var fontSettings = new FontSettings(null, null, null, null);
+
+        WordHeaderFooterHelper.InsertTextOrField(builder, "Text } more", fontSettings);
+
+        var text = doc.GetText();
+        Assert.Contains("Text } more", text);
+    }
+
+    [Fact]
+    public void InsertTextOrField_WithChineseAndField_InsertsCorrectly()
+    {
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        var fontSettings = new FontSettings(null, null, null, null);
+
+        WordHeaderFooterHelper.InsertTextOrField(builder, "第 {PAGE} 頁，共 {NUMPAGES} 頁", fontSettings);
+
+        var text = doc.GetText();
+        Assert.Contains("第", text);
+        Assert.Contains("頁，共", text);
+        Assert.Contains("頁", text);
+
+        var fields = doc.Range.Fields;
+        Assert.Equal(2, fields.Count);
+    }
+
     #endregion
 }

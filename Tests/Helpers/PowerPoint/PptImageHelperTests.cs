@@ -28,8 +28,8 @@ public class PptImageHelperTests : PptTestBase
     {
         var result = PptImageHelper.CalculateDimensions(200, 100, 400, 300);
 
-        Assert.Equal(200, result.width);
-        Assert.Equal(100, result.height);
+        Assert.Equal(200, result.Width);
+        Assert.Equal(100, result.Height);
     }
 
     [Fact]
@@ -37,8 +37,8 @@ public class PptImageHelperTests : PptTestBase
     {
         var result = PptImageHelper.CalculateDimensions(200, null, 400, 300);
 
-        Assert.Equal(200, result.width);
-        Assert.Equal(150, result.height);
+        Assert.Equal(200, result.Width);
+        Assert.Equal(150, result.Height);
     }
 
     [Fact]
@@ -46,8 +46,8 @@ public class PptImageHelperTests : PptTestBase
     {
         var result = PptImageHelper.CalculateDimensions(null, 150, 400, 300);
 
-        Assert.Equal(200, result.width);
-        Assert.Equal(150, result.height);
+        Assert.Equal(200, result.Width);
+        Assert.Equal(150, result.Height);
     }
 
     [Fact]
@@ -55,8 +55,8 @@ public class PptImageHelperTests : PptTestBase
     {
         var result = PptImageHelper.CalculateDimensions(null, null, 400, 300);
 
-        Assert.Equal(300, result.width);
-        Assert.Equal(225, result.height);
+        Assert.Equal(300, result.Width);
+        Assert.Equal(225, result.Height);
     }
 
     [Fact]
@@ -64,8 +64,8 @@ public class PptImageHelperTests : PptTestBase
     {
         var result = PptImageHelper.CalculateDimensions(200, null, 0, 300);
 
-        Assert.Equal(200, result.width);
-        Assert.Equal(200, result.height);
+        Assert.Equal(200, result.Width);
+        Assert.Equal(200, result.Height);
     }
 
     [Fact]
@@ -73,8 +73,8 @@ public class PptImageHelperTests : PptTestBase
     {
         var result = PptImageHelper.CalculateDimensions(null, 150, 400, 0);
 
-        Assert.Equal(150, result.width);
-        Assert.Equal(150, result.height);
+        Assert.Equal(150, result.Width);
+        Assert.Equal(150, result.Height);
     }
 
     #endregion

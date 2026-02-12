@@ -4,6 +4,13 @@ using AsposeMcpServer.Core.Session;
 namespace AsposeMcpServer.Tests.Core.Session;
 
 /// <summary>
+///     Represents paths to temporary document and metadata files.
+/// </summary>
+/// <param name="DocPath">The document file path.</param>
+/// <param name="MetaPath">The metadata file path.</param>
+internal record TempFilePaths(string DocPath, string MetaPath);
+
+/// <summary>
 ///     Unit tests for TempFileManager class
 /// </summary>
 public class TempFileManagerTests : IDisposable
@@ -44,7 +51,7 @@ public class TempFileManagerTests : IDisposable
 
     #region Helper Methods
 
-    private (string docPath, string metaPath) CreateTempFile(string sessionId, DateTime savedAt,
+    private TempFilePaths CreateTempFile(string sessionId, DateTime savedAt,
         string? originalPath = null)
     {
         var timestamp = savedAt.ToString("yyyyMMddHHmmss");
@@ -64,7 +71,7 @@ public class TempFileManagerTests : IDisposable
         };
         File.WriteAllText(metaPath, JsonSerializer.Serialize(metadata));
 
-        return (docPath, metaPath);
+        return new TempFilePaths(docPath, metaPath);
     }
 
     #endregion
@@ -84,30 +91,30 @@ public class TempFileManagerTests : IDisposable
     [Fact]
     public void CleanupExpiredFiles_NonExpiredFiles_ShouldNotDelete()
     {
-        var (docPath, metaPath) = CreateTempFile("sess_test1234", DateTime.UtcNow);
+        var tempFiles = CreateTempFile("sess_test1234", DateTime.UtcNow);
 
         var result = _manager.CleanupExpiredFiles();
 
         Assert.Equal(1, result.ScannedCount);
         Assert.Equal(0, result.DeletedCount);
         Assert.Equal(0, result.ErrorCount);
-        Assert.True(File.Exists(docPath));
-        Assert.True(File.Exists(metaPath));
+        Assert.True(File.Exists(tempFiles.DocPath));
+        Assert.True(File.Exists(tempFiles.MetaPath));
     }
 
     [Fact]
     public void CleanupExpiredFiles_ExpiredFiles_ShouldDelete()
     {
         var expiredTime = DateTime.UtcNow.AddHours(-(_config.TempRetentionHours + 1));
-        var (docPath, metaPath) = CreateTempFile("sess_expired12", expiredTime);
+        var tempFiles = CreateTempFile("sess_expired12", expiredTime);
 
         var result = _manager.CleanupExpiredFiles();
 
         Assert.Equal(1, result.ScannedCount);
         Assert.Equal(1, result.DeletedCount);
         Assert.Equal(0, result.ErrorCount);
-        Assert.False(File.Exists(docPath));
-        Assert.False(File.Exists(metaPath));
+        Assert.False(File.Exists(tempFiles.DocPath));
+        Assert.False(File.Exists(tempFiles.MetaPath));
     }
 
     [Fact]
@@ -212,28 +219,28 @@ public class TempFileManagerTests : IDisposable
     public void RecoverSession_WithDeleteAfterRecover_ShouldDeleteTempFiles()
     {
         var sessionId = "sess_delafter";
-        var (docPath, metaPath) = CreateTempFile(sessionId, DateTime.UtcNow);
+        var tempFiles = CreateTempFile(sessionId, DateTime.UtcNow);
 
         var targetPath = Path.Combine(_tempDir, "recovered_del.docx");
         var result = _manager.RecoverSession(sessionId, targetPath);
 
         Assert.True(result.Success);
-        Assert.False(File.Exists(docPath));
-        Assert.False(File.Exists(metaPath));
+        Assert.False(File.Exists(tempFiles.DocPath));
+        Assert.False(File.Exists(tempFiles.MetaPath));
     }
 
     [Fact]
     public void RecoverSession_WithoutDeleteAfterRecover_ShouldKeepTempFiles()
     {
         var sessionId = "sess_keepafter";
-        var (docPath, metaPath) = CreateTempFile(sessionId, DateTime.UtcNow);
+        var tempFiles = CreateTempFile(sessionId, DateTime.UtcNow);
 
         var targetPath = Path.Combine(_tempDir, "recovered_keep.docx");
         var result = _manager.RecoverSession(sessionId, targetPath, false);
 
         Assert.True(result.Success);
-        Assert.True(File.Exists(docPath));
-        Assert.True(File.Exists(metaPath));
+        Assert.True(File.Exists(tempFiles.DocPath));
+        Assert.True(File.Exists(tempFiles.MetaPath));
     }
 
     #endregion
@@ -252,13 +259,13 @@ public class TempFileManagerTests : IDisposable
     public void DeleteTempSession_ValidSession_ShouldDelete()
     {
         var sessionId = "sess_todel12";
-        var (docPath, metaPath) = CreateTempFile(sessionId, DateTime.UtcNow);
+        var tempFiles = CreateTempFile(sessionId, DateTime.UtcNow);
 
         var result = _manager.DeleteTempSession(sessionId);
 
         Assert.True(result);
-        Assert.False(File.Exists(docPath));
-        Assert.False(File.Exists(metaPath));
+        Assert.False(File.Exists(tempFiles.DocPath));
+        Assert.False(File.Exists(tempFiles.MetaPath));
     }
 
     #endregion
@@ -296,13 +303,13 @@ public class TempFileManagerTests : IDisposable
     public async Task StartAsync_ShouldCompleteAndPerformInitialCleanup()
     {
         var expiredTime = DateTime.UtcNow.AddHours(-(_config.TempRetentionHours + 1));
-        var (docPath, metaPath) = CreateTempFile("sess_startup1", expiredTime);
+        var tempFiles = CreateTempFile("sess_startup1", expiredTime);
         var manager = new TempFileManager(_config);
 
         await manager.StartAsync(CancellationToken.None);
 
-        Assert.False(File.Exists(docPath));
-        Assert.False(File.Exists(metaPath));
+        Assert.False(File.Exists(tempFiles.DocPath));
+        Assert.False(File.Exists(tempFiles.MetaPath));
 
         await manager.StopAsync(CancellationToken.None);
         manager.Dispose();
@@ -317,13 +324,13 @@ public class TempFileManagerTests : IDisposable
             TempDirectory = _tempDir
         };
         var expiredTime = DateTime.UtcNow.AddHours(-(_config.TempRetentionHours + 1));
-        var (docPath, metaPath) = CreateTempFile("sess_disabled", expiredTime);
+        var tempFiles = CreateTempFile("sess_disabled", expiredTime);
         var manager = new TempFileManager(disabledConfig);
 
         await manager.StartAsync(CancellationToken.None);
 
-        Assert.True(File.Exists(docPath));
-        Assert.True(File.Exists(metaPath));
+        Assert.True(File.Exists(tempFiles.DocPath));
+        Assert.True(File.Exists(tempFiles.MetaPath));
 
         await manager.StopAsync(CancellationToken.None);
         manager.Dispose();
@@ -333,7 +340,7 @@ public class TempFileManagerTests : IDisposable
 
     #region Session Isolation Tests
 
-    private (string docPath, string metaPath) CreateTempFileWithOwner(string sessionId, DateTime savedAt,
+    private TempFilePaths CreateTempFileWithOwner(string sessionId, DateTime savedAt,
         string? groupId, string? userId, string? originalPath = null)
     {
         var timestamp = savedAt.ToString("yyyyMMddHHmmss");
@@ -355,7 +362,7 @@ public class TempFileManagerTests : IDisposable
         };
         File.WriteAllText(metaPath, JsonSerializer.Serialize(metadata));
 
-        return (docPath, metaPath);
+        return new TempFilePaths(docPath, metaPath);
     }
 
     [Fact]
@@ -465,14 +472,14 @@ public class TempFileManagerTests : IDisposable
         };
         var isolatedManager = new TempFileManager(isolatedConfig);
 
-        var (docPath, metaPath) = CreateTempFileWithOwner("sess_del_g1", DateTime.UtcNow, "group1", "user1");
+        var tempFiles = CreateTempFileWithOwner("sess_del_g1", DateTime.UtcNow, "group1", "user1");
 
         var requestor = new SessionIdentity { GroupId = "group2", UserId = "user2" };
         var result = isolatedManager.DeleteTempSession("sess_del_g1", requestor);
 
         Assert.False(result);
-        Assert.True(File.Exists(docPath));
-        Assert.True(File.Exists(metaPath));
+        Assert.True(File.Exists(tempFiles.DocPath));
+        Assert.True(File.Exists(tempFiles.MetaPath));
 
         isolatedManager.Dispose();
     }
@@ -489,14 +496,14 @@ public class TempFileManagerTests : IDisposable
         };
         var isolatedManager = new TempFileManager(isolatedConfig);
 
-        var (docPath, metaPath) = CreateTempFileWithOwner("sess_del_sg", DateTime.UtcNow, "group1", "user1");
+        var tempFiles = CreateTempFileWithOwner("sess_del_sg", DateTime.UtcNow, "group1", "user1");
 
         var requestor = new SessionIdentity { GroupId = "group1", UserId = "user2" };
         var result = isolatedManager.DeleteTempSession("sess_del_sg", requestor);
 
         Assert.True(result);
-        Assert.False(File.Exists(docPath));
-        Assert.False(File.Exists(metaPath));
+        Assert.False(File.Exists(tempFiles.DocPath));
+        Assert.False(File.Exists(tempFiles.MetaPath));
 
         isolatedManager.Dispose();
     }

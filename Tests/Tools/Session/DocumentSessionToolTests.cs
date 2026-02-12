@@ -10,6 +10,13 @@ using SaveFormat = Aspose.Slides.Export.SaveFormat;
 namespace AsposeMcpServer.Tests.Tools.Session;
 
 /// <summary>
+///     Represents the result of opening a document session.
+/// </summary>
+/// <param name="SessionId">The session identifier.</param>
+/// <param name="Data">The full open session result data.</param>
+internal record SessionOpenInfo(string SessionId, OpenSessionResult Data);
+
+/// <summary>
 ///     Integration tests for DocumentSessionTool.
 ///     Focuses on core session operations, file I/O, and operation routing.
 ///     Detailed parameter validation tests are in Handler tests.
@@ -68,11 +75,11 @@ public class DocumentSessionToolTests : TestBase
         return filePath;
     }
 
-    private (string sessionId, OpenSessionResult data) OpenDocument(string path, string mode = "readwrite")
+    private SessionOpenInfo OpenDocument(string path, string mode = "readwrite")
     {
         var result = _tool.Execute("open", path, mode: mode);
         var data = GetResultData<OpenSessionResult>(result);
-        return (data.SessionId, data);
+        return new SessionOpenInfo(data.SessionId, data);
     }
 
     #region File I/O Smoke Tests
@@ -91,12 +98,12 @@ public class DocumentSessionToolTests : TestBase
             _ => throw new ArgumentException($"Unsupported extension: {extension}")
         };
 
-        var (sessionId, openData) = OpenDocument(docPath);
+        var sessionInfo = OpenDocument(docPath);
 
-        Assert.True(openData.Success);
-        Assert.StartsWith("sess_", sessionId);
+        Assert.True(sessionInfo.Data.Success);
+        Assert.StartsWith("sess_", sessionInfo.SessionId);
 
-        var statusResult = _tool.Execute("status", sessionId: sessionId);
+        var statusResult = _tool.Execute("status", sessionId: sessionInfo.SessionId);
         var data = GetResultData<SessionStatusResult>(statusResult);
         Assert.Equal(expectedType, data.Session.DocumentType);
     }
@@ -105,13 +112,13 @@ public class DocumentSessionToolTests : TestBase
     public void Save_Word_ShouldPersistModifications()
     {
         var docPath = CreateWordDocument("test_save_word.docx");
-        var (sessionId, _) = OpenDocument(docPath);
+        var sessionInfo = OpenDocument(docPath);
 
-        var doc = _sessionManager.GetDocument<Document>(sessionId);
+        var doc = _sessionManager.GetDocument<Document>(sessionInfo.SessionId);
         new DocumentBuilder(doc).Write("Modified content");
-        _sessionManager.MarkDirty(sessionId);
+        _sessionManager.MarkDirty(sessionInfo.SessionId);
 
-        var saveResult = _tool.Execute("save", sessionId: sessionId);
+        var saveResult = _tool.Execute("save", sessionId: sessionInfo.SessionId);
         var data = GetResultData<SaveSessionResult>(saveResult);
         Assert.True(data.Success);
 
@@ -124,13 +131,13 @@ public class DocumentSessionToolTests : TestBase
     {
         var docPath = CreateWordDocument("test_save_output.docx");
         var outputPath = CreateTestFilePath("test_save_new.docx");
-        var (sessionId, _) = OpenDocument(docPath);
+        var sessionInfo = OpenDocument(docPath);
 
-        var doc = _sessionManager.GetDocument<Document>(sessionId);
+        var doc = _sessionManager.GetDocument<Document>(sessionInfo.SessionId);
         new DocumentBuilder(doc).Write("New content");
-        _sessionManager.MarkDirty(sessionId);
+        _sessionManager.MarkDirty(sessionInfo.SessionId);
 
-        var saveResult = _tool.Execute("save", sessionId: sessionId, outputPath: outputPath);
+        var saveResult = _tool.Execute("save", sessionId: sessionInfo.SessionId, outputPath: outputPath);
         var data = GetResultData<SaveSessionResult>(saveResult);
 
         Assert.True(data.Success);
@@ -141,12 +148,12 @@ public class DocumentSessionToolTests : TestBase
     public void Close_ShouldRemoveSession()
     {
         var docPath = CreateWordDocument("test_close.docx");
-        var (sessionId, _) = OpenDocument(docPath);
+        var sessionInfo = OpenDocument(docPath);
 
         var listBefore = GetResultData<ListSessionsResult>(_tool.Execute("list"));
         Assert.Equal(1, listBefore.Count);
 
-        var closeResult = _tool.Execute("close", sessionId: sessionId);
+        var closeResult = _tool.Execute("close", sessionId: sessionInfo.SessionId);
         var closeData = GetResultData<CloseSessionResult>(closeResult);
         Assert.True(closeData.Success);
 
@@ -158,23 +165,23 @@ public class DocumentSessionToolTests : TestBase
     public void List_AfterOpen_ShouldShowSession()
     {
         var docPath = CreateWordDocument("test_list.docx");
-        var (sessionId, _) = OpenDocument(docPath);
+        var sessionInfo = OpenDocument(docPath);
 
         var listResult = _tool.Execute("list");
         var data = GetResultData<ListSessionsResult>(listResult);
 
         Assert.True(data.Success);
         Assert.Equal(1, data.Count);
-        Assert.Equal(sessionId, data.Sessions[0].SessionId);
+        Assert.Equal(sessionInfo.SessionId, data.Sessions[0].SessionId);
     }
 
     [Fact]
     public void Status_ShouldReturnSessionInfo()
     {
         var docPath = CreateWordDocument("test_status.docx");
-        var (sessionId, _) = OpenDocument(docPath);
+        var sessionInfo = OpenDocument(docPath);
 
-        var statusResult = _tool.Execute("status", sessionId: sessionId);
+        var statusResult = _tool.Execute("status", sessionId: sessionInfo.SessionId);
         var data = GetResultData<SessionStatusResult>(statusResult);
 
         Assert.True(data.Success);
@@ -208,10 +215,10 @@ public class DocumentSessionToolTests : TestBase
     public void Open_WithReadOnlyMode_ShouldPreventSave()
     {
         var docPath = CreateWordDocument("test_readonly.docx");
-        var (sessionId, _) = OpenDocument(docPath, "readonly");
+        var sessionInfo = OpenDocument(docPath, "readonly");
 
         var ex = Assert.Throws<InvalidOperationException>(() =>
-            _tool.Execute("save", sessionId: sessionId));
+            _tool.Execute("save", sessionId: sessionInfo.SessionId));
         Assert.Contains("readonly", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 

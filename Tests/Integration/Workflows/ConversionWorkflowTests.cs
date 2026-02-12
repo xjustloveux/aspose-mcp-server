@@ -19,7 +19,6 @@ namespace AsposeMcpServer.Tests.Integration.Workflows;
 public class ConversionWorkflowTests : TestBase
 {
     private readonly ConvertDocumentTool _convertDocumentTool;
-    private readonly ConvertToPdfTool _convertToPdfTool;
     private readonly DocumentSessionManager _sessionManager;
     private readonly DocumentSessionTool _sessionTool;
 
@@ -32,7 +31,6 @@ public class ConversionWorkflowTests : TestBase
         _sessionManager = new DocumentSessionManager(config);
         var tempFileManager = new TempFileManager(config);
         _sessionTool = new DocumentSessionTool(_sessionManager, tempFileManager, new StdioSessionIdentityAccessor());
-        _convertToPdfTool = new ConvertToPdfTool(_sessionManager);
         _convertDocumentTool = new ConvertDocumentTool(_sessionManager);
     }
 
@@ -56,7 +54,7 @@ public class ConversionWorkflowTests : TestBase
         var excelPath = CreateExcelDocument();
         var pdfPath = CreateTestFilePath("excel_to_pdf_output.pdf");
 
-        var result = _convertToPdfTool.Execute(excelPath, outputPath: pdfPath);
+        var result = _convertDocumentTool.Execute(excelPath, outputPath: pdfPath);
 
         Assert.True(File.Exists(pdfPath));
         Assert.Equal(pdfPath, result.OutputPath);
@@ -75,7 +73,7 @@ public class ConversionWorkflowTests : TestBase
         var pptPath = CreatePowerPointDocument();
         var pdfPath = CreateTestFilePath("ppt_to_pdf_output.pdf");
 
-        var result = _convertToPdfTool.Execute(pptPath, outputPath: pdfPath);
+        var result = _convertDocumentTool.Execute(pptPath, outputPath: pdfPath);
 
         Assert.True(File.Exists(pdfPath));
         Assert.Equal(pdfPath, result.OutputPath);
@@ -101,7 +99,7 @@ public class ConversionWorkflowTests : TestBase
         foreach (var inputFile in inputFiles)
         {
             var outputPath = CreateTestFilePath($"batch_{Path.GetFileNameWithoutExtension(inputFile)}.pdf");
-            var result = _convertToPdfTool.Execute(inputFile, outputPath: outputPath);
+            var result = _convertDocumentTool.Execute(inputFile, outputPath: outputPath);
             outputFiles.Add(result.OutputPath);
         }
 
@@ -122,7 +120,7 @@ public class ConversionWorkflowTests : TestBase
         var wordPath = CreateWordDocument("Content for PDF conversion");
         var pdfPath = CreateTestFilePath("word_to_pdf_output.pdf");
 
-        var result = _convertToPdfTool.Execute(wordPath, outputPath: pdfPath);
+        var result = _convertDocumentTool.Execute(wordPath, outputPath: pdfPath);
 
         Assert.True(File.Exists(pdfPath));
         Assert.Equal(pdfPath, result.OutputPath);
@@ -142,7 +140,7 @@ public class ConversionWorkflowTests : TestBase
         var openData = GetResultData<OpenSessionResult>(openResult);
 
         var pdfPath = CreateTestFilePath("session_to_pdf_output.pdf");
-        var result = _convertToPdfTool.Execute(sessionId: openData.SessionId, outputPath: pdfPath);
+        var result = _convertDocumentTool.Execute(sessionId: openData.SessionId, outputPath: pdfPath);
 
         Assert.True(File.Exists(pdfPath));
         Assert.Equal(pdfPath, result.OutputPath);

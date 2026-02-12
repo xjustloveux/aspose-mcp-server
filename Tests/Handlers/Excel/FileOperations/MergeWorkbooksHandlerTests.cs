@@ -5,11 +5,18 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Excel.FileOperations;
 
+/// <summary>
+///     Represents paths to test input workbooks.
+/// </summary>
+/// <param name="Path1">The first workbook path.</param>
+/// <param name="Path2">The second workbook path.</param>
+internal record WorkbookPaths(string Path1, string Path2);
+
 public class MergeWorkbooksHandlerTests : ExcelHandlerTestBase
 {
     private readonly MergeWorkbooksHandler _handler = new();
 
-    private (string path1, string path2) CreateInputWorkbooks()
+    private WorkbookPaths CreateInputWorkbooks()
     {
         var input1Path = Path.Combine(TestDir, $"input1_{Guid.NewGuid()}.xlsx");
         var workbook1 = new Workbook();
@@ -23,7 +30,7 @@ public class MergeWorkbooksHandlerTests : ExcelHandlerTestBase
         workbook2.Worksheets[0].Cells[0, 0].Value = "Data2";
         workbook2.Save(input2Path);
 
-        return (input1Path, input2Path);
+        return new WorkbookPaths(input1Path, input2Path);
     }
 
     #region Operation Property
@@ -41,14 +48,14 @@ public class MergeWorkbooksHandlerTests : ExcelHandlerTestBase
     [Fact]
     public void Execute_MergesWorkbooks()
     {
-        var (input1Path, input2Path) = CreateInputWorkbooks();
+        var inputPaths = CreateInputWorkbooks();
         var outputPath = Path.Combine(TestDir, "merged.xlsx");
         var workbook = CreateEmptyWorkbook();
         var context = CreateContext(workbook);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "path", outputPath },
-            { "inputPaths", new[] { input1Path, input2Path } }
+            { "inputPaths", new[] { inputPaths.Path1, inputPaths.Path2 } }
         });
 
         var res = _handler.Execute(context, parameters);
@@ -72,14 +79,14 @@ public class MergeWorkbooksHandlerTests : ExcelHandlerTestBase
     [Fact]
     public void Execute_WithOutputPath_MergesWorkbooks()
     {
-        var (input1Path, input2Path) = CreateInputWorkbooks();
+        var inputPaths = CreateInputWorkbooks();
         var outputPath = Path.Combine(TestDir, "merged_output.xlsx");
         var workbook = CreateEmptyWorkbook();
         var context = CreateContext(workbook);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "outputPath", outputPath },
-            { "inputPaths", new[] { input1Path, input2Path } }
+            { "inputPaths", new[] { inputPaths.Path1, inputPaths.Path2 } }
         });
 
         var res = _handler.Execute(context, parameters);
@@ -98,7 +105,7 @@ public class MergeWorkbooksHandlerTests : ExcelHandlerTestBase
     [Fact]
     public void Execute_WithMergeSheets_MergesSheetsWithSameName()
     {
-        var (input1Path, _) = CreateInputWorkbooks();
+        var inputPaths = CreateInputWorkbooks();
 
         var input3Path = Path.Combine(TestDir, $"input3_{Guid.NewGuid()}.xlsx");
         var workbook3 = new Workbook();
@@ -112,7 +119,7 @@ public class MergeWorkbooksHandlerTests : ExcelHandlerTestBase
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "path", outputPath },
-            { "inputPaths", new[] { input1Path, input3Path } },
+            { "inputPaths", new[] { inputPaths.Path1, input3Path } },
             { "mergeSheets", true }
         });
 
@@ -136,12 +143,12 @@ public class MergeWorkbooksHandlerTests : ExcelHandlerTestBase
     [Fact]
     public void Execute_WithoutPathOrOutputPath_ThrowsArgumentException()
     {
-        var (input1Path, input2Path) = CreateInputWorkbooks();
+        var inputPaths = CreateInputWorkbooks();
         var workbook = CreateEmptyWorkbook();
         var context = CreateContext(workbook);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
-            { "inputPaths", new[] { input1Path, input2Path } }
+            { "inputPaths", new[] { inputPaths.Path1, inputPaths.Path2 } }
         });
 
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));

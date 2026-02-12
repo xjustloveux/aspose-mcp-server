@@ -9,6 +9,21 @@ using WordShape = Aspose.Words.Drawing.Shape;
 namespace AsposeMcpServer.Handlers.Word.Image;
 
 /// <summary>
+///     Represents the position and context information for an image.
+/// </summary>
+/// <param name="Alignment">The alignment of the image.</param>
+/// <param name="Position">The position information for the image.</param>
+/// <param name="ContextText">The context text near the image.</param>
+internal record ImagePositionContext(string? Alignment, WordImagePosition? Position, string? ContextText);
+
+/// <summary>
+///     Represents image data information including type and original size.
+/// </summary>
+/// <param name="ImageType">The type of the image.</param>
+/// <param name="OriginalSize">The original size of the image.</param>
+internal record ImageDataInfo(string? ImageType, ImageSize? OriginalSize);
+
+/// <summary>
 ///     Handler for getting all images from Word documents.
 /// </summary>
 [ResultType(typeof(GetImagesWordResult))]
@@ -96,8 +111,8 @@ public class GetImagesWordHandler : OperationHandlerBase<Document>
     /// <returns>A WordImageInfo record containing image information.</returns>
     private static WordImageInfo BuildImageInfo(WordShape shape, int index)
     {
-        var (alignment, position, contextText) = GetPositionAndContext(shape);
-        var (imageType, originalSize) = GetImageDataInfo(shape);
+        var positionContext = GetPositionAndContext(shape);
+        var imageDataInfo = GetImageDataInfo(shape);
 
         return new WordImageInfo
         {
@@ -106,11 +121,11 @@ public class GetImagesWordHandler : OperationHandlerBase<Document>
             Width = shape.Width,
             Height = shape.Height,
             IsInline = shape.IsInline,
-            Alignment = alignment,
-            Position = position,
-            Context = contextText,
-            ImageType = imageType,
-            OriginalSize = originalSize,
+            Alignment = positionContext.Alignment,
+            Position = positionContext.Position,
+            Context = positionContext.ContextText,
+            ImageType = imageDataInfo.ImageType,
+            OriginalSize = imageDataInfo.OriginalSize,
             Hyperlink = string.IsNullOrEmpty(shape.HRef) ? null : shape.HRef,
             AltText = string.IsNullOrEmpty(shape.AlternativeText) ? null : shape.AlternativeText,
             Title = string.IsNullOrEmpty(shape.Title) ? null : shape.Title
@@ -121,8 +136,8 @@ public class GetImagesWordHandler : OperationHandlerBase<Document>
     ///     Gets the position and context information for an image.
     /// </summary>
     /// <param name="shape">The image shape.</param>
-    /// <returns>A tuple containing alignment, position, and context text.</returns>
-    private static (string? alignment, WordImagePosition? position, string? contextText) GetPositionAndContext(
+    /// <returns>An ImagePositionContext containing alignment, position, and context text.</returns>
+    private static ImagePositionContext GetPositionAndContext(
         WordShape shape)
     {
         if (shape.IsInline)
@@ -135,26 +150,26 @@ public class GetImagesWordHandler : OperationHandlerBase<Document>
     ///     Gets position and context for an inline image.
     /// </summary>
     /// <param name="shape">The inline image shape.</param>
-    /// <returns>A tuple containing alignment, position, and context text.</returns>
-    private static (string? alignment, WordImagePosition? position, string? contextText) GetInlinePositionAndContext(
+    /// <returns>An ImagePositionContext containing alignment, position, and context text.</returns>
+    private static ImagePositionContext GetInlinePositionAndContext(
         WordShape shape)
     {
         if (shape.ParentNode is WordParagraph parentPara)
         {
             var alignment = parentPara.ParagraphFormat.Alignment.ToString();
             var contextText = TruncateText(parentPara.GetText().Trim());
-            return (alignment, null, contextText);
+            return new ImagePositionContext(alignment, null, contextText);
         }
 
-        return (null, new WordImagePosition { X = shape.Left, Y = shape.Top }, null);
+        return new ImagePositionContext(null, new WordImagePosition { X = shape.Left, Y = shape.Top }, null);
     }
 
     /// <summary>
     ///     Gets position and context for a floating image.
     /// </summary>
     /// <param name="shape">The floating image shape.</param>
-    /// <returns>A tuple containing alignment, position, and context text.</returns>
-    private static (string? alignment, WordImagePosition? position, string? contextText) GetFloatingPositionAndContext(
+    /// <returns>An ImagePositionContext containing alignment, position, and context text.</returns>
+    private static ImagePositionContext GetFloatingPositionAndContext(
         WordShape shape)
     {
         var position = new WordImagePosition
@@ -170,7 +185,7 @@ public class GetImagesWordHandler : OperationHandlerBase<Document>
         if (shape.GetAncestor(NodeType.Paragraph) is WordParagraph nearestPara)
             contextText = TruncateText(nearestPara.GetText().Trim());
 
-        return (null, position, contextText);
+        return new ImagePositionContext(null, position, contextText);
     }
 
     /// <summary>
@@ -188,10 +203,10 @@ public class GetImagesWordHandler : OperationHandlerBase<Document>
     ///     Gets image data information from the shape.
     /// </summary>
     /// <param name="shape">The image shape.</param>
-    /// <returns>A tuple containing image type and original size.</returns>
-    private static (string? imageType, ImageSize? originalSize) GetImageDataInfo(WordShape shape)
+    /// <returns>An ImageDataInfo containing image type and original size.</returns>
+    private static ImageDataInfo GetImageDataInfo(WordShape shape)
     {
-        if (shape.ImageData == null) return (null, null);
+        if (shape.ImageData == null) return new ImageDataInfo(null, null);
 
         var imageType = shape.ImageData.ImageType.ToString();
         var imageSize = shape.ImageData.ImageSize;
@@ -201,7 +216,7 @@ public class GetImagesWordHandler : OperationHandlerBase<Document>
             HeightPixels = imageSize.HeightPixels
         };
 
-        return (imageType, originalSize);
+        return new ImageDataInfo(imageType, originalSize);
     }
 
     /// <summary>

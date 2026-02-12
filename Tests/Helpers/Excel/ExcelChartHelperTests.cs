@@ -277,5 +277,40 @@ public class ExcelChartHelperTests
         Assert.Single(chart.NSeries);
     }
 
+    [Fact]
+    public void AddDataSeries_WithMultiColumnRange_CreatesMultipleSeries()
+    {
+        var workbook = new Workbook();
+        var worksheet = workbook.Worksheets[0];
+        worksheet.Cells["A1"].PutValue(1);
+        worksheet.Cells["A2"].PutValue(2);
+        worksheet.Cells["B1"].PutValue(3);
+        worksheet.Cells["B2"].PutValue(4);
+        var chartIndex = worksheet.Charts.Add(ChartType.Column, 5, 0, 20, 10);
+        var chart = worksheet.Charts[chartIndex];
+
+        ExcelChartHelper.AddDataSeries(chart, "A1:B2");
+
+        Assert.Equal(2, chart.NSeries.Count);
+    }
+
+    [Fact]
+    public void AddDataSeries_WithMultiColumnRange_EachSeriesHasCorrectColumn()
+    {
+        var workbook = new Workbook();
+        var worksheet = workbook.Worksheets[0];
+        worksheet.Cells["A1"].PutValue(10);
+        worksheet.Cells["A2"].PutValue(20);
+        worksheet.Cells["B1"].PutValue(30);
+        worksheet.Cells["B2"].PutValue(40);
+        var chartIndex = worksheet.Charts.Add(ChartType.Column, 5, 0, 20, 10);
+        var chart = worksheet.Charts[chartIndex];
+
+        ExcelChartHelper.AddDataSeries(chart, "A1:B2");
+
+        Assert.Contains("$A$", chart.NSeries[0].Values);
+        Assert.Contains("$B$", chart.NSeries[1].Values);
+    }
+
     #endregion
 }

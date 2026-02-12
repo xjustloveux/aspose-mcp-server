@@ -101,6 +101,12 @@
                     <a href="developers.html">開發者指南</a>
                 </li>
                 <li>
+                    <a href="extensions.html">擴充功能開發</a>
+                </li>
+                <li>
+                    <a href="configuration.html">配置參考</a>
+                </li>
+                <li>
                     <a href="deployment.html">部署指南</a>
                 </li>
                 <li>
@@ -121,199 +127,223 @@
 </div>
 
 <div class="container">
-    <div class="section">
-        <h2>🎯 核心特性</h2>
+<div class="section">
+    <h2>🎯 核心特性</h2>
 
-        <h3>核心功能</h3>
-        <ul class="feature-list">
-            <li><strong>115 個統一工具</strong> - Word(27)、Excel(31)、PowerPoint(25)、PDF(19)、OCR(2)、Email(6)、BarCode(2)、轉換(2)、Session(1) 已整合</li>
-            <li><strong>按需啟用</strong> - 只啟用需要的文檔類型，減少資源佔用</li>
-            <li><strong>跨平台</strong> - Windows、Linux、macOS (Intel + ARM) 原生支援，無需外部圖形庫，單一可執行檔案</li>
-            <li><strong>開箱即用</strong> - 預編譯版本無需安裝 .NET Runtime</li>
-            <li><strong>完整讀寫</strong> - 支援從A文檔讀取格式應用到B文檔</li>
-        </ul>
+    <h3>核心功能</h3>
+    <ul class="feature-list">
+        <li><strong>115 個統一工具</strong> - Word(27)、Excel(31)、PowerPoint(25)、PDF(19)、OCR(2)、Email(6)、BarCode(2)、轉換(1)、Session(1)、擴充功能(1) 已整合</li>
+        <li><strong>按需啟用</strong> - 只啟用需要的文檔類型，減少資源佔用</li>
+        <li><strong>跨平台</strong> - Windows、Linux、macOS (Intel + ARM) 原生支援，無需外部圖形庫，單一可執行檔案</li>
+        <li><strong>開箱即用</strong> - 預編譯版本無需安裝 .NET Runtime</li>
+        <li><strong>完整讀寫</strong> - 支援從A文檔讀取格式應用到B文檔</li>
+    </ul>
 
-        <h3>技術特性</h3>
-        <ul class="feature-list">
-            <li><strong>MCP 2025-11-25 規範支援</strong> - 完全符合最新 MCP 協議規範，自動工具註解（readonly/destructive）基於命名約定，完整的 JSON-RPC 2.0 錯誤處理</li>
-            <li><strong>統一字型設定</strong> - 多個工具支援中英文字型分別設定（<code>fontNameAscii</code> 和 <code>fontNameFarEast</code> 參數）</li>
-            <li><strong>靈活的授權配置</strong> - 支援總授權或單一組件授權，自動搜尋、環境變數或命令列參數配置，試用模式降級（找不到授權時）</li>
-            <li><strong>自動工具發現</strong> - 基於命名約定的自動工具註冊系統</li>
-            <li><strong>安全加固</strong> - 全面的路徑驗證、輸入驗證和錯誤處理</li>
-        </ul>
-    </div>
+    <h3>技術特性</h3>
+    <ul class="feature-list">
+        <li><strong>MCP 2025-11-25 規範支援</strong> - 完全符合最新 MCP 協議規範，自動工具註解（readonly/destructive）基於命名約定，完整的 JSON-RPC 2.0 錯誤處理</li>
+        <li><strong>統一字型設定</strong> - 多個工具支援中英文字型分別設定（<code>fontNameAscii</code> 和 <code>fontNameFarEast</code> 參數）</li>
+        <li><strong>靈活的授權配置</strong> - 支援總授權或單一組件授權，自動搜尋、環境變數或命令列參數配置，試用模式降級（找不到授權時）</li>
+        <li><strong>自動工具發現</strong> - 基於命名約定的自動工具註冊系統</li>
+        <li><strong>安全加固</strong> - 全面的路徑驗證、輸入驗證和錯誤處理</li>
+    </ul>
+</div>
 
-    <div class="section">
-        <h2>🔒 安全特性</h2>
+<div class="section">
+    <h2>🔒 安全特性</h2>
 
-        <h3>路徑驗證</h3>
-        <ul class="feature-list">
-            <li>所有檔案路徑都經過 `SecurityHelper.ValidateFilePath()` 驗證</li>
-            <li>防止路徑遍歷攻擊（`../`, `..\`）</li>
-            <li>限制路徑長度（最大260字元）和檔案名稱長度（最大255字元）</li>
-            <li>驗證路徑中的非法字元</li>
-        </ul>
+    <h3>路徑驗證</h3>
+    <ul class="feature-list">
+        <li>所有檔案路徑都經過 `SecurityHelper.ValidateFilePath()` 驗證</li>
+        <li>防止路徑遍歷攻擊（`../`, `..\`）</li>
+        <li>限制路徑長度（最大260字元）和檔案名稱長度（最大255字元）</li>
+        <li>驗證路徑中的非法字元</li>
+    </ul>
 
-        <h3>輸入驗證</h3>
-        <ul class="feature-list">
-            <li>陣列大小驗證（`SecurityHelper.ValidateArraySize`，最大1000項）</li>
-            <li>字串長度驗證（`SecurityHelper.ValidateStringLength`，最大10000字元）</li>
-        </ul>
+    <h3>輸入驗證</h3>
+    <ul class="feature-list">
+        <li>陣列大小驗證（`SecurityHelper.ValidateArraySize`，最大1000項）</li>
+        <li>字串長度驗證（`SecurityHelper.ValidateStringLength`，最大10000字元）</li>
+    </ul>
 
-        <h3>錯誤處理</h3>
-        <ul class="feature-list">
-            <li>錯誤訊息清理，防止資訊洩露</li>
-            <li>移除檔案路徑、堆疊追蹤等敏感資訊</li>
-            <li>生產環境不暴露詳細錯誤資訊</li>
-        </ul>
+    <h3>錯誤處理</h3>
+    <ul class="feature-list">
+        <li>錯誤訊息清理，防止資訊洩露</li>
+        <li>移除檔案路徑、堆疊追蹤等敏感資訊</li>
+        <li>生產環境不暴露詳細錯誤資訊</li>
+    </ul>
 
-        <h3>Origin 驗證（DNS 重綁定攻擊防護）</h3>
-        <ul class="feature-list">
-            <li>HTTP 和 WebSocket 模式預設啟用 Origin 標頭驗證</li>
-            <li>支援配置允許的來源域名清單</li>
-            <li>可配置是否允許 localhost 來源（開發環境）</li>
-            <li>可配置是否要求必須有 Origin 標頭</li>
-            <li>健康檢查端點（/health, /ready）自動排除驗證</li>
-        </ul>
+    <h3>Origin 驗證（DNS 重綁定攻擊防護）</h3>
+    <ul class="feature-list">
+        <li>HTTP 和 WebSocket 模式預設啟用 Origin 標頭驗證</li>
+        <li>支援配置允許的來源域名清單</li>
+        <li>可配置是否允許 localhost 來源（開發環境）</li>
+        <li>可配置是否要求必須有 Origin 標頭</li>
+        <li>健康檢查端點（/health, /ready）自動排除驗證</li>
+    </ul>
 
-        <h3>安全限制</h3>
-        <div class="security-grid">
-            <div class="security-item">
-                <strong>最大路徑長度</strong>
-                260 字元
-            </div>
-            <div class="security-item">
-                <strong>最大檔案名稱長度</strong>
-                255 字元
-            </div>
-            <div class="security-item">
-                <strong>最大陣列大小</strong>
-                1000 項
-            </div>
-            <div class="security-item">
-                <strong>最大字串長度</strong>
-                10000 字元
-            </div>
+    <h3>安全限制</h3>
+    <div class="security-grid">
+        <div class="security-item">
+            <strong>最大路徑長度</strong>
+            260 字元
+        </div>
+        <div class="security-item">
+            <strong>最大檔案名稱長度</strong>
+            255 字元
+        </div>
+        <div class="security-item">
+            <strong>最大陣列大小</strong>
+            1000 項
+        </div>
+        <div class="security-item">
+            <strong>最大字串長度</strong>
+            10000 字元
         </div>
     </div>
+</div>
 
-    <div class="section">
-        <h2>📡 MCP 協議支援</h2>
-        <h3>MCP 2025-11-25 規範支援</h3>
-        <ul class="feature-list">
-            <li>符合最新 MCP 協議規範（protocolVersion: 2025-11-25）</li>
-            <li>使用 ModelContextProtocol SDK 0.6.0-preview.1</li>
-            <li>完整的 JSON-RPC 2.0 錯誤處理</li>
-        </ul>
+<div class="section">
+    <h2>📡 MCP 協議支援</h2>
+    <h3>MCP 2025-11-25 規範支援</h3>
+    <ul class="feature-list">
+        <li>符合最新 MCP 協議規範（protocolVersion: 2025-11-25）</li>
+        <li>使用 ModelContextProtocol SDK 0.6.0-preview.1</li>
+        <li>完整的 JSON-RPC 2.0 錯誤處理</li>
+    </ul>
 
-        <h3>Tool Annotations（工具行為標註）</h3>
-        <ul class="feature-list">
-            <li><strong>Title</strong> - 人類可讀的工具標題</li>
-            <li><strong>ReadOnly</strong> - 標示只讀操作（如 get、list）</li>
-            <li><strong>Destructive</strong> - 標示可能造成破壞性變更的操作（如 delete）</li>
-            <li><strong>Idempotent</strong> - 標示冪等操作（重複調用產生相同結果）</li>
-            <li><strong>OpenWorld = false</strong> - 所有工具都是本地檔案操作，不與外部實體交互</li>
-        </ul>
+    <h3>Tool Annotations（工具行為標註）</h3>
+    <ul class="feature-list">
+        <li><strong>Title</strong> - 人類可讀的工具標題</li>
+        <li><strong>ReadOnly</strong> - 標示只讀操作（如 get、list）</li>
+        <li><strong>Destructive</strong> - 標示可能造成破壞性變更的操作（如 delete）</li>
+        <li><strong>Idempotent</strong> - 標示冪等操作（重複調用產生相同結果）</li>
+        <li><strong>OpenWorld = false</strong> - 所有工具都是本地檔案操作，不與外部實體交互</li>
+    </ul>
 
-        <h3>結構化輸出（outputSchema）</h3>
-        <ul class="feature-list">
-            <li>所有工具回傳結構化 JSON 結果</li>
-            <li>SDK 自動生成 outputSchema（使用 oneOf 支援多種結果類型）</li>
-            <li>包含 <code>output</code> 欄位（path 或 sessionId）指示輸出位置</li>
-            <li>客戶端可根據 schema 自動解析結果</li>
-        </ul>
-    </div>
+    <h3>結構化輸出（outputSchema）</h3>
+    <ul class="feature-list">
+        <li>所有工具回傳結構化 JSON 結果</li>
+        <li>SDK 自動生成 outputSchema（使用 oneOf 支援多種結果類型）</li>
+        <li>包含 <code>output</code> 欄位（path 或 sessionId）指示輸出位置</li>
+        <li>客戶端可根據 schema 自動解析結果</li>
+    </ul>
+</div>
 
-    <div class="section">
-        <h2>🔍 OCR 文字辨識</h2>
+<div class="section">
+    <h2>🔍 OCR 文字辨識</h2>
 
-        <h3>文字辨識功能</h3>
-        <ul class="feature-list">
-            <li><strong>圖片文字辨識</strong> - 支援 PNG、JPG、BMP、TIFF 等圖片格式的文字辨識</li>
-            <li><strong>掃描 PDF 轉換</strong> - 將掃描 PDF 轉換為可編輯文件（DOCX、XLSX、PDF、TXT）</li>
-            <li><strong>多語言支援</strong> - 英文、中文、德文、法文、西班牙文、義大利文、俄文、印地文等</li>
-            <li><strong>文字定位（Bounding Box）</strong> - 使用 <code>includeWords=true</code> 取得每個辨識單詞的座標位置（X, Y, Width, Height），適用於文字位置分析與版面重建</li>
-        </ul>
+    <h3>文字辨識功能</h3>
+    <ul class="feature-list">
+        <li><strong>圖片文字辨識</strong> - 支援 PNG、JPG、BMP、TIFF 等圖片格式的文字辨識</li>
+        <li><strong>掃描 PDF 轉換</strong> - 將掃描 PDF 轉換為可編輯文件（DOCX、XLSX、PDF、TXT）</li>
+        <li><strong>多語言支援</strong> - 英文、中文、德文、法文、西班牙文、義大利文、俄文、印地文等</li>
+        <li><strong>文字定位（Bounding Box）</strong> - 使用 <code>includeWords=true</code> 取得每個辨識單詞的座標位置（X, Y, Width, Height），適用於文字位置分析與版面重建</li>
+    </ul>
 
-        <h3>平台支援</h3>
-        <ul class="feature-list">
-            <li>Windows x64、Linux x64、macOS x64 完整支援</li>
-            <li>macOS ARM64 透過 Rosetta 2 支援</li>
-            <li>Linux ARM64 不支援（ONNX Runtime 限制）</li>
-        </ul>
-    </div>
+    <h3>平台支援</h3>
+    <ul class="feature-list">
+        <li>Windows x64、Linux x64、macOS x64 完整支援</li>
+        <li>macOS ARM64 透過 Rosetta 2 支援</li>
+        <li>Linux ARM64 不支援（ONNX Runtime 限制）</li>
+    </ul>
+</div>
 
-    <div class="section">
-        <h2>📧 Email 郵件處理</h2>
+<div class="section">
+    <h2>📧 Email 郵件處理</h2>
 
-        <h3>郵件格式轉換</h3>
-        <ul class="feature-list">
-            <li><strong>MSG 轉 EML</strong> - 將 Outlook MSG 格式轉換為標準 EML 格式</li>
-            <li><strong>EML 轉 MSG</strong> - 將 EML 格式轉換為 Outlook MSG 格式</li>
-            <li>完整保留郵件內容、附件與格式</li>
-        </ul>
+    <h3>郵件格式轉換</h3>
+    <ul class="feature-list">
+        <li><strong>MSG 轉 EML</strong> - 將 Outlook MSG 格式轉換為標準 EML 格式</li>
+        <li><strong>EML 轉 MSG</strong> - 將 EML 格式轉換為 Outlook MSG 格式</li>
+        <li>完整保留郵件內容、附件與格式</li>
+    </ul>
 
-        <h3>郵件資訊提取</h3>
-        <ul class="feature-list">
-            <li><strong>郵件屬性</strong> - 提取主題、寄件者、收件者、日期等資訊</li>
-            <li><strong>附件列表</strong> - 獲取郵件中所有附件的清單</li>
-            <li><strong>附件提取</strong> - 將郵件附件提取到指定目錄</li>
-            <li><strong>附件刪除</strong> - 從郵件中移除指定附件</li>
-        </ul>
+    <h3>郵件資訊提取</h3>
+    <ul class="feature-list">
+        <li><strong>郵件屬性</strong> - 提取主題、寄件者、收件者、日期等資訊</li>
+        <li><strong>附件列表</strong> - 獲取郵件中所有附件的清單</li>
+        <li><strong>附件提取</strong> - 將郵件附件提取到指定目錄</li>
+        <li><strong>附件刪除</strong> - 從郵件中移除指定附件</li>
+    </ul>
 
-        <h3>支援格式</h3>
-        <ul class="feature-list">
-            <li>MSG - Microsoft Outlook 郵件格式</li>
-            <li>EML - 標準電子郵件格式（RFC 822）</li>
-        </ul>
-    </div>
+    <h3>支援格式</h3>
+    <ul class="feature-list">
+        <li>MSG - Microsoft Outlook 郵件格式</li>
+        <li>EML - 標準電子郵件格式（RFC 822）</li>
+    </ul>
+</div>
 
-    <div class="section">
-        <h2>📊 BarCode 條碼處理</h2>
+<div class="section">
+    <h2>📊 BarCode 條碼處理</h2>
 
-        <h3>條碼生成</h3>
-        <ul class="feature-list">
-            <li><strong>1D 條碼</strong> - Code128、Code39、EAN-13、UPC-A 等</li>
-            <li><strong>2D 條碼</strong> - QR Code、Data Matrix、PDF417、Aztec 等</li>
-            <li><strong>郵政條碼</strong> - USPS OneCode、Australia Post、Singapore Post 等</li>
-            <li><strong>自訂樣式</strong> - 尺寸、顏色、解析度等參數可調</li>
-        </ul>
+    <h3>條碼生成</h3>
+    <ul class="feature-list">
+        <li><strong>1D 條碼</strong> - Code128、Code39、EAN-13、UPC-A 等</li>
+        <li><strong>2D 條碼</strong> - QR Code、Data Matrix、PDF417、Aztec 等</li>
+        <li><strong>郵政條碼</strong> - USPS OneCode、Australia Post、Singapore Post 等</li>
+        <li><strong>自訂樣式</strong> - 尺寸、顏色、解析度等參數可調</li>
+    </ul>
 
-        <h3>條碼辨識</h3>
-        <ul class="feature-list">
-            <li><strong>多格式識別</strong> - 自動識別圖片中的條碼類型</li>
-            <li><strong>批量識別</strong> - 一張圖片中識別多個條碼</li>
-            <li><strong>支援格式</strong> - PNG、JPG、BMP、TIFF、GIF 等圖片格式</li>
-        </ul>
+    <h3>條碼辨識</h3>
+    <ul class="feature-list">
+        <li><strong>多格式識別</strong> - 自動識別圖片中的條碼類型</li>
+        <li><strong>批量識別</strong> - 一張圖片中識別多個條碼</li>
+        <li><strong>支援格式</strong> - PNG、JPG、BMP、TIFF、GIF 等圖片格式</li>
+    </ul>
 
-        <h3>支援的條碼類型（60+種）</h3>
-        <ul class="feature-list">
-            <li><strong>線性條碼</strong> - Code128、Code39、Code93、Codabar、ITF-14、ISBN、ISSN</li>
-            <li><strong>二維條碼</strong> - QR Code、Micro QR、Data Matrix、PDF417、Aztec</li>
-            <li><strong>零售條碼</strong> - EAN-8、EAN-13、UPC-A、UPC-E</li>
-            <li><strong>郵政條碼</strong> - Postnet、Planet、Australia Post、Deutsche Post</li>
-        </ul>
-    </div>
+    <h3>支援的條碼類型（60+種）</h3>
+    <ul class="feature-list">
+        <li><strong>線性條碼</strong> - Code128、Code39、Code93、Codabar、ITF-14、ISBN、ISSN</li>
+        <li><strong>二維條碼</strong> - QR Code、Micro QR、Data Matrix、PDF417、Aztec</li>
+        <li><strong>零售條碼</strong> - EAN-8、EAN-13、UPC-A、UPC-E</li>
+        <li><strong>郵政條碼</strong> - Postnet、Planet、Australia Post、Deutsche Post</li>
+    </ul>
+</div>
 
-    <div class="section">
-        <h2>🎨 其他特性</h2>
+<div class="section">
+    <h2>🔌 擴充功能系統</h2>
 
-        <h3>統一字型設定</h3>
-        <p>多個工具支援中英文字型分別設定（`fontNameAscii` 和 `fontNameFarEast` 參數），確保中英文混排文檔的完美顯示。</p>
+    <h3>外部程序整合</h3>
+    <ul class="feature-list">
+        <li><strong>Session 變更訂閱</strong> - 外部程序可訂閱 Session 文件變更，實現即時預覽</li>
+        <li><strong>多種傳輸模式</strong> - 支援 mmap（記憶體映射）、stdin（標準輸入）、file（臨時檔案）</li>
+        <li><strong>多語言支援</strong> - 支援 Node.js、Python、.NET、自訂解釋器、可執行檔等命令類型</li>
+        <li><strong>自動進程管理</strong> - 健康檢查、自動重啟、閒置超時卸載</li>
+    </ul>
 
-        <h3>靈活的授權配置</h3>
-        <ul class="feature-list">
-            <li>支援總授權或單一組件授權</li>
-            <li>自動搜尋、環境變數或命令列參數配置</li>
-            <li>試用模式降級（找不到授權時）</li>
-        </ul>
+    <h3>擴充功能工具操作</h3>
+    <ul class="feature-list">
+        <li><strong>list</strong> - 列出所有已註冊的擴展</li>
+        <li><strong>bind</strong> - 將 Session 綁定到擴展</li>
+        <li><strong>unbind</strong> - 解除 Session 與擴展的綁定</li>
+        <li><strong>status</strong> - 查詢擴展狀態</li>
+        <li><strong>set_format</strong> - 設定快照輸出格式</li>
+        <li><strong>bindings</strong> - 列出 Session 的所有綁定</li>
+        <li><strong>command</strong> - 向綁定的擴展發送命令</li>
+    </ul>
 
-        <h3>跨格式轉換</h3>
-        <ul class="feature-list">
-            <li>啟用任何文檔工具時，自動包含 `convert_to_pdf`（轉換為PDF）</li>
-            <li>啟用兩個或以上文檔工具時，自動包含 `convert_document`（跨格式轉換，如Word轉Excel）</li>
-        </ul>
-    </div>
+    <p style="margin-top: 15px;">詳細開發指南請參考 <a href="extensions.html">擴充功能開發指南</a>，完整配置選項請參考 <a href="configuration.html#extension">配置參考</a>。</p>
+</div>
+
+<div class="section">
+    <h2>🎨 其他特性</h2>
+
+    <h3>統一字型設定</h3>
+    <p>多個工具支援中英文字型分別設定（`fontNameAscii` 和 `fontNameFarEast` 參數），確保中英文混排文檔的完美顯示。</p>
+
+    <h3>靈活的授權配置</h3>
+    <ul class="feature-list">
+        <li>支援總授權或單一組件授權</li>
+        <li>自動搜尋、環境變數或命令列參數配置</li>
+        <li>試用模式降級（找不到授權時）</li>
+    </ul>
+
+    <h3>跨格式轉換</h3>
+    <ul class="feature-list">
+        <li>啟用任何文檔工具時，自動包含 `convert_document`（跨格式轉換，支援 Word/Excel/PDF 轉圖片、特殊格式轉 PDF）</li>
+    </ul>
+</div>
 </div>
 
 <footer>

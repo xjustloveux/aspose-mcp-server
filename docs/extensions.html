@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>擴充功能開發指南 - Aspose MCP Server</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="alternate icon" href="favicon.ico">
+    <meta name="description" content="Aspose MCP Server 擴充功能開發指南：擴充功能配置、傳輸模式、消息協議、API 操作。">
+    <meta name="keywords" content="Aspose, MCP, Extension, 擴充功能, 開發指南, 傳輸模式, 消息協議">
+    <link rel="canonical" href="https://xjustloveux.github.io/aspose-mcp-server/extensions.html">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://xjustloveux.github.io/aspose-mcp-server/extensions.html">
+    <meta property="og:title" content="擴充功能開發指南 - Aspose MCP Server">
+    <meta property="og:description" content="Aspose MCP Server 擴充功能開發指南：擴充功能配置、傳輸模式、消息協議、API 操作。">
+    <meta property="og:site_name" content="Aspose MCP Server">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary">
+    <meta property="twitter:url" content="https://xjustloveux.github.io/aspose-mcp-server/extensions.html">
+    <meta property="twitter:title" content="擴充功能開發指南 - Aspose MCP Server">
+    <meta property="twitter:description" content="Aspose MCP Server 擴充功能開發指南：擴充功能配置、傳輸模式、消息協議、API 操作。">
+    <link rel="stylesheet" href="theme.css">
+    <script src="theme.js"></script>
+    <style>
+        /* Page-specific styles */
+        .feature-list {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .feature-list li {
+            padding: 10px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+
+        .feature-list li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: var(--accent-primary);
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .message-type {
+            background: var(--bg-step);
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border-left: 4px solid var(--accent-primary);
+        }
+
+        .message-type h4 {
+            margin: 0 0 10px 0;
+            color: var(--accent-primary);
+        }
+
+        .message-type code {
+            background: var(--bg-hover);
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+
+        /* Page-specific RWD */
+        @media (max-width: 768px) {
+            .message-type {
+                padding: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+<nav>
+    <div class="nav-container">
+        <div class="nav-header">
+            <a href="index.html" class="nav-logo"><img src="favicon.svg" alt="Aspose MCP Server"> Aspose MCP Server</a>
+            <ul class="nav-menu" id="navMenu">
+                <li>
+                    <a href="index.html">首頁</a>
+                </li>
+                <li>
+                    <a href="features.html">功能特性</a>
+                </li>
+                <li>
+                    <a href="tools.html">工具列表</a>
+                </li>
+                <li>
+                    <a href="getting-started.html">快速開始</a>
+                </li>
+                <li>
+                    <a href="developers.html">開發者指南</a>
+                </li>
+                <li>
+                    <a href="extensions.html" class="active">擴充功能開發</a>
+                </li>
+                <li>
+                    <a href="configuration.html">配置參考</a>
+                </li>
+                <li>
+                    <a href="deployment.html">部署指南</a>
+                </li>
+                <li>
+                    <a href="faq.html">常見問答</a>
+                </li>
+            </ul>
+            <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme" title="切換亮/暗色主題">🌙</button>
+            <button class="menu-toggle" aria-label="Toggle menu">☰</button>
+        </div>
+    </div>
+</nav>
+
+<div class="page-header">
+    <div class="container">
+        <h1>🔌 擴充功能開發指南</h1>
+        <p>了解如何開發擴展程序訂閱 Session 變更</p>
+    </div>
+</div>
+
+<div class="container">
+<div class="section">
+    <h2>📋 概述</h2>
+    <p>擴充功能系統讓外部程序訂閱 Aspose MCP Server 的 Session 變更事件。當 Session 中的文件被修改時，系統會自動將文件快照發送給已綁定的擴充功能程序，開發者可據此實現各種自訂應用。</p>
+
+    <h3>系統架構</h3>
+    <div class="code-wrapper">
+        <pre class="code-block">伺服器啟動 → 載入擴展配置 → MCP 就緒
+                 ↓
+         背景初始化（異步）
+                 ↓
+         啟動所有擴展程序 → 握手交換元資料
+                                    ↓
+MCP Client → extension(bind) → ExtensionSessionBridge ←─┘
+                                    ↓
+Session 變更 → DocumentConversionService → 快照
+                                    ↓
+                    Extension Process (Node.js/Python/etc.)
+                                    ↓
+                         接收快照 → 處理 → 回應 ACK</pre>
+    </div>
+
+    <h3>生命週期</h3>
+    <ul class="feature-list">
+        <li><strong>啟動階段</strong>：伺服器啟動時會在背景異步初始化擴展（不阻塞 MCP 伺服器啟動），初始化過程中擴展處於 <code>Initializing</code> 狀態</li>
+        <li><strong>初始化中</strong>：擴展正在執行握手協議，此時無法綁定 Session，需等待初始化完成</li>
+        <li><strong>運作階段</strong>：握手完成後擴展進入 <code>Idle</code> 狀態，可透過綁定接收 Session 快照，處理後回應 ACK</li>
+        <li><strong>閒置管理</strong>：非常駐擴展（idleTimeoutMinutes &gt; 0）在閒置超時後自動關閉</li>
+        <li><strong>常駐模式</strong>：設定 idleTimeoutMinutes = 0 的擴展永遠保持運作</li>
+    </ul>
+</div>
+
+<div class="section">
+    <h2>💡 適用場景</h2>
+    <p>以下是開發者可透過擴充功能系統實現的應用方向：</p>
+
+    <h3>預覽與呈現</h3>
+    <ul class="feature-list">
+        <li><strong>圖片/HTML 預覽</strong> - 將文件快照轉換為圖片或 HTML，整合至編輯器或網頁應用</li>
+        <li><strong>列印服務</strong> - 自動化列印工作流程，支援批次列印或條件觸發列印</li>
+    </ul>
+
+    <h3>安全與合規</h3>
+    <ul class="feature-list">
+        <li><strong>合規檢查</strong> - 自動檢查文件內容是否符合法規或企業規範（GDPR、HIPAA 等）</li>
+        <li><strong>數位簽章</strong> - 整合數位簽章服務，實現文件電子簽核</li>
+        <li><strong>敏感資料偵測/遮蔽</strong> - 自動偵測並遮蔽個資、信用卡號等敏感資訊</li>
+        <li><strong>審計日誌</strong> - 記錄所有文件變更歷程，符合法規審計要求</li>
+    </ul>
+
+    <h3>協作與整合</h3>
+    <ul class="feature-list">
+        <li><strong>多人協作狀態廣播</strong> - 透過 WebSocket 廣播文件變更，實現即時協作</li>
+        <li><strong>雲端/ERP/簽核整合</strong> - 自動同步至雲端空間、ERP 系統或簽核流程</li>
+        <li><strong>通知/警報</strong> - 文件變更時發送 Email、Slack、Teams 等通知</li>
+    </ul>
+
+    <h3>智慧處理</h3>
+    <ul class="feature-list">
+        <li><strong>AI 摘要/翻譯</strong> - 整合 LLM 服務，自動生成摘要或翻譯內容</li>
+        <li><strong>文檔對比</strong> - 比較文件版本差異，標示變更內容</li>
+        <li><strong>無障礙輔助</strong> - 文檔朗讀、圖片 OCR 解析，協助視障使用者</li>
+    </ul>
+
+    <h3>自訂處理</h3>
+    <ul class="feature-list">
+        <li><strong>浮水印/品牌化</strong> - 分發前自動加入浮水印或公司標誌</li>
+        <li><strong>客製化再編輯</strong> - 對文件快照進行自訂轉換或後處理</li>
+    </ul>
+</div>
+
+<div class="section">
+    <h2>⚙️ 啟用擴充功能系統</h2>
+    <p>擴充功能系統需要同時啟用 Session 功能。使用以下參數啟用：</p>
+
+    <h3>快速啟動</h3>
+    <div class="code-wrapper">
+        <button class="copy-button" onclick="copyCode(this)">📋 複製</button>
+        <pre class="code-block"># 環境變數
+ASPOSE_SESSION_ENABLED=true
+ASPOSE_EXTENSION_ENABLED=true
+ASPOSE_EXTENSION_CONFIG=/path/to/extensions.json
+
+# 或命令行參數
+./AsposeMcpServer --http \
+    --session-enabled \
+    --extension-enabled \
+    --extension-config ./extensions.json</pre>
+    </div>
+
+    <div class="info-box" style="margin-top: 15px;">
+        <strong>📖 完整配置參考</strong>
+        <p style="margin-top: 8px; margin-bottom: 0;">
+            完整的擴充功能參數說明請參考
+            <a href="configuration.html#extension">
+                <strong>配置參考 - 擴充功能設定</strong>
+            </a>，包含所有系統級設定和可覆寫設定（含 Floor/Ceiling 約束）。
+        </p>
+    </div>
+</div>
+
+<div class="section">
+    <h2>📄 擴展配置檔案</h2>
+    <p>擴展配置檔案（extensions.json）定義所有已註冊的擴展。使用物件格式，key 作為擴展的唯一 ID。</p>
+
+    <h3>完整範例</h3>
+    <div class="code-wrapper">
+        <button class="copy-button" onclick="copyCode(this)">📋 複製</button>
+        <pre class="code-block">{
+  "extensions": {
+    "pdf-viewer": {
+      "command": {
+        "type": "node",
+        "executable": "/path/to/index.js",
+        "arguments": "--port 8080",
+        "workingDirectory": "/path/to/extension",
+        "environment": {
+          "NODE_ENV": "production"
+        }
+      },
+      "inputFormats": ["pdf"],
+      "supportedDocumentTypes": ["word", "excel", "powerpoint", "pdf"],
+      "transportModes": ["mmap", "stdin", "file"],
+      "preferredTransportMode": "file",
+      "capabilities": {
+        "supportsHeartbeat": true,
+        "frameIntervalMs": 100
+      }
+    },
+    "cloud-sync": {
+      "command": {
+        "type": "python",
+        "executable": "/path/to/main.py"
+      },
+      "inputFormats": ["pdf", "html"],
+      "supportedDocumentTypes": ["word", "excel"],
+      "transportModes": ["file"],
+      "preferredTransportMode": "file",
+      "capabilities": {
+        "supportsHeartbeat": true,
+        "idleTimeoutMinutes": 5
+      }
+    }
+  }
+}</pre>
+    </div>
+
+    <div class="info-box" style="margin-top: 15px;">
+        <strong>💡 配置格式說明</strong>
+        <p style="margin-top: 8px; margin-bottom: 0;">
+            配置檔使用物件格式（而非陣列），key 即為擴展的唯一 ID（不可包含冒號）。
+            擴展的名稱、版本等元資料透過<a href="#handshake">握手協議</a>動態交換，無需在配置檔中指定。
+        </p>
+    </div>
+
+    <h3>欄位說明</h3>
+    <table class="tool-detail-table" style="margin-bottom: 15px;">
+        <tr>
+            <th style="width: 200px;">欄位</th>
+            <th>說明</th>
+        </tr>
+        <tr>
+            <td>
+                <code>extensions.{id}</code>
+            </td>
+            <td>物件的 key 作為擴展唯一識別符（不可包含冒號）</td>
+        </tr>
+        <tr>
+            <td>
+                <code>command.type</code>
+            </td>
+            <td>命令類型：executable / node / python / dotnet / npx / pipx / custom</td>
+        </tr>
+        <tr>
+            <td>
+                <code>command.executable</code>
+            </td>
+            <td>可執行檔、腳本路徑或套件名稱（npx/pipx 時為套件名稱）</td>
+        </tr>
+        <tr>
+            <td>
+                <code>command.arguments</code>
+            </td>
+            <td>命令列參數</td>
+        </tr>
+        <tr>
+            <td>
+                <code>command.workingDirectory</code>
+            </td>
+            <td>工作目錄</td>
+        </tr>
+        <tr>
+            <td>
+                <code>command.environment</code>
+            </td>
+            <td>環境變數（支援 ${VAR} 引用系統環境變數）</td>
+        </tr>
+        <tr>
+            <td>
+                <code>inputFormats</code>
+            </td>
+            <td>接受的輸入格式陣列：pdf / html / png</td>
+        </tr>
+        <tr>
+            <td>
+                <code>supportedDocumentTypes</code>
+            </td>
+            <td>支援的文檔類型：word / excel / powerpoint / pdf</td>
+        </tr>
+        <tr>
+            <td>
+                <code>transportModes</code>
+            </td>
+            <td>支援的傳輸模式陣列：mmap / stdin / file</td>
+        </tr>
+        <tr>
+            <td>
+                <code>preferredTransportMode</code>
+            </td>
+            <td>偏好的傳輸模式</td>
+        </tr>
+        <tr>
+            <td>
+                <code>capabilities.supportsHeartbeat</code>
+            </td>
+            <td>是否支援心跳檢測</td>
+        </tr>
+        <tr>
+            <td>
+                <code>capabilities.frameIntervalMs</code>
+            </td>
+            <td>快照傳輸間隔毫秒數（預設：100，範圍：10-5000）</td>
+        </tr>
+        <tr>
+            <td>
+                <code>capabilities.snapshotTtlSeconds</code>
+            </td>
+            <td>未確認快照的 TTL 秒數（預設：30，範圍：5-300）</td>
+        </tr>
+        <tr>
+            <td>
+                <code>capabilities.maxMissedHeartbeats</code>
+            </td>
+            <td>最大連續心跳失敗次數（預設：3，範圍：1-20）</td>
+        </tr>
+        <tr>
+            <td>
+                <code>capabilities.idleTimeoutMinutes</code>
+            </td>
+            <td>閒置卸載超時分鐘數（預設：30，範圍：1-1440，0=常駐模式）</td>
+        </tr>
+    </table>
+</div>
+
+<div class="section" id="handshake">
+    <h2>🤝 握手協議</h2>
+    <p>所有擴展在服務啟動後會在背景異步啟動，並執行初始化握手。透過握手，擴展會回報自己的名稱、版本等元資料。握手期間擴展處於 <code>Initializing</code> 狀態，此時無法進行綁定操作。</p>
+
+    <h3>握手流程</h3>
+    <div class="code-wrapper">
+        <pre class="code-block">MCP Server                                    Extension
+    │                                              │
+    │  1. 啟動擴展程序                              │
+    │─────────────────────────────────────────────&gt;│
+    │                                              │
+    │  2. {"type":"initialize","protocolVersion":"1.0"}
+    │─────────────────────────────────────────────&gt;│
+    │                                              │
+    │  3. {"type":"initialize_response","name":"...","version":"..."}
+    │&lt;─────────────────────────────────────────────│
+    │                                              │
+    │  4. {"type":"initialized"}                   │
+    │─────────────────────────────────────────────&gt;│
+    │                                              │
+    │  握手完成，開始正常運作                        │</pre>
+    </div>
+
+    <h3>握手消息</h3>
+
+    <div class="message-type">
+        <h4>initialize（MCP Server → Extension）</h4>
+        <p>伺服器發送給擴展，啟動握手流程。</p>
+        <div class="code-wrapper">
+            <button class="copy-button" onclick="copyCode(this)">📋 複製</button>
+            <pre class="code-block">{
+  "type": "initialize",
+  "protocolVersion": "1.0"
+}</pre>
+        </div>
+    </div>
+
+    <div class="message-type">
+        <h4>initialize_response（Extension → MCP Server）</h4>
+        <p>擴展回應其元資料。<code>name</code> 和 <code>version</code> 為必填欄位。</p>
+        <div class="code-wrapper">
+            <button class="copy-button" onclick="copyCode(this)">📋 複製</button>
+            <pre class="code-block">{
+  "type": "initialize_response",
+  "name": "PDF Viewer",
+  "version": "1.0.0",
+  "title": "PDF 即時預覽器",
+  "description": "提供 PDF 文件的即時預覽功能",
+  "author": "開發者名稱",
+  "websiteUrl": "https://example.com"
+}</pre>
+        </div>
+        <table class="tool-detail-table" style="margin-top: 15px;">
+            <tr>
+                <th style="width: 150px;">欄位</th>
+                <th style="width: 80px;">必填</th>
+                <th>說明</th>
+            </tr>
+            <tr>
+                <td>
+                    <code>name</code>
+                </td>
+                <td>是</td>
+                <td>擴展顯示名稱</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>version</code>
+                </td>
+                <td>是</td>
+                <td>版本號（建議使用 semver 格式）</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>title</code>
+                </td>
+                <td>否</td>
+                <td>本地化標題（用於 UI 顯示）</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>description</code>
+                </td>
+                <td>否</td>
+                <td>擴展功能說明</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>author</code>
+                </td>
+                <td>否</td>
+                <td>作者資訊</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>websiteUrl</code>
+                </td>
+                <td>否</td>
+                <td>擴展網站或文檔 URL</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="message-type">
+        <h4>initialized（MCP Server → Extension）</h4>
+        <p>伺服器確認握手完成。收到此消息後，擴展可開始正常處理快照等消息。</p>
+        <div class="code-wrapper">
+            <button class="copy-button" onclick="copyCode(this)">📋 複製</button>
+            <pre class="code-block">{
+  "type": "initialized"
+}</pre>
+        </div>
+    </div>
+
+    <h3>握手失敗處理</h3>
+    <ul class="feature-list">
+        <li>握手超時（預設 30 秒）：擴展被標記為不可用</li>
+        <li>缺少必填欄位（name 或 version）：握手失敗，擴展被標記為不可用</li>
+        <li>擴展程序啟動失敗：擴展被標記為不可用，記錄錯誤原因</li>
+    </ul>
+</div>
+
+<div class="section">
+    <h2>🚚 傳輸模式</h2>
+    <p>擴充功能系統支援三種傳輸模式，用於將快照資料發送給擴充功能程序：</p>
+
+    <div class="message-type">
+        <h4>mmap (Memory-Mapped File)</h4>
+        <p>使用記憶體映射檔案傳輸資料。跨平台支援，效能最佳。</p>
+        <ul>
+            <li><strong>Windows</strong>：使用 Windows 內核命名共享記憶體</li>
+            <li><strong>Linux</strong>：使用 POSIX shm_open (/dev/shm/)</li>
+            <li><strong>macOS</strong>：使用檔案支持的記憶體映射（自動降級）</li>
+            <li><strong>優點</strong>：零拷貝（Windows/Linux），高效能</li>
+            <li><strong>適用場景</strong>：大型文件預覽，需要最佳效能時</li>
+        </ul>
+    </div>
+
+    <div class="message-type">
+        <h4>stdin (Standard Input) - 預設</h4>
+        <p>透過標準輸入發送二進位資料。跨平台相容，無磁碟 I/O 開銷。</p>
+        <ul>
+            <li><strong>優點</strong>：跨平台、低延遲、無需暫存檔</li>
+            <li><strong>缺點</strong>：需要處理二進位串流</li>
+            <li><strong>適用場景</strong>：大多數場景（預設）</li>
+        </ul>
+    </div>
+
+    <div class="message-type">
+        <h4>file (Temporary File)</h4>
+        <p>將快照寫入臨時檔案，透過路徑傳遞給擴展。實作最簡單。</p>
+        <ul>
+            <li><strong>優點</strong>：實作簡單，支援所有語言</li>
+            <li><strong>缺點</strong>：需要磁碟 I/O</li>
+            <li><strong>適用場景</strong>：簡單整合、除錯測試</li>
+        </ul>
+    </div>
+</div>
+
+<div class="section">
+    <h2>📨 消息協議</h2>
+    <p>擴展程序透過標準輸入輸出與 MCP Server 通訊。消息格式為 JSON，每行一條消息。</p>
+
+    <div class="info-box" style="margin-bottom: 20px;">
+        <strong>💡 握手消息</strong>
+        <p style="margin-top: 8px; margin-bottom: 0;">
+            擴展啟動時必須先完成<a href="#handshake">握手協議</a>（initialize → initialize_response → initialized），才會收到以下消息。
+        </p>
+    </div>
+
+    <h3>MCP Server → 擴充功能 消息</h3>
+
+    <div class="message-type">
+        <h4>snapshot</h4>
+        <p>文件快照消息，包含轉換後的文件資料。</p>
+        <div class="code-wrapper">
+            <button class="copy-button" onclick="copyCode(this)">📋 複製</button>
+            <pre class="code-block">{
+  "protocolVersion": "1.0",
+  "type": "snapshot",
+  "sessionId": "sess_abc123",
+  "documentType": "word",
+  "outputFormat": "pdf",
+  "mimeType": "application/pdf",
+  "transportMode": "file",
+  "filePath": "/tmp/extensions/snapshot_xxx.pdf",
+  "dataSize": 12345,
+  "checksum": 1234567890,
+  "sequenceNumber": 1,
+  "timestamp": "2024-01-01T12:00:00Z"
+}</pre>
+        </div>
+    </div>
+
+    <div class="message-type">
+        <h4>heartbeat</h4>
+        <p>心跳檢測消息，用於確認擴展存活。</p>
+        <div class="code-wrapper">
+            <button class="copy-button" onclick="copyCode(this)">📋 複製</button>
+            <pre class="code-block">{
+  "protocolVersion": "1.0",
+  "type": "heartbeat",
+  "timestamp": "2024-01-01T12:00:00Z"
+}</pre>
+        </div>
+    </div>
+
+    <div class="message-type">
+        <h4>command</h4>
+        <p>命令消息，由 MCP 客戶端發送給擴展。</p>
+        <div class="code-wrapper">
+            <button class="copy-button" onclick="copyCode(this)">📋 複製</button>
+            <pre class="code-block">{
+  "protocolVersion": "1.0",
+  "type": "command",
+  "sessionId": "sess_abc123",
+  "commandId": "cmd_abc123",
+  "commandType": "highlight",
+  "commandPayload": { "text": "important" },
+  "timestamp": "2024-01-01T12:00:00Z"
+}</pre>
+        </div>
+    </div>
+
+    <div class="message-type">
+        <h4>session_closed</h4>
+        <p>Session 關閉消息，通知擴展停止處理該 Session 並清理資源。</p>
+        <div class="code-wrapper">
+            <button class="copy-button" onclick="copyCode(this)">📋 複製</button>
+            <pre class="code-block">{
+  "protocolVersion": "1.0",
+  "type": "session_closed",
+  "sessionId": "sess_abc123",
+  "timestamp": "2024-01-01T12:00:00Z"
+}</pre>
+        </div>
+    </div>
+
+    <div class="message-type">
+        <h4>session_unbound</h4>
+        <p>Session 解除綁定消息，通知擴展該 Session 不再綁定到此擴展（但 Session 仍存在）。</p>
+        <div class="code-wrapper">
+            <button class="copy-button" onclick="copyCode(this)">📋 複製</button>
+            <pre class="code-block">{
+  "protocolVersion": "1.0",
+  "type": "session_unbound",
+  "sessionId": "sess_abc123",
+  "timestamp": "2024-01-01T12:00:00Z"
+}</pre>
+        </div>
+    </div>
+
+    <h3>擴充功能 → MCP Server 消息</h3>
+
+    <div class="message-type">
+        <h4>ack</h4>
+        <p>快照確認消息，表示已成功接收並處理快照。</p>
+        <div class="code-wrapper">
+            <button class="copy-button" onclick="copyCode(this)">📋 複製</button>
+            <pre class="code-block">{
+  "type": "ack",
+  "sessionId": "sess_abc123",
+  "sequenceNumber": 1,
+  "success": true
+}</pre>
+        </div>
+    </div>
+
+    <div class="message-type">
+        <h4>heartbeat_response</h4>
+        <p>心跳回應消息。</p>
+        <div class="code-wrapper">
+            <button class="copy-button" onclick="copyCode(this)">📋 複製</button>
+            <pre class="code-block">{
+  "type": "heartbeat_response",
+  "status": "ok",
+  "timestamp": "2024-01-01T12:00:00Z"
+}</pre>
+        </div>
+    </div>
+</div>
+
+<div class="section">
+    <h2>🔧 擴充功能工具操作</h2>
+    <p>MCP 客戶端可透過 <code>extension</code> 工具管理擴展和綁定。</p>
+
+    <h3>list - 列出所有擴展</h3>
+    <div class="code-wrapper">
+        <button class="copy-button" onclick="copyCode(this)">📋 複製</button>
+        <pre class="code-block">{
+  "operation": "list"
+}</pre>
+    </div>
+
+    <h3>bind - 綁定 Session 到擴展</h3>
+    <div class="code-wrapper">
+        <button class="copy-button" onclick="copyCode(this)">📋 複製</button>
+        <pre class="code-block">{
+  "operation": "bind",
+  "sessionId": "abc123",
+  "extensionId": "pdf-viewer",
+  "format": "pdf"
+}</pre>
+    </div>
+
+    <h3>unbind - 解除綁定</h3>
+    <div class="code-wrapper">
+        <button class="copy-button" onclick="copyCode(this)">📋 複製</button>
+        <pre class="code-block">{
+  "operation": "unbind",
+  "sessionId": "abc123",
+  "extensionId": "pdf-viewer"
+}</pre>
+    </div>
+
+    <h3>status - 查詢擴展狀態</h3>
+    <div class="code-wrapper">
+        <button class="copy-button" onclick="copyCode(this)">📋 複製</button>
+        <pre class="code-block">{
+  "operation": "status",
+  "extensionId": "pdf-viewer"
+}</pre>
+    </div>
+
+    <h3>set_format - 設定快照格式</h3>
+    <div class="code-wrapper">
+        <button class="copy-button" onclick="copyCode(this)">📋 複製</button>
+        <pre class="code-block">{
+  "operation": "set_format",
+  "sessionId": "abc123",
+  "extensionId": "pdf-viewer",
+  "format": "html"
+}</pre>
+    </div>
+
+    <h3>bindings - 列出 Session 綁定</h3>
+    <div class="code-wrapper">
+        <button class="copy-button" onclick="copyCode(this)">📋 複製</button>
+        <pre class="code-block">{
+  "operation": "bindings",
+  "sessionId": "abc123"
+}</pre>
+    </div>
+
+    <h3>command - 發送命令給擴展</h3>
+    <div class="code-wrapper">
+        <button class="copy-button" onclick="copyCode(this)">📋 複製</button>
+        <pre class="code-block">{
+  "operation": "command",
+  "sessionId": "abc123",
+  "extensionId": "pdf-viewer",
+  "command": "goto",
+  "data": { "page": 5 }
+}</pre>
+    </div>
+</div>
+
+<div class="section">
+<h2>💻 開發範例</h2>
+
+<h3>Node.js 擴展範例</h3>
+<div class="code-wrapper">
+    <button class="copy-button" onclick="copyCode(this)">📋 複製</button>
+    <pre class="code-block">const readline = require('readline');
+
+let initialized = false;
+
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+    terminal: false
+});
+
+rl.on('line', (line) => {
+    try {
+        const message = JSON.parse(line);
+        const msgType = message.type;
+
+        switch (msgType) {
+            // ===== 握手協議 =====
+            case 'initialize':
+                // 回應握手，提供擴展元資料
+                const initResponse = {
+                    type: 'initialize_response',
+                    name: 'My Extension',
+                    version: '1.0.0',
+                    title: '我的擴展功能',
+                    description: '提供自訂文件處理功能',
+                    author: '開發者名稱',
+                    websiteUrl: 'https://example.com'
+                };
+                console.log(JSON.stringify(initResponse));
+                console.error('Handshake: sent initialize_response');
+                break;
+
+            case 'initialized':
+                // 握手完成，開始正常運作
+                initialized = true;
+                console.error('Handshake completed, ready to receive messages');
+                break;
+
+            // ===== 正常運作消息 =====
+            case 'snapshot':
+                if (!initialized) {
+                    console.error('Warning: received snapshot before initialization');
+                    return;
+                }
+                // 處理快照
+                console.error(`Received snapshot for session ${message.sessionId}`);
+                console.error(`File: ${message.filePath}, Size: ${message.dataSize}`);
+
+                // 驗證 checksum（可選但建議）
+                // const data = fs.readFileSync(message.filePath);
+                // if (crc32(data) !== message.checksum) { /* 處理錯誤 */ }
+
+                // 發送 ACK
+                const ack = {
+                    type: 'ack',
+                    sessionId: message.sessionId,
+                    sequenceNumber: message.sequenceNumber,
+                    success: true
+                };
+                console.log(JSON.stringify(ack));
+                break;
+
+            case 'heartbeat':
+                // 回應心跳
+                const response = {
+                    type: 'heartbeat_response',
+                    status: 'ok',
+                    timestamp: new Date().toISOString()
+                };
+                console.log(JSON.stringify(response));
+                break;
+
+            case 'command':
+                // 處理命令
+                console.error(`Received command: ${message.commandType}`);
+                console.error(`Payload: ${JSON.stringify(message.commandPayload)}`);
+                break;
+
+            case 'session_closed':
+                // 清理 Session 資源
+                console.error(`Session ${message.sessionId} closed`);
+                break;
+
+            case 'session_unbound':
+                // Session 解除綁定（Session 仍存在，但不再綁定到此擴展）
+                console.error(`Session ${message.sessionId} unbound`);
+                break;
+
+            case 'shutdown':
+                // 準備關閉
+                console.error('Shutdown requested');
+                process.exit(0);
+                break;
+        }
+    } catch (error) {
+        console.error('Error processing message:', error);
+    }
+});
+
+console.error('Extension started, waiting for handshake...');</pre>
+</div>
+
+<h3>Python 擴展範例</h3>
+<div class="code-wrapper">
+    <button class="copy-button" onclick="copyCode(this)">📋 複製</button>
+    <pre class="code-block">import sys
+import json
+from datetime import datetime
+
+initialized = False
+
+def main():
+    global initialized
+    print("Extension started, waiting for handshake...", file=sys.stderr)
+
+    for line in sys.stdin:
+        try:
+            message = json.loads(line.strip())
+            msg_type = message.get('type')
+
+            # ===== 握手協議 =====
+            if msg_type == 'initialize':
+                # 回應握手，提供擴展元資料
+                init_response = {
+                    'type': 'initialize_response',
+                    'name': 'My Extension',
+                    'version': '1.0.0',
+                    'title': '我的擴展功能',
+                    'description': '提供自訂文件處理功能',
+                    'author': '開發者名稱',
+                    'websiteUrl': 'https://example.com'
+                }
+                print(json.dumps(init_response))
+                sys.stdout.flush()
+                print("Handshake: sent initialize_response", file=sys.stderr)
+
+            elif msg_type == 'initialized':
+                # 握手完成，開始正常運作
+                initialized = True
+                print("Handshake completed, ready to receive messages", file=sys.stderr)
+
+            # ===== 正常運作消息 =====
+            elif msg_type == 'snapshot':
+                if not initialized:
+                    print("Warning: received snapshot before initialization", file=sys.stderr)
+                    continue
+                # 處理快照
+                session_id = message['sessionId']
+                file_path = message['filePath']
+                data_size = message['dataSize']
+                seq_num = message['sequenceNumber']
+                print(f"Received snapshot: {file_path} ({data_size} bytes)", file=sys.stderr)
+
+                # 驗證 checksum（可選但建議）
+                # checksum = message['checksum']
+                # with open(file_path, 'rb') as f:
+                #     if crc32(f.read()) != checksum: handle_error()
+
+                # 發送 ACK
+                ack = {
+                    'type': 'ack',
+                    'sessionId': session_id,
+                    'sequenceNumber': seq_num,
+                    'success': True
+                }
+                print(json.dumps(ack))
+                sys.stdout.flush()
+
+            elif msg_type == 'heartbeat':
+                # 回應心跳
+                response = {
+                    'type': 'heartbeat_response',
+                    'status': 'ok',
+                    'timestamp': datetime.utcnow().isoformat() + 'Z'
+                }
+                print(json.dumps(response))
+                sys.stdout.flush()
+
+            elif msg_type == 'command':
+                # 處理命令
+                cmd_type = message.get('commandType')
+                payload = message.get('commandPayload', {})
+                print(f"Received command: {cmd_type}, payload: {payload}", file=sys.stderr)
+
+            elif msg_type == 'session_closed':
+                # 清理資源
+                print(f"Session {message['sessionId']} closed", file=sys.stderr)
+
+            elif msg_type == 'session_unbound':
+                # Session 解除綁定（Session 仍存在，但不再綁定到此擴展）
+                print(f"Session {message['sessionId']} unbound", file=sys.stderr)
+
+            elif msg_type == 'shutdown':
+                # 準備關閉
+                print("Shutdown requested", file=sys.stderr)
+                sys.exit(0)
+
+        except json.JSONDecodeError as e:
+            print(f"JSON parse error: {e}", file=sys.stderr)
+        except Exception as e:
+            print(f"Error: {e}", file=sys.stderr)
+
+if __name__ == '__main__':
+    main()</pre>
+</div>
+</div>
+
+<div class="section">
+    <h2>📝 最佳實踐</h2>
+
+    <h3>握手協議</h3>
+    <ul class="feature-list">
+        <li>擴展必須在收到 <code>initialize</code> 後盡快回應 <code>initialize_response</code></li>
+        <li><code>name</code> 和 <code>version</code> 欄位為必填，建議版本號使用 semver 格式</li>
+        <li>在收到 <code>initialized</code> 之前不要處理其他消息</li>
+        <li>握手超時預設為 30 秒，請確保擴展能在此時間內完成初始化</li>
+    </ul>
+
+    <h3>錯誤處理</h3>
+    <ul class="feature-list">
+        <li>使用 stderr 輸出日誌和錯誤，stdout 僅用於協議消息</li>
+        <li>處理 JSON 解析錯誤，避免擴展崩潰</li>
+        <li>設定適當的超時處理，避免阻塞</li>
+    </ul>
+
+    <h3>效能優化</h3>
+    <ul class="feature-list">
+        <li>優先使用 file 傳輸模式，實作最簡單</li>
+        <li>及時發送 ACK 確認，避免重試</li>
+        <li>設定合理的 frameIntervalMs 配合擴展處理能力</li>
+    </ul>
+
+    <h3>可靠性</h3>
+    <ul class="feature-list">
+        <li>啟用 supportsHeartbeat 保持連接活躍</li>
+        <li>發送 ACK 確認快照送達，避免重複發送</li>
+        <li>處理 session_closed 消息正確釋放資源</li>
+    </ul>
+</div>
+
+<div class="section">
+    <h2>🔗 相關資源</h2>
+    <ul class="feature-list">
+        <li>
+            <a href="tools.html#extension-擴充功能">擴充功能工具操作文檔</a>
+        </li>
+        <li>
+            <a href="deployment.html">部署指南 - 擴充功能配置</a>
+        </li>
+        <li>
+            <a href="features.html">功能特性 - 擴充功能系統</a>
+        </li>
+        <li>
+            <a href="https://github.com/xjustloveux/aspose-mcp-server/blob/master/extensions_example.json" target="_blank">
+                <code>extensions_example.json</code>
+            </a> - 完整配置範例
+        </li>
+    </ul>
+</div>
+</div>
+
+<footer>
+    <div class="container">
+        <p>基於 .NET 8.0、Aspose.Total 23.10.0 和 MCP SDK 0.6.0 構建</p>
+        <p class="footer-links" style="margin-top: 10px;">
+            <a href="https://github.com/xjustloveux/aspose-mcp-server" target="_blank">GitHub</a> |
+            <a href="https://www.aspose.com/" target="_blank">Aspose</a> |
+            <a href="https://modelcontextprotocol.io/" target="_blank">MCP Protocol</a> |
+            <a href="https://github.com/modelcontextprotocol/csharp-sdk" target="_blank">.NET MCP SDK</a>
+        </p>
+        <p class="copyright-text" style="margin-top: 20px; font-size: 0.9em;">
+            © 2025 JaJa. All rights reserved. | MIT License
+        </p>
+    </div>
+</footer>
+
+<script>
+    function copyCode(button) {
+        const wrapper = button.parentElement;
+        const codeBlock = wrapper.querySelector('.code-block');
+        const text = codeBlock.textContent;
+
+        navigator.clipboard.writeText(text).then(function() {
+            button.textContent = '✓ 已複製';
+            button.classList.add('copied');
+            setTimeout(function() {
+                button.textContent = '📋 複製';
+                button.classList.remove('copied');
+            }, 2000);
+        });
+    }
+</script>
+</body>
+</html>

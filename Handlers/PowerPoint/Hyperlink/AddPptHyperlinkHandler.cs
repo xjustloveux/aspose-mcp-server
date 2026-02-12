@@ -31,9 +31,10 @@ public class AddPptHyperlinkHandler : OperationHandlerBase<Presentation>
         var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
 
         var autoShape = GetOrCreateAutoShape(slide, p);
-        var (hyperlink, linkDescription) = PptHyperlinkHelper.CreateHyperlink(presentation, p.Url, p.SlideTargetIndex);
+        var hyperlinkResult = PptHyperlinkHelper.CreateHyperlink(presentation, p.Url, p.SlideTargetIndex);
 
-        var finalDescription = ApplyHyperlink(autoShape, hyperlink, linkDescription, p.Text, p.LinkText);
+        var finalDescription = ApplyHyperlink(autoShape, hyperlinkResult.Hyperlink, hyperlinkResult.Description, p.Text,
+            p.LinkText);
 
         MarkModified(context);
         return new SuccessResult { Message = $"Hyperlink added to slide {p.SlideIndex}: {finalDescription}." };

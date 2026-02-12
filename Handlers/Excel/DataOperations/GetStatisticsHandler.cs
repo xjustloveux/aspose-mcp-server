@@ -8,6 +8,14 @@ using AsposeMcpServer.Results.Excel.DataOperations;
 namespace AsposeMcpServer.Handlers.Excel.DataOperations;
 
 /// <summary>
+///     Represents cell value collection statistics.
+/// </summary>
+/// <param name="NumericValues">The list of numeric values found.</param>
+/// <param name="NonNumericCount">The count of non-numeric values.</param>
+/// <param name="EmptyCount">The count of empty cells.</param>
+internal record CellValueStats(List<double> NumericValues, int NonNumericCount, int EmptyCount);
+
+/// <summary>
 ///     Handler for getting statistics from Excel worksheets.
 /// </summary>
 [ResultType(typeof(GetStatisticsResult))]
@@ -139,19 +147,19 @@ public class GetStatisticsHandler : OperationHandlerBase<Workbook>
     private static RangeStatistics CalculateRangeStatistics(Worksheet worksheet, string range)
     {
         var cellRange = ExcelHelper.CreateRange(worksheet.Cells, range);
-        var (numericValues, nonNumericCount, emptyCount) = CollectCellValues(worksheet, cellRange);
+        var cellStats = CollectCellValues(worksheet, cellRange);
 
         var rangeStats = new RangeStatistics
         {
             Range = range,
             TotalCells = cellRange.RowCount * cellRange.ColumnCount,
-            NumericCells = numericValues.Count,
-            NonNumericCells = nonNumericCount,
-            EmptyCells = emptyCount
+            NumericCells = cellStats.NumericValues.Count,
+            NonNumericCells = cellStats.NonNumericCount,
+            EmptyCells = cellStats.EmptyCount
         };
 
-        if (numericValues.Count > 0)
-            rangeStats = AddNumericStatistics(numericValues, rangeStats);
+        if (cellStats.NumericValues.Count > 0)
+            rangeStats = AddNumericStatistics(cellStats.NumericValues, rangeStats);
 
         return rangeStats;
     }
@@ -161,9 +169,8 @@ public class GetStatisticsHandler : OperationHandlerBase<Workbook>
     /// </summary>
     /// <param name="worksheet">The worksheet containing the range.</param>
     /// <param name="cellRange">The range to collect values from.</param>
-    /// <returns>A tuple containing numeric values, non-numeric count, and empty count.</returns>
-    private static (List<double> numericValues, int nonNumericCount, int emptyCount) CollectCellValues(
-        Worksheet worksheet, Aspose.Cells.Range cellRange)
+    /// <returns>A <see cref="CellValueStats" /> with collection statistics.</returns>
+    private static CellValueStats CollectCellValues(Worksheet worksheet, Aspose.Cells.Range cellRange)
     {
         List<double> numericValues = [];
         var nonNumericCount = 0;
@@ -176,7 +183,7 @@ public class GetStatisticsHandler : OperationHandlerBase<Workbook>
             ClassifyCellValue(value, numericValues, ref nonNumericCount, ref emptyCount);
         }
 
-        return (numericValues, nonNumericCount, emptyCount);
+        return new CellValueStats(numericValues, nonNumericCount, emptyCount);
     }
 
     /// <summary>

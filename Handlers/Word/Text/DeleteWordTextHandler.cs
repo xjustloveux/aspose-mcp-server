@@ -8,6 +8,22 @@ using WordParagraph = Aspose.Words.Paragraph;
 namespace AsposeMcpServer.Handlers.Word.Text;
 
 /// <summary>
+///     Represents the location of text within paragraphs.
+/// </summary>
+/// <param name="ParagraphIndex">The paragraph index where text was found.</param>
+/// <param name="EndParagraphIndex">The end paragraph index.</param>
+/// <param name="StartRunIndex">The starting run index.</param>
+/// <param name="EndRunIndex">The ending run index.</param>
+internal record TextLocation(int? ParagraphIndex, int? EndParagraphIndex, int StartRunIndex, int? EndRunIndex);
+
+/// <summary>
+///     Represents the start and end run indices for a text range.
+/// </summary>
+/// <param name="StartIndex">The starting run index.</param>
+/// <param name="EndIndex">The ending run index.</param>
+internal record RunRangeIndices(int StartIndex, int EndIndex);
+
+/// <summary>
 ///     Handler for deleting text from Word documents.
 /// </summary>
 [ResultType(typeof(SuccessResult))]
@@ -40,15 +56,15 @@ public class DeleteWordTextHandler : OperationHandlerBase<Document>
 
         if (!string.IsNullOrEmpty(p.SearchText))
         {
-            var (foundStart, foundEnd, foundStartRun, foundEndRun) = FindTextLocation(paragraphs, p.SearchText);
-            if (!foundStart.HasValue)
+            var textLocation = FindTextLocation(paragraphs, p.SearchText);
+            if (!textLocation.ParagraphIndex.HasValue)
                 throw new ArgumentException(
                     $"Text '{p.SearchText}' not found. Please use search operation to confirm text location first.");
 
-            startParagraphIndex = foundStart;
-            endParagraphIndex = foundEnd;
-            startRunIndex = foundStartRun;
-            endRunIndex = foundEndRun;
+            startParagraphIndex = textLocation.ParagraphIndex;
+            endParagraphIndex = textLocation.EndParagraphIndex;
+            startRunIndex = textLocation.StartRunIndex;
+            endRunIndex = textLocation.EndRunIndex;
         }
         else
         {
@@ -89,7 +105,10 @@ public class DeleteWordTextHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Finds the location of search text in paragraphs.
     /// </summary>
-    private static (int?, int?, int, int?) FindTextLocation(NodeCollection paragraphs, string searchText)
+    /// <param name="paragraphs">The collection of paragraphs to search.</param>
+    /// <param name="searchText">The text to search for.</param>
+    /// <returns>A TextLocation containing the paragraph and run indices.</returns>
+    private static TextLocation FindTextLocation(NodeCollection paragraphs, string searchText)
     {
         for (var p = 0; p < paragraphs.Count; p++)
         {
@@ -101,18 +120,22 @@ public class DeleteWordTextHandler : OperationHandlerBase<Document>
             if (textIndex >= 0)
             {
                 var runs = para.GetChildNodes(NodeType.Run, false);
-                var (startRunIdx, endRunIdx) = FindRunRange(runs, textIndex, searchText.Length);
-                return (p, p, startRunIdx, endRunIdx);
+                var runRange = FindRunRange(runs, textIndex, searchText.Length);
+                return new TextLocation(p, p, runRange.StartIndex, runRange.EndIndex);
             }
         }
 
-        return (null, null, 0, null);
+        return new TextLocation(null, null, 0, null);
     }
 
     /// <summary>
     ///     Finds the run range for a text position.
     /// </summary>
-    private static (int, int) FindRunRange(NodeCollection runs, int textIndex, int textLength)
+    /// <param name="runs">The collection of runs to search.</param>
+    /// <param name="textIndex">The starting text index.</param>
+    /// <param name="textLength">The length of the text.</param>
+    /// <returns>A RunRangeIndices containing the start and end run indices.</returns>
+    private static RunRangeIndices FindRunRange(NodeCollection runs, int textIndex, int textLength)
     {
         var charCount = 0;
         var startRunIdx = 0;
@@ -148,7 +171,7 @@ public class DeleteWordTextHandler : OperationHandlerBase<Document>
             charCount += runLength;
         }
 
-        return (startRunIdx, endRunIdx);
+        return new RunRangeIndices(startRunIdx, endRunIdx);
     }
 
     /// <summary>

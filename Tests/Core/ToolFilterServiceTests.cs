@@ -1,4 +1,5 @@
 using AsposeMcpServer.Core;
+using AsposeMcpServer.Core.Extension;
 using AsposeMcpServer.Core.Session;
 
 namespace AsposeMcpServer.Tests.Core;
@@ -254,39 +255,9 @@ public class ToolFilterServiceTests
     #region Conversion Tool Tests
 
     [Fact]
-    public void IsToolEnabled_ConvertToPdf_WhenAnyDocumentEnabled_ShouldReturnTrue()
+    public void IsToolEnabled_ConvertDocument_WhenWordEnabled_ShouldReturnTrue()
     {
         var serverConfig = CreateServerConfig(true);
-        var sessionConfig = new SessionConfig();
-        var service = new ToolFilterService(serverConfig, sessionConfig);
-
-        Assert.True(service.IsToolEnabled("convert_to_pdf"));
-    }
-
-    [Fact]
-    public void IsToolEnabled_ConvertToPdf_WhenOnlyPdfEnabled_ShouldReturnTrue()
-    {
-        var serverConfig = CreateServerConfig(enablePdf: true);
-        var sessionConfig = new SessionConfig();
-        var service = new ToolFilterService(serverConfig, sessionConfig);
-
-        Assert.True(service.IsToolEnabled("convert_to_pdf"));
-    }
-
-    [Fact]
-    public void IsToolEnabled_ConvertToPdf_WhenNoneEnabled_ShouldReturnFalse()
-    {
-        var serverConfig = CreateServerConfig();
-        var sessionConfig = new SessionConfig();
-        var service = new ToolFilterService(serverConfig, sessionConfig);
-
-        Assert.False(service.IsToolEnabled("convert_to_pdf"));
-    }
-
-    [Fact]
-    public void IsToolEnabled_ConvertDocument_WhenTwoOrMoreEnabled_ShouldReturnTrue()
-    {
-        var serverConfig = CreateServerConfig(true, true);
         var sessionConfig = new SessionConfig();
         var service = new ToolFilterService(serverConfig, sessionConfig);
 
@@ -294,9 +265,39 @@ public class ToolFilterServiceTests
     }
 
     [Fact]
-    public void IsToolEnabled_ConvertDocument_WhenOnlyOneEnabled_ShouldReturnFalse()
+    public void IsToolEnabled_ConvertDocument_WhenExcelEnabled_ShouldReturnTrue()
     {
-        var serverConfig = CreateServerConfig(true);
+        var serverConfig = CreateServerConfig(enableExcel: true);
+        var sessionConfig = new SessionConfig();
+        var service = new ToolFilterService(serverConfig, sessionConfig);
+
+        Assert.True(service.IsToolEnabled("convert_document"));
+    }
+
+    [Fact]
+    public void IsToolEnabled_ConvertDocument_WhenPowerPointEnabled_ShouldReturnTrue()
+    {
+        var serverConfig = CreateServerConfig(enablePowerPoint: true);
+        var sessionConfig = new SessionConfig();
+        var service = new ToolFilterService(serverConfig, sessionConfig);
+
+        Assert.True(service.IsToolEnabled("convert_document"));
+    }
+
+    [Fact]
+    public void IsToolEnabled_ConvertDocument_WhenPdfEnabled_ShouldReturnTrue()
+    {
+        var serverConfig = CreateServerConfig(enablePdf: true);
+        var sessionConfig = new SessionConfig();
+        var service = new ToolFilterService(serverConfig, sessionConfig);
+
+        Assert.True(service.IsToolEnabled("convert_document"));
+    }
+
+    [Fact]
+    public void IsToolEnabled_ConvertDocument_WhenNoneEnabled_ShouldReturnFalse()
+    {
+        var serverConfig = CreateServerConfig();
         var sessionConfig = new SessionConfig();
         var service = new ToolFilterService(serverConfig, sessionConfig);
 
@@ -304,13 +305,13 @@ public class ToolFilterServiceTests
     }
 
     [Fact]
-    public void IsToolEnabled_ConvertDocument_WhenWordAndEmailEnabled_ShouldReturnTrue()
+    public void IsToolEnabled_ConvertDocument_WhenOnlyOcrEnabled_ShouldReturnFalse()
     {
-        var serverConfig = CreateServerConfig(true, enableEmail: true);
+        var serverConfig = CreateServerConfig(enableOcr: true);
         var sessionConfig = new SessionConfig();
         var service = new ToolFilterService(serverConfig, sessionConfig);
 
-        Assert.True(service.IsToolEnabled("convert_document"));
+        Assert.False(service.IsToolEnabled("convert_document"));
     }
 
     #endregion
@@ -362,6 +363,68 @@ public class ToolFilterServiceTests
         Assert.DoesNotContain("Excel", result);
         Assert.DoesNotContain("PowerPoint", result);
         Assert.DoesNotContain("Session", result);
+    }
+
+    #endregion
+
+    #region Extension Tool Tests
+
+    [Fact]
+    public void IsToolEnabled_ExtensionTool_WhenExtensionEnabled_ShouldReturnTrue()
+    {
+        var serverConfig = CreateServerConfig();
+        var sessionConfig = new SessionConfig { Enabled = true };
+        var extensionConfig = new ExtensionConfig { Enabled = true };
+        var service = new ToolFilterService(serverConfig, sessionConfig, extensionConfig);
+
+        Assert.True(service.IsToolEnabled("extension"));
+    }
+
+    [Fact]
+    public void IsToolEnabled_ExtensionTool_WhenExtensionDisabled_ShouldReturnFalse()
+    {
+        var serverConfig = CreateServerConfig();
+        var sessionConfig = new SessionConfig { Enabled = true };
+        var extensionConfig = new ExtensionConfig { Enabled = false };
+        var service = new ToolFilterService(serverConfig, sessionConfig, extensionConfig);
+
+        Assert.False(service.IsToolEnabled("extension"));
+    }
+
+    [Fact]
+    public void IsToolEnabled_ExtensionTool_WhenNoExtensionConfig_ShouldReturnFalse()
+    {
+        var serverConfig = CreateServerConfig();
+        var sessionConfig = new SessionConfig { Enabled = true };
+        var service = new ToolFilterService(serverConfig, sessionConfig);
+
+        Assert.False(service.IsToolEnabled("extension"));
+    }
+
+    [Fact]
+    public void GetEnabledCategories_ExtensionEnabled_ShouldIncludeExtension()
+    {
+        var serverConfig = CreateServerConfig(true);
+        var sessionConfig = new SessionConfig { Enabled = true };
+        var extensionConfig = new ExtensionConfig { Enabled = true };
+        var service = new ToolFilterService(serverConfig, sessionConfig, extensionConfig);
+
+        var result = service.GetEnabledCategories();
+
+        Assert.Contains("Extension", result);
+    }
+
+    [Fact]
+    public void GetEnabledCategories_ExtensionDisabled_ShouldNotIncludeExtension()
+    {
+        var serverConfig = CreateServerConfig(true);
+        var sessionConfig = new SessionConfig { Enabled = true };
+        var extensionConfig = new ExtensionConfig { Enabled = false };
+        var service = new ToolFilterService(serverConfig, sessionConfig, extensionConfig);
+
+        var result = service.GetEnabledCategories();
+
+        Assert.DoesNotContain("Extension", result);
     }
 
     #endregion

@@ -7,6 +7,13 @@ using WordParagraph = Aspose.Words.Paragraph;
 namespace AsposeMcpServer.Handlers.Word.Text;
 
 /// <summary>
+///     Represents a run index and character index within that run.
+/// </summary>
+/// <param name="RunIndex">The index of the run.</param>
+/// <param name="CharacterIndex">The character index within the run.</param>
+internal record RunPosition(int RunIndex, int CharacterIndex);
+
+/// <summary>
 ///     Handler for inserting text at a specific position in Word documents.
 /// </summary>
 [ResultType(typeof(SuccessResult))]
@@ -95,12 +102,12 @@ public class InsertAtPositionWordTextHandler : OperationHandlerBase<Document>
             throw new ArgumentNullException(nameof(para), "Paragraph cannot be null");
 
         var runs = para.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
-        var (targetRunIndex, targetRunCharIndex) = FindTargetRunPosition(runs, charIndex);
+        var runPosition = FindTargetRunPosition(runs, charIndex);
 
-        if (targetRunIndex == -1)
+        if (runPosition.RunIndex == -1)
             InsertUsingBuilder(doc, para, paragraphIndex, text, insertBefore);
         else
-            InsertIntoRun(runs[targetRunIndex], targetRunCharIndex, text);
+            InsertIntoRun(runs[runPosition.RunIndex], runPosition.CharacterIndex, text);
     }
 
     /// <summary>
@@ -108,8 +115,8 @@ public class InsertAtPositionWordTextHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="runs">The list of runs.</param>
     /// <param name="charIndex">The target character index.</param>
-    /// <returns>Tuple of run index and character index within the run.</returns>
-    private static (int runIndex, int charIndex) FindTargetRunPosition(List<Run> runs, int charIndex)
+    /// <returns>A RunPosition containing run index and character index within the run.</returns>
+    private static RunPosition FindTargetRunPosition(List<Run> runs, int charIndex)
     {
         var totalChars = 0;
 
@@ -117,11 +124,11 @@ public class InsertAtPositionWordTextHandler : OperationHandlerBase<Document>
         {
             var runLength = runs[i].Text.Length;
             if (totalChars + runLength >= charIndex)
-                return (i, charIndex - totalChars);
+                return new RunPosition(i, charIndex - totalChars);
             totalChars += runLength;
         }
 
-        return (-1, 0);
+        return new RunPosition(-1, 0);
     }
 
     /// <summary>

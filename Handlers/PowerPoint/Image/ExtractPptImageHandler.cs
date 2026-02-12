@@ -9,6 +9,13 @@ using AsposeMcpServer.Results.Common;
 namespace AsposeMcpServer.Handlers.PowerPoint.Image;
 
 /// <summary>
+///     Represents extraction statistics.
+/// </summary>
+/// <param name="Count">The number of images extracted.</param>
+/// <param name="SkippedCount">The number of images skipped.</param>
+internal record ExtractionStats(int Count, int SkippedCount);
+
+/// <summary>
 ///     Handler for extracting embedded images from PowerPoint presentations.
 /// </summary>
 [ResultType(typeof(SuccessResult))]
@@ -33,9 +40,9 @@ public class ExtractPptImageHandler : OperationHandlerBase<Presentation>
 
         Directory.CreateDirectory(extractParams.OutputDir);
 
-        var (count, skippedCount) = ExtractAllImages(context.Document, extractParams);
+        var stats = ExtractAllImages(context.Document, extractParams);
 
-        return new SuccessResult { Message = BuildResultMessage(count, skippedCount, extractParams) };
+        return new SuccessResult { Message = BuildResultMessage(stats.Count, stats.SkippedCount, extractParams) };
     }
 
     /// <summary>
@@ -74,8 +81,8 @@ public class ExtractPptImageHandler : OperationHandlerBase<Presentation>
     /// </summary>
     /// <param name="presentation">The presentation to extract images from.</param>
     /// <param name="p">The extraction parameters.</param>
-    /// <returns>A tuple containing the extracted count and skipped count.</returns>
-    private static (int count, int skippedCount) ExtractAllImages(Presentation presentation, ExtractionParameters p)
+    /// <returns>An <see cref="ExtractionStats" /> with extraction counts.</returns>
+    private static ExtractionStats ExtractAllImages(Presentation presentation, ExtractionParameters p)
     {
         var count = 0;
         var skippedCount = 0;
@@ -93,7 +100,7 @@ public class ExtractPptImageHandler : OperationHandlerBase<Presentation>
                 }
         }
 
-        return (count, skippedCount);
+        return new ExtractionStats(count, skippedCount);
     }
 
     /// <summary>

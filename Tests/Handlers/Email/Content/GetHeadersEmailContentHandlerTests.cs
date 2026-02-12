@@ -57,6 +57,7 @@ public class GetHeadersEmailContentHandlerTests : HandlerTestBase<object>
         var result = _handler.Execute(context, parameters);
 
         var headersResult = Assert.IsType<EmailHeadersResult>(result);
+        // ReSharper disable once ParameterOnlyUsedForPreconditionCheck.Local - Assert.All parameter is intended for validation
         Assert.All(headersResult.Headers, h =>
         {
             Assert.NotNull(h.Name);

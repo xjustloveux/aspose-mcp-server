@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Text;
 using AsposeMcpServer.Core;
+using AsposeMcpServer.Core.Extension;
 using AsposeMcpServer.Core.Security;
 using AsposeMcpServer.Core.Session;
 using AsposeMcpServer.Core.Tracking;
@@ -21,6 +22,7 @@ var sessionConfig = SessionConfig.LoadFromArgs(args);
 var authConfig = AuthConfig.LoadFromArgs(args);
 var trackingConfig = TrackingConfig.LoadFromArgs(args);
 var originConfig = OriginValidationConfig.LoadFromArgs(args);
+var extensionConfig = ExtensionConfig.LoadFromArgs(args);
 
 try
 {
@@ -29,6 +31,7 @@ try
     sessionConfig.Validate();
     authConfig.Validate();
     trackingConfig.Validate();
+    extensionConfig.Validate(sessionConfig);
 }
 catch (InvalidOperationException ex)
 {
@@ -36,11 +39,13 @@ catch (InvalidOperationException ex)
     Environment.Exit(1);
 }
 
-var toolFilter = new ToolFilterService(config, sessionConfig);
+var toolFilter = new ToolFilterService(config, sessionConfig, extensionConfig);
 Console.Error.WriteLine($"[INFO] Aspose MCP Server - Enabled categories: {toolFilter.GetEnabledCategories()}");
 Console.Error.WriteLine($"[INFO] Transport mode: {transportConfig.Mode}");
 if (sessionConfig.Enabled)
     Console.Error.WriteLine($"[INFO] Session isolation mode: {sessionConfig.IsolationMode}");
+if (extensionConfig.Enabled)
+    Console.Error.WriteLine("[INFO] Extension system enabled");
 await Console.Error.FlushAsync();
 
 LicenseManager.SetLicense(config);
@@ -48,7 +53,7 @@ LicenseManager.SetLicense(config);
 try
 {
     var host = HostFactory.CreateHost(args, config, transportConfig, sessionConfig, authConfig, trackingConfig,
-        originConfig);
+        originConfig, extensionConfig);
     await host.RunAsync();
 }
 catch (Exception ex)

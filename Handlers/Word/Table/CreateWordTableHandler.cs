@@ -12,6 +12,20 @@ using WordParagraph = Aspose.Words.Paragraph;
 namespace AsposeMcpServer.Handlers.Word.Table;
 
 /// <summary>
+///     Represents a section and its actual index.
+/// </summary>
+/// <param name="Section">The document section.</param>
+/// <param name="ActualIndex">The actual section index.</param>
+internal record SectionResult(Section Section, int ActualIndex);
+
+/// <summary>
+///     Represents the dimensions of a table.
+/// </summary>
+/// <param name="NumRows">The number of rows.</param>
+/// <param name="NumColumns">The number of columns.</param>
+internal record TableDimensions(int NumRows, int NumColumns);
+
+/// <summary>
 ///     Handler for creating tables in Word documents.
 /// </summary>
 [ResultType(typeof(SuccessResult))]
@@ -37,16 +51,21 @@ public class CreateWordTableHandler : OperationHandlerBase<Document>
         var doc = context.Document;
         var builder = new DocumentBuilder(doc);
 
-        var (section, actualSectionIndex) = ValidateAndGetSection(doc, tableParams.SectionIndex);
+        var sectionResult = ValidateAndGetSection(doc, tableParams.SectionIndex);
         var parsedTableData = ParseTableData(tableParams.TableData);
-        var (numRows, numCols) = CalculateTableDimensions(parsedTableData, tableParams.Rows, tableParams.Columns);
+        var tableDimensions = CalculateTableDimensions(parsedTableData, tableParams.Rows, tableParams.Columns);
 
-        MoveToInsertPosition(builder, section, tableParams.ParagraphIndex, actualSectionIndex);
-        var table = BuildTable(builder, numRows, numCols, parsedTableData, tableParams);
+        MoveToInsertPosition(builder, sectionResult.Section, tableParams.ParagraphIndex, sectionResult.ActualIndex);
+        var table = BuildTable(builder, tableDimensions.NumRows, tableDimensions.NumColumns, parsedTableData,
+            tableParams);
         FinalizeTable(table, tableParams);
 
         MarkModified(context);
-        return new SuccessResult { Message = $"Successfully created table with {numRows} rows and {numCols} columns." };
+        return new SuccessResult
+        {
+            Message =
+                $"Successfully created table with {tableDimensions.NumRows} rows and {tableDimensions.NumColumns} columns."
+        };
     }
 
     /// <summary>
@@ -82,14 +101,14 @@ public class CreateWordTableHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="doc">The Word document.</param>
     /// <param name="sectionIndex">The section index.</param>
-    /// <returns>A tuple containing the section and actual index.</returns>
+    /// <returns>A SectionResult containing the section and actual index.</returns>
     /// <exception cref="ArgumentException">Thrown when section index is out of range.</exception>
-    private static (Section section, int actualIndex) ValidateAndGetSection(Document doc, int? sectionIndex)
+    private static SectionResult ValidateAndGetSection(Document doc, int? sectionIndex)
     {
         var actualSectionIndex = sectionIndex ?? 0;
         if (actualSectionIndex < 0 || actualSectionIndex >= doc.Sections.Count)
             throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
-        return (doc.Sections[actualSectionIndex], actualSectionIndex);
+        return new SectionResult(doc.Sections[actualSectionIndex], actualSectionIndex);
     }
 
     /// <summary>
@@ -98,13 +117,13 @@ public class CreateWordTableHandler : OperationHandlerBase<Document>
     /// <param name="parsedData">The parsed table data.</param>
     /// <param name="rows">The specified number of rows.</param>
     /// <param name="columns">The specified number of columns.</param>
-    /// <returns>A tuple containing the number of rows and columns.</returns>
-    private static (int numRows, int numCols) CalculateTableDimensions(List<List<string>>? parsedData, int? rows,
+    /// <returns>A TableDimensions containing the number of rows and columns.</returns>
+    private static TableDimensions CalculateTableDimensions(List<List<string>>? parsedData, int? rows,
         int? columns)
     {
         if (parsedData is { Count: > 0 })
-            return (parsedData.Count, parsedData.Max(r => r.Count));
-        return (rows ?? 3, columns ?? 3);
+            return new TableDimensions(parsedData.Count, parsedData.Max(r => r.Count));
+        return new TableDimensions(rows ?? 3, columns ?? 3);
     }
 
     /// <summary>

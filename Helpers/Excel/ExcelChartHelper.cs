@@ -62,17 +62,19 @@ public static class ExcelChartHelper
     ///     Adds data series to chart.
     /// </summary>
     /// <param name="chart">The chart to add data series to.</param>
-    /// <param name="dataRange">The data range for the series.</param>
+    /// <param name="dataRange">
+    ///     The data range for the series. Supports:
+    ///     - Single column: "B2:B5" (creates 1 series)
+    ///     - Multi-column: "B2:C5" (creates 2 series, one per column)
+    ///     - Comma-separated: "B2:B5, C2:C5" (creates 2 series)
+    /// </param>
     public static void AddDataSeries(Chart chart, string dataRange)
     {
         chart.NSeries.Clear();
         var ranges = dataRange.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
         foreach (var range in ranges)
-        {
-            var seriesIndex = chart.NSeries.Add(range, true);
-            chart.NSeries[seriesIndex].Values = range;
-        }
+            chart.NSeries.Add(range, true);
     }
 
     /// <summary>

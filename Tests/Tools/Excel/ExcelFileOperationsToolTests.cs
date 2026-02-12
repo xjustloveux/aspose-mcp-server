@@ -34,17 +34,6 @@ public class ExcelFileOperationsToolTests : ExcelTestBase
     }
 
     [Fact]
-    public void Convert_ToPdf_ShouldConvert()
-    {
-        var workbookPath = CreateExcelWorkbookWithData("test_convert_pdf.xlsx", 3);
-        var outputPath = CreateTestFilePath("test_convert_output.pdf");
-        var result = _tool.Execute("convert", inputPath: workbookPath, outputPath: outputPath, format: "pdf");
-        Assert.IsType<FinalizedResult<SuccessResult>>(result);
-        Assert.True(File.Exists(outputPath));
-        Assert.True(new FileInfo(outputPath).Length > 0);
-    }
-
-    [Fact]
     public void Merge_ShouldMergeWorkbooks()
     {
         var workbook1Path = CreateExcelWorkbookWithData("test_merge1.xlsx", 2, 2);
@@ -113,19 +102,6 @@ public class ExcelFileOperationsToolTests : ExcelTestBase
     #region Session Management
 
     [SkippableFact]
-    public void Convert_WithSessionId_ShouldConvertFromMemory()
-    {
-        SkipInEvaluationMode(AsposeLibraryType.Cells, "Session convert may have evaluation limitations");
-        var workbookPath = CreateExcelWorkbookWithData("test_session_convert.xlsx", 3);
-        var sessionId = OpenSession(workbookPath);
-        var outputPath = CreateTestFilePath("test_session_convert_output.csv");
-        var result = _tool.Execute("convert", sessionId, outputPath: outputPath, format: "csv");
-        Assert.IsType<FinalizedResult<SuccessResult>>(result);
-        Assert.True(File.Exists(outputPath));
-        Assert.True(new FileInfo(outputPath).Length > 0);
-    }
-
-    [SkippableFact]
     public void Split_WithSessionId_ShouldSplitFromMemory()
     {
         SkipInEvaluationMode(AsposeLibraryType.Cells, "Session split may have evaluation limitations");
@@ -146,11 +122,12 @@ public class ExcelFileOperationsToolTests : ExcelTestBase
     }
 
     [Fact]
-    public void Convert_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
+    public void Split_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
-        var outputPath = CreateTestFilePath("test_invalid_session.csv");
+        var outputDir = Path.Combine(TestDir, "test_invalid_session_split");
+        Directory.CreateDirectory(outputDir);
         Assert.Throws<KeyNotFoundException>(() =>
-            _tool.Execute("convert", "invalid_session", outputPath: outputPath, format: "csv"));
+            _tool.Execute("split", "invalid_session", outputDirectory: outputDir));
     }
 
     #endregion

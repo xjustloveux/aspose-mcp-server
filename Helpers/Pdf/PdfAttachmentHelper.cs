@@ -35,8 +35,8 @@ public static class PdfAttachmentHelper
     /// </summary>
     /// <param name="embeddedFiles">The collection of embedded files.</param>
     /// <param name="attachmentName">The name of the attachment to find.</param>
-    /// <returns>A tuple indicating whether the attachment was found, its actual name, and all available names.</returns>
-    public static (bool found, string actualName, List<string> allNames) FindAttachment(
+    /// <returns>An <see cref="AttachmentSearchResult" /> with search results.</returns>
+    public static AttachmentSearchResult FindAttachment(
         EmbeddedFileCollection embeddedFiles, string attachmentName)
     {
         List<string> allNames = [];
@@ -51,14 +51,14 @@ public static class PdfAttachmentHelper
                 var fileName = Path.GetFileName(name);
                 if (string.Equals(name, attachmentName, StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(fileName, attachmentName, StringComparison.OrdinalIgnoreCase))
-                    return (true, name, allNames);
+                    return new AttachmentSearchResult(true, name, allNames);
             }
             catch
             {
                 // Ignore errors reading individual attachment
             }
 
-        return (false, "", allNames);
+        return new AttachmentSearchResult(false, "", allNames);
     }
 
     /// <summary>

@@ -76,8 +76,6 @@ public class DocumentSessionManager : IDisposable
     /// </summary>
     public void Dispose()
     {
-        // Atomically set _disposed to 1, return previous value
-        // If previous value was already 1, another thread already disposed
         if (Interlocked.Exchange(ref _disposed, 1) == 1)
             return;
 
@@ -90,6 +88,18 @@ public class DocumentSessionManager : IDisposable
 
         _sessionsByOwner.Clear();
     }
+
+    /// <summary>
+    ///     Event raised when a session's IsDirty property becomes true.
+    ///     Parameters: sessionId, requestor identity.
+    /// </summary>
+    public event Action<string, SessionIdentity>? SessionModified;
+
+    /// <summary>
+    ///     Event raised when a session is closed.
+    ///     Parameters: sessionId, owner identity.
+    /// </summary>
+    public event Action<string, SessionIdentity>? SessionClosed;
 
     /// <summary>
     ///     Opens a document and creates a session
@@ -124,7 +134,6 @@ public class DocumentSessionManager : IDisposable
         var ownerSessions =
             _sessionsByOwner.GetOrAdd(ownerKey, _ => new ConcurrentDictionary<string, DocumentSession>());
 
-        // Early check for session limit (not atomic, but avoids unnecessary work)
         if (ownerSessions.Count >= Config.MaxSessions)
             throw new InvalidOperationException($"Maximum session limit ({Config.MaxSessions}) reached for this user");
 
@@ -152,7 +161,6 @@ public class DocumentSessionManager : IDisposable
             throw new InvalidOperationException("Failed to create session");
         }
 
-        // Atomic check after add: if we exceeded the limit due to race condition, rollback
         if (ownerSessions.Count > Config.MaxSessions)
         {
             if (ownerSessions.TryRemove(sessionId, out _)) session.Dispose();
@@ -242,11 +250,9 @@ public class DocumentSessionManager : IDisposable
         foreach (var ownerSessions in _sessionsByOwner.Values)
             if (ownerSessions.TryGetValue(sessionId, out var session))
             {
-                // Check if session is disposed (safety check for race conditions)
                 if (session.IsDisposed)
                 {
                     _logger?.LogWarning("Attempted to access disposed session {SessionId}", sessionId);
-                    // Try to clean up the orphaned entry
                     ownerSessions.TryRemove(sessionId, out _);
                     return null;
                 }
@@ -282,7 +288,11 @@ public class DocumentSessionManager : IDisposable
     public void MarkDirty(string sessionId, SessionIdentity requestor)
     {
         var session = FindSessionWithAuth(sessionId, requestor);
-        if (session != null) session.IsDirty = true;
+        if (session != null)
+        {
+            session.IsDirty = true;
+            SessionModified?.Invoke(sessionId, requestor);
+        }
     }
 
     /// <summary>
@@ -367,10 +377,11 @@ public class DocumentSessionManager : IDisposable
         if (session == null)
             throw new KeyNotFoundException($"Session not found: {sessionId}");
 
-        // Safely clean up empty owner dictionary using atomic operation
         if (ownerDict != null && ownerKey != null && ownerDict.IsEmpty)
             ((ICollection<KeyValuePair<string, ConcurrentDictionary<string, DocumentSession>>>)_sessionsByOwner)
                 .Remove(new KeyValuePair<string, ConcurrentDictionary<string, DocumentSession>>(ownerKey, ownerDict));
+
+        SessionClosed?.Invoke(sessionId, session.Owner);
 
         try
         {
@@ -379,7 +390,6 @@ public class DocumentSessionManager : IDisposable
         }
         finally
         {
-            // Always dispose session to prevent resource leaks, even if save fails
             session.Dispose();
         }
 
@@ -514,8 +524,6 @@ public class DocumentSessionManager : IDisposable
         foreach (var session in clientSessions)
             try
             {
-                // First remove from storage, then handle disconnect (dispose)
-                // This prevents race conditions where disposed sessions are still accessible
                 RemoveSessionById(session.SessionId);
                 HandleDisconnect(session);
             }
@@ -534,10 +542,7 @@ public class DocumentSessionManager : IDisposable
         foreach (var kvp in _sessionsByOwner)
             if (kvp.Value.TryRemove(sessionId, out _))
             {
-                // Safely clean up empty owner dictionary using atomic operation
-                // Only remove if the dictionary is still empty (handles race condition)
                 if (kvp.Value.IsEmpty)
-                    // Use TryUpdate pattern: only remove if value matches (empty dictionary)
                     ((ICollection<KeyValuePair<string, ConcurrentDictionary<string, DocumentSession>>>)_sessionsByOwner)
                         .Remove(new KeyValuePair<string, ConcurrentDictionary<string, DocumentSession>>(kvp.Key,
                             kvp.Value));
@@ -552,6 +557,8 @@ public class DocumentSessionManager : IDisposable
     /// <param name="session">Session to handle disconnect for</param>
     private void HandleDisconnect(DocumentSession session)
     {
+        SessionClosed?.Invoke(session.SessionId, session.Owner);
+
         try
         {
             if (!session.IsDirty)
@@ -593,7 +600,6 @@ public class DocumentSessionManager : IDisposable
         }
         finally
         {
-            // Always dispose session to prevent resource leaks
             session.Dispose();
         }
     }
@@ -619,8 +625,6 @@ public class DocumentSessionManager : IDisposable
 
                 try
                 {
-                    // First remove from storage, then handle disconnect (dispose)
-                    // This prevents race conditions where disposed sessions are still accessible
                     RemoveSessionById(session.SessionId);
                     HandleDisconnect(session);
                 }

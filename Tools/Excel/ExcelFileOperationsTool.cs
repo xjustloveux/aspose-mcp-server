@@ -10,7 +10,7 @@ using ModelContextProtocol.Server;
 namespace AsposeMcpServer.Tools.Excel;
 
 /// <summary>
-///     Unified tool for Excel file operations (create, convert, merge workbooks, split workbook).
+///     Unified tool for Excel file operations (create, merge workbooks, split workbook).
 /// </summary>
 [ToolHandlerMapping("AsposeMcpServer.Handlers.Excel.FileOperations")]
 [McpServerToolType]
@@ -46,16 +46,15 @@ public class ExcelFileOperationsTool
     }
 
     /// <summary>
-    ///     Executes an Excel file operation (create, convert, merge, or split).
+    ///     Executes an Excel file operation (create, merge, or split).
     /// </summary>
-    /// <param name="operation">The operation to perform: create, convert, merge, or split.</param>
-    /// <param name="sessionId">Session ID to read workbook from session (for convert, split).</param>
+    /// <param name="operation">The operation to perform: create, merge, or split.</param>
+    /// <param name="sessionId">Session ID to read workbook from session (for split).</param>
     /// <param name="path">File path (output path for create/merge, input path for split).</param>
-    /// <param name="outputPath">Output file path (required for convert, optional for create).</param>
-    /// <param name="inputPath">Input file path (required for convert/split).</param>
+    /// <param name="outputPath">Output file path (optional for create).</param>
+    /// <param name="inputPath">Input file path (required for split).</param>
     /// <param name="outputDirectory">Output directory path (required for split).</param>
     /// <param name="sheetName">Initial sheet name (optional, for create).</param>
-    /// <param name="format">Output format: pdf, html, csv, xlsx, xls, ods, txt, tsv (required for convert).</param>
     /// <param name="inputPaths">Array of input workbook file paths (required for merge).</param>
     /// <param name="mergeSheets">When true, merges data from sheets with same name by appending rows.</param>
     /// <param name="sheetIndices">Sheet indices to split (0-based, optional).</param>
@@ -71,36 +70,32 @@ public class ExcelFileOperationsTool
         OpenWorld = false,
         ReadOnly = false,
         UseStructuredContent = true)]
-    [Description(@"Excel file operations. Supports 4 operations: create, convert, merge, split.
+    [Description(@"Excel file operations. Supports 3 operations: create, merge, split.
+For workbook format conversion, use convert_document tool instead.
 
 Usage examples:
 - Create workbook: excel_file_operations(operation='create', path='new.xlsx')
-- Convert format: excel_file_operations(operation='convert', inputPath='book.xlsx', outputPath='book.pdf', format='pdf')
-- Convert from session: excel_file_operations(operation='convert', sessionId='sess_xxx', outputPath='book.pdf', format='pdf')
 - Merge workbooks: excel_file_operations(operation='merge', path='merged.xlsx', inputPaths=['book1.xlsx', 'book2.xlsx'])
 - Split workbook: excel_file_operations(operation='split', inputPath='book.xlsx', outputDirectory='output/')
 - Split from session: excel_file_operations(operation='split', sessionId='sess_xxx', outputDirectory='output/')")]
     public object Execute(
         [Description(@"Operation to perform.
 - 'create': Create a new workbook (required params: path or outputPath)
-- 'convert': Convert workbook format (required params: inputPath or sessionId, outputPath, format)
 - 'merge': Merge workbooks (required params: path or outputPath, inputPaths)
 - 'split': Split workbook (required params: inputPath, path, or sessionId, outputDirectory)")]
         string operation,
-        [Description("Session ID to read workbook from session (for convert, split)")]
+        [Description("Session ID to read workbook from session (for split)")]
         string? sessionId = null,
         [Description("File path (output path for create/merge operations, input path for split operation)")]
         string? path = null,
-        [Description("Output file path (required for convert, optional for create)")]
+        [Description("Output file path (optional for create)")]
         string? outputPath = null,
-        [Description("Input file path (required for convert/split)")]
+        [Description("Input file path (required for split)")]
         string? inputPath = null,
         [Description("Output directory path (required for split)")]
         string? outputDirectory = null,
         [Description("Initial sheet name (optional, for create)")]
         string? sheetName = null,
-        [Description("Output format: 'pdf', 'html', 'csv', 'xlsx', 'xls', 'ods', 'txt', 'tsv' (required for convert)")]
-        string? format = null,
         [Description("Array of input workbook file paths (required for merge)")]
         string[]? inputPaths = null,
         [Description(
@@ -114,7 +109,7 @@ Usage examples:
         IProgress<ProgressNotificationValue>? progress = null)
     {
         var parameters = BuildParameters(operation, sessionId, path, outputPath, inputPath, outputDirectory,
-            sheetName, format, inputPaths, mergeSheets, sheetIndices, outputFileNamePattern);
+            sheetName, inputPaths, mergeSheets, sheetIndices, outputFileNamePattern);
 
         var handler = _handlerRegistry.GetHandler(operation);
 
@@ -146,7 +141,6 @@ Usage examples:
         string? inputPath,
         string? outputDirectory,
         string? sheetName,
-        string? format,
         string[]? inputPaths,
         bool mergeSheets,
         int[]? sheetIndices,
@@ -157,7 +151,6 @@ Usage examples:
         return operation.ToLowerInvariant() switch
         {
             "create" => BuildCreateParameters(parameters, path, outputPath, sheetName),
-            "convert" => BuildConvertParameters(parameters, inputPath, sessionId, outputPath, format),
             "merge" => BuildMergeParameters(parameters, path, outputPath, inputPaths, mergeSheets),
             "split" => BuildSplitParameters(parameters, inputPath, path, sessionId, outputDirectory, sheetIndices,
                 outputFileNamePattern),
@@ -179,25 +172,6 @@ Usage examples:
         if (path != null) parameters.Set("path", path);
         if (outputPath != null) parameters.Set("outputPath", outputPath);
         if (sheetName != null) parameters.Set("sheetName", sheetName);
-        return parameters;
-    }
-
-    /// <summary>
-    ///     Builds parameters for the convert workbook operation.
-    /// </summary>
-    /// <param name="parameters">Base parameters.</param>
-    /// <param name="inputPath">The input file path.</param>
-    /// <param name="sessionId">The session ID for in-memory workbook.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="format">The output format.</param>
-    /// <returns>OperationParameters configured for converting workbook.</returns>
-    private static OperationParameters BuildConvertParameters(OperationParameters parameters, string? inputPath,
-        string? sessionId, string? outputPath, string? format)
-    {
-        if (inputPath != null) parameters.Set("inputPath", inputPath);
-        if (sessionId != null) parameters.Set("sessionId", sessionId);
-        if (outputPath != null) parameters.Set("outputPath", outputPath);
-        if (format != null) parameters.Set("format", format);
         return parameters;
     }
 

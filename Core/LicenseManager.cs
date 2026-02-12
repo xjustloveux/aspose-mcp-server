@@ -27,11 +27,11 @@ public static class LicenseManager
             Console.SetOut(TextWriter.Null);
 
             var globalLicensePath = ResolveGlobalLicensePath(config);
-            var (loadedLicenses, enabledComponents) = LoadLicenses(config, globalLicensePath);
+            var result = LoadLicenses(config, globalLicensePath);
 
             Console.SetOut(originalOut);
             ConfigureFontSubstitutions(config);
-            LogLicenseResult(loadedLicenses, enabledComponents);
+            LogLicenseResult(result.LoadedLicenses, result.EnabledComponents);
         }
         catch (Exception ex)
         {
@@ -158,18 +158,9 @@ public static class LicenseManager
     /// <param name="config">The server configuration.</param>
     /// <param name="globalLicensePath">The global license path from --license flag, or null.</param>
     /// <returns>
-    ///     A tuple containing:
-    ///     <list type="bullet">
-    ///         <item>
-    ///             <description>A list of successfully loaded license names.</description>
-    ///         </item>
-    ///         <item>
-    ///             <description>A list of all enabled component names.</description>
-    ///         </item>
-    ///     </list>
+    ///     A <see cref="LicenseLoadResult" /> containing loaded licenses and enabled components.
     /// </returns>
-    private static (List<string> loadedLicenses, List<string> enabledComponents) LoadLicenses(
-        ServerConfig config, string? globalLicensePath)
+    private static LicenseLoadResult LoadLicenses(ServerConfig config, string? globalLicensePath)
     {
         List<string> loadedLicenses = [];
         List<string> enabledComponents = [];
@@ -209,7 +200,7 @@ public static class LicenseManager
             }
         }
 
-        return (loadedLicenses, enabledComponents);
+        return new LicenseLoadResult(loadedLicenses, enabledComponents);
     }
 
     /// <summary>

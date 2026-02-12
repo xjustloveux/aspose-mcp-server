@@ -10,6 +10,13 @@ using WordHeaderFooter = Aspose.Words.HeaderFooter;
 namespace AsposeMcpServer.Handlers.Word.Shape;
 
 /// <summary>
+///     Represents the target node and location description for line insertion.
+/// </summary>
+/// <param name="TargetNode">The target node for insertion.</param>
+/// <param name="LocationDescription">The description of the location.</param>
+internal record LineInsertTarget(Node? TargetNode, string LocationDescription);
+
+/// <summary>
 ///     Handler for adding line shapes to Word documents.
 /// </summary>
 [ResultType(typeof(SuccessResult))]
@@ -33,16 +40,19 @@ public class AddLineWordHandler : OperationHandlerBase<Document>
         var section = doc.FirstSection;
         var calculatedWidth = lineParams.Width ?? CalculateDefaultWidth(section);
 
-        var (targetNode, locationDesc) = GetTargetNode(doc, section, lineParams.Location);
-        if (targetNode == null)
+        var lineInsertTarget = GetTargetNode(doc, section, lineParams.Location);
+        if (lineInsertTarget.TargetNode == null)
             throw new InvalidOperationException($"Could not access {lineParams.Location}");
 
         var linePara = CreateLineParagraph(doc, lineParams, calculatedWidth);
-        InsertParagraph(targetNode, linePara, lineParams.Position);
+        InsertParagraph(lineInsertTarget.TargetNode, linePara, lineParams.Position);
 
         MarkModified(context);
         return new SuccessResult
-            { Message = $"Successfully inserted line in {locationDesc} at {lineParams.Position} position." };
+        {
+            Message =
+                $"Successfully inserted line in {lineInsertTarget.LocationDescription} at {lineParams.Position} position."
+        };
     }
 
     /// <summary>
@@ -78,14 +88,16 @@ public class AddLineWordHandler : OperationHandlerBase<Document>
     /// <param name="doc">The Word document.</param>
     /// <param name="section">The document section.</param>
     /// <param name="location">The location string.</param>
-    /// <returns>A tuple containing the target node and location description.</returns>
-    private static (Node? targetNode, string locationDesc) GetTargetNode(Document doc, Section section, string location)
+    /// <returns>A LineInsertTarget containing the target node and location description.</returns>
+    private static LineInsertTarget GetTargetNode(Document doc, Section section, string location)
     {
         return location.ToLower() switch
         {
-            "header" => (GetOrCreateHeaderFooter(doc, section, HeaderFooterType.HeaderPrimary), "header"),
-            "footer" => (GetOrCreateHeaderFooter(doc, section, HeaderFooterType.FooterPrimary), "footer"),
-            _ => (section.Body, "document body")
+            "header" => new LineInsertTarget(GetOrCreateHeaderFooter(doc, section, HeaderFooterType.HeaderPrimary),
+                "header"),
+            "footer" => new LineInsertTarget(GetOrCreateHeaderFooter(doc, section, HeaderFooterType.FooterPrimary),
+                "footer"),
+            _ => new LineInsertTarget(section.Body, "document body")
         };
     }
 

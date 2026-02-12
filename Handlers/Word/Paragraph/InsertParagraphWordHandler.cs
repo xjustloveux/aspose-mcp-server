@@ -8,6 +8,13 @@ using WordParagraph = Aspose.Words.Paragraph;
 namespace AsposeMcpServer.Handlers.Word.Paragraph;
 
 /// <summary>
+///     Represents the target position for paragraph insertion.
+/// </summary>
+/// <param name="TargetParagraph">The target paragraph to insert after, or null for end of document.</param>
+/// <param name="PositionDescription">A description of the insertion position.</param>
+internal record InsertTarget(WordParagraph? TargetParagraph, string PositionDescription);
+
+/// <summary>
 ///     Handler for inserting paragraphs in Word documents.
 /// </summary>
 [ResultType(typeof(SuccessResult))]
@@ -34,13 +41,13 @@ public class InsertParagraphWordHandler : OperationHandlerBase<Document>
         var doc = context.Document;
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
 
-        var (targetPara, insertPosition) = FindInsertTarget(paragraphs, insertParams.ParagraphIndex);
+        var insertTarget = FindInsertTarget(paragraphs, insertParams.ParagraphIndex);
         var para = CreateParagraph(doc, insertParams);
-        InsertParagraph(doc, para, targetPara, insertParams.ParagraphIndex);
+        InsertParagraph(doc, para, insertTarget.TargetParagraph, insertParams.ParagraphIndex);
 
         MarkModified(context);
 
-        return BuildResultMessage(insertPosition, insertParams, paragraphs.Count + 1);
+        return BuildResultMessage(insertTarget.PositionDescription, insertParams, paragraphs.Count + 1);
     }
 
     /// <summary>
@@ -68,19 +75,19 @@ public class InsertParagraphWordHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="paragraphs">The collection of paragraphs.</param>
     /// <param name="paragraphIndex">The paragraph index.</param>
-    /// <returns>A tuple containing the target paragraph and position description.</returns>
+    /// <returns>An <see cref="InsertTarget" /> with the target paragraph and position description.</returns>
     /// <exception cref="ArgumentException">Thrown when paragraph index is out of range.</exception>
-    private static (WordParagraph? targetPara, string insertPosition) FindInsertTarget(NodeCollection paragraphs,
-        int? paragraphIndex)
+    private static InsertTarget FindInsertTarget(NodeCollection paragraphs, int? paragraphIndex)
     {
         if (!paragraphIndex.HasValue)
-            return (null, "end of document");
+            return new InsertTarget(null, "end of document");
 
         if (paragraphIndex.Value == -1 && paragraphs.Count > 0)
-            return (paragraphs[0] as WordParagraph, "beginning of document");
+            return new InsertTarget(paragraphs[0] as WordParagraph, "beginning of document");
 
         if (paragraphIndex.Value >= 0 && paragraphIndex.Value < paragraphs.Count)
-            return (paragraphs[paragraphIndex.Value] as WordParagraph, $"after paragraph #{paragraphIndex.Value}");
+            return new InsertTarget(paragraphs[paragraphIndex.Value] as WordParagraph,
+                $"after paragraph #{paragraphIndex.Value}");
 
         var validRange = paragraphs.Count > 0 ? $"0-{paragraphs.Count - 1}" : "none (document is empty)";
         throw new ArgumentException(

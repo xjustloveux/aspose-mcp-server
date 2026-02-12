@@ -24,7 +24,8 @@ public class VersionHelperTests
     public void GetVersion_ShouldReturnValidSemanticVersionFormat()
     {
         var version = VersionHelper.GetVersion();
-        var parts = version.Split('.');
+        var mainVersion = version.Split('-')[0];
+        var parts = mainVersion.Split('.');
 
         Assert.True(parts.Length >= 2, "Version should have at least major.minor");
         Assert.True(parts.Length <= 3, "Version should not have more than 3 parts");
@@ -40,6 +41,14 @@ public class VersionHelperTests
         var version2 = VersionHelper.GetVersion();
 
         Assert.Same(version1, version2);
+    }
+
+    [Fact]
+    public void GetVersion_ShouldNotContainCommitHash()
+    {
+        var version = VersionHelper.GetVersion();
+
+        Assert.DoesNotContain("+", version);
     }
 
     #endregion
@@ -59,7 +68,9 @@ public class VersionHelperTests
 
             Assert.NotNull(result);
             Assert.NotEmpty(result);
-            var parts = result.Split('.');
+
+            var mainVersion = result.Split('-')[0];
+            var parts = mainVersion.Split('.');
             Assert.True(parts.Length is >= 2 and <= 3);
             foreach (var part in parts)
                 Assert.True(int.TryParse(part, out _), $"Version part '{part}' should be numeric");

@@ -81,7 +81,6 @@ public class ToolAnnotationsTests
     }
 
     [Theory]
-    [InlineData("convert_to_pdf", false, true, false)]
     [InlineData("convert_document", false, true, false)]
     public void ConversionTools_ShouldHaveCorrectAnnotations(
         string toolName,

@@ -17,28 +17,27 @@ public static class PptImageHelper
     /// <param name="height">The requested height (optional).</param>
     /// <param name="pixelWidth">The original image width in pixels.</param>
     /// <param name="pixelHeight">The original image height in pixels.</param>
-    /// <returns>A tuple containing the calculated width and height.</returns>
-    public static (float width, float height) CalculateDimensions(float? width, float? height, int pixelWidth,
-        int pixelHeight)
+    /// <returns>A <see cref="Dimensions" /> with calculated width and height.</returns>
+    public static Dimensions CalculateDimensions(float? width, float? height, int pixelWidth, int pixelHeight)
     {
         if (width.HasValue && height.HasValue)
-            return (width.Value, height.Value);
+            return new Dimensions(width.Value, height.Value);
 
         if (width.HasValue)
         {
             var ratio = pixelWidth > 0 ? (float)pixelHeight / pixelWidth : 1;
-            return (width.Value, width.Value * ratio);
+            return new Dimensions(width.Value, width.Value * ratio);
         }
 
         if (height.HasValue)
         {
             var ratio = pixelHeight > 0 ? (float)pixelWidth / pixelHeight : 1;
-            return (height.Value * ratio, height.Value);
+            return new Dimensions(height.Value * ratio, height.Value);
         }
 
         var defaultWidth = 300f;
         var defaultRatio = pixelWidth > 0 ? (float)pixelHeight / pixelWidth : 1;
-        return (defaultWidth, defaultWidth * defaultRatio);
+        return new Dimensions(defaultWidth, defaultWidth * defaultRatio);
     }
 
     /// <summary>
