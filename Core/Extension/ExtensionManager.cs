@@ -162,7 +162,8 @@ public class ExtensionManager : IHostedService, IAsyncDisposable
         {
             fileTransport?.Dispose();
             mmapTransport?.Dispose();
-            processCleanupManager?.Dispose();
+            if (processCleanupManager != null)
+                processCleanupManager.Dispose();
             throw;
         }
     }
@@ -188,6 +189,7 @@ public class ExtensionManager : IHostedService, IAsyncDisposable
             }
             catch (OperationCanceledException)
             {
+                // Ignore cancellation during shutdown
             }
             catch (TimeoutException)
             {
@@ -201,6 +203,7 @@ public class ExtensionManager : IHostedService, IAsyncDisposable
             }
             catch (OperationCanceledException)
             {
+                // Ignore cancellation during shutdown
             }
             catch (TimeoutException)
             {
@@ -293,6 +296,7 @@ public class ExtensionManager : IHostedService, IAsyncDisposable
                 }
                 catch (OperationCanceledException)
                 {
+                    // Ignore cancellation during shutdown
                 }
         }
 
@@ -610,7 +614,11 @@ public class ExtensionManager : IHostedService, IAsyncDisposable
         var normalizedConfigDir = Path.GetFullPath(configDir)
             .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
-        if (!string.IsNullOrEmpty(command.Executable) && !Path.IsPathRooted(command.Executable))
+        var isPackageType = command.Type.Equals("npx", StringComparison.OrdinalIgnoreCase) ||
+                            command.Type.Equals("pipx", StringComparison.OrdinalIgnoreCase);
+
+        if (!isPackageType && !string.IsNullOrEmpty(command.Executable) &&
+            !Path.IsPathRooted(command.Executable))
         {
             var resolvedPath = Path.GetFullPath(Path.Combine(configDir, command.Executable));
             ValidatePathWithinDirectory(resolvedPath, normalizedConfigDir, "Executable", definition.Id);
@@ -664,29 +672,24 @@ public class ExtensionManager : IHostedService, IAsyncDisposable
             return;
         }
 
-        if (command.Type is "executable" or "custom")
+        if (command.Type is "executable" or "custom" && !File.Exists(command.Executable))
         {
-            if (!File.Exists(command.Executable))
-            {
-                definition.IsAvailable = false;
-                definition.UnavailableReason = $"Executable not found: {command.Executable}";
-                _logger.LogWarning(
-                    "Extension {Id} marked unavailable: {Reason}",
-                    definition.Id, definition.UnavailableReason);
-                return;
-            }
+            definition.IsAvailable = false;
+            definition.UnavailableReason = $"Executable not found: {command.Executable}";
+            _logger.LogWarning(
+                "Extension {Id} marked unavailable: {Reason}",
+                definition.Id, definition.UnavailableReason);
+            return;
         }
-        else if (command.Type is "node" or "python" or "dotnet")
+
+        if (command.Type is "node" or "python" or "dotnet" && !File.Exists(command.Executable))
         {
-            if (!File.Exists(command.Executable))
-            {
-                definition.IsAvailable = false;
-                definition.UnavailableReason = $"Script not found: {command.Executable}";
-                _logger.LogWarning(
-                    "Extension {Id} marked unavailable: {Reason}",
-                    definition.Id, definition.UnavailableReason);
-                return;
-            }
+            definition.IsAvailable = false;
+            definition.UnavailableReason = $"Script not found: {command.Executable}";
+            _logger.LogWarning(
+                "Extension {Id} marked unavailable: {Reason}",
+                definition.Id, definition.UnavailableReason);
+            return;
         }
 
         var invalidModes = definition.TransportModes
@@ -910,12 +913,11 @@ public class ExtensionManager : IHostedService, IAsyncDisposable
 
         ExtensionError?.Invoke(extensionId);
 
-        if (_extensions.TryRemove(extensionId, out var lazy))
-            if (lazy.IsValueCreated)
-            {
-                extension.StateChanged -= OnExtensionStateChanged;
-                await extension.DisposeAsync();
-            }
+        if (_extensions.TryRemove(extensionId, out var lazy) && lazy.IsValueCreated)
+        {
+            extension.StateChanged -= OnExtensionStateChanged;
+            await extension.DisposeAsync();
+        }
     }
 
     /// <summary>

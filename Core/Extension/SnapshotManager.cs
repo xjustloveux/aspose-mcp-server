@@ -123,6 +123,7 @@ public class SnapshotManager : IHostedService, IDisposable
             }
             catch (OperationCanceledException)
             {
+                // Ignore cancellation during shutdown
             }
 
         CleanupAllPendingSnapshots();

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using AsposeMcpServer.Core.Conversion;
 using AsposeMcpServer.Core.Extension;
@@ -31,6 +32,8 @@ internal static class HostFactory
     /// <summary>
     ///     Server website URL for MCP protocol identification.
     /// </summary>
+    [SuppressMessage("SonarAnalyzer.CSharp", "S1075",
+        Justification = "Static project website URL for MCP protocol identification")]
     private const string ServerWebsiteUrl = "https://xjustloveux.github.io/aspose-mcp-server";
 
     /// <summary>

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using AsposeMcpServer.Core.Session;
 
 namespace AsposeMcpServer.Core.Extension;
@@ -20,6 +21,8 @@ public class ExtensionConfig
     /// <summary>
     ///     Temporary directory for snapshot files.
     /// </summary>
+    [SuppressMessage("SonarAnalyzer.CSharp", "S5443",
+        Justification = "System temp directory is validated in Validate() to prevent use of system directories")]
     public string TempDirectory { get; set; } = Path.GetTempPath();
 
     /// <summary>
@@ -569,24 +572,6 @@ public class ExtensionConfig
     }
 
     /// <summary>
-    ///     Validates a constrained integer setting.
-    /// </summary>
-    private static void ValidateConstrainedInt(ConstrainedInt setting, string name, int minFloor, int maxCeiling)
-    {
-        if (setting.Floor < minFloor)
-            throw new InvalidOperationException($"{name}.Floor must be at least {minFloor}");
-
-        if (setting.Ceiling > maxCeiling)
-            throw new InvalidOperationException($"{name}.Ceiling cannot exceed {maxCeiling}");
-
-        if (setting.Floor > setting.Ceiling)
-            throw new InvalidOperationException($"{name}.Floor cannot be greater than {name}.Ceiling");
-
-        if (setting.Default < setting.Floor || setting.Default > setting.Ceiling)
-            throw new InvalidOperationException($"{name}.Default must be between Floor and Ceiling");
-    }
-
-    /// <summary>
     ///     Validates the extension configuration with session config dependency check.
     /// </summary>
     /// <param name="sessionConfig">The session configuration to validate against.</param>
@@ -602,6 +587,24 @@ public class ExtensionConfig
             throw new InvalidOperationException(
                 "Extension requires Session to be enabled. " +
                 "Use --session-enabled together with --extension-enabled");
+    }
+
+    /// <summary>
+    ///     Validates a constrained integer setting.
+    /// </summary>
+    private static void ValidateConstrainedInt(ConstrainedInt setting, string name, int minFloor, int maxCeiling)
+    {
+        if (setting.Floor < minFloor)
+            throw new InvalidOperationException($"{name}.Floor must be at least {minFloor}");
+
+        if (setting.Ceiling > maxCeiling)
+            throw new InvalidOperationException($"{name}.Ceiling cannot exceed {maxCeiling}");
+
+        if (setting.Floor > setting.Ceiling)
+            throw new InvalidOperationException($"{name}.Floor cannot be greater than {name}.Ceiling");
+
+        if (setting.Default < setting.Floor || setting.Default > setting.Ceiling)
+            throw new InvalidOperationException($"{name}.Default must be between Floor and Ceiling");
     }
 
     /// <summary>

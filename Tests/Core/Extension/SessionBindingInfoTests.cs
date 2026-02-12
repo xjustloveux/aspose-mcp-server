@@ -1,3 +1,4 @@
+using AsposeMcpServer.Core.Conversion;
 using AsposeMcpServer.Core.Extension;
 using AsposeMcpServer.Core.Session;
 
@@ -32,6 +33,40 @@ public class SessionBindingInfoTests
         var exception = await Record.ExceptionAsync(() => Task.WhenAll(tasks));
 
         Assert.Null(exception);
+    }
+
+    #endregion
+
+    #region UpdateLastSent Backoff Tests
+
+    [Fact]
+    public void UpdateLastSent_ClearsBackoff()
+    {
+        var binding = new SessionBindingInfo(2);
+        binding.RecordConversionFailure();
+        binding.RecordConversionFailure();
+        Assert.True(binding.IsInBackoff());
+
+        binding.UpdateLastSent(DateTime.UtcNow);
+
+        Assert.False(binding.IsInBackoff());
+    }
+
+    #endregion
+
+    #region UpdateFormat Backoff Tests
+
+    [Fact]
+    public void UpdateFormat_ClearsBackoff()
+    {
+        var binding = new SessionBindingInfo(2);
+        binding.RecordConversionFailure();
+        binding.RecordConversionFailure();
+        Assert.True(binding.IsInBackoff());
+
+        binding.UpdateFormat("html");
+
+        Assert.False(binding.IsInBackoff());
     }
 
     #endregion
@@ -305,6 +340,141 @@ public class SessionBindingInfoTests
 
         Assert.Equal("group1", binding.Owner.GroupId);
         Assert.Equal("user1", binding.Owner.UserId);
+    }
+
+    #endregion
+
+    #region UpdateFormatAndOptions Tests
+
+    [Fact]
+    public void UpdateFormatAndOptions_SetsFormatAndOptionsAndNeedsSend()
+    {
+        var binding = new SessionBindingInfo
+        {
+            OutputFormat = "pdf",
+            NeedsSend = false
+        };
+        var options = new ConversionOptions { JpegQuality = 85 };
+
+        binding.UpdateFormatAndOptions("html", options);
+
+        Assert.Equal("html", binding.OutputFormat);
+        Assert.Equal(85, binding.ConversionOptions.JpegQuality);
+        Assert.True(binding.NeedsSend);
+    }
+
+    [Fact]
+    public void UpdateFormatAndOptions_ResetsConversionFailures()
+    {
+        var binding = new SessionBindingInfo();
+        binding.RecordConversionFailure();
+        binding.RecordConversionFailure();
+
+        binding.UpdateFormatAndOptions("html", new ConversionOptions());
+
+        Assert.Equal(0, binding.ConversionFailures);
+    }
+
+    [Fact]
+    public void UpdateFormatAndOptions_ClearsBackoff()
+    {
+        var binding = new SessionBindingInfo(2);
+        binding.RecordConversionFailure();
+        binding.RecordConversionFailure();
+        Assert.True(binding.IsInBackoff());
+
+        binding.UpdateFormatAndOptions("html", new ConversionOptions());
+
+        Assert.False(binding.IsInBackoff());
+    }
+
+    #endregion
+
+    #region ConversionOptions Tests
+
+    [Fact]
+    public void ConversionOptions_DefaultIsNewInstance()
+    {
+        var binding = new SessionBindingInfo();
+
+        Assert.NotNull(binding.ConversionOptions);
+    }
+
+    [Fact]
+    public void ConversionOptions_CanBeSet()
+    {
+        var options = new ConversionOptions
+        {
+            JpegQuality = 90,
+            Dpi = 150,
+            CsvSeparator = ";"
+        };
+        var binding = new SessionBindingInfo { ConversionOptions = options };
+
+        Assert.Equal(90, binding.ConversionOptions.JpegQuality);
+        Assert.Equal(150, binding.ConversionOptions.Dpi);
+        Assert.Equal(";", binding.ConversionOptions.CsvSeparator);
+    }
+
+    #endregion
+
+    #region GetOptionsCacheKey Tests
+
+    [Fact]
+    public void GetOptionsCacheKey_ReturnsConsistentHashForSameOptions()
+    {
+        var binding = new SessionBindingInfo
+        {
+            ConversionOptions = new ConversionOptions
+            {
+                JpegQuality = 85,
+                Dpi = 300
+            }
+        };
+
+        var key1 = binding.GetOptionsCacheKey();
+        var key2 = binding.GetOptionsCacheKey();
+
+        Assert.Equal(key1, key2);
+    }
+
+    [Fact]
+    public void GetOptionsCacheKey_ReturnsDifferentHashForDifferentOptions()
+    {
+        var binding1 = new SessionBindingInfo
+        {
+            ConversionOptions = new ConversionOptions { JpegQuality = 85 }
+        };
+        var binding2 = new SessionBindingInfo
+        {
+            ConversionOptions = new ConversionOptions { JpegQuality = 90 }
+        };
+
+        var key1 = binding1.GetOptionsCacheKey();
+        var key2 = binding2.GetOptionsCacheKey();
+
+        Assert.NotEqual(key1, key2);
+    }
+
+    [Fact]
+    public void GetOptionsCacheKey_IncludesAllRelevantOptions()
+    {
+        var binding = new SessionBindingInfo
+        {
+            ConversionOptions = new ConversionOptions
+            {
+                JpegQuality = 85,
+                CsvSeparator = ",",
+                PdfCompliance = "PDF/A-1b",
+                HtmlEmbedImages = true,
+                HtmlSingleFile = true,
+                Dpi = 300
+            }
+        };
+
+        var key = binding.GetOptionsCacheKey();
+
+        Assert.NotEqual(0, key);
     }
 
     #endregion

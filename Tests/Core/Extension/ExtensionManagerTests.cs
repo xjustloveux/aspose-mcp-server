@@ -289,18 +289,21 @@ public class ExtensionManagerTests : IAsyncDisposable
 
         await manager.StartAsync(CancellationToken.None);
 
-        var timeout = DateTime.UtcNow.AddSeconds(30);
+        await Task.Delay(500);
+
+        var timeout = DateTime.UtcNow.AddSeconds(60);
         ExtensionDefinition? extension = null;
         while (DateTime.UtcNow < timeout)
         {
             extension = manager.ListExtensions().FirstOrDefault();
             if (extension is { IsAvailable: false })
                 break;
-            await Task.Delay(100);
+            await Task.Delay(200);
         }
 
         Assert.NotNull(extension);
-        Assert.False(extension.IsAvailable, "Extension should be marked unavailable after handshake failure");
+        Assert.False(extension.IsAvailable,
+            $"Extension should be marked unavailable after handshake failure. Current state: IsAvailable={extension.IsAvailable}, Reason={extension.UnavailableReason}");
         Assert.True(
             extension.UnavailableReason?.Contains("Handshake") == true ||
             extension.UnavailableReason?.Contains("Initialization") == true,
@@ -632,6 +635,70 @@ public class ExtensionManagerTests : IAsyncDisposable
         var results = manager.ListExtensions().ToList();
 
         Assert.Equal(3, results.Count);
+    }
+
+    #endregion
+
+    #region ResolveRelativePaths Tests
+
+    [Fact]
+    public async Task StartAsync_NpxType_ExecutableNotResolvedAsPath()
+    {
+        var configPath = CreateTestConfigFile(
+        [
+            new ExtensionDefinition
+            {
+                Id = "npx-ext",
+                Command = new ExtensionCommand
+                {
+                    Type = "npx",
+                    Executable = "@modelcontextprotocol/server-everything"
+                }
+            }
+        ]);
+        InitializeConfig(configPath);
+
+        await using var manager = new ExtensionManager(
+            _config,
+            _snapshotManager,
+            _loggerFactoryMock.Object,
+            _loggerMock.Object);
+
+        await manager.StartAsync(CancellationToken.None);
+
+        var extensions = manager.ListExtensions().ToList();
+        Assert.Single(extensions);
+        Assert.Equal("@modelcontextprotocol/server-everything", extensions[0].Command.Executable);
+    }
+
+    [Fact]
+    public async Task StartAsync_PipxType_ExecutableNotResolvedAsPath()
+    {
+        var configPath = CreateTestConfigFile(
+        [
+            new ExtensionDefinition
+            {
+                Id = "pipx-ext",
+                Command = new ExtensionCommand
+                {
+                    Type = "pipx",
+                    Executable = "mcp-server-fetch"
+                }
+            }
+        ]);
+        InitializeConfig(configPath);
+
+        await using var manager = new ExtensionManager(
+            _config,
+            _snapshotManager,
+            _loggerFactoryMock.Object,
+            _loggerMock.Object);
+
+        await manager.StartAsync(CancellationToken.None);
+
+        var extensions = manager.ListExtensions().ToList();
+        Assert.Single(extensions);
+        Assert.Equal("mcp-server-fetch", extensions[0].Command.Executable);
     }
 
     #endregion

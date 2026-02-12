@@ -9,7 +9,7 @@ namespace AsposeMcpServer.Core.Extension;
 ///     Bridges document sessions with extensions, managing bindings and snapshot delivery.
 ///     Handles session-extension binding lifecycle and coordinated snapshot sending.
 /// </summary>
-public class ExtensionSessionBridge : IDisposable
+public sealed class ExtensionSessionBridge : IDisposable
 {
     /// <summary>
     ///     Separator for binding keys. Uses unit separator character unlikely to appear in IDs.
@@ -232,7 +232,6 @@ public class ExtensionSessionBridge : IDisposable
         _conversionCache.Clear();
         _closedSessions.Clear();
         _disposeCts.Dispose();
-        GC.SuppressFinalize(this);
     }
 
     /// <summary>
@@ -277,6 +276,7 @@ public class ExtensionSessionBridge : IDisposable
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
+                    // Ignore cancellation during shutdown
                 }
                 catch (Exception ex)
                 {
@@ -330,6 +330,7 @@ public class ExtensionSessionBridge : IDisposable
             }
             catch (AggregateException)
             {
+                // Ignore errors from pending tasks during disposal
             }
     }
 
@@ -1240,9 +1241,9 @@ public class ExtensionSessionBridge : IDisposable
             {
                 lockToDispose.Dispose();
             }
-            // ReSharper disable once EmptyGeneralCatchClause - Best-effort disposal during cleanup
             catch
             {
+                // Ignore lock disposal errors during cleanup
             }
     }
 

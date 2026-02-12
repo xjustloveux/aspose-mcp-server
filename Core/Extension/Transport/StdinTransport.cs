@@ -132,23 +132,23 @@ public class StdinTransport : IExtensionTransport
 
             return true;
         }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
         {
-            _logger?.LogWarning(
+            _logger?.LogWarning(ex,
                 "Stdin write timed out after {Timeout}ms for session {SessionId}",
                 _writeTimeoutMs, metadata.SessionId);
             return false;
         }
         catch (IOException ioEx) when (IsStdinClosedError(ioEx))
         {
-            _logger?.LogWarning(
+            _logger?.LogWarning(ioEx,
                 "Stdin was closed during write for session {SessionId}. Process may have terminated.",
                 metadata.SessionId);
             return false;
         }
-        catch (ObjectDisposedException)
+        catch (ObjectDisposedException ex)
         {
-            _logger?.LogWarning(
+            _logger?.LogWarning(ex,
                 "Stdin stream was disposed for session {SessionId}. Process may have terminated.",
                 metadata.SessionId);
             return false;

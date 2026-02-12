@@ -394,9 +394,9 @@ public class MmapTransport : IExtensionTransport, IDisposable
             if (File.Exists(filePath))
                 File.Delete(filePath);
         }
-// ReSharper disable once EmptyGeneralCatchClause
         catch
         {
+            // Ignore file deletion errors during cleanup
         }
     }
 

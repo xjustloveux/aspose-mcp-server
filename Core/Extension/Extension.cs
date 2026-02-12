@@ -283,9 +283,9 @@ public class Extension : IAsyncDisposable
                     await _readerCts.CancelAsync();
                     _readerCts.Dispose();
                 }
-                // ReSharper disable once EmptyGeneralCatchClause
                 catch
                 {
+                    // Ignore disposal errors during cleanup
                 }
 
                 _readerCts = null;
@@ -523,6 +523,7 @@ public class Extension : IAsyncDisposable
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The deserialized message.</returns>
     private async Task<T> WaitForMessageAsync<T>(string expectedType, CancellationToken cancellationToken)
+        where T : class
     {
         var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -845,7 +846,7 @@ public class Extension : IAsyncDisposable
             _stdinLock.Release();
         }
 
-        if (!waitForResponse || tcs == null)
+        if (!waitForResponse)
             return CommandResponse.Success(commandId);
 
         try
@@ -853,7 +854,7 @@ public class Extension : IAsyncDisposable
             using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeoutCts.CancelAfter(timeoutMs);
 
-            var completedTask = await Task.WhenAny(tcs.Task, Task.Delay(Timeout.Infinite, timeoutCts.Token));
+            var completedTask = await Task.WhenAny(tcs!.Task, Task.Delay(Timeout.Infinite, timeoutCts.Token));
             if (completedTask == tcs.Task)
                 return await tcs.Task;
 
@@ -904,9 +905,6 @@ public class Extension : IAsyncDisposable
 
         try
         {
-            if (_disposed)
-                return false;
-
             try
             {
                 await _processLock.WaitAsync();
@@ -1134,9 +1132,9 @@ public class Extension : IAsyncDisposable
                         {
                             _stdinLock.Release();
                         }
-                        // ReSharper disable once EmptyGeneralCatchClause
                         catch
                         {
+                            // Ignore semaphore release errors during shutdown
                         }
 
                     _process.Kill(true);
@@ -1149,9 +1147,9 @@ public class Extension : IAsyncDisposable
                         {
                             _stdinLock.Release();
                         }
-                        // ReSharper disable once EmptyGeneralCatchClause
                         catch
                         {
+                            // Ignore semaphore release errors during shutdown
                         }
 
                     try
@@ -1555,6 +1553,7 @@ public class Extension : IAsyncDisposable
         }
         catch (OperationCanceledException)
         {
+            // Ignore cancellation during shutdown
         }
         catch (Exception ex)
         {
@@ -1602,6 +1601,7 @@ public class Extension : IAsyncDisposable
         }
         catch (OperationCanceledException)
         {
+            // Ignore cancellation during shutdown
         }
         catch (Exception ex)
         {
@@ -1809,6 +1809,7 @@ public class Extension : IAsyncDisposable
             }
             catch (InvalidOperationException)
             {
+                // Ignore: process may have already been disposed
             }
 
             _logger.LogWarning(
@@ -1840,9 +1841,9 @@ public class Extension : IAsyncDisposable
             {
                 await _readerCts.CancelAsync();
             }
-            // ReSharper disable once EmptyGeneralCatchClause
             catch
             {
+                // Ignore cancellation errors during cleanup
             }
 
         var readerTaskTimeout = TimeSpan.FromSeconds(ReaderTaskCleanupTimeoutSeconds);
@@ -1860,9 +1861,9 @@ public class Extension : IAsyncDisposable
                     "This may indicate the process is hung or streams are blocked.",
                     _definition.Id, ReaderTaskCleanupTimeoutSeconds);
             }
-            // ReSharper disable once EmptyGeneralCatchClause
             catch
             {
+                // Ignore reader task errors during cleanup
             }
 
             _stdoutReaderTask = null;
@@ -1880,9 +1881,9 @@ public class Extension : IAsyncDisposable
                     "stderr reader task for extension {ExtensionId} did not complete within {Timeout}s",
                     _definition.Id, ReaderTaskCleanupTimeoutSeconds);
             }
-            // ReSharper disable once EmptyGeneralCatchClause
             catch
             {
+                // Ignore reader task errors during cleanup
             }
 
             _stderrReaderTask = null;

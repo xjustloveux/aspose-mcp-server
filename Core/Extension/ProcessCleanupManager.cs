@@ -298,15 +298,15 @@ public sealed class ProcessCleanupManager : IDisposable
                 return;
             }
 
-            var info = new JOBOBJECT_EXTENDED_LIMIT_INFORMATION
+            var info = new JobObjectExtendedLimitInformation
             {
-                BasicLimitInformation = new JOBOBJECT_BASIC_LIMIT_INFORMATION
+                BasicLimitInformation = new JobObjectBasicLimitInformation
                 {
                     LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
                 }
             };
 
-            var length = Marshal.SizeOf(typeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION));
+            var length = Marshal.SizeOf(typeof(JobObjectExtendedLimitInformation));
             var infoPtr = Marshal.AllocHGlobal(length);
 
             try
@@ -373,7 +373,7 @@ public sealed class ProcessCleanupManager : IDisposable
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    private struct JOBOBJECT_BASIC_LIMIT_INFORMATION
+    private struct JobObjectBasicLimitInformation
     {
         public long PerProcessUserTimeLimit;
         public long PerJobUserTimeLimit;
@@ -387,7 +387,7 @@ public sealed class ProcessCleanupManager : IDisposable
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    private struct IO_COUNTERS
+    private struct IoCounters
     {
         public ulong ReadOperationCount;
         public ulong WriteOperationCount;
@@ -398,10 +398,10 @@ public sealed class ProcessCleanupManager : IDisposable
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    private struct JOBOBJECT_EXTENDED_LIMIT_INFORMATION
+    private struct JobObjectExtendedLimitInformation
     {
-        public JOBOBJECT_BASIC_LIMIT_INFORMATION BasicLimitInformation;
-        public IO_COUNTERS IoInfo;
+        public JobObjectBasicLimitInformation BasicLimitInformation;
+        public IoCounters IoInfo;
         public UIntPtr ProcessMemoryLimit;
         public UIntPtr JobMemoryLimit;
         public UIntPtr PeakProcessMemoryUsed;
