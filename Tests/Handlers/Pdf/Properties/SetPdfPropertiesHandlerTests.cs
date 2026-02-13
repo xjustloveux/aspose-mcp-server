@@ -128,6 +128,26 @@ public class SetPdfPropertiesHandlerTests : PdfHandlerTestBase
 
     #endregion
 
+    #region Result Message Validation
+
+    [Fact]
+    public void Execute_ReturnsSuccessMessage()
+    {
+        var doc = CreateDocumentWithPages(1);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "title", "Test Title" }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<SuccessResult>(res);
+        Assert.Contains("properties updated", result.Message);
+    }
+
+    #endregion
+
     #region Basic Set Operations
 
     [Fact]
@@ -317,6 +337,107 @@ public class SetPdfPropertiesHandlerTests : PdfHandlerTestBase
         Assert.IsType<SuccessResult>(res);
         if (!IsEvaluationMode(AsposeLibraryType.Pdf))
             Assert.Equal(originalTitle, doc.Info.Title);
+        AssertModified(context);
+    }
+
+    [Fact]
+    public void Execute_WithAllEmptyValues_DoesNotFail()
+    {
+        var doc = CreateDocumentWithPages(1);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "title", "" },
+            { "author", "" },
+            { "subject", "" },
+            { "keywords", "" },
+            { "creator", "" },
+            { "producer", "" }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        Assert.IsType<SuccessResult>(res);
+        AssertModified(context);
+    }
+
+    [Fact]
+    public void Execute_WithAllNullValues_DoesNotFail()
+    {
+        var doc = CreateDocumentWithPages(1);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "title", null },
+            { "author", null },
+            { "subject", null },
+            { "keywords", null },
+            { "creator", null },
+            { "producer", null }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        Assert.IsType<SuccessResult>(res);
+        AssertModified(context);
+    }
+
+    #endregion
+
+    #region Special Characters
+
+    [Fact]
+    public void Execute_WithSpecialCharactersInTitle_SetsTitle()
+    {
+        var doc = CreateDocumentWithPages(1);
+        var context = CreateContext(doc);
+        var specialTitle = "Test <Title> with \"Special\" & 'Characters'";
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "title", specialTitle }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+            Assert.Equal(specialTitle, doc.Info.Title);
+        AssertModified(context);
+    }
+
+    [Fact]
+    public void Execute_WithUnicodeCharacters_SetsProperties()
+    {
+        var doc = CreateDocumentWithPages(1);
+        var context = CreateContext(doc);
+        var unicodeTitle = "文件標題 ドキュメント 문서";
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "title", unicodeTitle }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
+            Assert.Equal(unicodeTitle, doc.Info.Title);
+        AssertModified(context);
+    }
+
+    [Fact]
+    public void Execute_WithLongValues_SetsProperties()
+    {
+        var doc = CreateDocumentWithPages(1);
+        var context = CreateContext(doc);
+        var longValue = new string('A', 1000);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "title", longValue }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        Assert.IsType<SuccessResult>(res);
         AssertModified(context);
     }
 

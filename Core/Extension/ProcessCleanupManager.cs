@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 
@@ -354,9 +355,15 @@ public sealed class ProcessCleanupManager : IDisposable
     /// </remarks>
     private const uint JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x2000;
 
+    [SuppressMessage("Interoperability", "SYSLIB1054",
+        Justification =
+            "DllImport preferred over LibraryImport to avoid AllowUnsafeBlocks; these APIs are called infrequently")]
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern SafeFileHandle CreateJobObject(IntPtr lpJobAttributes, string? lpName);
 
+    [SuppressMessage("Interoperability", "SYSLIB1054",
+        Justification =
+            "DllImport preferred over LibraryImport to avoid AllowUnsafeBlocks; these APIs are called infrequently")]
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern bool SetInformationJobObject(
         SafeHandle hJob,
@@ -364,6 +371,9 @@ public sealed class ProcessCleanupManager : IDisposable
         IntPtr lpJobObjectInfo,
         uint cbJobObjectInfoLength);
 
+    [SuppressMessage("Interoperability", "SYSLIB1054",
+        Justification =
+            "DllImport preferred over LibraryImport to avoid AllowUnsafeBlocks; these APIs are called infrequently")]
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern bool AssignProcessToJobObject(SafeHandle hJob, SafeHandle hProcess);
 

@@ -81,11 +81,6 @@ public sealed class ExtensionSessionBridge : IDisposable
     private readonly TimeSpan _conversionCacheTtl;
 
     /// <summary>
-    ///     Document conversion service for format conversion.
-    /// </summary>
-    private readonly DocumentConversionService _conversionService;
-
-    /// <summary>
     ///     Debounce delay for session modifications.
     /// </summary>
     private readonly TimeSpan _debounceDelay;
@@ -154,19 +149,16 @@ public sealed class ExtensionSessionBridge : IDisposable
     /// <param name="config">Extension configuration.</param>
     /// <param name="sessionManager">Document session manager.</param>
     /// <param name="extensionManager">Extension manager.</param>
-    /// <param name="conversionService">Document conversion service.</param>
     /// <param name="logger">Logger instance.</param>
     public ExtensionSessionBridge(
         ExtensionConfig config,
         DocumentSessionManager sessionManager,
         ExtensionManager extensionManager,
-        DocumentConversionService conversionService,
         ILogger<ExtensionSessionBridge> logger)
     {
         _config = config;
         _sessionManager = sessionManager;
         _extensionManager = extensionManager;
-        _conversionService = conversionService;
         _logger = logger;
 
         _debounceDelay = TimeSpan.FromMilliseconds(config.DebounceDelayMs);
@@ -347,16 +339,16 @@ public sealed class ExtensionSessionBridge : IDisposable
 
         _pendingModifications.AddOrUpdate(
             sessionId,
-            _ =>
+            key =>
             {
                 var timer = new Timer(
                     OnDebounceTimerElapsed,
-                    sessionId,
+                    key,
                     _debounceDelay,
                     Timeout.InfiniteTimeSpan);
                 return (requestor, timer);
             },
-            (_, existing) =>
+            (key, existing) =>
             {
                 try
                 {
@@ -366,7 +358,7 @@ public sealed class ExtensionSessionBridge : IDisposable
                 {
                     var newTimer = new Timer(
                         OnDebounceTimerElapsed,
-                        sessionId,
+                        key,
                         _debounceDelay,
                         Timeout.InfiniteTimeSpan);
                     return (requestor, newTimer);
@@ -419,9 +411,9 @@ public sealed class ExtensionSessionBridge : IDisposable
                 {
                     await OnSessionModifiedAsync(sessionId, pending.Requestor, cancellationToken);
                 }
-                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
                 {
-                    _logger.LogDebug(
+                    _logger.LogDebug(ex,
                         "Session modified handling cancelled for session {SessionId}",
                         sessionId);
                 }
@@ -514,9 +506,9 @@ public sealed class ExtensionSessionBridge : IDisposable
                         await extension.NotifySessionClosedAsync(sessionId, ConvertOwner(owner), cancellationToken);
                 }
             }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
             {
-                _logger.LogDebug(
+                _logger.LogDebug(ex,
                     "Session closed notification cancelled for session {SessionId}",
                     sessionId);
             }
@@ -579,7 +571,7 @@ public sealed class ExtensionSessionBridge : IDisposable
                 ExtensionErrorCode.FormatNotSupported,
                 $"Extension '{extensionId}' cannot handle document type '{session.Type}' with format '{outputFormat}'");
 
-        if (!_conversionService.IsFormatSupported(session.Type, outputFormat))
+        if (!DocumentConverter.IsFormatSupported(session.Type, outputFormat))
             return BindingResult.Failure(
                 ExtensionErrorCode.FormatNotSupported,
                 $"Format '{outputFormat}' is not supported for document type '{session.Type}'");
@@ -788,7 +780,7 @@ public sealed class ExtensionSessionBridge : IDisposable
         if (session == null)
             return BindingResult.Failure(ExtensionErrorCode.SessionNotFound, $"Session not found: {sessionId}");
 
-        if (!_conversionService.IsFormatSupported(session.Type, newFormat))
+        if (!DocumentConverter.IsFormatSupported(session.Type, newFormat))
             return BindingResult.Failure(
                 ExtensionErrorCode.FormatNotSupported,
                 $"Format '{newFormat}' is not supported for document type '{session.Type}'");
@@ -1281,7 +1273,7 @@ public sealed class ExtensionSessionBridge : IDisposable
         try
         {
             var data = await session.ExecuteAsync(
-                doc => _conversionService.ConvertToBytes(doc, session.Type, outputFormat, options),
+                doc => DocumentConverter.ConvertToBytes(doc, session.Type, outputFormat, options),
                 cancellationToken);
 
             if (!_closedSessions.ContainsKey(session.SessionId))
@@ -1292,16 +1284,16 @@ public sealed class ExtensionSessionBridge : IDisposable
 
             return data;
         }
-        catch (ObjectDisposedException)
+        catch (ObjectDisposedException ex)
         {
-            _logger.LogDebug(
+            _logger.LogDebug(ex,
                 "Session {SessionId} was closed during conversion to {Format}",
                 session.SessionId, outputFormat);
             return null;
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
-            _logger.LogDebug(
+            _logger.LogDebug(ex,
                 "Conversion of session {SessionId} to {Format} was cancelled",
                 session.SessionId, outputFormat);
             return null;
@@ -1390,7 +1382,7 @@ public sealed class ExtensionSessionBridge : IDisposable
             DocumentType = session.Type.ToString().ToLowerInvariant(),
             OriginalPath = session.Path,
             OutputFormat = outputFormat,
-            MimeType = _conversionService.GetMimeType(outputFormat),
+            MimeType = DocumentConverter.GetMimeType(outputFormat),
             Timestamp = DateTime.UtcNow,
             Owner = ConvertOwner(session.Owner)
         };

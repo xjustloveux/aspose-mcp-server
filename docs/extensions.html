@@ -945,6 +945,105 @@ if __name__ == '__main__':
 </div>
 
 <div class="section">
+    <h2>🎯 實際範例：aspose-mcp-preview</h2>
+    <p>
+        <a href="https://github.com/xjustloveux/aspose-mcp-preview" target="_blank">
+            <strong>aspose-mcp-preview</strong>
+        </a>
+        是一個完整的擴充功能實作範例，提供即時文檔預覽功能。透過 WebSocket 即時更新，讓 MCP 客戶端在編輯文檔時可同步在瀏覽器中查看 PNG、HTML 或 PDF 預覽。
+    </p>
+
+    <h3>功能展示</h3>
+    <div style="text-align: center; margin: 20px 0;">
+        <img src="images/aspose-mcp-preview-demo.gif" alt="aspose-mcp-preview 操作展示" style="max-width: 100%; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+    </div>
+
+    <h3>主要功能</h3>
+    <ul class="feature-list">
+        <li><strong>即時預覽</strong> - 透過 WebSocket 即時更新，文檔變更立即反映在預覽畫面</li>
+        <li><strong>多格式支援</strong> - 支援 Word、Excel、PowerPoint、PDF 文檔類型</li>
+        <li><strong>多種輸出格式</strong> - 可輸出為 PNG、HTML、PDF 格式</li>
+        <li><strong>多 Session 管理</strong> - 支援多個 Session 同時預覽，可快速切換</li>
+        <li><strong>縮放控制</strong> - 自適應、100%、自訂百分比等縮放選項</li>
+        <li><strong>PDF 頁面導覽</strong> - PDF 文檔支援頁面切換導覽</li>
+        <li><strong>主題切換</strong> - 支援亮色、暗色、跟隨系統主題</li>
+        <li><strong>除錯日誌</strong> - 可收合的日誌面板，方便開發除錯</li>
+    </ul>
+
+    <h3>快速安裝</h3>
+    <p>在 <code>extensions.json</code> 中加入以下配置：</p>
+    <div class="code-wrapper">
+        <button class="copy-button" onclick="copyCode(this)">📋 複製</button>
+        <pre class="code-block">{
+  "extensions": {
+    "preview": {
+      "command": {
+        "type": "npx",
+        "executable": "aspose-mcp-preview",
+        "arguments": "--port 3000"
+      },
+      "inputFormats": ["png", "html", "pdf"],
+      "supportedDocumentTypes": ["word", "excel", "powerpoint", "pdf"],
+      "transportModes": ["stdin", "file", "mmap"],
+      "preferredTransportMode": "stdin",
+      "capabilities": {
+        "supportsHeartbeat": true,
+        "idleTimeoutMinutes": 0
+      }
+    }
+  }
+}</pre>
+    </div>
+
+    <h3>命令列選項</h3>
+    <table class="tool-detail-table">
+        <tr>
+            <th style="width: 150px;">選項</th>
+            <th style="width: 100px;">預設值</th>
+            <th>說明</th>
+        </tr>
+        <tr>
+            <td>
+                <code>--port</code>
+            </td>
+            <td>3000</td>
+            <td>Web 伺服器連接埠</td>
+        </tr>
+        <tr>
+            <td>
+                <code>--host</code>
+            </td>
+            <td>localhost</td>
+            <td>Web 伺服器主機名稱</td>
+        </tr>
+        <tr>
+            <td>
+                <code>--no-open</code>
+            </td>
+            <td>false</td>
+            <td>啟動時不自動開啟瀏覽器</td>
+        </tr>
+        <tr>
+            <td>
+                <code>--transport</code>
+            </td>
+            <td>stdin</td>
+            <td>傳輸模式：stdin / file / mmap</td>
+        </tr>
+    </table>
+
+    <div class="info-box" style="margin-top: 20px;">
+        <strong>📦 更多資訊</strong>
+        <p style="margin-top: 8px; margin-bottom: 0;">
+            完整文檔、原始碼與更新請參考
+            <a href="https://github.com/xjustloveux/aspose-mcp-preview" target="_blank">
+                <strong>GitHub - aspose-mcp-preview</strong>
+            </a>
+        </p>
+    </div>
+</div>
+
+<div class="section">
     <h2>📝 最佳實踐</h2>
 
     <h3>握手協議</h3>
@@ -964,7 +1063,8 @@ if __name__ == '__main__':
 
     <h3>效能優化</h3>
     <ul class="feature-list">
-        <li>優先使用 file 傳輸模式，實作最簡單</li>
+        <li>優先使用 stdin 傳輸模式（預設），跨平台且無磁碟 I/O 開銷</li>
+        <li>需要最佳效能時可使用 mmap 模式（Windows/Linux 零拷貝）</li>
         <li>及時發送 ACK 確認，避免重試</li>
         <li>設定合理的 frameIntervalMs 配合擴展處理能力</li>
     </ul>
@@ -980,6 +1080,11 @@ if __name__ == '__main__':
 <div class="section">
     <h2>🔗 相關資源</h2>
     <ul class="feature-list">
+        <li>
+            <a href="https://github.com/xjustloveux/aspose-mcp-preview" target="_blank">
+                <strong>aspose-mcp-preview</strong>
+            </a> - 即時文檔預覽擴充功能（完整實作範例）
+        </li>
         <li>
             <a href="tools.html#extension-擴充功能">擴充功能工具操作文檔</a>
         </li>

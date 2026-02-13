@@ -10,6 +10,15 @@ namespace AsposeMcpServer.Tests.Core.Extension;
 /// </summary>
 public class ExtensionManagerTests : IAsyncDisposable
 {
+    /// <summary>
+    ///     Cached JSON serializer options for test configuration serialization.
+    /// </summary>
+    private static readonly JsonSerializerOptions TestJsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = true
+    };
+
     private readonly Mock<ILoggerFactory> _loggerFactoryMock;
     private readonly Mock<ILogger<ExtensionManager>> _loggerMock;
     private readonly Mock<ILogger<SnapshotManager>> _snapshotLoggerMock;
@@ -93,11 +102,7 @@ public class ExtensionManagerTests : IAsyncDisposable
         {
             Extensions = extensions.ToDictionary(e => e.Id, e => e)
         };
-        var json = JsonSerializer.Serialize(configFile, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            WriteIndented = true
-        });
+        var json = JsonSerializer.Serialize(configFile, TestJsonOptions);
 
         var configPath = Path.Combine(_tempDir, $"extensions_{Guid.NewGuid():N}.json");
         File.WriteAllText(configPath, json);

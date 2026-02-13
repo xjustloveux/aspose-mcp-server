@@ -617,12 +617,12 @@ public class ExtensionConfig
             .ToLowerInvariant();
 
         var forbiddenPaths = GetForbiddenPaths();
-        foreach (var forbidden in forbiddenPaths)
-            if (normalizedPath.Equals(forbidden, StringComparison.OrdinalIgnoreCase) ||
-                normalizedPath.StartsWith(forbidden + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException(
-                    $"TempDirectory cannot be set to system directory: {tempDir}. " +
-                    "Please use a user-writable directory like the system temp folder.");
+        if (forbiddenPaths.Any(forbidden =>
+                normalizedPath.Equals(forbidden, StringComparison.OrdinalIgnoreCase) ||
+                normalizedPath.StartsWith(forbidden + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidOperationException(
+                $"TempDirectory cannot be set to system directory: {tempDir}. " +
+                "Please use a user-writable directory like the system temp folder.");
 
         try
         {

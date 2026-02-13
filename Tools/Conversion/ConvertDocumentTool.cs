@@ -174,27 +174,27 @@ Usage examples:
         {
             case DocumentType.Word:
                 var wordDoc = _sessionManager.GetDocument<Document>(sessionId, identity);
-                DocumentConversionService.ConvertWordDocument(wordDoc, outputPath, outputExtension, progress, options);
+                DocumentConverter.ConvertWordDocument(wordDoc, outputPath, outputExtension, progress, options);
                 sourceType = "Word";
                 break;
 
             case DocumentType.Excel:
                 var workbook = _sessionManager.GetDocument<Workbook>(sessionId, identity);
-                DocumentConversionService.ConvertExcelDocument(workbook, outputPath, outputExtension, progress,
+                DocumentConverter.ConvertExcelDocument(workbook, outputPath, outputExtension, progress,
                     options);
                 sourceType = "Excel";
                 break;
 
             case DocumentType.PowerPoint:
                 var presentation = _sessionManager.GetDocument<Presentation>(sessionId, identity);
-                DocumentConversionService.ConvertPowerPointDocument(presentation, outputPath, outputExtension,
+                DocumentConverter.ConvertPowerPointDocument(presentation, outputPath, outputExtension,
                     progress, options);
                 sourceType = "PowerPoint";
                 break;
 
             case DocumentType.Pdf:
                 var pdfDoc = _sessionManager.GetDocument<Aspose.Pdf.Document>(sessionId, identity);
-                DocumentConversionService.ConvertPdfDocument(pdfDoc, outputPath, outputExtension, options);
+                DocumentConverter.ConvertPdfDocument(pdfDoc, outputPath, outputExtension, options);
                 sourceType = "PDF";
                 break;
 
@@ -230,48 +230,48 @@ Usage examples:
         var inputExtension = Path.GetExtension(inputPath).ToLower();
         string sourceFormat;
 
-        if (DocumentConversionService.IsWordDocument(inputExtension))
+        if (DocumentConverter.IsWordDocument(inputExtension))
         {
             var doc = new Document(inputPath);
-            DocumentConversionService.ConvertWordDocument(doc, outputPath, outputExtension, progress, options);
+            DocumentConverter.ConvertWordDocument(doc, outputPath, outputExtension, progress, options);
             sourceFormat = "Word";
         }
-        else if (DocumentConversionService.IsExcelDocument(inputExtension))
+        else if (DocumentConverter.IsExcelDocument(inputExtension))
         {
             using var workbook = new Workbook(inputPath);
-            DocumentConversionService.ConvertExcelDocument(workbook, outputPath, outputExtension, progress, options);
+            DocumentConverter.ConvertExcelDocument(workbook, outputPath, outputExtension, progress, options);
             sourceFormat = "Excel";
         }
-        else if (DocumentConversionService.IsPowerPointDocument(inputExtension))
+        else if (DocumentConverter.IsPowerPointDocument(inputExtension))
         {
             using var presentation = new Presentation(inputPath);
-            DocumentConversionService.ConvertPowerPointDocument(presentation, outputPath, outputExtension, progress,
+            DocumentConverter.ConvertPowerPointDocument(presentation, outputPath, outputExtension, progress,
                 options);
             sourceFormat = "PowerPoint";
         }
-        else if (DocumentConversionService.IsPdfDocument(inputExtension))
+        else if (DocumentConverter.IsPdfDocument(inputExtension))
         {
-            if (DocumentConversionService.IsImageFormat(outputExtension))
+            if (DocumentConverter.IsImageFormat(outputExtension))
             {
-                DocumentConversionService.ConvertPdfToImages(inputPath, outputPath, outputExtension, options.PageIndex,
+                DocumentConverter.ConvertPdfToImages(inputPath, outputPath, outputExtension, options.PageIndex,
                     options);
             }
             else
             {
                 using var pdfDoc = new Aspose.Pdf.Document(inputPath);
-                DocumentConversionService.ConvertPdfDocument(pdfDoc, outputPath, outputExtension, options);
+                DocumentConverter.ConvertPdfDocument(pdfDoc, outputPath, outputExtension, options);
             }
 
             sourceFormat = "PDF";
         }
-        else if (DocumentConversionService.IsPdfConvertibleFormat(inputExtension))
+        else if (DocumentConverter.IsPdfConvertibleFormat(inputExtension))
         {
             var normalizedOutput = outputExtension.TrimStart('.').ToLowerInvariant();
             if (normalizedOutput != "pdf")
                 throw new ArgumentException(
                     $"Format '{inputExtension}' can only be converted to PDF, not '{outputExtension}'");
 
-            sourceFormat = DocumentConversionService.ConvertToPdfFromSpecialFormat(inputPath, outputPath);
+            sourceFormat = DocumentConverter.ConvertToPdfFromSpecialFormat(inputPath, outputPath);
         }
         else
         {

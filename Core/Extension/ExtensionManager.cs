@@ -12,6 +12,14 @@ namespace AsposeMcpServer.Core.Extension;
 public class ExtensionManager : IHostedService, IAsyncDisposable
 {
     /// <summary>
+    ///     Cached JSON serializer options for deserializing extension configuration.
+    /// </summary>
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
+    /// <summary>
     ///     Valid transport modes supported by the system.
     /// </summary>
     /// <remarks>
@@ -162,8 +170,7 @@ public class ExtensionManager : IHostedService, IAsyncDisposable
         {
             fileTransport?.Dispose();
             mmapTransport?.Dispose();
-            if (processCleanupManager != null)
-                processCleanupManager.Dispose();
+            processCleanupManager?.Dispose();
             throw;
         }
     }
@@ -191,9 +198,9 @@ public class ExtensionManager : IHostedService, IAsyncDisposable
             {
                 // Ignore cancellation during shutdown
             }
-            catch (TimeoutException)
+            catch (TimeoutException ex)
             {
-                _logger.LogDebug("Health check task did not complete within timeout during disposal");
+                _logger.LogDebug(ex, "Health check task did not complete within timeout during disposal");
             }
 
         if (_initializationTask != null)
@@ -205,9 +212,9 @@ public class ExtensionManager : IHostedService, IAsyncDisposable
             {
                 // Ignore cancellation during shutdown
             }
-            catch (TimeoutException)
+            catch (TimeoutException ex)
             {
-                _logger.LogDebug("Background initialization task did not complete within timeout during disposal");
+                _logger.LogDebug(ex, "Background initialization task did not complete within timeout during disposal");
             }
 
         _healthCheckCts?.Dispose();
@@ -220,9 +227,9 @@ public class ExtensionManager : IHostedService, IAsyncDisposable
             {
                 await Task.WhenAll(restartTasks).WaitAsync(TimeSpan.FromSeconds(10));
             }
-            catch (TimeoutException)
+            catch (TimeoutException ex)
             {
-                _logger.LogWarning("Timed out waiting for restart tasks during disposal");
+                _logger.LogWarning(ex, "Timed out waiting for restart tasks during disposal");
             }
             catch (Exception ex)
             {
@@ -460,10 +467,7 @@ public class ExtensionManager : IHostedService, IAsyncDisposable
         try
         {
             var json = await File.ReadAllTextAsync(_config.ConfigPath, cancellationToken);
-            var configFile = JsonSerializer.Deserialize<ExtensionsConfigFile>(json, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            var configFile = JsonSerializer.Deserialize<ExtensionsConfigFile>(json, JsonOptions);
 
             if (configFile?.Extensions == null || configFile.Extensions.Count == 0)
             {
@@ -587,7 +591,7 @@ public class ExtensionManager : IHostedService, IAsyncDisposable
         }
         catch (OperationCanceledException ex)
         {
-            _logger.LogWarning("Handshake timeout for extension {Id}", definition.Id);
+            _logger.LogWarning(ex, "Handshake timeout for extension {Id}", definition.Id);
             definition.IsAvailable = false;
             definition.UnavailableReason = $"Handshake timeout: {ex.Message}";
             return false;
@@ -1080,9 +1084,9 @@ public class ExtensionManager : IHostedService, IAsyncDisposable
             if (extension.State == ExtensionState.Idle)
                 await extension.SendHeartbeatAsync(timeoutCts.Token);
         }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
         {
-            _logger.LogWarning(
+            _logger.LogWarning(ex,
                 "Health check for extension {Id} timed out",
                 extension.Definition.Id);
         }

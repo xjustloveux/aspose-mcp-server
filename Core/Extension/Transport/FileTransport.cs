@@ -166,10 +166,10 @@ public class FileTransport : IExtensionTransport, IDisposable
                 metadata.SessionId, _tempDirectory);
             return false;
         }
-        catch (DirectoryNotFoundException)
+        catch (DirectoryNotFoundException ex)
         {
             CleanupFailedFile(filePath);
-            _logger?.LogWarning(
+            _logger?.LogWarning(ex,
                 "Temp directory was deleted during snapshot write for session {SessionId}",
                 metadata.SessionId);
             return false;

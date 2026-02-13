@@ -257,7 +257,7 @@ public class ProcessCleanupManagerTests : IDisposable
 
         var result = _manager.GetZombieProcesses();
 
-        Assert.IsAssignableFrom<IReadOnlyList<int>>(result);
+        Assert.IsType<IReadOnlyList<int>>(result, false);
     }
 
     #endregion

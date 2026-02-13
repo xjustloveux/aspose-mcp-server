@@ -424,8 +424,7 @@ public class Extension : IAsyncDisposable
     /// </exception>
     public async Task PerformHandshakeAsync(CancellationToken cancellationToken = default)
     {
-        if (_disposed)
-            throw new ObjectDisposedException(nameof(Extension));
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
         if (_state != ExtensionState.Starting &&
             _state != ExtensionState.Initializing &&
@@ -1123,9 +1122,9 @@ public class Extension : IAsyncDisposable
                             _stdinLock.Release();
                         }
                 }
-                catch (OperationCanceledException)
+                catch (OperationCanceledException ex)
                 {
-                    _logger.LogWarning("Extension {ExtensionId} did not exit gracefully, killing process",
+                    _logger.LogWarning(ex, "Extension {ExtensionId} did not exit gracefully, killing process",
                         _definition.Id);
                     if (stdinLockAcquired)
                         try
@@ -1854,9 +1853,9 @@ public class Extension : IAsyncDisposable
             {
                 await _stdoutReaderTask.WaitAsync(readerTaskTimeout);
             }
-            catch (TimeoutException)
+            catch (TimeoutException ex)
             {
-                _logger.LogWarning(
+                _logger.LogWarning(ex,
                     "stdout reader task for extension {ExtensionId} did not complete within {Timeout}s. " +
                     "This may indicate the process is hung or streams are blocked.",
                     _definition.Id, ReaderTaskCleanupTimeoutSeconds);
@@ -1875,9 +1874,9 @@ public class Extension : IAsyncDisposable
             {
                 await _stderrReaderTask.WaitAsync(readerTaskTimeout);
             }
-            catch (TimeoutException)
+            catch (TimeoutException ex)
             {
-                _logger.LogWarning(
+                _logger.LogWarning(ex,
                     "stderr reader task for extension {ExtensionId} did not complete within {Timeout}s",
                     _definition.Id, ReaderTaskCleanupTimeoutSeconds);
             }
@@ -2049,9 +2048,9 @@ public class Extension : IAsyncDisposable
             await process.StandardInput.FlushAsync(timeoutCts.Token);
             return true;
         }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
         {
-            _logger.LogWarning(
+            _logger.LogWarning(ex,
                 "Stdin write to extension {ExtensionId} timed out after {Timeout}ms",
                 _definition.Id, _config.StdinWriteTimeoutMs);
             return false;

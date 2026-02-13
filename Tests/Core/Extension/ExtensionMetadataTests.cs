@@ -154,4 +154,74 @@ public class ExtensionMetadataTests
 
         Assert.Equal(DataVerificationResult.ChecksumMismatch, result);
     }
+
+    [Fact]
+    public void VerifyChecksum_NullData_NonZeroChecksum_ReturnsFalse()
+    {
+        var metadata = new ExtensionMetadata
+        {
+            DataSize = 0,
+            Checksum = 12345
+        };
+
+        var result = metadata.VerifyChecksum(null);
+
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void VerifyChecksum_EmptyData_NonZeroChecksum_ReturnsFalse()
+    {
+        var data = Array.Empty<byte>();
+        var metadata = new ExtensionMetadata
+        {
+            DataSize = 0,
+            Checksum = 12345
+        };
+
+        var result = metadata.VerifyChecksum(data);
+
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void CreateCommand_ReturnsValidCommandMetadata()
+    {
+        var sessionId = "test-session-123";
+        var commandType = "highlight";
+        var payload = new Dictionary<string, object> { { "color", "yellow" } };
+
+        var result = ExtensionMetadata.CreateCommand(sessionId, commandType, payload);
+
+        Assert.Equal("command", result.Type);
+        Assert.Equal(sessionId, result.SessionId);
+        Assert.Equal(commandType, result.CommandType);
+        Assert.Equal(payload, result.CommandPayload);
+        Assert.NotNull(result.CommandId);
+        Assert.NotEmpty(result.CommandId);
+    }
+
+    [Fact]
+    public void CreateCommand_WithoutPayload_ReturnsValidCommandMetadata()
+    {
+        var sessionId = "test-session-456";
+        var commandType = "navigate";
+
+        var result = ExtensionMetadata.CreateCommand(sessionId, commandType);
+
+        Assert.Equal("command", result.Type);
+        Assert.Equal(sessionId, result.SessionId);
+        Assert.Equal(commandType, result.CommandType);
+        Assert.Null(result.CommandPayload);
+        Assert.NotNull(result.CommandId);
+    }
+
+    [Fact]
+    public void CreateCommand_GeneratesUniqueCommandIds()
+    {
+        var command1 = ExtensionMetadata.CreateCommand("session1", "type1");
+        var command2 = ExtensionMetadata.CreateCommand("session2", "type2");
+
+        Assert.NotEqual(command1.CommandId, command2.CommandId);
+    }
 }
