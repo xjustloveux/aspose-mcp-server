@@ -39,34 +39,17 @@ internal static class HostFactory
     ///     Creates an appropriate host based on the transport configuration.
     /// </summary>
     /// <param name="args">Command line arguments.</param>
-    /// <param name="config">Server configuration.</param>
-    /// <param name="transportConfig">Transport configuration.</param>
-    /// <param name="sessionConfig">Session configuration.</param>
-    /// <param name="authConfig">Authentication configuration.</param>
-    /// <param name="trackingConfig">Tracking configuration.</param>
-    /// <param name="originConfig">Origin validation configuration.</param>
-    /// <param name="extensionConfig">Extension configuration.</param>
+    /// <param name="bundle">Configuration bundle containing all host settings.</param>
     /// <returns>The configured host instance.</returns>
     /// <exception cref="ArgumentException">Thrown when transport mode is unknown.</exception>
-    public static IHost CreateHost(
-        string[] args,
-        ServerConfig config,
-        TransportConfig transportConfig,
-        SessionConfig sessionConfig,
-        AuthConfig authConfig,
-        TrackingConfig trackingConfig,
-        OriginValidationConfig originConfig,
-        ExtensionConfig extensionConfig)
+    public static IHost CreateHost(string[] args, HostConfigBundle bundle)
     {
-        var bundle = new HostConfigBundle(config, transportConfig, sessionConfig, authConfig,
-            trackingConfig, originConfig, extensionConfig);
-
-        return transportConfig.Mode switch
+        return bundle.TransportConfig.Mode switch
         {
             TransportMode.Stdio => CreateStdioHost(args, bundle),
             TransportMode.Http => CreateHttpHost(args, bundle),
             TransportMode.WebSocket => CreateWebSocketHost(args, bundle),
-            _ => throw new ArgumentException($"Unknown transport mode: {transportConfig.Mode}")
+            _ => throw new ArgumentException($"Unknown transport mode: {bundle.TransportConfig.Mode}")
         };
     }
 
@@ -425,7 +408,7 @@ internal static class HostFactory
     /// <param name="TrackingConfig">Tracking configuration.</param>
     /// <param name="OriginConfig">Origin validation configuration.</param>
     /// <param name="ExtensionConfig">Extension configuration.</param>
-    private sealed record HostConfigBundle(
+    internal sealed record HostConfigBundle(
         ServerConfig ServerConfig,
         TransportConfig TransportConfig,
         SessionConfig SessionConfig,

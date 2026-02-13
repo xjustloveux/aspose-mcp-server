@@ -52,8 +52,9 @@ LicenseManager.SetLicense(config);
 
 try
 {
-    var host = HostFactory.CreateHost(args, config, transportConfig, sessionConfig, authConfig, trackingConfig,
-        originConfig, extensionConfig);
+    var bundle = new HostFactory.HostConfigBundle(config, transportConfig, sessionConfig, authConfig,
+        trackingConfig, originConfig, extensionConfig);
+    var host = HostFactory.CreateHost(args, bundle);
     await host.RunAsync();
 }
 catch (Exception ex)

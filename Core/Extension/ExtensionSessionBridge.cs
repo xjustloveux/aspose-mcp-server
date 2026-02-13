@@ -1374,7 +1374,7 @@ public sealed class ExtensionSessionBridge : IDisposable
     /// <param name="session">The document session.</param>
     /// <param name="outputFormat">The output format captured at the time of conversion.</param>
     /// <returns>A new <see cref="ExtensionMetadata" /> instance.</returns>
-    private ExtensionMetadata CreateMetadata(DocumentSession session, string outputFormat)
+    private static ExtensionMetadata CreateMetadata(DocumentSession session, string outputFormat)
     {
         return new ExtensionMetadata
         {

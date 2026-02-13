@@ -170,7 +170,9 @@ public class ExtensionManager : IHostedService, IAsyncDisposable
         {
             fileTransport?.Dispose();
             mmapTransport?.Dispose();
+#pragma warning disable S2589 // Boolean expressions should not be gratuitous
             processCleanupManager?.Dispose();
+#pragma warning restore S2589
             throw;
         }
     }
