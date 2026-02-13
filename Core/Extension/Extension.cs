@@ -1416,12 +1416,70 @@ public class Extension : IAsyncDisposable
             "python" => new CommandResolution(isWindows ? "python.exe" : "python3",
                 PrependExecutable(executable, argumentList)),
             "dotnet" => new CommandResolution("dotnet", PrependExecutable(executable, argumentList)),
-            "npx" => new CommandResolution(isWindows ? "npx.cmd" : "npx",
-                PrependExecutable(executable, argumentList)),
+            "npx" => ResolveNpxCommand(executable, argumentList),
             "pipx" => new CommandResolution(isWindows ? "pipx.exe" : "pipx",
                 PrependRun(executable, argumentList)),
             _ => new CommandResolution(executable, argumentList)
         };
+    }
+
+    /// <summary>
+    ///     Resolves npx command by directly executing npx-cli.js with node to avoid
+    ///     shell script path resolution issues when executed via Process.Start.
+    ///     Adds --yes flag to auto-confirm package installation since extensions
+    ///     run non-interactively and cannot respond to prompts.
+    /// </summary>
+    /// <param name="packageName">The npm package name to execute.</param>
+    /// <param name="arguments">Additional arguments for the package.</param>
+    /// <returns>A <see cref="CommandResolution" /> for npx execution.</returns>
+    private static CommandResolution ResolveNpxCommand(string packageName, List<string> arguments)
+    {
+        var npxArgs = new List<string>(arguments.Count + 2) { "--yes", packageName };
+        npxArgs.AddRange(arguments);
+
+        var isWindows = OperatingSystem.IsWindows();
+        var npxCliPath = FindNpxCliPath(isWindows);
+
+        if (npxCliPath != null)
+        {
+            var args = new List<string>(npxArgs.Count + 1) { npxCliPath };
+            args.AddRange(npxArgs);
+            return new CommandResolution(isWindows ? "node.exe" : "node", args);
+        }
+
+        return new CommandResolution(isWindows ? "npx.cmd" : "npx", npxArgs);
+    }
+
+    /// <summary>
+    ///     Finds the path to npx-cli.js by searching PATH for node installation.
+    /// </summary>
+    /// <param name="isWindows">Whether the current platform is Windows.</param>
+    /// <returns>The full path to npx-cli.js, or null if not found.</returns>
+    private static string? FindNpxCliPath(bool isWindows)
+    {
+        var pathEnv = Environment.GetEnvironmentVariable("PATH");
+        if (string.IsNullOrEmpty(pathEnv))
+            return null;
+
+        var nodeExeName = isWindows ? "node.exe" : "node";
+        var paths = pathEnv.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries);
+
+        foreach (var path in paths)
+            try
+            {
+                var nodePath = Path.Combine(path, nodeExeName);
+                if (!File.Exists(nodePath))
+                    continue;
+
+                var npxCliPath = Path.Combine(path, "node_modules", "npm", "bin", "npx-cli.js");
+                if (File.Exists(npxCliPath))
+                    return npxCliPath;
+            }
+            catch
+            {
+            }
+
+        return null;
     }
 
     /// <summary>
