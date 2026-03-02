@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Text;
 using AsposeMcpServer.Results.Common;
@@ -5,15 +6,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Text;
 
+[SupportedOSPlatform("windows")]
 public class AddPptTextHandlerTests : PptHandlerTestBase
 {
     private readonly AddPptTextHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Add()
     {
+        SkipIfNotWindows();
         Assert.Equal("add", _handler.Operation);
     }
 
@@ -21,9 +24,10 @@ public class AddPptTextHandlerTests : PptHandlerTestBase
 
     #region Existing Shape
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithShapeIndex_AddsToExistingShape()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Original");
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -48,9 +52,10 @@ public class AddPptTextHandlerTests : PptHandlerTestBase
 
     #region Basic Add Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_AddsText()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -69,9 +74,10 @@ public class AddPptTextHandlerTests : PptHandlerTestBase
         }
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsSlideIndex()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var initialShapeCount = pres.Slides[1].Shapes.Count;
         var context = CreateContext(pres);
@@ -88,9 +94,10 @@ public class AddPptTextHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_CreatesNewShape()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var initialShapeCount = pres.Slides[0].Shapes.Count;
         var context = CreateContext(pres);
@@ -108,9 +115,10 @@ public class AddPptTextHandlerTests : PptHandlerTestBase
 
     #region Position Parameters
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithPosition_CreatesShapeAtPosition()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var initialShapeCount = pres.Slides[0].Shapes.Count;
         var context = CreateContext(pres);
@@ -128,9 +136,10 @@ public class AddPptTextHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithSize_CreatesShapeWithSize()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var initialShapeCount = pres.Slides[0].Shapes.Count;
         var context = CreateContext(pres);
@@ -152,9 +161,10 @@ public class AddPptTextHandlerTests : PptHandlerTestBase
 
     #region Font Formatting
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithFontName_AppliesFont()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var initialShapeCount = pres.Slides[0].Shapes.Count;
         var context = CreateContext(pres);
@@ -177,9 +187,10 @@ public class AddPptTextHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithFontSize_AppliesSize()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var initialShapeCount = pres.Slides[0].Shapes.Count;
         var context = CreateContext(pres);
@@ -202,9 +213,10 @@ public class AddPptTextHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithBold_AppliesBold()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var initialShapeCount = pres.Slides[0].Shapes.Count;
         var context = CreateContext(pres);
@@ -227,9 +239,10 @@ public class AddPptTextHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithItalic_AppliesItalic()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var initialShapeCount = pres.Slides[0].Shapes.Count;
         var context = CreateContext(pres);
@@ -252,9 +265,10 @@ public class AddPptTextHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithColor_AppliesColor()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var initialShapeCount = pres.Slides[0].Shapes.Count;
         var context = CreateContext(pres);
@@ -281,9 +295,10 @@ public class AddPptTextHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutText_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -291,9 +306,10 @@ public class AddPptTextHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -305,9 +321,10 @@ public class AddPptTextHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidShapeIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

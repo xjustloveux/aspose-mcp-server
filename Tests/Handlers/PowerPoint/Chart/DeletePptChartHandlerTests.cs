@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using Aspose.Slides.Charts;
 using AsposeMcpServer.Handlers.PowerPoint.Chart;
@@ -6,15 +7,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Chart;
 
+[SupportedOSPlatform("windows")]
 public class DeletePptChartHandlerTests : PptHandlerTestBase
 {
     private readonly DeletePptChartHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Delete()
     {
+        SkipIfNotWindows();
         Assert.Equal("delete", _handler.Operation);
     }
 
@@ -22,9 +25,10 @@ public class DeletePptChartHandlerTests : PptHandlerTestBase
 
     #region Basic Delete Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DeletesChart()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithChart();
         var initialCount = pres.Slides[0].Shapes.Count;
         var context = CreateContext(pres);
@@ -59,9 +63,10 @@ public class DeletePptChartHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithChart();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -72,9 +77,10 @@ public class DeletePptChartHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutShapeIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithChart();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -85,9 +91,10 @@ public class DeletePptChartHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithChart();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

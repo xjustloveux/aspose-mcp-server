@@ -1,18 +1,21 @@
+using System.Runtime.Versioning;
 using AsposeMcpServer.Handlers.PowerPoint.PageSetup;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.PageSetup;
 
+[SupportedOSPlatform("windows")]
 public class SetSlideNumberingHandlerTests : PptHandlerTestBase
 {
     private readonly SetSlideNumberingHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_SetSlideNumbering()
     {
+        SkipIfNotWindows();
         Assert.Equal("set_slide_numbering", _handler.Operation);
     }
 
@@ -20,9 +23,10 @@ public class SetSlideNumberingHandlerTests : PptHandlerTestBase
 
     #region Basic Set Slide Numbering Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ShowsSlideNumbers()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -42,9 +46,10 @@ public class SetSlideNumberingHandlerTests : PptHandlerTestBase
         }
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_HidesSlideNumbers()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -63,9 +68,10 @@ public class SetSlideNumberingHandlerTests : PptHandlerTestBase
         }
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SetsFirstNumber()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -79,9 +85,10 @@ public class SetSlideNumberingHandlerTests : PptHandlerTestBase
         Assert.Equal(5, presentation.FirstSlideNumber);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithDefaults()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateEmptyParameters();

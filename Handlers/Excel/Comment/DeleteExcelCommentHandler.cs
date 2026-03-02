@@ -46,7 +46,8 @@ public class DeleteExcelCommentHandler : OperationHandlerBase<Workbook>
         }
         catch (CellsException ex)
         {
-            throw new ArgumentException($"Excel operation failed for cell '{deleteParams.Cell}': {ex.Message}");
+            throw new InvalidOperationException($"Excel operation failed for cell '{deleteParams.Cell}': {ex.Message}",
+                ex);
         }
     }
 

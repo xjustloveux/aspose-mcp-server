@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Table;
 using AsposeMcpServer.Results.Common;
@@ -5,15 +6,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Table;
 
+[SupportedOSPlatform("windows")]
 public class EditPptTableCellHandlerTests : PptHandlerTestBase
 {
     private readonly EditPptTableCellHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_EditCell()
     {
+        SkipIfNotWindows();
         Assert.Equal("edit_cell", _handler.Operation);
     }
 
@@ -28,6 +31,7 @@ public class EditPptTableCellHandlerTests : PptHandlerTestBase
     [InlineData(2, 2)]
     public void Execute_EditsAnyCell(int row, int col)
     {
+        SkipIfNotWindows();
         SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation mode adds watermark to text");
         var pres = CreatePresentationWithTable(3, 3);
         var context = CreateContext(pres);
@@ -53,6 +57,7 @@ public class EditPptTableCellHandlerTests : PptHandlerTestBase
     [SkippableFact]
     public void Execute_WithSlideIndex_EditsOnCorrectSlide()
     {
+        SkipIfNotWindows();
         SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation mode adds watermark to text");
         var pres = CreatePresentationWithSlides(3);
         var tableShapeIndex = AddTableToSlide(pres, 1, 2, 2);
@@ -77,9 +82,10 @@ public class EditPptTableCellHandlerTests : PptHandlerTestBase
 
     #region Basic Edit Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_EditsCell()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(3, 3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -103,9 +109,10 @@ public class EditPptTableCellHandlerTests : PptHandlerTestBase
         }
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsCellCoordinates()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(3, 3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -131,6 +138,7 @@ public class EditPptTableCellHandlerTests : PptHandlerTestBase
     [SkippableFact]
     public void Execute_UpdatesCellContent()
     {
+        SkipIfNotWindows();
         SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation mode adds watermark to text");
         var pres = CreatePresentationWithTable(3, 3);
         var context = CreateContext(pres);
@@ -149,9 +157,10 @@ public class EditPptTableCellHandlerTests : PptHandlerTestBase
         Assert.Equal("Updated Content", table[1, 1].TextFrame.Text);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_CanSetEmptyText()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTableData([["A1", "B1"], ["A2", "B2"]]);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -172,6 +181,7 @@ public class EditPptTableCellHandlerTests : PptHandlerTestBase
     [SkippableFact]
     public void Execute_WithNonSquareTable_WritesToCorrectRowAndColumn()
     {
+        SkipIfNotWindows();
         SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation mode adds watermark to text");
         var pres = CreatePresentationWithTable(3, 2);
         var context = CreateContext(pres);
@@ -194,9 +204,10 @@ public class EditPptTableCellHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutShapeIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(3, 3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -210,9 +221,10 @@ public class EditPptTableCellHandlerTests : PptHandlerTestBase
         Assert.Contains("shapeIndex", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutRowIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(3, 3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -226,9 +238,10 @@ public class EditPptTableCellHandlerTests : PptHandlerTestBase
         Assert.Contains("rowIndex", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutColumnIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(3, 3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -242,9 +255,10 @@ public class EditPptTableCellHandlerTests : PptHandlerTestBase
         Assert.Contains("columnIndex", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutText_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(3, 3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -258,9 +272,10 @@ public class EditPptTableCellHandlerTests : PptHandlerTestBase
         Assert.Contains("text", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidRowIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(3, 3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -274,9 +289,10 @@ public class EditPptTableCellHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidColumnIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(3, 3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -290,9 +306,10 @@ public class EditPptTableCellHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNegativeRowIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(3, 3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -306,9 +323,10 @@ public class EditPptTableCellHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNonTableShape_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Sample");
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

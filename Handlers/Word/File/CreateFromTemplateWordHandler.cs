@@ -89,7 +89,8 @@ public class CreateFromTemplateWordHandler : OperationHandlerBase<Document>
         doc.Save(p.OutputPath);
         return new SuccessResult
         {
-            Message = $"Document created from template ({templateSource}) using LINQ Reporting Engine: {p.OutputPath}"
+            Message =
+                $"Document created from template ({templateSource}) using LINQ Reporting Engine: {p.OutputPath}"
         };
     }
 

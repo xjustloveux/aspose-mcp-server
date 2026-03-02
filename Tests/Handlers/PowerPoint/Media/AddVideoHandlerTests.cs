@@ -1,18 +1,21 @@
+using System.Runtime.Versioning;
 using AsposeMcpServer.Handlers.PowerPoint.Media;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Media;
 
+[SupportedOSPlatform("windows")]
 public class AddVideoHandlerTests : PptHandlerTestBase
 {
     private readonly AddVideoHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_AddVideo()
     {
+        SkipIfNotWindows();
         Assert.Equal("add_video", _handler.Operation);
     }
 
@@ -20,9 +23,10 @@ public class AddVideoHandlerTests : PptHandlerTestBase
 
     #region Basic Add Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_AddsVideo()
     {
+        SkipIfNotWindows();
         var tempFile = CreateTempVideoFile();
         var pres = CreateEmptyPresentation();
         var initialShapeCount = pres.Slides[0].Shapes.Count;
@@ -39,9 +43,10 @@ public class AddVideoHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithSlideIndex_AddsVideoToSlide()
     {
+        SkipIfNotWindows();
         var tempFile = CreateTempVideoFile();
         var pres = CreateEmptyPresentation();
         var initialShapeCount = pres.Slides[0].Shapes.Count;
@@ -63,9 +68,10 @@ public class AddVideoHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutVideoPath_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -74,9 +80,10 @@ public class AddVideoHandlerTests : PptHandlerTestBase
         Assert.Contains("videoPath", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNonExistentFile_ThrowsFileNotFoundException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -87,9 +94,10 @@ public class AddVideoHandlerTests : PptHandlerTestBase
         Assert.Throws<FileNotFoundException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var tempFile = CreateTempVideoFile();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);

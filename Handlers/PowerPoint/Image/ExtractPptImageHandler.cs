@@ -67,6 +67,7 @@ public class ExtractPptImageHandler : OperationHandlerBase<Presentation>
     private static ExtractionParameters ExtractImageParameters(OperationParameters parameters, string path)
     {
         var outputDir = parameters.GetOptional<string?>("outputDir") ?? Path.GetDirectoryName(path) ?? ".";
+        SecurityHelper.ValidateFilePath(outputDir, "outputDir", true);
         var formatStr = parameters.GetOptional("format", "png");
         var skipDuplicates = parameters.GetOptional("skipDuplicates", false);
 

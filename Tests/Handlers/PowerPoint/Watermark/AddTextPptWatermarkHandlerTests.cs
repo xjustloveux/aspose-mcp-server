@@ -1,18 +1,21 @@
+using System.Runtime.Versioning;
 using AsposeMcpServer.Handlers.PowerPoint.Watermark;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Watermark;
 
+[SupportedOSPlatform("windows")]
 public class AddTextPptWatermarkHandlerTests : PptHandlerTestBase
 {
     private readonly AddTextPptWatermarkHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_AddText()
     {
+        SkipIfNotWindows();
         Assert.Equal("add_text", _handler.Operation);
     }
 
@@ -20,9 +23,10 @@ public class AddTextPptWatermarkHandlerTests : PptHandlerTestBase
 
     #region Add Text Watermark
 
-    [Fact]
+    [SkippableFact]
     public void Execute_AddsWatermarkToAllSlides_ReturnsSuccessResult()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -36,9 +40,10 @@ public class AddTextPptWatermarkHandlerTests : PptHandlerTestBase
         Assert.Contains("3 slide(s)", result.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_AddsWatermarkToAllSlides_MarksContextModified()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -51,9 +56,10 @@ public class AddTextPptWatermarkHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_CreatesNamedShape()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -75,9 +81,10 @@ public class AddTextPptWatermarkHandlerTests : PptHandlerTestBase
         Assert.True(hasWatermark);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithMissingText_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -85,9 +92,10 @@ public class AddTextPptWatermarkHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithCustomFontSize_ReturnsSuccessResult()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -101,9 +109,10 @@ public class AddTextPptWatermarkHandlerTests : PptHandlerTestBase
         Assert.IsType<SuccessResult>(res);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithRotation_ReturnsSuccessResult()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -117,9 +126,10 @@ public class AddTextPptWatermarkHandlerTests : PptHandlerTestBase
         Assert.IsType<SuccessResult>(res);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithCustomOpacity_ReturnsSuccessResult()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -133,9 +143,10 @@ public class AddTextPptWatermarkHandlerTests : PptHandlerTestBase
         Assert.IsType<SuccessResult>(res);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SingleSlide_ReturnsCorrectCount()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -149,9 +160,10 @@ public class AddTextPptWatermarkHandlerTests : PptHandlerTestBase
         Assert.Contains("1 slide(s)", result.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WatermarkShapeNameContainsTextPrefix()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

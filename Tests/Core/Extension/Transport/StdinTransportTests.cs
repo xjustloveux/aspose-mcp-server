@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.Versioning;
 using AsposeMcpServer.Core.Extension;
 using AsposeMcpServer.Core.Extension.Transport;
 using Microsoft.Extensions.Logging;
@@ -9,6 +10,7 @@ namespace AsposeMcpServer.Tests.Core.Extension.Transport;
 /// <summary>
 ///     Unit tests for StdinTransport class.
 /// </summary>
+[SupportedOSPlatform("windows")]
 public class StdinTransportTests
 {
     private readonly Mock<ILogger<StdinTransport>> _loggerMock = new();
@@ -16,9 +18,10 @@ public class StdinTransportTests
 
     #region Mode Tests
 
-    [Fact]
+    [SkippableFact]
     public void Mode_ReturnsCorrectValue()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         Assert.Equal("stdin", _transport.Mode);
     }
 
@@ -26,9 +29,10 @@ public class StdinTransportTests
 
     #region SendAsync Tests
 
-    [Fact]
+    [SkippableFact]
     public async Task SendAsync_ProcessHasExited_ReturnsFalse()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         using var process = new Process();
         process.StartInfo = new ProcessStartInfo
         {
@@ -50,9 +54,10 @@ public class StdinTransportTests
         Assert.False(result);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task SendAsync_Success_SetsMetadataProperties()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         using var process = CreateTestProcess();
         var metadata = CreateTestMetadata();
         var data = new byte[] { 1, 2, 3, 4, 5 };
@@ -64,9 +69,10 @@ public class StdinTransportTests
         Assert.Equal(5, metadata.DataSize);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task SendAsync_Success_DoesNotModifyMmapNameOrFilePath()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         using var process = CreateTestProcess();
         var metadata = CreateTestMetadata();
         var data = new byte[] { 1, 2, 3, 4 };
@@ -81,9 +87,10 @@ public class StdinTransportTests
 
     #region Cleanup Tests
 
-    [Fact]
+    [SkippableFact]
     public void Cleanup_DoesNotThrow()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         var metadata = CreateTestMetadata();
 
         var exception = Record.Exception(() => _transport.Cleanup(metadata));
@@ -91,9 +98,10 @@ public class StdinTransportTests
         Assert.Null(exception);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Cleanup_WithNullMetadata_DoesNotThrow()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         var metadata = new ExtensionMetadata();
 
         var exception = Record.Exception(() => _transport.Cleanup(metadata));
@@ -101,9 +109,10 @@ public class StdinTransportTests
         Assert.Null(exception);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Cleanup_CanBeCalledMultipleTimes()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         var metadata = CreateTestMetadata();
 
         var exception = Record.Exception(() =>
@@ -120,25 +129,28 @@ public class StdinTransportTests
 
     #region Constructor Tests
 
-    [Fact]
+    [SkippableFact]
     public void Constructor_WithDefaultParameters_DoesNotThrow()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         var exception = Record.Exception(() => new StdinTransport());
 
         Assert.Null(exception);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Constructor_WithLogger_DoesNotThrow()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         var exception = Record.Exception(() => new StdinTransport(_loggerMock.Object));
 
         Assert.Null(exception);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Constructor_WithCustomParameters_DoesNotThrow()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         var exception = Record.Exception(() => new StdinTransport(
             _loggerMock.Object,
             60000,
@@ -151,9 +163,10 @@ public class StdinTransportTests
 
     #region DataSize Limit Tests
 
-    [Fact]
+    [SkippableFact]
     public async Task SendAsync_DataExceedsMaxSize_ReturnsFalse()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         var transport = new StdinTransport(_loggerMock.Object, maxDataSize: 10);
         using var process = CreateTestProcess();
         var metadata = CreateTestMetadata();
@@ -164,9 +177,10 @@ public class StdinTransportTests
         Assert.False(result);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task SendAsync_DataAtMaxSize_ReturnsTrue()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         var transport = new StdinTransport(_loggerMock.Object, maxDataSize: 100);
         using var process = CreateTestProcess();
         var metadata = CreateTestMetadata();
@@ -177,9 +191,10 @@ public class StdinTransportTests
         Assert.True(result);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task SendAsync_DataBelowMaxSize_ReturnsTrue()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         var transport = new StdinTransport(_loggerMock.Object, maxDataSize: 100);
         using var process = CreateTestProcess();
         var metadata = CreateTestMetadata();

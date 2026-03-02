@@ -1,18 +1,21 @@
+using System.Runtime.Versioning;
 using AsposeMcpServer.Handlers.PowerPoint.Layout;
 using AsposeMcpServer.Results.PowerPoint.Layout;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Layout;
 
+[SupportedOSPlatform("windows")]
 public class GetMastersHandlerTests : PptHandlerTestBase
 {
     private readonly GetMastersHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_GetMasters()
     {
+        SkipIfNotWindows();
         Assert.Equal("get_masters", _handler.Operation);
     }
 
@@ -20,9 +23,10 @@ public class GetMastersHandlerTests : PptHandlerTestBase
 
     #region Basic Get Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsMasters()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -36,9 +40,10 @@ public class GetMastersHandlerTests : PptHandlerTestBase
         AssertNotModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsCorrectMasterCount()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var expectedCount = pres.Masters.Count;
         var context = CreateContext(pres);
@@ -52,9 +57,10 @@ public class GetMastersHandlerTests : PptHandlerTestBase
         Assert.Equal(expectedCount, result.Masters.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsResultType()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -67,9 +73,10 @@ public class GetMastersHandlerTests : PptHandlerTestBase
         Assert.IsType<GetMastersResult>(result);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_IncludesLayoutCount()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -82,9 +89,10 @@ public class GetMastersHandlerTests : PptHandlerTestBase
         if (result.Masters.Count > 0) Assert.True(result.Masters[0].LayoutCount >= 0);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_IncludesMasterName()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -102,9 +110,10 @@ public class GetMastersHandlerTests : PptHandlerTestBase
         }
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_IncludesLayoutsList()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -117,9 +126,10 @@ public class GetMastersHandlerTests : PptHandlerTestBase
         if (result.Masters.Count > 0) Assert.NotNull(result.Masters[0].Layouts);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_IncludesMasterIndex()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -136,9 +146,10 @@ public class GetMastersHandlerTests : PptHandlerTestBase
 
     #region API Constraint - Empty Masters
 
-    [Fact]
+    [SkippableFact]
     public void Execute_PresentationAlwaysHasAtLeastOneMaster()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         Assert.True(pres.Masters.Count >= 1);
         var context = CreateContext(pres);
@@ -154,9 +165,10 @@ public class GetMastersHandlerTests : PptHandlerTestBase
         AssertNotModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsAllMasterDetails()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();

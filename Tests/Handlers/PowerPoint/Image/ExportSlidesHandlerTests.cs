@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Handlers.PowerPoint.Image;
@@ -6,15 +7,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Image;
 
+[SupportedOSPlatform("windows")]
 public class ExportSlidesHandlerTests : PptHandlerTestBase
 {
     private readonly ExportSlidesHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_ExportSlides()
     {
+        SkipIfNotWindows();
         Assert.Equal("export_slides", _handler.Operation);
     }
 
@@ -22,9 +25,10 @@ public class ExportSlidesHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutPath_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -36,9 +40,10 @@ public class ExportSlidesHandlerTests : PptHandlerTestBase
 
     #region Basic Export Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ExportsSlidesToImages()
     {
+        SkipIfNotWindows();
         var outputDir = Path.Combine(TestDir, "export_output");
         var tempPptxPath = Path.Combine(TestDir, "test.pptx");
 
@@ -69,9 +74,10 @@ public class ExportSlidesHandlerTests : PptHandlerTestBase
         }
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithSpecificSlideIndexes_ExportsSelectedSlides()
     {
+        SkipIfNotWindows();
         var outputDir = Path.Combine(TestDir, "export_selected");
         var tempPptxPath = Path.Combine(TestDir, "test_selected.pptx");
 
@@ -97,9 +103,10 @@ public class ExportSlidesHandlerTests : PptHandlerTestBase
         Assert.Equal(2, files.Length);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithJpegFormat_ExportsAsJpeg()
     {
+        SkipIfNotWindows();
         var outputDir = Path.Combine(TestDir, "export_jpeg");
         var tempPptxPath = Path.Combine(TestDir, "test_jpeg.pptx");
 

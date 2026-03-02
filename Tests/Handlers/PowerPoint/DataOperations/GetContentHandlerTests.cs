@@ -1,18 +1,21 @@
+using System.Runtime.Versioning;
 using AsposeMcpServer.Handlers.PowerPoint.DataOperations;
 using AsposeMcpServer.Results.PowerPoint.DataOperations;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.DataOperations;
 
+[SupportedOSPlatform("windows")]
 public class GetContentHandlerTests : PptHandlerTestBase
 {
     private readonly GetContentHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_GetContent()
     {
+        SkipIfNotWindows();
         Assert.Equal("get_content", _handler.Operation);
     }
 
@@ -20,9 +23,10 @@ public class GetContentHandlerTests : PptHandlerTestBase
 
     #region Basic Get Content Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsTotalSlides()
     {
+        SkipIfNotWindows();
         var presentation = CreatePresentationWithSlides(2);
         var context = CreateContext(presentation);
         var parameters = CreateEmptyParameters();
@@ -34,9 +38,10 @@ public class GetContentHandlerTests : PptHandlerTestBase
         Assert.Equal(2, result.TotalSlides);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsSlideContent()
     {
+        SkipIfNotWindows();
         var presentation = CreatePresentationWithText("Hello World");
         var context = CreateContext(presentation);
         var parameters = CreateEmptyParameters();
@@ -50,9 +55,10 @@ public class GetContentHandlerTests : PptHandlerTestBase
         Assert.NotNull(result.Slides[0].TextContent);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsSlideIndex()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateEmptyParameters();
@@ -66,9 +72,10 @@ public class GetContentHandlerTests : PptHandlerTestBase
         Assert.Equal(0, result.Slides[0].Index);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsHiddenStatus()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateEmptyParameters();

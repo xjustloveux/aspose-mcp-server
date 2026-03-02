@@ -8,18 +8,21 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 // CA1416 - System.Drawing.Common is Windows-only, cross-platform support not required
 #pragma warning disable CA1416
+using System.Runtime.Versioning;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Image;
 
+[SupportedOSPlatform("windows")]
 public class ExtractPptImageHandlerTests : PptHandlerTestBase
 {
     private readonly ExtractPptImageHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Extract()
     {
+        SkipIfNotWindows();
         Assert.Equal("extract", _handler.Operation);
     }
 
@@ -27,9 +30,10 @@ public class ExtractPptImageHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutPath_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -41,9 +45,10 @@ public class ExtractPptImageHandlerTests : PptHandlerTestBase
 
     #region Basic Extract Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ExtractsImagesFromPresentation()
     {
+        SkipIfNotWindows();
         var outputDir = Path.Combine(TestDir, "extract_output");
         var tempPptxPath = Path.Combine(TestDir, "test.pptx");
 
@@ -73,9 +78,10 @@ public class ExtractPptImageHandlerTests : PptHandlerTestBase
         }
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithSkipDuplicates_SkipsDuplicateImages()
     {
+        SkipIfNotWindows();
         var outputDir = Path.Combine(TestDir, "extract_skip");
         var tempPptxPath = Path.Combine(TestDir, "test_dup.pptx");
 
@@ -98,9 +104,10 @@ public class ExtractPptImageHandlerTests : PptHandlerTestBase
         Assert.Contains("extracted", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithJpegFormat_ExtractsAsJpeg()
     {
+        SkipIfNotWindows();
         var outputDir = Path.Combine(TestDir, "extract_jpeg");
         var tempPptxPath = Path.Combine(TestDir, "test_jpeg.pptx");
 
@@ -123,9 +130,10 @@ public class ExtractPptImageHandlerTests : PptHandlerTestBase
         Assert.Contains("extracted", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithEmptyPresentation_ExtractsZeroImages()
     {
+        SkipIfNotWindows();
         var outputDir = Path.Combine(TestDir, "extract_empty");
         var tempPptxPath = Path.Combine(TestDir, "test_empty.pptx");
 

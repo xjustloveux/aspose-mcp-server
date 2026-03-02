@@ -3,6 +3,7 @@ using Aspose.Words;
 using Aspose.Words.Drawing;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 using IOFile = System.IO.File;
@@ -75,7 +76,10 @@ public class AddImageWordHandler : OperationHandlerBase<Document>
     /// <exception cref="FileNotFoundException">Thrown when the image file is not found.</exception>
     private static void ValidateImagePath(string? imagePath)
     {
-        if (string.IsNullOrEmpty(imagePath) || !IOFile.Exists(imagePath))
+        if (string.IsNullOrEmpty(imagePath))
+            throw new FileNotFoundException("Image file not found: path is required");
+        SecurityHelper.ValidateFilePath(imagePath, nameof(imagePath), true);
+        if (!IOFile.Exists(imagePath))
             throw new FileNotFoundException($"Image file not found: {imagePath}");
     }
 

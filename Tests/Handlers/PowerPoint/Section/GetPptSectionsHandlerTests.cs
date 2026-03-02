@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Section;
 using AsposeMcpServer.Results.PowerPoint.Section;
@@ -5,15 +6,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Section;
 
+[SupportedOSPlatform("windows")]
 public class GetPptSectionsHandlerTests : PptHandlerTestBase
 {
     private readonly GetPptSectionsHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Get()
     {
+        SkipIfNotWindows();
         Assert.Equal("get", _handler.Operation);
     }
 
@@ -37,9 +40,10 @@ public class GetPptSectionsHandlerTests : PptHandlerTestBase
 
     #region Get All Sections
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNoSections_ReturnsEmptyResult()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -51,9 +55,10 @@ public class GetPptSectionsHandlerTests : PptHandlerTestBase
         Assert.Equal(0, result.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNoSections_ReturnsMessage()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -65,9 +70,10 @@ public class GetPptSectionsHandlerTests : PptHandlerTestBase
         Assert.Contains("No sections found", result.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithSections_ReturnsCount()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSections(3);
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -79,9 +85,10 @@ public class GetPptSectionsHandlerTests : PptHandlerTestBase
         Assert.Equal(3, result.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsResultType()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSections(2);
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -98,9 +105,10 @@ public class GetPptSectionsHandlerTests : PptHandlerTestBase
 
     #region Section Details
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsSectionIndex()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSections(2);
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -114,9 +122,10 @@ public class GetPptSectionsHandlerTests : PptHandlerTestBase
         Assert.Equal(1, result.Sections[1].Index);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsSectionName()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSections(2);
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -129,9 +138,10 @@ public class GetPptSectionsHandlerTests : PptHandlerTestBase
         Assert.NotNull(result.Sections[0].Name);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsStartSlideIndex()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSections(2);
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -144,9 +154,10 @@ public class GetPptSectionsHandlerTests : PptHandlerTestBase
         Assert.True(result.Sections[0].StartSlideIndex >= 0);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsSlideCount()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSections(2);
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();

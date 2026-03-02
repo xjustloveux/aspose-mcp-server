@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Security.Cryptography;
 using System.Text.Json;
 using Aspose.Cells;
 using Aspose.Slides;
@@ -324,7 +325,7 @@ public class DocumentSessionManager : IDisposable
         if (session.Mode == "readonly") throw new InvalidOperationException("Cannot save a readonly session");
 
         var savePath = outputPath ?? session.Path;
-        SaveDocumentToFile(session.Document, session.Type, savePath);
+        session.Execute(doc => SaveDocumentToFile(doc, session.Type, savePath));
         session.IsDirty = false;
 
         _logger?.LogInformation("Saved session {SessionId} to {Path}", sessionId, savePath);
@@ -383,10 +384,12 @@ public class DocumentSessionManager : IDisposable
 
         SessionClosed?.Invoke(sessionId, session.Owner);
 
+        var sessionType = session.Type;
+        var sessionPath = session.Path;
         try
         {
             if (!discard && session.IsDirty)
-                SaveDocumentToFile(session.Document, session.Type, session.Path);
+                session.Execute(doc => SaveDocumentToFile(doc, sessionType, sessionPath));
         }
         finally
         {
@@ -559,6 +562,8 @@ public class DocumentSessionManager : IDisposable
     {
         SessionClosed?.Invoke(session.SessionId, session.Owner);
 
+        var sessionType = session.Type;
+        var sessionPath = session.Path;
         try
         {
             if (!session.IsDirty)
@@ -570,7 +575,7 @@ public class DocumentSessionManager : IDisposable
             switch (Config.OnDisconnect)
             {
                 case DisconnectBehavior.AutoSave:
-                    SaveDocumentToFile(session.Document, session.Type, session.Path);
+                    session.Execute(doc => SaveDocumentToFile(doc, sessionType, sessionPath));
                     DeleteSessionTempFiles(session.SessionId);
                     _logger?.LogInformation("Auto-saved session {SessionId} and cleaned up temp files",
                         session.SessionId);
@@ -578,7 +583,7 @@ public class DocumentSessionManager : IDisposable
 
                 case DisconnectBehavior.SaveToTemp:
                     var tempPath = GetTempPath(session);
-                    SaveDocumentToFile(session.Document, session.Type, tempPath);
+                    session.Execute(doc => SaveDocumentToFile(doc, sessionType, tempPath));
                     SaveSessionMetadata(session, tempPath);
                     _logger?.LogInformation("Saved session {SessionId} to temp: {TempPath}", session.SessionId,
                         tempPath);
@@ -592,7 +597,7 @@ public class DocumentSessionManager : IDisposable
 
                 case DisconnectBehavior.PromptOnReconnect:
                     var promptTempPath = GetTempPath(session);
-                    SaveDocumentToFile(session.Document, session.Type, promptTempPath);
+                    session.Execute(doc => SaveDocumentToFile(doc, sessionType, promptTempPath));
                     SaveSessionMetadata(session, promptTempPath, true);
                     _logger?.LogInformation("Saved session {SessionId} for prompt on reconnect", session.SessionId);
                     break;
@@ -657,7 +662,7 @@ public class DocumentSessionManager : IDisposable
             try
             {
                 var tempPath = GetTempPath(session);
-                SaveDocumentToFile(session.Document, session.Type, tempPath);
+                session.Execute(doc => SaveDocumentToFile(doc, session.Type, tempPath));
                 SaveSessionMetadata(session, tempPath);
                 _logger?.LogInformation("Auto-saved dirty session {SessionId} to temp: {TempPath}",
                     session.SessionId, tempPath);
@@ -674,9 +679,7 @@ public class DocumentSessionManager : IDisposable
     /// <returns>Generated session ID in format sess_XXXXXXXXXXXXXXXXXXXXXXXX (24 chars total)</returns>
     private static string GenerateSessionId()
     {
-        // Use 19 hex chars from GUID for better uniqueness (76 bits of randomness)
-        // Format: sess_ (5) + 19 hex chars = 24 chars total
-        return $"sess_{Guid.NewGuid():N}"[..24];
+        return $"sess_{Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant()}";
     }
 
     /// <summary>

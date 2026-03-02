@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Comment;
 using AsposeMcpServer.Results.Common;
@@ -6,15 +7,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Comment;
 
+[SupportedOSPlatform("windows")]
 public class DeletePptCommentHandlerTests : PptHandlerTestBase
 {
     private readonly DeletePptCommentHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Delete()
     {
+        SkipIfNotWindows();
         Assert.Equal("delete", _handler.Operation);
     }
 
@@ -38,9 +41,10 @@ public class DeletePptCommentHandlerTests : PptHandlerTestBase
 
     #region Basic Delete Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ValidIndex_DeletesComment()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithComments(1);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -55,9 +59,10 @@ public class DeletePptCommentHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsCommentIndexInMessage()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithComments(1);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -72,9 +77,10 @@ public class DeletePptCommentHandlerTests : PptHandlerTestBase
         Assert.Contains("Comment 0", result.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsSlideIndexInMessage()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithComments(1);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -93,9 +99,10 @@ public class DeletePptCommentHandlerTests : PptHandlerTestBase
 
     #region Various Comment Indices
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DeletesSecondComment()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithComments(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -109,9 +116,10 @@ public class DeletePptCommentHandlerTests : PptHandlerTestBase
         Assert.IsType<SuccessResult>(res);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DeletesLastComment()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithComments(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -129,9 +137,10 @@ public class DeletePptCommentHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_InvalidIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -143,9 +152,10 @@ public class DeletePptCommentHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_NegativeIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithComments(1);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -157,9 +167,10 @@ public class DeletePptCommentHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_OutOfRangeIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithComments(2);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -171,9 +182,10 @@ public class DeletePptCommentHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_MissingCommentIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

@@ -1,6 +1,7 @@
 using Aspose.Slides;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Layout;
@@ -25,6 +26,8 @@ public class ApplyThemeHandler : OperationHandlerBase<Presentation>
     public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractApplyThemeParameters(parameters);
+
+        SecurityHelper.ValidateFilePath(p.ThemePath, "themePath", true);
 
         if (!File.Exists(p.ThemePath))
             throw new FileNotFoundException($"Theme file not found: {p.ThemePath}");

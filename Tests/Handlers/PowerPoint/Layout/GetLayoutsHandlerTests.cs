@@ -1,18 +1,21 @@
+using System.Runtime.Versioning;
 using AsposeMcpServer.Handlers.PowerPoint.Layout;
 using AsposeMcpServer.Results.PowerPoint.Layout;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Layout;
 
+[SupportedOSPlatform("windows")]
 public class GetLayoutsHandlerTests : PptHandlerTestBase
 {
     private readonly GetLayoutsHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_GetLayouts()
     {
+        SkipIfNotWindows();
         Assert.Equal("get_layouts", _handler.Operation);
     }
 
@@ -20,9 +23,10 @@ public class GetLayoutsHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidMasterIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -37,9 +41,10 @@ public class GetLayoutsHandlerTests : PptHandlerTestBase
 
     #region Basic Get Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsLayouts()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -54,9 +59,10 @@ public class GetLayoutsHandlerTests : PptHandlerTestBase
         AssertNotModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithMasterIndex_ReturnsLayoutsForMaster()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -73,9 +79,10 @@ public class GetLayoutsHandlerTests : PptHandlerTestBase
         AssertNotModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsResultType()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();

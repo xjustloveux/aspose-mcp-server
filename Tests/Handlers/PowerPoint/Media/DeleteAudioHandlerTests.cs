@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Media;
 using AsposeMcpServer.Results.Common;
@@ -5,15 +6,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Media;
 
+[SupportedOSPlatform("windows")]
 public class DeleteAudioHandlerTests : PptHandlerTestBase
 {
     private readonly DeleteAudioHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_DeleteAudio()
     {
+        SkipIfNotWindows();
         Assert.Equal("delete_audio", _handler.Operation);
     }
 
@@ -35,9 +38,10 @@ public class DeleteAudioHandlerTests : PptHandlerTestBase
 
     #region Basic Delete Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DeletesAudio()
     {
+        SkipIfNotWindows();
         var tempFile = CreateTempAudioFile();
         var pres = CreatePresentationWithAudio(tempFile);
         var initialShapeCount = pres.Slides[0].Shapes.Count;
@@ -55,9 +59,10 @@ public class DeleteAudioHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DeletesAudioFromSpecificSlide()
     {
+        SkipIfNotWindows();
         var tempFile = CreateTempAudioFile();
         var pres = CreatePresentationWithAudio(tempFile);
         var initialShapeCount = pres.Slides[0].Shapes.Count;
@@ -79,9 +84,10 @@ public class DeleteAudioHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutShapeIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -90,11 +96,12 @@ public class DeleteAudioHandlerTests : PptHandlerTestBase
         Assert.Contains("shapeIndex", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(-1)]
     [InlineData(99)]
     public void Execute_WithInvalidShapeIndex_ThrowsArgumentException(int invalidIndex)
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -105,9 +112,10 @@ public class DeleteAudioHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNonAudioShape_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Test");
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -119,9 +127,10 @@ public class DeleteAudioHandlerTests : PptHandlerTestBase
         Assert.Contains("not an audio frame", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

@@ -54,6 +54,14 @@ public class ServerConfig
     public string? LicensePath { get; private set; }
 
     /// <summary>
+    ///     Gets the list of allowed base paths for file access.
+    ///     When set, all file paths must be within one of these directories.
+    ///     If empty, all absolute paths are allowed (backward compatible behavior).
+    ///     Configure via --allowed-path argument (can be specified multiple times).
+    /// </summary>
+    public IReadOnlyList<string> AllowedBasePaths { get; private set; } = [];
+
+    /// <summary>
     ///     Loads configuration from environment variables and command line arguments.
     ///     Command line arguments take precedence over environment variables.
     /// </summary>
@@ -212,6 +220,25 @@ public class ServerConfig
                     else if (originalArg.StartsWith("--license=", StringComparison.OrdinalIgnoreCase))
                     {
                         LicensePath = originalArg["--license=".Length..];
+                    }
+                    else if (arg == "--allowed-path" && i + 1 < args.Length)
+                    {
+                        var paths = AllowedBasePaths.ToList();
+                        paths.Add(Path.GetFullPath(args[i + 1]));
+                        AllowedBasePaths = paths.AsReadOnly();
+                        i++;
+                    }
+                    else if (originalArg.StartsWith("--allowed-path:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var paths = AllowedBasePaths.ToList();
+                        paths.Add(Path.GetFullPath(originalArg["--allowed-path:".Length..]));
+                        AllowedBasePaths = paths.AsReadOnly();
+                    }
+                    else if (originalArg.StartsWith("--allowed-path=", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var paths = AllowedBasePaths.ToList();
+                        paths.Add(Path.GetFullPath(originalArg["--allowed-path=".Length..]));
+                        AllowedBasePaths = paths.AsReadOnly();
                     }
 
                     break;

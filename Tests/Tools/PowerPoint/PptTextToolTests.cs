@@ -1,4 +1,5 @@
-﻿using Aspose.Slides;
+﻿using System.Runtime.Versioning;
+using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Results.PowerPoint.Text;
@@ -12,6 +13,7 @@ namespace AsposeMcpServer.Tests.Tools.PowerPoint;
 ///     Focuses on session management, file I/O, and operation routing.
 ///     Detailed parameter validation and business logic tests are in Handler tests.
 /// </summary>
+[SupportedOSPlatform("windows")]
 public class PptTextToolTests : PptTestBase
 {
     private readonly PptTextTool _tool;
@@ -26,6 +28,7 @@ public class PptTextToolTests : PptTestBase
     [SkippableFact]
     public void AddText_ShouldAddTextToSlide()
     {
+        SkipIfNotWindows();
         SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation mode truncates text content");
 
         var pptPath = CreatePresentation("test_add_text.pptx");
@@ -38,9 +41,10 @@ public class PptTextToolTests : PptTestBase
         Assert.Contains(textFrames, tf => tf.TextFrame.Text.Contains("Test Text"));
     }
 
-    [Fact]
+    [SkippableFact]
     public void EditText_ShouldEditText()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_edit_text.pptx");
         using (var ppt = new Presentation(pptPath))
         {
@@ -94,6 +98,7 @@ public class PptTextToolTests : PptTestBase
     [SkippableFact]
     public void ReplaceText_ShouldReplaceText()
     {
+        SkipIfNotWindows();
         SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation mode truncates text content");
 
         var pptPath = CreatePresentation("test_replace_text.pptx");
@@ -117,12 +122,13 @@ public class PptTextToolTests : PptTestBase
 
     #region Operation Routing
 
-    [Theory]
+    [SkippableTheory]
     [InlineData("ADD")]
     [InlineData("Add")]
     [InlineData("add")]
     public void Operation_ShouldBeCaseInsensitive(string operation)
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation($"test_case_add_{operation}.pptx");
         var outputPath = CreateTestFilePath($"test_case_add_{operation}_output.pptx");
         var result = _tool.Execute(operation, pptPath, slideIndex: 0, text: "Test", x: 100, y: 100,
@@ -131,18 +137,20 @@ public class PptTextToolTests : PptTestBase
         Assert.StartsWith("Text added to slide", data.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_unknown_op.pptx");
         var ex = Assert.Throws<ArgumentException>(() =>
             _tool.Execute("unknown", pptPath));
         Assert.Contains("Unknown operation", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNoPathOrSessionId_ShouldThrowException()
     {
+        SkipIfNotWindows();
         Assert.ThrowsAny<Exception>(() =>
             _tool.Execute("add", slideIndex: 0, text: "Test", x: 100, y: 100));
     }
@@ -154,6 +162,7 @@ public class PptTextToolTests : PptTestBase
     [SkippableFact]
     public void AddText_WithSessionId_ShouldAddInMemory()
     {
+        SkipIfNotWindows();
         SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation mode truncates text content");
 
         var pptPath = CreatePresentation("test_session_add.pptx");
@@ -173,6 +182,7 @@ public class PptTextToolTests : PptTestBase
     [SkippableFact]
     public void EditText_WithSessionId_ShouldEditInMemory()
     {
+        SkipIfNotWindows();
         SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation mode adds watermarks");
 
         var pptPath = CreateTestFilePath("test_session_edit.pptx");
@@ -207,6 +217,7 @@ public class PptTextToolTests : PptTestBase
     [SkippableFact]
     public void ReplaceText_WithSessionId_ShouldReplaceInMemory()
     {
+        SkipIfNotWindows();
         SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation mode truncates text content");
 
         var pptPath = CreateTestFilePath("test_session_replace.pptx");
@@ -228,9 +239,10 @@ public class PptTextToolTests : PptTestBase
         Assert.Contains(autoShapes, s => s.TextFrame.Text.Contains("New Session Value"));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
+        SkipIfNotWindows();
         Assert.Throws<KeyNotFoundException>(() =>
             _tool.Execute("add", sessionId: "invalid_session_id", slideIndex: 0, text: "Test", x: 100, y: 100));
     }
@@ -238,6 +250,7 @@ public class PptTextToolTests : PptTestBase
     [SkippableFact]
     public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
     {
+        SkipIfNotWindows();
         SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation mode truncates text content");
 
         var pptPath1 = CreateTestFilePath("test_path_text.pptx");

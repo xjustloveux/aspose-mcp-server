@@ -1,18 +1,21 @@
+using System.Runtime.Versioning;
 using AsposeMcpServer.Handlers.PowerPoint.Handout;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Handout;
 
+[SupportedOSPlatform("windows")]
 public class SetHeaderFooterPptHandoutHandlerTests : PptHandlerTestBase
 {
     private readonly SetHeaderFooterPptHandoutHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_SetHeaderFooter()
     {
+        SkipIfNotWindows();
         Assert.Equal("set_header_footer", _handler.Operation);
     }
 
@@ -20,9 +23,10 @@ public class SetHeaderFooterPptHandoutHandlerTests : PptHandlerTestBase
 
     #region Auto-Create Handout Master
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNoHandoutMaster_AutoCreatesAndSetsHeader()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -43,9 +47,10 @@ public class SetHeaderFooterPptHandoutHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNoHandoutMaster_AutoCreatesAndSetsFooter()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -66,9 +71,10 @@ public class SetHeaderFooterPptHandoutHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNoHandoutMaster_AutoCreatesAndSetsDate()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -89,9 +95,10 @@ public class SetHeaderFooterPptHandoutHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNoHandoutMaster_AutoCreatesAndSetsAllSettings()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>

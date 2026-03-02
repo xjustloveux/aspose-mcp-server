@@ -51,7 +51,8 @@ public class EditExcelCommentHandler : OperationHandlerBase<Workbook>
         }
         catch (CellsException ex)
         {
-            throw new ArgumentException($"Excel operation failed for cell '{editParams.Cell}': {ex.Message}");
+            throw new InvalidOperationException($"Excel operation failed for cell '{editParams.Cell}': {ex.Message}",
+                ex);
         }
     }
 

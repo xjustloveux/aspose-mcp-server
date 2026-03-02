@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Comment;
 using AsposeMcpServer.Results.Common;
@@ -6,15 +7,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Comment;
 
+[SupportedOSPlatform("windows")]
 public class ReplyPptCommentHandlerTests : PptHandlerTestBase
 {
     private readonly ReplyPptCommentHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Reply()
     {
+        SkipIfNotWindows();
         Assert.Equal("reply", _handler.Operation);
     }
 
@@ -35,9 +38,10 @@ public class ReplyPptCommentHandlerTests : PptHandlerTestBase
 
     #region Basic Reply Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ValidReply_AddsReply()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithParentComment();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -54,9 +58,10 @@ public class ReplyPptCommentHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsCommentIndexInMessage()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithParentComment();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -73,9 +78,10 @@ public class ReplyPptCommentHandlerTests : PptHandlerTestBase
         Assert.Contains("comment 0", result.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsAuthorInMessage()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithParentComment();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -92,9 +98,10 @@ public class ReplyPptCommentHandlerTests : PptHandlerTestBase
         Assert.Contains("Jane Doe", result.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsSlideIndexInMessage()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithParentComment();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -115,9 +122,10 @@ public class ReplyPptCommentHandlerTests : PptHandlerTestBase
 
     #region Reply Author Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SameAuthorAsParent_ReusesAuthor()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithParentComment("Parent", "Same Author");
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -133,9 +141,10 @@ public class ReplyPptCommentHandlerTests : PptHandlerTestBase
         Assert.Single(pres.CommentAuthors);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DifferentAuthor_CreatesNewAuthor()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithParentComment("Parent", "Original");
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -155,9 +164,10 @@ public class ReplyPptCommentHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_InvalidCommentIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -171,9 +181,10 @@ public class ReplyPptCommentHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_NegativeCommentIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithParentComment();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -187,9 +198,10 @@ public class ReplyPptCommentHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_OutOfRangeCommentIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithParentComment();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -203,9 +215,10 @@ public class ReplyPptCommentHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_MissingText_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithParentComment();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -218,9 +231,10 @@ public class ReplyPptCommentHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_MissingAuthor_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithParentComment();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -233,9 +247,10 @@ public class ReplyPptCommentHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_MissingCommentIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithParentComment();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

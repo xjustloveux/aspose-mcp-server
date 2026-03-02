@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Hyperlink;
 using AsposeMcpServer.Results.Common;
@@ -5,15 +6,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Hyperlink;
 
+[SupportedOSPlatform("windows")]
 public class EditPptHyperlinkHandlerTests : PptHandlerTestBase
 {
     private readonly EditPptHyperlinkHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Edit()
     {
+        SkipIfNotWindows();
         Assert.Equal("edit", _handler.Operation);
     }
 
@@ -34,9 +37,10 @@ public class EditPptHyperlinkHandlerTests : PptHandlerTestBase
 
     #region Basic Edit Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_EditsHyperlinkUrl()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithHyperlink();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -59,9 +63,10 @@ public class EditPptHyperlinkHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ChangesToSlideTarget()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithHyperlink();
         pres.Slides.AddEmptySlide(pres.LayoutSlides[0]);
         var context = CreateContext(pres);
@@ -85,9 +90,10 @@ public class EditPptHyperlinkHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithRemoveHyperlink_RemovesHyperlink()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithHyperlink();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -113,9 +119,10 @@ public class EditPptHyperlinkHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithHyperlink();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -127,9 +134,10 @@ public class EditPptHyperlinkHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutShapeIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithHyperlink();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -141,9 +149,10 @@ public class EditPptHyperlinkHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutUrlOrSlideTargetOrRemove_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithHyperlink();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -155,9 +164,10 @@ public class EditPptHyperlinkHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSlideTargetIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithHyperlink();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

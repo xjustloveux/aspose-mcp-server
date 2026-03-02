@@ -1,4 +1,5 @@
-﻿using Aspose.Slides;
+﻿using System.Runtime.Versioning;
+using Aspose.Slides;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.PowerPoint;
@@ -10,6 +11,7 @@ namespace AsposeMcpServer.Tests.Tools.PowerPoint;
 ///     Focuses on session management, file I/O, and operation routing.
 ///     Detailed parameter validation and business logic tests are in Handler tests.
 /// </summary>
+[SupportedOSPlatform("windows")]
 public class PptPageSetupToolTests : PptTestBase
 {
     private readonly PptPageSetupTool _tool;
@@ -21,9 +23,10 @@ public class PptPageSetupToolTests : PptTestBase
 
     #region File I/O Smoke Tests
 
-    [Fact]
+    [SkippableFact]
     public void SetSize_WithPreset_ShouldSetSlideSize()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_set_size.pptx");
         var outputPath = CreateTestFilePath("test_set_size_output.pptx");
         var result = _tool.Execute("set_size", pptPath, preset: "OnScreen16x9", outputPath: outputPath);
@@ -33,9 +36,10 @@ public class PptPageSetupToolTests : PptTestBase
         Assert.Equal(SlideSizeType.OnScreen16x9, presentation.SlideSize.Type);
     }
 
-    [Fact]
+    [SkippableFact]
     public void SetOrientation_Portrait_ShouldSwapToPortrait()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_set_portrait.pptx");
         var outputPath = CreateTestFilePath("test_set_portrait_output.pptx");
         var result = _tool.Execute("set_orientation", pptPath, orientation: "Portrait", outputPath: outputPath);
@@ -45,9 +49,10 @@ public class PptPageSetupToolTests : PptTestBase
         Assert.True(presentation.SlideSize.Size.Height > presentation.SlideSize.Size.Width);
     }
 
-    [Fact]
+    [SkippableFact]
     public void SetFooter_ShouldSetFooterText()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_set_footer.pptx");
         var outputPath = CreateTestFilePath("test_set_footer_output.pptx");
         var result = _tool.Execute("set_footer", pptPath, footerText: "Footer Text", outputPath: outputPath);
@@ -56,9 +61,10 @@ public class PptPageSetupToolTests : PptTestBase
         Assert.True(File.Exists(outputPath));
     }
 
-    [Fact]
+    [SkippableFact]
     public void SetSlideNumbering_Show_ShouldShowNumbers()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_numbering_show.pptx");
         var outputPath = CreateTestFilePath("test_numbering_show_output.pptx");
         var result = _tool.Execute("set_slide_numbering", pptPath, showSlideNumber: true, outputPath: outputPath);
@@ -71,12 +77,13 @@ public class PptPageSetupToolTests : PptTestBase
 
     #region Operation Routing
 
-    [Theory]
+    [SkippableTheory]
     [InlineData("SET_SIZE")]
     [InlineData("Set_Size")]
     [InlineData("set_size")]
     public void Operation_ShouldBeCaseInsensitive(string operation)
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation($"test_case_size_{operation.Replace("_", "")}.pptx");
         var outputPath = CreateTestFilePath($"test_case_size_{operation.Replace("_", "")}_output.pptx");
         var result = _tool.Execute(operation, pptPath, preset: "OnScreen16x9", outputPath: outputPath);
@@ -84,9 +91,10 @@ public class PptPageSetupToolTests : PptTestBase
         Assert.StartsWith("Slide size set to", data.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_unknown_op.pptx");
         var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", pptPath));
         Assert.Contains("Unknown operation", ex.Message);
@@ -96,9 +104,10 @@ public class PptPageSetupToolTests : PptTestBase
 
     #region Session Management
 
-    [Fact]
+    [SkippableFact]
     public void SetSize_WithSessionId_ShouldModifyInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_session_size.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("set_size", sessionId: sessionId, preset: "OnScreen16x9");
@@ -108,9 +117,10 @@ public class PptPageSetupToolTests : PptTestBase
         Assert.Equal(SlideSizeType.OnScreen16x9, ppt.SlideSize.Type);
     }
 
-    [Fact]
+    [SkippableFact]
     public void SetOrientation_WithSessionId_ShouldModifyInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_session_orientation.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("set_orientation", sessionId: sessionId, orientation: "Portrait");
@@ -120,9 +130,10 @@ public class PptPageSetupToolTests : PptTestBase
         Assert.True(ppt.SlideSize.Size.Height > ppt.SlideSize.Size.Width);
     }
 
-    [Fact]
+    [SkippableFact]
     public void SetFooter_WithSessionId_ShouldModifyInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_session_footer.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("set_footer", sessionId: sessionId, footerText: "Session Footer");
@@ -130,9 +141,10 @@ public class PptPageSetupToolTests : PptTestBase
         Assert.StartsWith("Footer settings updated for", data.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void SetSlideNumbering_WithSessionId_ShouldModifyInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_session_numbering.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("set_slide_numbering", sessionId: sessionId, showSlideNumber: true, firstNumber: 10);
@@ -142,16 +154,18 @@ public class PptPageSetupToolTests : PptTestBase
         Assert.Equal(10, ppt.FirstSlideNumber);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
+        SkipIfNotWindows();
         Assert.Throws<KeyNotFoundException>(() =>
             _tool.Execute("set_size", sessionId: "invalid_session", preset: "OnScreen16x9"));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
     {
+        SkipIfNotWindows();
         var pptPath1 = CreatePresentation("test_path_setup.pptx");
         var pptPath2 = CreatePresentation("test_session_setup.pptx");
         var sessionId = OpenSession(pptPath2);

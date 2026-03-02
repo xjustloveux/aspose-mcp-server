@@ -7,18 +7,21 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 // CA1416 - System.Drawing.Common is Windows-only, cross-platform support not required
 #pragma warning disable CA1416
+using System.Runtime.Versioning;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Image;
 
+[SupportedOSPlatform("windows")]
 public class GetPptImagesHandlerTests : PptHandlerTestBase
 {
     private readonly GetPptImagesHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Get()
     {
+        SkipIfNotWindows();
         Assert.Equal("get", _handler.Operation);
     }
 
@@ -26,9 +29,10 @@ public class GetPptImagesHandlerTests : PptHandlerTestBase
 
     #region Read-Only Verification
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DoesNotModifyPresentation()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithImage();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -45,9 +49,10 @@ public class GetPptImagesHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSlideIndex_ThrowsException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -85,9 +90,10 @@ public class GetPptImagesHandlerTests : PptHandlerTestBase
 
     #region Basic Get Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsImageInfo()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithImage();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -103,9 +109,10 @@ public class GetPptImagesHandlerTests : PptHandlerTestBase
         Assert.NotNull(result.Images);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithEmptySlide_ReturnsZeroImages()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -120,9 +127,10 @@ public class GetPptImagesHandlerTests : PptHandlerTestBase
         Assert.Equal(0, result.ImageCount);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsImagePosition()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithImage();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

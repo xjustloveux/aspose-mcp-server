@@ -1,18 +1,21 @@
+using System.Runtime.Versioning;
 using AsposeMcpServer.Handlers.PowerPoint.Notes;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Notes;
 
+[SupportedOSPlatform("windows")]
 public class SetNotesHandlerTests : PptHandlerTestBase
 {
     private readonly SetNotesHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Set()
     {
+        SkipIfNotWindows();
         Assert.Equal("set", _handler.Operation);
     }
 
@@ -20,9 +23,10 @@ public class SetNotesHandlerTests : PptHandlerTestBase
 
     #region Basic Set Notes Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SetsNotesForSlide()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -44,6 +48,7 @@ public class SetNotesHandlerTests : PptHandlerTestBase
     [SkippableFact]
     public void Execute_ReplacesExistingNotes()
     {
+        SkipIfNotWindows();
         SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation mode truncates text content");
 
         var presentation = CreateEmptyPresentation();
@@ -63,9 +68,10 @@ public class SetNotesHandlerTests : PptHandlerTestBase
         Assert.Equal("New notes", slide.NotesSlideManager.NotesSlide.NotesTextFrame.Text);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>

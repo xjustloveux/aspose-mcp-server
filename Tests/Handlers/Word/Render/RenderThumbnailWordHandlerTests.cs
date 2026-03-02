@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using AsposeMcpServer.Handlers.Word.Render;
 using AsposeMcpServer.Results.Word.Render;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -7,6 +8,7 @@ namespace AsposeMcpServer.Tests.Handlers.Word.Render;
 /// <summary>
 ///     Tests for RenderThumbnailWordHandler.
 /// </summary>
+[SupportedOSPlatform("windows")]
 public class RenderThumbnailWordHandlerTests : WordHandlerTestBase
 {
     private readonly RenderThumbnailWordHandler _handler = new();
@@ -17,9 +19,10 @@ public class RenderThumbnailWordHandlerTests : WordHandlerTestBase
         Assert.Equal("render_thumbnail", _handler.Operation);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithDefaultScale_ShouldRenderThumbnail()
     {
+        SkipIfNotWindows();
         var doc = CreateDocumentWithText("Thumbnail test content");
         var docPath = Path.Combine(TestDir, "test_thumb.docx");
         doc.Save(docPath);
@@ -43,9 +46,10 @@ public class RenderThumbnailWordHandlerTests : WordHandlerTestBase
         Assert.True(System.IO.File.Exists(outputPath));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithJpegFormat_ShouldRenderJpeg()
     {
+        SkipIfNotWindows();
         var doc = CreateDocumentWithText("JPEG thumbnail");
         var docPath = Path.Combine(TestDir, "test_thumb_jpeg.docx");
         doc.Save(docPath);
@@ -67,9 +71,10 @@ public class RenderThumbnailWordHandlerTests : WordHandlerTestBase
         Assert.Equal("jpeg", renderResult.Format);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithCustomScale_ShouldUseScale()
     {
+        SkipIfNotWindows();
         var doc = CreateDocumentWithText("Custom scale");
         var docPath = Path.Combine(TestDir, "test_thumb_scale.docx");
         doc.Save(docPath);

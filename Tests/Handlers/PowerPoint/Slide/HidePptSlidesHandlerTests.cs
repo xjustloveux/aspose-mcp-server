@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using System.Text.Json;
 using AsposeMcpServer.Handlers.PowerPoint.Slide;
 using AsposeMcpServer.Results.Common;
@@ -5,6 +6,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Slide;
 
+[SupportedOSPlatform("windows")]
 public class HidePptSlidesHandlerTests : PptHandlerTestBase
 {
     private static readonly int[] IndicesZeroTwo = [0, 2];
@@ -15,9 +17,10 @@ public class HidePptSlidesHandlerTests : PptHandlerTestBase
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Hide()
     {
+        SkipIfNotWindows();
         Assert.Equal("hide", _handler.Operation);
     }
 
@@ -25,12 +28,13 @@ public class HidePptSlidesHandlerTests : PptHandlerTestBase
 
     #region Single Slide
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(0)]
     [InlineData(1)]
     [InlineData(2)]
     public void Execute_WithSingleIndex_HidesSingleSlide(int slideIndex)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var indices = JsonSerializer.Serialize(new[] { slideIndex });
         var context = CreateContext(pres);
@@ -50,9 +54,10 @@ public class HidePptSlidesHandlerTests : PptHandlerTestBase
 
     #region Result Message
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsSlideCountInMessage()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(5);
         var indices = JsonSerializer.Serialize(IndicesZeroTwo);
         var context = CreateContext(pres);
@@ -77,9 +82,10 @@ public class HidePptSlidesHandlerTests : PptHandlerTestBase
 
     #region Preserve Other Slides
 
-    [Fact]
+    [SkippableFact]
     public void Execute_PreservesUnaffectedSlides()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(5);
         pres.Slides[1].Hidden = true;
         pres.Slides[3].Hidden = true;
@@ -104,9 +110,10 @@ public class HidePptSlidesHandlerTests : PptHandlerTestBase
 
     #region Hide Slides
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithHiddenTrue_HidesAllSlides()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -123,9 +130,10 @@ public class HidePptSlidesHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithSpecificIndices_HidesOnlyThoseSlides()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(5);
         var indices = JsonSerializer.Serialize(IndicesZeroTwoFour);
         var context = CreateContext(pres);
@@ -150,9 +158,10 @@ public class HidePptSlidesHandlerTests : PptHandlerTestBase
 
     #region Show Slides
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithHiddenFalse_ShowsAllSlides()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         pres.Slides[0].Hidden = true;
         pres.Slides[1].Hidden = true;
@@ -172,9 +181,10 @@ public class HidePptSlidesHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithSpecificIndices_ShowsOnlyThoseSlides()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(5);
         pres.Slides[0].Hidden = true;
         pres.Slides[1].Hidden = true;
@@ -202,9 +212,10 @@ public class HidePptSlidesHandlerTests : PptHandlerTestBase
 
     #region Default Behavior
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutHiddenParam_DefaultsToFalse()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         pres.Slides[0].Hidden = true;
         pres.Slides[1].Hidden = true;
@@ -217,9 +228,10 @@ public class HidePptSlidesHandlerTests : PptHandlerTestBase
         Assert.False(pres.Slides[1].Hidden);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutSlideIndices_AffectsAllSlides()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(5);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -239,12 +251,13 @@ public class HidePptSlidesHandlerTests : PptHandlerTestBase
 
     #region Error Handling - Invalid Index
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(3, 3)]
     [InlineData(3, 5)]
     [InlineData(3, 100)]
     public void Execute_WithIndexOutOfRange_ThrowsArgumentException(int totalSlides, int invalidIndex)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(totalSlides);
         var indices = JsonSerializer.Serialize(new[] { invalidIndex });
         var context = CreateContext(pres);
@@ -258,11 +271,12 @@ public class HidePptSlidesHandlerTests : PptHandlerTestBase
         Assert.Contains("out of range", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(-1)]
     [InlineData(-5)]
     public void Execute_WithNegativeIndex_ThrowsArgumentException(int negativeIndex)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var indices = JsonSerializer.Serialize(new[] { negativeIndex });
         var context = CreateContext(pres);

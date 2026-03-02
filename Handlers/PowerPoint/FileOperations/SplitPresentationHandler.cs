@@ -34,10 +34,15 @@ public class SplitPresentationHandler : OperationHandlerBase<Presentation>
         if (string.IsNullOrEmpty(sourcePath) && string.IsNullOrEmpty(p.SessionId))
             throw new ArgumentException("Either inputPath, path, or sessionId is required for split operation");
 
+        if (!string.IsNullOrEmpty(sourcePath))
+            SecurityHelper.ValidateFilePath(sourcePath, "inputPath", true);
+        SecurityHelper.ValidateFilePath(p.OutputDirectory, "outputDirectory", true);
+
         if (!Directory.Exists(p.OutputDirectory))
             Directory.CreateDirectory(p.OutputDirectory);
 
         Presentation presentation;
+        Presentation? ownedPresentation = null;
 
         if (!string.IsNullOrEmpty(p.SessionId))
         {
@@ -49,40 +54,48 @@ public class SplitPresentationHandler : OperationHandlerBase<Presentation>
         }
         else
         {
-            presentation = new Presentation(sourcePath);
+            ownedPresentation = new Presentation(sourcePath);
+            presentation = ownedPresentation;
         }
 
         var totalSlides = presentation.Slides.Count;
 
-        var start = p.StartSlideIndex ?? 0;
-        var end = p.EndSlideIndex ?? totalSlides - 1;
-
-        if (start < 0 || start >= totalSlides || end < 0 || end >= totalSlides || start > end)
-            throw new ArgumentException($"Invalid slide range: start={start}, end={end}, total={totalSlides}");
-
-        var fileCount = 0;
-        for (var i = start; i <= end; i += p.SlidesPerFile)
+        try
         {
-            using var newPresentation = new Presentation();
-            newPresentation.Slides.RemoveAt(0);
+            var start = p.StartSlideIndex ?? 0;
+            var end = p.EndSlideIndex ?? totalSlides - 1;
 
-            for (var j = 0; j < p.SlidesPerFile && i + j <= end; j++)
+            if (start < 0 || start >= totalSlides || end < 0 || end >= totalSlides || start > end)
+                throw new ArgumentException($"Invalid slide range: start={start}, end={end}, total={totalSlides}");
+
+            var fileCount = 0;
+            for (var i = start; i <= end; i += p.SlidesPerFile)
             {
-                var sourceSlide = presentation.Slides[i + j];
-                var sourceMaster = sourceSlide.LayoutSlide.MasterSlide;
-                var destMaster = newPresentation.Masters.AddClone(sourceMaster);
-                newPresentation.Slides.AddClone(sourceSlide, destMaster, true);
+                using var newPresentation = new Presentation();
+                newPresentation.Slides.RemoveAt(0);
+
+                for (var j = 0; j < p.SlidesPerFile && i + j <= end; j++)
+                {
+                    var sourceSlide = presentation.Slides[i + j];
+                    var sourceMaster = sourceSlide.LayoutSlide.MasterSlide;
+                    var destMaster = newPresentation.Masters.AddClone(sourceMaster);
+                    newPresentation.Slides.AddClone(sourceSlide, destMaster, true);
+                }
+
+                var outputFileName = p.OutputFileNamePattern.Replace("{index}", fileCount.ToString());
+                outputFileName = SecurityHelper.SanitizeFileName(outputFileName);
+                var outPath = Path.Combine(p.OutputDirectory, outputFileName);
+                newPresentation.Save(outPath, SaveFormat.Pptx);
+                fileCount++;
             }
 
-            var outputFileName = p.OutputFileNamePattern.Replace("{index}", fileCount.ToString());
-            outputFileName = SecurityHelper.SanitizeFileName(outputFileName);
-            var outPath = Path.Combine(p.OutputDirectory, outputFileName);
-            newPresentation.Save(outPath, SaveFormat.Pptx);
-            fileCount++;
+            return new SuccessResult
+                { Message = $"Split presentation into {fileCount} file(s). Output: {p.OutputDirectory}" };
         }
-
-        return new SuccessResult
-            { Message = $"Split presentation into {fileCount} file(s). Output: {p.OutputDirectory}" };
+        finally
+        {
+            ownedPresentation?.Dispose();
+        }
     }
 
     /// <summary>

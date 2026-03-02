@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Handlers.PowerPoint.FileOperations;
@@ -6,6 +7,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.FileOperations;
 
+[SupportedOSPlatform("windows")]
 public class MergePresentationsHandlerTests : PptHandlerTestBase
 {
     private readonly MergePresentationsHandler _handler = new();
@@ -31,9 +33,10 @@ public class MergePresentationsHandlerTests : PptHandlerTestBase
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Merge()
     {
+        SkipIfNotWindows();
         Assert.Equal("merge", _handler.Operation);
     }
 
@@ -41,9 +44,10 @@ public class MergePresentationsHandlerTests : PptHandlerTestBase
 
     #region Basic Merge Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_MergesPresentations()
     {
+        SkipIfNotWindows();
         var outputPath = Path.Combine(TestDir, "merged.pptx");
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
@@ -67,9 +71,10 @@ public class MergePresentationsHandlerTests : PptHandlerTestBase
         Assert.Equal(2, mergedPres.Slides.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithOutputPath_MergesPresentations()
     {
+        SkipIfNotWindows();
         var outputPath = Path.Combine(TestDir, "merged_output.pptx");
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
@@ -89,9 +94,10 @@ public class MergePresentationsHandlerTests : PptHandlerTestBase
         Assert.True(fileInfo.Length > 0, "Merged file should have content");
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutKeepSourceFormatting_MergesPresentations()
     {
+        SkipIfNotWindows();
         var outputPath = Path.Combine(TestDir, "merged_no_keep.pptx");
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
@@ -112,9 +118,10 @@ public class MergePresentationsHandlerTests : PptHandlerTestBase
         Assert.True(fileInfo.Length > 0, "Merged file should have content");
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInputPathAsBase_MergesAllSlides()
     {
+        SkipIfNotWindows();
         var outputPath = Path.Combine(TestDir, "merged_with_base.pptx");
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
@@ -138,9 +145,10 @@ public class MergePresentationsHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutPathOrOutputPath_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -151,9 +159,10 @@ public class MergePresentationsHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutInputPaths_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -164,9 +173,10 @@ public class MergePresentationsHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithEmptyInputPaths_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

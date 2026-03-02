@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO.MemoryMappedFiles;
+using System.Runtime.Versioning;
 using AsposeMcpServer.Core.Extension;
 using AsposeMcpServer.Core.Extension.Transport;
 
@@ -12,6 +13,7 @@ namespace AsposeMcpServer.Tests.Core.Extension.Transport;
 ///     Unit tests for MmapTransport class.
 ///     Tests are cross-platform compatible.
 /// </summary>
+[SupportedOSPlatform("windows")]
 public class MmapTransportTests : IDisposable
 {
     private readonly string _tempDirectory;
@@ -26,6 +28,7 @@ public class MmapTransportTests : IDisposable
 
     public void Dispose()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         _transport.Dispose();
         try
         {
@@ -42,9 +45,10 @@ public class MmapTransportTests : IDisposable
 
     #region Mode Tests
 
-    [Fact]
+    [SkippableFact]
     public void Mode_ReturnsCorrectValue()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         Assert.Equal("mmap", _transport.Mode);
     }
 
@@ -52,9 +56,10 @@ public class MmapTransportTests : IDisposable
 
     #region SendAsync Tests
 
-    [Fact]
+    [SkippableFact]
     public async Task SendAsync_ProcessHasExited_ReturnsFalse()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         using var process = new Process();
         process.StartInfo = CreateExitingProcessStartInfo();
         process.Start();
@@ -68,9 +73,10 @@ public class MmapTransportTests : IDisposable
         Assert.False(result);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task SendAsync_DisposedTransport_ThrowsObjectDisposedException()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         var transport = new MmapTransport(tempDirectory: _tempDirectory);
         transport.Dispose();
 
@@ -82,9 +88,10 @@ public class MmapTransportTests : IDisposable
             transport.SendAsync(process, data, metadata));
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task SendAsync_Success_SetsMetadataProperties()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         using var process = CreateTestProcess();
         var metadata = CreateTestMetadata();
         var data = new byte[] { 1, 2, 3, 4, 5 };
@@ -100,9 +107,10 @@ public class MmapTransportTests : IDisposable
         _transport.Cleanup(metadata);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task SendAsync_Success_CreatesMemoryMappedFile()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         using var process = CreateTestProcess();
         var metadata = CreateTestMetadata();
         var testData = new byte[] { 10, 20, 30, 40, 50 };
@@ -131,9 +139,10 @@ public class MmapTransportTests : IDisposable
         _transport.Cleanup(metadata);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task SendAsync_MacOS_SetsFilePath()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         if (!OperatingSystem.IsMacOS())
             return;
 
@@ -157,9 +166,10 @@ public class MmapTransportTests : IDisposable
 
     #region Cleanup Tests
 
-    [Fact]
+    [SkippableFact]
     public void Cleanup_NullMmapName_DoesNotThrow()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         var metadata = CreateTestMetadata();
         metadata.MmapName = null;
 
@@ -168,9 +178,10 @@ public class MmapTransportTests : IDisposable
         Assert.Null(exception);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Cleanup_EmptyMmapName_DoesNotThrow()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         var metadata = CreateTestMetadata();
         metadata.MmapName = string.Empty;
 
@@ -179,9 +190,10 @@ public class MmapTransportTests : IDisposable
         Assert.Null(exception);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task Cleanup_ExistingMmap_SchedulesDelayedDispose()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         if (OperatingSystem.IsMacOS())
             return;
 
@@ -200,9 +212,10 @@ public class MmapTransportTests : IDisposable
             MemoryMappedFile.OpenExisting(mmapName!));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Cleanup_AlreadyCleanedUp_DoesNotThrow()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         var metadata = CreateTestMetadata();
         metadata.MmapName = "nonexistent_mmap";
 
@@ -215,9 +228,10 @@ public class MmapTransportTests : IDisposable
 
     #region Dispose Tests
 
-    [Fact]
+    [SkippableFact]
     public async Task Dispose_CleansUpAllMmaps()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         if (OperatingSystem.IsMacOS())
             return;
 
@@ -238,9 +252,10 @@ public class MmapTransportTests : IDisposable
             MemoryMappedFile.OpenExisting(metadata2.MmapName!));
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task Dispose_MacOS_CleansUpAllFiles()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         if (!OperatingSystem.IsMacOS())
             return;
 
@@ -265,9 +280,10 @@ public class MmapTransportTests : IDisposable
         Assert.False(File.Exists(filePath2));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Dispose_CanBeCalledMultipleTimes()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         var transport = new MmapTransport(tempDirectory: _tempDirectory);
 
         var exception = Record.Exception(() =>
@@ -283,9 +299,10 @@ public class MmapTransportTests : IDisposable
 
     #region ForceCleanup Tests
 
-    [Fact]
+    [SkippableFact]
     public async Task ForceCleanup_ExistingMmap_ImmediatelyDisposes()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         if (OperatingSystem.IsMacOS())
             return;
 
@@ -303,9 +320,10 @@ public class MmapTransportTests : IDisposable
             MemoryMappedFile.OpenExisting(mmapName));
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task ForceCleanup_MacOS_ImmediatelyDeletesFile()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         if (!OperatingSystem.IsMacOS())
             return;
 
@@ -325,25 +343,28 @@ public class MmapTransportTests : IDisposable
         Assert.False(File.Exists(filePath));
     }
 
-    [Fact]
+    [SkippableFact]
     public void ForceCleanup_NonexistentMmap_ReturnsFalse()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         var result = _transport.ForceCleanup("nonexistent_mmap_name");
 
         Assert.False(result);
     }
 
-    [Fact]
+    [SkippableFact]
     public void ForceCleanup_NullMmapName_ReturnsFalse()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         var result = _transport.ForceCleanup(null!);
 
         Assert.False(result);
     }
 
-    [Fact]
+    [SkippableFact]
     public void ForceCleanup_EmptyMmapName_ReturnsFalse()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         var result = _transport.ForceCleanup(string.Empty);
 
         Assert.False(result);
@@ -353,15 +374,17 @@ public class MmapTransportTests : IDisposable
 
     #region Diagnostic Properties Tests
 
-    [Fact]
+    [SkippableFact]
     public void ActiveMmapCount_InitiallyZero()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         Assert.Equal(0, _transport.ActiveMmapCount);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task ActiveMmapCount_IncreasesAfterSend()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         using var process = CreateTestProcess();
         var metadata = CreateTestMetadata();
         var data = new byte[] { 1, 2, 3, 4 };
@@ -373,9 +396,10 @@ public class MmapTransportTests : IDisposable
         _transport.Cleanup(metadata);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task ActiveMmapCount_DecreasesAfterCleanup()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         using var process = CreateTestProcess();
         var metadata = CreateTestMetadata();
         var data = new byte[] { 1, 2, 3, 4 };
@@ -387,15 +411,17 @@ public class MmapTransportTests : IDisposable
         Assert.Equal(0, _transport.ActiveMmapCount);
     }
 
-    [Fact]
+    [SkippableFact]
     public void PendingCleanupCount_InitiallyZero()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         Assert.Equal(0, _transport.PendingCleanupCount);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task PendingCleanupCount_IncreasesAfterCleanup()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         using var process = CreateTestProcess();
         var metadata = CreateTestMetadata();
         var data = new byte[] { 1, 2, 3, 4 };

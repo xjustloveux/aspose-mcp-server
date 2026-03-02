@@ -1,18 +1,21 @@
+using System.Runtime.Versioning;
 using AsposeMcpServer.Handlers.PowerPoint.Properties;
 using AsposeMcpServer.Results.PowerPoint.Properties;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Properties;
 
+[SupportedOSPlatform("windows")]
 public class GetPptPropertiesHandlerTests : PptHandlerTestBase
 {
     private readonly GetPptPropertiesHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Get()
     {
+        SkipIfNotWindows();
         Assert.Equal("get", _handler.Operation);
     }
 
@@ -20,9 +23,10 @@ public class GetPptPropertiesHandlerTests : PptHandlerTestBase
 
     #region Basic Get Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_GetsDocumentProperties()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         pres.DocumentProperties.Title = "Test Title";
         pres.DocumentProperties.Author = "Test Author";
@@ -38,9 +42,10 @@ public class GetPptPropertiesHandlerTests : PptHandlerTestBase
         AssertNotModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_GetsAllProperties()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         pres.DocumentProperties.Title = "My Title";
         pres.DocumentProperties.Subject = "My Subject";
@@ -67,9 +72,10 @@ public class GetPptPropertiesHandlerTests : PptHandlerTestBase
         Assert.Equal("My Manager", result.Manager);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithEmptyProperties_ReturnsEmptyValues()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -82,9 +88,10 @@ public class GetPptPropertiesHandlerTests : PptHandlerTestBase
         Assert.IsType<GetPropertiesPptResult>(result);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_IncludesCreatedTime()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -96,9 +103,10 @@ public class GetPptPropertiesHandlerTests : PptHandlerTestBase
         Assert.IsType<DateTime>(result.CreatedTime);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_IncludesRevisionNumber()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -110,9 +118,10 @@ public class GetPptPropertiesHandlerTests : PptHandlerTestBase
         Assert.IsType<int>(result.RevisionNumber);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsResultType()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         pres.DocumentProperties.Title = "JSON Test";
         var context = CreateContext(pres);

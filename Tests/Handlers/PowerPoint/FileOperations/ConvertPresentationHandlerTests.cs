@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Handlers.PowerPoint.FileOperations;
@@ -6,6 +7,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.FileOperations;
 
+[SupportedOSPlatform("windows")]
 public class ConvertPresentationHandlerTests : PptHandlerTestBase
 {
     private readonly ConvertPresentationHandler _handler = new();
@@ -22,9 +24,10 @@ public class ConvertPresentationHandlerTests : PptHandlerTestBase
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Convert()
     {
+        SkipIfNotWindows();
         Assert.Equal("convert", _handler.Operation);
     }
 
@@ -32,9 +35,10 @@ public class ConvertPresentationHandlerTests : PptHandlerTestBase
 
     #region Basic Convert Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ConvertsToPdf()
     {
+        SkipIfNotWindows();
         var outputPath = Path.Combine(TestDir, "output.pdf");
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
@@ -55,9 +59,10 @@ public class ConvertPresentationHandlerTests : PptHandlerTestBase
         Assert.True(fileInfo.Length > 0, "Converted PDF file should have content");
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ConvertsToHtml()
     {
+        SkipIfNotWindows();
         var outputPath = Path.Combine(TestDir, "output.html");
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
@@ -78,9 +83,10 @@ public class ConvertPresentationHandlerTests : PptHandlerTestBase
         Assert.True(fileInfo.Length > 0, "Converted HTML file should have content");
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ConvertsToPpt()
     {
+        SkipIfNotWindows();
         var outputPath = Path.Combine(TestDir, "output.ppt");
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
@@ -108,9 +114,10 @@ public class ConvertPresentationHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutSource_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -122,9 +129,10 @@ public class ConvertPresentationHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutOutputPath_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -136,9 +144,10 @@ public class ConvertPresentationHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutFormat_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -150,9 +159,10 @@ public class ConvertPresentationHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithUnsupportedFormat_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -169,13 +179,14 @@ public class ConvertPresentationHandlerTests : PptHandlerTestBase
 
     #region Additional Format Tests
 
-    [Theory]
+    [SkippableTheory]
     [InlineData("pptx")]
     [InlineData("odp")]
     [InlineData("xps")]
     [InlineData("tiff")]
     public void Execute_WithVariousFormats_Converts(string format)
     {
+        SkipIfNotWindows();
         var outputPath = Path.Combine(TestDir, $"output.{format}");
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
@@ -197,6 +208,7 @@ public class ConvertPresentationHandlerTests : PptHandlerTestBase
     [SkippableFact]
     public void Execute_WithJpegFormat_ConvertsSlide()
     {
+        SkipIfNotWindows();
         SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation mode limits image conversion");
 
         var outputPath = Path.Combine(TestDir, "slide.jpg");
@@ -222,6 +234,7 @@ public class ConvertPresentationHandlerTests : PptHandlerTestBase
     [SkippableFact]
     public void Execute_WithPngFormat_ConvertsSlide()
     {
+        SkipIfNotWindows();
         SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation mode limits image conversion");
 
         var outputPath = Path.Combine(TestDir, "slide.png");
@@ -247,6 +260,7 @@ public class ConvertPresentationHandlerTests : PptHandlerTestBase
     [SkippableFact]
     public void Execute_WithJpgFormat_ConvertsSlide()
     {
+        SkipIfNotWindows();
         SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation mode limits image conversion");
 
         var outputPath = Path.Combine(TestDir, "slide_jpg.jpg");

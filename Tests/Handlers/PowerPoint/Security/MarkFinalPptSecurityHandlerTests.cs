@@ -1,18 +1,21 @@
+using System.Runtime.Versioning;
 using AsposeMcpServer.Handlers.PowerPoint.Security;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Security;
 
+[SupportedOSPlatform("windows")]
 public class MarkFinalPptSecurityHandlerTests : PptHandlerTestBase
 {
     private readonly MarkFinalPptSecurityHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_MarkFinal()
     {
+        SkipIfNotWindows();
         Assert.Equal("mark_final", _handler.Operation);
     }
 
@@ -20,9 +23,10 @@ public class MarkFinalPptSecurityHandlerTests : PptHandlerTestBase
 
     #region Mark As Final
 
-    [Fact]
+    [SkippableFact]
     public void Execute_MarkAsFinal_SetsProperty()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -37,9 +41,10 @@ public class MarkFinalPptSecurityHandlerTests : PptHandlerTestBase
         Assert.True((bool)pres.DocumentProperties["_MarkAsFinal"]);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_MarkAsFinal_ReturnsMarkedMessage()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -53,9 +58,10 @@ public class MarkFinalPptSecurityHandlerTests : PptHandlerTestBase
         Assert.Contains("marked as final", result.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DefaultMarkAsFinal_MarksAsFinal()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -70,9 +76,10 @@ public class MarkFinalPptSecurityHandlerTests : PptHandlerTestBase
 
     #region Unmark As Final
 
-    [Fact]
+    [SkippableFact]
     public void Execute_UnmarkAsFinal_UnsetsProperty()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         pres.DocumentProperties["_MarkAsFinal"] = true;
         var context = CreateContext(pres);
@@ -87,9 +94,10 @@ public class MarkFinalPptSecurityHandlerTests : PptHandlerTestBase
         Assert.False((bool)pres.DocumentProperties["_MarkAsFinal"]);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_UnmarkAsFinal_ReturnsUnmarkedMessage()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         pres.DocumentProperties["_MarkAsFinal"] = true;
         var context = CreateContext(pres);

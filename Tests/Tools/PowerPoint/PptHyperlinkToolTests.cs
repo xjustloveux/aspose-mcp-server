@@ -1,4 +1,5 @@
-﻿using Aspose.Slides;
+﻿using System.Runtime.Versioning;
+using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Results.PowerPoint.Hyperlink;
@@ -12,6 +13,7 @@ namespace AsposeMcpServer.Tests.Tools.PowerPoint;
 ///     Focuses on session management, file I/O, and operation routing.
 ///     Detailed parameter validation and business logic tests are in Handler tests.
 /// </summary>
+[SupportedOSPlatform("windows")]
 public class PptHyperlinkToolTests : PptTestBase
 {
     private readonly PptHyperlinkTool _tool;
@@ -46,9 +48,10 @@ public class PptHyperlinkToolTests : PptTestBase
 
     #region File I/O Smoke Tests
 
-    [Fact]
+    [SkippableFact]
     public void Add_ShouldAddHyperlink()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithShape("test_add_hyperlink.pptx");
         var shapeIndex = FindShapeIndex(pptPath);
         var outputPath = CreateTestFilePath("test_add_hyperlink_output.pptx");
@@ -62,9 +65,10 @@ public class PptHyperlinkToolTests : PptTestBase
         Assert.Contains("example.com", shape.HyperlinkClick.ExternalUrl ?? "");
     }
 
-    [Fact]
+    [SkippableFact]
     public void Edit_ShouldModifyHyperlink()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithHyperlink("test_edit_hyperlink.pptx", "https://old.com");
         var outputPath = CreateTestFilePath("test_edit_hyperlink_output.pptx");
         var result = _tool.Execute("edit", pptPath, slideIndex: 0, shapeIndex: 0, url: "https://new.com",
@@ -75,9 +79,10 @@ public class PptHyperlinkToolTests : PptTestBase
         Assert.Contains("new.com", presentation.Slides[0].Shapes[0].HyperlinkClick?.ExternalUrl ?? "");
     }
 
-    [Fact]
+    [SkippableFact]
     public void Delete_ShouldRemoveHyperlink()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithHyperlink("test_delete_hyperlink.pptx");
         var outputPath = CreateTestFilePath("test_delete_hyperlink_output.pptx");
         var result = _tool.Execute("delete", pptPath, slideIndex: 0, shapeIndex: 0, outputPath: outputPath);
@@ -87,9 +92,10 @@ public class PptHyperlinkToolTests : PptTestBase
         Assert.Null(presentation.Slides[0].Shapes[0].HyperlinkClick);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Get_ShouldReturnAllHyperlinks()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithHyperlink("test_get_hyperlinks.pptx");
         var result = _tool.Execute("get", pptPath);
         var data = GetResultData<GetHyperlinksPptResult>(result);
@@ -101,12 +107,13 @@ public class PptHyperlinkToolTests : PptTestBase
 
     #region Operation Routing
 
-    [Theory]
+    [SkippableTheory]
     [InlineData("ADD")]
     [InlineData("Add")]
     [InlineData("add")]
     public void Operation_ShouldBeCaseInsensitive(string operation)
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithShape($"test_case_add_{operation}.pptx");
         var outputPath = CreateTestFilePath($"test_case_add_{operation}_output.pptx");
         var result = _tool.Execute(operation, pptPath, slideIndex: 0, url: "https://example.com", text: "Link",
@@ -115,9 +122,10 @@ public class PptHyperlinkToolTests : PptTestBase
         Assert.StartsWith("Hyperlink added to slide", data.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithShape("test_unknown_op.pptx");
         var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", pptPath));
         Assert.Contains("Unknown operation", ex.Message);
@@ -127,9 +135,10 @@ public class PptHyperlinkToolTests : PptTestBase
 
     #region Session Management
 
-    [Fact]
+    [SkippableFact]
     public void Get_WithSessionId_ShouldReturnHyperlinks()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithHyperlink("test_session_get_hyperlinks.pptx", "https://session-test.com");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("get", sessionId: sessionId);
@@ -140,9 +149,10 @@ public class PptHyperlinkToolTests : PptTestBase
         Assert.True(output.IsSession);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Add_WithSessionId_ShouldAddInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithShape("test_session_add_hyperlink.pptx");
         var shapeIndex = FindShapeIndex(pptPath);
         var sessionId = OpenSession(pptPath);
@@ -158,9 +168,10 @@ public class PptHyperlinkToolTests : PptTestBase
         Assert.Contains("session-example.com", shape.HyperlinkClick.ExternalUrl ?? "");
     }
 
-    [Fact]
+    [SkippableFact]
     public void Edit_WithSessionId_ShouldEditInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithHyperlink("test_session_edit_hyperlink.pptx", "https://old.com");
         var sessionId = OpenSession(pptPath);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
@@ -173,9 +184,10 @@ public class PptHyperlinkToolTests : PptTestBase
         Assert.Contains("session-new.com", ppt.Slides[0].Shapes[0].HyperlinkClick?.ExternalUrl ?? "");
     }
 
-    [Fact]
+    [SkippableFact]
     public void Delete_WithSessionId_ShouldDeleteInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithHyperlink("test_session_delete_hyperlink.pptx");
         var sessionId = OpenSession(pptPath);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
@@ -187,15 +199,17 @@ public class PptHyperlinkToolTests : PptTestBase
         Assert.Null(ppt.Slides[0].Shapes[0].HyperlinkClick);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
+        SkipIfNotWindows();
         Assert.Throws<KeyNotFoundException>(() => _tool.Execute("get", sessionId: "invalid_session"));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
     {
+        SkipIfNotWindows();
         var pptPath1 = CreatePresentationWithShape("test_path_hyperlink.pptx");
         var pptPath2 = CreatePresentationWithHyperlink("test_session_hyperlink.pptx", "https://session-url.com");
         var sessionId = OpenSession(pptPath2);

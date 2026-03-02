@@ -208,6 +208,9 @@ public class DocumentConverterTests : TestBase
         Assert.Contains("bmp", formats);
         Assert.Contains("svg", formats);
         Assert.Equal(14, formats.Count);
+        var expectedFormats = new[]
+            { "pdf", "docx", "doc", "html", "rtf", "txt", "odt", "png", "jpg", "jpeg", "tiff", "tif", "bmp", "svg" };
+        Assert.Empty(formats.Except(expectedFormats));
     }
 
     [Fact]
@@ -229,6 +232,9 @@ public class DocumentConverterTests : TestBase
         Assert.Contains("bmp", formats);
         Assert.Contains("svg", formats);
         Assert.Equal(13, formats.Count);
+        var expectedFormats = new[]
+            { "pdf", "html", "xlsx", "xls", "csv", "ods", "png", "jpg", "jpeg", "tiff", "tif", "bmp", "svg" };
+        Assert.Empty(formats.Except(expectedFormats));
     }
 
     [Fact]
@@ -244,6 +250,8 @@ public class DocumentConverterTests : TestBase
         Assert.Contains("png", formats);
         Assert.Contains("jpg", formats);
         Assert.Equal(7, formats.Count);
+        var expectedFormats = new[] { "pdf", "html", "pptx", "ppt", "odp", "png", "jpg" };
+        Assert.Empty(formats.Except(expectedFormats));
     }
 
     [Fact]
@@ -1011,6 +1019,7 @@ public class DocumentConverterTests : TestBase
     public void ConvertPdfDocument_ToHtml_CreatesFile()
     {
         SkipInEvaluationMode(AsposeLibraryType.Pdf);
+        SkipIfNotWindows();
 
         var pdfDoc = new Aspose.Pdf.Document();
         var page = pdfDoc.Pages.Add();

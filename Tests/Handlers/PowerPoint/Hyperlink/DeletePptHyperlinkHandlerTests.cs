@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Hyperlink;
 using AsposeMcpServer.Results.Common;
@@ -5,15 +6,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Hyperlink;
 
+[SupportedOSPlatform("windows")]
 public class DeletePptHyperlinkHandlerTests : PptHandlerTestBase
 {
     private readonly DeletePptHyperlinkHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Delete()
     {
+        SkipIfNotWindows();
         Assert.Equal("delete", _handler.Operation);
     }
 
@@ -21,9 +24,10 @@ public class DeletePptHyperlinkHandlerTests : PptHandlerTestBase
 
     #region Basic Delete Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DeletesHyperlink()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithHyperlink();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -57,9 +61,10 @@ public class DeletePptHyperlinkHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithHyperlink();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -70,9 +75,10 @@ public class DeletePptHyperlinkHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutShapeIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithHyperlink();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -83,9 +89,10 @@ public class DeletePptHyperlinkHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithHyperlink();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

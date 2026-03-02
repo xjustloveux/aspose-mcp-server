@@ -378,9 +378,10 @@ public class ConvertDocumentToolTests : TestBase
     /// <summary>
     ///     Tests that PDF can be converted to EPUB format.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public void Convert_PdfToEpub_ShouldSucceed()
     {
+        SkipIfNotWindows();
         var pdfPath = CreatePdfDocument("test_pdf_to_epub.pdf", "PDF to EPUB content");
         var outputPath = CreateTestFilePath("test_pdf_to_epub_output.epub");
 
@@ -395,9 +396,10 @@ public class ConvertDocumentToolTests : TestBase
     /// <summary>
     ///     Tests that PDF can be converted to SVG format.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public void Convert_PdfToSvg_ShouldSucceed()
     {
+        SkipIfNotWindows();
         var pdfPath = CreatePdfDocument("test_pdf_to_svg.pdf", "PDF to SVG content");
         var outputPath = CreateTestFilePath("test_pdf_to_svg_output.svg");
 
@@ -411,9 +413,10 @@ public class ConvertDocumentToolTests : TestBase
     /// <summary>
     ///     Tests that PDF can be converted to XPS format.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public void Convert_PdfToXps_ShouldSucceed()
     {
+        SkipIfNotWindows();
         var pdfPath = CreatePdfDocument("test_pdf_to_xps.pdf", "PDF to XPS content");
         var outputPath = CreateTestFilePath("test_pdf_to_xps_output.xps");
 

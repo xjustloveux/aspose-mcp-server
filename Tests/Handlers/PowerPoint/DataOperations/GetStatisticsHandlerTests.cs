@@ -1,18 +1,21 @@
+using System.Runtime.Versioning;
 using AsposeMcpServer.Handlers.PowerPoint.DataOperations;
 using AsposeMcpServer.Results.PowerPoint.DataOperations;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.DataOperations;
 
+[SupportedOSPlatform("windows")]
 public class GetStatisticsHandlerTests : PptHandlerTestBase
 {
     private readonly GetStatisticsHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_GetStatistics()
     {
+        SkipIfNotWindows();
         Assert.Equal("get_statistics", _handler.Operation);
     }
 
@@ -20,9 +23,10 @@ public class GetStatisticsHandlerTests : PptHandlerTestBase
 
     #region Basic Get Statistics Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsSlideCount()
     {
+        SkipIfNotWindows();
         var presentation = CreatePresentationWithSlides(3);
         var context = CreateContext(presentation);
         var parameters = CreateEmptyParameters();
@@ -34,9 +38,10 @@ public class GetStatisticsHandlerTests : PptHandlerTestBase
         Assert.Equal(3, result.TotalSlides);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsShapeCount()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateEmptyParameters();
@@ -48,9 +53,10 @@ public class GetStatisticsHandlerTests : PptHandlerTestBase
         Assert.True(result.TotalShapes >= 0);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsSlideSizeInfo()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateEmptyParameters();
@@ -64,9 +70,10 @@ public class GetStatisticsHandlerTests : PptHandlerTestBase
         Assert.True(result.SlideSize.Height > 0);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsMediaCounts()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateEmptyParameters();
@@ -80,9 +87,10 @@ public class GetStatisticsHandlerTests : PptHandlerTestBase
         Assert.True(result.TotalVideo >= 0);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsLayoutAndMasterCounts()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateEmptyParameters();

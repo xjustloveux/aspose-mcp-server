@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Table;
 using AsposeMcpServer.Results.Common;
@@ -5,15 +6,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Table;
 
+[SupportedOSPlatform("windows")]
 public class DeletePptTableRowHandlerTests : PptHandlerTestBase
 {
     private readonly DeletePptTableRowHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_DeleteRow()
     {
+        SkipIfNotWindows();
         Assert.Equal("delete_row", _handler.Operation);
     }
 
@@ -21,9 +24,10 @@ public class DeletePptTableRowHandlerTests : PptHandlerTestBase
 
     #region Slide Index Parameter
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithSlideIndex_DeletesFromCorrectSlide()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var tableShapeIndex = AddTableToSlide(pres, 1, 3, 2);
         var table = pres.Slides[1].Shapes[tableShapeIndex] as ITable;
@@ -45,9 +49,10 @@ public class DeletePptTableRowHandlerTests : PptHandlerTestBase
 
     #region Basic Delete Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DeletesRow()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(3, 3);
         var table = pres.Slides[0].Shapes[0] as ITable;
         var initialRowCount = table!.Rows.Count;
@@ -66,9 +71,10 @@ public class DeletePptTableRowHandlerTests : PptHandlerTestBase
         Assert.Equal(initialRowCount - 1, table.Rows.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DecreasesRowCount()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(3, 3);
         var table = pres.Slides[0].Shapes[0] as ITable;
         var initialRowCount = table!.Rows.Count;
@@ -84,9 +90,10 @@ public class DeletePptTableRowHandlerTests : PptHandlerTestBase
         Assert.Equal(initialRowCount - 1, table.Rows.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsDeletedRowIndex()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(3, 3);
         var table = pres.Slides[0].Shapes[0] as ITable;
         var context = CreateContext(pres);
@@ -107,12 +114,13 @@ public class DeletePptTableRowHandlerTests : PptHandlerTestBase
 
     #region Various Row Indices
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(0)]
     [InlineData(1)]
     [InlineData(2)]
     public void Execute_DeletesRowAtVariousIndices(int rowIndex)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(3, 3);
         var table = pres.Slides[0].Shapes[0] as ITable;
         var initialRowCount = table!.Rows.Count;
@@ -128,9 +136,10 @@ public class DeletePptTableRowHandlerTests : PptHandlerTestBase
         Assert.Equal(initialRowCount - 1, table.Rows.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DeletesFirstRow()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(3, 3);
         var table = pres.Slides[0].Shapes[0] as ITable;
         var context = CreateContext(pres);
@@ -147,9 +156,10 @@ public class DeletePptTableRowHandlerTests : PptHandlerTestBase
         Assert.Equal(2, table.Rows.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DeletesLastRow()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(3, 3);
         var table = pres.Slides[0].Shapes[0] as ITable;
         var context = CreateContext(pres);
@@ -170,9 +180,10 @@ public class DeletePptTableRowHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutShapeIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(3, 3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -184,9 +195,10 @@ public class DeletePptTableRowHandlerTests : PptHandlerTestBase
         Assert.Contains("shapeIndex", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutRowIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(3, 3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -198,9 +210,10 @@ public class DeletePptTableRowHandlerTests : PptHandlerTestBase
         Assert.Contains("rowIndex", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidShapeIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(3, 3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -212,9 +225,10 @@ public class DeletePptTableRowHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNonTableShape_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Sample");
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

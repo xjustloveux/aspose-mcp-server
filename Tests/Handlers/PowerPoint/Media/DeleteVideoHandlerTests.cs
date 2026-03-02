@@ -1,17 +1,20 @@
+using System.Runtime.Versioning;
 using AsposeMcpServer.Handlers.PowerPoint.Media;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Media;
 
+[SupportedOSPlatform("windows")]
 public class DeleteVideoHandlerTests : PptHandlerTestBase
 {
     private readonly DeleteVideoHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_DeleteVideo()
     {
+        SkipIfNotWindows();
         Assert.Equal("delete_video", _handler.Operation);
     }
 
@@ -19,9 +22,10 @@ public class DeleteVideoHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutShapeIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -30,11 +34,12 @@ public class DeleteVideoHandlerTests : PptHandlerTestBase
         Assert.Contains("shapeIndex", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(-1)]
     [InlineData(99)]
     public void Execute_WithInvalidShapeIndex_ThrowsArgumentException(int invalidIndex)
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -45,9 +50,10 @@ public class DeleteVideoHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNonVideoShape_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Test");
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -59,9 +65,10 @@ public class DeleteVideoHandlerTests : PptHandlerTestBase
         Assert.Contains("not a video frame", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

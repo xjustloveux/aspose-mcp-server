@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Hyperlink;
 using AsposeMcpServer.Results.PowerPoint.Hyperlink;
@@ -5,15 +6,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Hyperlink;
 
+[SupportedOSPlatform("windows")]
 public class GetPptHyperlinksHandlerTests : PptHandlerTestBase
 {
     private readonly GetPptHyperlinksHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Get()
     {
+        SkipIfNotWindows();
         Assert.Equal("get", _handler.Operation);
     }
 
@@ -21,9 +24,10 @@ public class GetPptHyperlinksHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -51,9 +55,10 @@ public class GetPptHyperlinksHandlerTests : PptHandlerTestBase
 
     #region Basic Get Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsHyperlinks()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithHyperlink();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -67,9 +72,10 @@ public class GetPptHyperlinksHandlerTests : PptHandlerTestBase
         AssertNotModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithSlideIndex_ReturnsHyperlinksForSlide()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithHyperlink();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -86,9 +92,10 @@ public class GetPptHyperlinksHandlerTests : PptHandlerTestBase
         AssertNotModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsResultWithProperties()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();

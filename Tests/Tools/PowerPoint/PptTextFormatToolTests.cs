@@ -1,4 +1,5 @@
-﻿using Aspose.Slides;
+﻿using System.Runtime.Versioning;
+using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -11,6 +12,7 @@ namespace AsposeMcpServer.Tests.Tools.PowerPoint;
 ///     Focuses on session management, file I/O, and operation routing.
 ///     Detailed parameter validation and business logic tests are in Handler tests.
 /// </summary>
+[SupportedOSPlatform("windows")]
 public class PptTextFormatToolTests : PptTestBase
 {
     private readonly PptTextFormatTool _tool;
@@ -35,9 +37,10 @@ public class PptTextFormatToolTests : PptTestBase
 
     #region Operation Routing
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNoFormattingOptions_ShouldStillSucceed()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithTextBox("test_format_none.pptx");
         var outputPath = CreateTestFilePath("test_format_none_output.pptx");
         var result = _tool.Execute(path: pptPath, outputPath: outputPath);
@@ -50,9 +53,10 @@ public class PptTextFormatToolTests : PptTestBase
 
     #region File I/O Smoke Tests
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithFontOptions_ShouldApplyFontFormatting()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithTextBox("test_format_font.pptx");
         var outputPath = CreateTestFilePath("test_format_font_output.pptx");
         var result = _tool.Execute(path: pptPath, fontName: "Arial", fontSize: 16, bold: true, outputPath: outputPath);
@@ -61,9 +65,10 @@ public class PptTextFormatToolTests : PptTestBase
         Assert.True(File.Exists(outputPath));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithHexColor_ShouldApplyColor()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithTextBox("test_format_color.pptx");
         var outputPath = CreateTestFilePath("test_format_color_output.pptx");
         var result = _tool.Execute(path: pptPath, color: "#FF0000", outputPath: outputPath);
@@ -72,9 +77,10 @@ public class PptTextFormatToolTests : PptTestBase
         Assert.True(File.Exists(outputPath));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithAllFormattingOptions_ShouldApplyAllFormats()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithTextBox("test_format_all.pptx");
         var outputPath = CreateTestFilePath("test_format_all_output.pptx");
         var result = _tool.Execute(path: pptPath, fontName: "Arial", fontSize: 14, bold: true, italic: true,
@@ -89,9 +95,10 @@ public class PptTextFormatToolTests : PptTestBase
 
     #region Session Management
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithSessionId_ShouldFormatInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithTextBox("test_session_format.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute(sessionId: sessionId, fontName: "Arial", fontSize: 16, bold: true);
@@ -101,9 +108,10 @@ public class PptTextFormatToolTests : PptTestBase
         Assert.True(output.IsSession);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithSessionId_ShouldApplyColorInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithTextBox("test_session_color.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute(sessionId: sessionId, color: "#FF0000");
@@ -115,16 +123,18 @@ public class PptTextFormatToolTests : PptTestBase
         Assert.NotNull(ppt);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
+        SkipIfNotWindows();
         Assert.Throws<KeyNotFoundException>(() =>
             _tool.Execute(sessionId: "invalid_session_id", fontName: "Arial"));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
     {
+        SkipIfNotWindows();
         var pptPath1 = CreateTestFilePath("test_path_format.pptx");
         using (var pres1 = new Presentation())
         {

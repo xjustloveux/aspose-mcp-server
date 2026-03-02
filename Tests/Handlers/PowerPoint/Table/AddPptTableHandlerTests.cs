@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Table;
 using AsposeMcpServer.Results.Common;
@@ -5,15 +6,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Table;
 
+[SupportedOSPlatform("windows")]
 public class AddPptTableHandlerTests : PptHandlerTestBase
 {
     private readonly AddPptTableHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Add()
     {
+        SkipIfNotWindows();
         Assert.Equal("add", _handler.Operation);
     }
 
@@ -21,9 +24,10 @@ public class AddPptTableHandlerTests : PptHandlerTestBase
 
     #region Basic Add Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_AddsTableToSlide()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -43,9 +47,10 @@ public class AddPptTableHandlerTests : PptHandlerTestBase
         Assert.Equal(4, table.Columns.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsShapeIndex()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var initialShapeCount = pres.Slides[0].Shapes.Count;
         var context = CreateContext(pres);
@@ -64,9 +69,10 @@ public class AddPptTableHandlerTests : PptHandlerTestBase
         Assert.NotNull(table);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_AddsTableShape()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var initialShapeCount = pres.Slides[0].Shapes.Count;
         var context = CreateContext(pres);
@@ -81,9 +87,10 @@ public class AddPptTableHandlerTests : PptHandlerTestBase
         Assert.Equal(initialShapeCount + 1, pres.Slides[0].Shapes.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_CreatesTableWithCorrectDimensions()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -104,9 +111,10 @@ public class AddPptTableHandlerTests : PptHandlerTestBase
 
     #region Slide Index Parameter
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithSlideIndex_AddsToCorrectSlide()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var initialShapeCount = pres.Slides[1].Shapes.Count;
         var context = CreateContext(pres);
@@ -128,9 +136,10 @@ public class AddPptTableHandlerTests : PptHandlerTestBase
         Assert.Equal(2, table.Columns.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DefaultSlideIndex_AddsToFirstSlide()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var initialShapeCount = pres.Slides[0].Shapes.Count;
         var context = CreateContext(pres);
@@ -155,9 +164,10 @@ public class AddPptTableHandlerTests : PptHandlerTestBase
 
     #region Position Parameters
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithCustomPosition_SetsPosition()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -176,9 +186,10 @@ public class AddPptTableHandlerTests : PptHandlerTestBase
         Assert.Equal(150.0f, table.Y, 0.1);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithDefaultPosition_UsesDefault()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -199,9 +210,10 @@ public class AddPptTableHandlerTests : PptHandlerTestBase
 
     #region Size Parameters
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithCustomColumnWidth_SetsWidth()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -218,9 +230,10 @@ public class AddPptTableHandlerTests : PptHandlerTestBase
         Assert.True(table.Width > 400);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithCustomRowHeight_SetsHeight()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -241,9 +254,10 @@ public class AddPptTableHandlerTests : PptHandlerTestBase
 
     #region Data Parameter
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithData_PopulatesCells()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -263,9 +277,10 @@ public class AddPptTableHandlerTests : PptHandlerTestBase
         Assert.Equal("B2", table[1, 1].TextFrame.Text);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutData_CreatesEmptyCells()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -285,9 +300,10 @@ public class AddPptTableHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutRows_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -299,9 +315,10 @@ public class AddPptTableHandlerTests : PptHandlerTestBase
         Assert.Contains("rows", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutColumns_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -313,9 +330,10 @@ public class AddPptTableHandlerTests : PptHandlerTestBase
         Assert.Contains("columns", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithZeroRows_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -328,9 +346,10 @@ public class AddPptTableHandlerTests : PptHandlerTestBase
         Assert.Contains("rows", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithZeroColumns_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -343,9 +362,10 @@ public class AddPptTableHandlerTests : PptHandlerTestBase
         Assert.Contains("columns", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNegativeRows_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -358,9 +378,10 @@ public class AddPptTableHandlerTests : PptHandlerTestBase
         Assert.Contains("rows", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

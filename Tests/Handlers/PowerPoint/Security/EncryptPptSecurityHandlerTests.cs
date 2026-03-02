@@ -1,18 +1,21 @@
+using System.Runtime.Versioning;
 using AsposeMcpServer.Handlers.PowerPoint.Security;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Security;
 
+[SupportedOSPlatform("windows")]
 public class EncryptPptSecurityHandlerTests : PptHandlerTestBase
 {
     private readonly EncryptPptSecurityHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Encrypt()
     {
+        SkipIfNotWindows();
         Assert.Equal("encrypt", _handler.Operation);
     }
 
@@ -20,9 +23,10 @@ public class EncryptPptSecurityHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_MissingPassword_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -34,9 +38,10 @@ public class EncryptPptSecurityHandlerTests : PptHandlerTestBase
 
     #region Basic Encrypt Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_EncryptsPresentation()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -51,9 +56,10 @@ public class EncryptPptSecurityHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsSuccessMessage()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

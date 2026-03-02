@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Section;
 using AsposeMcpServer.Results.Common;
@@ -5,15 +6,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Section;
 
+[SupportedOSPlatform("windows")]
 public class RenamePptSectionHandlerTests : PptHandlerTestBase
 {
     private readonly RenamePptSectionHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Rename()
     {
+        SkipIfNotWindows();
         Assert.Equal("rename", _handler.Operation);
     }
 
@@ -21,12 +24,13 @@ public class RenamePptSectionHandlerTests : PptHandlerTestBase
 
     #region Various Section Indices
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(0)]
     [InlineData(1)]
     [InlineData(2)]
     public void Execute_RenamesVariousSections(int sectionIndex)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSections(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -62,9 +66,10 @@ public class RenamePptSectionHandlerTests : PptHandlerTestBase
 
     #region Basic Rename Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_RenamesSection()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSections(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -81,9 +86,10 @@ public class RenamePptSectionHandlerTests : PptHandlerTestBase
         Assert.Equal(3, pres.Sections.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsSectionIndex()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSections(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -100,9 +106,10 @@ public class RenamePptSectionHandlerTests : PptHandlerTestBase
         Assert.Equal("Section 2", pres.Sections[2].Name);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsNewName()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSections(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -117,9 +124,10 @@ public class RenamePptSectionHandlerTests : PptHandlerTestBase
         Assert.Equal("Introduction", pres.Sections[0].Name);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_UpdatesSectionName()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSections(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -137,9 +145,10 @@ public class RenamePptSectionHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutSectionIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSections(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -150,9 +159,10 @@ public class RenamePptSectionHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutNewName_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSections(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -163,9 +173,10 @@ public class RenamePptSectionHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSectionIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSections(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -177,9 +188,10 @@ public class RenamePptSectionHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNegativeSectionIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSections(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -191,9 +203,10 @@ public class RenamePptSectionHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNoSections_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

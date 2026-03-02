@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Results.PowerPoint.Font;
@@ -11,6 +12,7 @@ namespace AsposeMcpServer.Tests.Tools.PowerPoint;
 ///     Focuses on session management, file I/O, and operation routing.
 ///     Detailed parameter validation and business logic tests are in Handler tests.
 /// </summary>
+[SupportedOSPlatform("windows")]
 public class PptFontToolTests : PptTestBase
 {
     private readonly PptFontTool _tool;
@@ -22,9 +24,10 @@ public class PptFontToolTests : PptTestBase
 
     #region File I/O Smoke Tests
 
-    [Fact]
+    [SkippableFact]
     public void Replace_ShouldReplaceFont()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithContent("test_replace.pptx", "Hello World");
         var outputPath = CreateTestFilePath("test_replace_output.pptx");
         var result = _tool.Execute("replace", pptPath, sourceFont: "Calibri", targetFont: "Arial",
@@ -33,9 +36,10 @@ public class PptFontToolTests : PptTestBase
         Assert.Contains("replaced", data.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void GetUsed_ShouldReturnFonts()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithContent("test_get_used.pptx", "Hello World");
         var result = _tool.Execute("get_used", pptPath);
         var data = GetResultData<GetFontsPptResult>(result);
@@ -43,9 +47,10 @@ public class PptFontToolTests : PptTestBase
         Assert.NotEmpty(data.Items);
     }
 
-    [Fact]
+    [SkippableFact]
     public void SetFallback_ShouldSetFallbackRule()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithContent("test_fallback.pptx", "Hello World");
         var outputPath = CreateTestFilePath("test_fallback_output.pptx");
         var result = _tool.Execute("set_fallback", pptPath, fallbackFont: "Arial", outputPath: outputPath);
@@ -53,9 +58,10 @@ public class PptFontToolTests : PptTestBase
         Assert.Contains("fallback", data.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Embed_WithExistingFont_ShouldEmbed()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithContent("test_embed.pptx", "Hello World");
         using var pres = new Presentation(pptPath);
         var allFonts = pres.FontsManager.GetFonts();
@@ -72,21 +78,23 @@ public class PptFontToolTests : PptTestBase
 
     #region Operation Routing
 
-    [Theory]
+    [SkippableTheory]
     [InlineData("GET_USED")]
     [InlineData("Get_Used")]
     [InlineData("get_used")]
     public void Operation_ShouldBeCaseInsensitive(string operation)
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithContent($"test_case_{operation.Replace(" ", "_")}.pptx", "Hello World");
         var result = _tool.Execute(operation, pptPath);
         var data = GetResultData<GetFontsPptResult>(result);
         Assert.True(data.Count >= 0);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithContent("test_unknown_op.pptx", "Hello World");
         var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", pptPath));
         Assert.Contains("Unknown operation", ex.Message);
@@ -96,9 +104,10 @@ public class PptFontToolTests : PptTestBase
 
     #region Session Management
 
-    [Fact]
+    [SkippableFact]
     public void GetUsed_WithSessionId_ShouldReturnFontsFromMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithContent("test_session_get.pptx", "Hello World");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("get_used", sessionId: sessionId);
@@ -108,9 +117,10 @@ public class PptFontToolTests : PptTestBase
         Assert.Equal(sessionId, output.SessionId);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Replace_WithSessionId_ShouldReplaceInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithContent("test_session_replace.pptx", "Hello World");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("replace", sessionId: sessionId, sourceFont: "Calibri", targetFont: "Arial");
@@ -120,9 +130,10 @@ public class PptFontToolTests : PptTestBase
         Assert.Equal(sessionId, output.SessionId);
     }
 
-    [Fact]
+    [SkippableFact]
     public void SetFallback_WithSessionId_ShouldSetInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithContent("test_session_fallback.pptx", "Hello World");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("set_fallback", sessionId: sessionId, fallbackFont: "Arial");
@@ -132,15 +143,17 @@ public class PptFontToolTests : PptTestBase
         Assert.Equal(sessionId, output.SessionId);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
+        SkipIfNotWindows();
         Assert.Throws<KeyNotFoundException>(() => _tool.Execute("get_used", sessionId: "invalid_session"));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
     {
+        SkipIfNotWindows();
         var pptPath1 = CreatePresentationWithContent("test_path_font.pptx", "Path content");
         var pptPath2 = CreatePresentationWithContent("test_session_font.pptx", "Session content");
         var sessionId = OpenSession(pptPath2);

@@ -1,18 +1,21 @@
+using System.Runtime.Versioning;
 using AsposeMcpServer.Handlers.PowerPoint.Security;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Security;
 
+[SupportedOSPlatform("windows")]
 public class DecryptPptSecurityHandlerTests : PptHandlerTestBase
 {
     private readonly DecryptPptSecurityHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Decrypt()
     {
+        SkipIfNotWindows();
         Assert.Equal("decrypt", _handler.Operation);
     }
 
@@ -20,9 +23,10 @@ public class DecryptPptSecurityHandlerTests : PptHandlerTestBase
 
     #region Basic Decrypt Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DecryptsEncryptedPresentation()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         pres.ProtectionManager.Encrypt("test");
         var context = CreateContext(pres);
@@ -34,9 +38,10 @@ public class DecryptPptSecurityHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsSuccessMessage()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         pres.ProtectionManager.Encrypt("test");
         var context = CreateContext(pres);
@@ -48,9 +53,10 @@ public class DecryptPptSecurityHandlerTests : PptHandlerTestBase
         Assert.Contains("decrypted", result.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_NotEncrypted_StillSucceeds()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();

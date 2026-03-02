@@ -1,4 +1,5 @@
 ﻿using System.Drawing;
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Results.Common;
@@ -13,6 +14,7 @@ namespace AsposeMcpServer.Tests.Tools.PowerPoint;
 ///     Focuses on session management, file I/O, and operation routing.
 ///     Detailed parameter validation and business logic tests are in Handler tests.
 /// </summary>
+[SupportedOSPlatform("windows")]
 public class PptBackgroundToolTests : PptTestBase
 {
     private readonly PptBackgroundTool _tool;
@@ -35,9 +37,10 @@ public class PptBackgroundToolTests : PptTestBase
 
     #region File I/O Smoke Tests
 
-    [Fact]
+    [SkippableFact]
     public void Set_WithColor_ShouldSetSolidBackground()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_set_color.pptx");
         var outputPath = CreateTestFilePath("test_set_color_output.pptx");
         var result = _tool.Execute("set", pptPath, slideIndex: 0, color: "#FF0000", outputPath: outputPath);
@@ -47,9 +50,10 @@ public class PptBackgroundToolTests : PptTestBase
         Assert.Equal(FillType.Solid, presentation.Slides[0].Background.FillFormat.FillType);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Get_ShouldReturnBackgroundInfo()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_get.pptx");
         var result = _tool.Execute("get", pptPath, slideIndex: 0);
         var data = GetResultData<GetBackgroundResult>(result);
@@ -61,12 +65,13 @@ public class PptBackgroundToolTests : PptTestBase
 
     #region Operation Routing
 
-    [Theory]
+    [SkippableTheory]
     [InlineData("SET")]
     [InlineData("Set")]
     [InlineData("set")]
     public void Operation_ShouldBeCaseInsensitive(string operation)
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation($"test_case_set_{operation}.pptx");
         var outputPath = CreateTestFilePath($"test_case_set_{operation}_output.pptx");
         var result = _tool.Execute(operation, pptPath, slideIndex: 0, color: "#FF0000", outputPath: outputPath);
@@ -74,9 +79,10 @@ public class PptBackgroundToolTests : PptTestBase
         Assert.StartsWith("Background", data.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_unknown_op.pptx");
         var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", pptPath));
         Assert.Contains("Unknown operation", ex.Message);
@@ -86,9 +92,10 @@ public class PptBackgroundToolTests : PptTestBase
 
     #region Session Management
 
-    [Fact]
+    [SkippableFact]
     public void Set_WithSessionId_ShouldSetInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_session_set.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("set", sessionId: sessionId, slideIndex: 0, color: "#FF0000");
@@ -100,9 +107,10 @@ public class PptBackgroundToolTests : PptTestBase
         Assert.True(output.IsSession);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Get_WithSessionId_ShouldReturnBackgroundInfo()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_session_get.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("get", sessionId: sessionId, slideIndex: 0);
@@ -111,15 +119,17 @@ public class PptBackgroundToolTests : PptTestBase
         Assert.NotNull(data.FillType);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
+        SkipIfNotWindows();
         Assert.Throws<KeyNotFoundException>(() => _tool.Execute("get", sessionId: "invalid_session", slideIndex: 0));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
     {
+        SkipIfNotWindows();
         var pptPath1 = CreatePresentationWithSolidBackground("test_path_bg.pptx", Color.Red);
         var pptPath2 = CreatePresentationWithSolidBackground("test_session_bg.pptx", Color.Blue);
         var sessionId = OpenSession(pptPath2);

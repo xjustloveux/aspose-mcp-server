@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Helpers.Excel;
 using AsposeMcpServer.Results.Common;
 
@@ -37,6 +38,7 @@ public class SetBackgroundExcelViewHandler : OperationHandlerBase<Workbook>
         }
         else if (!string.IsNullOrEmpty(p.ImagePath))
         {
+            SecurityHelper.ValidateFilePath(p.ImagePath, "imagePath", true);
             if (!File.Exists(p.ImagePath))
                 throw new FileNotFoundException($"Image file not found: {p.ImagePath}");
             var imageBytes = File.ReadAllBytes(p.ImagePath);

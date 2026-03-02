@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Comment;
 using AsposeMcpServer.Results.PowerPoint.Comment;
@@ -6,15 +7,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Comment;
 
+[SupportedOSPlatform("windows")]
 public class GetPptCommentsHandlerTests : PptHandlerTestBase
 {
     private readonly GetPptCommentsHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Get()
     {
+        SkipIfNotWindows();
         Assert.Equal("get", _handler.Operation);
     }
 
@@ -22,9 +25,10 @@ public class GetPptCommentsHandlerTests : PptHandlerTestBase
 
     #region Modification State
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ShouldNotMarkModified()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -41,9 +45,10 @@ public class GetPptCommentsHandlerTests : PptHandlerTestBase
 
     #region Default Slide Index
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DefaultSlideIndex_QueriesFirstSlide()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithComment();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -84,9 +89,10 @@ public class GetPptCommentsHandlerTests : PptHandlerTestBase
 
     #region Get Comments - Empty
 
-    [Fact]
+    [SkippableFact]
     public void Execute_NoComments_ReturnsEmptyResult()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -101,9 +107,10 @@ public class GetPptCommentsHandlerTests : PptHandlerTestBase
         Assert.Empty(result.Items);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_NoComments_ReturnsMessage()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -121,9 +128,10 @@ public class GetPptCommentsHandlerTests : PptHandlerTestBase
 
     #region Get Comments - With Data
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithComment_ReturnsCount()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithComment();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -137,9 +145,10 @@ public class GetPptCommentsHandlerTests : PptHandlerTestBase
         Assert.Equal(1, result.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithComment_ReturnsAuthor()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithComment("Hello");
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -153,9 +162,10 @@ public class GetPptCommentsHandlerTests : PptHandlerTestBase
         Assert.Equal("Test Author", result.Items[0].Author);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithComment_ReturnsText()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithComment("Hello World");
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -169,9 +179,10 @@ public class GetPptCommentsHandlerTests : PptHandlerTestBase
         Assert.Equal("Hello World", result.Items[0].Text);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithMultipleComments_ReturnsAll()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithMultipleComments(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -186,9 +197,10 @@ public class GetPptCommentsHandlerTests : PptHandlerTestBase
         Assert.Equal(3, result.Items.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsSlideIndex()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithComment();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -202,9 +214,10 @@ public class GetPptCommentsHandlerTests : PptHandlerTestBase
         Assert.Equal(0, result.SlideIndex);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsCommentIndex()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithMultipleComments(2);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

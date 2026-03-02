@@ -1,18 +1,21 @@
+using System.Runtime.Versioning;
 using AsposeMcpServer.Handlers.PowerPoint.Security;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Security;
 
+[SupportedOSPlatform("windows")]
 public class SetWriteProtectionPptSecurityHandlerTests : PptHandlerTestBase
 {
     private readonly SetWriteProtectionPptSecurityHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_SetWriteProtection()
     {
+        SkipIfNotWindows();
         Assert.Equal("set_write_protection", _handler.Operation);
     }
 
@@ -20,9 +23,10 @@ public class SetWriteProtectionPptSecurityHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_MissingPassword_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -34,9 +38,10 @@ public class SetWriteProtectionPptSecurityHandlerTests : PptHandlerTestBase
 
     #region Basic Set Write Protection Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SetsWriteProtection()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -51,9 +56,10 @@ public class SetWriteProtectionPptSecurityHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsSuccessMessage()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

@@ -65,6 +65,7 @@ public class ExportSlidesHandler : OperationHandlerBase<Presentation>
     private static ExportParameters ExtractExportParameters(OperationParameters parameters, string path)
     {
         var outputDir = parameters.GetOptional<string?>("outputDir") ?? Path.GetDirectoryName(path) ?? ".";
+        SecurityHelper.ValidateFilePath(outputDir, "outputDir", true);
         var slideIndexes = parameters.GetOptional<string?>("slideIndexes");
         var formatStr = parameters.GetOptional("format", "png");
         var scale = parameters.GetOptional("scale", 1.0f);

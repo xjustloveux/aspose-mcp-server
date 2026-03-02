@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Shape;
 using AsposeMcpServer.Results.Common;
@@ -5,15 +6,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Shape;
 
+[SupportedOSPlatform("windows")]
 public class UngroupPptShapesHandlerTests : PptHandlerTestBase
 {
     private readonly UngroupPptShapesHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Ungroup()
     {
+        SkipIfNotWindows();
         Assert.Equal("ungroup", _handler.Operation);
     }
 
@@ -21,9 +24,10 @@ public class UngroupPptShapesHandlerTests : PptHandlerTestBase
 
     #region Group with Three Shapes
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithThreeShapesInGroup_UngroupsAll()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var groupShape = pres.Slides[0].Shapes.AddGroupShape();
         groupShape.Shapes.AddAutoShape(ShapeType.Rectangle, 0, 0, 100, 100);
@@ -47,9 +51,10 @@ public class UngroupPptShapesHandlerTests : PptHandlerTestBase
 
     #region Slide Index
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithSlideIndex_UngroupsOnSpecificSlide()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var groupShape = pres.Slides[1].Shapes.AddGroupShape();
         groupShape.Shapes.AddAutoShape(ShapeType.Rectangle, 0, 0, 100, 100);
@@ -74,9 +79,10 @@ public class UngroupPptShapesHandlerTests : PptHandlerTestBase
 
     #region Result Message
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsShapeCountInMessage()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var groupShape = pres.Slides[0].Shapes.AddGroupShape();
         groupShape.Shapes.AddAutoShape(ShapeType.Rectangle, 0, 0, 100, 100);
@@ -99,9 +105,10 @@ public class UngroupPptShapesHandlerTests : PptHandlerTestBase
 
     #region Basic Ungroup Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_UngroupsShapes()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var groupShape = pres.Slides[0].Shapes.AddGroupShape();
         groupShape.Shapes.AddAutoShape(ShapeType.Rectangle, 0, 0, 100, 100);
@@ -121,9 +128,10 @@ public class UngroupPptShapesHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_RemovesGroupShape()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var groupShape = pres.Slides[0].Shapes.AddGroupShape();
         groupShape.Shapes.AddAutoShape(ShapeType.Rectangle, 0, 0, 100, 100);
@@ -140,9 +148,10 @@ public class UngroupPptShapesHandlerTests : PptHandlerTestBase
         Assert.DoesNotContain(pres.Slides[0].Shapes.OfType<IGroupShape>(), s => s != null);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_CreatesIndividualShapes()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var groupShape = pres.Slides[0].Shapes.AddGroupShape();
         groupShape.Shapes.AddAutoShape(ShapeType.Rectangle, 0, 0, 100, 100);
@@ -163,9 +172,10 @@ public class UngroupPptShapesHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var groupShape = pres.Slides[0].Shapes.AddGroupShape();
         groupShape.Shapes.AddAutoShape(ShapeType.Rectangle, 0, 0, 100, 100);
@@ -180,9 +190,10 @@ public class UngroupPptShapesHandlerTests : PptHandlerTestBase
         Assert.Contains("slideIndex", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutShapeIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var groupShape = pres.Slides[0].Shapes.AddGroupShape();
         groupShape.Shapes.AddAutoShape(ShapeType.Rectangle, 0, 0, 100, 100);
@@ -197,9 +208,10 @@ public class UngroupPptShapesHandlerTests : PptHandlerTestBase
         Assert.Contains("shapeIndex", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNonGroupShape_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 100, 100);
         var context = CreateContext(pres);
@@ -213,11 +225,12 @@ public class UngroupPptShapesHandlerTests : PptHandlerTestBase
         Assert.Contains("group", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(-1)]
     [InlineData(10)]
     public void Execute_WithInvalidShapeIndex_ThrowsArgumentException(int invalidIndex)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var groupShape = pres.Slides[0].Shapes.AddGroupShape();
         groupShape.Shapes.AddAutoShape(ShapeType.Rectangle, 0, 0, 100, 100);

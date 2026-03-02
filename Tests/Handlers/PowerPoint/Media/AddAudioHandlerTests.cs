@@ -1,18 +1,21 @@
+using System.Runtime.Versioning;
 using AsposeMcpServer.Handlers.PowerPoint.Media;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Media;
 
+[SupportedOSPlatform("windows")]
 public class AddAudioHandlerTests : PptHandlerTestBase
 {
     private readonly AddAudioHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_AddAudio()
     {
+        SkipIfNotWindows();
         Assert.Equal("add_audio", _handler.Operation);
     }
 
@@ -20,9 +23,10 @@ public class AddAudioHandlerTests : PptHandlerTestBase
 
     #region Basic Add Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_AddsAudio()
     {
+        SkipIfNotWindows();
         var tempFile = CreateTempAudioFile();
         var pres = CreateEmptyPresentation();
         var initialShapeCount = pres.Slides[0].Shapes.Count;
@@ -39,9 +43,10 @@ public class AddAudioHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithSlideIndex_AddsAudioToSlide()
     {
+        SkipIfNotWindows();
         var tempFile = CreateTempAudioFile();
         var pres = CreateEmptyPresentation();
         var initialShapeCount = pres.Slides[0].Shapes.Count;
@@ -59,9 +64,10 @@ public class AddAudioHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithPosition_AddsAudioAtPosition()
     {
+        SkipIfNotWindows();
         var tempFile = CreateTempAudioFile();
         var pres = CreateEmptyPresentation();
         var initialShapeCount = pres.Slides[0].Shapes.Count;
@@ -91,9 +97,10 @@ public class AddAudioHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutAudioPath_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -102,9 +109,10 @@ public class AddAudioHandlerTests : PptHandlerTestBase
         Assert.Contains("audioPath", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNonExistentFile_ThrowsFileNotFoundException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -115,9 +123,10 @@ public class AddAudioHandlerTests : PptHandlerTestBase
         Assert.Throws<FileNotFoundException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var tempFile = CreateTempAudioFile();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);

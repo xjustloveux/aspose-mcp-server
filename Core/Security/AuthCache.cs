@@ -22,6 +22,11 @@ public class AuthCache<TResult> where TResult : class
     private readonly object _cleanupLock = new();
 
     /// <summary>
+    ///     Per-key semaphores to prevent thundering herd on cache miss
+    /// </summary>
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _keyLocks = new();
+
+    /// <summary>
     ///     Maximum number of entries allowed in the cache
     /// </summary>
     private readonly int _maxSize;
@@ -72,34 +77,46 @@ public class AuthCache<TResult> where TResult : class
 
         var cacheKey = ComputeCacheKey(token);
 
-        if (_cache.TryGetValue(cacheKey, out var entry))
+        if (_cache.TryGetValue(cacheKey, out var entry) && entry.Expiry > DateTime.UtcNow)
         {
-            if (entry.Expiry > DateTime.UtcNow)
+            entry.LastAccess = DateTime.UtcNow;
+            return entry.Result;
+        }
+
+        var keyLock = _keyLocks.GetOrAdd(cacheKey, _ => new SemaphoreSlim(1, 1));
+        await keyLock.WaitAsync();
+        try
+        {
+            if (_cache.TryGetValue(cacheKey, out var cachedEntry) && cachedEntry.Expiry > DateTime.UtcNow)
             {
-                entry.LastAccess = DateTime.UtcNow;
-                return entry.Result;
+                cachedEntry.LastAccess = DateTime.UtcNow;
+                return cachedEntry.Result;
             }
 
             _cache.TryRemove(cacheKey, out _);
-        }
 
-        var result = await validateFunc();
+            var result = await validateFunc();
 
-        if (shouldCache(result))
-        {
-            EnsureCapacity();
-
-            var newEntry = new CacheEntry
+            if (shouldCache(result))
             {
-                Result = result,
-                Expiry = DateTime.UtcNow.AddSeconds(_ttlSeconds),
-                LastAccess = DateTime.UtcNow
-            };
+                EnsureCapacity();
 
-            _cache[cacheKey] = newEntry;
+                var newEntry = new CacheEntry
+                {
+                    Result = result,
+                    Expiry = DateTime.UtcNow.AddSeconds(_ttlSeconds),
+                    LastAccess = DateTime.UtcNow
+                };
+
+                _cache[cacheKey] = newEntry;
+            }
+
+            return result;
         }
-
-        return result;
+        finally
+        {
+            keyLock.Release();
+        }
     }
 
     /// <summary>

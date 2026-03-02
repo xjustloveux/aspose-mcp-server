@@ -36,7 +36,10 @@ public class SetPptBackgroundHandler : OperationHandlerBase<Presentation>
 
         IPPImage? img = null;
         if (!string.IsNullOrWhiteSpace(p.ImagePath))
+        {
+            SecurityHelper.ValidateFilePath(p.ImagePath, "imagePath", true);
             img = presentation.Images.AddImage(File.ReadAllBytes(p.ImagePath));
+        }
 
         Color? color = null;
         if (!string.IsNullOrWhiteSpace(p.Color))

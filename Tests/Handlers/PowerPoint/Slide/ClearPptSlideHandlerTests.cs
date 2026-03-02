@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Slide;
 using AsposeMcpServer.Results.Common;
@@ -5,15 +6,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Slide;
 
+[SupportedOSPlatform("windows")]
 public class ClearPptSlideHandlerTests : PptHandlerTestBase
 {
     private readonly ClearPptSlideHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Clear()
     {
+        SkipIfNotWindows();
         Assert.Equal("clear", _handler.Operation);
     }
 
@@ -21,9 +24,10 @@ public class ClearPptSlideHandlerTests : PptHandlerTestBase
 
     #region Multiple Shapes
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ClearsMultipleShapeTypes()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 10, 10, 50, 50);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Ellipse, 100, 10, 50, 50);
@@ -45,9 +49,10 @@ public class ClearPptSlideHandlerTests : PptHandlerTestBase
 
     #region Preserve Other Slides
 
-    [Fact]
+    [SkippableFact]
     public void Execute_PreservesOtherSlides()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 10, 10, 50, 50);
         pres.Slides[1].Shapes.AddAutoShape(ShapeType.Rectangle, 10, 10, 50, 50);
@@ -71,9 +76,10 @@ public class ClearPptSlideHandlerTests : PptHandlerTestBase
 
     #region Empty Slide
 
-    [Fact]
+    [SkippableFact]
     public void Execute_OnEmptySlide_Succeeds()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         while (pres.Slides[0].Shapes.Count > 0)
             pres.Slides[0].Shapes.RemoveAt(0);
@@ -93,9 +99,10 @@ public class ClearPptSlideHandlerTests : PptHandlerTestBase
 
     #region Result Message
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsSlideIndexInMessage()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(5);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -113,9 +120,10 @@ public class ClearPptSlideHandlerTests : PptHandlerTestBase
 
     #region Error Handling - Missing Parameter
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -128,9 +136,10 @@ public class ClearPptSlideHandlerTests : PptHandlerTestBase
 
     #region Basic Clear Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ClearsAllShapesFromSlide()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Ellipse, 300, 100, 200, 100);
@@ -147,12 +156,13 @@ public class ClearPptSlideHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(0)]
     [InlineData(1)]
     [InlineData(2)]
     public void Execute_ClearsSlideAtVariousIndices(int slideIndex)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         pres.Slides[slideIndex].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);
@@ -172,12 +182,13 @@ public class ClearPptSlideHandlerTests : PptHandlerTestBase
 
     #region Error Handling - Invalid Index
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(3, 3)]
     [InlineData(3, 5)]
     [InlineData(3, 100)]
     public void Execute_WithIndexOutOfRange_ThrowsArgumentException(int totalSlides, int invalidIndex)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(totalSlides);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -188,11 +199,12 @@ public class ClearPptSlideHandlerTests : PptHandlerTestBase
         Assert.ThrowsAny<Exception>(() => _handler.Execute(context, parameters));
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(-1)]
     [InlineData(-5)]
     public void Execute_WithNegativeIndex_ThrowsException(int negativeIndex)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

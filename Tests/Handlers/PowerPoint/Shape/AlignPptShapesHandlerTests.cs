@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Shape;
 using AsposeMcpServer.Results.Common;
@@ -5,6 +6,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Shape;
 
+[SupportedOSPlatform("windows")]
 public class AlignPptShapesHandlerTests : PptHandlerTestBase
 {
     private static readonly int[] TwoShapeIndices = [0, 1];
@@ -16,9 +18,10 @@ public class AlignPptShapesHandlerTests : PptHandlerTestBase
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Align()
     {
+        SkipIfNotWindows();
         Assert.Equal("align", _handler.Operation);
     }
 
@@ -26,9 +29,10 @@ public class AlignPptShapesHandlerTests : PptHandlerTestBase
 
     #region Align Left
 
-    [Fact]
+    [SkippableFact]
     public void Execute_AlignLeft_AlignsToLeftmost()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 50, 100, 100, 100);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Ellipse, 200, 100, 100, 100);
@@ -50,9 +54,10 @@ public class AlignPptShapesHandlerTests : PptHandlerTestBase
 
     #region Align to Slide
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithAlignToSlideTrue_AlignsToSlide()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 100, 100);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Ellipse, 200, 200, 100, 100);
@@ -75,9 +80,10 @@ public class AlignPptShapesHandlerTests : PptHandlerTestBase
 
     #region Multiple Shapes
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithThreeShapes_AlignsAll()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 100, 100);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Ellipse, 200, 200, 100, 100);
@@ -103,9 +109,10 @@ public class AlignPptShapesHandlerTests : PptHandlerTestBase
 
     #region Result Message
 
-    [Fact]
+    [SkippableFact]
     public void Execute_AlignCenter_CentersShapesHorizontally()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Ellipse, 200, 200, 200, 100);
@@ -128,9 +135,10 @@ public class AlignPptShapesHandlerTests : PptHandlerTestBase
 
     #region Basic Align Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_AlignsShapes()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Ellipse, 200, 200, 200, 100);
@@ -150,7 +158,7 @@ public class AlignPptShapesHandlerTests : PptHandlerTestBase
         Assert.Equal(100, pres.Slides[0].Shapes[1].X);
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData("left")]
     [InlineData("center")]
     [InlineData("right")]
@@ -159,6 +167,7 @@ public class AlignPptShapesHandlerTests : PptHandlerTestBase
     [InlineData("bottom")]
     public void Execute_SupportsVariousAlignments(string align)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Ellipse, 200, 200, 200, 100);
@@ -195,9 +204,10 @@ public class AlignPptShapesHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Ellipse, 200, 200, 200, 100);
@@ -212,9 +222,10 @@ public class AlignPptShapesHandlerTests : PptHandlerTestBase
         Assert.Contains("slideIndex", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutShapeIndices_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Ellipse, 200, 200, 200, 100);
@@ -229,9 +240,10 @@ public class AlignPptShapesHandlerTests : PptHandlerTestBase
         Assert.Contains("shapeIndices", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutAlign_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Ellipse, 200, 200, 200, 100);
@@ -246,9 +258,10 @@ public class AlignPptShapesHandlerTests : PptHandlerTestBase
         Assert.Contains("align", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithLessThanTwoShapes_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);
@@ -263,9 +276,10 @@ public class AlignPptShapesHandlerTests : PptHandlerTestBase
         Assert.Contains("2", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidAlign_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Ellipse, 200, 200, 200, 100);
@@ -281,9 +295,10 @@ public class AlignPptShapesHandlerTests : PptHandlerTestBase
         Assert.Contains("align", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidShapeIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Ellipse, 200, 200, 200, 100);

@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Security;
 using AsposeMcpServer.Results.PowerPoint.Security;
@@ -5,15 +6,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Security;
 
+[SupportedOSPlatform("windows")]
 public class GetStatusPptSecurityHandlerTests : PptHandlerTestBase
 {
     private readonly GetStatusPptSecurityHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_GetStatus()
     {
+        SkipIfNotWindows();
         Assert.Equal("get_status", _handler.Operation);
     }
 
@@ -36,9 +39,10 @@ public class GetStatusPptSecurityHandlerTests : PptHandlerTestBase
 
     #region Modification State
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ShouldNotMarkModified()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationForSecurityStatus();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -52,9 +56,10 @@ public class GetStatusPptSecurityHandlerTests : PptHandlerTestBase
 
     #region Default Status
 
-    [Fact]
+    [SkippableFact]
     public void Execute_Default_ReturnsSecurityStatus()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationForSecurityStatus();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -65,9 +70,10 @@ public class GetStatusPptSecurityHandlerTests : PptHandlerTestBase
         Assert.NotNull(result);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_Default_NotEncrypted()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationForSecurityStatus();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -78,9 +84,10 @@ public class GetStatusPptSecurityHandlerTests : PptHandlerTestBase
         Assert.False(result.IsEncrypted);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_Default_NotWriteProtected()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationForSecurityStatus();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -91,9 +98,10 @@ public class GetStatusPptSecurityHandlerTests : PptHandlerTestBase
         Assert.False(result.IsWriteProtected);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_Default_NotMarkedFinal()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationForSecurityStatus();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -104,9 +112,10 @@ public class GetStatusPptSecurityHandlerTests : PptHandlerTestBase
         Assert.False(result.IsMarkedFinal);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_Default_NotReadOnlyRecommended()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationForSecurityStatus();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -117,9 +126,10 @@ public class GetStatusPptSecurityHandlerTests : PptHandlerTestBase
         Assert.False(result.IsReadOnlyRecommended);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsMessage()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationForSecurityStatus();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -135,9 +145,10 @@ public class GetStatusPptSecurityHandlerTests : PptHandlerTestBase
 
     #region With Protection Applied
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithWriteProtection_ReflectsStatus()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationForSecurityStatus();
         pres.ProtectionManager.SetWriteProtection("pass");
         var context = CreateContext(pres);
@@ -149,9 +160,10 @@ public class GetStatusPptSecurityHandlerTests : PptHandlerTestBase
         Assert.True(result.IsWriteProtected);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithEncryption_ReflectsStatus()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationForSecurityStatus();
         pres.ProtectionManager.Encrypt("secret");
         var context = CreateContext(pres);
@@ -163,9 +175,10 @@ public class GetStatusPptSecurityHandlerTests : PptHandlerTestBase
         Assert.True(result.IsEncrypted);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithMarkFinal_ReflectsStatus()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationForSecurityStatus();
         pres.DocumentProperties["_MarkAsFinal"] = true;
         var context = CreateContext(pres);

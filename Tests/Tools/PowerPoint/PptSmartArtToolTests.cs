@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Runtime.Versioning;
+using System.Text.Json;
 using Aspose.Slides;
 using Aspose.Slides.Export;
 using Aspose.Slides.SmartArt;
@@ -20,6 +21,7 @@ internal record SmartArtTestInfo(string Path, int ShapeIndex);
 ///     Focuses on session management, file I/O, and operation routing.
 ///     Detailed parameter validation and business logic tests are in Handler tests.
 /// </summary>
+[SupportedOSPlatform("windows")]
 public class PptSmartArtToolTests : PptTestBase
 {
     private readonly PptSmartArtTool _tool;
@@ -42,9 +44,10 @@ public class PptSmartArtToolTests : PptTestBase
 
     #region File I/O Smoke Tests
 
-    [Fact]
+    [SkippableFact]
     public void AddSmartArt_ShouldAddSmartArt()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_add_smartart.pptx");
         var outputPath = CreateTestFilePath("test_add_smartart_output.pptx");
         var result = _tool.Execute("add", pptPath, slideIndex: 0, layout: "BasicProcess", x: 100, y: 100, width: 400,
@@ -57,9 +60,10 @@ public class PptSmartArtToolTests : PptTestBase
         Assert.NotEmpty(smartArts);
     }
 
-    [Fact]
+    [SkippableFact]
     public void ManageNodes_DeleteNode_ShouldDeleteNode()
     {
+        SkipIfNotWindows();
         var smartArtInfo = CreatePresentationWithSmartArt("test_delete_node.pptx");
         int initialNodeCount;
         using (var ppt = new Presentation(smartArtInfo.Path))
@@ -85,12 +89,13 @@ public class PptSmartArtToolTests : PptTestBase
 
     #region Operation Routing
 
-    [Theory]
+    [SkippableTheory]
     [InlineData("ADD")]
     [InlineData("Add")]
     [InlineData("add")]
     public void Operation_ShouldBeCaseInsensitive(string operation)
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation($"test_case_add_{operation}.pptx");
         var outputPath = CreateTestFilePath($"test_case_add_{operation}_output.pptx");
         var result = _tool.Execute(operation, pptPath, slideIndex: 0, layout: "BasicProcess", outputPath: outputPath);
@@ -99,9 +104,10 @@ public class PptSmartArtToolTests : PptTestBase
         Assert.Contains("added to slide", data.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_unknown_op.pptx");
         var ex = Assert.Throws<ArgumentException>(() =>
             _tool.Execute("unknown", pptPath, slideIndex: 0));
@@ -112,9 +118,10 @@ public class PptSmartArtToolTests : PptTestBase
 
     #region Session Management
 
-    [Fact]
+    [SkippableFact]
     public void AddSmartArt_WithSessionId_ShouldAddInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_session_add.pptx");
         var sessionId = OpenSession(pptPath);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
@@ -132,9 +139,10 @@ public class PptSmartArtToolTests : PptTestBase
         Assert.True(smartArts > initialCount);
     }
 
-    [Fact]
+    [SkippableFact]
     public void ManageNodes_DeleteNodeWithSessionId_ShouldDeleteInMemory()
     {
+        SkipIfNotWindows();
         var smartArtInfo = CreatePresentationWithSmartArt("test_session_delete.pptx");
         var sessionId = OpenSession(smartArtInfo.Path);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
@@ -152,16 +160,18 @@ public class PptSmartArtToolTests : PptTestBase
         Assert.True(smartArt.AllNodes.Count < initialNodeCount);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
+        SkipIfNotWindows();
         Assert.Throws<KeyNotFoundException>(() =>
             _tool.Execute("add", sessionId: "invalid_session_id", slideIndex: 0, layout: "BasicProcess"));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
     {
+        SkipIfNotWindows();
         var pptPath1 = CreatePresentation("test_path_smartart.pptx");
         var pptPath2 = CreatePresentation("test_session_smartart.pptx");
 

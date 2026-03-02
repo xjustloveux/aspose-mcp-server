@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Pdf;
 using Aspose.Pdf.Text;
 using AsposeMcpServer.Results;
@@ -12,6 +13,7 @@ namespace AsposeMcpServer.Tests.Tools.Pdf;
 ///     Focuses on session management, file I/O, and operation routing.
 ///     Detailed parameter validation and business logic tests are in Handler tests.
 /// </summary>
+[SupportedOSPlatform("windows")]
 public class PdfComplianceToolTests : PdfTestBase
 {
     private readonly PdfComplianceTool _tool;
@@ -33,9 +35,10 @@ public class PdfComplianceToolTests : PdfTestBase
 
     #region File I/O Smoke Tests
 
-    [Fact]
+    [SkippableFact]
     public void Execute_Validate_ReturnsResult()
     {
+        SkipIfNotWindows();
         var pdfPath = CreateTestPdf("test_validate.pdf");
 
         var result = _tool.Execute("validate", pdfPath, format: "pdf/a-1b");
@@ -45,9 +48,10 @@ public class PdfComplianceToolTests : PdfTestBase
         Assert.NotNull(data.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_Convert_ReturnsResult()
     {
+        SkipIfNotWindows();
         var pdfPath = CreateTestPdf("test_convert.pdf");
         var outputPath = CreateTestFilePath("test_convert_output.pdf");
 
@@ -59,9 +63,10 @@ public class PdfComplianceToolTests : PdfTestBase
         Assert.True(File.Exists(outputPath));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_Convert_MarksModified()
     {
+        SkipIfNotWindows();
         var pdfPath = CreateTestPdf("test_convert_modified.pdf");
         var outputPath = CreateTestFilePath("test_convert_modified_output.pdf");
 
@@ -71,9 +76,10 @@ public class PdfComplianceToolTests : PdfTestBase
         Assert.True(File.Exists(outputPath));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_Validate_WithLogPath_WritesLog()
     {
+        SkipIfNotWindows();
         var pdfPath = CreateTestPdf("test_validate_log.pdf");
         var logPath = CreateTestFilePath("validation.log");
 
@@ -88,12 +94,13 @@ public class PdfComplianceToolTests : PdfTestBase
 
     #region Operation Routing
 
-    [Theory]
+    [SkippableTheory]
     [InlineData("VALIDATE")]
     [InlineData("Validate")]
     [InlineData("validate")]
     public void Validate_Operation_ShouldBeCaseInsensitive(string operation)
     {
+        SkipIfNotWindows();
         var pdfPath = CreateTestPdf($"test_case_validate_{operation}.pdf");
 
         var result = _tool.Execute(operation, pdfPath, format: "pdf/a-1b");
@@ -101,12 +108,13 @@ public class PdfComplianceToolTests : PdfTestBase
         Assert.IsType<FinalizedResult<ValidateCompliancePdfResult>>(result);
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData("CONVERT")]
     [InlineData("Convert")]
     [InlineData("convert")]
     public void Convert_Operation_ShouldBeCaseInsensitive(string operation)
     {
+        SkipIfNotWindows();
         var pdfPath = CreateTestPdf($"test_case_convert_{operation}.pdf");
         var outputPath = CreateTestFilePath($"test_case_convert_{operation}_output.pdf");
 
@@ -115,18 +123,20 @@ public class PdfComplianceToolTests : PdfTestBase
         Assert.IsType<FinalizedResult<ConvertCompliancePdfResult>>(result);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
+        SkipIfNotWindows();
         var pdfPath = CreateTestPdf("test_unknown_op.pdf");
 
         var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", pdfPath));
         Assert.Contains("Unknown operation", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNoPathOrSessionId_ShouldThrowException()
     {
+        SkipIfNotWindows();
         Assert.ThrowsAny<Exception>(() => _tool.Execute("validate", format: "pdf/a-1b"));
     }
 
@@ -134,9 +144,10 @@ public class PdfComplianceToolTests : PdfTestBase
 
     #region Session Management
 
-    [Fact]
+    [SkippableFact]
     public void Validate_WithSessionId_ShouldValidateFromSession()
     {
+        SkipIfNotWindows();
         var pdfPath = CreateTestPdf("test_session_validate.pdf");
         var sessionId = OpenSession(pdfPath);
 
@@ -148,9 +159,10 @@ public class PdfComplianceToolTests : PdfTestBase
         Assert.True(output.IsSession);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Convert_WithSessionId_ShouldConvertInSession()
     {
+        SkipIfNotWindows();
         var pdfPath = CreateTestPdf("test_session_convert.pdf");
         var sessionId = OpenSession(pdfPath);
 
@@ -162,16 +174,18 @@ public class PdfComplianceToolTests : PdfTestBase
         Assert.True(output.IsSession);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
+        SkipIfNotWindows();
         Assert.Throws<KeyNotFoundException>(() =>
             _tool.Execute("validate", sessionId: "invalid_session", format: "pdf/a-1b"));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
     {
+        SkipIfNotWindows();
         var pdfPath1 = CreateTestPdf("test_path_file.pdf");
         var pdfPath2 = CreateTestPdf("test_session_file.pdf");
         var sessionId = OpenSession(pdfPath2);

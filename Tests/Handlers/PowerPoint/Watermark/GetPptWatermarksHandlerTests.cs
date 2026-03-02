@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Watermark;
 using AsposeMcpServer.Results.PowerPoint.Watermark;
@@ -5,15 +6,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Watermark;
 
+[SupportedOSPlatform("windows")]
 public class GetPptWatermarksHandlerTests : PptHandlerTestBase
 {
     private readonly GetPptWatermarksHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Get()
     {
+        SkipIfNotWindows();
         Assert.Equal("get", _handler.Operation);
     }
 
@@ -21,9 +24,10 @@ public class GetPptWatermarksHandlerTests : PptHandlerTestBase
 
     #region Get Watermarks
 
-    [Fact]
+    [SkippableFact]
     public void Execute_NoWatermarks_ReturnsEmptyResult()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -35,9 +39,10 @@ public class GetPptWatermarksHandlerTests : PptHandlerTestBase
         Assert.Empty(result.Items);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithTextWatermark_ReturnsWatermarkInfo()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var shape = pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 0, 0, 100, 100);
         shape.Name = $"{AddTextPptWatermarkHandler.WatermarkPrefix}TEXT_test";
@@ -53,9 +58,10 @@ public class GetPptWatermarksHandlerTests : PptHandlerTestBase
         Assert.Equal("DRAFT", result.Items[0].Text);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithImageWatermark_ReturnsImageType()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var shape = pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 0, 0, 100, 100);
         shape.Name = $"{AddTextPptWatermarkHandler.WatermarkPrefix}IMAGE_test";
@@ -69,9 +75,10 @@ public class GetPptWatermarksHandlerTests : PptHandlerTestBase
         Assert.Equal("image", result.Items[0].Type);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DoesNotMarkModified()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -81,9 +88,10 @@ public class GetPptWatermarksHandlerTests : PptHandlerTestBase
         AssertNotModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsMessage()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -95,9 +103,10 @@ public class GetPptWatermarksHandlerTests : PptHandlerTestBase
         Assert.Contains("watermark", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsCorrectCount()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var wm1 = pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 0, 0, 100, 100);
         wm1.Name = $"{AddTextPptWatermarkHandler.WatermarkPrefix}TEXT_one";
@@ -113,9 +122,10 @@ public class GetPptWatermarksHandlerTests : PptHandlerTestBase
         Assert.Equal(2, result.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsCorrectSlideIndex()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(2);
         var wm = pres.Slides[1].Shapes.AddAutoShape(ShapeType.Rectangle, 0, 0, 100, 100);
         wm.Name = $"{AddTextPptWatermarkHandler.WatermarkPrefix}TEXT_slide1";
@@ -130,9 +140,10 @@ public class GetPptWatermarksHandlerTests : PptHandlerTestBase
         Assert.Equal(1, result.Items[0].SlideIndex);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_IgnoresNonWatermarkShapes()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var normal = pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 0, 0, 100, 100);
         normal.Name = "NormalShape";

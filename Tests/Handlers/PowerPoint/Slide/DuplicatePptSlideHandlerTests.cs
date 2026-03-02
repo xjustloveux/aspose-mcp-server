@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Slide;
 using AsposeMcpServer.Results.Common;
@@ -5,15 +6,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Slide;
 
+[SupportedOSPlatform("windows")]
 public class DuplicatePptSlideHandlerTests : PptHandlerTestBase
 {
     private readonly DuplicatePptSlideHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Duplicate()
     {
+        SkipIfNotWindows();
         Assert.Equal("duplicate", _handler.Operation);
     }
 
@@ -21,13 +24,14 @@ public class DuplicatePptSlideHandlerTests : PptHandlerTestBase
 
     #region Basic Duplicate Operations
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(3, 0)]
     [InlineData(3, 1)]
     [InlineData(3, 2)]
     [InlineData(5, 4)]
     public void Execute_DuplicatesAtVariousIndices(int totalSlides, int slideIndex)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(totalSlides);
         var initialCount = pres.Slides.Count;
         var context = CreateContext(pres);
@@ -47,9 +51,10 @@ public class DuplicatePptSlideHandlerTests : PptHandlerTestBase
 
     #region Default Append Behavior
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutInsertAt_AppendsAtEnd()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 10, 10, 50, 50);
         var context = CreateContext(pres);
@@ -68,13 +73,14 @@ public class DuplicatePptSlideHandlerTests : PptHandlerTestBase
 
     #region InsertAt Position
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(0)]
     [InlineData(1)]
     [InlineData(2)]
     [InlineData(3)]
     public void Execute_WithVariousInsertAtPositions_InsertsCorrectly(int insertAt)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -94,9 +100,10 @@ public class DuplicatePptSlideHandlerTests : PptHandlerTestBase
 
     #region Error Handling - Missing Parameter
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -109,9 +116,10 @@ public class DuplicatePptSlideHandlerTests : PptHandlerTestBase
 
     #region Content Preservation
 
-    [Fact]
+    [SkippableFact]
     public void Execute_PreservesOriginalSlide()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         pres.Slides[1].Shapes.AddAutoShape(ShapeType.Ellipse, 100, 100, 200, 100);
         var originalShapeCount = pres.Slides[1].Shapes.Count;
@@ -129,6 +137,7 @@ public class DuplicatePptSlideHandlerTests : PptHandlerTestBase
     [SkippableFact]
     public void Execute_DuplicatedSlideHasSameShapeCount()
     {
+        SkipIfNotWindows();
         SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation mode adds watermark shapes");
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 10, 10, 50, 50);
@@ -149,9 +158,10 @@ public class DuplicatePptSlideHandlerTests : PptHandlerTestBase
 
     #region Result Message
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsSlideIndexInMessage()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(5);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -166,9 +176,10 @@ public class DuplicatePptSlideHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsTotalCountInMessage()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(5);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -187,12 +198,13 @@ public class DuplicatePptSlideHandlerTests : PptHandlerTestBase
 
     #region Error Handling - Invalid slideIndex
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(3, 3)]
     [InlineData(3, 5)]
     [InlineData(3, 100)]
     public void Execute_WithSlideIndexOutOfRange_ThrowsArgumentException(int totalSlides, int invalidIndex)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(totalSlides);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -204,11 +216,12 @@ public class DuplicatePptSlideHandlerTests : PptHandlerTestBase
         Assert.Contains("slideIndex", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(-1)]
     [InlineData(-5)]
     public void Execute_WithNegativeSlideIndex_ThrowsArgumentException(int negativeIndex)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -224,11 +237,12 @@ public class DuplicatePptSlideHandlerTests : PptHandlerTestBase
 
     #region Error Handling - Invalid insertAt
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(3, 4)]
     [InlineData(3, 10)]
     public void Execute_WithInsertAtOutOfRange_ThrowsArgumentException(int totalSlides, int invalidInsertAt)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(totalSlides);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -241,11 +255,12 @@ public class DuplicatePptSlideHandlerTests : PptHandlerTestBase
         Assert.Contains("insertAt", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(-1)]
     [InlineData(-5)]
     public void Execute_WithNegativeInsertAt_ThrowsArgumentException(int negativeInsertAt)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

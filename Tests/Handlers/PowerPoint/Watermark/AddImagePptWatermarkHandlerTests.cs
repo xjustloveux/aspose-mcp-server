@@ -1,18 +1,21 @@
+using System.Runtime.Versioning;
 using AsposeMcpServer.Handlers.PowerPoint.Watermark;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Watermark;
 
+[SupportedOSPlatform("windows")]
 public class AddImagePptWatermarkHandlerTests : PptHandlerTestBase
 {
     private readonly AddImagePptWatermarkHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_AddImage()
     {
+        SkipIfNotWindows();
         Assert.Equal("add_image", _handler.Operation);
     }
 
@@ -45,9 +48,10 @@ public class AddImagePptWatermarkHandlerTests : PptHandlerTestBase
 
     #region Add Image Watermark
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithValidImage_ReturnsSuccessResult()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var imagePath = CreateTestImage();
@@ -62,9 +66,10 @@ public class AddImagePptWatermarkHandlerTests : PptHandlerTestBase
         Assert.Contains("1 slide(s)", result.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithValidImage_MarksContextModified()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var imagePath = CreateTestImage();
@@ -78,9 +83,10 @@ public class AddImagePptWatermarkHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithMultipleSlides_AddsToAllSlides()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
         var imagePath = CreateTestImage();
@@ -95,9 +101,10 @@ public class AddImagePptWatermarkHandlerTests : PptHandlerTestBase
         Assert.Contains("3 slide(s)", result.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithMissingImagePath_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -105,9 +112,10 @@ public class AddImagePptWatermarkHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNonExistentFile_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -118,9 +126,10 @@ public class AddImagePptWatermarkHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WatermarkShapeNameContainsImagePrefix()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var imagePath = CreateTestImage();
@@ -143,9 +152,10 @@ public class AddImagePptWatermarkHandlerTests : PptHandlerTestBase
         Assert.True(hasImageWatermark);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithCustomDimensions_ReturnsSuccessResult()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var imagePath = CreateTestImage();

@@ -1,18 +1,21 @@
+using System.Runtime.Versioning;
 using AsposeMcpServer.Handlers.PowerPoint.Font;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Font;
 
+[SupportedOSPlatform("windows")]
 public class EmbedPptFontHandlerTests : PptHandlerTestBase
 {
     private readonly EmbedPptFontHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Embed()
     {
+        SkipIfNotWindows();
         Assert.Equal("embed", _handler.Operation);
     }
 
@@ -20,9 +23,10 @@ public class EmbedPptFontHandlerTests : PptHandlerTestBase
 
     #region Embed Font
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithExistingFont_ReturnsSuccessResult()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Hello World");
         var allFonts = pres.FontsManager.GetFonts();
         Assert.NotEmpty(allFonts);
@@ -39,9 +43,10 @@ public class EmbedPptFontHandlerTests : PptHandlerTestBase
         Assert.Contains(fontName, result.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNonExistentFont_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Hello World");
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -52,9 +57,10 @@ public class EmbedPptFontHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithMissingFontName_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Hello World");
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -62,9 +68,10 @@ public class EmbedPptFontHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithSubsetMode_ReturnsSuccessResult()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Hello World");
         var allFonts = pres.FontsManager.GetFonts();
         Assert.NotEmpty(allFonts);

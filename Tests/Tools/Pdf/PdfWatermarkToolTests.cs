@@ -1,4 +1,5 @@
-﻿using Aspose.Pdf;
+﻿using System.Runtime.Versioning;
+using Aspose.Pdf;
 using Aspose.Pdf.Text;
 using AsposeMcpServer.Results;
 using AsposeMcpServer.Results.Common;
@@ -12,6 +13,7 @@ namespace AsposeMcpServer.Tests.Tools.Pdf;
 ///     Focuses on session management, file I/O, and operation routing.
 ///     Detailed parameter validation and business logic tests are in Handler tests.
 /// </summary>
+[SupportedOSPlatform("windows")]
 public class PdfWatermarkToolTests : PdfTestBase
 {
     private readonly PdfWatermarkTool _tool;
@@ -40,6 +42,7 @@ public class PdfWatermarkToolTests : PdfTestBase
     [SkippableFact]
     public void Add_WithText_ShouldAddWatermark()
     {
+        SkipIfNotWindows();
         SkipInEvaluationMode(AsposeLibraryType.Pdf, "Watermark text extraction has limitations in evaluation mode");
         const string watermarkText = "Confidential";
         var pdfPath = CreatePdfDocument("test_add.pdf");
@@ -59,6 +62,7 @@ public class PdfWatermarkToolTests : PdfTestBase
     [SkippableFact]
     public void Add_WithMultiplePages_ShouldApplyToAllPages()
     {
+        SkipIfNotWindows();
         SkipInEvaluationMode(AsposeLibraryType.Pdf, "Watermark text extraction has limitations in evaluation mode");
         const string watermarkText = "All Pages";
         var pdfPath = CreatePdfDocument("test_multi.pdf", 3);
@@ -72,9 +76,10 @@ public class PdfWatermarkToolTests : PdfTestBase
         Assert.Equal(3, outputDoc.Pages.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Add_WithPageRange_ShouldApplyToSpecificPages()
     {
+        SkipIfNotWindows();
         const string watermarkText = "Range Pages";
         var pdfPath = CreatePdfDocument("test_hyphen.pdf", 4);
         var outputPath = CreateTestFilePath("test_hyphen_output.pdf");
@@ -91,12 +96,13 @@ public class PdfWatermarkToolTests : PdfTestBase
 
     #region Operation Routing
 
-    [Theory]
+    [SkippableTheory]
     [InlineData("ADD")]
     [InlineData("Add")]
     [InlineData("add")]
     public void Operation_ShouldBeCaseInsensitive(string operation)
     {
+        SkipIfNotWindows();
         var pdfPath = CreatePdfDocument($"test_case_{operation}.pdf");
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.pdf");
 
@@ -105,17 +111,19 @@ public class PdfWatermarkToolTests : PdfTestBase
         Assert.True(File.Exists(outputPath));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
+        SkipIfNotWindows();
         var pdfPath = CreatePdfDocument("test_unknown_op.pdf");
         var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", text: "Test", path: pdfPath));
         Assert.StartsWith("Unknown operation: unknown", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNoPathOrSessionId_ShouldThrowException()
     {
+        SkipIfNotWindows();
         Assert.ThrowsAny<Exception>(() => _tool.Execute("add", text: "Test", path: null, sessionId: null));
     }
 
@@ -126,6 +134,7 @@ public class PdfWatermarkToolTests : PdfTestBase
     [SkippableFact]
     public void Add_WithSessionId_ShouldModifyInMemory()
     {
+        SkipIfNotWindows();
         SkipInEvaluationMode(AsposeLibraryType.Pdf, "Watermark text extraction has limitations in evaluation mode");
         const string watermarkText = "Confidential";
         var pdfPath = CreatePdfDocument("test_session_add.pdf");
@@ -142,9 +151,10 @@ public class PdfWatermarkToolTests : PdfTestBase
         Assert.Contains(watermarkText, textAbsorber.Text);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Add_WithSessionId_AndPageRange_ShouldApplyToSpecificPages()
     {
+        SkipIfNotWindows();
         const string watermarkText = "Selected";
         var pdfPath = CreatePdfDocument("test_session_range.pdf", 3);
         var sessionId = OpenSession(pdfPath);
@@ -156,15 +166,17 @@ public class PdfWatermarkToolTests : PdfTestBase
         Assert.Equal(3, document.Pages.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
+        SkipIfNotWindows();
         Assert.Throws<KeyNotFoundException>(() => _tool.Execute("add", text: "Test", sessionId: "invalid_session"));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
     {
+        SkipIfNotWindows();
         var pdfPath1 = CreatePdfDocument("test_path_watermark.pdf");
         var pdfPath2 = CreatePdfDocument("test_session_watermark.pdf", 3);
         var sessionId = OpenSession(pdfPath2);

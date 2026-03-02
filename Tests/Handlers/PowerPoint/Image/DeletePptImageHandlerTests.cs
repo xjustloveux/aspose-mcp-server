@@ -7,18 +7,21 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 // CA1416 - System.Drawing.Common is Windows-only, cross-platform support not required
 #pragma warning disable CA1416
+using System.Runtime.Versioning;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Image;
 
+[SupportedOSPlatform("windows")]
 public class DeletePptImageHandlerTests : PptHandlerTestBase
 {
     private readonly DeletePptImageHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Delete()
     {
+        SkipIfNotWindows();
         Assert.Equal("delete", _handler.Operation);
     }
 
@@ -26,9 +29,10 @@ public class DeletePptImageHandlerTests : PptHandlerTestBase
 
     #region Basic Delete Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DeletesImage()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithImage();
         var initialCount = GetPictureFrames(pres.Slides[0]).Count;
         var context = CreateContext(pres);
@@ -51,9 +55,10 @@ public class DeletePptImageHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidImageIndex_ThrowsException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithImage();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -65,9 +70,10 @@ public class DeletePptImageHandlerTests : PptHandlerTestBase
         Assert.ThrowsAny<Exception>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSlideIndex_ThrowsException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithImage();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

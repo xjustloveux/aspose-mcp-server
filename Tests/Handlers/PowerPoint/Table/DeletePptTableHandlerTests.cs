@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Table;
 using AsposeMcpServer.Results.Common;
@@ -5,15 +6,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Table;
 
+[SupportedOSPlatform("windows")]
 public class DeletePptTableHandlerTests : PptHandlerTestBase
 {
     private readonly DeletePptTableHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Delete()
     {
+        SkipIfNotWindows();
         Assert.Equal("delete", _handler.Operation);
     }
 
@@ -21,9 +24,10 @@ public class DeletePptTableHandlerTests : PptHandlerTestBase
 
     #region Basic Delete Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DeletesTable()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(2, 2);
         var initialCount = pres.Slides[0].Shapes.Count;
         var context = CreateContext(pres);
@@ -40,9 +44,10 @@ public class DeletePptTableHandlerTests : PptHandlerTestBase
         Assert.Equal(initialCount - 1, pres.Slides[0].Shapes.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReducesShapeCount()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(2, 2);
         var initialCount = pres.Slides[0].Shapes.Count;
         var context = CreateContext(pres);
@@ -56,9 +61,10 @@ public class DeletePptTableHandlerTests : PptHandlerTestBase
         Assert.Equal(initialCount - 1, pres.Slides[0].Shapes.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsSlideIndex()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(2, 2);
         var initialCount = pres.Slides[0].Shapes.Count;
         var context = CreateContext(pres);
@@ -77,9 +83,10 @@ public class DeletePptTableHandlerTests : PptHandlerTestBase
 
     #region Slide Index Parameter
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithSlideIndex_DeletesFromCorrectSlide()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var tableShapeIndex = AddTableToSlide(pres, 1, 2, 2);
         var initialCount = pres.Slides[1].Shapes.Count;
@@ -95,9 +102,10 @@ public class DeletePptTableHandlerTests : PptHandlerTestBase
         Assert.Equal(initialCount - 1, pres.Slides[1].Shapes.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithSlideIndex_ReturnsCorrectSlide()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var tableShapeIndex = AddTableToSlide(pres, 2, 2, 2);
         var initialCount = pres.Slides[2].Shapes.Count;
@@ -118,9 +126,10 @@ public class DeletePptTableHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutShapeIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(2, 2);
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -129,9 +138,10 @@ public class DeletePptTableHandlerTests : PptHandlerTestBase
         Assert.Contains("shapeIndex", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidShapeIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(2, 2);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -142,9 +152,10 @@ public class DeletePptTableHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNonTableShape_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Sample");
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -156,9 +167,10 @@ public class DeletePptTableHandlerTests : PptHandlerTestBase
         Assert.Contains("not a table", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(2, 2);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -170,9 +182,10 @@ public class DeletePptTableHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNegativeShapeIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(2, 2);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Handlers.PowerPoint.Watermark;
@@ -13,6 +14,7 @@ namespace AsposeMcpServer.Tests.Tools.PowerPoint;
 ///     Focuses on session management, file I/O, and operation routing.
 ///     Detailed parameter validation and business logic tests are in Handler tests.
 /// </summary>
+[SupportedOSPlatform("windows")]
 public class PptWatermarkToolTests : PptTestBase
 {
     private readonly PptWatermarkTool _tool;
@@ -66,9 +68,10 @@ public class PptWatermarkToolTests : PptTestBase
 
     #region File I/O Smoke Tests
 
-    [Fact]
+    [SkippableFact]
     public void AddText_ShouldAddTextWatermark()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithContent("test_add_text.pptx", "Hello World");
         var outputPath = CreateTestFilePath("test_add_text_output.pptx");
         var result = _tool.Execute("add_text", pptPath, text: "DRAFT", outputPath: outputPath);
@@ -76,9 +79,10 @@ public class PptWatermarkToolTests : PptTestBase
         Assert.Contains("1 slide(s)", data.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void AddImage_ShouldAddImageWatermark()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithContent("test_add_image.pptx", "Hello World");
         var imagePath = CreateTestImage();
         var outputPath = CreateTestFilePath("test_add_image_output.pptx");
@@ -87,9 +91,10 @@ public class PptWatermarkToolTests : PptTestBase
         Assert.Contains("1 slide(s)", data.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Remove_ShouldRemoveWatermarks()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithWatermark("test_remove.pptx");
         var outputPath = CreateTestFilePath("test_remove_output.pptx");
         var result = _tool.Execute("remove", pptPath, outputPath: outputPath);
@@ -97,9 +102,10 @@ public class PptWatermarkToolTests : PptTestBase
         Assert.Contains("watermark", data.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Get_ShouldReturnWatermarks()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithWatermark("test_get.pptx");
         var result = _tool.Execute("get", pptPath);
         var data = GetResultData<GetWatermarksPptResult>(result);
@@ -107,9 +113,10 @@ public class PptWatermarkToolTests : PptTestBase
         Assert.NotEmpty(data.Items);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Get_EmptyPresentation_ShouldReturnZeroCount()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_get_empty.pptx");
         var result = _tool.Execute("get", pptPath);
         var data = GetResultData<GetWatermarksPptResult>(result);
@@ -121,21 +128,23 @@ public class PptWatermarkToolTests : PptTestBase
 
     #region Operation Routing
 
-    [Theory]
+    [SkippableTheory]
     [InlineData("GET")]
     [InlineData("Get")]
     [InlineData("get")]
     public void Operation_ShouldBeCaseInsensitive(string operation)
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithContent($"test_case_{operation.Replace(" ", "_")}.pptx", "Hello World");
         var result = _tool.Execute(operation, pptPath);
         var data = GetResultData<GetWatermarksPptResult>(result);
         Assert.True(data.Count >= 0);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithContent("test_unknown_op.pptx", "Hello World");
         var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", pptPath));
         Assert.Contains("Unknown operation", ex.Message);
@@ -145,9 +154,10 @@ public class PptWatermarkToolTests : PptTestBase
 
     #region Session Management
 
-    [Fact]
+    [SkippableFact]
     public void Get_WithSessionId_ShouldReturnWatermarksFromMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithContent("test_session_get.pptx", "Hello World");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("get", sessionId: sessionId);
@@ -157,9 +167,10 @@ public class PptWatermarkToolTests : PptTestBase
         Assert.Equal(sessionId, output.SessionId);
     }
 
-    [Fact]
+    [SkippableFact]
     public void AddText_WithSessionId_ShouldAddInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithContent("test_session_add_text.pptx", "Hello World");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("add_text", sessionId: sessionId, text: "CONFIDENTIAL");
@@ -169,9 +180,10 @@ public class PptWatermarkToolTests : PptTestBase
         Assert.Equal(sessionId, output.SessionId);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Remove_WithSessionId_ShouldRemoveInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithWatermark("test_session_remove.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("remove", sessionId: sessionId);
@@ -181,15 +193,17 @@ public class PptWatermarkToolTests : PptTestBase
         Assert.Equal(sessionId, output.SessionId);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
+        SkipIfNotWindows();
         Assert.Throws<KeyNotFoundException>(() => _tool.Execute("get", sessionId: "invalid_session"));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
     {
+        SkipIfNotWindows();
         var pptPath1 = CreatePresentationWithContent("test_path_wm.pptx", "Path content");
         var pptPath2 = CreatePresentationWithWatermark("test_session_wm.pptx");
         var sessionId = OpenSession(pptPath2);

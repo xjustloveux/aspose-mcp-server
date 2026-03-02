@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using Aspose.Slides.Animation;
 using AsposeMcpServer.Handlers.PowerPoint.Animation;
@@ -6,15 +7,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Animation;
 
+[SupportedOSPlatform("windows")]
 public class DeletePptAnimationHandlerTests : PptHandlerTestBase
 {
     private readonly DeletePptAnimationHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Delete()
     {
+        SkipIfNotWindows();
         Assert.Equal("delete", _handler.Operation);
     }
 
@@ -22,9 +25,10 @@ public class DeletePptAnimationHandlerTests : PptHandlerTestBase
 
     #region Delete All From Shape
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutAnimationIndex_DeletesAllFromShape()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithMultipleAnimations();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -44,9 +48,10 @@ public class DeletePptAnimationHandlerTests : PptHandlerTestBase
 
     #region Delete All From Slide
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutShapeIndex_ClearsAllAnimations()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithAnimation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -66,9 +71,10 @@ public class DeletePptAnimationHandlerTests : PptHandlerTestBase
 
     #region Basic Delete Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DeletesAnimation()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithAnimation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -86,9 +92,10 @@ public class DeletePptAnimationHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsSlideIndex()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithAnimation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -107,9 +114,10 @@ public class DeletePptAnimationHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithAnimation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -118,9 +126,10 @@ public class DeletePptAnimationHandlerTests : PptHandlerTestBase
         Assert.Contains("slideIndex", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithAnimation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -132,9 +141,10 @@ public class DeletePptAnimationHandlerTests : PptHandlerTestBase
         Assert.Contains("Slide index", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidShapeIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithAnimation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -147,9 +157,10 @@ public class DeletePptAnimationHandlerTests : PptHandlerTestBase
         Assert.Contains("Shape index", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidAnimationIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithAnimation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -163,9 +174,10 @@ public class DeletePptAnimationHandlerTests : PptHandlerTestBase
         Assert.Contains("animationIndex", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNegativeAnimationIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithAnimation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -179,9 +191,10 @@ public class DeletePptAnimationHandlerTests : PptHandlerTestBase
         Assert.Contains("animationIndex", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNegativeSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithAnimation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -193,9 +206,10 @@ public class DeletePptAnimationHandlerTests : PptHandlerTestBase
         Assert.Contains("Slide index", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNegativeShapeIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithAnimation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -208,10 +222,11 @@ public class DeletePptAnimationHandlerTests : PptHandlerTestBase
         Assert.Contains("Shape index", ex.Message);
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(int.MaxValue)]
     public void Execute_WithExtremeSlideIndex_ThrowsArgumentException(int slideIndex)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithAnimation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

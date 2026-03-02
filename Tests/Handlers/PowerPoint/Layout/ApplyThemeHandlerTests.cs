@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Handlers.PowerPoint.Layout;
@@ -6,15 +7,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Layout;
 
+[SupportedOSPlatform("windows")]
 public class ApplyThemeHandlerTests : PptHandlerTestBase
 {
     private readonly ApplyThemeHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_ApplyTheme()
     {
+        SkipIfNotWindows();
         Assert.Equal("apply_theme", _handler.Operation);
     }
 
@@ -22,9 +25,10 @@ public class ApplyThemeHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutThemePath_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -32,9 +36,10 @@ public class ApplyThemeHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNonExistentThemePath_ThrowsFileNotFoundException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -52,6 +57,7 @@ public class ApplyThemeHandlerTests : PptHandlerTestBase
     [SkippableFact]
     public void Execute_WithValidTheme_AppliesTheme()
     {
+        SkipIfNotWindows();
         SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation mode limits master slide operations");
 
         var themePath = Path.Combine(Path.GetTempPath(), $"theme_{Guid.NewGuid()}.pptx");
@@ -86,6 +92,7 @@ public class ApplyThemeHandlerTests : PptHandlerTestBase
     [SkippableFact]
     public void Execute_WithSlides_AppliesLayoutToAllSlides()
     {
+        SkipIfNotWindows();
         SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation mode limits slide operations");
 
         var themePath = Path.Combine(Path.GetTempPath(), $"theme_slides_{Guid.NewGuid()}.pptx");

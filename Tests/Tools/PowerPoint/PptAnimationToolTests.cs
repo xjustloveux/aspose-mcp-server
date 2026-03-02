@@ -1,4 +1,5 @@
-﻿using Aspose.Slides;
+﻿using System.Runtime.Versioning;
+using Aspose.Slides;
 using Aspose.Slides.Animation;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Results.Common;
@@ -13,6 +14,7 @@ namespace AsposeMcpServer.Tests.Tools.PowerPoint;
 ///     Focuses on session management, file I/O, and operation routing.
 ///     Detailed parameter validation and business logic tests are in Handler tests.
 /// </summary>
+[SupportedOSPlatform("windows")]
 public class PptAnimationToolTests : PptTestBase
 {
     private readonly PptAnimationTool _tool;
@@ -47,9 +49,10 @@ public class PptAnimationToolTests : PptTestBase
 
     #region File I/O Smoke Tests
 
-    [Fact]
+    [SkippableFact]
     public void Add_ShouldAddAnimation()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithShape("test_add.pptx");
         var shapeIndex = FindShapeIndex(pptPath);
         var outputPath = CreateTestFilePath("test_add_output.pptx");
@@ -62,9 +65,10 @@ public class PptAnimationToolTests : PptTestBase
         Assert.True(presentation.Slides[0].Timeline.MainSequence.Count > 0);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Edit_ShouldModifyAnimation()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithAnimation("test_edit.pptx");
         var shapeIndex = FindShapeIndex(pptPath);
         var outputPath = CreateTestFilePath("test_edit_output.pptx");
@@ -75,9 +79,10 @@ public class PptAnimationToolTests : PptTestBase
         Assert.True(File.Exists(outputPath));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Delete_ShouldDeleteAnimationForShape()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithAnimation("test_delete.pptx");
         var outputPath = CreateTestFilePath("test_delete_output.pptx");
         var result = _tool.Execute("delete", 0, pptPath, outputPath: outputPath);
@@ -87,9 +92,10 @@ public class PptAnimationToolTests : PptTestBase
         Assert.Equal(0, presentation.Slides[0].Timeline.MainSequence.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Get_WithAnimations_ShouldReturnAnimationList()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithAnimation("test_get.pptx");
         var result = _tool.Execute("get", 0, pptPath);
         var data = GetResultData<GetAnimationsResult>(result);
@@ -97,9 +103,10 @@ public class PptAnimationToolTests : PptTestBase
         Assert.Contains(data.Animations, a => a.EffectType == "Fade");
     }
 
-    [Fact]
+    [SkippableFact]
     public void Get_EmptySlide_ShouldReturnEmptyList()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithShape("test_get_empty.pptx");
         var result = _tool.Execute("get", 0, pptPath);
         var data = GetResultData<GetAnimationsResult>(result);
@@ -111,12 +118,13 @@ public class PptAnimationToolTests : PptTestBase
 
     #region Operation Routing
 
-    [Theory]
+    [SkippableTheory]
     [InlineData("ADD")]
     [InlineData("Add")]
     [InlineData("add")]
     public void Operation_ShouldBeCaseInsensitive(string operation)
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithShape($"test_case_add_{operation}.pptx");
         var shapeIndex = FindShapeIndex(pptPath);
         var outputPath = CreateTestFilePath($"test_case_add_{operation}_output.pptx");
@@ -126,9 +134,10 @@ public class PptAnimationToolTests : PptTestBase
         Assert.Contains("added", data.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithShape("test_unknown_op.pptx");
         var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", 0, pptPath));
         Assert.Contains("Unknown operation", ex.Message);
@@ -138,9 +147,10 @@ public class PptAnimationToolTests : PptTestBase
 
     #region Session Management
 
-    [Fact]
+    [SkippableFact]
     public void Add_WithSessionId_ShouldAddInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithShape("test_session_add.pptx");
         var shapeIndex = FindShapeIndex(pptPath);
         var sessionId = OpenSession(pptPath);
@@ -154,9 +164,10 @@ public class PptAnimationToolTests : PptTestBase
         Assert.True(output.IsSession);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Edit_WithSessionId_ShouldModifyInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithAnimation("test_session_edit.pptx");
         var shapeIndex = FindShapeIndex(pptPath);
         var sessionId = OpenSession(pptPath);
@@ -170,9 +181,10 @@ public class PptAnimationToolTests : PptTestBase
         Assert.True(output.IsSession);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Delete_WithSessionId_ShouldDeleteInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithAnimation("test_session_delete.pptx");
         var sessionId = OpenSession(pptPath);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
@@ -185,9 +197,10 @@ public class PptAnimationToolTests : PptTestBase
         Assert.True(output.IsSession);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Get_WithSessionId_ShouldReturnAnimations()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithAnimation("test_session_get.pptx", EffectType.Appear);
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("get", 0, sessionId: sessionId);
@@ -198,15 +211,17 @@ public class PptAnimationToolTests : PptTestBase
         Assert.True(output.IsSession);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
+        SkipIfNotWindows();
         Assert.Throws<KeyNotFoundException>(() => _tool.Execute("get", 0, sessionId: "invalid_session"));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
     {
+        SkipIfNotWindows();
         var pptPath1 = CreatePresentationWithAnimation("test_path_anim.pptx");
         var pptPath2 = CreatePresentationWithAnimation("test_session_anim.pptx", EffectType.Zoom);
         var sessionId = OpenSession(pptPath2);

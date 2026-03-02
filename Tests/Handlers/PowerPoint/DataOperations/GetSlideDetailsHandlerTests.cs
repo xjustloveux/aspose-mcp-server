@@ -1,18 +1,21 @@
+using System.Runtime.Versioning;
 using AsposeMcpServer.Handlers.PowerPoint.DataOperations;
 using AsposeMcpServer.Results.PowerPoint.DataOperations;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.DataOperations;
 
+[SupportedOSPlatform("windows")]
 public class GetSlideDetailsHandlerTests : PptHandlerTestBase
 {
     private readonly GetSlideDetailsHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_GetSlideDetails()
     {
+        SkipIfNotWindows();
         Assert.Equal("get_slide_details", _handler.Operation);
     }
 
@@ -20,9 +23,10 @@ public class GetSlideDetailsHandlerTests : PptHandlerTestBase
 
     #region Basic Get Slide Details Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsSlideDetails()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -38,9 +42,10 @@ public class GetSlideDetailsHandlerTests : PptHandlerTestBase
         Assert.True(result.ShapesCount >= 0);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsLayoutInfo()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -55,9 +60,10 @@ public class GetSlideDetailsHandlerTests : PptHandlerTestBase
         Assert.NotNull(result);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsTransitionInfo()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -72,9 +78,10 @@ public class GetSlideDetailsHandlerTests : PptHandlerTestBase
         Assert.NotNull(result);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsAnimationsCount()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -89,9 +96,10 @@ public class GetSlideDetailsHandlerTests : PptHandlerTestBase
         Assert.True(result.AnimationsCount >= 0);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>

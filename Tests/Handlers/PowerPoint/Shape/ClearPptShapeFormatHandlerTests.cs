@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Shape;
 using AsposeMcpServer.Results.Common;
@@ -6,15 +7,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Shape;
 
+[SupportedOSPlatform("windows")]
 public class ClearPptShapeFormatHandlerTests : PptHandlerTestBase
 {
     private readonly ClearPptShapeFormatHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_ClearFormat()
     {
+        SkipIfNotWindows();
         Assert.Equal("clear_format", _handler.Operation);
     }
 
@@ -22,9 +25,10 @@ public class ClearPptShapeFormatHandlerTests : PptHandlerTestBase
 
     #region Basic Clear Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ClearsFormat()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var shape = pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         shape.FillFormat.FillType = FillType.Solid;
@@ -46,9 +50,10 @@ public class ClearPptShapeFormatHandlerTests : PptHandlerTestBase
 
     #region Result Message
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ClearsFillAndLineOnFirstSlide()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var shape = pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         shape.FillFormat.FillType = FillType.Solid;
@@ -73,9 +78,10 @@ public class ClearPptShapeFormatHandlerTests : PptHandlerTestBase
 
     #region Clear Fill
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DefaultClearsFill()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var shape = pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         shape.FillFormat.FillType = FillType.Solid;
@@ -91,9 +97,10 @@ public class ClearPptShapeFormatHandlerTests : PptHandlerTestBase
         Assert.Equal(FillType.NoFill, shape.FillFormat.FillType);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithClearFillFalse_PreservesFill()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var shape = pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         shape.FillFormat.FillType = FillType.Solid;
@@ -114,9 +121,10 @@ public class ClearPptShapeFormatHandlerTests : PptHandlerTestBase
 
     #region Clear Line
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DefaultClearsLine()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var shape = pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         shape.LineFormat.FillFormat.FillType = FillType.Solid;
@@ -132,9 +140,10 @@ public class ClearPptShapeFormatHandlerTests : PptHandlerTestBase
         Assert.Equal(FillType.NoFill, shape.LineFormat.FillFormat.FillType);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithClearLineFalse_PreservesLine()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var shape = pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         shape.LineFormat.FillFormat.FillType = FillType.Solid;
@@ -155,9 +164,10 @@ public class ClearPptShapeFormatHandlerTests : PptHandlerTestBase
 
     #region Clear Both
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ClearsBothFillAndLine()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var shape = pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         shape.FillFormat.FillType = FillType.Solid;
@@ -178,9 +188,10 @@ public class ClearPptShapeFormatHandlerTests : PptHandlerTestBase
         Assert.Equal(FillType.NoFill, shape.LineFormat.FillFormat.FillType);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithBothFalse_PreservesBoth()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var shape = pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         shape.FillFormat.FillType = FillType.Solid;
@@ -205,9 +216,10 @@ public class ClearPptShapeFormatHandlerTests : PptHandlerTestBase
 
     #region Slide Index
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithSlideIndex_ClearsOnSpecificSlide()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var shape = pres.Slides[1].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         shape.FillFormat.FillType = FillType.Solid;
@@ -226,9 +238,10 @@ public class ClearPptShapeFormatHandlerTests : PptHandlerTestBase
         Assert.Equal(FillType.NoFill, pres.Slides[1].Shapes[0].FillFormat.FillType);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DefaultSlideIndex_ClearsOnFirstSlide()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var shape = pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         shape.FillFormat.FillType = FillType.Solid;
@@ -250,9 +263,10 @@ public class ClearPptShapeFormatHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutShapeIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);
@@ -262,11 +276,12 @@ public class ClearPptShapeFormatHandlerTests : PptHandlerTestBase
         Assert.Contains("shapeIndex", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(-1)]
     [InlineData(10)]
     public void Execute_WithInvalidShapeIndex_ThrowsArgumentException(int invalidIndex)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);

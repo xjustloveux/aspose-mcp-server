@@ -1,4 +1,5 @@
-﻿using Aspose.Slides;
+﻿using System.Runtime.Versioning;
+using Aspose.Slides;
 using Aspose.Slides.Export;
 using Aspose.Slides.SlideShow;
 using AsposeMcpServer.Results;
@@ -14,6 +15,7 @@ namespace AsposeMcpServer.Tests.Tools.PowerPoint;
 ///     Focuses on session management, file I/O, and operation routing.
 ///     Detailed parameter validation and business logic tests are in Handler tests.
 /// </summary>
+[SupportedOSPlatform("windows")]
 public class PptTransitionToolTests : PptTestBase
 {
     private readonly PptTransitionTool _tool;
@@ -25,9 +27,10 @@ public class PptTransitionToolTests : PptTestBase
 
     #region File I/O Smoke Tests
 
-    [Fact]
+    [SkippableFact]
     public void SetTransition_ShouldSetTransition()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_set_transition.pptx");
         var outputPath = CreateTestFilePath("test_set_transition_output.pptx");
         _tool.Execute("set", pptPath, slideIndex: 0, transitionType: "Fade", advanceAfterSeconds: 1.5,
@@ -38,9 +41,10 @@ public class PptTransitionToolTests : PptTestBase
         Assert.Equal(1500u, slide.SlideShowTransition.AdvanceAfterTime);
     }
 
-    [Fact]
+    [SkippableFact]
     public void GetTransition_ShouldReturnTransitionInfo()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_get_transition.pptx");
         using (var presentation = new Presentation(pptPath))
         {
@@ -56,9 +60,10 @@ public class PptTransitionToolTests : PptTestBase
         Assert.True(data.HasTransition);
     }
 
-    [Fact]
+    [SkippableFact]
     public void GetTransition_WithNoTransition_ShouldReturnHasTransitionFalse()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_get_no_transition.pptx");
         var result = _tool.Execute("get", pptPath, slideIndex: 0);
         var data = GetResultData<GetTransitionResult>(result);
@@ -66,9 +71,10 @@ public class PptTransitionToolTests : PptTestBase
         Assert.Equal("None", data.Type);
     }
 
-    [Fact]
+    [SkippableFact]
     public void DeleteTransition_ShouldRemoveTransition()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_delete_transition.pptx");
         using (var presentation = new Presentation(pptPath))
         {
@@ -87,12 +93,13 @@ public class PptTransitionToolTests : PptTestBase
 
     #region Operation Routing
 
-    [Theory]
+    [SkippableTheory]
     [InlineData("SET")]
     [InlineData("Set")]
     [InlineData("set")]
     public void Operation_ShouldBeCaseInsensitive(string operation)
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation($"test_case_set_{operation}.pptx");
         var outputPath = CreateTestFilePath($"test_case_set_{operation}_output.pptx");
         var result = _tool.Execute(operation, pptPath, slideIndex: 0, transitionType: "Fade", outputPath: outputPath);
@@ -100,9 +107,10 @@ public class PptTransitionToolTests : PptTestBase
         Assert.True(File.Exists(outputPath));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_unknown_op.pptx");
         var ex = Assert.Throws<ArgumentException>(() =>
             _tool.Execute("unknown", pptPath, slideIndex: 0));
@@ -113,9 +121,10 @@ public class PptTransitionToolTests : PptTestBase
 
     #region Session Management
 
-    [Fact]
+    [SkippableFact]
     public void SetTransition_WithSessionId_ShouldSetInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_session_set.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("set", sessionId: sessionId, slideIndex: 0, transitionType: "Push",
@@ -128,9 +137,10 @@ public class PptTransitionToolTests : PptTestBase
         Assert.Equal(TransitionType.Push, slide.SlideShowTransition.Type);
     }
 
-    [Fact]
+    [SkippableFact]
     public void GetTransition_WithSessionId_ShouldReturnTransition()
     {
+        SkipIfNotWindows();
         var pptPath = CreateTestFilePath("test_session_get.pptx");
         using (var presentation = new Presentation())
         {
@@ -147,9 +157,10 @@ public class PptTransitionToolTests : PptTestBase
         Assert.NotNull(SessionManager.GetSessionStatus(sessionId));
     }
 
-    [Fact]
+    [SkippableFact]
     public void DeleteTransition_WithSessionId_ShouldDeleteInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreateTestFilePath("test_session_delete.pptx");
         using (var presentation = new Presentation())
         {
@@ -167,16 +178,18 @@ public class PptTransitionToolTests : PptTestBase
         Assert.Equal(TransitionType.None, ppt.Slides[0].SlideShowTransition.Type);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
+        SkipIfNotWindows();
         Assert.Throws<KeyNotFoundException>(() =>
             _tool.Execute("get", sessionId: "invalid_session_id", slideIndex: 0));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
     {
+        SkipIfNotWindows();
         var pptPath1 = CreateTestFilePath("test_path_trans.pptx");
         using (var pres1 = new Presentation())
         {

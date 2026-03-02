@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using AsposeMcpServer.Handlers.Pdf.Compliance;
 using AsposeMcpServer.Results.Pdf.Compliance;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -7,6 +8,7 @@ namespace AsposeMcpServer.Tests.Handlers.Pdf.Compliance;
 /// <summary>
 ///     Tests for <see cref="ConvertPdfComplianceHandler" />.
 /// </summary>
+[SupportedOSPlatform("windows")]
 public class ConvertPdfComplianceHandlerTests : PdfHandlerTestBase
 {
     private readonly ConvertPdfComplianceHandler _handler = new();
@@ -23,7 +25,7 @@ public class ConvertPdfComplianceHandlerTests : PdfHandlerTestBase
 
     #region Format Variants
 
-    [Theory]
+    [SkippableTheory]
     [InlineData("pdf/a-1a", "PDF/A-1a")]
     [InlineData("pdf/a-1b", "PDF/A-1b")]
     [InlineData("pdf/a-2a", "PDF/A-2a")]
@@ -34,6 +36,7 @@ public class ConvertPdfComplianceHandlerTests : PdfHandlerTestBase
     [InlineData("pdfa1b", "PDF/A-1b")]
     public void Execute_WithVariousFormats_ReturnsExpectedFormatName(string inputFormat, string expectedDisplayName)
     {
+        SkipIfNotWindows();
         var doc = CreateDocumentWithText("Test content");
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -52,9 +55,10 @@ public class ConvertPdfComplianceHandlerTests : PdfHandlerTestBase
 
     #region Message Content
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WhenSuccessful_ReturnsSuccessMessage()
     {
+        SkipIfNotWindows();
         var doc = CreateDocumentWithText("Test content");
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -74,9 +78,10 @@ public class ConvertPdfComplianceHandlerTests : PdfHandlerTestBase
 
     #region Basic Conversion
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithValidFormat_ConvertsAndMarksModified()
     {
+        SkipIfNotWindows();
         var doc = CreateDocumentWithText("Test content");
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -92,9 +97,10 @@ public class ConvertPdfComplianceHandlerTests : PdfHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsIsSuccessField()
     {
+        SkipIfNotWindows();
         var doc = CreateDocumentWithText("Test content");
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -112,9 +118,10 @@ public class ConvertPdfComplianceHandlerTests : PdfHandlerTestBase
 
     #region LogPath
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithLogPath_WritesConversionLog()
     {
+        SkipIfNotWindows();
         var doc = CreateDocumentWithText("Test content");
         var context = CreateContext(doc);
         var logPath = CreateTestFilePath("conversion.log");
@@ -132,9 +139,10 @@ public class ConvertPdfComplianceHandlerTests : PdfHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutLogPath_DoesNotPersistLogFile()
     {
+        SkipIfNotWindows();
         var doc = CreateDocumentWithText("Test content");
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>

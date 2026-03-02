@@ -1,4 +1,5 @@
-﻿using Aspose.Slides;
+﻿using System.Runtime.Versioning;
+using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Results.PowerPoint.Section;
@@ -12,6 +13,7 @@ namespace AsposeMcpServer.Tests.Tools.PowerPoint;
 ///     Focuses on session management, file I/O, and operation routing.
 ///     Detailed parameter validation and business logic tests are in Handler tests.
 /// </summary>
+[SupportedOSPlatform("windows")]
 public class PptSectionToolTests : PptTestBase
 {
     private readonly PptSectionTool _tool;
@@ -33,9 +35,10 @@ public class PptSectionToolTests : PptTestBase
 
     #region File I/O Smoke Tests
 
-    [Fact]
+    [SkippableFact]
     public void Add_ShouldAddSection()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_add.pptx");
         var outputPath = CreateTestFilePath("test_add_output.pptx");
         var result = _tool.Execute("add", pptPath, name: "Section 1", slideIndex: 0, outputPath: outputPath);
@@ -46,9 +49,10 @@ public class PptSectionToolTests : PptTestBase
         Assert.Equal("Section 1", presentation.Sections[0].Name);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Get_ShouldReturnAllSections()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithSection("test_get.pptx");
         var result = _tool.Execute("get", pptPath);
         var data = GetResultData<GetSectionsResult>(result);
@@ -57,9 +61,10 @@ public class PptSectionToolTests : PptTestBase
         Assert.Equal("Test Section", data.Sections[0].Name);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Rename_ShouldRenameSection()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithSection("test_rename.pptx", "Old Name");
         var outputPath = CreateTestFilePath("test_rename_output.pptx");
         var result = _tool.Execute("rename", pptPath, sectionIndex: 0, newName: "New Name", outputPath: outputPath);
@@ -69,9 +74,10 @@ public class PptSectionToolTests : PptTestBase
         Assert.Equal("New Name", presentation.Sections[0].Name);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Delete_WithKeepSlidesTrue_ShouldDeleteSectionKeepSlides()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithSection("test_delete_keep.pptx");
         var outputPath = CreateTestFilePath("test_delete_keep_output.pptx");
         var result = _tool.Execute("delete", pptPath, sectionIndex: 0, keepSlides: true, outputPath: outputPath);
@@ -85,12 +91,13 @@ public class PptSectionToolTests : PptTestBase
 
     #region Operation Routing
 
-    [Theory]
+    [SkippableTheory]
     [InlineData("ADD")]
     [InlineData("Add")]
     [InlineData("add")]
     public void Operation_ShouldBeCaseInsensitive(string operation)
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation($"test_case_add_{operation}.pptx");
         var outputPath = CreateTestFilePath($"test_case_add_{operation}_output.pptx");
         var result = _tool.Execute(operation, pptPath, name: "Section", slideIndex: 0, outputPath: outputPath);
@@ -98,9 +105,10 @@ public class PptSectionToolTests : PptTestBase
         Assert.StartsWith("Section 'Section' added", data.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_unknown_op.pptx");
         var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", pptPath));
         Assert.Contains("Unknown operation", ex.Message);
@@ -110,9 +118,10 @@ public class PptSectionToolTests : PptTestBase
 
     #region Session Management
 
-    [Fact]
+    [SkippableFact]
     public void Get_WithSessionId_ShouldReturnSectionsFromMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithSection("test_session_get.pptx", "Session Section");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("get", sessionId: sessionId);
@@ -124,9 +133,10 @@ public class PptSectionToolTests : PptTestBase
         Assert.Equal(sessionId, output.SessionId);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Add_WithSessionId_ShouldAddInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_session_add.pptx");
         var sessionId = OpenSession(pptPath);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
@@ -139,9 +149,10 @@ public class PptSectionToolTests : PptTestBase
         Assert.Equal(sessionId, output.SessionId);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Rename_WithSessionId_ShouldRenameInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithSection("test_session_rename.pptx", "Old Name");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("rename", sessionId: sessionId, sectionIndex: 0, newName: "Renamed Section");
@@ -153,9 +164,10 @@ public class PptSectionToolTests : PptTestBase
         Assert.Equal(sessionId, output.SessionId);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Delete_WithSessionId_ShouldDeleteInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithSection("test_session_delete.pptx");
         var sessionId = OpenSession(pptPath);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
@@ -168,15 +180,17 @@ public class PptSectionToolTests : PptTestBase
         Assert.Equal(sessionId, output.SessionId);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
+        SkipIfNotWindows();
         Assert.Throws<KeyNotFoundException>(() => _tool.Execute("get", sessionId: "invalid_session"));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
     {
+        SkipIfNotWindows();
         var pptPath1 = CreatePresentationWithSection("test_path_section.pptx", "PathSection");
         var pptPath2 = CreatePresentationWithSection("test_session_section.pptx", "SessionSection");
         var sessionId = OpenSession(pptPath2);

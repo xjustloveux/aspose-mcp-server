@@ -678,6 +678,12 @@ public static class DocumentConverter
     {
         options ??= new ConversionOptions();
         var format = NormalizeExtension(outputFormat);
+
+        var ext = Path.GetExtension(outputPath);
+        if (string.IsNullOrEmpty(ext))
+            throw new ArgumentException(
+                $"outputPath must include a file extension (e.g. output.{format}). Received: '{outputPath}'");
+
         var resolution = new Resolution(options.Dpi);
 
         if (pageIndex.HasValue)
@@ -718,7 +724,6 @@ public static class DocumentConverter
 
         var dir = Path.GetDirectoryName(outputPath) ?? ".";
         var nameWithoutExt = Path.GetFileNameWithoutExtension(outputPath);
-        var ext = Path.GetExtension(outputPath);
 
         for (var i = 1; i <= pdfDocument.Pages.Count; i++)
         {

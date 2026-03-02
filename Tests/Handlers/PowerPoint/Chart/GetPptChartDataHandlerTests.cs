@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using Aspose.Slides.Charts;
 using AsposeMcpServer.Handlers.PowerPoint.Chart;
@@ -6,15 +7,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Chart;
 
+[SupportedOSPlatform("windows")]
 public class GetPptChartDataHandlerTests : PptHandlerTestBase
 {
     private readonly GetPptChartDataHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_GetData()
     {
+        SkipIfNotWindows();
         Assert.Equal("get_data", _handler.Operation);
     }
 
@@ -34,9 +37,10 @@ public class GetPptChartDataHandlerTests : PptHandlerTestBase
 
     #region Basic Get Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsChartData()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithChart();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -55,9 +59,10 @@ public class GetPptChartDataHandlerTests : PptHandlerTestBase
         AssertNotModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsJsonFormat()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithChart();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -78,9 +83,10 @@ public class GetPptChartDataHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithChart();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -91,9 +97,10 @@ public class GetPptChartDataHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutShapeIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithChart();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -104,9 +111,10 @@ public class GetPptChartDataHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithChart();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

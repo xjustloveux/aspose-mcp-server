@@ -1,18 +1,21 @@
+using System.Runtime.Versioning;
 using AsposeMcpServer.Handlers.PowerPoint.Font;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Font;
 
+[SupportedOSPlatform("windows")]
 public class SetFallbackPptFontHandlerTests : PptHandlerTestBase
 {
     private readonly SetFallbackPptFontHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_SetFallback()
     {
+        SkipIfNotWindows();
         Assert.Equal("set_fallback", _handler.Operation);
     }
 
@@ -20,9 +23,10 @@ public class SetFallbackPptFontHandlerTests : PptHandlerTestBase
 
     #region Set Fallback
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithFallbackFont_ReturnsSuccessResult()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Hello World");
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -36,9 +40,10 @@ public class SetFallbackPptFontHandlerTests : PptHandlerTestBase
         Assert.Contains("Arial", result.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithFallbackFont_MarksContextModified()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Hello World");
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -51,9 +56,10 @@ public class SetFallbackPptFontHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithCustomUnicodeRange_ReturnsSuccessResult()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Hello World");
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -71,9 +77,10 @@ public class SetFallbackPptFontHandlerTests : PptHandlerTestBase
         Assert.Contains("9FFF", result.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithMissingFallbackFont_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Hello World");
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -81,9 +88,10 @@ public class SetFallbackPptFontHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_AddsFallbackRule()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Hello World");
         var initialCount = pres.FontsManager.FontFallBackRulesCollection.Count;
         var context = CreateContext(pres);

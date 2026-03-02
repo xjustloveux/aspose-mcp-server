@@ -24,9 +24,10 @@ public class PptFileOperationsToolTests : PptTestBase
 
     #region File I/O Smoke Tests
 
-    [Fact]
+    [SkippableFact]
     public void Create_ShouldCreateNewPresentation()
     {
+        SkipIfNotWindows();
         var outputPath = CreateTestFilePath("test_create.pptx");
         var result = _tool.Execute("create", path: outputPath);
         Assert.IsType<FinalizedResult<SuccessResult>>(result);
@@ -35,9 +36,10 @@ public class PptFileOperationsToolTests : PptTestBase
         Assert.True(presentation.Slides.Count > 0);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Convert_ToPdf_ShouldConvert()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_convert_pdf.pptx");
         var outputPath = CreateTestFilePath("test_convert_output.pdf");
         var result = _tool.Execute("convert", inputPath: pptPath, outputPath: outputPath, format: "pdf");
@@ -46,9 +48,10 @@ public class PptFileOperationsToolTests : PptTestBase
         Assert.True(new FileInfo(outputPath).Length > 0);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Merge_ShouldMergePresentations()
     {
+        SkipIfNotWindows();
         var ppt1Path = CreatePresentation("test_merge1.pptx", 2);
         var ppt2Path = CreatePresentation("test_merge2.pptx", 2);
         var outputPath = CreateTestFilePath("test_merge_output.pptx");
@@ -61,9 +64,10 @@ public class PptFileOperationsToolTests : PptTestBase
             Assert.Equal(4, presentation.Slides.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Split_ShouldSplitIntoMultipleFiles()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_split.pptx", 3);
         var outputDir = Path.Combine(TestDir, "split_output");
         Directory.CreateDirectory(outputDir);
@@ -80,21 +84,23 @@ public class PptFileOperationsToolTests : PptTestBase
 
     #region Operation Routing
 
-    [Theory]
+    [SkippableTheory]
     [InlineData("CREATE")]
     [InlineData("Create")]
     [InlineData("create")]
     public void Operation_ShouldBeCaseInsensitive(string operation)
     {
+        SkipIfNotWindows();
         var outputPath = CreateTestFilePath($"test_case_create_{operation}.pptx");
         var result = _tool.Execute(operation, path: outputPath);
         Assert.IsType<FinalizedResult<SuccessResult>>(result);
         Assert.True(File.Exists(outputPath));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
+        SkipIfNotWindows();
         var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", path: "test.pptx"));
         Assert.Contains("Unknown operation", ex.Message);
     }
@@ -103,9 +109,10 @@ public class PptFileOperationsToolTests : PptTestBase
 
     #region Session Management
 
-    [Fact]
+    [SkippableFact]
     public void Convert_WithSessionId_ShouldConvertFromSession()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_session_convert.pptx", 2);
         var sessionId = OpenSession(pptPath);
         var outputPath = CreateTestFilePath("test_session_convert_output.pdf");
@@ -117,9 +124,10 @@ public class PptFileOperationsToolTests : PptTestBase
         Assert.True(output.IsSession);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Split_WithSessionId_ShouldSplitFromSession()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_session_split.pptx", 3);
         var sessionId = OpenSession(pptPath);
         var outputDir = Path.Combine(TestDir, "session_split_output");
@@ -135,17 +143,19 @@ public class PptFileOperationsToolTests : PptTestBase
         Assert.True(output.IsSession);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Convert_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
+        SkipIfNotWindows();
         var outputPath = CreateTestFilePath("test_invalid_session.pdf");
         Assert.Throws<KeyNotFoundException>(() =>
             _tool.Execute("convert", "invalid_session", outputPath: outputPath, format: "pdf"));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Split_WithBothPathAndSessionId_ShouldPreferSessionId()
     {
+        SkipIfNotWindows();
         var pptPath1 = CreatePresentation("test_path_split.pptx");
         var pptPath2 = CreatePresentation("test_session_split2.pptx", 3);
         var sessionId = OpenSession(pptPath2);

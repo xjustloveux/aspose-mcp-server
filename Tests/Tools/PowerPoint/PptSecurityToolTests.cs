@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Results.Common;
@@ -12,6 +13,7 @@ namespace AsposeMcpServer.Tests.Tools.PowerPoint;
 ///     Focuses on session management, file I/O, and operation routing.
 ///     Detailed parameter validation and business logic tests are in Handler tests.
 /// </summary>
+[SupportedOSPlatform("windows")]
 public class PptSecurityToolTests : PptTestBase
 {
     private readonly PptSecurityTool _tool;
@@ -45,9 +47,10 @@ public class PptSecurityToolTests : PptTestBase
 
     #region File I/O Smoke Tests
 
-    [Fact]
+    [SkippableFact]
     public void Encrypt_ShouldEncrypt()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_encrypt.pptx");
         var outputPath = CreateTestFilePath("test_encrypt_output.pptx");
         var result = _tool.Execute("encrypt", pptPath, password: "secret", outputPath: outputPath);
@@ -55,9 +58,10 @@ public class PptSecurityToolTests : PptTestBase
         Assert.Contains("encrypted", data.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Decrypt_ShouldDecrypt()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_decrypt.pptx");
         var outputPath = CreateTestFilePath("test_decrypt_output.pptx");
         var result = _tool.Execute("decrypt", pptPath, outputPath: outputPath);
@@ -65,9 +69,10 @@ public class PptSecurityToolTests : PptTestBase
         Assert.Contains("decrypted", data.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void SetWriteProtection_ShouldSetProtection()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_set_wp.pptx");
         var outputPath = CreateTestFilePath("test_set_wp_output.pptx");
         var result = _tool.Execute("set_write_protection", pptPath, password: "edit_pass", outputPath: outputPath);
@@ -77,9 +82,10 @@ public class PptSecurityToolTests : PptTestBase
         Assert.True(presentation.ProtectionManager.IsWriteProtected);
     }
 
-    [Fact]
+    [SkippableFact]
     public void RemoveWriteProtection_ShouldRemoveProtection()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithWriteProtection("test_remove_wp.pptx");
         var outputPath = CreateTestFilePath("test_remove_wp_output.pptx");
         var result = _tool.Execute("remove_write_protection", pptPath, outputPath: outputPath);
@@ -87,9 +93,10 @@ public class PptSecurityToolTests : PptTestBase
         Assert.Contains("Write protection removed", data.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void MarkFinal_ShouldMarkAsFinal()
     {
+        SkipIfNotWindows();
         var pptPath = CreateSecurityPresentation("test_mark_final.pptx");
         var outputPath = CreateTestFilePath("test_mark_final_output.pptx");
         var result = _tool.Execute("mark_final", pptPath, markAsFinal: true, outputPath: outputPath);
@@ -97,9 +104,10 @@ public class PptSecurityToolTests : PptTestBase
         Assert.Contains("marked as final", data.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void GetStatus_ShouldReturnStatus()
     {
+        SkipIfNotWindows();
         var pptPath = CreateSecurityPresentation("test_get_status.pptx");
         var result = _tool.Execute("get_status", pptPath);
         var data = GetResultData<SecurityStatusPptResult>(result);
@@ -108,9 +116,10 @@ public class PptSecurityToolTests : PptTestBase
         Assert.False(data.IsMarkedFinal);
     }
 
-    [Fact]
+    [SkippableFact]
     public void GetStatus_WithWriteProtection_ShouldReflect()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithWriteProtection("test_get_status_wp.pptx");
         var result = _tool.Execute("get_status", pptPath);
         var data = GetResultData<SecurityStatusPptResult>(result);
@@ -121,12 +130,13 @@ public class PptSecurityToolTests : PptTestBase
 
     #region Operation Routing
 
-    [Theory]
+    [SkippableTheory]
     [InlineData("ENCRYPT")]
     [InlineData("Encrypt")]
     [InlineData("encrypt")]
     public void Operation_ShouldBeCaseInsensitive(string operation)
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation($"test_case_{operation}.pptx");
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.pptx");
         var result = _tool.Execute(operation, pptPath, password: "pass", outputPath: outputPath);
@@ -134,9 +144,10 @@ public class PptSecurityToolTests : PptTestBase
         Assert.Contains("encrypted", data.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_unknown_op.pptx");
         var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", pptPath));
         Assert.Contains("Unknown operation", ex.Message);
@@ -146,9 +157,10 @@ public class PptSecurityToolTests : PptTestBase
 
     #region Session Management
 
-    [Fact]
+    [SkippableFact]
     public void GetStatus_WithSessionId_ShouldReturnStatusFromMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreateSecurityPresentation("test_session_status.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("get_status", sessionId: sessionId);
@@ -159,9 +171,10 @@ public class PptSecurityToolTests : PptTestBase
         Assert.True(output.IsSession);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Encrypt_WithSessionId_ShouldEncryptInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_session_encrypt.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("encrypt", sessionId: sessionId, password: "secret");
@@ -171,9 +184,10 @@ public class PptSecurityToolTests : PptTestBase
         Assert.True(output.IsSession);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Decrypt_WithSessionId_ShouldDecryptInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_session_decrypt.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("decrypt", sessionId: sessionId);
@@ -183,9 +197,10 @@ public class PptSecurityToolTests : PptTestBase
         Assert.True(output.IsSession);
     }
 
-    [Fact]
+    [SkippableFact]
     public void SetWriteProtection_WithSessionId_ShouldSetInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_session_set_wp.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("set_write_protection", sessionId: sessionId, password: "edit_pass");
@@ -197,9 +212,10 @@ public class PptSecurityToolTests : PptTestBase
         Assert.True(output.IsSession);
     }
 
-    [Fact]
+    [SkippableFact]
     public void RemoveWriteProtection_WithSessionId_ShouldRemoveInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithWriteProtection("test_session_remove_wp.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("remove_write_protection", sessionId: sessionId);
@@ -209,9 +225,10 @@ public class PptSecurityToolTests : PptTestBase
         Assert.True(output.IsSession);
     }
 
-    [Fact]
+    [SkippableFact]
     public void MarkFinal_WithSessionId_ShouldMarkInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreateSecurityPresentation("test_session_mark_final.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("mark_final", sessionId: sessionId, markAsFinal: true);
@@ -221,15 +238,17 @@ public class PptSecurityToolTests : PptTestBase
         Assert.True(output.IsSession);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
+        SkipIfNotWindows();
         Assert.Throws<KeyNotFoundException>(() => _tool.Execute("get_status", sessionId: "invalid_session"));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
     {
+        SkipIfNotWindows();
         var pptPath1 = CreatePresentationWithWriteProtection("test_path_security.pptx");
         var pptPath2 = CreateSecurityPresentation("test_session_security.pptx");
         var sessionId = OpenSession(pptPath2);

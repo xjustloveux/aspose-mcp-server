@@ -1,18 +1,21 @@
+using System.Runtime.Versioning;
 using AsposeMcpServer.Handlers.PowerPoint.Notes;
 using AsposeMcpServer.Results.PowerPoint.Notes;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Notes;
 
+[SupportedOSPlatform("windows")]
 public class GetNotesHandlerTests : PptHandlerTestBase
 {
     private readonly GetNotesHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Get()
     {
+        SkipIfNotWindows();
         Assert.Equal("get", _handler.Operation);
     }
 
@@ -20,9 +23,10 @@ public class GetNotesHandlerTests : PptHandlerTestBase
 
     #region Basic Get Notes Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsAllSlidesNotes()
     {
+        SkipIfNotWindows();
         var presentation = CreatePresentationWithSlides(3);
         var context = CreateContext(presentation);
         var parameters = CreateEmptyParameters();
@@ -35,9 +39,10 @@ public class GetNotesHandlerTests : PptHandlerTestBase
         Assert.NotNull(result.Slides);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithSlideIndex_ReturnsSpecificSlideNotes()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -53,9 +58,10 @@ public class GetNotesHandlerTests : PptHandlerTestBase
         Assert.NotNull(result.HasNotes);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -66,9 +72,10 @@ public class GetNotesHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsHasNotesField()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>

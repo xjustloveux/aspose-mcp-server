@@ -61,6 +61,9 @@ public class AuthCacheTests
         await Task.WhenAll(tasks);
 
         Assert.True(cache.Count <= 10);
+        Assert.True(validateCallCount <= 10,
+            $"Expected at most 10 validateFunc calls (one per unique token), but got {validateCallCount}. " +
+            "This may indicate a race condition in the cache implementation.");
     }
 
     #endregion

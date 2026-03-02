@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Slide;
 using AsposeMcpServer.Results.Common;
@@ -5,15 +6,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Slide;
 
+[SupportedOSPlatform("windows")]
 public class AddPptSlideHandlerTests : PptHandlerTestBase
 {
     private readonly AddPptSlideHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Add()
     {
+        SkipIfNotWindows();
         Assert.Equal("add", _handler.Operation);
     }
 
@@ -21,9 +24,10 @@ public class AddPptSlideHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithEmptyLayoutSlides_ThrowsInvalidOperationException()
     {
+        SkipIfNotWindows();
         var pres = new Presentation();
         while (pres.LayoutSlides.Count > 0)
             try
@@ -48,9 +52,10 @@ public class AddPptSlideHandlerTests : PptHandlerTestBase
 
     #region Basic Slide Addition
 
-    [Fact]
+    [SkippableFact]
     public void Execute_AddsSlideToPresentation()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var initialCount = pres.Slides.Count;
         var context = CreateContext(pres);
@@ -63,12 +68,13 @@ public class AddPptSlideHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(1)]
     [InlineData(3)]
     [InlineData(5)]
     public void Execute_AddsCorrectNumberOfSlides(int slidesToAdd)
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var initialCount = pres.Slides.Count;
         var context = CreateContext(pres);
@@ -83,12 +89,13 @@ public class AddPptSlideHandlerTests : PptHandlerTestBase
 
     #region Layout Types
 
-    [Theory]
+    [SkippableTheory]
     [InlineData("Blank")]
     [InlineData("blank")]
     [InlineData("BLANK")]
     public void Execute_WithBlankLayout_AddsBlankSlide(string layoutType)
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var initialCount = pres.Slides.Count;
         var context = CreateContext(pres);
@@ -106,13 +113,14 @@ public class AddPptSlideHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData("Title")]
     [InlineData("TitleOnly")]
     [InlineData("TwoColumn")]
     [InlineData("SectionHeader")]
     public void Execute_WithVariousLayoutTypes_AddsSlideWithLayout(string layoutType)
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var initialCount = pres.Slides.Count;
         var context = CreateContext(pres);
@@ -128,12 +136,13 @@ public class AddPptSlideHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData("UnknownLayout")]
     [InlineData("CustomType")]
     [InlineData("InvalidLayout")]
     public void Execute_WithUnknownLayout_UsesDefaultLayout(string layoutType)
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var initialCount = pres.Slides.Count;
         var context = CreateContext(pres);
@@ -149,9 +158,10 @@ public class AddPptSlideHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DefaultLayout_IsBlank()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -166,9 +176,10 @@ public class AddPptSlideHandlerTests : PptHandlerTestBase
 
     #region Result Message
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsSlideCount()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var initialCount = pres.Slides.Count;
         var context = CreateContext(pres);
@@ -180,9 +191,10 @@ public class AddPptSlideHandlerTests : PptHandlerTestBase
         Assert.Equal(initialCount + 1, pres.Slides.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsCorrectTotalAfterMultipleAdditions()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(5);
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -197,9 +209,10 @@ public class AddPptSlideHandlerTests : PptHandlerTestBase
 
     #region Presentation State
 
-    [Fact]
+    [SkippableFact]
     public void Execute_PreservesExistingSlides()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);
@@ -211,9 +224,10 @@ public class AddPptSlideHandlerTests : PptHandlerTestBase
         Assert.True(pres.Slides[0].Shapes.Count > 0, "First slide shapes should be preserved");
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_AddsSlideAtEnd()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();

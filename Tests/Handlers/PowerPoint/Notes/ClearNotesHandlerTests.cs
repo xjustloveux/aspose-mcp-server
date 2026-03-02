@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Notes;
 using AsposeMcpServer.Results.Common;
@@ -5,6 +6,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Notes;
 
+[SupportedOSPlatform("windows")]
 public class ClearNotesHandlerTests : PptHandlerTestBase
 {
     private static readonly int[] SlideIndicesZeroTwo = [0, 2];
@@ -14,9 +16,10 @@ public class ClearNotesHandlerTests : PptHandlerTestBase
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Clear()
     {
+        SkipIfNotWindows();
         Assert.Equal("clear", _handler.Operation);
     }
 
@@ -42,9 +45,10 @@ public class ClearNotesHandlerTests : PptHandlerTestBase
 
     #region Basic Clear Notes Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ClearsAllNotes()
     {
+        SkipIfNotWindows();
         var presentation = CreatePresentationWithNotes(3);
         var context = CreateContext(presentation);
         var parameters = CreateEmptyParameters();
@@ -63,9 +67,10 @@ public class ClearNotesHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ClearsSpecificSlideNotes()
     {
+        SkipIfNotWindows();
         var presentation = CreatePresentationWithNotes(3);
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -92,9 +97,10 @@ public class ClearNotesHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var presentation = CreatePresentationWithSlides(2);
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -105,9 +111,10 @@ public class ClearNotesHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNoNotes_SlidesRemainWithoutNotes()
     {
+        SkipIfNotWindows();
         var presentation = CreatePresentationWithSlides(2);
         var context = CreateContext(presentation);
         var parameters = CreateEmptyParameters();

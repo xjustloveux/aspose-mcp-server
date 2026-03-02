@@ -1,4 +1,5 @@
-﻿using Aspose.Slides;
+﻿using System.Runtime.Versioning;
+using Aspose.Slides;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Results.PowerPoint.Layout;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -11,6 +12,7 @@ namespace AsposeMcpServer.Tests.Tools.PowerPoint;
 ///     Focuses on session management, file I/O, and operation routing.
 ///     Detailed parameter validation and business logic tests are in Handler tests.
 /// </summary>
+[SupportedOSPlatform("windows")]
 public class PptLayoutToolTests : PptTestBase
 {
     private readonly PptLayoutTool _tool;
@@ -22,9 +24,10 @@ public class PptLayoutToolTests : PptTestBase
 
     #region File I/O Smoke Tests
 
-    [Fact]
+    [SkippableFact]
     public void GetMasters_ShouldReturnMasterSlides()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_get_masters.pptx");
         var result = _tool.Execute("get_masters", pptPath);
         var data = GetResultData<GetMastersResult>(result);
@@ -33,9 +36,10 @@ public class PptLayoutToolTests : PptTestBase
         Assert.NotNull(data.Masters[0].Layouts);
     }
 
-    [Fact]
+    [SkippableFact]
     public void GetLayouts_ShouldReturnLayoutsWithType()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_get_layouts.pptx");
         var result = _tool.Execute("get_layouts", pptPath);
         var data = GetResultData<GetLayoutsResult>(result);
@@ -44,9 +48,10 @@ public class PptLayoutToolTests : PptTestBase
         Assert.True(data.Masters.Count > 0);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Set_ShouldSetSlideLayout()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_set_layout.pptx");
         var outputPath = CreateTestFilePath("test_set_layout_output.pptx");
         var result = _tool.Execute("set", pptPath, slideIndex: 0, layout: "Blank", outputPath: outputPath);
@@ -56,9 +61,10 @@ public class PptLayoutToolTests : PptTestBase
         Assert.Equal(SlideLayoutType.Blank, presentation.Slides[0].LayoutSlide.LayoutType);
     }
 
-    [Fact]
+    [SkippableFact]
     public void ApplyMaster_ShouldApplyToAllSlides()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_apply_master.pptx", 3);
         var outputPath = CreateTestFilePath("test_apply_master_output.pptx");
         var result = _tool.Execute("apply_master", pptPath, masterIndex: 0, layoutIndex: 0, outputPath: outputPath);
@@ -71,21 +77,23 @@ public class PptLayoutToolTests : PptTestBase
 
     #region Operation Routing
 
-    [Theory]
+    [SkippableTheory]
     [InlineData("GET_MASTERS")]
     [InlineData("Get_Masters")]
     [InlineData("get_masters")]
     public void Operation_ShouldBeCaseInsensitive(string operation)
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation($"test_case_masters_{operation.Replace("_", "")}.pptx");
         var result = _tool.Execute(operation, pptPath);
         var data = GetResultData<GetMastersResult>(result);
         Assert.True(data.Count >= 0);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_unknown_op.pptx");
         var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", pptPath));
         Assert.Contains("Unknown operation", ex.Message);
@@ -95,9 +103,10 @@ public class PptLayoutToolTests : PptTestBase
 
     #region Session Management
 
-    [Fact]
+    [SkippableFact]
     public void GetMasters_WithSessionId_ShouldReturnMasterSlides()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_session_get_masters.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("get_masters", sessionId: sessionId);
@@ -108,9 +117,10 @@ public class PptLayoutToolTests : PptTestBase
         Assert.True(output.IsSession);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Set_WithSessionId_ShouldSetLayoutInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_session_set_layout.pptx");
         var sessionId = OpenSession(pptPath);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
@@ -122,9 +132,10 @@ public class PptLayoutToolTests : PptTestBase
         Assert.True(output.IsSession);
     }
 
-    [Fact]
+    [SkippableFact]
     public void ApplyMaster_WithSessionId_ShouldApplyInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_session_apply_master.pptx", 3);
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("apply_master", sessionId: sessionId, masterIndex: 0, layoutIndex: 0);
@@ -135,15 +146,17 @@ public class PptLayoutToolTests : PptTestBase
         Assert.True(output.IsSession);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
+        SkipIfNotWindows();
         Assert.Throws<KeyNotFoundException>(() => _tool.Execute("get_masters", sessionId: "invalid_session"));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
     {
+        SkipIfNotWindows();
         var pptPath1 = CreatePresentation("test_path_layout.pptx");
         var pptPath2 = CreatePresentation("test_session_layout.pptx", 5);
         var sessionId = OpenSession(pptPath2);

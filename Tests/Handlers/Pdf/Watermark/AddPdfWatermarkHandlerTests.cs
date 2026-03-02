@@ -36,6 +36,7 @@ public class AddPdfWatermarkHandlerTests : PdfHandlerTestBase
     public void Execute_AddsWatermark()
     {
         SkipInEvaluationMode(AsposeLibraryType.Pdf);
+        SkipIfNotWindows();
         var document = CreateEmptyDocument();
         var context = CreateContext(document);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -57,6 +58,7 @@ public class AddPdfWatermarkHandlerTests : PdfHandlerTestBase
     public void Execute_AddsWatermarkWithCustomSettings()
     {
         SkipInEvaluationMode(AsposeLibraryType.Pdf);
+        SkipIfNotWindows();
         var document = CreateEmptyDocument();
         var context = CreateContext(document);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -82,6 +84,7 @@ public class AddPdfWatermarkHandlerTests : PdfHandlerTestBase
     public void Execute_AddsWatermarkWithAlignment()
     {
         SkipInEvaluationMode(AsposeLibraryType.Pdf);
+        SkipIfNotWindows();
         var document = CreateEmptyDocument();
         var context = CreateContext(document);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -104,6 +107,7 @@ public class AddPdfWatermarkHandlerTests : PdfHandlerTestBase
     public void Execute_AddsWatermarkAsBackground()
     {
         SkipInEvaluationMode(AsposeLibraryType.Pdf);
+        SkipIfNotWindows();
         var document = CreateEmptyDocument();
         var context = CreateContext(document);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -124,6 +128,7 @@ public class AddPdfWatermarkHandlerTests : PdfHandlerTestBase
     public void Execute_AddsWatermarkToMultiplePages()
     {
         SkipInEvaluationMode(AsposeLibraryType.Pdf);
+        SkipIfNotWindows();
         var document = CreatePdfWithPages(3);
         var context = CreateContext(document);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -146,6 +151,7 @@ public class AddPdfWatermarkHandlerTests : PdfHandlerTestBase
     public void Execute_AddsWatermarkToPageRange()
     {
         SkipInEvaluationMode(AsposeLibraryType.Pdf);
+        SkipIfNotWindows();
         var document = CreatePdfWithPages(5);
         var context = CreateContext(document);
         var parameters = CreateParameters(new Dictionary<string, object?>

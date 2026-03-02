@@ -1,18 +1,21 @@
+using System.Runtime.Versioning;
 using AsposeMcpServer.Handlers.PowerPoint.Section;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Section;
 
+[SupportedOSPlatform("windows")]
 public class AddPptSectionHandlerTests : PptHandlerTestBase
 {
     private readonly AddPptSectionHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Add()
     {
+        SkipIfNotWindows();
         Assert.Equal("add", _handler.Operation);
     }
 
@@ -20,12 +23,13 @@ public class AddPptSectionHandlerTests : PptHandlerTestBase
 
     #region Various Slide Indices
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(0)]
     [InlineData(1)]
     [InlineData(2)]
     public void Execute_AddsSectionAtVariousSlideIndices(int slideIndex)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var initialCount = pres.Sections.Count;
         var context = CreateContext(pres);
@@ -54,9 +58,10 @@ public class AddPptSectionHandlerTests : PptHandlerTestBase
 
     #region Multiple Sections
 
-    [Fact]
+    [SkippableFact]
     public void Execute_AddsMultipleSections()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(5);
         var context = CreateContext(pres);
 
@@ -79,9 +84,10 @@ public class AddPptSectionHandlerTests : PptHandlerTestBase
 
     #region Basic Add Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_AddsSection()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -98,9 +104,10 @@ public class AddPptSectionHandlerTests : PptHandlerTestBase
         Assert.Equal("New Section", section.Name);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsSectionName()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -116,9 +123,10 @@ public class AddPptSectionHandlerTests : PptHandlerTestBase
         Assert.Equal("Introduction", section.Name);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsSlideIndex()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var initialCount = pres.Sections.Count;
         var context = CreateContext(pres);
@@ -142,9 +150,10 @@ public class AddPptSectionHandlerTests : PptHandlerTestBase
         Assert.Fail("Section not found");
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_IncreasesSectionCount()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var initialCount = pres.Sections.Count;
         var context = CreateContext(pres);
@@ -163,9 +172,10 @@ public class AddPptSectionHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutName_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -176,9 +186,10 @@ public class AddPptSectionHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -189,9 +200,10 @@ public class AddPptSectionHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -203,9 +215,10 @@ public class AddPptSectionHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNegativeSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

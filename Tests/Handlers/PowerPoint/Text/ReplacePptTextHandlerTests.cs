@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Text;
 using AsposeMcpServer.Results.PowerPoint.Text;
@@ -5,15 +6,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Text;
 
+[SupportedOSPlatform("windows")]
 public class ReplacePptTextHandlerTests : PptHandlerTestBase
 {
     private readonly ReplacePptTextHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Replace()
     {
+        SkipIfNotWindows();
         Assert.Equal("replace", _handler.Operation);
     }
 
@@ -21,9 +24,10 @@ public class ReplacePptTextHandlerTests : PptHandlerTestBase
 
     #region No Match Scenarios
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNoMatch_ReturnsZeroOccurrences()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Hello World");
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -46,6 +50,7 @@ public class ReplacePptTextHandlerTests : PptHandlerTestBase
     [SkippableFact]
     public void Execute_ReturnsCorrectProperties()
     {
+        SkipIfNotWindows();
         SkipInEvaluationMode(AsposeLibraryType.Slides, "Text replacement has limitations in evaluation mode");
 
         var pres = CreatePresentationWithText("Original Value");
@@ -72,6 +77,7 @@ public class ReplacePptTextHandlerTests : PptHandlerTestBase
     [SkippableFact]
     public void Execute_ReplacesText()
     {
+        SkipIfNotWindows();
         SkipInEvaluationMode(AsposeLibraryType.Slides, "Text replacement has limitations in evaluation mode");
 
         var pres = CreatePresentationWithText("Hello World");
@@ -92,9 +98,10 @@ public class ReplacePptTextHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsFindText()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Test");
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -110,9 +117,10 @@ public class ReplacePptTextHandlerTests : PptHandlerTestBase
         Assert.Equal("Test", result.FindText);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsReplaceText()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Old");
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -128,9 +136,10 @@ public class ReplacePptTextHandlerTests : PptHandlerTestBase
         Assert.Equal("New", result.ReplaceText);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsOccurrenceCount()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Test Test Test");
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -158,9 +167,10 @@ public class ReplacePptTextHandlerTests : PptHandlerTestBase
 
     #region Match Case Parameter
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithMatchCaseFalse_MatchesCaseInsensitive()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Hello HELLO hello");
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -184,9 +194,10 @@ public class ReplacePptTextHandlerTests : PptHandlerTestBase
         }
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithMatchCaseTrue_MatchesCaseSensitive()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Hello HELLO hello");
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -212,9 +223,10 @@ public class ReplacePptTextHandlerTests : PptHandlerTestBase
         }
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DefaultMatchCase_IsCaseInsensitive()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("TEST test");
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -244,9 +256,10 @@ public class ReplacePptTextHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutFindText_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Text");
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -257,9 +270,10 @@ public class ReplacePptTextHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutReplaceText_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Text");
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

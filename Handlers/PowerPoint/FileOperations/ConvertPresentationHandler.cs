@@ -43,6 +43,7 @@ public class ConvertPresentationHandler : OperationHandlerBase<Presentation>
         var format = p.Format.ToLower();
 
         Presentation presentation;
+        Presentation? ownedPresentation = null;
         string sourceDescription;
 
         if (!string.IsNullOrEmpty(p.SessionId))
@@ -57,59 +58,67 @@ public class ConvertPresentationHandler : OperationHandlerBase<Presentation>
         else
         {
             SecurityHelper.ValidateFilePath(sourcePath!, "inputPath", true);
-            presentation = new Presentation(sourcePath);
+            ownedPresentation = new Presentation(sourcePath);
+            presentation = ownedPresentation;
             sourceDescription = sourcePath!;
         }
 
-        if (format is "jpg" or "jpeg" or "png")
+        try
         {
-            var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
+            if (format is "jpg" or "jpeg" or "png")
+            {
+                var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
 
-            var slideSize = presentation.SlideSize.Size;
-            var targetSize = new Size((int)slideSize.Width, (int)slideSize.Height);
+                var slideSize = presentation.SlideSize.Size;
+                var targetSize = new Size((int)slideSize.Width, (int)slideSize.Height);
 
-            using var bitmap = slide.GetThumbnail(targetSize);
-            var imageFormat = format == "png" ? ImageFormat.Png : ImageFormat.Jpeg;
-            bitmap.Save(p.OutputPath, imageFormat);
+                using var bitmap = slide.GetThumbnail(targetSize);
+                var imageFormat = format == "png" ? ImageFormat.Png : ImageFormat.Jpeg;
+                bitmap.Save(p.OutputPath, imageFormat);
 
-            var formatName = format == "png" ? "PNG" : "JPEG";
+                var formatName = format == "png" ? "PNG" : "JPEG";
+                return new SuccessResult
+                {
+                    Message =
+                        $"Slide {p.SlideIndex} from {sourceDescription} converted to {formatName}. Output: {p.OutputPath}"
+                };
+            }
+
+            var saveFormat = format switch
+            {
+                "pdf" => SaveFormat.Pdf,
+                "html" => SaveFormat.Html,
+                "pptx" => SaveFormat.Pptx,
+                "ppt" => SaveFormat.Ppt,
+                "odp" => SaveFormat.Odp,
+                "xps" => SaveFormat.Xps,
+                "tiff" => SaveFormat.Tiff,
+                _ => throw new ArgumentException($"Unsupported format: {format}")
+            };
+
+            if (format == "pdf" && context.Progress != null)
+            {
+                var pdfOptions = new PdfOptions
+                {
+                    ProgressCallback = new SlidesProgressAdapter(context.Progress)
+                };
+                presentation.Save(p.OutputPath, SaveFormat.Pdf, pdfOptions);
+            }
+            else
+            {
+                presentation.Save(p.OutputPath, saveFormat);
+            }
+
             return new SuccessResult
             {
                 Message =
-                    $"Slide {p.SlideIndex} from {sourceDescription} converted to {formatName}. Output: {p.OutputPath}"
+                    $"Presentation from {sourceDescription} converted to {format.ToUpper()} format. Output: {p.OutputPath}"
             };
         }
-
-        var saveFormat = format switch
+        finally
         {
-            "pdf" => SaveFormat.Pdf,
-            "html" => SaveFormat.Html,
-            "pptx" => SaveFormat.Pptx,
-            "ppt" => SaveFormat.Ppt,
-            "odp" => SaveFormat.Odp,
-            "xps" => SaveFormat.Xps,
-            "tiff" => SaveFormat.Tiff,
-            _ => throw new ArgumentException($"Unsupported format: {format}")
-        };
-
-        if (format == "pdf" && context.Progress != null)
-        {
-            var pdfOptions = new PdfOptions
-            {
-                ProgressCallback = new SlidesProgressAdapter(context.Progress)
-            };
-            presentation.Save(p.OutputPath, SaveFormat.Pdf, pdfOptions);
+            ownedPresentation?.Dispose();
         }
-        else
-        {
-            presentation.Save(p.OutputPath, saveFormat);
-        }
-
-        return new SuccessResult
-        {
-            Message =
-                $"Presentation from {sourceDescription} converted to {format.ToUpper()} format. Output: {p.OutputPath}"
-        };
     }
 
     /// <summary>

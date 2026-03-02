@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Render;
 using AsposeMcpServer.Results.Word.Render;
@@ -8,6 +9,7 @@ namespace AsposeMcpServer.Tests.Handlers.Word.Render;
 /// <summary>
 ///     Tests for RenderPageWordHandler.
 /// </summary>
+[SupportedOSPlatform("windows")]
 public class RenderPageWordHandlerTests : WordHandlerTestBase
 {
     private readonly RenderPageWordHandler _handler = new();
@@ -18,9 +20,10 @@ public class RenderPageWordHandlerTests : WordHandlerTestBase
         Assert.Equal("render_page", _handler.Operation);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithSinglePage_ShouldRenderToImage()
     {
+        SkipIfNotWindows();
         var doc = CreateDocumentWithText("Test page content");
         var docPath = Path.Combine(TestDir, "test_render_single.docx");
         doc.Save(docPath);
@@ -45,9 +48,10 @@ public class RenderPageWordHandlerTests : WordHandlerTestBase
         Assert.True(System.IO.File.Exists(outputPath));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithAllPages_ShouldRenderMultipleImages()
     {
+        SkipIfNotWindows();
         var doc = new Document();
         var builder = new DocumentBuilder(doc);
         builder.Write("Page 1 content");
@@ -74,9 +78,10 @@ public class RenderPageWordHandlerTests : WordHandlerTestBase
         Assert.True(renderResult.OutputPaths.Count >= 2);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithJpegFormat_ShouldRenderJpeg()
     {
+        SkipIfNotWindows();
         var doc = CreateDocumentWithText("JPEG test");
         var docPath = Path.Combine(TestDir, "test_render_jpeg.docx");
         doc.Save(docPath);
@@ -99,9 +104,10 @@ public class RenderPageWordHandlerTests : WordHandlerTestBase
         Assert.Equal("jpeg", renderResult.Format);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidPageIndex_ShouldThrowArgumentException()
     {
+        SkipIfNotWindows();
         var doc = CreateDocumentWithText("Single page");
         var docPath = Path.Combine(TestDir, "test_render_invalid.docx");
         doc.Save(docPath);
@@ -174,12 +180,13 @@ public class RenderPageWordHandlerTests : WordHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData("bmp")]
     [InlineData("tiff")]
     [InlineData("svg")]
     public void Execute_WithVariousFormats_ShouldSucceed(string format)
     {
+        SkipIfNotWindows();
         var doc = CreateDocumentWithText($"Test {format}");
         var docPath = Path.Combine(TestDir, $"test_render_{format}.docx");
         doc.Save(docPath);

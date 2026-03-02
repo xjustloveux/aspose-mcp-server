@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Slide;
 using AsposeMcpServer.Results.Common;
@@ -5,15 +6,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Slide;
 
+[SupportedOSPlatform("windows")]
 public class MovePptSlideHandlerTests : PptHandlerTestBase
 {
     private readonly MovePptSlideHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Move()
     {
+        SkipIfNotWindows();
         Assert.Equal("move", _handler.Operation);
     }
 
@@ -21,13 +24,14 @@ public class MovePptSlideHandlerTests : PptHandlerTestBase
 
     #region Basic Move Operations
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(3, 0, 2)]
     [InlineData(3, 2, 0)]
     [InlineData(5, 1, 3)]
     [InlineData(5, 4, 0)]
     public void Execute_MovesToVariousPositions(int totalSlides, int fromIndex, int toIndex)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(totalSlides);
         pres.Slides[fromIndex].Shapes.AddAutoShape(ShapeType.Rectangle, 10, 10, 50, 50);
         var context = CreateContext(pres);
@@ -49,9 +53,10 @@ public class MovePptSlideHandlerTests : PptHandlerTestBase
 
     #region Same Position
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SamePosition_StillSucceeds()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -71,12 +76,13 @@ public class MovePptSlideHandlerTests : PptHandlerTestBase
 
     #region Result Message
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(0, 2)]
     [InlineData(1, 3)]
     [InlineData(3, 1)]
     public void Execute_ReturnsFromAndToInMessage(int fromIndex, int toIndex)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(5);
         pres.Slides[fromIndex].Shapes.AddAutoShape(ShapeType.Ellipse, 10, 10, 50, 50);
         var context = CreateContext(pres);
@@ -98,9 +104,10 @@ public class MovePptSlideHandlerTests : PptHandlerTestBase
 
     #region Slide Tracking
 
-    [Fact]
+    [SkippableFact]
     public void Execute_MoveFirst_ToLast_CorrectOrder()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 10, 10, 50, 50);
         pres.Slides[1].Shapes.AddAutoShape(ShapeType.Ellipse, 10, 10, 50, 50);
@@ -117,9 +124,10 @@ public class MovePptSlideHandlerTests : PptHandlerTestBase
         Assert.True(pres.Slides[2].Shapes.Count > 0);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_PreservesSlideCount()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(5);
         var initialCount = pres.Slides.Count;
         var context = CreateContext(pres);
@@ -138,9 +146,10 @@ public class MovePptSlideHandlerTests : PptHandlerTestBase
 
     #region Error Handling - Missing Parameters
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutFromIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -152,9 +161,10 @@ public class MovePptSlideHandlerTests : PptHandlerTestBase
         Assert.Contains("fromIndex", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutToIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -170,12 +180,13 @@ public class MovePptSlideHandlerTests : PptHandlerTestBase
 
     #region Error Handling - Invalid fromIndex
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(3, 3)]
     [InlineData(3, 5)]
     [InlineData(3, 100)]
     public void Execute_WithFromIndexOutOfRange_ThrowsArgumentException(int totalSlides, int invalidFromIndex)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(totalSlides);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -188,11 +199,12 @@ public class MovePptSlideHandlerTests : PptHandlerTestBase
         Assert.Contains("fromIndex", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(-1)]
     [InlineData(-5)]
     public void Execute_WithNegativeFromIndex_ThrowsArgumentException(int negativeIndex)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -209,12 +221,13 @@ public class MovePptSlideHandlerTests : PptHandlerTestBase
 
     #region Error Handling - Invalid toIndex
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(3, 3)]
     [InlineData(3, 5)]
     [InlineData(3, 100)]
     public void Execute_WithToIndexOutOfRange_ThrowsArgumentException(int totalSlides, int invalidToIndex)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(totalSlides);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -227,11 +240,12 @@ public class MovePptSlideHandlerTests : PptHandlerTestBase
         Assert.Contains("toIndex", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(-1)]
     [InlineData(-5)]
     public void Execute_WithNegativeToIndex_ThrowsArgumentException(int negativeIndex)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

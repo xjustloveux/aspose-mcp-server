@@ -1,4 +1,5 @@
-﻿using Aspose.Slides;
+﻿using System.Runtime.Versioning;
+using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Results;
 using AsposeMcpServer.Results.Common;
@@ -12,6 +13,7 @@ namespace AsposeMcpServer.Tests.Tools.PowerPoint;
 ///     Focuses on session management, file I/O, and operation routing.
 ///     Detailed parameter validation and business logic tests are in Handler tests.
 /// </summary>
+[SupportedOSPlatform("windows")]
 public class PptMediaToolTests : PptTestBase
 {
     private readonly PptMediaTool _tool;
@@ -64,9 +66,10 @@ public class PptMediaToolTests : PptTestBase
 
     #region File I/O Smoke Tests
 
-    [Fact]
+    [SkippableFact]
     public void AddAudio_ShouldEmbedAudio()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_add_audio.pptx");
         var audioPath = CreateFakeAudioFile("test_audio.mp3");
         var outputPath = CreateTestFilePath("test_add_audio_output.pptx");
@@ -78,9 +81,10 @@ public class PptMediaToolTests : PptTestBase
         Assert.NotEmpty(presentation.Slides[0].Shapes.OfType<IAudioFrame>());
     }
 
-    [Fact]
+    [SkippableFact]
     public void DeleteAudio_ShouldRemoveAudioFrame()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithAudio("test_delete_audio.pptx");
         var outputPath = CreateTestFilePath("test_delete_audio_output.pptx");
         var result = _tool.Execute("delete_audio", pptPath, slideIndex: 0, shapeIndex: 0, outputPath: outputPath);
@@ -90,9 +94,10 @@ public class PptMediaToolTests : PptTestBase
         Assert.Empty(presentation.Slides[0].Shapes.OfType<IAudioFrame>());
     }
 
-    [Fact]
+    [SkippableFact]
     public void AddVideo_ShouldEmbedVideo()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_add_video.pptx");
         var videoPath = CreateFakeVideoFile("test_video.mp4");
         var outputPath = CreateTestFilePath("test_add_video_output.pptx");
@@ -104,9 +109,10 @@ public class PptMediaToolTests : PptTestBase
         Assert.NotEmpty(presentation.Slides[0].Shapes.OfType<IVideoFrame>());
     }
 
-    [Fact]
+    [SkippableFact]
     public void DeleteVideo_ShouldRemoveVideoFrame()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithVideo("test_delete_video.pptx");
         var outputPath = CreateTestFilePath("test_delete_video_output.pptx");
         var result = _tool.Execute("delete_video", pptPath, slideIndex: 0, shapeIndex: 0, outputPath: outputPath);
@@ -116,9 +122,10 @@ public class PptMediaToolTests : PptTestBase
         Assert.Empty(presentation.Slides[0].Shapes.OfType<IVideoFrame>());
     }
 
-    [Fact]
+    [SkippableFact]
     public void SetPlayback_ForAudio_ShouldUpdateSettings()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithAudio("test_playback_audio.pptx");
         var outputPath = CreateTestFilePath("test_playback_audio_output.pptx");
         var result = _tool.Execute("set_playback", pptPath, slideIndex: 0, shapeIndex: 0, playMode: "onclick",
@@ -131,12 +138,13 @@ public class PptMediaToolTests : PptTestBase
 
     #region Operation Routing
 
-    [Theory]
+    [SkippableTheory]
     [InlineData("ADD_AUDIO")]
     [InlineData("Add_Audio")]
     [InlineData("add_audio")]
     public void Operation_ShouldBeCaseInsensitive(string operation)
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation($"test_case_add_audio_{operation.Replace("_", "")}.pptx");
         var audioPath = CreateFakeAudioFile($"test_case_audio_{operation.Replace("_", "")}.mp3");
         var outputPath = CreateTestFilePath($"test_case_add_audio_{operation.Replace("_", "")}_output.pptx");
@@ -147,9 +155,10 @@ public class PptMediaToolTests : PptTestBase
         Assert.NotEmpty(presentation.Slides[0].Shapes.OfType<IAudioFrame>());
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_unknown_op.pptx");
         var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", pptPath, slideIndex: 0));
         Assert.Contains("Unknown operation", ex.Message);
@@ -159,9 +168,10 @@ public class PptMediaToolTests : PptTestBase
 
     #region Session Management
 
-    [Fact]
+    [SkippableFact]
     public void AddAudio_WithSessionId_ShouldAddInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_session_add_audio.pptx");
         var audioPath = CreateFakeAudioFile("session_audio.mp3");
         var sessionId = OpenSession(pptPath);
@@ -175,9 +185,10 @@ public class PptMediaToolTests : PptTestBase
         Assert.True(output.IsSession);
     }
 
-    [Fact]
+    [SkippableFact]
     public void AddVideo_WithSessionId_ShouldAddInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_session_add_video.pptx");
         var videoPath = CreateFakeVideoFile("session_video.mp4");
         var sessionId = OpenSession(pptPath);
@@ -191,9 +202,10 @@ public class PptMediaToolTests : PptTestBase
         Assert.True(output.IsSession);
     }
 
-    [Fact]
+    [SkippableFact]
     public void DeleteAudio_WithSessionId_ShouldDeleteInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithAudio("test_session_delete_audio.pptx");
         var sessionId = OpenSession(pptPath);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
@@ -205,16 +217,18 @@ public class PptMediaToolTests : PptTestBase
         Assert.True(output.IsSession);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
+        SkipIfNotWindows();
         Assert.Throws<KeyNotFoundException>(() =>
             _tool.Execute("add_audio", sessionId: "invalid_session", slideIndex: 0));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
     {
+        SkipIfNotWindows();
         var pptPath1 = CreatePresentation("test_path_media.pptx");
         var pptPath2 = CreatePresentation("test_session_media.pptx");
         var audioPath = CreateFakeAudioFile("preference_audio.mp3");

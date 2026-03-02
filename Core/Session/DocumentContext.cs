@@ -101,13 +101,15 @@ public sealed class DocumentContext<T> : IDisposable
     ///     enabled)
     /// </param>
     /// <param name="password">Optional password for opening encrypted documents</param>
+    /// <param name="serverConfig">Optional server config for path whitelist validation</param>
     /// <returns>Document context</returns>
     public static DocumentContext<T> Create(
         DocumentSessionManager? sessionManager,
         string? sessionId,
         string? path,
         ISessionIdentityAccessor? identityAccessor = null,
-        string? password = null)
+        string? password = null,
+        ServerConfig? serverConfig = null)
     {
         var identity = identityAccessor?.GetCurrentIdentity() ?? SessionIdentity.GetAnonymous();
 
@@ -125,6 +127,8 @@ public sealed class DocumentContext<T> : IDisposable
             throw new ArgumentException("Either sessionId or path must be provided");
 
         SecurityHelper.ValidateFilePath(path, nameof(path), true);
+        if (serverConfig != null)
+            SecurityHelper.ValidatePathWithinAllowedBases(path, serverConfig.AllowedBasePaths);
 
         var document = LoadDocument(path, password);
         return new DocumentContext<T>(document, null, null, path, true, identity);

@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.TextFormat;
 using AsposeMcpServer.Results.Common;
@@ -5,15 +6,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.TextFormat;
 
+[SupportedOSPlatform("windows")]
 public class FormatPptTextHandlerTests : PptHandlerTestBase
 {
     private readonly FormatPptTextHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Format()
     {
+        SkipIfNotWindows();
         Assert.Equal("format", _handler.Operation);
     }
 
@@ -34,9 +37,10 @@ public class FormatPptTextHandlerTests : PptHandlerTestBase
 
     #region Table Shape Tests
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithTableShape_FormatsTableCells()
     {
+        SkipIfNotWindows();
         var presentation = new Presentation();
         var slide = presentation.Slides[0];
         var colWidths = new double[] { 100, 100 };
@@ -64,9 +68,10 @@ public class FormatPptTextHandlerTests : PptHandlerTestBase
 
     #region Basic Format Text Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_FormatsAllSlides()
     {
+        SkipIfNotWindows();
         var presentation = CreatePresentationWithText("Sample text");
         var slideCount = presentation.Slides.Count;
         var context = CreateContext(presentation);
@@ -83,9 +88,10 @@ public class FormatPptTextHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_FormatsSpecificSlides()
     {
+        SkipIfNotWindows();
         var presentation = CreatePresentationWithSlides(3);
         AddTextToSlides(presentation);
         var context = CreateContext(presentation);
@@ -102,9 +108,10 @@ public class FormatPptTextHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var presentation = CreatePresentationWithSlides(2);
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -116,9 +123,10 @@ public class FormatPptTextHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_AppliesBoldFormatting()
     {
+        SkipIfNotWindows();
         var presentation = CreatePresentationWithText("Sample text");
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -133,9 +141,10 @@ public class FormatPptTextHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_AppliesItalicFormatting()
     {
+        SkipIfNotWindows();
         var presentation = CreatePresentationWithText("Sample text");
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -150,9 +159,10 @@ public class FormatPptTextHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_AppliesColorFormatting()
     {
+        SkipIfNotWindows();
         var presentation = CreatePresentationWithText("Sample text");
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -167,9 +177,10 @@ public class FormatPptTextHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_AppliesMultipleFormattingOptions()
     {
+        SkipIfNotWindows();
         var presentation = CreatePresentationWithText("Sample text");
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -192,7 +203,7 @@ public class FormatPptTextHandlerTests : PptHandlerTestBase
 
     #region Alignment Tests
 
-    [Theory]
+    [SkippableTheory]
     [InlineData("left")]
     [InlineData("center")]
     [InlineData("right")]
@@ -200,6 +211,7 @@ public class FormatPptTextHandlerTests : PptHandlerTestBase
     [InlineData("distributed")]
     public void Execute_WithAlignment_AppliesAlignment(string alignment)
     {
+        SkipIfNotWindows();
         var presentation = CreatePresentationWithText("Sample text");
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -214,9 +226,10 @@ public class FormatPptTextHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidAlignment_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var presentation = CreatePresentationWithText("Sample text");
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -232,9 +245,10 @@ public class FormatPptTextHandlerTests : PptHandlerTestBase
 
     #region Shape Indices Tests
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithShapeIndices_FormatsOnlyTargetShapes()
     {
+        SkipIfNotWindows();
         var presentation = CreatePresentationWithSlides(1);
         var slide = presentation.Slides[0];
         var shape0 = slide.Shapes.AddAutoShape(ShapeType.Rectangle, 50, 50, 200, 50);
@@ -256,9 +270,10 @@ public class FormatPptTextHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidShapeIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var presentation = CreatePresentationWithText("Sample text");
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>

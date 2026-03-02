@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Shape;
 using AsposeMcpServer.Results.Common;
@@ -5,15 +6,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Shape;
 
+[SupportedOSPlatform("windows")]
 public class FlipPptShapeHandlerTests : PptHandlerTestBase
 {
     private readonly FlipPptShapeHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Flip()
     {
+        SkipIfNotWindows();
         Assert.Equal("flip", _handler.Operation);
     }
 
@@ -21,9 +24,10 @@ public class FlipPptShapeHandlerTests : PptHandlerTestBase
 
     #region Result Message
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsShapeIndexInMessage()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);
@@ -45,9 +49,10 @@ public class FlipPptShapeHandlerTests : PptHandlerTestBase
 
     #region Basic Flip Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_FlipsHorizontally()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);
@@ -66,9 +71,10 @@ public class FlipPptShapeHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_FlipsVertically()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);
@@ -87,9 +93,10 @@ public class FlipPptShapeHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_FlipsBothDirections()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);
@@ -114,9 +121,10 @@ public class FlipPptShapeHandlerTests : PptHandlerTestBase
 
     #region Flip State
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithFlipHorizontalFalse_SetsNoHorizontalFlip()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);
@@ -135,9 +143,10 @@ public class FlipPptShapeHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithFlipVerticalFalse_SetsNoVerticalFlip()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);
@@ -160,9 +169,10 @@ public class FlipPptShapeHandlerTests : PptHandlerTestBase
 
     #region Preserve Properties
 
-    [Fact]
+    [SkippableFact]
     public void Execute_PreservesShapePosition()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var shape = pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 150, 250, 200, 100);
         var originalX = shape.X;
@@ -181,9 +191,10 @@ public class FlipPptShapeHandlerTests : PptHandlerTestBase
         Assert.Equal(originalY, shape.Y);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_PreservesShapeSize()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var shape = pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 250, 150);
         var originalWidth = shape.Width;
@@ -206,9 +217,10 @@ public class FlipPptShapeHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);
@@ -222,9 +234,10 @@ public class FlipPptShapeHandlerTests : PptHandlerTestBase
         Assert.Contains("slideIndex", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutShapeIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);
@@ -238,9 +251,10 @@ public class FlipPptShapeHandlerTests : PptHandlerTestBase
         Assert.Contains("shapeIndex", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutFlipOption_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);
@@ -254,11 +268,12 @@ public class FlipPptShapeHandlerTests : PptHandlerTestBase
         Assert.Contains("flip", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(-1)]
     [InlineData(10)]
     public void Execute_WithInvalidShapeIndex_ThrowsArgumentException(int invalidIndex)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);

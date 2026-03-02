@@ -1,4 +1,5 @@
-﻿using Aspose.Slides;
+﻿using System.Runtime.Versioning;
+using Aspose.Slides;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Results.PowerPoint.Table;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -11,6 +12,7 @@ namespace AsposeMcpServer.Tests.Tools.PowerPoint;
 ///     Focuses on session management, file I/O, and operation routing.
 ///     Detailed parameter validation and business logic tests are in Handler tests.
 /// </summary>
+[SupportedOSPlatform("windows")]
 public class PptTableToolTests : PptTestBase
 {
     private readonly PptTableTool _tool;
@@ -30,9 +32,10 @@ public class PptTableToolTests : PptTestBase
 
     #region File I/O Smoke Tests
 
-    [Fact]
+    [SkippableFact]
     public void AddTable_ShouldAddTableToSlide()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_add_table.pptx");
         var outputPath = CreateTestFilePath("test_add_table_output.pptx");
         var result = _tool.Execute("add", pptPath, slideIndex: 0, rows: 3, columns: 3, outputPath: outputPath);
@@ -45,9 +48,10 @@ public class PptTableToolTests : PptTestBase
         Assert.Equal(3, tables[0].Rows.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void DeleteTable_ShouldDeleteTable()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithTable("test_delete_table.pptx");
         var shapeIndex = FindTableShapeIndex(pptPath, 0);
         var outputPath = CreateTestFilePath("test_delete_table_output.pptx");
@@ -61,6 +65,7 @@ public class PptTableToolTests : PptTestBase
     [SkippableFact]
     public void GetContent_ShouldReturnTableContent()
     {
+        SkipIfNotWindows();
         SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation mode truncates text data");
         var pptPath = CreatePresentationWithTable("test_get_content.pptx");
         var shapeIndex = FindTableShapeIndex(pptPath, 0);
@@ -70,9 +75,10 @@ public class PptTableToolTests : PptTestBase
         Assert.True(data.RowCount > 0);
     }
 
-    [Fact]
+    [SkippableFact]
     public void InsertRow_ShouldInsertRow()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithTable("test_insert_row.pptx");
         var shapeIndex = FindTableShapeIndex(pptPath, 0);
         var outputPath = CreateTestFilePath("test_insert_row_output.pptx");
@@ -85,9 +91,10 @@ public class PptTableToolTests : PptTestBase
         Assert.Equal(3, table.Rows.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void InsertColumn_ShouldInsertColumn()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithTable("test_insert_column.pptx");
         var shapeIndex = FindTableShapeIndex(pptPath, 0);
         var outputPath = CreateTestFilePath("test_insert_column_output.pptx");
@@ -104,12 +111,13 @@ public class PptTableToolTests : PptTestBase
 
     #region Operation Routing
 
-    [Theory]
+    [SkippableTheory]
     [InlineData("ADD")]
     [InlineData("Add")]
     [InlineData("add")]
     public void Operation_ShouldBeCaseInsensitive(string operation)
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation($"test_case_add_{operation}.pptx");
         var outputPath = CreateTestFilePath($"test_case_add_{operation}_output.pptx");
         var result = _tool.Execute(operation, pptPath, slideIndex: 0, rows: 2, columns: 2, outputPath: outputPath);
@@ -117,9 +125,10 @@ public class PptTableToolTests : PptTestBase
         Assert.StartsWith("Table added to slide", data.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_unknown_op.pptx");
         var ex = Assert.Throws<ArgumentException>(() =>
             _tool.Execute("unknown", pptPath, slideIndex: 0));
@@ -130,9 +139,10 @@ public class PptTableToolTests : PptTestBase
 
     #region Session Management
 
-    [Fact]
+    [SkippableFact]
     public void AddTable_WithSessionId_ShouldAddInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_session_add.pptx");
         var sessionId = OpenSession(pptPath);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
@@ -148,9 +158,10 @@ public class PptTableToolTests : PptTestBase
         Assert.True(tablesAfter > initialTableCount);
     }
 
-    [Fact]
+    [SkippableFact]
     public void InsertRow_WithSessionId_ShouldInsertInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithTable("test_session_insert_row.pptx");
         var sessionId = OpenSession(pptPath);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
@@ -167,9 +178,10 @@ public class PptTableToolTests : PptTestBase
         Assert.True(table.Rows.Count > initialRowCount);
     }
 
-    [Fact]
+    [SkippableFact]
     public void DeleteTable_WithSessionId_ShouldDeleteInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithTable("test_session_delete.pptx");
         var sessionId = OpenSession(pptPath);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
@@ -184,16 +196,18 @@ public class PptTableToolTests : PptTestBase
         Assert.Empty(ppt.Slides[0].Shapes.OfType<ITable>());
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
+        SkipIfNotWindows();
         Assert.Throws<KeyNotFoundException>(() =>
             _tool.Execute("add", sessionId: "invalid_session_id", slideIndex: 0, rows: 2, columns: 2));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
     {
+        SkipIfNotWindows();
         var pptPath1 = CreatePresentationWithTable("test_path_table.pptx");
         var pptPath2 = CreatePresentation("test_session_table.pptx");
 

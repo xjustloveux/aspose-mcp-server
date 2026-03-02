@@ -1475,8 +1475,9 @@ public class Extension : IAsyncDisposable
                 if (File.Exists(npxCliPath))
                     return npxCliPath;
             }
-            catch
+            catch (Exception)
             {
+                // Ignore invalid paths or permission errors and continue searching
             }
 
         return null;

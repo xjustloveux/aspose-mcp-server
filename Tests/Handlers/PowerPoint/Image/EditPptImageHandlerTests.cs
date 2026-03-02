@@ -7,18 +7,21 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 // CA1416 - System.Drawing.Common is Windows-only, cross-platform support not required
 #pragma warning disable CA1416
+using System.Runtime.Versioning;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Image;
 
+[SupportedOSPlatform("windows")]
 public class EditPptImageHandlerTests : PptHandlerTestBase
 {
     private readonly EditPptImageHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Edit()
     {
+        SkipIfNotWindows();
         Assert.Equal("edit", _handler.Operation);
     }
 
@@ -26,9 +29,10 @@ public class EditPptImageHandlerTests : PptHandlerTestBase
 
     #region Basic Edit Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_EditsImagePosition()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithImage();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -52,9 +56,10 @@ public class EditPptImageHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_EditsImageSize()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithImage();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -78,9 +83,10 @@ public class EditPptImageHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNewImage_ReplacesImage()
     {
+        SkipIfNotWindows();
         var tempImagePath = CreateTempImageFile();
         var pres = CreatePresentationWithImage();
         var originalImage = GetPictureFrames(pres.Slides[0])[0].PictureFormat.Picture.Image;
@@ -108,9 +114,10 @@ public class EditPptImageHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidImageIndex_ThrowsException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithImage();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -122,9 +129,10 @@ public class EditPptImageHandlerTests : PptHandlerTestBase
         Assert.ThrowsAny<Exception>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSlideIndex_ThrowsException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithImage();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

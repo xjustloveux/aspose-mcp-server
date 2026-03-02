@@ -19,8 +19,10 @@ public class UpdateFieldWordHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="context">The document context.</param>
     /// <param name="parameters">
-    ///     Optional: fieldIndex (update specific field)
-    ///     Optional: updateAll (update all fields)
+    ///     Optional: fieldIndex (int) — update only the field at this index (0-based).
+    ///     Optional: updateAll (bool) — explicitly request updating all fields.
+    ///     If neither parameter is provided, all fields are updated by default.
+    ///     If both are provided, fieldIndex takes precedence (updateAll is ignored).
     /// </param>
     /// <returns>Success message with update details.</returns>
     public override object Execute(OperationContext<Document> context, OperationParameters parameters)

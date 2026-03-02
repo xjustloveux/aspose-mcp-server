@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using Aspose.Slides.Charts;
 using AsposeMcpServer.Handlers.PowerPoint.Chart;
@@ -6,15 +7,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Chart;
 
+[SupportedOSPlatform("windows")]
 public class EditPptChartHandlerTests : PptHandlerTestBase
 {
     private readonly EditPptChartHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Edit()
     {
+        SkipIfNotWindows();
         Assert.Equal("edit", _handler.Operation);
     }
 
@@ -22,9 +25,10 @@ public class EditPptChartHandlerTests : PptHandlerTestBase
 
     #region Basic Edit Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_EditsChartTitle()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithChart();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -60,9 +64,10 @@ public class EditPptChartHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithChart();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -73,9 +78,10 @@ public class EditPptChartHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutShapeIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithChart();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -86,9 +92,10 @@ public class EditPptChartHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithChart();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -100,9 +107,10 @@ public class EditPptChartHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidShapeIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithChart();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -118,9 +126,10 @@ public class EditPptChartHandlerTests : PptHandlerTestBase
 
     #region Chart Type Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithChartType_ChangesChartType()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithChart();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -138,9 +147,10 @@ public class EditPptChartHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithTitleAndChartType_UpdatesBoth()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithChart();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -162,9 +172,10 @@ public class EditPptChartHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNoUpdates_StillReturnsSuccess()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithChart();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

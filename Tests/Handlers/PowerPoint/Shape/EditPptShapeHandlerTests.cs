@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Shape;
 using AsposeMcpServer.Results.Common;
@@ -5,15 +6,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Shape;
 
+[SupportedOSPlatform("windows")]
 public class EditPptShapeHandlerTests : PptHandlerTestBase
 {
     private readonly EditPptShapeHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Edit()
     {
+        SkipIfNotWindows();
         Assert.Equal("edit", _handler.Operation);
     }
 
@@ -21,9 +24,10 @@ public class EditPptShapeHandlerTests : PptHandlerTestBase
 
     #region Basic Edit Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_UpdatesShape()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);
@@ -46,9 +50,10 @@ public class EditPptShapeHandlerTests : PptHandlerTestBase
 
     #region Rotation
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithRotation_UpdatesRotation()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);
@@ -67,9 +72,10 @@ public class EditPptShapeHandlerTests : PptHandlerTestBase
 
     #region Name
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithName_UpdatesName()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);
@@ -88,9 +94,10 @@ public class EditPptShapeHandlerTests : PptHandlerTestBase
 
     #region Slide Index
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithSlideIndex_EditsOnSpecificSlide()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         pres.Slides[1].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);
@@ -110,9 +117,10 @@ public class EditPptShapeHandlerTests : PptHandlerTestBase
 
     #region Result Message
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithMultipleProperties_UpdatesAll()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);
@@ -144,9 +152,10 @@ public class EditPptShapeHandlerTests : PptHandlerTestBase
 
     #region Position Updates
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithX_UpdatesXPosition()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);
@@ -161,9 +170,10 @@ public class EditPptShapeHandlerTests : PptHandlerTestBase
         Assert.Equal(300, pres.Slides[0].Shapes[0].X);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithY_UpdatesYPosition()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);
@@ -182,9 +192,10 @@ public class EditPptShapeHandlerTests : PptHandlerTestBase
 
     #region Size Updates
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithWidth_UpdatesWidth()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);
@@ -199,9 +210,10 @@ public class EditPptShapeHandlerTests : PptHandlerTestBase
         Assert.Equal(500, pres.Slides[0].Shapes[0].Width);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithHeight_UpdatesHeight()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);
@@ -220,9 +232,10 @@ public class EditPptShapeHandlerTests : PptHandlerTestBase
 
     #region AlternativeText
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithAlternativeText_UpdatesAlternativeText()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);
@@ -237,9 +250,10 @@ public class EditPptShapeHandlerTests : PptHandlerTestBase
         Assert.Equal("Description of shape", pres.Slides[0].Shapes[0].AlternativeText);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithEmptyAlternativeText_ClearsAlternativeText()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var shape = pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         shape.AlternativeText = "Old text";
@@ -259,9 +273,10 @@ public class EditPptShapeHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutShapeIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);
@@ -271,11 +286,12 @@ public class EditPptShapeHandlerTests : PptHandlerTestBase
         Assert.Contains("shapeIndex", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(-1)]
     [InlineData(10)]
     public void Execute_WithInvalidShapeIndex_ThrowsArgumentException(int invalidIndex)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);

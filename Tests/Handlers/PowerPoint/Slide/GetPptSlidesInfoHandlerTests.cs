@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Slide;
 using AsposeMcpServer.Results.PowerPoint.Slide;
@@ -5,15 +6,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Slide;
 
+[SupportedOSPlatform("windows")]
 public class GetPptSlidesInfoHandlerTests : PptHandlerTestBase
 {
     private readonly GetPptSlidesInfoHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_GetInfo()
     {
+        SkipIfNotWindows();
         Assert.Equal("get_info", _handler.Operation);
     }
 
@@ -21,9 +24,10 @@ public class GetPptSlidesInfoHandlerTests : PptHandlerTestBase
 
     #region Read-Only Verification
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DoesNotModifyPresentation()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var initialCount = pres.Slides.Count;
         var context = CreateContext(pres);
@@ -39,9 +43,10 @@ public class GetPptSlidesInfoHandlerTests : PptHandlerTestBase
 
     #region Basic Info Retrieval
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsSlideInfo()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -54,13 +59,14 @@ public class GetPptSlidesInfoHandlerTests : PptHandlerTestBase
         AssertNotModified(context);
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(1)]
     [InlineData(3)]
     [InlineData(5)]
     [InlineData(10)]
     public void Execute_ReturnsCorrectSlideCount(int slideCount)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(slideCount);
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -77,9 +83,10 @@ public class GetPptSlidesInfoHandlerTests : PptHandlerTestBase
 
     #region Slides Array
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsSlidesArray()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -92,9 +99,10 @@ public class GetPptSlidesInfoHandlerTests : PptHandlerTestBase
         Assert.Equal(3, result.Slides.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SlidesContainIndex()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -107,9 +115,10 @@ public class GetPptSlidesInfoHandlerTests : PptHandlerTestBase
         Assert.Equal(0, firstSlide.Index);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SlidesContainLayoutInfo()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -122,9 +131,10 @@ public class GetPptSlidesInfoHandlerTests : PptHandlerTestBase
         Assert.NotNull(firstSlide.LayoutType);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SlidesContainShapesCount()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);
@@ -138,9 +148,10 @@ public class GetPptSlidesInfoHandlerTests : PptHandlerTestBase
         Assert.True(firstSlide.ShapesCount >= 1);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SlidesContainHiddenProperty()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -157,9 +168,10 @@ public class GetPptSlidesInfoHandlerTests : PptHandlerTestBase
 
     #region Available Layouts
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsAvailableLayouts()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -172,9 +184,10 @@ public class GetPptSlidesInfoHandlerTests : PptHandlerTestBase
         Assert.True(result.AvailableLayouts.Count > 0);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_LayoutsContainNameAndType()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();

@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Shape;
 using AsposeMcpServer.Results.Common;
@@ -5,15 +6,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Shape;
 
+[SupportedOSPlatform("windows")]
 public class CopyPptShapeHandlerTests : PptHandlerTestBase
 {
     private readonly CopyPptShapeHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Copy()
     {
+        SkipIfNotWindows();
         Assert.Equal("copy", _handler.Operation);
     }
 
@@ -21,9 +24,10 @@ public class CopyPptShapeHandlerTests : PptHandlerTestBase
 
     #region Preserve Source
 
-    [Fact]
+    [SkippableFact]
     public void Execute_PreservesSourceShape()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(2);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var sourceInitialCount = pres.Slides[0].Shapes.Count;
@@ -44,9 +48,10 @@ public class CopyPptShapeHandlerTests : PptHandlerTestBase
 
     #region Result Message
 
-    [Fact]
+    [SkippableFact]
     public void Execute_CopyAddsShapeToTargetSlide()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(2);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var targetInitialCount = pres.Slides[1].Shapes.Count;
@@ -69,9 +74,10 @@ public class CopyPptShapeHandlerTests : PptHandlerTestBase
 
     #region Basic Copy Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_CopiesShapeToAnotherSlide()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(2);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var targetInitialCount = pres.Slides[1].Shapes.Count;
@@ -90,12 +96,13 @@ public class CopyPptShapeHandlerTests : PptHandlerTestBase
         Assert.Equal(targetInitialCount + 1, pres.Slides[1].Shapes.Count);
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(0, 1)]
     [InlineData(0, 2)]
     [InlineData(1, 0)]
     public void Execute_CopiesBetweenVariousSlides(int from, int to)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         pres.Slides[from].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var targetInitialCount = pres.Slides[to].Shapes.Count;
@@ -116,9 +123,10 @@ public class CopyPptShapeHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutFromSlide_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(2);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);
@@ -132,9 +140,10 @@ public class CopyPptShapeHandlerTests : PptHandlerTestBase
         Assert.Contains("fromSlide", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutToSlide_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(2);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);
@@ -148,9 +157,10 @@ public class CopyPptShapeHandlerTests : PptHandlerTestBase
         Assert.Contains("toSlide", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutShapeIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(2);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);
@@ -164,11 +174,12 @@ public class CopyPptShapeHandlerTests : PptHandlerTestBase
         Assert.Contains("shapeIndex", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(-1, 1)]
     [InlineData(10, 1)]
     public void Execute_WithInvalidFromSlide_ThrowsArgumentException(int invalidFrom, int to)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(2);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);
@@ -183,11 +194,12 @@ public class CopyPptShapeHandlerTests : PptHandlerTestBase
         Assert.Contains("fromSlide", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(0, -1)]
     [InlineData(0, 10)]
     public void Execute_WithInvalidToSlide_ThrowsArgumentException(int from, int invalidTo)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(2);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);
@@ -202,11 +214,12 @@ public class CopyPptShapeHandlerTests : PptHandlerTestBase
         Assert.Contains("toSlide", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(-1)]
     [InlineData(10)]
     public void Execute_WithInvalidShapeIndex_ThrowsArgumentException(int invalidIndex)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(2);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var context = CreateContext(pres);

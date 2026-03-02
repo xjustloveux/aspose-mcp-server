@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using Aspose.Slides.SlideShow;
 using AsposeMcpServer.Handlers.PowerPoint.Transition;
@@ -6,15 +7,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Transition;
 
+[SupportedOSPlatform("windows")]
 public class GetPptTransitionHandlerTests : PptHandlerTestBase
 {
     private readonly GetPptTransitionHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Get()
     {
+        SkipIfNotWindows();
         Assert.Equal("get", _handler.Operation);
     }
 
@@ -22,9 +25,10 @@ public class GetPptTransitionHandlerTests : PptHandlerTestBase
 
     #region Multiple Slides
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithSlideIndex_ReturnsCorrectSlideInfo()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         pres.Slides[1].SlideShowTransition.Type = TransitionType.Wipe;
         var context = CreateContext(pres);
@@ -45,9 +49,10 @@ public class GetPptTransitionHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -62,9 +67,10 @@ public class GetPptTransitionHandlerTests : PptHandlerTestBase
 
     #region Read-Only Verification
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DoesNotModifyDocument()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -89,9 +95,10 @@ public class GetPptTransitionHandlerTests : PptHandlerTestBase
 
     #region Basic Get Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsTransitionInfo()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -105,9 +112,10 @@ public class GetPptTransitionHandlerTests : PptHandlerTestBase
         AssertNotModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNoTransition_ReturnsNone()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -120,9 +128,10 @@ public class GetPptTransitionHandlerTests : PptHandlerTestBase
         Assert.False(result.HasTransition);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithTransition_ReturnsTransitionType()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTransition(TransitionType.Fade);
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -137,9 +146,10 @@ public class GetPptTransitionHandlerTests : PptHandlerTestBase
         Assert.NotNull(result.Speed);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsSlideIndex()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -151,9 +161,10 @@ public class GetPptTransitionHandlerTests : PptHandlerTestBase
         Assert.Equal(0, result.SlideIndex);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsAdvanceSettings()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();

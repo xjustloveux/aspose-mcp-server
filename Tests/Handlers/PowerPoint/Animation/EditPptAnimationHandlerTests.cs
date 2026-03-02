@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using Aspose.Slides.Animation;
 using AsposeMcpServer.Handlers.PowerPoint.Animation;
@@ -6,15 +7,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Animation;
 
+[SupportedOSPlatform("windows")]
 public class EditPptAnimationHandlerTests : PptHandlerTestBase
 {
     private readonly EditPptAnimationHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Edit()
     {
+        SkipIfNotWindows();
         Assert.Equal("edit", _handler.Operation);
     }
 
@@ -22,9 +25,10 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
 
     #region Replace All Animations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutAnimationIndex_ReplacesAllAnimations()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithAnimation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -58,9 +62,10 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
 
     #region Clear Animations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutAnimationIndexAndWithoutEffect_ClearsAnimations()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithAnimation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -79,9 +84,10 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
 
     #region Basic Edit Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_EditsAnimation()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithAnimation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -103,12 +109,13 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
 
     #region Edit Duration and Delay
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(1.0f)]
     [InlineData(2.5f)]
     [InlineData(5.0f)]
     public void Execute_WithDuration_ChangesDuration(float duration)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithAnimation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -125,9 +132,10 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
         if (!IsEvaluationMode()) Assert.Equal(duration, pres.Slides[0].Timeline.MainSequence[0].Timing.Duration);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithDelay_ChangesDelay()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithAnimation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -148,12 +156,13 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
 
     #region Boundary Condition Tests
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(0.0f)]
     [InlineData(0.001f)]
     [InlineData(100.0f)]
     public void Execute_WithBoundaryDuration_AcceptsValidValues(float duration)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithAnimation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -170,11 +179,12 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
         if (!IsEvaluationMode()) Assert.Equal(duration, pres.Slides[0].Timeline.MainSequence[0].Timing.Duration);
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(-1.0f)]
     [InlineData(-0.5f)]
     public void Execute_WithNegativeDuration_StillUpdatesAnimation(float duration)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithAnimation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -191,12 +201,13 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(0.0f)]
     [InlineData(0.001f)]
     [InlineData(100.0f)]
     public void Execute_WithBoundaryDelay_AcceptsValidValues(float delay)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithAnimation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -213,11 +224,12 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
         if (!IsEvaluationMode()) Assert.Equal(delay, pres.Slides[0].Timeline.MainSequence[0].Timing.TriggerDelayTime);
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(-1.0f)]
     [InlineData(-0.5f)]
     public void Execute_WithNegativeDelay_StillUpdatesAnimation(float delay)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithAnimation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -234,9 +246,10 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNegativeSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithAnimation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -249,9 +262,10 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
         Assert.Contains("Slide index", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNegativeShapeIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithAnimation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -264,9 +278,10 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
         Assert.Contains("Shape index", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNegativeAnimationIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithAnimation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -284,9 +299,10 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithAnimation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -298,9 +314,10 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
         Assert.Contains("slideIndex", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutShapeIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithAnimation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -312,9 +329,10 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
         Assert.Contains("shapeIndex", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithAnimation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -327,9 +345,10 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
         Assert.Contains("Slide index", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidShapeIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithAnimation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -342,9 +361,10 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
         Assert.Contains("Shape index", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidAnimationIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithAnimation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -362,9 +382,10 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
 
     #region Effect Type Changes
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithEffectType_ChangesEffect()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithAnimation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -382,9 +403,10 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithEffectSubtype_ChangesSubtype()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithAnimation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -402,9 +424,10 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithTriggerType_ChangesTrigger()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithAnimation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -422,9 +445,10 @@ public class EditPptAnimationHandlerTests : PptHandlerTestBase
             Assert.Equal(EffectTriggerType.WithPrevious, pres.Slides[0].Timeline.MainSequence[0].Timing.TriggerType);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithAllEffectParameters_ChangesAll()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithAnimation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

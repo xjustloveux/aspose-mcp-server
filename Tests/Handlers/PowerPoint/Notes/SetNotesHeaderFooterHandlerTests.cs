@@ -1,18 +1,21 @@
+using System.Runtime.Versioning;
 using AsposeMcpServer.Handlers.PowerPoint.Notes;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Notes;
 
+[SupportedOSPlatform("windows")]
 public class SetNotesHeaderFooterHandlerTests : PptHandlerTestBase
 {
     private readonly SetNotesHeaderFooterHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_SetHeaderFooter()
     {
+        SkipIfNotWindows();
         Assert.Equal("set_header_footer", _handler.Operation);
     }
 
@@ -20,9 +23,10 @@ public class SetNotesHeaderFooterHandlerTests : PptHandlerTestBase
 
     #region Basic Set Notes Header Footer Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SetsHeaderText()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -43,9 +47,10 @@ public class SetNotesHeaderFooterHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SetsFooterText()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -66,9 +71,10 @@ public class SetNotesHeaderFooterHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SetsDateText()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -89,9 +95,10 @@ public class SetNotesHeaderFooterHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SetsPageNumberVisibility()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -112,9 +119,10 @@ public class SetNotesHeaderFooterHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithAllSettings()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>

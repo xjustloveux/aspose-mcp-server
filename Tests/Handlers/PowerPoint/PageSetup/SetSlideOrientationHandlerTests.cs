@@ -1,18 +1,21 @@
+using System.Runtime.Versioning;
 using AsposeMcpServer.Handlers.PowerPoint.PageSetup;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.PageSetup;
 
+[SupportedOSPlatform("windows")]
 public class SetSlideOrientationHandlerTests : PptHandlerTestBase
 {
     private readonly SetSlideOrientationHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_SetOrientation()
     {
+        SkipIfNotWindows();
         Assert.Equal("set_orientation", _handler.Operation);
     }
 
@@ -20,9 +23,10 @@ public class SetSlideOrientationHandlerTests : PptHandlerTestBase
 
     #region Basic Set Slide Orientation Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SetsPortraitOrientation()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -39,9 +43,10 @@ public class SetSlideOrientationHandlerTests : PptHandlerTestBase
             $"Portrait orientation should have height ({size.Height}) > width ({size.Width})");
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SetsLandscapeOrientation()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -57,9 +62,10 @@ public class SetSlideOrientationHandlerTests : PptHandlerTestBase
             $"Landscape orientation should have width ({size.Width}) > height ({size.Height})");
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsSizeInfo()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>

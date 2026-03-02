@@ -86,9 +86,10 @@ public class SystemErrorTests : TestBase
     /// <summary>
     ///     Verifies that saving to an invalid path throws exception.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public void System_InvalidOutputPath_ThrowsException()
     {
+        SkipIfNotWindows();
         var path = CreateWordDocument();
         var openResult = _sessionTool.Execute("open", path);
         var openData = GetResultData<OpenSessionResult>(openResult);

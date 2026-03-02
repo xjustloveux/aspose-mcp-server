@@ -16,6 +16,16 @@ public sealed class DocumentSession : IDisposable
     private int _disposed;
 
     /// <summary>
+    ///     Backing field for IsDirty with volatile semantics
+    /// </summary>
+    private int _isDirty;
+
+    /// <summary>
+    ///     Backing field for LastAccessedAt with volatile semantics (stores Ticks)
+    /// </summary>
+    private long _lastAccessedAtTicks;
+
+    /// <summary>
     ///     Creates a new document session
     /// </summary>
     /// <param name="sessionId">Unique session identifier</param>
@@ -31,7 +41,7 @@ public sealed class DocumentSession : IDisposable
         Document = document;
         Mode = mode;
         OpenedAt = DateTime.UtcNow;
-        LastAccessedAt = DateTime.UtcNow;
+        _lastAccessedAtTicks = OpenedAt.Ticks;
     }
 
     /// <summary>
@@ -60,9 +70,13 @@ public sealed class DocumentSession : IDisposable
     public string Mode { get; }
 
     /// <summary>
-    ///     Whether the document has unsaved changes
+    ///     Whether the document has unsaved changes (thread-safe via Volatile)
     /// </summary>
-    public bool IsDirty { get; set; }
+    public bool IsDirty
+    {
+        get => Volatile.Read(ref _isDirty) == 1;
+        set => Volatile.Write(ref _isDirty, value ? 1 : 0);
+    }
 
     /// <summary>
     ///     When the session was opened
@@ -70,9 +84,13 @@ public sealed class DocumentSession : IDisposable
     public DateTime OpenedAt { get; }
 
     /// <summary>
-    ///     Last access time (for idle timeout)
+    ///     Last access time (for idle timeout, thread-safe via Volatile)
     /// </summary>
-    public DateTime LastAccessedAt { get; set; }
+    public DateTime LastAccessedAt
+    {
+        get => new(Volatile.Read(ref _lastAccessedAtTicks), DateTimeKind.Utc);
+        set => Volatile.Write(ref _lastAccessedAtTicks, value.Ticks);
+    }
 
     /// <summary>
     ///     Client identifier (for multi-client scenarios)
@@ -118,6 +136,35 @@ public sealed class DocumentSession : IDisposable
     {
         if (IsDisposed)
             throw new ObjectDisposedException(nameof(DocumentSession), $"Session {SessionId} has been disposed");
+    }
+
+    /// <summary>
+    ///     Execute a synchronous operation on the document with thread-safety
+    /// </summary>
+    /// <param name="operation">The operation to execute on the document</param>
+    /// <exception cref="ObjectDisposedException">Thrown when session is disposed</exception>
+    public void Execute(Action<object> operation)
+    {
+        ThrowIfDisposed();
+        try
+        {
+            _lock.Wait();
+        }
+        catch (ObjectDisposedException)
+        {
+            throw new ObjectDisposedException(nameof(DocumentSession), $"Session {SessionId} has been disposed");
+        }
+
+        try
+        {
+            ThrowIfDisposed();
+            LastAccessedAt = DateTime.UtcNow;
+            operation(Document);
+        }
+        finally
+        {
+            _lock.Release();
+        }
     }
 
     /// <summary>

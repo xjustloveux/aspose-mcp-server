@@ -1,6 +1,7 @@
 using Aspose.Slides;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Helpers.PowerPoint;
 using AsposeMcpServer.Results.Common;
 
@@ -27,6 +28,8 @@ public class AddPptImageHandler : OperationHandlerBase<Presentation>
     public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractAddParameters(parameters);
+
+        SecurityHelper.ValidateFilePath(p.ImagePath, "imagePath", true);
 
         if (!File.Exists(p.ImagePath))
             throw new FileNotFoundException($"Image file not found: {p.ImagePath}");

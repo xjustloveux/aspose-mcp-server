@@ -2,6 +2,7 @@ using Aspose.Cells;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.FileOperations;
@@ -54,6 +55,7 @@ public class SplitWorkbookHandler : OperationHandlerBase<Workbook>
             throw new ArgumentException("Either inputPath, path, or sessionId is required");
         if (string.IsNullOrEmpty(outputDirectory))
             throw new ArgumentException("outputDirectory is required for split operation");
+        SecurityHelper.ValidateFilePath(outputDirectory, nameof(outputDirectory), true);
     }
 
     /// <summary>
@@ -139,7 +141,7 @@ public class SplitWorkbookHandler : OperationHandlerBase<Workbook>
         var worksheet = sourceWorkbook.Worksheets[sheetIndex];
         var fileName = outputFileNamePattern
             .Replace("{index}", sheetIndex.ToString())
-            .Replace("{name}", worksheet.Name);
+            .Replace("{name}", SecurityHelper.SanitizeFileName(worksheet.Name));
         var outputFilePath = Path.Combine(outputDirectory, fileName);
 
         using var newWorkbook = new Workbook();

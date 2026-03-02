@@ -31,7 +31,7 @@ public class AddImagePptWatermarkHandler : OperationHandlerBase<Presentation>
         var width = parameters.GetOptional("width", 200f);
         var height = parameters.GetOptional("height", 200f);
 
-        SecurityHelper.ValidateFilePath(imagePath, "imagePath");
+        SecurityHelper.ValidateFilePath(imagePath, "imagePath", true);
 
         if (!File.Exists(imagePath))
             throw new ArgumentException($"Image file not found: {imagePath}");

@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Table;
 using AsposeMcpServer.Results.Common;
@@ -5,15 +6,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Table;
 
+[SupportedOSPlatform("windows")]
 public class EditPptTableHandlerTests : PptHandlerTestBase
 {
     private readonly EditPptTableHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Edit()
     {
+        SkipIfNotWindows();
         Assert.Equal("edit", _handler.Operation);
     }
 
@@ -21,9 +24,10 @@ public class EditPptTableHandlerTests : PptHandlerTestBase
 
     #region Slide Index Parameter
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithSlideIndex_UpdatesOnCorrectSlide()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var tableShapeIndex = AddTableToSlide(pres, 1, 2, 2);
         var context = CreateContext(pres);
@@ -45,9 +49,10 @@ public class EditPptTableHandlerTests : PptHandlerTestBase
 
     #region Basic Edit Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_EditsTableProperties()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(2, 2);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -66,9 +71,10 @@ public class EditPptTableHandlerTests : PptHandlerTestBase
         Assert.Equal(200.0f, table.X, 0.1);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsSlideIndex()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(2, 2);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -90,9 +96,10 @@ public class EditPptTableHandlerTests : PptHandlerTestBase
 
     #region Position Updates
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithX_UpdatesXPosition()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(2, 2);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -108,9 +115,10 @@ public class EditPptTableHandlerTests : PptHandlerTestBase
         Assert.Equal(300.0f, table.X, 0.1);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithY_UpdatesYPosition()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(2, 2);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -126,9 +134,10 @@ public class EditPptTableHandlerTests : PptHandlerTestBase
         Assert.Equal(250.0f, table.Y, 0.1);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithXAndY_UpdatesBothPositions()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(2, 2);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -150,9 +159,10 @@ public class EditPptTableHandlerTests : PptHandlerTestBase
 
     #region Size Updates (Rejected)
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithWidth_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(2, 2);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -165,9 +175,10 @@ public class EditPptTableHandlerTests : PptHandlerTestBase
         Assert.Contains("column widths", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithHeight_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(2, 2);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -180,9 +191,10 @@ public class EditPptTableHandlerTests : PptHandlerTestBase
         Assert.Contains("row heights", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithWidthAndHeight_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(2, 2);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -199,9 +211,10 @@ public class EditPptTableHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutShapeIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(2, 2);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -213,9 +226,10 @@ public class EditPptTableHandlerTests : PptHandlerTestBase
         Assert.Contains("shapeIndex", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidShapeIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(2, 2);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -227,9 +241,10 @@ public class EditPptTableHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNonTableShape_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Sample");
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -242,9 +257,10 @@ public class EditPptTableHandlerTests : PptHandlerTestBase
         Assert.Contains("not a table", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(2, 2);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

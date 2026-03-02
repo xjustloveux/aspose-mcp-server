@@ -55,9 +55,10 @@ public class WordWatermarkToolTests : WordTestBase
         Assert.NotEqual(WatermarkType.None, doc.Watermark.Type);
     }
 
-    [Fact]
+    [SkippableFact]
     public void AddImageWatermark_ShouldAddImageWatermark()
     {
+        SkipIfNotWindows();
         var docPath = CreateWordDocument("test_add_image_watermark.docx");
         var imagePath = CreateTestImage("watermark_image.png");
         var outputPath = CreateTestFilePath("test_add_image_watermark_output.docx");
@@ -125,9 +126,10 @@ public class WordWatermarkToolTests : WordTestBase
         Assert.NotEqual(WatermarkType.None, doc.Watermark.Type);
     }
 
-    [Fact]
+    [SkippableFact]
     public void AddImageWatermark_WithSessionId_ShouldAddImageWatermarkInMemory()
     {
+        SkipIfNotWindows();
         var docPath = CreateWordDocument("test_session_add_image_watermark.docx");
         var imagePath = CreateTestImage("session_watermark.png");
         var sessionId = OpenSession(docPath);

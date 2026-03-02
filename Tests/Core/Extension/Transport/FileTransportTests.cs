@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.Versioning;
 using AsposeMcpServer.Core.Extension;
 using AsposeMcpServer.Core.Extension.Transport;
 
@@ -7,6 +8,7 @@ namespace AsposeMcpServer.Tests.Core.Extension.Transport;
 /// <summary>
 ///     Unit tests for FileTransport class.
 /// </summary>
+[SupportedOSPlatform("windows")]
 public class FileTransportTests : IDisposable
 {
     private readonly string _tempDirectory;
@@ -20,6 +22,7 @@ public class FileTransportTests : IDisposable
 
     public void Dispose()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         try
         {
             if (Directory.Exists(_tempDirectory))
@@ -35,9 +38,10 @@ public class FileTransportTests : IDisposable
 
     #region Mode Tests
 
-    [Fact]
+    [SkippableFact]
     public void Mode_ReturnsCorrectValue()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         Assert.Equal("file", _transport.Mode);
     }
 
@@ -45,15 +49,17 @@ public class FileTransportTests : IDisposable
 
     #region Constructor Tests
 
-    [Fact]
+    [SkippableFact]
     public void Constructor_CreatesTempDirectory()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         Assert.True(Directory.Exists(_tempDirectory));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Constructor_ExistingDirectory_DoesNotThrow()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         var existingDir = Path.Combine(Path.GetTempPath(), $"FileTransportTests_{Guid.NewGuid():N}");
         Directory.CreateDirectory(existingDir);
 
@@ -68,21 +74,24 @@ public class FileTransportTests : IDisposable
         }
     }
 
-    [Fact]
+    [SkippableFact]
     public void Constructor_NullTempDirectory_ThrowsArgumentException()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         Assert.Throws<ArgumentException>(() => new FileTransport(null!));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Constructor_EmptyTempDirectory_ThrowsArgumentException()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         Assert.Throws<ArgumentException>(() => new FileTransport(string.Empty));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Constructor_WhitespaceTempDirectory_ThrowsArgumentException()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         Assert.Throws<ArgumentException>(() => new FileTransport("   "));
     }
 
@@ -90,9 +99,10 @@ public class FileTransportTests : IDisposable
 
     #region SendAsync Tests
 
-    [Fact]
+    [SkippableFact]
     public async Task SendAsync_ProcessHasExited_ReturnsFalse()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         using var process = new Process();
         process.StartInfo = new ProcessStartInfo
         {
@@ -114,9 +124,10 @@ public class FileTransportTests : IDisposable
         Assert.False(result);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task SendAsync_Success_CreatesFile()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         using var process = CreateTestProcess();
         var metadata = CreateTestMetadata();
         var testData = new byte[] { 10, 20, 30, 40, 50 };
@@ -133,9 +144,10 @@ public class FileTransportTests : IDisposable
         _transport.Cleanup(metadata);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task SendAsync_Success_SetsMetadataProperties()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         using var process = CreateTestProcess();
         var metadata = CreateTestMetadata();
         var data = new byte[] { 1, 2, 3, 4, 5 };
@@ -152,9 +164,10 @@ public class FileTransportTests : IDisposable
         _transport.Cleanup(metadata);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task SendAsync_Success_FileNameIncludesSequenceNumber()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         using var process = CreateTestProcess();
         var metadata = CreateTestMetadata(42);
         var data = new byte[] { 1, 2, 3, 4 };
@@ -170,9 +183,10 @@ public class FileTransportTests : IDisposable
 
     #region Cleanup Tests
 
-    [Fact]
+    [SkippableFact]
     public void Cleanup_NullFilePath_DoesNotThrow()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         var metadata = CreateTestMetadata();
         metadata.FilePath = null;
 
@@ -181,9 +195,10 @@ public class FileTransportTests : IDisposable
         Assert.Null(exception);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Cleanup_EmptyFilePath_DoesNotThrow()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         var metadata = CreateTestMetadata();
         metadata.FilePath = string.Empty;
 
@@ -192,9 +207,10 @@ public class FileTransportTests : IDisposable
         Assert.Null(exception);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task Cleanup_ExistingFile_DeletesFile()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         using var process = CreateTestProcess();
         var metadata = CreateTestMetadata();
         var data = new byte[] { 1, 2, 3, 4 };
@@ -209,9 +225,10 @@ public class FileTransportTests : IDisposable
         Assert.False(File.Exists(filePath));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Cleanup_NonExistentFile_DoesNotThrow()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         var metadata = CreateTestMetadata();
         metadata.FilePath = Path.Combine(_tempDirectory, "nonexistent.pdf");
 

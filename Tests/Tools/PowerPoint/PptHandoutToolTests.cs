@@ -1,4 +1,5 @@
-﻿using Aspose.Slides;
+﻿using System.Runtime.Versioning;
+using Aspose.Slides;
 using AsposeMcpServer.Results;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -11,6 +12,7 @@ namespace AsposeMcpServer.Tests.Tools.PowerPoint;
 ///     Focuses on session management, file I/O, and operation routing.
 ///     Detailed parameter validation and business logic tests are in Handler tests.
 /// </summary>
+[SupportedOSPlatform("windows")]
 public class PptHandoutToolTests : PptTestBase
 {
     private readonly PptHandoutTool _tool;
@@ -22,9 +24,10 @@ public class PptHandoutToolTests : PptTestBase
 
     #region File I/O Smoke Tests
 
-    [Fact]
+    [SkippableFact]
     public void SetHeaderFooter_WithoutHandoutMaster_ShouldAutoCreateAndSucceed()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_handout_no_master.pptx");
         var result = _tool.Execute("set_header_footer", pptPath, headerText: "Handout Header");
         Assert.IsType<FinalizedResult<SuccessResult>>(result);
@@ -34,20 +37,22 @@ public class PptHandoutToolTests : PptTestBase
 
     #region Operation Routing
 
-    [Theory]
+    [SkippableTheory]
     [InlineData("SET_HEADER_FOOTER")]
     [InlineData("Set_Header_Footer")]
     [InlineData("set_header_footer")]
     public void Operation_ShouldBeCaseInsensitive(string operation)
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation($"test_case_{operation.Replace("_", "")}.pptx");
         var result = _tool.Execute(operation, pptPath, headerText: "Test");
         Assert.IsType<FinalizedResult<SuccessResult>>(result);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_unknown_op.pptx");
         var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", pptPath));
         Assert.Contains("Unknown operation", ex.Message);
@@ -57,25 +62,28 @@ public class PptHandoutToolTests : PptTestBase
 
     #region Session Management
 
-    [Fact]
+    [SkippableFact]
     public void SetHeaderFooter_WithSessionId_WithoutHandoutMaster_ShouldAutoCreateAndSucceed()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_session_set_header_footer.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("set_header_footer", sessionId: sessionId, headerText: "Session Header");
         Assert.IsType<FinalizedResult<SuccessResult>>(result);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
+        SkipIfNotWindows();
         Assert.Throws<KeyNotFoundException>(() =>
             _tool.Execute("set_header_footer", sessionId: "invalid_session", headerText: "Test"));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
     {
+        SkipIfNotWindows();
         var pptPath1 = CreatePresentation("test_path_handout.pptx");
         var pptPath2 = CreatePresentation("test_session_handout.pptx");
         var sessionId = OpenSession(pptPath2);

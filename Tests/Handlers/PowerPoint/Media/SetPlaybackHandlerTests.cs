@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Media;
 using AsposeMcpServer.Results.Common;
@@ -5,15 +6,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Media;
 
+[SupportedOSPlatform("windows")]
 public class SetPlaybackHandlerTests : PptHandlerTestBase
 {
     private readonly SetPlaybackHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_SetPlayback()
     {
+        SkipIfNotWindows();
         Assert.Equal("set_playback", _handler.Operation);
     }
 
@@ -21,9 +24,10 @@ public class SetPlaybackHandlerTests : PptHandlerTestBase
 
     #region Basic Playback Settings
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SetsAudioPlaybackSettings()
     {
+        SkipIfNotWindows();
         var tempFile = CreateTempAudioFile();
         var pres = CreatePresentationWithAudio(tempFile);
         var context = CreateContext(pres);
@@ -44,9 +48,10 @@ public class SetPlaybackHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithOnClickMode_SetsOnClickPlayback()
     {
+        SkipIfNotWindows();
         var tempFile = CreateTempAudioFile();
         var pres = CreatePresentationWithAudio(tempFile);
         var context = CreateContext(pres);
@@ -65,9 +70,10 @@ public class SetPlaybackHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithLoop_EnablesLooping()
     {
+        SkipIfNotWindows();
         var tempFile = CreateTempAudioFile();
         var pres = CreatePresentationWithAudio(tempFile);
         var context = CreateContext(pres);
@@ -86,13 +92,14 @@ public class SetPlaybackHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData("mute", AudioVolumeMode.Mute)]
     [InlineData("low", AudioVolumeMode.Low)]
     [InlineData("medium", AudioVolumeMode.Medium)]
     [InlineData("loud", AudioVolumeMode.Loud)]
     public void Execute_WithVolume_SetsVolumeLevel(string volumeStr, AudioVolumeMode expectedMode)
     {
+        SkipIfNotWindows();
         var tempFile = CreateTempAudioFile();
         var pres = CreatePresentationWithAudio(tempFile);
         var context = CreateContext(pres);
@@ -115,9 +122,10 @@ public class SetPlaybackHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutShapeIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -125,9 +133,10 @@ public class SetPlaybackHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidVolume_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var tempFile = CreateTempAudioFile();
         var pres = CreatePresentationWithAudio(tempFile);
         var context = CreateContext(pres);
@@ -142,9 +151,10 @@ public class SetPlaybackHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNonMediaShape_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Test");
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -159,9 +169,10 @@ public class SetPlaybackHandlerTests : PptHandlerTestBase
 
     #region Video FullScreenMode
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithFullScreenModeTrue_SetsFullScreenOnVideo()
     {
+        SkipIfNotWindows();
         var tempFile = CreateTempVideoFile();
         var pres = CreatePresentationWithVideo(tempFile);
         var context = CreateContext(pres);
@@ -180,9 +191,10 @@ public class SetPlaybackHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithFullScreenModeFalse_SetsFullScreenOffOnVideo()
     {
+        SkipIfNotWindows();
         var tempFile = CreateTempVideoFile();
         var pres = CreatePresentationWithVideo(tempFile);
         var context = CreateContext(pres);
@@ -202,9 +214,10 @@ public class SetPlaybackHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutFullScreenMode_DoesNotChangeFullScreen()
     {
+        SkipIfNotWindows();
         var tempFile = CreateTempVideoFile();
         var pres = CreatePresentationWithVideo(tempFile);
         var context = CreateContext(pres);

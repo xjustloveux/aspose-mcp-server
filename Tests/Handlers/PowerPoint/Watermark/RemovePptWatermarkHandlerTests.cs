@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Watermark;
 using AsposeMcpServer.Results.Common;
@@ -5,15 +6,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Watermark;
 
+[SupportedOSPlatform("windows")]
 public class RemovePptWatermarkHandlerTests : PptHandlerTestBase
 {
     private readonly RemovePptWatermarkHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Remove()
     {
+        SkipIfNotWindows();
         Assert.Equal("remove", _handler.Operation);
     }
 
@@ -21,9 +24,10 @@ public class RemovePptWatermarkHandlerTests : PptHandlerTestBase
 
     #region Remove Watermarks
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithWatermarks_ReturnsSuccessResult()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var shape = pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 0, 0, 100, 100);
         shape.Name = $"{AddTextPptWatermarkHandler.WatermarkPrefix}TEXT_test";
@@ -36,9 +40,10 @@ public class RemovePptWatermarkHandlerTests : PptHandlerTestBase
         Assert.Contains("1 watermark", result.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithWatermarks_MarksContextModified()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var shape = pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 0, 0, 100, 100);
         shape.Name = $"{AddTextPptWatermarkHandler.WatermarkPrefix}TEXT_test";
@@ -50,9 +55,10 @@ public class RemovePptWatermarkHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_NoWatermarks_ReturnsZeroCount()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -63,9 +69,10 @@ public class RemovePptWatermarkHandlerTests : PptHandlerTestBase
         Assert.Contains("0 watermark", result.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_NoWatermarks_DoesNotMarkModified()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -75,9 +82,10 @@ public class RemovePptWatermarkHandlerTests : PptHandlerTestBase
         AssertNotModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ShouldNotRemoveNonWatermarkShapes()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var normal = pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 0, 0, 100, 100);
         normal.Name = "NormalShape";
@@ -91,9 +99,10 @@ public class RemovePptWatermarkHandlerTests : PptHandlerTestBase
         Assert.Single(pres.Slides[0].Shapes);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_RemovesMultipleWatermarks()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var wm1 = pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 0, 0, 100, 100);
         wm1.Name = $"{AddTextPptWatermarkHandler.WatermarkPrefix}TEXT_one";
@@ -109,9 +118,10 @@ public class RemovePptWatermarkHandlerTests : PptHandlerTestBase
         Assert.Empty(pres.Slides[0].Shapes);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_RemovesWatermarksAcrossSlides()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(2);
         var wm1 = pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 0, 0, 100, 100);
         wm1.Name = $"{AddTextPptWatermarkHandler.WatermarkPrefix}TEXT_slide0";

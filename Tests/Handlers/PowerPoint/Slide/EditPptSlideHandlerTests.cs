@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Slide;
 using AsposeMcpServer.Results.Common;
@@ -5,15 +6,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Slide;
 
+[SupportedOSPlatform("windows")]
 public class EditPptSlideHandlerTests : PptHandlerTestBase
 {
     private readonly EditPptSlideHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Edit()
     {
+        SkipIfNotWindows();
         Assert.Equal("edit", _handler.Operation);
     }
 
@@ -21,9 +24,10 @@ public class EditPptSlideHandlerTests : PptHandlerTestBase
 
     #region Result Message
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsSlideIndexInMessage()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(5);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -42,9 +46,10 @@ public class EditPptSlideHandlerTests : PptHandlerTestBase
 
     #region Error Handling - Missing Parameter
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -57,9 +62,10 @@ public class EditPptSlideHandlerTests : PptHandlerTestBase
 
     #region Basic Edit Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithSlideIndex_ReturnsSuccess()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -74,12 +80,13 @@ public class EditPptSlideHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(0)]
     [InlineData(1)]
     [InlineData(2)]
     public void Execute_EditsSlideAtVariousIndices(int slideIndex)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -99,9 +106,10 @@ public class EditPptSlideHandlerTests : PptHandlerTestBase
 
     #region Layout Change
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithLayoutIndex_ChangesLayout()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var originalLayoutName = pres.Slides[0].LayoutSlide.Name;
         var layoutCount = pres.LayoutSlides.Count;
@@ -118,11 +126,12 @@ public class EditPptSlideHandlerTests : PptHandlerTestBase
         Assert.NotEqual(originalLayoutName, pres.Slides[0].LayoutSlide.Name);
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(0)]
     [InlineData(1)]
     public void Execute_WithVariousLayoutIndices_AppliesLayout(int layoutIndex)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         if (pres.LayoutSlides.Count <= layoutIndex) return;
         var targetLayoutName = pres.LayoutSlides[layoutIndex].Name;
@@ -142,9 +151,10 @@ public class EditPptSlideHandlerTests : PptHandlerTestBase
 
     #region Content Preservation
 
-    [Fact]
+    [SkippableFact]
     public void Execute_PreservesSlideShapes()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         var shapeCount = pres.Slides[0].Shapes.Count;
@@ -159,9 +169,10 @@ public class EditPptSlideHandlerTests : PptHandlerTestBase
         Assert.Equal(shapeCount, pres.Slides[0].Shapes.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_PreservesOtherSlides()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 10, 10, 50, 50);
         pres.Slides[2].Shapes.AddAutoShape(ShapeType.Ellipse, 10, 10, 50, 50);
@@ -183,12 +194,13 @@ public class EditPptSlideHandlerTests : PptHandlerTestBase
 
     #region Error Handling - Invalid slideIndex
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(3, 3)]
     [InlineData(3, 5)]
     [InlineData(3, 100)]
     public void Execute_WithSlideIndexOutOfRange_ThrowsException(int totalSlides, int invalidIndex)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(totalSlides);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -199,11 +211,12 @@ public class EditPptSlideHandlerTests : PptHandlerTestBase
         Assert.ThrowsAny<Exception>(() => _handler.Execute(context, parameters));
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(-1)]
     [InlineData(-5)]
     public void Execute_WithNegativeSlideIndex_ThrowsException(int negativeIndex)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -218,9 +231,10 @@ public class EditPptSlideHandlerTests : PptHandlerTestBase
 
     #region Error Handling - Invalid layoutIndex
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithLayoutIndexOutOfRange_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var layoutCount = pres.LayoutSlides.Count;
         var context = CreateContext(pres);
@@ -234,11 +248,12 @@ public class EditPptSlideHandlerTests : PptHandlerTestBase
         Assert.Contains("layoutIndex", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(-1)]
     [InlineData(-5)]
     public void Execute_WithNegativeLayoutIndex_ThrowsArgumentException(int negativeLayoutIndex)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(1);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

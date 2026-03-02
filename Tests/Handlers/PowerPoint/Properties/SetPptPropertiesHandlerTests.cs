@@ -1,18 +1,21 @@
+using System.Runtime.Versioning;
 using AsposeMcpServer.Handlers.PowerPoint.Properties;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Properties;
 
+[SupportedOSPlatform("windows")]
 public class SetPptPropertiesHandlerTests : PptHandlerTestBase
 {
     private readonly SetPptPropertiesHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Set()
     {
+        SkipIfNotWindows();
         Assert.Equal("set", _handler.Operation);
     }
 
@@ -20,9 +23,10 @@ public class SetPptPropertiesHandlerTests : PptHandlerTestBase
 
     #region Basic Set Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SetsTitle()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -37,9 +41,10 @@ public class SetPptPropertiesHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SetsSubject()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -54,9 +59,10 @@ public class SetPptPropertiesHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SetsAuthor()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -71,9 +77,10 @@ public class SetPptPropertiesHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SetsKeywords()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -88,9 +95,10 @@ public class SetPptPropertiesHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SetsComments()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -105,9 +113,10 @@ public class SetPptPropertiesHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SetsCategory()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -122,9 +131,10 @@ public class SetPptPropertiesHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SetsCompany()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -139,9 +149,10 @@ public class SetPptPropertiesHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SetsManager()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -156,9 +167,10 @@ public class SetPptPropertiesHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SetsMultipleProperties()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -181,9 +193,10 @@ public class SetPptPropertiesHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SetsCustomProperties()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var customProps = new Dictionary<string, object>
@@ -206,9 +219,10 @@ public class SetPptPropertiesHandlerTests : PptHandlerTestBase
 
     #region Edge Cases
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithEmptyParameters_StillReturnsSuccess()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -219,9 +233,10 @@ public class SetPptPropertiesHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_OverwritesExistingProperties()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         pres.DocumentProperties.Title = "Old Title";
         var context = CreateContext(pres);

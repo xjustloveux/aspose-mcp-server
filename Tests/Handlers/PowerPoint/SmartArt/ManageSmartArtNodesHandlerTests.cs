@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using Aspose.Slides.SmartArt;
 using AsposeMcpServer.Handlers.PowerPoint.SmartArt;
@@ -6,15 +7,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.SmartArt;
 
+[SupportedOSPlatform("windows")]
 public class ManageSmartArtNodesHandlerTests : PptHandlerTestBase
 {
     private readonly ManageSmartArtNodesHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_ManageNodes()
     {
+        SkipIfNotWindows();
         Assert.Equal("manage_nodes", _handler.Operation);
     }
 
@@ -34,9 +37,10 @@ public class ManageSmartArtNodesHandlerTests : PptHandlerTestBase
 
     #region Basic Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_AddNode_AddsNewNode()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSmartArt();
         var smartArt = (ISmartArt)pres.Slides[0].Shapes[0];
         var targetNode = smartArt.AllNodes[0];
@@ -64,9 +68,10 @@ public class ManageSmartArtNodesHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_EditNode_EditsExistingNode()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSmartArt();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -90,9 +95,10 @@ public class ManageSmartArtNodesHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DeleteNode_DeletesNode()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSmartArt();
         var smartArt = (ISmartArt)pres.Slides[0].Shapes[0];
         var initialNodeCount = smartArt.AllNodes.Count;
@@ -117,9 +123,10 @@ public class ManageSmartArtNodesHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSmartArt();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -133,9 +140,10 @@ public class ManageSmartArtNodesHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutAction_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSmartArt();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -148,9 +156,10 @@ public class ManageSmartArtNodesHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidAction_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSmartArt();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -164,9 +173,10 @@ public class ManageSmartArtNodesHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNonSmartArtShape_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Test");
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -181,9 +191,10 @@ public class ManageSmartArtNodesHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutTargetPath_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSmartArt();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -197,9 +208,10 @@ public class ManageSmartArtNodesHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidRootIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSmartArt();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -215,9 +227,10 @@ public class ManageSmartArtNodesHandlerTests : PptHandlerTestBase
         Assert.Contains("out of range", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_AddWithoutText_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSmartArt();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -232,9 +245,10 @@ public class ManageSmartArtNodesHandlerTests : PptHandlerTestBase
         Assert.Contains("text", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_EditWithoutText_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSmartArt();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -253,9 +267,10 @@ public class ManageSmartArtNodesHandlerTests : PptHandlerTestBase
 
     #region Position Parameter Tests
 
-    [Fact]
+    [SkippableFact]
     public void Execute_AddWithPosition_AddsAtPosition()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSmartArt();
         var smartArt = (ISmartArt)pres.Slides[0].Shapes[0];
         var targetNode = smartArt.AllNodes[0];
@@ -283,9 +298,10 @@ public class ManageSmartArtNodesHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_AddWithInvalidPosition_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSmartArt();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -306,9 +322,10 @@ public class ManageSmartArtNodesHandlerTests : PptHandlerTestBase
 
     #region Invalid Index Tests
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSmartArt();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -323,9 +340,10 @@ public class ManageSmartArtNodesHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidShapeIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSmartArt();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -340,9 +358,10 @@ public class ManageSmartArtNodesHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithEmptyTargetPath_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSmartArt();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

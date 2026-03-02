@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using Aspose.Slides.SlideShow;
 using AsposeMcpServer.Handlers.PowerPoint.Transition;
@@ -6,15 +7,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Transition;
 
+[SupportedOSPlatform("windows")]
 public class DeletePptTransitionHandlerTests : PptHandlerTestBase
 {
     private readonly DeletePptTransitionHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Delete()
     {
+        SkipIfNotWindows();
         Assert.Equal("delete", _handler.Operation);
     }
 
@@ -22,9 +25,10 @@ public class DeletePptTransitionHandlerTests : PptHandlerTestBase
 
     #region Multiple Slides
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithSlideIndex_RemovesFromCorrectSlide()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         pres.Slides[0].SlideShowTransition.Type = TransitionType.Fade;
         pres.Slides[1].SlideShowTransition.Type = TransitionType.Wipe;
@@ -44,9 +48,10 @@ public class DeletePptTransitionHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -61,9 +66,10 @@ public class DeletePptTransitionHandlerTests : PptHandlerTestBase
 
     #region Can Remove Non-Existent Transition
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNoExistingTransition_StillSucceeds()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -91,9 +97,10 @@ public class DeletePptTransitionHandlerTests : PptHandlerTestBase
 
     #region Basic Delete Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_RemovesTransition()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTransition(TransitionType.Fade);
         Assert.Equal(TransitionType.Fade, pres.Slides[0].SlideShowTransition.Type);
         var context = CreateContext(pres);
@@ -108,9 +115,10 @@ public class DeletePptTransitionHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SetsAdvanceOnClick()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTransition(TransitionType.Fade);
         pres.Slides[0].SlideShowTransition.AdvanceOnClick = false;
         var context = CreateContext(pres);
@@ -121,9 +129,10 @@ public class DeletePptTransitionHandlerTests : PptHandlerTestBase
         Assert.True(pres.Slides[0].SlideShowTransition.AdvanceOnClick);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsSlideIndex()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();

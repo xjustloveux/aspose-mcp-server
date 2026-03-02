@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Handlers.PowerPoint.FileOperations;
@@ -6,6 +7,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.FileOperations;
 
+[SupportedOSPlatform("windows")]
 public class SplitPresentationHandlerTests : PptHandlerTestBase
 {
     private readonly SplitPresentationHandler _handler = new();
@@ -24,9 +26,10 @@ public class SplitPresentationHandlerTests : PptHandlerTestBase
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Split()
     {
+        SkipIfNotWindows();
         Assert.Equal("split", _handler.Operation);
     }
 
@@ -37,6 +40,7 @@ public class SplitPresentationHandlerTests : PptHandlerTestBase
     [SkippableFact]
     public void Execute_SplitsPresentation()
     {
+        SkipIfNotWindows();
         SkipInEvaluationMode(AsposeLibraryType.Slides, "Master slide cloning fails in evaluation mode");
 
         var outputDir = Path.Combine(TestDir, "split_output");
@@ -67,6 +71,7 @@ public class SplitPresentationHandlerTests : PptHandlerTestBase
     [SkippableFact]
     public void Execute_WithPath_SplitsPresentation()
     {
+        SkipIfNotWindows();
         SkipInEvaluationMode(AsposeLibraryType.Slides, "Master slide cloning fails in evaluation mode");
 
         var outputDir = Path.Combine(TestDir, "split_path");
@@ -91,6 +96,7 @@ public class SplitPresentationHandlerTests : PptHandlerTestBase
     [SkippableFact]
     public void Execute_WithSlidesPerFile_SplitsPresentation()
     {
+        SkipIfNotWindows();
         SkipInEvaluationMode(AsposeLibraryType.Slides, "Master slide cloning fails in evaluation mode");
 
         var outputDir = Path.Combine(TestDir, "split_multi");
@@ -114,6 +120,7 @@ public class SplitPresentationHandlerTests : PptHandlerTestBase
     [SkippableFact]
     public void Execute_WithOutputFileNamePattern_UsesPattern()
     {
+        SkipIfNotWindows();
         SkipInEvaluationMode(AsposeLibraryType.Slides, "Master slide cloning fails in evaluation mode");
 
         var outputDir = Path.Combine(TestDir, "split_pattern");
@@ -138,9 +145,10 @@ public class SplitPresentationHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutSource_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -151,9 +159,10 @@ public class SplitPresentationHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutOutputDirectory_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -164,9 +173,10 @@ public class SplitPresentationHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSlideRange_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var outputDir = Path.Combine(TestDir, "split_invalid");
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);

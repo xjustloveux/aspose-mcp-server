@@ -43,6 +43,9 @@ public class MergePresentationsHandler : OperationHandlerBase<Presentation>
         if (validPaths.Count == 0)
             throw new ArgumentException("No valid input paths provided");
 
+        foreach (var inputPath in validPaths)
+            SecurityHelper.ValidateFilePath(inputPath, "inputPaths", true);
+
         using var masterPresentation = new Presentation(validPaths[0]);
 
         for (var i = 1; i < validPaths.Count; i++)

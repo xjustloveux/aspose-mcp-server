@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Handlers.PowerPoint.Font;
 using AsposeMcpServer.Results.Common;
@@ -5,15 +6,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Font;
 
+[SupportedOSPlatform("windows")]
 public class RemoveEmbeddedPptFontHandlerTests : PptHandlerTestBase
 {
     private readonly RemoveEmbeddedPptFontHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_RemoveEmbedded()
     {
+        SkipIfNotWindows();
         Assert.Equal("remove_embedded", _handler.Operation);
     }
 
@@ -21,9 +24,10 @@ public class RemoveEmbeddedPptFontHandlerTests : PptHandlerTestBase
 
     #region Remove Embedded Font
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNonEmbeddedFont_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Hello World");
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -34,9 +38,10 @@ public class RemoveEmbeddedPptFontHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithMissingFontName_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Hello World");
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -44,9 +49,10 @@ public class RemoveEmbeddedPptFontHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithEmbeddedFont_RemovesIt()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Hello World");
         var allFonts = pres.FontsManager.GetFonts();
         if (allFonts.Length == 0)

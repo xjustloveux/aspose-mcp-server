@@ -95,7 +95,7 @@ public class GetExcelCommentsHandler : OperationHandlerBase<Workbook>
         }
         catch (CellsException ex)
         {
-            throw new ArgumentException($"Excel operation failed: {ex.Message}");
+            throw new InvalidOperationException($"Excel operation failed: {ex.Message}", ex);
         }
     }
 

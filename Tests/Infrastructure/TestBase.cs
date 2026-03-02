@@ -543,6 +543,18 @@ public abstract class TestBase : IDisposable
     }
 
     /// <summary>
+    ///     Skips the current test if not running on Windows.
+    ///     Use this with [SkippableFact] or [SkippableTheory] attribute.
+    ///     This properly marks the test as "Skipped" instead of failing on non-Windows platforms.
+    /// </summary>
+    /// <param name="reason">The reason for skipping (shown in test output).</param>
+    protected static void SkipIfNotWindows(
+        string reason = "Only supported on Windows")
+    {
+        Skip.IfNot(OperatingSystem.IsWindows(), reason);
+    }
+
+    /// <summary>
     ///     Creates a test file path
     /// </summary>
     protected string CreateTestFilePath(string fileName)

@@ -1,18 +1,21 @@
+using System.Runtime.Versioning;
 using AsposeMcpServer.Handlers.PowerPoint.Font;
 using AsposeMcpServer.Results.PowerPoint.Font;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Font;
 
+[SupportedOSPlatform("windows")]
 public class GetUsedPptFontsHandlerTests : PptHandlerTestBase
 {
     private readonly GetUsedPptFontsHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_GetUsed()
     {
+        SkipIfNotWindows();
         Assert.Equal("get_used", _handler.Operation);
     }
 
@@ -20,9 +23,10 @@ public class GetUsedPptFontsHandlerTests : PptHandlerTestBase
 
     #region Get Used Fonts
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsGetFontsPptResult()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Hello World");
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -32,9 +36,10 @@ public class GetUsedPptFontsHandlerTests : PptHandlerTestBase
         Assert.IsType<GetFontsPptResult>(res);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsNonEmptyFontList()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Hello World");
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -46,9 +51,10 @@ public class GetUsedPptFontsHandlerTests : PptHandlerTestBase
         Assert.NotEmpty(result.Items);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsFontWithName()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Hello World");
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -59,9 +65,10 @@ public class GetUsedPptFontsHandlerTests : PptHandlerTestBase
         Assert.All(result.Items, item => Assert.NotNull(item.FontName));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsCorrectCount()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Hello World");
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -72,9 +79,10 @@ public class GetUsedPptFontsHandlerTests : PptHandlerTestBase
         Assert.Equal(result.Items.Count, result.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsMessage()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Hello World");
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -86,9 +94,10 @@ public class GetUsedPptFontsHandlerTests : PptHandlerTestBase
         Assert.Contains("font", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DoesNotModifyContext()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Hello World");
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -98,9 +107,10 @@ public class GetUsedPptFontsHandlerTests : PptHandlerTestBase
         AssertNotModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithEmptyPresentation_ReturnsResult()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -112,9 +122,10 @@ public class GetUsedPptFontsHandlerTests : PptHandlerTestBase
         Assert.Equal(result.Items.Count, result.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SystemFonts_MarkedAsNotCustom()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Hello World");
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -127,9 +138,10 @@ public class GetUsedPptFontsHandlerTests : PptHandlerTestBase
         if (calibriFont != null) Assert.False(calibriFont.IsCustom);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsEmbeddedCount()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Hello World");
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();

@@ -1,4 +1,5 @@
-﻿using Aspose.Slides;
+﻿using System.Runtime.Versioning;
+using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Results.PowerPoint.Properties;
@@ -12,6 +13,7 @@ namespace AsposeMcpServer.Tests.Tools.PowerPoint;
 ///     Focuses on session management, file I/O, and operation routing.
 ///     Detailed parameter validation and business logic tests are in Handler tests.
 /// </summary>
+[SupportedOSPlatform("windows")]
 public class PptPropertiesToolTests : PptTestBase
 {
     private readonly PptPropertiesTool _tool;
@@ -33,9 +35,10 @@ public class PptPropertiesToolTests : PptTestBase
 
     #region File I/O Smoke Tests
 
-    [Fact]
+    [SkippableFact]
     public void Get_ShouldReturnPropertiesAsJson()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_get.pptx");
         var result = _tool.Execute("get", pptPath);
         var data = GetResultData<GetPropertiesPptResult>(result);
@@ -44,9 +47,10 @@ public class PptPropertiesToolTests : PptTestBase
         Assert.NotNull(data.Author);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Set_ShouldSetBasicProperties()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_set_basic.pptx");
         var outputPath = CreateTestFilePath("test_set_basic_output.pptx");
         var result = _tool.Execute("set", pptPath, title: "Test Presentation", author: "Test Author",
@@ -60,21 +64,23 @@ public class PptPropertiesToolTests : PptTestBase
 
     #region Operation Routing
 
-    [Theory]
+    [SkippableTheory]
     [InlineData("GET")]
     [InlineData("Get")]
     [InlineData("get")]
     public void Operation_ShouldBeCaseInsensitive(string operation)
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation($"test_case_get_{operation}.pptx");
         var result = _tool.Execute(operation, pptPath);
         var data = GetResultData<GetPropertiesPptResult>(result);
         Assert.NotNull(data);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_unknown_op.pptx");
         var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", pptPath));
         Assert.Contains("Unknown operation", ex.Message);
@@ -84,9 +90,10 @@ public class PptPropertiesToolTests : PptTestBase
 
     #region Session Management
 
-    [Fact]
+    [SkippableFact]
     public void Get_WithSessionId_ShouldReturnPropertiesFromMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithProperties("test_session_get.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("get", sessionId: sessionId);
@@ -98,9 +105,10 @@ public class PptPropertiesToolTests : PptTestBase
         Assert.True(output.IsSession);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Set_WithSessionId_ShouldModifyInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_session_set.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("set", sessionId: sessionId, title: "Session Title", author: "Session Author");
@@ -110,15 +118,17 @@ public class PptPropertiesToolTests : PptTestBase
         Assert.True(output.IsSession);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
+        SkipIfNotWindows();
         Assert.Throws<KeyNotFoundException>(() => _tool.Execute("get", sessionId: "invalid_session"));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
     {
+        SkipIfNotWindows();
         var pptPath1 = CreatePresentationWithProperties("test_path_props.pptx");
         var pptPath2 = CreatePresentation("test_session_props.pptx");
         using (var ppt = new Presentation(pptPath2))

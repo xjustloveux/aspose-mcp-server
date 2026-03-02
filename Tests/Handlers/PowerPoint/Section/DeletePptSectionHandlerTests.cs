@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Section;
 using AsposeMcpServer.Results.Common;
@@ -5,15 +6,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Section;
 
+[SupportedOSPlatform("windows")]
 public class DeletePptSectionHandlerTests : PptHandlerTestBase
 {
     private readonly DeletePptSectionHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Delete()
     {
+        SkipIfNotWindows();
         Assert.Equal("delete", _handler.Operation);
     }
 
@@ -37,9 +40,10 @@ public class DeletePptSectionHandlerTests : PptHandlerTestBase
 
     #region Basic Delete Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DeletesSection()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSections(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -55,9 +59,10 @@ public class DeletePptSectionHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DecreasesSectionCount()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSections(3);
         var initialCount = pres.Sections.Count;
         var context = CreateContext(pres);
@@ -71,9 +76,10 @@ public class DeletePptSectionHandlerTests : PptHandlerTestBase
         Assert.Equal(initialCount - 1, pres.Sections.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsSectionIndex()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSections(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -92,9 +98,10 @@ public class DeletePptSectionHandlerTests : PptHandlerTestBase
 
     #region Keep Slides Parameter
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithKeepSlidesTrue_KeepsSlides()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSections(2);
         var initialSlideCount = pres.Slides.Count;
         var context = CreateContext(pres);
@@ -109,9 +116,10 @@ public class DeletePptSectionHandlerTests : PptHandlerTestBase
         Assert.Equal(initialSlideCount, pres.Slides.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithKeepSlidesFalse_RemovesSlidesWithSection()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSections(2);
         var initialSlideCount = pres.Slides.Count;
         var context = CreateContext(pres);
@@ -126,9 +134,10 @@ public class DeletePptSectionHandlerTests : PptHandlerTestBase
         Assert.True(pres.Slides.Count < initialSlideCount);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DefaultKeepSlides_KeepsSlides()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSections(2);
         var initialSlideCount = pres.Slides.Count;
         var context = CreateContext(pres);
@@ -142,9 +151,10 @@ public class DeletePptSectionHandlerTests : PptHandlerTestBase
         Assert.Equal(initialSlideCount, pres.Slides.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsKeepSlidesStatus()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSections(2);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -164,11 +174,12 @@ public class DeletePptSectionHandlerTests : PptHandlerTestBase
 
     #region Various Section Indices
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(1)]
     [InlineData(2)]
     public void Execute_DeletesVariousSections(int sectionIndex)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSections(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -183,9 +194,10 @@ public class DeletePptSectionHandlerTests : PptHandlerTestBase
         Assert.Contains("removed", result.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DeletesOnlySection()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSections(1);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -204,9 +216,10 @@ public class DeletePptSectionHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutSectionIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSections(3);
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -214,9 +227,10 @@ public class DeletePptSectionHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSectionIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSections(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -227,9 +241,10 @@ public class DeletePptSectionHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNegativeSectionIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSections(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -240,9 +255,10 @@ public class DeletePptSectionHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNoSections_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

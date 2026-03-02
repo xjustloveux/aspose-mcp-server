@@ -144,9 +144,9 @@ public static class LicenseManager
                 var licFiles = Directory.GetFiles(dir, "*.lic", SearchOption.TopDirectoryOnly);
                 if (licFiles.Length > 0) return licFiles[0];
             }
-            catch
+            catch (Exception ex)
             {
-                // Ignore directory access errors
+                Console.Error.WriteLine($"[WARN] Failed to scan directory for license files: {ex.Message}");
             }
 
         return null;
@@ -194,9 +194,9 @@ public static class LicenseManager
                 loader(licensePath);
                 loadedLicenses.Add(name);
             }
-            catch
+            catch (Exception ex)
             {
-                // Ignore license loading errors
+                Console.Error.WriteLine($"[WARN] Failed to load {name} license from '{licensePath}': {ex.Message}");
             }
         }
 

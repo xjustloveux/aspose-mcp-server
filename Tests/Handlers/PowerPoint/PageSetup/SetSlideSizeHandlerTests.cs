@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.PageSetup;
 using AsposeMcpServer.Results.Common;
@@ -5,15 +6,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.PageSetup;
 
+[SupportedOSPlatform("windows")]
 public class SetSlideSizeHandlerTests : PptHandlerTestBase
 {
     private readonly SetSlideSizeHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_SetSize()
     {
+        SkipIfNotWindows();
         Assert.Equal("set_size", _handler.Operation);
     }
 
@@ -21,9 +24,10 @@ public class SetSlideSizeHandlerTests : PptHandlerTestBase
 
     #region Basic Set Slide Size Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SetsDefaultSize()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateEmptyParameters();
@@ -35,9 +39,10 @@ public class SetSlideSizeHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_Sets16x10Size()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -52,9 +57,10 @@ public class SetSlideSizeHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SetsA4Size()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -69,9 +75,10 @@ public class SetSlideSizeHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SetsCustomSize()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -94,9 +101,10 @@ public class SetSlideSizeHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_CustomWithoutWidth_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -108,9 +116,10 @@ public class SetSlideSizeHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_CustomWithoutHeight_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -126,9 +135,10 @@ public class SetSlideSizeHandlerTests : PptHandlerTestBase
 
     #region Preset Variations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SetsWidescreenSize()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -143,9 +153,10 @@ public class SetSlideSizeHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SetsLetterSize()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -160,9 +171,10 @@ public class SetSlideSizeHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SetsBannerSize()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -181,9 +193,10 @@ public class SetSlideSizeHandlerTests : PptHandlerTestBase
 
     #region Validation Errors
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithUnsupportedPreset_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -195,9 +208,10 @@ public class SetSlideSizeHandlerTests : PptHandlerTestBase
         Assert.Contains("Unsupported preset", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithUnsupportedScaleType_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -210,9 +224,10 @@ public class SetSlideSizeHandlerTests : PptHandlerTestBase
         Assert.Contains("Unsupported scaleType", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_CustomWithZeroWidth_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -226,9 +241,10 @@ public class SetSlideSizeHandlerTests : PptHandlerTestBase
         Assert.Contains("Width", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_CustomWithExcessiveWidth_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -242,9 +258,10 @@ public class SetSlideSizeHandlerTests : PptHandlerTestBase
         Assert.Contains("Width", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_CustomWithZeroHeight_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -258,9 +275,10 @@ public class SetSlideSizeHandlerTests : PptHandlerTestBase
         Assert.Contains("Height", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_CustomWithExcessiveHeight_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -278,9 +296,10 @@ public class SetSlideSizeHandlerTests : PptHandlerTestBase
 
     #region Scale Type Variations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithMaximizeScaleType_Succeeds()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -294,9 +313,10 @@ public class SetSlideSizeHandlerTests : PptHandlerTestBase
         Assert.IsType<SuccessResult>(res);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithDoNotScaleScaleType_Succeeds()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>

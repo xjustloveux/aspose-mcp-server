@@ -80,9 +80,10 @@ public class PdfWorkflowTests : TestBase
     /// <summary>
     ///     Verifies the workflow of adding a watermark to PDF.
     /// </summary>
-    [Fact]
+    [SkippableFact]
     public void Pdf_AddWatermark_Workflow()
     {
+        SkipIfNotWindows();
         var originalPath = CreatePdfDocumentWithContent("Document content");
         var openResult = _sessionTool.Execute("open", originalPath);
         var openData = GetResultData<OpenSessionResult>(openResult);

@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Aspose.Slides;
 using AsposeMcpServer.Handlers.PowerPoint.Table;
 using AsposeMcpServer.Results.Common;
@@ -5,15 +6,17 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Table;
 
+[SupportedOSPlatform("windows")]
 public class InsertPptTableColumnHandlerTests : PptHandlerTestBase
 {
     private readonly InsertPptTableColumnHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_InsertColumn()
     {
+        SkipIfNotWindows();
         Assert.Equal("insert_column", _handler.Operation);
     }
 
@@ -21,9 +24,10 @@ public class InsertPptTableColumnHandlerTests : PptHandlerTestBase
 
     #region CopyFromColumn Parameter
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithCopyFromColumn_CopiesFromSpecifiedColumn()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(3, 3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -42,9 +46,10 @@ public class InsertPptTableColumnHandlerTests : PptHandlerTestBase
 
     #region Slide Index Parameter
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithSlideIndex_InsertsOnCorrectSlide()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var tableShapeIndex = AddTableToSlide(pres, 1, 2, 2);
         var context = CreateContext(pres);
@@ -64,9 +69,10 @@ public class InsertPptTableColumnHandlerTests : PptHandlerTestBase
 
     #region Basic Insert Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_InsertsColumn()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(3, 3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -87,9 +93,10 @@ public class InsertPptTableColumnHandlerTests : PptHandlerTestBase
         }
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_IncreasesColumnCount()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(3, 3);
         var table = pres.Slides[0].Shapes[0] as ITable;
         var initialColCount = table!.Columns.Count;
@@ -104,9 +111,10 @@ public class InsertPptTableColumnHandlerTests : PptHandlerTestBase
         Assert.Equal(initialColCount + 1, table.Columns.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsInsertIndex()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(3, 3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -131,9 +139,10 @@ public class InsertPptTableColumnHandlerTests : PptHandlerTestBase
 
     #region Column Index Parameter
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DefaultColumnIndex_InsertsAtEnd()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(3, 3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -153,12 +162,13 @@ public class InsertPptTableColumnHandlerTests : PptHandlerTestBase
         }
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(0)]
     [InlineData(1)]
     [InlineData(2)]
     public void Execute_WithColumnIndex_InsertsAtCorrectPosition(int colIndex)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(3, 3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -179,9 +189,10 @@ public class InsertPptTableColumnHandlerTests : PptHandlerTestBase
         }
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithColumnIndexAtEnd_InsertsAtEnd()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(3, 3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -200,9 +211,10 @@ public class InsertPptTableColumnHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithoutShapeIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(3, 3);
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
@@ -211,9 +223,10 @@ public class InsertPptTableColumnHandlerTests : PptHandlerTestBase
         Assert.Contains("shapeIndex", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidShapeIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(3, 3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -224,9 +237,10 @@ public class InsertPptTableColumnHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNonTableShape_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithText("Sample");
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -238,9 +252,10 @@ public class InsertPptTableColumnHandlerTests : PptHandlerTestBase
         Assert.Contains("not a table", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidColumnIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(3, 3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -252,9 +267,10 @@ public class InsertPptTableColumnHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithNegativeColumnIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithTable(3, 3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

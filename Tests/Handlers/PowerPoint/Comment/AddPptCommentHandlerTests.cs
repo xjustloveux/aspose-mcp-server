@@ -1,18 +1,21 @@
+using System.Runtime.Versioning;
 using AsposeMcpServer.Handlers.PowerPoint.Comment;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Comment;
 
+[SupportedOSPlatform("windows")]
 public class AddPptCommentHandlerTests : PptHandlerTestBase
 {
     private readonly AddPptCommentHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_Add()
     {
+        SkipIfNotWindows();
         Assert.Equal("add", _handler.Operation);
     }
 
@@ -20,12 +23,13 @@ public class AddPptCommentHandlerTests : PptHandlerTestBase
 
     #region Various Slide Indices
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(0)]
     [InlineData(1)]
     [InlineData(2)]
     public void Execute_AddsCommentAtVariousSlideIndices(int slideIndex)
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -44,9 +48,10 @@ public class AddPptCommentHandlerTests : PptHandlerTestBase
 
     #region Basic Add Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_AddsComment()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -62,9 +67,10 @@ public class AddPptCommentHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsAuthorInMessage()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -79,9 +85,10 @@ public class AddPptCommentHandlerTests : PptHandlerTestBase
         Assert.Contains("John Doe", result.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsSlideIndexInMessage()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -97,9 +104,10 @@ public class AddPptCommentHandlerTests : PptHandlerTestBase
         Assert.Contains("slide 1", result.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DefaultSlideIndex_AddsToFirstSlide()
     {
+        SkipIfNotWindows();
         var pres = CreatePresentationWithSlides(3);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -119,9 +127,10 @@ public class AddPptCommentHandlerTests : PptHandlerTestBase
 
     #region Position Parameters
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithPosition_ShouldSetPosition()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -137,9 +146,10 @@ public class AddPptCommentHandlerTests : PptHandlerTestBase
         Assert.IsType<SuccessResult>(res);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DefaultPosition_UsesZeroZero()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -159,9 +169,10 @@ public class AddPptCommentHandlerTests : PptHandlerTestBase
 
     #region Author Reuse
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SameAuthor_ShouldReuse()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
 
@@ -182,9 +193,10 @@ public class AddPptCommentHandlerTests : PptHandlerTestBase
         Assert.Single(pres.CommentAuthors);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_DifferentAuthors_CreatesMultiple()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
 
@@ -209,9 +221,10 @@ public class AddPptCommentHandlerTests : PptHandlerTestBase
 
     #region Error Handling
 
-    [Fact]
+    [SkippableFact]
     public void Execute_MissingText_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -222,9 +235,10 @@ public class AddPptCommentHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_MissingAuthor_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -235,9 +249,10 @@ public class AddPptCommentHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_InvalidSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -250,9 +265,10 @@ public class AddPptCommentHandlerTests : PptHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_NegativeSlideIndex_ThrowsArgumentException()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>

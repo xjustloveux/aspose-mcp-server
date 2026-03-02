@@ -3,6 +3,7 @@ using Aspose.Words;
 using Aspose.Words.DigitalSignatures;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Results.Word.DigitalSignature;
 
 namespace AsposeMcpServer.Handlers.Word.DigitalSignature;
@@ -28,6 +29,7 @@ public class ListWordDigitalSignatureHandler : OperationHandlerBase<Document>
     public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var path = parameters.GetRequired<string>("path");
+        SecurityHelper.ValidateFilePath(path, "path", true);
         var signatures = DigitalSignatureUtil.LoadSignatures(path);
 
         var signatureInfos = signatures.Select(sig => new SignatureInfo

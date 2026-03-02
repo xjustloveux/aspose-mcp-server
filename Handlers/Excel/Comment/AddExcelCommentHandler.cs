@@ -53,7 +53,8 @@ public class AddExcelCommentHandler : OperationHandlerBase<Workbook>
         }
         catch (CellsException ex)
         {
-            throw new ArgumentException($"Excel operation failed for cell '{addParams.Cell}': {ex.Message}");
+            throw new InvalidOperationException($"Excel operation failed for cell '{addParams.Cell}': {ex.Message}",
+                ex);
         }
     }
 

@@ -1,9 +1,11 @@
+using System.Runtime.Versioning;
 using AsposeMcpServer.Handlers.PowerPoint.PageSetup;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.PageSetup;
 
+[SupportedOSPlatform("windows")]
 public class SetFooterHandlerTests : PptHandlerTestBase
 {
     private static readonly int[] SlideIndicesZeroTwo = [0, 2];
@@ -12,9 +14,10 @@ public class SetFooterHandlerTests : PptHandlerTestBase
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_SetFooter()
     {
+        SkipIfNotWindows();
         Assert.Equal("set_footer", _handler.Operation);
     }
 
@@ -22,9 +25,10 @@ public class SetFooterHandlerTests : PptHandlerTestBase
 
     #region Basic Set Footer Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SetsFooterText()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -40,9 +44,10 @@ public class SetFooterHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_SetsDateText()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -58,9 +63,10 @@ public class SetFooterHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ShowsSlideNumber()
     {
+        SkipIfNotWindows();
         var presentation = CreateEmptyPresentation();
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -76,9 +82,10 @@ public class SetFooterHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_AppliesToAllSlides()
     {
+        SkipIfNotWindows();
         var presentation = CreatePresentationWithSlides(3);
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -96,9 +103,10 @@ public class SetFooterHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_AppliesToSpecificSlides()
     {
+        SkipIfNotWindows();
         var presentation = CreatePresentationWithSlides(3);
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>

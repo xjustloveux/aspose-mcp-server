@@ -1,4 +1,5 @@
-﻿using Aspose.Slides;
+﻿using System.Runtime.Versioning;
+using Aspose.Slides;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Results.PowerPoint.Slide;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -11,6 +12,7 @@ namespace AsposeMcpServer.Tests.Tools.PowerPoint;
 ///     Focuses on session management, file I/O, and operation routing.
 ///     Detailed parameter validation and business logic tests are in Handler tests.
 /// </summary>
+[SupportedOSPlatform("windows")]
 public class PptSlideToolTests : PptTestBase
 {
     private readonly PptSlideTool _tool;
@@ -22,9 +24,10 @@ public class PptSlideToolTests : PptTestBase
 
     #region File I/O Smoke Tests
 
-    [Fact]
+    [SkippableFact]
     public void Add_ShouldAddNewSlideAndPersistToFile()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_add.pptx", 2);
         var outputPath = CreateTestFilePath("test_add_output.pptx");
         var result = _tool.Execute("add", pptPath, outputPath: outputPath);
@@ -34,9 +37,10 @@ public class PptSlideToolTests : PptTestBase
         Assert.Equal(3, presentation.Slides.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Delete_ShouldDeleteSlideAndPersistToFile()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_delete.pptx", 3);
         var outputPath = CreateTestFilePath("test_delete_output.pptx");
         var result = _tool.Execute("delete", pptPath, slideIndex: 1, outputPath: outputPath);
@@ -46,9 +50,10 @@ public class PptSlideToolTests : PptTestBase
         Assert.Equal(2, presentation.Slides.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void GetInfo_ShouldReturnSlidesInfoFromFile()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_get_info.pptx", 3);
         var result = _tool.Execute("get_info", pptPath);
         var data = GetResultData<GetSlidesInfoResult>(result);
@@ -56,9 +61,10 @@ public class PptSlideToolTests : PptTestBase
         Assert.NotNull(data.Slides);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Move_ShouldMoveSlideAndPersistToFile()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_move.pptx", 3);
         var outputPath = CreateTestFilePath("test_move_output.pptx");
         var result = _tool.Execute("move", pptPath, fromIndex: 2, toIndex: 0, outputPath: outputPath);
@@ -68,9 +74,10 @@ public class PptSlideToolTests : PptTestBase
         Assert.Equal(3, presentation.Slides.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Duplicate_ShouldDuplicateSlideAndPersistToFile()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_duplicate.pptx", 2);
         var outputPath = CreateTestFilePath("test_duplicate_output.pptx");
         var result = _tool.Execute("duplicate", pptPath, slideIndex: 0, outputPath: outputPath);
@@ -80,9 +87,10 @@ public class PptSlideToolTests : PptTestBase
         Assert.Equal(3, presentation.Slides.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Hide_ShouldHideSlideAndPersistToFile()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_hide.pptx");
         var outputPath = CreateTestFilePath("test_hide_output.pptx");
         var result = _tool.Execute("hide", pptPath, slideIndex: 0, hidden: true, outputPath: outputPath);
@@ -95,6 +103,7 @@ public class PptSlideToolTests : PptTestBase
     [SkippableFact]
     public void Clear_ShouldClearSlideContentAndPersistToFile()
     {
+        SkipIfNotWindows();
         SkipInEvaluationMode(AsposeLibraryType.Slides, "Clear verification may not work correctly in evaluation mode");
         var pptPath = CreatePresentationWithShape("test_clear.pptx");
         var outputPath = CreateTestFilePath("test_clear_output.pptx");
@@ -105,9 +114,10 @@ public class PptSlideToolTests : PptTestBase
         Assert.Empty(presentation.Slides[0].Shapes);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Edit_ShouldEditSlideAndPersistToFile()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_edit.pptx");
         var outputPath = CreateTestFilePath("test_edit_output.pptx");
         var result = _tool.Execute("edit", pptPath, slideIndex: 0, outputPath: outputPath);
@@ -119,12 +129,13 @@ public class PptSlideToolTests : PptTestBase
 
     #region Operation Routing
 
-    [Theory]
+    [SkippableTheory]
     [InlineData("ADD")]
     [InlineData("Add")]
     [InlineData("add")]
     public void Operation_ShouldBeCaseInsensitive(string operation)
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation($"test_case_add_{operation}.pptx");
         var outputPath = CreateTestFilePath($"test_case_add_{operation}_output.pptx");
         var result = _tool.Execute(operation, pptPath, outputPath: outputPath);
@@ -132,9 +143,10 @@ public class PptSlideToolTests : PptTestBase
         Assert.StartsWith("Slide added", data.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_unknown_op.pptx");
         var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", pptPath));
         Assert.Contains("Unknown operation", ex.Message);
@@ -144,9 +156,10 @@ public class PptSlideToolTests : PptTestBase
 
     #region Session Management
 
-    [Fact]
+    [SkippableFact]
     public void Add_WithSessionId_ShouldAddInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_session_add.pptx");
         var sessionId = OpenSession(pptPath);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
@@ -159,9 +172,10 @@ public class PptSlideToolTests : PptTestBase
         Assert.Equal(initialCount + 1, ppt.Slides.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Delete_WithSessionId_ShouldDeleteInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_session_delete.pptx", 3);
         var sessionId = OpenSession(pptPath);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
@@ -173,9 +187,10 @@ public class PptSlideToolTests : PptTestBase
         Assert.Equal(2, ppt.Slides.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void GetInfo_WithSessionId_ShouldReturnInfo()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_session_info.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("get_info", sessionId: sessionId);
@@ -185,9 +200,10 @@ public class PptSlideToolTests : PptTestBase
         Assert.True(output.IsSession);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Move_WithSessionId_ShouldMoveInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_session_move.pptx", 3);
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("move", sessionId: sessionId, fromIndex: 2, toIndex: 0);
@@ -197,9 +213,10 @@ public class PptSlideToolTests : PptTestBase
         Assert.True(output.IsSession);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Duplicate_WithSessionId_ShouldDuplicateInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_session_dup.pptx");
         var sessionId = OpenSession(pptPath);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
@@ -212,9 +229,10 @@ public class PptSlideToolTests : PptTestBase
         Assert.Equal(initialCount + 1, ppt.Slides.Count);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Hide_WithSessionId_ShouldHideInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_session_hide.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("hide", sessionId: sessionId, slideIndex: 0, hidden: true);
@@ -225,9 +243,10 @@ public class PptSlideToolTests : PptTestBase
         Assert.True(output.IsSession);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Clear_WithSessionId_ShouldClearInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentationWithShape("test_session_clear.pptx");
         var sessionId = OpenSession(pptPath);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
@@ -239,9 +258,10 @@ public class PptSlideToolTests : PptTestBase
         Assert.Empty(ppt.Slides[0].Shapes);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Edit_WithSessionId_ShouldEditInMemory()
     {
+        SkipIfNotWindows();
         var pptPath = CreatePresentation("test_session_edit.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("edit", sessionId: sessionId, slideIndex: 0);
@@ -251,24 +271,27 @@ public class PptSlideToolTests : PptTestBase
         Assert.True(output.IsSession);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
+        SkipIfNotWindows();
         Assert.Throws<KeyNotFoundException>(() => _tool.Execute("get_info", sessionId: "invalid_session"));
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithSessionIdButNoSessionManager_ShouldThrowInvalidOperationException()
     {
+        SkipIfNotWindows();
         var toolWithoutSession = new PptSlideTool();
         var ex = Assert.Throws<InvalidOperationException>(() =>
             toolWithoutSession.Execute("get_info", sessionId: "any_session"));
         Assert.Contains("Session management is not enabled", ex.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
     {
+        SkipIfNotWindows();
         var pptPath1 = CreatePresentation("test_path_ppt.pptx");
         var pptPath2 = CreatePresentation("test_session_ppt.pptx", 5);
         var sessionId = OpenSession(pptPath2);

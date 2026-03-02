@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -199,14 +200,20 @@ public sealed class ApiKeyAuthenticationMiddleware : IMiddleware, IDisposable
             };
         }
 
-        if (_config.Keys.TryGetValue(apiKey, out var groupId))
+        var apiKeyBytes = Encoding.UTF8.GetBytes(apiKey);
+        foreach (var kvp in _config.Keys)
         {
-            _logger.LogDebug("API Key validated for group: {GroupId}", groupId);
-            return new ApiKeyAuthResult
+            var storedKeyBytes = Encoding.UTF8.GetBytes(kvp.Key);
+            if (storedKeyBytes.Length == apiKeyBytes.Length &&
+                CryptographicOperations.FixedTimeEquals(apiKeyBytes, storedKeyBytes))
             {
-                IsValid = true,
-                GroupId = groupId
-            };
+                _logger.LogDebug("API Key validated for group: {GroupId}", kvp.Value);
+                return new ApiKeyAuthResult
+                {
+                    IsValid = true,
+                    GroupId = kvp.Value
+                };
+            }
         }
 
         return new ApiKeyAuthResult

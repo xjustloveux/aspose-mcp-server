@@ -1,18 +1,21 @@
+using System.Runtime.Versioning;
 using AsposeMcpServer.Handlers.PowerPoint.Security;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Security;
 
+[SupportedOSPlatform("windows")]
 public class RemoveWriteProtectionPptSecurityHandlerTests : PptHandlerTestBase
 {
     private readonly RemoveWriteProtectionPptSecurityHandler _handler = new();
 
     #region Operation Property
 
-    [Fact]
+    [SkippableFact]
     public void Operation_Returns_RemoveWriteProtection()
     {
+        SkipIfNotWindows();
         Assert.Equal("remove_write_protection", _handler.Operation);
     }
 
@@ -20,9 +23,10 @@ public class RemoveWriteProtectionPptSecurityHandlerTests : PptHandlerTestBase
 
     #region Basic Remove Write Protection Operations
 
-    [Fact]
+    [SkippableFact]
     public void Execute_RemovesWriteProtection()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         pres.ProtectionManager.SetWriteProtection("pass");
         var context = CreateContext(pres);
@@ -34,9 +38,10 @@ public class RemoveWriteProtectionPptSecurityHandlerTests : PptHandlerTestBase
         AssertModified(context);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_ReturnsSuccessMessage()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         pres.ProtectionManager.SetWriteProtection("pass");
         var context = CreateContext(pres);
@@ -48,9 +53,10 @@ public class RemoveWriteProtectionPptSecurityHandlerTests : PptHandlerTestBase
         Assert.Contains("Write protection removed", result.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Execute_NotProtected_StillSucceeds()
     {
+        SkipIfNotWindows();
         var pres = CreateEmptyPresentation();
         var context = CreateContext(pres);
         var parameters = CreateEmptyParameters();
