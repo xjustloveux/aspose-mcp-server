@@ -13,7 +13,7 @@ namespace AsposeMcpServer.Handlers.Excel.ViewSettings;
 public class FreezePanesExcelViewHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
-    public override string Operation => "freeze_panes";
+    public override string Operation => "freeze";
 
     /// <summary>
     ///     Freezes or unfreezes panes at the specified position.

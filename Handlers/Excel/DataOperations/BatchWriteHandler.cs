@@ -14,7 +14,7 @@ namespace AsposeMcpServer.Handlers.Excel.DataOperations;
 public class BatchWriteHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
-    public override string Operation => "batch_write";
+    public override string Operation => "batch";
 
     /// <summary>
     ///     Writes multiple values to cells in batch.

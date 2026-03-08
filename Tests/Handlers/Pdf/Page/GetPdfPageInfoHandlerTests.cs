@@ -13,7 +13,7 @@ public class GetPdfPageInfoHandlerTests : PdfHandlerTestBase
     [Fact]
     public void Operation_Returns_GetInfo()
     {
-        Assert.Equal("get_info", _handler.Operation);
+        Assert.Equal("info", _handler.Operation);
     }
 
     #endregion

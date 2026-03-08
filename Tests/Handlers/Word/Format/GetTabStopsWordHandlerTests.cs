@@ -14,7 +14,7 @@ public class GetTabStopsWordHandlerTests : WordHandlerTestBase
     [Fact]
     public void Operation_Returns_GetTabStops()
     {
-        Assert.Equal("get_tab_stops", _handler.Operation);
+        Assert.Equal("get_tabs", _handler.Operation);
     }
 
     #endregion

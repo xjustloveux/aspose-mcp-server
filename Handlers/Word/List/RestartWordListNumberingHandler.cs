@@ -13,7 +13,7 @@ namespace AsposeMcpServer.Handlers.Word.List;
 public class RestartWordListNumberingHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "restart_numbering";
+    public override string Operation => "restart";
 
     /// <summary>
     ///     Restarts list numbering from a specified value at the given paragraph.

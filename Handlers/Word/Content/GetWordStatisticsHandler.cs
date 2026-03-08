@@ -13,7 +13,7 @@ namespace AsposeMcpServer.Handlers.Word.Content;
 public class GetWordStatisticsHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "get_statistics";
+    public override string Operation => "statistics";
 
     /// <summary>
     ///     Gets document statistics including word count, page count, and element counts.

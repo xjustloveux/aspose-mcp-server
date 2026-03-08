@@ -34,7 +34,7 @@ public class WordRevisionToolTests : WordTestBase
         builder.Writeln("Modified text");
         doc.StopTrackRevisions();
         doc.Save(docPath);
-        var result = _tool.Execute("get_revisions", docPath);
+        var result = _tool.Execute("list", docPath);
         Assert.NotNull(result);
         var data = GetResultData<GetRevisionsWordResult>(result);
         Assert.NotNull(data.Revisions);
@@ -119,9 +119,9 @@ public class WordRevisionToolTests : WordTestBase
     #region Operation Routing
 
     [Theory]
-    [InlineData("GET_REVISIONS")]
-    [InlineData("Get_Revisions")]
-    [InlineData("get_revisions")]
+    [InlineData("LIST")]
+    [InlineData("List")]
+    [InlineData("list")]
     public void Operation_ShouldBeCaseInsensitive(string operation)
     {
         var docPath = CreateWordDocumentWithContent($"test_case_{operation.Replace("_", "")}.docx", "Content");
@@ -143,7 +143,7 @@ public class WordRevisionToolTests : WordTestBase
     public void Execute_WithNoPathOrSessionId_ShouldThrowException()
     {
         Assert.ThrowsAny<Exception>(() =>
-            _tool.Execute("get_revisions"));
+            _tool.Execute("list"));
     }
 
     #endregion
@@ -162,7 +162,7 @@ public class WordRevisionToolTests : WordTestBase
         doc.Save(docPath);
 
         var sessionId = OpenSession(docPath);
-        var result = _tool.Execute("get_revisions", sessionId: sessionId);
+        var result = _tool.Execute("list", sessionId: sessionId);
         var data = GetResultData<GetRevisionsWordResult>(result);
         Assert.NotNull(data.Revisions);
     }
@@ -229,7 +229,7 @@ public class WordRevisionToolTests : WordTestBase
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
         Assert.Throws<KeyNotFoundException>(() =>
-            _tool.Execute("get_revisions", sessionId: "invalid_session_id"));
+            _tool.Execute("list", sessionId: "invalid_session_id"));
     }
 
     [Fact]
@@ -252,7 +252,7 @@ public class WordRevisionToolTests : WordTestBase
         doc2.Save(docPath2);
 
         var sessionId = OpenSession(docPath2);
-        var result = _tool.Execute("get_revisions", docPath1, sessionId);
+        var result = _tool.Execute("list", docPath1, sessionId);
         var data = GetResultData<GetRevisionsWordResult>(result);
         Assert.NotNull(data.Revisions);
     }

@@ -13,7 +13,7 @@ namespace AsposeMcpServer.Handlers.PowerPoint.DataOperations;
 public class GetStatisticsHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
-    public override string Operation => "get_statistics";
+    public override string Operation => "statistics";
 
     /// <summary>
     ///     Gets presentation statistics including slide count, shape count, and media counts.

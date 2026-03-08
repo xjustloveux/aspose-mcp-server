@@ -14,7 +14,7 @@ public class GetFieldDetailWordHandlerTests : WordHandlerTestBase
     [Fact]
     public void Operation_Returns_GetFieldDetail()
     {
-        Assert.Equal("get_field_detail", _handler.Operation);
+        Assert.Equal("get", _handler.Operation);
     }
 
     #endregion

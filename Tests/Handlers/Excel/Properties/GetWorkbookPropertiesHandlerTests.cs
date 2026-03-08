@@ -13,7 +13,7 @@ public class GetWorkbookPropertiesHandlerTests : ExcelHandlerTestBase
     [Fact]
     public void Operation_Returns_GetWorkbookProperties()
     {
-        Assert.Equal("get_workbook_properties", _handler.Operation);
+        Assert.Equal("get", _handler.Operation);
     }
 
     #endregion

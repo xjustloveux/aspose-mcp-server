@@ -14,7 +14,7 @@ namespace AsposeMcpServer.Handlers.Excel.Table;
 public class AddTotalRowExcelTableHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
-    public override string Operation => "add_total_row";
+    public override string Operation => "add_total";
 
     /// <summary>
     ///     Adds or configures a total row on a table.

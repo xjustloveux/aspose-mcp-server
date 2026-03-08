@@ -7,7 +7,8 @@ param(
     [switch]$Coverage,
     [string]$Filter,
     [switch]$SkipLicense,  # Skip license loading, force evaluation mode
-    [string]$Configuration = "Release"  # Build configuration (Debug or Release)
+    [string]$Configuration = "Release",  # Build configuration (Debug or Release)
+    [string]$LogFile  # Output failed test details to file (e.g. -LogFile "Tests\TestResults\log.txt")
 )
 
 # Set console encoding to UTF-8
@@ -79,6 +80,44 @@ if ($exitCode -eq 0) {
 } else {
     Write-Host ""
     Write-Host "=== Some Tests Failed ===" -ForegroundColor Red
+
+    # Export failed test details to file if LogFile parameter is specified
+    if ($LogFile) {
+        $trxFile = Get-ChildItem -Path "Tests/TestResults" -Filter "*.trx" -Recurse | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        if ($trxFile) {
+            $xml = [xml](Get-Content $trxFile.FullName)
+            $ns = @{ t = "http://microsoft.com/schemas/VisualStudio/TeamTest/2010" }
+            $failed = $xml | Select-Xml "//t:UnitTestResult[@outcome='Failed']" -Namespace $ns
+
+            $output = @()
+            $output += "=== Failed Tests Report ==="
+            $output += "Date: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+            $output += "Total Failed: $($failed.Count)"
+            $output += ""
+
+            foreach ($result in $failed) {
+                $node = $result.Node
+                $testName = $node.testName
+                $errorMsg = $node.Output.ErrorInfo.Message
+                $stackTrace = $node.Output.ErrorInfo.StackTrace
+                $output += "--- $testName ---"
+                $output += "Error: $errorMsg"
+                if ($stackTrace) {
+                    $output += "Stack: $($stackTrace.Split("`n") | Select-Object -First 3 | ForEach-Object { $_.Trim() })"
+                }
+                $output += ""
+            }
+
+            $logDir = Split-Path $LogFile -Parent
+            if ($logDir -and !(Test-Path $logDir)) {
+                New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+            }
+            $output | Out-File -FilePath $LogFile -Encoding utf8
+            Write-Host "Failed test details saved to: $LogFile" -ForegroundColor Yellow
+        } else {
+            Write-Host "No .trx file found to extract failures from." -ForegroundColor Yellow
+        }
+    }
 }
 
 # Clean up environment variable

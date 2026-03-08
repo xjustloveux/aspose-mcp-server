@@ -16,7 +16,7 @@ public class RenderThumbnailWordHandlerTests : WordHandlerTestBase
     [Fact]
     public void Operation_ShouldBeRenderThumbnail()
     {
-        Assert.Equal("render_thumbnail", _handler.Operation);
+        Assert.Equal("thumbnail", _handler.Operation);
     }
 
     [SkippableFact]

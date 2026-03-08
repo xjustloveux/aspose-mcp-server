@@ -14,7 +14,7 @@ public class GetWordDocumentInfoHandlerTests : WordHandlerTestBase
     [Fact]
     public void Operation_Returns_GetDocumentInfo()
     {
-        Assert.Equal("get_document_info", _handler.Operation);
+        Assert.Equal("info", _handler.Operation);
     }
 
     #endregion

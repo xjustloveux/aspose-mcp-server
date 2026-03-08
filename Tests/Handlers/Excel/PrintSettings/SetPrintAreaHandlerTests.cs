@@ -13,7 +13,7 @@ public class SetPrintAreaHandlerTests : ExcelHandlerTestBase
     [Fact]
     public void Operation_Returns_SetPrintArea()
     {
-        Assert.Equal("set_print_area", _handler.Operation);
+        Assert.Equal("set_area", _handler.Operation);
     }
 
     #endregion

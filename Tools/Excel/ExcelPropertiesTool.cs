@@ -63,21 +63,21 @@ public class ExcelPropertiesTool : PropertiesToolBase<Workbook>
         ReadOnly = false,
         UseStructuredContent = true)]
     [Description(
-        @"Manage Excel properties. Supports 5 operations: get_workbook_properties, set_workbook_properties, get_sheet_properties, edit_sheet_properties, get_sheet_info.
+        @"Manage Excel properties. Supports 5 operations: get, set, get_sheet, set_sheet, sheet_info.
 
 Usage examples:
-- Get workbook properties: excel_properties(operation='get_workbook_properties', path='book.xlsx')
-- Set workbook properties: excel_properties(operation='set_workbook_properties', path='book.xlsx', title='Title', author='Author')
-- Get sheet properties: excel_properties(operation='get_sheet_properties', path='book.xlsx', sheetIndex=0)
-- Edit sheet properties: excel_properties(operation='edit_sheet_properties', path='book.xlsx', sheetIndex=0, name='New Name')
-- Get sheet info: excel_properties(operation='get_sheet_info', path='book.xlsx')")]
+- Get workbook properties: excel_properties(operation='get', path='book.xlsx')
+- Set workbook properties: excel_properties(operation='set', path='book.xlsx', title='Title', author='Author')
+- Get sheet properties: excel_properties(operation='get_sheet', path='book.xlsx', sheetIndex=0)
+- Edit sheet properties: excel_properties(operation='set_sheet', path='book.xlsx', sheetIndex=0, name='New Name')
+- Get sheet info: excel_properties(operation='sheet_info', path='book.xlsx')")]
     public object Execute(
         [Description(@"Operation to perform.
-- 'get_workbook_properties': Get workbook properties (required params: path)
-- 'set_workbook_properties': Set workbook properties (required params: path)
-- 'get_sheet_properties': Get sheet properties (required params: path, sheetIndex)
-- 'edit_sheet_properties': Edit sheet properties (required params: path, sheetIndex)
-- 'get_sheet_info': Get sheet info (required params: path)")]
+- 'get': Get workbook properties (required params: path)
+- 'set': Set workbook properties (required params: path)
+- 'get_sheet': Get sheet properties (required params: path, sheetIndex)
+- 'set_sheet': Edit sheet properties (required params: path, sheetIndex)
+- 'sheet_info': Get sheet info (required params: path)")]
         string operation,
         [Description("Excel file path (required if no sessionId)")]
         string? path = null,
@@ -155,12 +155,12 @@ Usage examples:
 
         return operation.ToLowerInvariant() switch
         {
-            "get_workbook_properties" or "get_sheet_properties" => parameters,
-            "set_workbook_properties" => BuildSetWorkbookPropertiesParameters(parameters, title, subject, author,
+            "get" or "get_sheet" => parameters,
+            "set" => BuildSetWorkbookPropertiesParameters(parameters, title, subject, author,
                 keywords, comments, category, company, manager, customProperties),
-            "edit_sheet_properties" => BuildEditSheetPropertiesParameters(parameters, name, isVisible, tabColor,
+            "set_sheet" => BuildEditSheetPropertiesParameters(parameters, name, isVisible, tabColor,
                 isSelected),
-            "get_sheet_info" => BuildGetSheetInfoParameters(parameters, targetSheetIndex),
+            "sheet_info" => BuildGetSheetInfoParameters(parameters, targetSheetIndex),
             _ => parameters
         };
     }

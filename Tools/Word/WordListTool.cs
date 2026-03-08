@@ -47,17 +47,17 @@ public class WordListTool
     }
 
     /// <summary>
-    ///     Executes a Word list operation (add_list, add_item, delete_item, edit_item, set_format, get_format,
-    ///     restart_numbering, convert_to_list).
+    ///     Executes a Word list operation (add, add_item, delete_item, edit_item, set_format, get_format,
+    ///     restart, convert).
     /// </summary>
     /// <param name="operation">
-    ///     The operation to perform: add_list, add_item, delete_item, edit_item, set_format, get_format,
-    ///     restart_numbering, convert_to_list.
+    ///     The operation to perform: add, add_item, delete_item, edit_item, set_format, get_format,
+    ///     restart, convert.
     /// </param>
     /// <param name="path">Word document file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID for in-memory editing.</param>
     /// <param name="outputPath">Output file path (file mode only).</param>
-    /// <param name="items">List items for add_list operation (string array or object array with text/level).</param>
+    /// <param name="items">List items for add operation (string array or object array with text/level).</param>
     /// <param name="listType">List type: bullet, number, custom (default: bullet).</param>
     /// <param name="bulletChar">Custom bullet character (for custom type).</param>
     /// <param name="numberFormat">Number format: arabic, roman, letter (default: arabic).</param>
@@ -73,8 +73,8 @@ public class WordListTool
     /// <param name="leftIndent">Left indent in points.</param>
     /// <param name="firstLineIndent">First line indent in points.</param>
     /// <param name="startAt">Number to restart at (default: 1).</param>
-    /// <param name="startParagraphIndex">Starting paragraph index (for convert_to_list).</param>
-    /// <param name="endParagraphIndex">Ending paragraph index (for convert_to_list).</param>
+    /// <param name="startParagraphIndex">Starting paragraph index (for convert).</param>
+    /// <param name="endParagraphIndex">Ending paragraph index (for convert).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get_format operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(
@@ -86,20 +86,20 @@ public class WordListTool
         ReadOnly = false,
         UseStructuredContent = true)]
     [Description(
-        @"Manage lists in Word documents. Supports 8 operations: add_list, add_item, delete_item, edit_item, set_format, get_format, restart_numbering, convert_to_list.
+        @"Manage lists in Word documents. Supports 8 operations: add, add_item, delete_item, edit_item, set_format, get_format, restart, convert.
 
 Usage examples:
-- Add bullet list: word_list(operation='add_list', path='doc.docx', items=['Item 1', 'Item 2', 'Item 3'])
-- Add numbered list: word_list(operation='add_list', path='doc.docx', items=['First', 'Second'], listType='number')
+- Add bullet list: word_list(operation='add', path='doc.docx', items=['Item 1', 'Item 2', 'Item 3'])
+- Add numbered list: word_list(operation='add', path='doc.docx', items=['First', 'Second'], listType='number')
 - Add list item: word_list(operation='add_item', path='doc.docx', text='New item', styleName='Heading 4')
 - Delete list item: word_list(operation='delete_item', path='doc.docx', paragraphIndex=0)
 - Edit list item: word_list(operation='edit_item', path='doc.docx', paragraphIndex=0, text='Updated text')
 - Get list format: word_list(operation='get_format', path='doc.docx', paragraphIndex=0)
-- Restart numbering: word_list(operation='restart_numbering', path='doc.docx', paragraphIndex=2, startAt=1)
-- Convert to list: word_list(operation='convert_to_list', path='doc.docx', startParagraphIndex=0, endParagraphIndex=5)")]
+- Restart numbering: word_list(operation='restart', path='doc.docx', paragraphIndex=2, startAt=1)
+- Convert to list: word_list(operation='convert', path='doc.docx', startParagraphIndex=0, endParagraphIndex=5)")]
     public object Execute(
         [Description(
-            "Operation: add_list, add_item, delete_item, edit_item, set_format, get_format, restart_numbering, convert_to_list")]
+            "Operation: add, add_item, delete_item, edit_item, set_format, get_format, restart, convert")]
         string operation,
         [Description("Document file path (required if no sessionId)")]
         string? path = null,
@@ -107,7 +107,7 @@ Usage examples:
         string? sessionId = null,
         [Description("Output file path (file mode only)")]
         string? outputPath = null,
-        [Description("List items for add_list operation (string array or object array with text/level)")]
+        [Description("List items for add operation (string array or object array with text/level)")]
         JsonArray? items = null,
         [Description("List type: bullet, number, custom (default: bullet)")]
         string listType = "bullet",
@@ -137,9 +137,9 @@ Usage examples:
         double? firstLineIndent = null,
         [Description("Number to restart at (default: 1)")]
         int startAt = 1,
-        [Description("Starting paragraph index (for convert_to_list)")]
+        [Description("Starting paragraph index (for convert)")]
         int? startParagraphIndex = null,
-        [Description("Ending paragraph index (for convert_to_list)")]
+        [Description("Ending paragraph index (for convert)")]
         int? endParagraphIndex = null)
     {
         var parameters = BuildParameters(operation, items, listType, bulletChar, numberFormat, continuePrevious,
@@ -200,15 +200,15 @@ Usage examples:
 
         return operation.ToLower() switch
         {
-            "add_list" => BuildAddListParameters(parameters, items, listType, bulletChar, numberFormat,
+            "add" => BuildAddListParameters(parameters, items, listType, bulletChar, numberFormat,
                 continuePrevious),
             "add_item" => BuildAddItemParameters(parameters, text, styleName, listLevel, applyStyleIndent),
             "delete_item" or "get_format" => BuildParagraphIndexParameters(parameters, paragraphIndex),
             "edit_item" => BuildEditItemParameters(parameters, paragraphIndex, text, level),
             "set_format" => BuildSetFormatParameters(parameters, paragraphIndex, numberStyle, indentLevel, leftIndent,
                 firstLineIndent),
-            "restart_numbering" => BuildRestartNumberingParameters(parameters, paragraphIndex, startAt),
-            "convert_to_list" => BuildConvertToListParameters(parameters, startParagraphIndex, endParagraphIndex,
+            "restart" => BuildRestartNumberingParameters(parameters, paragraphIndex, startAt),
+            "convert" => BuildConvertToListParameters(parameters, startParagraphIndex, endParagraphIndex,
                 listType, numberFormat),
             _ => parameters
         };

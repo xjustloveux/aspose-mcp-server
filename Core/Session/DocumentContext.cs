@@ -34,6 +34,11 @@ public sealed class DocumentContext<T> : IDisposable
     private readonly DocumentSessionManager? _sessionManager;
 
     /// <summary>
+    ///     Usage scope that prevents the session from being cleaned up during tool execution
+    /// </summary>
+    private readonly IDisposable? _usageScope;
+
+    /// <summary>
     ///     Tracks whether this context has been disposed
     /// </summary>
     private bool _disposed;
@@ -47,8 +52,9 @@ public sealed class DocumentContext<T> : IDisposable
     /// <param name="path">Source file path (null for session mode)</param>
     /// <param name="ownsDocument">Whether this context owns and should dispose the document</param>
     /// <param name="identity">The requestor identity for session isolation</param>
+    /// <param name="usageScope">Usage scope to hold during the lifetime of this context (null for file mode)</param>
     private DocumentContext(T document, DocumentSessionManager? sessionManager, string? sessionId, string? path,
-        bool ownsDocument, SessionIdentity identity)
+        bool ownsDocument, SessionIdentity identity, IDisposable? usageScope = null)
     {
         Document = document;
         _sessionManager = sessionManager;
@@ -56,6 +62,7 @@ public sealed class DocumentContext<T> : IDisposable
         SourcePath = path;
         _ownsDocument = ownsDocument;
         _identity = identity;
+        _usageScope = usageScope;
     }
 
     /// <summary>
@@ -87,6 +94,7 @@ public sealed class DocumentContext<T> : IDisposable
         if (_disposed) return;
         _disposed = true;
 
+        _usageScope?.Dispose();
         if (_ownsDocument && Document is IDisposable disposable) disposable.Dispose();
     }
 
@@ -119,8 +127,18 @@ public sealed class DocumentContext<T> : IDisposable
                 throw new InvalidOperationException(
                     "Session management is not enabled. Use --enable-sessions flag or provide a file path.");
 
-            var doc = sessionManager.GetDocument<T>(sessionId, identity);
-            return new DocumentContext<T>(doc, sessionManager, sessionId, null, false, identity);
+            var session = sessionManager.GetSession(sessionId, identity);
+            var usageScope = session.AcquireUsage();
+            try
+            {
+                var doc = session.GetDocument<T>();
+                return new DocumentContext<T>(doc, sessionManager, sessionId, null, false, identity, usageScope);
+            }
+            catch
+            {
+                usageScope.Dispose();
+                throw;
+            }
         }
 
         if (string.IsNullOrEmpty(path))

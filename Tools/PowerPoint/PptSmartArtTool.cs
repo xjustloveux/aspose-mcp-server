@@ -83,11 +83,11 @@ public class PptSmartArtTool
 
 Usage examples:
 - Add SmartArt: ppt_smart_art(operation='add', path='presentation.pptx', slideIndex=0, layout='BasicProcess', x=100, y=100, width=400, height=300)
-- Manage nodes: ppt_smart_art(operation='manage_nodes', path='presentation.pptx', slideIndex=0, shapeIndex=0, action='add', targetPath='[0]', text='New Node')")]
+- Manage nodes: ppt_smart_art(operation='manage', path='presentation.pptx', slideIndex=0, shapeIndex=0, action='add', targetPath='[0]', text='New Node')")]
     public object Execute(
         [Description(@"Operation to perform.
 - 'add': Add a new SmartArt shape (required params: path, slideIndex, layout)
-- 'manage_nodes': Manage SmartArt nodes (add, edit, delete) (required params: path, slideIndex, shapeIndex, action)")]
+- 'manage': Manage SmartArt nodes (add, edit, delete) (required params: path, slideIndex, shapeIndex, action)")]
         string operation,
         [Description("Presentation file path (required if no sessionId)")]
         string? path = null,
@@ -167,7 +167,7 @@ Usage examples:
         return operation.ToLowerInvariant() switch
         {
             "add" => BuildAddParameters(slideIndex, layout, x, y, width, height),
-            "manage_nodes" => BuildManageNodesParameters(slideIndex, shapeIndex, action, targetPath, text, position),
+            "manage" => BuildManageNodesParameters(slideIndex, shapeIndex, action, targetPath, text, position),
             _ => new OperationParameters()
         };
     }

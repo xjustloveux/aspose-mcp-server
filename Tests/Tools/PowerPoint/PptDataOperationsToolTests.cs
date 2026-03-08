@@ -27,7 +27,7 @@ public class PptDataOperationsToolTests : PptTestBase
     {
         SkipIfNotWindows();
         var pptPath = CreatePresentation("test_get_statistics.pptx");
-        var result = _tool.Execute("get_statistics", pptPath);
+        var result = _tool.Execute("statistics", pptPath);
         var data = GetResultData<GetStatisticsResult>(result);
         Assert.True(data.TotalSlides >= 0);
         Assert.True(data.TotalShapes >= 0);
@@ -39,7 +39,7 @@ public class PptDataOperationsToolTests : PptTestBase
     {
         SkipIfNotWindows();
         var pptPath = CreatePresentation("test_get_content.pptx");
-        var result = _tool.Execute("get_content", pptPath);
+        var result = _tool.Execute("get", pptPath);
         var data = GetResultData<GetContentPptResult>(result);
         Assert.True(data.TotalSlides >= 0);
         Assert.NotNull(data.Slides);
@@ -50,7 +50,7 @@ public class PptDataOperationsToolTests : PptTestBase
     {
         SkipIfNotWindows();
         var pptPath = CreatePresentation("test_get_slide_details.pptx");
-        var result = _tool.Execute("get_slide_details", pptPath, slideIndex: 0);
+        var result = _tool.Execute("slide_details", pptPath, slideIndex: 0);
         var data = GetResultData<GetSlideDetailsResult>(result);
         Assert.Equal(0, data.SlideIndex);
         Assert.NotNull(data.SlideSize);
@@ -62,9 +62,9 @@ public class PptDataOperationsToolTests : PptTestBase
     #region Operation Routing
 
     [SkippableTheory]
-    [InlineData("GET_STATISTICS")]
-    [InlineData("Get_Statistics")]
-    [InlineData("get_statistics")]
+    [InlineData("STATISTICS")]
+    [InlineData("Statistics")]
+    [InlineData("statistics")]
     public void Operation_ShouldBeCaseInsensitive(string operation)
     {
         SkipIfNotWindows();
@@ -93,7 +93,7 @@ public class PptDataOperationsToolTests : PptTestBase
         SkipIfNotWindows();
         var pptPath = CreatePresentation("test_session_get_statistics.pptx");
         var sessionId = OpenSession(pptPath);
-        var result = _tool.Execute("get_statistics", sessionId: sessionId);
+        var result = _tool.Execute("statistics", sessionId: sessionId);
         var data = GetResultData<GetStatisticsResult>(result);
         Assert.True(data.TotalSlides >= 0);
     }
@@ -104,7 +104,7 @@ public class PptDataOperationsToolTests : PptTestBase
         SkipIfNotWindows();
         var pptPath = CreatePresentation("test_session_get_content.pptx");
         var sessionId = OpenSession(pptPath);
-        var result = _tool.Execute("get_content", sessionId: sessionId);
+        var result = _tool.Execute("get", sessionId: sessionId);
         var data = GetResultData<GetContentPptResult>(result);
         Assert.NotNull(data.Slides);
     }
@@ -115,7 +115,7 @@ public class PptDataOperationsToolTests : PptTestBase
         SkipIfNotWindows();
         var pptPath = CreatePresentation("test_session_get_slide_details.pptx");
         var sessionId = OpenSession(pptPath);
-        var result = _tool.Execute("get_slide_details", sessionId: sessionId, slideIndex: 0);
+        var result = _tool.Execute("slide_details", sessionId: sessionId, slideIndex: 0);
         var data = GetResultData<GetSlideDetailsResult>(result);
         Assert.Equal(0, data.SlideIndex);
         Assert.NotNull(data.SlideSize);
@@ -125,7 +125,7 @@ public class PptDataOperationsToolTests : PptTestBase
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
         SkipIfNotWindows();
-        Assert.Throws<KeyNotFoundException>(() => _tool.Execute("get_statistics", sessionId: "invalid_session"));
+        Assert.Throws<KeyNotFoundException>(() => _tool.Execute("statistics", sessionId: "invalid_session"));
     }
 
     [SkippableFact]
@@ -135,7 +135,7 @@ public class PptDataOperationsToolTests : PptTestBase
         var pptPath1 = CreatePresentation("test_path_data.pptx");
         var pptPath2 = CreatePresentation("test_session_data.pptx", 5);
         var sessionId = OpenSession(pptPath2);
-        var result = _tool.Execute("get_statistics", pptPath1, sessionId);
+        var result = _tool.Execute("statistics", pptPath1, sessionId);
         var data = GetResultData<GetStatisticsResult>(result);
         Assert.Equal(5, data.TotalSlides);
     }

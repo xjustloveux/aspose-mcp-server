@@ -158,7 +158,7 @@
     <h3>內容編輯 (6)</h3>
     <ul class="tool-list">
         <li>
-            <span class="tool-name">word_text</span><span class="tool-desc">- 添加、刪除、替換、搜尋、格式化文字</span><span class="tool-ops">（8個操作：add, delete, replace, search, format, insert_at_position, delete_range, add_with_style）</span>
+            <span class="tool-name">word_text</span><span class="tool-desc">- 添加、刪除、替換、搜尋、格式化文字</span><span class="tool-ops">（8個操作：add, delete, replace, search, format, insert, delete_range, add_styled）</span>
         </li>
         <li>
             <span class="tool-name">word_paragraph</span><span class="tool-desc">- 插入、刪除、編輯段落格式</span><span class="tool-ops">（7個操作：insert, delete, edit, get, get_format, copy_format, merge）</span>
@@ -170,7 +170,7 @@
             <span class="tool-name">word_image</span><span class="tool-desc">- 添加、編輯、刪除、替換圖片，提取圖片</span><span class="tool-ops">（6個操作：add, edit, delete, get, replace, extract）</span>
         </li>
         <li>
-            <span class="tool-name">word_shape</span><span class="tool-desc">- 添加線條、文字框、圖表、形狀管理，支援邊框樣式：solid, dash, dot, dashDot, dashDotDot, roundDot</span><span class="tool-ops">（9個操作：add_line, add_textbox, get_textboxes, edit_textbox_content, set_textbox_border, add_chart, add, get, delete）</span>
+            <span class="tool-name">word_shape</span><span class="tool-desc">- 添加線條、文字框、圖表、形狀管理，支援邊框樣式：solid, dash, dot, dashDot, dashDotDot, roundDot</span><span class="tool-ops">（9個操作：add_line, add_textbox, list_textboxes, edit_textbox, set_border, add_chart, add, get, delete）</span>
         </li>
         <li>
             <span class="tool-name">word_list</span><span class="tool-desc">- 添加、編輯、刪除清單項目，重新編號、轉換為清單</span><span class="tool-ops">（8個操作：add_list, add_item, delete_item, edit_item, set_format, get_format, restart_numbering, convert_to_list）</span>
@@ -180,16 +180,16 @@
     <h3>格式設定 (4)</h3>
     <ul class="tool-list">
         <li>
-            <span class="tool-name">word_format</span><span class="tool-desc">- 獲取/設定 Run 格式，獲取/添加/清除定位點，設定段落邊框</span><span class="tool-ops">（6個操作：get_run_format, set_run_format, get_tab_stops, add_tab_stop, clear_tab_stops, set_paragraph_border）</span>
+            <span class="tool-name">word_format</span><span class="tool-desc">- 獲取/設定 Run 格式，獲取/添加/清除定位點，設定段落邊框</span><span class="tool-ops">（6個操作：get, set, get_tabs, add_tab, clear_tabs, set_border）</span>
         </li>
         <li>
-            <span class="tool-name">word_style</span><span class="tool-desc">- 獲取、創建、應用樣式，從其他文檔複製樣式</span><span class="tool-ops">（4個操作：get_styles, create_style, apply_style, copy_styles）</span>
+            <span class="tool-name">word_style</span><span class="tool-desc">- 獲取、創建、應用樣式，從其他文檔複製樣式</span><span class="tool-ops">（4個操作：list, create, apply, copy）</span>
         </li>
         <li>
-            <span class="tool-name">word_page</span><span class="tool-desc">- 設定頁邊距、方向、大小、頁碼、刪除頁面、插入空白頁、添加分頁符</span><span class="tool-ops">（8個操作：set_margins, set_orientation, set_size, set_page_number, set_page_setup, delete_page, insert_blank_page, add_page_break）</span>
+            <span class="tool-name">word_page</span><span class="tool-desc">- 設定頁邊距、方向、大小、頁碼、刪除頁面、插入空白頁、添加分頁符</span><span class="tool-ops">（8個操作：set_margins, set_orientation, set_size, set_page_number, set_page, delete_page, insert_blank_page, add_page_break）</span>
         </li>
         <li>
-            <span class="tool-name">word_header_footer</span><span class="tool-desc">- 設定頁首頁尾文字、圖片、線條、定位點</span><span class="tool-ops">（10個操作：set_header_text, set_footer_text, set_header_image, set_footer_image, set_header_line, set_footer_line, set_header_tabs, set_footer_tabs, set_header_footer, get）</span>
+            <span class="tool-name">word_header_footer</span><span class="tool-desc">- 設定頁首頁尾文字、圖片、線條、定位點</span><span class="tool-ops">（10個操作：set_header, set_footer, set_header_image, set_footer_image, set_header_line, set_footer_line, set_header_tabs, set_footer_tabs, set_all, get）</span>
         </li>
     </ul>
 
@@ -202,7 +202,7 @@
             <span class="tool-name">word_content_control</span><span class="tool-desc">- 內容控制項管理（結構化文檔標籤）</span><span class="tool-ops">（5個操作：add, edit, delete, get, set_value）</span>
         </li>
         <li>
-            <span class="tool-name">word_render</span><span class="tool-desc">- 將文檔頁面渲染為圖片</span><span class="tool-ops">（2個操作：render_page, render_thumbnail）</span>
+            <span class="tool-name">word_render</span><span class="tool-desc">- 將文檔頁面渲染為圖片</span><span class="tool-ops">（2個操作：render, thumbnail）</span>
         </li>
         <li>
             <span class="tool-name">word_bookmark</span><span class="tool-desc">- 添加、編輯、刪除、獲取書籤，跳轉到書籤</span><span class="tool-ops">（5個操作：add, edit, delete, get, goto）</span>
@@ -214,13 +214,13 @@
             <span class="tool-name">word_comment</span><span class="tool-desc">- 添加、刪除、獲取註釋，回覆註釋</span><span class="tool-ops">（4個操作：add, delete, get, reply）</span>
         </li>
         <li>
-            <span class="tool-name">word_field</span><span class="tool-desc">- 插入、編輯、刪除、更新、獲取欄位</span><span class="tool-ops">（11個操作：insert_field, edit_field, delete_field, update_field, update_all, get_fields, get_field_detail, add_form_field, edit_form_field, delete_form_field, get_form_fields）</span>
+            <span class="tool-name">word_field</span><span class="tool-desc">- 插入、編輯、刪除、更新、獲取欄位</span><span class="tool-ops">（11個操作：add, edit_field, delete_field, update_field, update_all, list, get, add_form, edit_form, delete_form, list_forms）</span>
         </li>
         <li>
-            <span class="tool-name">word_note</span><span class="tool-desc">- 添加、編輯、刪除腳註和尾註</span><span class="tool-ops">（8個操作：add_footnote, add_endnote, delete_footnote, delete_endnote, edit_footnote, edit_endnote, get_footnotes, get_endnotes）</span>
+            <span class="tool-name">word_note</span><span class="tool-desc">- 添加、編輯、刪除腳註和尾註</span><span class="tool-ops">（8個操作：add_footnote, add_endnote, delete_footnote, delete_endnote, edit_footnote, edit_endnote, list_footnotes, list_endnotes）</span>
         </li>
         <li>
-            <span class="tool-name">word_reference</span><span class="tool-desc">- 添加目錄、更新目錄、添加索引、添加交叉引用</span><span class="tool-ops">（4個操作：add_table_of_contents, update_table_of_contents, add_index, add_cross_reference）</span>
+            <span class="tool-name">word_reference</span><span class="tool-desc">- 添加目錄、更新目錄、添加索引、添加交叉引用</span><span class="tool-ops">（4個操作：add_toc, update_toc, add_index, add_xref）</span>
         </li>
         <li>
             <span class="tool-name">word_properties</span><span class="tool-desc">- 獲取、設定文檔屬性</span><span class="tool-ops">（2個操作：get, set）</span>
@@ -229,7 +229,7 @@
             <span class="tool-name">word_protection</span><span class="tool-desc">- 保護、解除保護文檔</span><span class="tool-ops">（2個操作：protect, unprotect）</span>
         </li>
         <li>
-            <span class="tool-name">word_revision</span><span class="tool-desc">- 獲取、接受、拒絕修訂，比較文檔</span><span class="tool-ops">（5個操作：get_revisions, accept_all, reject_all, manage, compare）</span>
+            <span class="tool-name">word_revision</span><span class="tool-desc">- 獲取、接受、拒絕修訂，比較文檔</span><span class="tool-ops">（5個操作：list, accept_all, reject_all, manage, compare）</span>
         </li>
         <li>
             <span class="tool-name">word_section</span><span class="tool-desc">- 插入、刪除、獲取節資訊</span><span class="tool-ops">（3個操作：insert, delete, get）</span>
@@ -241,7 +241,7 @@
             <span class="tool-name">word_mail_merge</span><span class="tool-desc">- 郵件合併</span>
         </li>
         <li>
-            <span class="tool-name">word_content</span><span class="tool-desc">- 獲取內容、詳細內容、統計資訊、文檔資訊</span><span class="tool-ops">（4個操作：get_content, get_content_detailed, get_statistics, get_document_info）</span>
+            <span class="tool-name">word_content</span><span class="tool-desc">- 獲取內容、詳細內容、統計資訊、文檔資訊</span><span class="tool-ops">（4個操作：get, get_detailed, statistics, get_document_info）</span>
         </li>
     </ul>
 </div>
@@ -283,10 +283,10 @@
     <h3>資料操作 (2)</h3>
     <ul class="tool-list">
         <li>
-            <span class="tool-name">excel_data_operations</span><span class="tool-desc">- 排序、查找替換、批次寫入、獲取內容、統計資訊、獲取已使用範圍</span><span class="tool-ops">（6個操作：sort, find_replace, batch_write, get_content, get_statistics, get_used_range）</span>
+            <span class="tool-name">excel_data_operations</span><span class="tool-desc">- 排序、查找替換、批次寫入、獲取內容、統計資訊、獲取已使用範圍</span><span class="tool-ops">（6個操作：sort, replace, batch, get, statistics, used_range）</span>
         </li>
         <li>
-            <span class="tool-name">excel_data_import_export</span><span class="tool-desc">- 匯入/匯出資料（JSON、陣列、CSV、範圍圖片）</span><span class="tool-ops">（4個操作：import_json, import_array, export_csv, export_range_image）</span>
+            <span class="tool-name">excel_data_import_export</span><span class="tool-desc">- 匯入/匯出資料（JSON、陣列、CSV、範圍圖片）</span><span class="tool-ops">（4個操作：import_json, import_array, export_csv, export_image）</span>
         </li>
     </ul>
 
@@ -303,7 +303,7 @@
     <h3>高級功能 (11)</h3>
     <ul class="tool-list">
         <li>
-            <span class="tool-name">excel_table</span><span class="tool-desc">- 管理 Excel 表格（ListObject）</span><span class="tool-ops">（6個操作：create, get, delete, set_style, add_total_row, convert_to_range）</span>
+            <span class="tool-name">excel_table</span><span class="tool-desc">- 管理 Excel 表格（ListObject）</span><span class="tool-ops">（6個操作：create, get, delete, set_style, add_total, to_range）</span>
         </li>
         <li>
             <span class="tool-name">excel_shape</span><span class="tool-desc">- 管理形狀與文字方塊</span><span class="tool-ops">（5個操作：add, edit, delete, get, add_textbox）</span>
@@ -312,7 +312,7 @@
             <span class="tool-name">excel_sparkline</span><span class="tool-desc">- 管理迷你圖（走勢圖）</span><span class="tool-ops">（4個操作：add, delete, get, set_style）</span>
         </li>
         <li>
-            <span class="tool-name">excel_chart</span><span class="tool-desc">- 添加、編輯、刪除、獲取圖表，更新圖表資料，設定圖表屬性</span><span class="tool-ops">（6個操作：add, edit, delete, get, update_data, set_properties）</span>
+            <span class="tool-name">excel_chart</span><span class="tool-desc">- 添加、編輯、刪除、獲取圖表，更新圖表資料，設定圖表屬性</span><span class="tool-ops">（6個操作：add, edit, delete, get, update, set_properties）</span>
         </li>
         <li>
             <span class="tool-name">excel_formula</span><span class="tool-desc">- 添加、獲取公式，獲取公式結果，計算公式，設定/獲取陣列公式</span><span class="tool-ops">（6個操作：add, get, get_result, calculate, set_array, get_array）</span>
@@ -346,7 +346,7 @@
             <span class="tool-name">excel_filter</span><span class="tool-desc">- 應用、移除自動篩選，篩選資料，獲取篩選狀態</span><span class="tool-ops">（4個操作：apply, remove, filter, get_status）</span>
         </li>
         <li>
-            <span class="tool-name">excel_freeze_panes</span><span class="tool-desc">- 凍結、解凍窗格，獲取凍結狀態</span><span class="tool-ops">（3個操作：freeze, unfreeze, get）</span>
+            <span class="tool-name">excel_freeze</span><span class="tool-desc">- 凍結、解凍窗格，獲取凍結狀態</span><span class="tool-ops">（3個操作：freeze, unfreeze, get）</span>
         </li>
         <li>
             <span class="tool-name">excel_merge_cells</span><span class="tool-desc">- 合併、取消合併單元格，獲取合併單元格資訊</span><span class="tool-ops">（3個操作：merge, unmerge, get）</span>
@@ -359,13 +359,13 @@
             <span class="tool-name">excel_page_break</span><span class="tool-desc">- 管理分頁符號</span><span class="tool-ops">（5個操作：add_horizontal, add_vertical, remove, clear, get）</span>
         </li>
         <li>
-            <span class="tool-name">excel_render</span><span class="tool-desc">- 將工作表或圖表渲染為圖片</span><span class="tool-ops">（2個操作：render_sheet, render_chart）</span>
+            <span class="tool-name">excel_render</span><span class="tool-desc">- 將工作表或圖表渲染為圖片</span><span class="tool-ops">（2個操作：render, render_chart）</span>
         </li>
         <li>
-            <span class="tool-name">excel_view_settings</span><span class="tool-desc">- 設定工作表視圖（縮放、網格線、標題、零值、背景、標籤顏色、凍結窗格、視窗分割、自動調整欄寬列高、顯示公式）</span><span class="tool-ops">（14個操作：set_zoom, set_gridlines, set_headers, set_zero_values, set_column_width, set_row_height, set_background, set_tab_color, set_all, freeze_panes, split_window, auto_fit_column, auto_fit_row, show_formulas）</span>
+            <span class="tool-name">excel_view_settings</span><span class="tool-desc">- 設定工作表視圖（縮放、網格線、標題、零值、背景、標籤顏色、凍結窗格、視窗分割、自動調整欄寬列高、顯示公式）</span><span class="tool-ops">（14個操作：set_zoom, set_gridlines, set_headers, set_zero_values, set_column_width, set_row_height, set_background, set_tab, set_all, freeze, split, autofit_col, autofit_row, show_formulas）</span>
         </li>
         <li>
-            <span class="tool-name">excel_print_settings</span><span class="tool-desc">- 設定列印區域、標題行、頁面設定</span><span class="tool-ops">（4個操作：set_print_area, set_print_titles, set_page_setup, set_all）</span>
+            <span class="tool-name">excel_print_settings</span><span class="tool-desc">- 設定列印區域、標題行、頁面設定</span><span class="tool-ops">（4個操作：set_area, set_titles, set_page, set_all）</span>
         </li>
         <li>
             <span class="tool-name">excel_group</span><span class="tool-desc">- 分組/取消分組行/列</span><span class="tool-ops">（4個操作：group_rows, ungroup_rows, group_columns, ungroup_columns）</span>
@@ -375,7 +375,7 @@
     <h3>屬性與工具 (2)</h3>
     <ul class="tool-list">
         <li>
-            <span class="tool-name">excel_properties</span><span class="tool-desc">- 獲取、設定工作簿/工作表屬性</span><span class="tool-ops">（5個操作：get_workbook_properties, set_workbook_properties, get_sheet_properties, edit_sheet_properties, get_sheet_info）</span>
+            <span class="tool-name">excel_properties</span><span class="tool-desc">- 獲取、設定工作簿/工作表屬性</span><span class="tool-ops">（5個操作：get, set, get_sheet, set_sheet, sheet_info）</span>
         </li>
         <li>
             <span class="tool-name">excel_get_cell_address</span><span class="tool-desc">- 單元格地址格式轉換（A1 ↔ 行列索引）</span>
@@ -409,10 +409,10 @@
             <span class="tool-name">ppt_image</span><span class="tool-desc">- 添加、編輯、刪除、獲取圖片，匯出投影片為圖片、提取圖片</span><span class="tool-ops">（6個操作：add, edit, delete, get, export_slides, extract）</span>
         </li>
         <li>
-            <span class="tool-name">ppt_table</span><span class="tool-desc">- 添加、編輯、刪除表格，插入/刪除行列</span><span class="tool-ops">（9個操作：add, edit, delete, get_content, insert_row, insert_column, delete_row, delete_column, edit_cell）</span>
+            <span class="tool-name">ppt_table</span><span class="tool-desc">- 添加、編輯、刪除表格，插入/刪除行列</span><span class="tool-ops">（9個操作：add, edit, delete, get, insert_row, insert_column, delete_row, delete_column, edit_cell）</span>
         </li>
         <li>
-            <span class="tool-name">ppt_chart</span><span class="tool-desc">- 添加、編輯、刪除、獲取圖表，更新圖表資料</span><span class="tool-ops">（5個操作：add, edit, delete, get_data, update_data）</span>
+            <span class="tool-name">ppt_chart</span><span class="tool-desc">- 添加、編輯、刪除、獲取圖表，更新圖表資料</span><span class="tool-ops">（5個操作：add, edit, delete, get, update）</span>
         </li>
         <li>
             <span class="tool-name">ppt_shape</span><span class="tool-desc">- 統一形狀管理工具</span><span class="tool-ops">（12個操作：get, get_details, delete, edit, set_format, clear_format, group, ungroup, copy, reorder, align, flip）</span>
@@ -435,7 +435,7 @@
             <span class="tool-name">ppt_comment</span><span class="tool-desc">- 管理投影片註解</span><span class="tool-ops">（4個操作：add, get, delete, reply）</span>
         </li>
         <li>
-            <span class="tool-name">ppt_security</span><span class="tool-desc">- 加密、解密、寫入保護、標記為完稿</span><span class="tool-ops">（6個操作：encrypt, decrypt, set_write_protection, remove_write_protection, mark_final, get_status）</span>
+            <span class="tool-name">ppt_security</span><span class="tool-desc">- 加密、解密、寫入保護、標記為完稿</span><span class="tool-ops">（6個操作：encrypt, decrypt, set_write_protect, remove_write_protect, mark_final, get_status）</span>
         </li>
         <li>
             <span class="tool-name">ppt_watermark</span><span class="tool-desc">- 添加/移除文字或圖片浮水印</span><span class="tool-ops">（4個操作：add_text, add_image, remove, get）</span>
@@ -456,7 +456,7 @@
             <span class="tool-name">ppt_media</span><span class="tool-desc">- 添加、刪除音訊/影片，設定播放設定</span><span class="tool-ops">（5個操作：add_audio, delete_audio, add_video, delete_video, set_playback）</span>
         </li>
         <li>
-            <span class="tool-name">ppt_smart_art</span><span class="tool-desc">- 添加、管理 SmartArt 節點</span><span class="tool-ops">（2個操作：add, manage_nodes）</span>
+            <span class="tool-name">ppt_smart_art</span><span class="tool-desc">- 添加、管理 SmartArt 節點</span><span class="tool-ops">（2個操作：add, manage）</span>
         </li>
         <li>
             <span class="tool-name">ppt_section</span><span class="tool-desc">- 添加、重新命名、刪除章節</span><span class="tool-ops">（4個操作：add, rename, delete, get）</span>
@@ -465,20 +465,20 @@
             <span class="tool-name">ppt_notes</span><span class="tool-desc">- 設定、獲取、清空講者備註，設定頁首頁尾</span><span class="tool-ops">（4個操作：set, get, clear, set_header_footer）</span>
         </li>
         <li>
-            <span class="tool-name">ppt_layout</span><span class="tool-desc">- 設定投影片版面配置，批次應用版面配置</span><span class="tool-ops">（6個操作：set, get_layouts, get_masters, apply_master, apply_layout_range, apply_theme）</span>
+            <span class="tool-name">ppt_layout</span><span class="tool-desc">- 設定投影片版面配置，批次應用版面配置</span><span class="tool-ops">（6個操作：set, list, list_masters, apply_master, apply_range, apply_theme）</span>
         </li>
     </ul>
 
     <h3>頁面與設定 (4)</h3>
     <ul class="tool-list">
         <li>
-            <span class="tool-name">ppt_page_setup</span><span class="tool-desc">- 設定投影片大小、方向、頁尾、頁碼</span><span class="tool-ops">（4個操作：set_size, set_orientation, set_footer, set_slide_numbering）</span>
+            <span class="tool-name">ppt_page_setup</span><span class="tool-desc">- 設定投影片大小、方向、頁尾、頁碼</span><span class="tool-ops">（4個操作：set_size, set_orientation, set_footer, set_numbering）</span>
         </li>
         <li>
             <span class="tool-name">ppt_handout</span><span class="tool-desc">- 設定講義頁首頁尾</span><span class="tool-ops">（1個操作：set_header_footer）</span>
         </li>
         <li>
-            <span class="tool-name">ppt_data_operations</span><span class="tool-desc">- 獲取統計資訊、內容、投影片詳情</span><span class="tool-ops">（3個操作：get_statistics, get_content, get_slide_details）</span>
+            <span class="tool-name">ppt_data_operations</span><span class="tool-desc">- 獲取統計資訊、內容、投影片詳情</span><span class="tool-ops">（3個操作：statistics, get, slide_details）</span>
         </li>
         <li>
             <span class="tool-name">ppt_properties</span><span class="tool-desc">- 獲取、設定文檔屬性</span><span class="tool-ops">（2個操作：get, set）</span>
@@ -548,7 +548,7 @@
     <h3>頁首頁尾與印章 (2)</h3>
     <ul class="tool-list">
         <li>
-            <span class="tool-name">pdf_header_footer</span><span class="tool-desc">- 添加文字、圖片、頁碼至頁首/頁尾</span><span class="tool-ops">（4個操作：add_text, add_image, add_page_number, remove）</span>
+            <span class="tool-name">pdf_header_footer</span><span class="tool-desc">- 添加文字、圖片、頁碼至頁首/頁尾</span><span class="tool-ops">（4個操作：add_text, add_image, add_number, remove）</span>
         </li>
         <li>
             <span class="tool-name">pdf_stamp</span><span class="tool-desc">- 添加文字、圖片、PDF 頁面印章</span><span class="tool-ops">（5個操作：add_text, add_image, add_pdf, list, remove）</span>
@@ -568,7 +568,7 @@
     <h3>讀取與屬性 (3)</h3>
     <ul class="tool-list">
         <li>
-            <span class="tool-name">pdf_info</span><span class="tool-desc">- 獲取PDF內容和統計資訊</span><span class="tool-ops">（2個操作：get_content, get_statistics）</span>
+            <span class="tool-name">pdf_info</span><span class="tool-desc">- 獲取PDF內容和統計資訊</span><span class="tool-ops">（2個操作：get, statistics）</span>
         </li>
         <li>
             <span class="tool-name">pdf_properties</span><span class="tool-desc">- 獲取、設定文檔屬性</span><span class="tool-ops">（2個操作：get, set）</span>
@@ -593,10 +593,10 @@
     <h3>文字辨識 (1)</h3>
     <ul class="tool-list">
         <li>
-            <span class="tool-name">ocr_recognition</span><span class="tool-desc">- 圖片/PDF 文字辨識，含專用辨識模式</span><span class="tool-ops">（5個操作：recognize, recognize_pdf, recognize_receipt, recognize_id_card, recognize_passport）</span>
+            <span class="tool-name">ocr_recognition</span><span class="tool-desc">- 圖片/PDF 文字辨識，含專用辨識模式</span><span class="tool-ops">（5個操作：recognize, recognize_pdf, recognize_receipt, recognize_id, recognize_passport）</span>
             <br><small class="small-hint" style="margin-left: 20px;"><code>recognize</code>：辨識圖片中的文字（PNG/JPG/BMP/TIFF/PDF），回傳文字、信心度、座標；<code>includeWords=true</code> 可取得每個單詞的 Bounding Box 座標（X, Y, Width, Height）</small>
             <br><small class="small-hint" style="margin-left: 20px;"><code>recognize_pdf</code>：掃描 PDF 轉可編輯文件（DOCX/XLSX/PDF/TXT），支援 <code>language</code> 參數指定辨識語言</small>
-            <br><small class="small-hint" style="margin-left: 20px;"><code>recognize_receipt / recognize_id_card / recognize_passport</code>：針對收據、身分證、護照的專用辨識，回傳結構化欄位資料</small>
+            <br><small class="small-hint" style="margin-left: 20px;"><code>recognize_receipt / recognize_id / recognize_passport</code>：針對收據、身分證、護照的專用辨識，回傳結構化欄位資料</small>
         </li>
     </ul>
 
@@ -612,7 +612,7 @@
     <h3>郵件操作 (3)</h3>
     <ul class="tool-list">
         <li>
-            <span class="tool-name">email_file</span><span class="tool-desc">- 建立、讀取、儲存、轉換、偵測格式</span><span class="tool-ops">（5個操作：create, get_info, save, convert, detect_format）</span>
+            <span class="tool-name">email_file</span><span class="tool-desc">- 建立、讀取、儲存、轉換、偵測格式</span><span class="tool-ops">（5個操作：create, get_info, save, convert, detect）</span>
         </li>
         <li>
             <span class="tool-name">email_content</span><span class="tool-desc">- 取得/設定郵件內容（主旨、內文、標頭、收件人）</span><span class="tool-ops">（8個操作：get_body, set_body, get_headers, set_headers, get_subject, set_subject, get_recipients, set_recipients）</span>

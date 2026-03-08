@@ -176,10 +176,12 @@ public static class FontHelper
 
             return underline.ToLower() switch
             {
-                "single" => Underline.Single,
+                "single" or "true" => Underline.Single,
                 "double" => Underline.Double,
                 "dotted" => Underline.Dotted,
                 "dash" => Underline.Dash,
+                // ReSharper disable once RedundantSwitchExpressionArms - Explicit mapping for "none"/"false" as documented valid inputs
+                "none" or "false" => Underline.None,
                 _ => Underline.None
             };
         }

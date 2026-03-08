@@ -13,7 +13,7 @@ public class SetWorkbookPropertiesHandlerTests : ExcelHandlerTestBase
     [Fact]
     public void Operation_Returns_SetWorkbookProperties()
     {
-        Assert.Equal("set_workbook_properties", _handler.Operation);
+        Assert.Equal("set", _handler.Operation);
     }
 
     #endregion

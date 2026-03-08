@@ -45,9 +45,9 @@ public class ExcelFilterTool
     }
 
     /// <summary>
-    ///     Executes an Excel filter operation (apply, remove, filter, or get_status).
+    ///     Executes an Excel filter operation (apply, remove, filter, or status).
     /// </summary>
-    /// <param name="operation">The operation to perform: apply, remove, filter, or get_status.</param>
+    /// <param name="operation">The operation to perform: apply, remove, filter, or status.</param>
     /// <param name="path">Excel file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID for in-memory editing.</param>
     /// <param name="outputPath">Output file path (file mode only).</param>
@@ -66,20 +66,20 @@ public class ExcelFilterTool
         OpenWorld = false,
         ReadOnly = false,
         UseStructuredContent = true)]
-    [Description(@"Manage Excel filters. Supports 4 operations: apply, remove, filter, get_status.
+    [Description(@"Manage Excel filters. Supports 4 operations: apply, remove, filter, status.
 
 Usage examples:
 - Apply auto filter: excel_filter(operation='apply', path='book.xlsx', range='A1:C10')
 - Remove filter: excel_filter(operation='remove', path='book.xlsx')
 - Filter by value: excel_filter(operation='filter', path='book.xlsx', range='A1:C10', columnIndex=0, criteria='Completed')
 - Filter by custom: excel_filter(operation='filter', path='book.xlsx', range='A1:C10', columnIndex=1, filterOperator='GreaterThan', criteria='100')
-- Get filter status: excel_filter(operation='get_status', path='book.xlsx')")]
+- Get filter status: excel_filter(operation='status', path='book.xlsx')")]
     public object Execute(
         [Description(@"Operation to perform.
 - 'apply': Apply auto filter dropdown buttons (required params: path, range)
 - 'remove': Remove auto filter completely (required params: path)
 - 'filter': Apply filter criteria to a column (required params: path, range, columnIndex, criteria)
-- 'get_status': Get filter status with details (required params: path)")]
+- 'status': Get filter status with details (required params: path)")]
         string operation,
         [Description("Excel file path (required if no sessionId)")]
         string? path = null,
@@ -116,7 +116,7 @@ Usage examples:
 
         var result = handler.Execute(operationContext, parameters);
 
-        if (string.Equals(operation, "get_status", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(operation, "status", StringComparison.OrdinalIgnoreCase))
             return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
@@ -144,7 +144,7 @@ Usage examples:
         return operation.ToLowerInvariant() switch
         {
             "apply" => BuildApplyParameters(parameters, range),
-            "remove" or "get_status" => parameters,
+            "remove" or "status" => parameters,
             "filter" => BuildFilterParameters(parameters, range, columnIndex, criteria, filterOperator),
             _ => parameters
         };

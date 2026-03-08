@@ -75,7 +75,7 @@ public class PptSecurityToolTests : PptTestBase
         SkipIfNotWindows();
         var pptPath = CreatePresentation("test_set_wp.pptx");
         var outputPath = CreateTestFilePath("test_set_wp_output.pptx");
-        var result = _tool.Execute("set_write_protection", pptPath, password: "edit_pass", outputPath: outputPath);
+        var result = _tool.Execute("set_write_protect", pptPath, password: "edit_pass", outputPath: outputPath);
         var data = GetResultData<SuccessResult>(result);
         Assert.Contains("Write protection set", data.Message);
         using var presentation = new Presentation(outputPath);
@@ -88,7 +88,7 @@ public class PptSecurityToolTests : PptTestBase
         SkipIfNotWindows();
         var pptPath = CreatePresentationWithWriteProtection("test_remove_wp.pptx");
         var outputPath = CreateTestFilePath("test_remove_wp_output.pptx");
-        var result = _tool.Execute("remove_write_protection", pptPath, outputPath: outputPath);
+        var result = _tool.Execute("remove_write_protect", pptPath, outputPath: outputPath);
         var data = GetResultData<SuccessResult>(result);
         Assert.Contains("Write protection removed", data.Message);
     }
@@ -109,7 +109,7 @@ public class PptSecurityToolTests : PptTestBase
     {
         SkipIfNotWindows();
         var pptPath = CreateSecurityPresentation("test_get_status.pptx");
-        var result = _tool.Execute("get_status", pptPath);
+        var result = _tool.Execute("status", pptPath);
         var data = GetResultData<SecurityStatusPptResult>(result);
         Assert.False(data.IsEncrypted);
         Assert.False(data.IsWriteProtected);
@@ -121,7 +121,7 @@ public class PptSecurityToolTests : PptTestBase
     {
         SkipIfNotWindows();
         var pptPath = CreatePresentationWithWriteProtection("test_get_status_wp.pptx");
-        var result = _tool.Execute("get_status", pptPath);
+        var result = _tool.Execute("status", pptPath);
         var data = GetResultData<SecurityStatusPptResult>(result);
         Assert.True(data.IsWriteProtected);
     }
@@ -163,7 +163,7 @@ public class PptSecurityToolTests : PptTestBase
         SkipIfNotWindows();
         var pptPath = CreateSecurityPresentation("test_session_status.pptx");
         var sessionId = OpenSession(pptPath);
-        var result = _tool.Execute("get_status", sessionId: sessionId);
+        var result = _tool.Execute("status", sessionId: sessionId);
         var data = GetResultData<SecurityStatusPptResult>(result);
         Assert.NotNull(data);
         Assert.False(data.IsEncrypted);
@@ -203,7 +203,7 @@ public class PptSecurityToolTests : PptTestBase
         SkipIfNotWindows();
         var pptPath = CreatePresentation("test_session_set_wp.pptx");
         var sessionId = OpenSession(pptPath);
-        var result = _tool.Execute("set_write_protection", sessionId: sessionId, password: "edit_pass");
+        var result = _tool.Execute("set_write_protect", sessionId: sessionId, password: "edit_pass");
         var data = GetResultData<SuccessResult>(result);
         Assert.Contains("Write protection set", data.Message);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
@@ -218,7 +218,7 @@ public class PptSecurityToolTests : PptTestBase
         SkipIfNotWindows();
         var pptPath = CreatePresentationWithWriteProtection("test_session_remove_wp.pptx");
         var sessionId = OpenSession(pptPath);
-        var result = _tool.Execute("remove_write_protection", sessionId: sessionId);
+        var result = _tool.Execute("remove_write_protect", sessionId: sessionId);
         var data = GetResultData<SuccessResult>(result);
         Assert.Contains("Write protection removed", data.Message);
         var output = GetResultOutput<SuccessResult>(result);
@@ -242,7 +242,7 @@ public class PptSecurityToolTests : PptTestBase
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
         SkipIfNotWindows();
-        Assert.Throws<KeyNotFoundException>(() => _tool.Execute("get_status", sessionId: "invalid_session"));
+        Assert.Throws<KeyNotFoundException>(() => _tool.Execute("status", sessionId: "invalid_session"));
     }
 
     [SkippableFact]
@@ -252,7 +252,7 @@ public class PptSecurityToolTests : PptTestBase
         var pptPath1 = CreatePresentationWithWriteProtection("test_path_security.pptx");
         var pptPath2 = CreateSecurityPresentation("test_session_security.pptx");
         var sessionId = OpenSession(pptPath2);
-        var result = _tool.Execute("get_status", pptPath1, sessionId);
+        var result = _tool.Execute("status", pptPath1, sessionId);
         var data = GetResultData<SecurityStatusPptResult>(result);
         Assert.False(data.IsWriteProtected);
         var output = GetResultOutput<SecurityStatusPptResult>(result);

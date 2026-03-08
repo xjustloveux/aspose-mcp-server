@@ -16,7 +16,7 @@ public class GetSlideDetailsHandlerTests : PptHandlerTestBase
     public void Operation_Returns_GetSlideDetails()
     {
         SkipIfNotWindows();
-        Assert.Equal("get_slide_details", _handler.Operation);
+        Assert.Equal("slide_details", _handler.Operation);
     }
 
     #endregion

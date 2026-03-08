@@ -15,7 +15,7 @@ public class UpdateTableOfContentsWordHandlerTests : WordHandlerTestBase
     [Fact]
     public void Operation_Returns_UpdateTableOfContents()
     {
-        Assert.Equal("update_table_of_contents", _handler.Operation);
+        Assert.Equal("update_toc", _handler.Operation);
     }
 
     #endregion

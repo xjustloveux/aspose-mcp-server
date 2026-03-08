@@ -13,7 +13,7 @@ namespace AsposeMcpServer.Handlers.Word.Format;
 public class GetRunFormatWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "get_run_format";
+    public override string Operation => "get";
 
     /// <summary>
     ///     Gets run format information.

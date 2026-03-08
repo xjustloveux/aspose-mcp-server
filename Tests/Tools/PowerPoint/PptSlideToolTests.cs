@@ -55,7 +55,7 @@ public class PptSlideToolTests : PptTestBase
     {
         SkipIfNotWindows();
         var pptPath = CreatePresentation("test_get_info.pptx", 3);
-        var result = _tool.Execute("get_info", pptPath);
+        var result = _tool.Execute("get", pptPath);
         var data = GetResultData<GetSlidesInfoResult>(result);
         Assert.Equal(3, data.Count);
         Assert.NotNull(data.Slides);
@@ -193,7 +193,7 @@ public class PptSlideToolTests : PptTestBase
         SkipIfNotWindows();
         var pptPath = CreatePresentation("test_session_info.pptx");
         var sessionId = OpenSession(pptPath);
-        var result = _tool.Execute("get_info", sessionId: sessionId);
+        var result = _tool.Execute("get", sessionId: sessionId);
         var data = GetResultData<GetSlidesInfoResult>(result);
         Assert.True(data.Count >= 0);
         var output = GetResultOutput<GetSlidesInfoResult>(result);
@@ -275,7 +275,7 @@ public class PptSlideToolTests : PptTestBase
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
         SkipIfNotWindows();
-        Assert.Throws<KeyNotFoundException>(() => _tool.Execute("get_info", sessionId: "invalid_session"));
+        Assert.Throws<KeyNotFoundException>(() => _tool.Execute("get", sessionId: "invalid_session"));
     }
 
     [SkippableFact]
@@ -284,7 +284,7 @@ public class PptSlideToolTests : PptTestBase
         SkipIfNotWindows();
         var toolWithoutSession = new PptSlideTool();
         var ex = Assert.Throws<InvalidOperationException>(() =>
-            toolWithoutSession.Execute("get_info", sessionId: "any_session"));
+            toolWithoutSession.Execute("get", sessionId: "any_session"));
         Assert.Contains("Session management is not enabled", ex.Message);
     }
 
@@ -295,7 +295,7 @@ public class PptSlideToolTests : PptTestBase
         var pptPath1 = CreatePresentation("test_path_ppt.pptx");
         var pptPath2 = CreatePresentation("test_session_ppt.pptx", 5);
         var sessionId = OpenSession(pptPath2);
-        var result = _tool.Execute("get_info", pptPath1, sessionId);
+        var result = _tool.Execute("get", pptPath1, sessionId);
         var data = GetResultData<GetSlidesInfoResult>(result);
         Assert.Equal(5, data.Count);
     }

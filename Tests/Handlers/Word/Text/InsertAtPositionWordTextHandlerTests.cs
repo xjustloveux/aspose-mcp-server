@@ -13,7 +13,7 @@ public class InsertAtPositionWordTextHandlerTests : WordHandlerTestBase
     [Fact]
     public void Operation_Returns_InsertAtPosition()
     {
-        Assert.Equal("insert_at_position", _handler.Operation);
+        Assert.Equal("insert", _handler.Operation);
     }
 
     #endregion

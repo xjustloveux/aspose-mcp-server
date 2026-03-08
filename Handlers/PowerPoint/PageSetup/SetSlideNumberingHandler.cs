@@ -12,7 +12,7 @@ namespace AsposeMcpServer.Handlers.PowerPoint.PageSetup;
 public class SetSlideNumberingHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
-    public override string Operation => "set_slide_numbering";
+    public override string Operation => "set_numbering";
 
     /// <summary>
     ///     Sets slide numbering visibility and start number.

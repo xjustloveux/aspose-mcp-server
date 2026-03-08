@@ -69,7 +69,7 @@ public class PptTableToolTests : PptTestBase
         SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation mode truncates text data");
         var pptPath = CreatePresentationWithTable("test_get_content.pptx");
         var shapeIndex = FindTableShapeIndex(pptPath, 0);
-        var result = _tool.Execute("get_content", pptPath, slideIndex: 0, shapeIndex: shapeIndex);
+        var result = _tool.Execute("get", pptPath, slideIndex: 0, shapeIndex: shapeIndex);
         var data = GetResultData<GetTableContentResult>(result);
         Assert.Contains(data.Data, row => row.Any(cell => cell.Contains("R0C0")));
         Assert.True(data.RowCount > 0);

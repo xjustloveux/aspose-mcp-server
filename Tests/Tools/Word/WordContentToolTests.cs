@@ -24,7 +24,7 @@ public class WordContentToolTests : WordTestBase
     public void GetContent_ShouldReturnContent()
     {
         var docPath = CreateWordDocumentWithContent("test_get_content.docx", "Test content for extraction");
-        var result = _tool.Execute("get_content", docPath);
+        var result = _tool.Execute("get", docPath);
         Assert.NotNull(result);
         var data = GetResultData<GetWordContentResult>(result);
         Assert.Contains("Test content for extraction", data.Content);
@@ -34,7 +34,7 @@ public class WordContentToolTests : WordTestBase
     public void GetContentDetailed_ShouldReturnDetailedContent()
     {
         var docPath = CreateWordDocumentWithContent("test_detailed.docx", "Detailed content");
-        var result = _tool.Execute("get_content_detailed", docPath);
+        var result = _tool.Execute("get_detailed", docPath);
         var data = GetResultData<GetWordContentDetailedResult>(result);
         Assert.Contains("Detailed content", data.Content);
     }
@@ -43,7 +43,7 @@ public class WordContentToolTests : WordTestBase
     public void GetStatistics_ShouldReturnStatistics()
     {
         var docPath = CreateWordDocumentWithContent("test_statistics.docx", "Test document for statistics");
-        var result = _tool.Execute("get_statistics", docPath);
+        var result = _tool.Execute("statistics", docPath);
         var data = GetResultData<GetWordStatisticsResult>(result);
         Assert.True(data.Pages >= 0);
         Assert.True(data.Words >= 0);
@@ -54,7 +54,7 @@ public class WordContentToolTests : WordTestBase
     public void GetDocumentInfo_ShouldReturnDocumentInfo()
     {
         var docPath = CreateWordDocument("test_doc_info.docx");
-        var result = _tool.Execute("get_document_info", docPath);
+        var result = _tool.Execute("info", docPath);
         var data = GetResultData<GetWordDocumentInfoResult>(result);
         Assert.NotNull(data.Created);
         Assert.NotNull(data.Modified);
@@ -66,9 +66,9 @@ public class WordContentToolTests : WordTestBase
     #region Operation Routing
 
     [Theory]
-    [InlineData("GET_CONTENT")]
-    [InlineData("Get_Content")]
-    [InlineData("get_content")]
+    [InlineData("GET")]
+    [InlineData("Get")]
+    [InlineData("get")]
     public void Operation_ShouldBeCaseInsensitive(string operation)
     {
         var docPath = CreateWordDocumentWithContent($"test_case_{operation.Replace("_", "")}.docx", "Test");
@@ -95,7 +95,7 @@ public class WordContentToolTests : WordTestBase
     {
         var docPath = CreateWordDocumentWithContent("test_session_content.docx", "Session content for extraction");
         var sessionId = OpenSession(docPath);
-        var result = _tool.Execute("get_content", sessionId: sessionId);
+        var result = _tool.Execute("get", sessionId: sessionId);
         var data = GetResultData<GetWordContentResult>(result);
         Assert.Contains("Session content", data.Content);
     }
@@ -105,7 +105,7 @@ public class WordContentToolTests : WordTestBase
     {
         var docPath = CreateWordDocumentWithContent("test_session_stats.docx", "Session document for statistics");
         var sessionId = OpenSession(docPath);
-        var result = _tool.Execute("get_statistics", sessionId: sessionId);
+        var result = _tool.Execute("statistics", sessionId: sessionId);
         var data = GetResultData<GetWordStatisticsResult>(result);
         Assert.True(data.Pages >= 0);
         Assert.True(data.Words >= 0);
@@ -115,7 +115,7 @@ public class WordContentToolTests : WordTestBase
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
         Assert.Throws<KeyNotFoundException>(() =>
-            _tool.Execute("get_content", sessionId: "invalid_session_id"));
+            _tool.Execute("get", sessionId: "invalid_session_id"));
     }
 
     [Fact]
@@ -124,7 +124,7 @@ public class WordContentToolTests : WordTestBase
         var docPath1 = CreateWordDocumentWithContent("test_path_content.docx", "PathDocumentContent");
         var docPath2 = CreateWordDocumentWithContent("test_session_content2.docx", "SessionDocumentContent");
         var sessionId = OpenSession(docPath2);
-        var result = _tool.Execute("get_content", docPath1, sessionId);
+        var result = _tool.Execute("get", docPath1, sessionId);
         var data = GetResultData<GetWordContentResult>(result);
         Assert.Contains("SessionDocumentContent", data.Content);
         Assert.DoesNotContain("PathDocumentContent", data.Content);

@@ -13,7 +13,7 @@ public class GetStatisticsHandlerTests : ExcelHandlerTestBase
     [Fact]
     public void Operation_Returns_GetStatistics()
     {
-        Assert.Equal("get_statistics", _handler.Operation);
+        Assert.Equal("statistics", _handler.Operation);
     }
 
     #endregion

@@ -13,7 +13,7 @@ namespace AsposeMcpServer.Handlers.Excel.DataOperations;
 public class FindReplaceHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
-    public override string Operation => "find_replace";
+    public override string Operation => "replace";
 
     /// <summary>
     ///     Finds and replaces text in the worksheet.

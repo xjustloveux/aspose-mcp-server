@@ -14,7 +14,7 @@ public class AddTotalRowExcelTableHandlerTests : ExcelHandlerTestBase
     [Fact]
     public void Operation_ShouldBeAddTotalRow()
     {
-        Assert.Equal("add_total_row", _handler.Operation);
+        Assert.Equal("add_total", _handler.Operation);
     }
 
     #endregion

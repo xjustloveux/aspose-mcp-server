@@ -14,7 +14,7 @@ public class DeletePageWordHandlerTests : WordHandlerTestBase
     [Fact]
     public void Operation_Returns_DeletePage()
     {
-        Assert.Equal("delete_page", _handler.Operation);
+        Assert.Equal("delete", _handler.Operation);
     }
 
     #endregion

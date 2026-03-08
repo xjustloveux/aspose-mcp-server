@@ -14,7 +14,7 @@ namespace AsposeMcpServer.Handlers.Email.FileOperations;
 public class DetectFormatEmailFileHandler : OperationHandlerBase<object>
 {
     /// <inheritdoc />
-    public override string Operation => "detect_format";
+    public override string Operation => "detect";
 
     /// <summary>
     ///     Detects the format of an email file using Aspose.Email's format detection.

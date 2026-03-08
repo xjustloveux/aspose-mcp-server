@@ -17,7 +17,7 @@ public class RenderPageWordHandlerTests : WordHandlerTestBase
     [Fact]
     public void Operation_ShouldBeRenderPage()
     {
-        Assert.Equal("render_page", _handler.Operation);
+        Assert.Equal("render", _handler.Operation);
     }
 
     [SkippableFact]

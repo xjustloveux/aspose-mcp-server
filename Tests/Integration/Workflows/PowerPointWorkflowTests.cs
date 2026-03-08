@@ -105,7 +105,7 @@ public class PowerPointWorkflowTests : TestBase
         var openResult = _sessionTool.Execute("open", originalPath);
         var openData = GetResultData<OpenSessionResult>(openResult);
 
-        var infoResult = _slideTool.Execute("get_info", sessionId: openData.SessionId, slideIndex: 0);
+        var infoResult = _slideTool.Execute("get", sessionId: openData.SessionId, slideIndex: 0);
 
         Assert.NotNull(infoResult);
 
@@ -208,7 +208,7 @@ public class PowerPointWorkflowTests : TestBase
         var openResult = _sessionTool.Execute("open", originalPath);
         var openData = GetResultData<OpenSessionResult>(openResult);
 
-        var layoutResult = _layoutTool.Execute("get_layouts", sessionId: openData.SessionId);
+        var layoutResult = _layoutTool.Execute("list", sessionId: openData.SessionId);
 
         Assert.NotNull(layoutResult);
 

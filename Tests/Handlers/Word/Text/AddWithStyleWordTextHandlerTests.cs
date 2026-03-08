@@ -16,7 +16,7 @@ public class AddWithStyleWordTextHandlerTests : WordHandlerTestBase
     [Fact]
     public void Operation_Returns_AddWithStyle()
     {
-        Assert.Equal("add_with_style", _handler.Operation);
+        Assert.Equal("add_styled", _handler.Operation);
     }
 
     #endregion

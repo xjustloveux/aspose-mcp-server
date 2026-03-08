@@ -13,7 +13,7 @@ namespace AsposeMcpServer.Handlers.Word.Field;
 public class AddFormFieldWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "add_form_field";
+    public override string Operation => "add_form";
 
     /// <summary>
     ///     Adds a form field (text input, checkbox, or dropdown) to the document.
@@ -69,9 +69,9 @@ public class AddFormFieldWordHandler : OperationHandlerBase<Document>
         var checkedValue = parameters.GetOptional<bool?>("checkedValue");
 
         if (string.IsNullOrEmpty(formFieldType))
-            throw new ArgumentException("formFieldType is required for add_form_field operation");
+            throw new ArgumentException("formFieldType is required for add_form operation");
         if (string.IsNullOrEmpty(fieldName))
-            throw new ArgumentException("fieldName is required for add_form_field operation");
+            throw new ArgumentException("fieldName is required for add_form operation");
 
         return new AddFormFieldParameters(formFieldType, fieldName, defaultValue, options, checkedValue);
     }

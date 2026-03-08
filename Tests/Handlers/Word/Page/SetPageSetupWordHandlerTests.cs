@@ -14,7 +14,7 @@ public class SetPageSetupWordHandlerTests : WordHandlerTestBase
     [Fact]
     public void Operation_Returns_SetPageSetup()
     {
-        Assert.Equal("set_page_setup", _handler.Operation);
+        Assert.Equal("set_all", _handler.Operation);
     }
 
     #endregion

@@ -56,7 +56,7 @@ public class EmailContactTool
 
 Usage examples:
 - Create contact: email_contact(operation='create', outputPath='contact.vcf', displayName='John Doe', email='john@example.com')
-- Get info: email_contact(operation='get_info', path='contact.vcf')
+- Get info: email_contact(operation='get', path='contact.vcf')
 - Convert format: email_contact(operation='save', path='contact.vcf', outputPath='contact.msg')
 - Set photo: email_contact(operation='set_photo', path='contact.vcf', outputPath='contact_photo.vcf', photoPath='photo.jpg')
 
@@ -64,7 +64,7 @@ Supported formats: VCF (vCard), MSG (Outlook)")]
     public object Execute(
         [Description(@"Operation to perform.
 - 'create': Create a new contact (required params: outputPath; optional: displayName, email, phone, company, jobTitle, format)
-- 'get_info': Get contact information (required params: path)
+- 'get': Get contact information (required params: path)
 - 'save': Save/convert contact to a different format (required params: path, outputPath; optional: format)
 - 'set_photo': Set a photo on a contact (required params: path, outputPath, photoPath)")]
         string operation,

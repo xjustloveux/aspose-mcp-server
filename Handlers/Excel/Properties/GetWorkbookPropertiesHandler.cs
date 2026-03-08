@@ -12,7 +12,7 @@ namespace AsposeMcpServer.Handlers.Excel.Properties;
 public class GetWorkbookPropertiesHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
-    public override string Operation => "get_workbook_properties";
+    public override string Operation => "get";
 
     /// <summary>
     ///     Gets workbook properties including built-in and custom properties.

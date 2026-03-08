@@ -13,7 +13,7 @@ namespace AsposeMcpServer.Handlers.Word.Content;
 public class GetWordDocumentInfoHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "get_document_info";
+    public override string Operation => "info";
 
     /// <summary>
     ///     Gets document metadata and properties as JSON.

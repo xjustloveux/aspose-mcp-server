@@ -44,9 +44,9 @@ public class WordRevisionTool
     }
 
     /// <summary>
-    ///     Executes a Word revision operation (get_revisions, accept_all, reject_all, manage, compare).
+    ///     Executes a Word revision operation (list, accept_all, reject_all, manage, compare).
     /// </summary>
-    /// <param name="operation">The operation to perform: get_revisions, accept_all, reject_all, manage, compare.</param>
+    /// <param name="operation">The operation to perform: list, accept_all, reject_all, manage, compare.</param>
     /// <param name="path">Word document file path (required if no sessionId for most operations).</param>
     /// <param name="sessionId">Session ID for in-memory editing.</param>
     /// <param name="outputPath">Output file path (optional for most operations, required for compare).</param>
@@ -57,7 +57,7 @@ public class WordRevisionTool
     /// <param name="authorName">Author name for revisions (for compare, default: 'Comparison').</param>
     /// <param name="ignoreFormatting">Ignore formatting changes in comparison (for compare, default: false).</param>
     /// <param name="ignoreComments">Ignore comments in comparison (for compare, default: false).</param>
-    /// <returns>A message indicating the result of the operation, or JSON data for get_revisions.</returns>
+    /// <returns>A message indicating the result of the operation, or JSON data for list.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(
         Name = "word_revision",
@@ -68,10 +68,10 @@ public class WordRevisionTool
         ReadOnly = false,
         UseStructuredContent = true)]
     [Description(
-        @"Manage revisions in Word documents. Supports 5 operations: get_revisions, accept_all, reject_all, manage, compare.
+        @"Manage revisions in Word documents. Supports 5 operations: list, accept_all, reject_all, manage, compare.
 
 Usage examples:
-- Get revisions: word_revision(operation='get_revisions', path='doc.docx')
+- List revisions: word_revision(operation='list', path='doc.docx')
 - Accept all: word_revision(operation='accept_all', path='doc.docx')
 - Reject all: word_revision(operation='reject_all', path='doc.docx')
 - Manage specific revision: word_revision(operation='manage', path='doc.docx', revisionIndex=0, action='accept')
@@ -79,10 +79,10 @@ Usage examples:
 
 Notes:
 - The 'manage' operation accepts or rejects a specific revision by index (0-based)
-- Use 'get_revisions' first to see all revisions and their indices
+- Use 'list' first to see all revisions and their indices
 - Compare operation can optionally ignore formatting and comments changes")]
     public object Execute(
-        [Description("Operation: get_revisions, accept_all, reject_all, manage, compare")]
+        [Description("Operation: list, accept_all, reject_all, manage, compare")]
         string operation,
         [Description("Document file path (required if no sessionId for most operations)")]
         string? path = null,
@@ -173,7 +173,7 @@ Notes:
     {
         return operation switch
         {
-            "get_revisions" or "accept_all" or "reject_all" => new OperationParameters(),
+            "list" or "accept_all" or "reject_all" => new OperationParameters(),
             "manage" => BuildManageParameters(revisionIndex, action),
             _ => new OperationParameters()
         };

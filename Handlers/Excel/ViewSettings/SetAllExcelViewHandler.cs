@@ -13,7 +13,7 @@ namespace AsposeMcpServer.Handlers.Excel.ViewSettings;
 public class SetAllExcelViewHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
-    public override string Operation => "set_all";
+    public override string Operation => "set";
 
     /// <summary>
     ///     Sets all view settings at once.

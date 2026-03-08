@@ -12,7 +12,7 @@ namespace AsposeMcpServer.Handlers.PowerPoint.Font;
 public class RemoveEmbeddedPptFontHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
-    public override string Operation => "remove_embedded";
+    public override string Operation => "remove";
 
     /// <summary>
     ///     Removes an embedded font from the presentation.

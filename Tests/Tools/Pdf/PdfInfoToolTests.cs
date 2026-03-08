@@ -40,7 +40,7 @@ public class PdfInfoToolTests : PdfTestBase
     public void GetContent_ShouldReturnContent()
     {
         var pdfPath = CreateTestPdf("test_get_content.pdf");
-        var result = _tool.Execute("get_content", pdfPath);
+        var result = _tool.Execute("get", pdfPath);
         var data = GetResultData<GetPdfContentResult>(result);
         Assert.True(data.TotalPages > 0);
         Assert.NotNull(data.ExtractedPages);
@@ -51,7 +51,7 @@ public class PdfInfoToolTests : PdfTestBase
     public void GetContent_WithPageIndex_ShouldReturnSpecificPage()
     {
         var pdfPath = CreateTestPdf("test_get_content_page.pdf", 2);
-        var result = _tool.Execute("get_content", pdfPath, pageIndex: 1);
+        var result = _tool.Execute("get", pdfPath, pageIndex: 1);
         var data = GetResultData<GetPdfContentResult>(result);
         Assert.Equal(1, data.PageIndex);
         Assert.Equal(2, data.TotalPages);
@@ -61,7 +61,7 @@ public class PdfInfoToolTests : PdfTestBase
     public void GetStatistics_ShouldReturnAllFields()
     {
         var pdfPath = CreateTestPdf("test_statistics.pdf");
-        var result = _tool.Execute("get_statistics", pdfPath);
+        var result = _tool.Execute("statistics", pdfPath);
         var data = GetResultData<GetPdfStatisticsResult>(result);
         Assert.NotNull(data.FileSizeBytes);
         Assert.True(data.TotalPages > 0);
@@ -73,9 +73,9 @@ public class PdfInfoToolTests : PdfTestBase
     #region Operation Routing
 
     [Theory]
-    [InlineData("GET_CONTENT")]
-    [InlineData("Get_Content")]
-    [InlineData("get_content")]
+    [InlineData("GET")]
+    [InlineData("Get")]
+    [InlineData("get")]
     public void Operation_ShouldBeCaseInsensitive(string operation)
     {
         var pdfPath = CreateTestPdf($"test_case_{operation.Replace("_", "")}.pdf");
@@ -102,7 +102,7 @@ public class PdfInfoToolTests : PdfTestBase
     {
         var pdfPath = CreateTestPdf("test_session_content.pdf");
         var sessionId = OpenSession(pdfPath);
-        var result = _tool.Execute("get_content", sessionId: sessionId, pageIndex: 1);
+        var result = _tool.Execute("get", sessionId: sessionId, pageIndex: 1);
         var data = GetResultData<GetPdfContentResult>(result);
         Assert.NotNull(data.Content);
         var output = GetResultOutput<GetPdfContentResult>(result);
@@ -114,7 +114,7 @@ public class PdfInfoToolTests : PdfTestBase
     {
         var pdfPath = CreateTestPdf("test_session_stats.pdf");
         var sessionId = OpenSession(pdfPath);
-        var result = _tool.Execute("get_statistics", sessionId: sessionId);
+        var result = _tool.Execute("statistics", sessionId: sessionId);
         var data = GetResultData<GetPdfStatisticsResult>(result);
         Assert.True(data.TotalPages > 0);
         var output = GetResultOutput<GetPdfStatisticsResult>(result);
@@ -125,7 +125,7 @@ public class PdfInfoToolTests : PdfTestBase
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
         Assert.Throws<KeyNotFoundException>(() =>
-            _tool.Execute("get_content", sessionId: "invalid_session"));
+            _tool.Execute("get", sessionId: "invalid_session"));
     }
 
     [Fact]
@@ -134,7 +134,7 @@ public class PdfInfoToolTests : PdfTestBase
         var pdfPath1 = CreateTestPdf("test_path_info.pdf");
         var pdfPath2 = CreateTestPdf("test_session_info.pdf", 3);
         var sessionId = OpenSession(pdfPath2);
-        var result = _tool.Execute("get_content", pdfPath1, sessionId);
+        var result = _tool.Execute("get", pdfPath1, sessionId);
         var data = GetResultData<GetPdfContentResult>(result);
         Assert.Equal(3, data.TotalPages);
         var output = GetResultOutput<GetPdfContentResult>(result);

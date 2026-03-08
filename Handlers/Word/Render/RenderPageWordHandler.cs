@@ -14,7 +14,7 @@ namespace AsposeMcpServer.Handlers.Word.Render;
 public class RenderPageWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "render_page";
+    public override string Operation => "render";
 
     /// <summary>
     ///     Renders a specific page (or all pages) of a Word document to image file(s).
@@ -138,7 +138,7 @@ public class RenderPageWordHandler : OperationHandlerBase<Document>
     }
 
     /// <summary>
-    ///     Parameters for the render_page operation.
+    ///     Parameters for the render operation.
     /// </summary>
     /// <param name="Path">The source document file path.</param>
     /// <param name="OutputPath">The output file/directory path.</param>

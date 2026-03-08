@@ -13,7 +13,7 @@ namespace AsposeMcpServer.Handlers.Excel.Table;
 public class ConvertToRangeExcelTableHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
-    public override string Operation => "convert_to_range";
+    public override string Operation => "to_range";
 
     /// <summary>
     ///     Converts a table to a normal cell range.

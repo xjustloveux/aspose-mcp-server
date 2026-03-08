@@ -9,7 +9,7 @@ using ModelContextProtocol.Server;
 namespace AsposeMcpServer.Tools.Word;
 
 /// <summary>
-///     Tool for rendering Word document pages to images (render_page, render_thumbnail).
+///     Tool for rendering Word document pages to images (render, thumbnail).
 /// </summary>
 [ToolHandlerMapping("AsposeMcpServer.Handlers.Word.Render")]
 [McpServerToolType]
@@ -44,15 +44,15 @@ public class WordRenderTool
     }
 
     /// <summary>
-    ///     Executes a Word document render operation (render_page, render_thumbnail).
+    ///     Executes a Word document render operation (render, thumbnail).
     /// </summary>
-    /// <param name="operation">The operation to perform: render_page, render_thumbnail.</param>
+    /// <param name="operation">The operation to perform: render, thumbnail.</param>
     /// <param name="path">Word document file path (required).</param>
     /// <param name="outputPath">Output image file path (required).</param>
-    /// <param name="pageIndex">Page index (1-based, for render_page; default: all pages).</param>
+    /// <param name="pageIndex">Page index (1-based, for render; default: all pages).</param>
     /// <param name="format">Image format: png, jpeg, bmp, tiff, svg (default: png).</param>
-    /// <param name="dpi">Rendering DPI (for render_page, default: 150).</param>
-    /// <param name="scale">Scale factor for thumbnail (0-1, for render_thumbnail, default: 0.25).</param>
+    /// <param name="dpi">Rendering DPI (for render, default: 150).</param>
+    /// <param name="scale">Scale factor for thumbnail (0-1, for thumbnail, default: 0.25).</param>
     /// <returns>Render result with output file paths.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(
@@ -63,29 +63,29 @@ public class WordRenderTool
         OpenWorld = false,
         ReadOnly = true,
         UseStructuredContent = true)]
-    [Description(@"Render Word document pages to images. Supports 2 operations: render_page, render_thumbnail.
+    [Description(@"Render Word document pages to images. Supports 2 operations: render, thumbnail.
 
 Usage examples:
-- Render single page: word_render(operation='render_page', path='doc.docx', outputPath='page.png', pageIndex=1)
-- Render all pages: word_render(operation='render_page', path='doc.docx', outputPath='output/pages.png')
-- Render thumbnail: word_render(operation='render_thumbnail', path='doc.docx', outputPath='thumb.png')
-- Render with options: word_render(operation='render_page', path='doc.docx', outputPath='page.jpeg', format='jpeg', dpi=300)")]
+- Render single page: word_render(operation='render', path='doc.docx', outputPath='page.png', pageIndex=1)
+- Render all pages: word_render(operation='render', path='doc.docx', outputPath='output/pages.png')
+- Render thumbnail: word_render(operation='thumbnail', path='doc.docx', outputPath='thumb.png')
+- Render with options: word_render(operation='render', path='doc.docx', outputPath='page.jpeg', format='jpeg', dpi=300)")]
     public object Execute(
         [Description(@"Operation to perform.
-- 'render_page': Render page(s) to image (required params: path, outputPath)
-- 'render_thumbnail': Render first page thumbnail (required params: path, outputPath)")]
+- 'render': Render page(s) to image (required params: path, outputPath)
+- 'thumbnail': Render first page thumbnail (required params: path, outputPath)")]
         string operation,
         [Description("Word document file path (required)")]
         string? path = null,
         [Description("Output image file path (required)")]
         string? outputPath = null,
-        [Description("Page index (1-based, for render_page; omit to render all pages)")]
+        [Description("Page index (1-based, for render; omit to render all pages)")]
         int? pageIndex = null,
         [Description("Image format: png, jpeg, bmp, tiff, svg (default: png)")]
         string format = "png",
-        [Description("Rendering DPI (for render_page, default: 150)")]
+        [Description("Rendering DPI (for render, default: 150)")]
         int dpi = 150,
-        [Description("Scale factor for thumbnail (0-1, for render_thumbnail, default: 0.25)")]
+        [Description("Scale factor for thumbnail (0-1, for thumbnail, default: 0.25)")]
         double scale = 0.25)
     {
         var parameters = BuildParameters(operation, path, outputPath, pageIndex, format, dpi, scale);
@@ -121,14 +121,14 @@ Usage examples:
     {
         return operation.ToLowerInvariant() switch
         {
-            "render_page" => BuildRenderPageParameters(path, outputPath, pageIndex, format, dpi),
-            "render_thumbnail" => BuildRenderThumbnailParameters(path, outputPath, format, scale),
+            "render" => BuildRenderPageParameters(path, outputPath, pageIndex, format, dpi),
+            "thumbnail" => BuildRenderThumbnailParameters(path, outputPath, format, scale),
             _ => new OperationParameters()
         };
     }
 
     /// <summary>
-    ///     Builds parameters for the render_page operation.
+    ///     Builds parameters for the render operation.
     /// </summary>
     /// <param name="path">The source document file path.</param>
     /// <param name="outputPath">The output image file path.</param>
@@ -149,7 +149,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds parameters for the render_thumbnail operation.
+    ///     Builds parameters for the thumbnail operation.
     /// </summary>
     /// <param name="path">The source document file path.</param>
     /// <param name="outputPath">The output image file path.</param>

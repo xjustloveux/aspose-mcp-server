@@ -13,7 +13,7 @@ namespace AsposeMcpServer.Handlers.Excel.DataOperations;
 public class GetUsedRangeHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
-    public override string Operation => "get_used_range";
+    public override string Operation => "used_range";
 
     /// <summary>
     ///     Gets the used range information for the worksheet.

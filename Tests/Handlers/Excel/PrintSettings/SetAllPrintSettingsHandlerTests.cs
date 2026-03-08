@@ -14,7 +14,7 @@ public class SetAllPrintSettingsHandlerTests : ExcelHandlerTestBase
     [Fact]
     public void Operation_Returns_SetAll()
     {
-        Assert.Equal("set_all", _handler.Operation);
+        Assert.Equal("set", _handler.Operation);
     }
 
     #endregion

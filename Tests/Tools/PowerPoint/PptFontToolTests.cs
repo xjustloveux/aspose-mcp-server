@@ -41,7 +41,7 @@ public class PptFontToolTests : PptTestBase
     {
         SkipIfNotWindows();
         var pptPath = CreatePresentationWithContent("test_get_used.pptx", "Hello World");
-        var result = _tool.Execute("get_used", pptPath);
+        var result = _tool.Execute("list", pptPath);
         var data = GetResultData<GetFontsPptResult>(result);
         Assert.True(data.Count > 0);
         Assert.NotEmpty(data.Items);
@@ -79,9 +79,9 @@ public class PptFontToolTests : PptTestBase
     #region Operation Routing
 
     [SkippableTheory]
-    [InlineData("GET_USED")]
-    [InlineData("Get_Used")]
-    [InlineData("get_used")]
+    [InlineData("LIST")]
+    [InlineData("List")]
+    [InlineData("list")]
     public void Operation_ShouldBeCaseInsensitive(string operation)
     {
         SkipIfNotWindows();
@@ -110,7 +110,7 @@ public class PptFontToolTests : PptTestBase
         SkipIfNotWindows();
         var pptPath = CreatePresentationWithContent("test_session_get.pptx", "Hello World");
         var sessionId = OpenSession(pptPath);
-        var result = _tool.Execute("get_used", sessionId: sessionId);
+        var result = _tool.Execute("list", sessionId: sessionId);
         var data = GetResultData<GetFontsPptResult>(result);
         Assert.True(data.Count >= 0);
         var output = GetResultOutput<GetFontsPptResult>(result);
@@ -147,7 +147,7 @@ public class PptFontToolTests : PptTestBase
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
         SkipIfNotWindows();
-        Assert.Throws<KeyNotFoundException>(() => _tool.Execute("get_used", sessionId: "invalid_session"));
+        Assert.Throws<KeyNotFoundException>(() => _tool.Execute("list", sessionId: "invalid_session"));
     }
 
     [SkippableFact]
@@ -157,7 +157,7 @@ public class PptFontToolTests : PptTestBase
         var pptPath1 = CreatePresentationWithContent("test_path_font.pptx", "Path content");
         var pptPath2 = CreatePresentationWithContent("test_session_font.pptx", "Session content");
         var sessionId = OpenSession(pptPath2);
-        var result = _tool.Execute("get_used", pptPath1, sessionId);
+        var result = _tool.Execute("list", pptPath1, sessionId);
         var data = GetResultData<GetFontsPptResult>(result);
         Assert.NotNull(data);
     }

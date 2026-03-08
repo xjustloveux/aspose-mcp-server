@@ -18,7 +18,7 @@ public class ManageSmartArtNodesHandlerTests : PptHandlerTestBase
     public void Operation_Returns_ManageNodes()
     {
         SkipIfNotWindows();
-        Assert.Equal("manage_nodes", _handler.Operation);
+        Assert.Equal("manage", _handler.Operation);
     }
 
     #endregion

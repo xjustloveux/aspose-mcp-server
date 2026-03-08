@@ -28,7 +28,7 @@ public class WordHeaderFooterToolTests : WordTestBase
     {
         var docPath = CreateWordDocument("test_set_header_text.docx");
         var outputPath = CreateTestFilePath("test_set_header_text_output.docx");
-        _tool.Execute("set_header_text", docPath, outputPath: outputPath,
+        _tool.Execute("set_header", docPath, outputPath: outputPath,
             headerLeft: "Left Header", headerCenter: "Center Header");
         var doc = new Document(outputPath);
         var header = doc.FirstSection.HeadersFooters[HeaderFooterType.HeaderPrimary];
@@ -41,7 +41,7 @@ public class WordHeaderFooterToolTests : WordTestBase
     {
         var docPath = CreateWordDocument("test_set_footer_text.docx");
         var outputPath = CreateTestFilePath("test_set_footer_text_output.docx");
-        _tool.Execute("set_footer_text", docPath, outputPath: outputPath,
+        _tool.Execute("set_footer", docPath, outputPath: outputPath,
             footerLeft: "Page", footerRight: "{PAGE}");
         var doc = new Document(outputPath);
         var footer = doc.FirstSection.HeadersFooters[HeaderFooterType.FooterPrimary];
@@ -96,7 +96,7 @@ public class WordHeaderFooterToolTests : WordTestBase
     {
         var docPath = CreateWordDocument("test_set_header_footer.docx");
         var outputPath = CreateTestFilePath("test_set_header_footer_output.docx");
-        _tool.Execute("set_header_footer", docPath, outputPath: outputPath,
+        _tool.Execute("set_all", docPath, outputPath: outputPath,
             headerLeft: "Left Header", footerCenter: "Center Footer");
         Assert.True(File.Exists(outputPath));
         var doc = new Document(outputPath);
@@ -109,9 +109,9 @@ public class WordHeaderFooterToolTests : WordTestBase
     #region Operation Routing
 
     [Theory]
-    [InlineData("SET_HEADER_TEXT")]
-    [InlineData("Set_Header_Text")]
-    [InlineData("set_header_text")]
+    [InlineData("SET_HEADER")]
+    [InlineData("Set_Header")]
+    [InlineData("set_header")]
     public void Operation_ShouldBeCaseInsensitive(string operation)
     {
         var docPath = CreateWordDocument($"test_case_{operation.Replace("_", "")}.docx");
@@ -147,7 +147,7 @@ public class WordHeaderFooterToolTests : WordTestBase
     {
         var docPath = CreateWordDocument("test_session_set_header.docx");
         var sessionId = OpenSession(docPath);
-        var result = _tool.Execute("set_header_text", sessionId: sessionId,
+        var result = _tool.Execute("set_header", sessionId: sessionId,
             headerLeft: "Session Left", headerCenter: "Session Center");
         Assert.IsType<FinalizedResult<SuccessResult>>(result);
 
@@ -162,7 +162,7 @@ public class WordHeaderFooterToolTests : WordTestBase
     {
         var docPath = CreateWordDocument("test_session_set_footer.docx");
         var sessionId = OpenSession(docPath);
-        var result = _tool.Execute("set_footer_text", sessionId: sessionId,
+        var result = _tool.Execute("set_footer", sessionId: sessionId,
             footerLeft: "Session Footer", footerRight: "{PAGE}");
         Assert.IsType<FinalizedResult<SuccessResult>>(result);
 
@@ -221,7 +221,7 @@ public class WordHeaderFooterToolTests : WordTestBase
     {
         var docPath = CreateWordDocument("test_session_hf_both.docx");
         var sessionId = OpenSession(docPath);
-        var result = _tool.Execute("set_header_footer", sessionId: sessionId,
+        var result = _tool.Execute("set_all", sessionId: sessionId,
             headerCenter: "Session Header", footerCenter: "Session Footer");
         Assert.IsType<FinalizedResult<SuccessResult>>(result);
 

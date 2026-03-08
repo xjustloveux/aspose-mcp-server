@@ -12,7 +12,7 @@ namespace AsposeMcpServer.Handlers.Word.Page;
 public class SetPageSetupWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "set_page_setup";
+    public override string Operation => "set_all";
 
     /// <summary>
     ///     Sets multiple page setup options (margins and orientation) for a section.

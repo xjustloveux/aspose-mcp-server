@@ -44,9 +44,9 @@ public class ExcelFormulaTool
     }
 
     /// <summary>
-    ///     Executes an Excel formula operation (add, get, get_result, calculate, set_array, get_array).
+    ///     Executes an Excel formula operation (add, get, result, calculate, set_array, get_array).
     /// </summary>
-    /// <param name="operation">The operation to perform: add, get, get_result, calculate, set_array, get_array.</param>
+    /// <param name="operation">The operation to perform: add, get, result, calculate, set_array, get_array.</param>
     /// <param name="path">Excel file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID for in-memory editing.</param>
     /// <param name="outputPath">Output file path (file mode only).</param>
@@ -66,12 +66,12 @@ public class ExcelFormulaTool
         OpenWorld = false,
         ReadOnly = false,
         UseStructuredContent = true)]
-    [Description(@"Manage Excel formulas. Supports 6 operations: add, get, get_result, calculate, set_array, get_array.
+    [Description(@"Manage Excel formulas. Supports 6 operations: add, get, result, calculate, set_array, get_array.
 
 Usage examples:
 - Add formula: excel_formula(operation='add', path='book.xlsx', cell='A1', formula='=SUM(B1:B10)')
 - Get formula: excel_formula(operation='get', path='book.xlsx', cell='A1')
-- Get result: excel_formula(operation='get_result', path='book.xlsx', cell='A1')
+- Get result: excel_formula(operation='result', path='book.xlsx', cell='A1')
 - Calculate: excel_formula(operation='calculate', path='book.xlsx')
 - Set array formula: excel_formula(operation='set_array', path='book.xlsx', range='A1:A10', formula='=B1:B10*2')
 - Get array formula: excel_formula(operation='get_array', path='book.xlsx', cell='A1')")]
@@ -79,7 +79,7 @@ Usage examples:
         [Description(@"Operation to perform.
 - 'add': Add a formula to a cell (required params: path, cell, formula)
 - 'get': Get formula from a cell (required params: path, cell)
-- 'get_result': Get formula result (required params: path, cell)
+- 'result': Get formula result (required params: path, cell)
 - 'calculate': Calculate all formulas (required params: path)
 - 'set_array': Set array formula (required params: path, range, formula)
 - 'get_array': Get array formula (required params: path, cell)")]
@@ -123,7 +123,7 @@ Usage examples:
         var result = handler.Execute(operationContext, parameters);
 
         var op = operation.ToLowerInvariant();
-        if (op == "get" || op == "get_result" || op == "get_array")
+        if (op == "get" || op == "result" || op == "get_array")
             return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
@@ -153,7 +153,7 @@ Usage examples:
         {
             "add" => BuildAddParameters(parameters, cell, formula, autoCalculate),
             "get" => BuildGetParameters(parameters, range),
-            "get_result" => BuildGetResultParameters(parameters, cell, calculateBeforeRead),
+            "result" => BuildGetResultParameters(parameters, cell, calculateBeforeRead),
             "calculate" => parameters,
             "set_array" => BuildSetArrayParameters(parameters, range, formula, autoCalculate),
             "get_array" => BuildCellParameters(parameters, cell),

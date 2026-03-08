@@ -15,7 +15,7 @@ namespace AsposeMcpServer.Handlers.Word.HeaderFooter;
 public class SetHeaderFooterHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "set_header_footer";
+    public override string Operation => "set_all";
 
     /// <summary>
     ///     Sets both header and footer content in the document.

@@ -13,7 +13,7 @@ namespace AsposeMcpServer.Handlers.Word.Content;
 public class GetWordContentHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "get_content";
+    public override string Operation => "get";
 
     /// <summary>
     ///     Gets document content as plain text with optional pagination.

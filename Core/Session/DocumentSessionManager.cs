@@ -625,6 +625,14 @@ public class DocumentSessionManager : IDisposable
         foreach (var session in allSessions)
             if (now - session.LastAccessedAt > timeout)
             {
+                if (session.HasActiveUsers)
+                {
+                    _logger?.LogDebug(
+                        "Skipping cleanup of idle session {SessionId} because it has active users",
+                        session.SessionId);
+                    continue;
+                }
+
                 _logger?.LogInformation("Session {SessionId} timed out after {Minutes} minutes of inactivity",
                     session.SessionId, Config.IdleTimeoutMinutes);
 

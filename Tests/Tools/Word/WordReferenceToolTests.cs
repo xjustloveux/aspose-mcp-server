@@ -35,7 +35,7 @@ public class WordReferenceToolTests : WordTestBase
         doc.Save(docPath);
 
         var outputPath = CreateTestFilePath("test_add_toc_output.docx");
-        var result = _tool.Execute("add_table_of_contents", docPath, outputPath: outputPath,
+        var result = _tool.Execute("add_toc", docPath, outputPath: outputPath,
             title: "Table of Contents", maxLevel: 3);
         Assert.IsType<FinalizedResult<SuccessResult>>(result);
         Assert.True(File.Exists(outputPath));
@@ -57,7 +57,7 @@ public class WordReferenceToolTests : WordTestBase
         doc.Save(docPath);
 
         var outputPath = CreateTestFilePath("test_update_toc_output.docx");
-        var result = _tool.Execute("update_table_of_contents", docPath, outputPath: outputPath);
+        var result = _tool.Execute("update_toc", docPath, outputPath: outputPath);
         Assert.IsType<FinalizedResult<SuccessResult>>(result);
         Assert.True(File.Exists(outputPath));
         var resultDoc = new Document(outputPath);
@@ -97,7 +97,7 @@ public class WordReferenceToolTests : WordTestBase
         doc.Save(docPath);
 
         var outputPath = CreateTestFilePath("test_cross_reference_output.docx");
-        var result = _tool.Execute("add_cross_reference", docPath, outputPath: outputPath,
+        var result = _tool.Execute("add_xref", docPath, outputPath: outputPath,
             referenceType: "Bookmark", targetName: "Chapter1", referenceText: "See ");
         Assert.IsType<FinalizedResult<SuccessResult>>(result);
         Assert.True(File.Exists(outputPath));
@@ -111,9 +111,9 @@ public class WordReferenceToolTests : WordTestBase
     #region Operation Routing
 
     [Theory]
-    [InlineData("ADD_TABLE_OF_CONTENTS")]
-    [InlineData("Add_Table_Of_Contents")]
-    [InlineData("add_table_of_contents")]
+    [InlineData("ADD_TOC")]
+    [InlineData("Add_Toc")]
+    [InlineData("add_toc")]
     public void Operation_ShouldBeCaseInsensitive(string operation)
     {
         var docPath = CreateWordDocumentWithContent($"test_toc_{operation.Replace("_", "")}.docx", "Content");
@@ -147,7 +147,7 @@ public class WordReferenceToolTests : WordTestBase
         doc.Save(docPath);
 
         var sessionId = OpenSession(docPath);
-        var result = _tool.Execute("add_table_of_contents", sessionId: sessionId, title: "TOC");
+        var result = _tool.Execute("add_toc", sessionId: sessionId, title: "TOC");
         Assert.IsType<FinalizedResult<SuccessResult>>(result);
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         var tocFields = sessionDoc.Range.Fields.Where(f => f.Type == FieldType.FieldTOC).ToList();
@@ -175,7 +175,7 @@ public class WordReferenceToolTests : WordTestBase
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
         Assert.Throws<KeyNotFoundException>(() =>
-            _tool.Execute("add_table_of_contents", sessionId: "invalid_session_id"));
+            _tool.Execute("add_toc", sessionId: "invalid_session_id"));
     }
 
     [Fact]
@@ -184,7 +184,7 @@ public class WordReferenceToolTests : WordTestBase
         var docPath1 = CreateWordDocumentWithContent("test_path_ref.docx", "Path document");
         var docPath2 = CreateWordDocumentWithContent("test_session_ref.docx", "Session document");
         var sessionId = OpenSession(docPath2);
-        var result = _tool.Execute("add_table_of_contents", docPath1, sessionId, title: "Test");
+        var result = _tool.Execute("add_toc", docPath1, sessionId, title: "Test");
         Assert.IsType<FinalizedResult<SuccessResult>>(result);
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         var tocFields = sessionDoc.Range.Fields.Where(f => f.Type == FieldType.FieldTOC).ToList();

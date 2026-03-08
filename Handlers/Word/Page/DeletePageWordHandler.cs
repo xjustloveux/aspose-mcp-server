@@ -12,7 +12,7 @@ namespace AsposeMcpServer.Handlers.Word.Page;
 public class DeletePageWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "delete_page";
+    public override string Operation => "delete";
 
     /// <summary>
     ///     Deletes a specific page from the document by extracting and recombining pages.
@@ -27,7 +27,7 @@ public class DeletePageWordHandler : OperationHandlerBase<Document>
         var deleteParams = ExtractDeletePageParameters(parameters);
 
         if (!deleteParams.PageIndex.HasValue)
-            throw new ArgumentException("pageIndex parameter is required for delete_page operation");
+            throw new ArgumentException("pageIndex parameter is required for delete operation");
 
         var doc = context.Document;
         var pageCount = doc.PageCount;

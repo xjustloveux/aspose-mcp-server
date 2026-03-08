@@ -14,7 +14,7 @@ public class AutoFitColumnExcelViewHandlerTests : ExcelHandlerTestBase
     [Fact]
     public void Operation_Returns_AutoFitColumn()
     {
-        Assert.Equal("auto_fit_column", _handler.Operation);
+        Assert.Equal("autofit_col", _handler.Operation);
     }
 
     #endregion

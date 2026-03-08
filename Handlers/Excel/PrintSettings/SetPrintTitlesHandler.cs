@@ -13,7 +13,7 @@ namespace AsposeMcpServer.Handlers.Excel.PrintSettings;
 public class SetPrintTitlesHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
-    public override string Operation => "set_print_titles";
+    public override string Operation => "set_titles";
 
     /// <summary>
     ///     Sets print titles (rows/columns to repeat on each page).

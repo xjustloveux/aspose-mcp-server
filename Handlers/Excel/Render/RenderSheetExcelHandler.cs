@@ -16,7 +16,7 @@ namespace AsposeMcpServer.Handlers.Excel.Render;
 public class RenderSheetExcelHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
-    public override string Operation => "render_sheet";
+    public override string Operation => "render";
 
     /// <summary>
     ///     Renders a worksheet to image(s).

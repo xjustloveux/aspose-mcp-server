@@ -15,7 +15,7 @@ public class AddWordListHandlerTests : WordHandlerTestBase
     [Fact]
     public void Operation_Returns_AddList()
     {
-        Assert.Equal("add_list", _handler.Operation);
+        Assert.Equal("add", _handler.Operation);
     }
 
     #endregion

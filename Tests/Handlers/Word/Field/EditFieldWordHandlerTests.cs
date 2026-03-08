@@ -14,7 +14,7 @@ public class EditFieldWordHandlerTests : WordHandlerTestBase
     [Fact]
     public void Operation_Returns_EditField()
     {
-        Assert.Equal("edit_field", _handler.Operation);
+        Assert.Equal("edit", _handler.Operation);
     }
 
     #endregion

@@ -46,9 +46,9 @@ public class PptPageSetupTool
     }
 
     /// <summary>
-    ///     Executes a PowerPoint page setup operation (set_size, set_orientation, set_footer, set_slide_numbering).
+    ///     Executes a PowerPoint page setup operation (set_size, set_orientation, set_footer, set_numbering).
     /// </summary>
-    /// <param name="operation">The operation to perform: set_size, set_orientation, set_footer, set_slide_numbering.</param>
+    /// <param name="operation">The operation to perform: set_size, set_orientation, set_footer, set_numbering.</param>
     /// <param name="path">Presentation file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID for in-memory editing.</param>
     /// <param name="outputPath">Output file path (file mode only).</param>
@@ -65,8 +65,8 @@ public class PptPageSetupTool
     /// <param name="orientation">Orientation: Portrait or Landscape (required for set_orientation).</param>
     /// <param name="footerText">Footer text (optional, for set_footer).</param>
     /// <param name="dateText">Date/time text (optional, for set_footer).</param>
-    /// <param name="showSlideNumber">Show slide number (optional, for set_footer/set_slide_numbering, default: true).</param>
-    /// <param name="firstNumber">First slide number (optional, for set_slide_numbering, default: 1).</param>
+    /// <param name="showSlideNumber">Show slide number (optional, for set_footer/set_numbering, default: true).</param>
+    /// <param name="firstNumber">First slide number (optional, for set_numbering, default: 1).</param>
     /// <param name="slideIndices">Slide indices (0-based, optional, for set_footer, if not provided applies to all slides).</param>
     /// <returns>A message indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
@@ -79,7 +79,7 @@ public class PptPageSetupTool
         ReadOnly = false,
         UseStructuredContent = true)]
     [Description(
-        @"Manage PowerPoint page setup. Supports 4 operations: set_size, set_orientation, set_footer, set_slide_numbering.
+        @"Manage PowerPoint page setup. Supports 4 operations: set_size, set_orientation, set_footer, set_numbering.
 
 Note: PowerPoint slides do not have a separate header field. Only footer, date, and slide number are available.
 Size unit: 1 inch = 72 points. Valid range: 1-5000 points.
@@ -91,9 +91,9 @@ Usage examples:
 - Set size without scaling: ppt_page_setup(operation='set_size', path='presentation.pptx', preset='OnScreen16x9', scaleType='DoNotScale')
 - Set orientation: ppt_page_setup(operation='set_orientation', path='presentation.pptx', orientation='Portrait')
 - Set footer: ppt_page_setup(operation='set_footer', path='presentation.pptx', footerText='Footer', showSlideNumber=true)
-- Set slide numbering: ppt_page_setup(operation='set_slide_numbering', path='presentation.pptx', showSlideNumber=true, firstNumber=1)")]
+- Set slide numbering: ppt_page_setup(operation='set_numbering', path='presentation.pptx', showSlideNumber=true, firstNumber=1)")]
     public object Execute(
-        [Description("Operation: set_size, set_orientation, set_footer, set_slide_numbering")]
+        [Description("Operation: set_size, set_orientation, set_footer, set_numbering")]
         string operation,
         [Description("Presentation file path (required if no sessionId)")]
         string? path = null,
@@ -117,9 +117,9 @@ Usage examples:
         string? footerText = null,
         [Description("Date/time text (optional, for set_footer)")]
         string? dateText = null,
-        [Description("Show slide number (optional, for set_footer/set_slide_numbering, default: true)")]
+        [Description("Show slide number (optional, for set_footer/set_numbering, default: true)")]
         bool showSlideNumber = true,
-        [Description("First slide number (optional, for set_slide_numbering, default: 1)")]
+        [Description("First slide number (optional, for set_numbering, default: 1)")]
         int firstNumber = 1,
         [Description("Slide indices (0-based, optional, for set_footer, if not provided applies to all slides)")]
         int[]? slideIndices = null)
@@ -172,7 +172,7 @@ Usage examples:
             "set_size" => BuildSetSizeParameters(preset, width, height, scaleType),
             "set_orientation" => BuildSetOrientationParameters(orientation),
             "set_footer" => BuildSetFooterParameters(footerText, dateText, showSlideNumber, slideIndices),
-            "set_slide_numbering" => BuildSetSlideNumberingParameters(showSlideNumber, firstNumber),
+            "set_numbering" => BuildSetSlideNumberingParameters(showSlideNumber, firstNumber),
             _ => new OperationParameters()
         };
     }

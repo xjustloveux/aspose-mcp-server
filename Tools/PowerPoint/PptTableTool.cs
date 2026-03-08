@@ -61,7 +61,7 @@ public class PptTableTool
     /// <param name="columns">Number of columns (required for add).</param>
     /// <param name="x">X position in points (optional for add, defaults to 50).</param>
     /// <param name="y">Y position in points (optional for add, defaults to 50).</param>
-    /// <param name="data">2D array of cell data as JSON (optional, for add/edit).</param>
+    /// <param name="data">2D array of cell data (optional, for add/edit).</param>
     /// <param name="rowIndex">Row index (0-based, required for insert_row/delete_row/edit_cell).</param>
     /// <param name="columnIndex">Column index (0-based, required for insert_column/delete_column/edit_cell).</param>
     /// <param name="text">Cell text content (required for edit_cell).</param>
@@ -82,9 +82,9 @@ Coordinate unit: 1 inch = 72 points.
 
 Usage examples:
 - Add table: ppt_table(operation='add', path='presentation.pptx', slideIndex=0, rows=3, columns=3, x=100, y=100)
-- Edit table: ppt_table(operation='edit', path='presentation.pptx', slideIndex=0, shapeIndex=0, data='[[""A"",""B""],[""C"",""D""]]')
+- Edit table: ppt_table(operation='edit', path='presentation.pptx', slideIndex=0, shapeIndex=0, data=[['A','B'],['C','D']])
 - Delete table: ppt_table(operation='delete', path='presentation.pptx', slideIndex=0, shapeIndex=0)
-- Get content: ppt_table(operation='get_content', path='presentation.pptx', slideIndex=0, shapeIndex=0)
+- Get content: ppt_table(operation='get', path='presentation.pptx', slideIndex=0, shapeIndex=0)
 - Insert row: ppt_table(operation='insert_row', path='presentation.pptx', slideIndex=0, shapeIndex=0, rowIndex=1)
 - Insert column: ppt_table(operation='insert_column', path='presentation.pptx', slideIndex=0, shapeIndex=0, columnIndex=1)
 - Delete row: ppt_table(operation='delete_row', path='presentation.pptx', slideIndex=0, shapeIndex=0, rowIndex=1)
@@ -94,7 +94,7 @@ Usage examples:
 - 'add': Add a table (required params: path, slideIndex, rows, columns)
 - 'edit': Edit table data (required params: path, slideIndex, shapeIndex, data)
 - 'delete': Delete a table (required params: path, slideIndex, shapeIndex)
-- 'get_content': Get table content (required params: path, slideIndex, shapeIndex)
+- 'get': Get table content (required params: path, slideIndex, shapeIndex)
 - 'insert_row': Insert a row (required params: path, slideIndex, shapeIndex, rowIndex)
 - 'insert_column': Insert a column (required params: path, slideIndex, shapeIndex, columnIndex)
 - 'delete_row': Delete a row (required params: path, slideIndex, shapeIndex, rowIndex)
@@ -118,8 +118,8 @@ Usage examples:
         float x = 50,
         [Description("Y position in points (optional for add, defaults to 50)")]
         float y = 50,
-        [Description("2D array of cell data as JSON (optional, for add/edit)")]
-        string? data = null,
+        [Description("2D array of cell data (optional, for add/edit)")]
+        string[][]? data = null,
         [Description("Row index (0-based, required for insert_row/delete_row/edit_cell)")]
         int? rowIndex = null,
         [Description("Column index (0-based, required for insert_column/delete_column/edit_cell)")]
@@ -146,7 +146,7 @@ Usage examples:
 
         var result = handler.Execute(operationContext, parameters);
 
-        if (string.Equals(operation, "get_content", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(operation, "get", StringComparison.OrdinalIgnoreCase))
             return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
@@ -168,7 +168,7 @@ Usage examples:
         int? columns,
         float x,
         float y,
-        string? data,
+        string[][]? data,
         int? rowIndex,
         int? columnIndex,
         string? text)
@@ -180,7 +180,7 @@ Usage examples:
         {
             "add" => BuildAddParameters(parameters, rows, columns, x, y, data),
             "edit" => BuildEditParameters(parameters, shapeIndex, data),
-            "delete" or "get_content" => BuildShapeIndexParameters(parameters, shapeIndex),
+            "delete" or "get" => BuildShapeIndexParameters(parameters, shapeIndex),
             "insert_row" or "delete_row" => BuildRowParameters(parameters, shapeIndex, rowIndex),
             "insert_column" or "delete_column" => BuildColumnParameters(parameters, shapeIndex, columnIndex),
             "edit_cell" => BuildEditCellParameters(parameters, shapeIndex, rowIndex, columnIndex, text),
@@ -196,10 +196,10 @@ Usage examples:
     /// <param name="columns">The number of columns for the table.</param>
     /// <param name="x">The X position in points.</param>
     /// <param name="y">The Y position in points.</param>
-    /// <param name="data">The 2D array of cell data as JSON.</param>
+    /// <param name="data">The 2D array of cell data.</param>
     /// <returns>OperationParameters configured for the add operation.</returns>
     private static OperationParameters BuildAddParameters(OperationParameters parameters, int? rows, int? columns,
-        float x, float y, string? data)
+        float x, float y, string[][]? data)
     {
         if (rows.HasValue) parameters.Set("rows", rows.Value);
         if (columns.HasValue) parameters.Set("columns", columns.Value);
@@ -214,10 +214,10 @@ Usage examples:
     /// </summary>
     /// <param name="parameters">The base operation parameters.</param>
     /// <param name="shapeIndex">The shape index of the table (0-based).</param>
-    /// <param name="data">The 2D array of cell data as JSON.</param>
+    /// <param name="data">The 2D array of cell data.</param>
     /// <returns>OperationParameters configured for the edit operation.</returns>
     private static OperationParameters BuildEditParameters(OperationParameters parameters, int? shapeIndex,
-        string? data)
+        string[][]? data)
     {
         if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
         if (data != null) parameters.Set("data", data);

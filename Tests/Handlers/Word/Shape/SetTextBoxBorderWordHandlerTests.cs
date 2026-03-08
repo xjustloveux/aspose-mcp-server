@@ -18,7 +18,7 @@ public class SetTextBoxBorderWordHandlerTests : WordHandlerTestBase
     [Fact]
     public void Operation_Returns_SetTextboxBorder()
     {
-        Assert.Equal("set_textbox_border", _handler.Operation);
+        Assert.Equal("set_border", _handler.Operation);
     }
 
     #endregion

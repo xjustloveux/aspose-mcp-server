@@ -18,7 +18,7 @@ public class RecognizeIdCardHandlerTests : HandlerTestBase<AsposeOcr>
     [Fact]
     public void Operation_Returns_RecognizeIdCard()
     {
-        Assert.Equal("recognize_id_card", _handler.Operation);
+        Assert.Equal("recognize_id", _handler.Operation);
     }
 
     #endregion

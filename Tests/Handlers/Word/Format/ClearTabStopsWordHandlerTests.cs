@@ -14,7 +14,7 @@ public class ClearTabStopsWordHandlerTests : WordHandlerTestBase
     [Fact]
     public void Operation_Returns_ClearTabStops()
     {
-        Assert.Equal("clear_tab_stops", _handler.Operation);
+        Assert.Equal("clear_tabs", _handler.Operation);
     }
 
     #endregion

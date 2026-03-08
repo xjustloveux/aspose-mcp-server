@@ -13,7 +13,7 @@ namespace AsposeMcpServer.Handlers.Excel.ViewSettings;
 public class AutoFitRowExcelViewHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
-    public override string Operation => "auto_fit_row";
+    public override string Operation => "autofit_row";
 
     /// <summary>
     ///     Auto-fits a row height based on its content.

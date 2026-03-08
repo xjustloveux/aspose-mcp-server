@@ -13,7 +13,7 @@ namespace AsposeMcpServer.Handlers.Word.Format;
 public class ClearTabStopsWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "clear_tab_stops";
+    public override string Operation => "clear_tabs";
 
     /// <summary>
     ///     Clears tab stops from a paragraph.

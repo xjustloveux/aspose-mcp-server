@@ -14,7 +14,7 @@ public class SetPageNumberWordHandlerTests : WordHandlerTestBase
     [Fact]
     public void Operation_Returns_SetPageNumber()
     {
-        Assert.Equal("set_page_number", _handler.Operation);
+        Assert.Equal("set_number", _handler.Operation);
     }
 
     #endregion

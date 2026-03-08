@@ -26,7 +26,7 @@ public class ExcelPropertiesToolTests : ExcelTestBase
     public void GetWorkbookProperties_ShouldReturnJsonWithAllFields()
     {
         var workbookPath = CreateExcelWorkbook("test_get_workbook.xlsx");
-        var result = _tool.Execute("get_workbook_properties", workbookPath);
+        var result = _tool.Execute("get", workbookPath);
         var data = GetResultData<GetWorkbookPropertiesResult>(result);
         Assert.NotNull(data.Created);
         Assert.NotNull(data.Modified);
@@ -37,7 +37,7 @@ public class ExcelPropertiesToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbook("test_set_workbook.xlsx");
         var outputPath = CreateTestFilePath("test_set_workbook_output.xlsx");
-        var result = _tool.Execute("set_workbook_properties", workbookPath,
+        var result = _tool.Execute("set", workbookPath,
             title: "Test Title", author: "Test Author", outputPath: outputPath);
         var data = GetResultData<SuccessResult>(result);
         Assert.Contains("Workbook properties updated", data.Message);
@@ -50,7 +50,7 @@ public class ExcelPropertiesToolTests : ExcelTestBase
     public void GetSheetProperties_ShouldReturnJsonWithAllFields()
     {
         var workbookPath = CreateExcelWorkbookWithData("test_get_sheet.xlsx");
-        var result = _tool.Execute("get_sheet_properties", workbookPath, sheetIndex: 0);
+        var result = _tool.Execute("get_sheet", workbookPath, sheetIndex: 0);
         var data = GetResultData<GetSheetPropertiesResult>(result);
         Assert.NotNull(data.Name);
         Assert.True(data.IsVisible);
@@ -61,7 +61,7 @@ public class ExcelPropertiesToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbook("test_edit_name.xlsx");
         var outputPath = CreateTestFilePath("test_edit_name_output.xlsx");
-        _tool.Execute("edit_sheet_properties", workbookPath, sheetIndex: 0, name: "NewSheetName",
+        _tool.Execute("set_sheet", workbookPath, sheetIndex: 0, name: "NewSheetName",
             outputPath: outputPath);
         using var workbook = new Workbook(outputPath);
         Assert.Equal("NewSheetName", workbook.Worksheets[0].Name);
@@ -77,7 +77,7 @@ public class ExcelPropertiesToolTests : ExcelTestBase
             workbook.Save(workbookPath);
         }
 
-        var result = _tool.Execute("get_sheet_info", workbookPath);
+        var result = _tool.Execute("sheet_info", workbookPath);
         var data = GetResultData<GetSheetInfoResult>(result);
         Assert.True(data.Count >= 2);
     }
@@ -87,9 +87,9 @@ public class ExcelPropertiesToolTests : ExcelTestBase
     #region Operation Routing
 
     [Theory]
-    [InlineData("GET_WORKBOOK_PROPERTIES")]
-    [InlineData("Get_Workbook_Properties")]
-    [InlineData("get_workbook_properties")]
+    [InlineData("GET")]
+    [InlineData("Get")]
+    [InlineData("get")]
     public void Operation_ShouldBeCaseInsensitive(string operation)
     {
         var workbookPath = CreateExcelWorkbook($"test_case_{operation.Replace("_", "")}.xlsx");
@@ -121,7 +121,7 @@ public class ExcelPropertiesToolTests : ExcelTestBase
         }
 
         var sessionId = OpenSession(workbookPath);
-        var result = _tool.Execute("get_workbook_properties", sessionId: sessionId);
+        var result = _tool.Execute("get", sessionId: sessionId);
         var data = GetResultData<GetWorkbookPropertiesResult>(result);
         Assert.Equal("Session Title", data.Title);
     }
@@ -131,7 +131,7 @@ public class ExcelPropertiesToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbook("test_session_set_workbook.xlsx");
         var sessionId = OpenSession(workbookPath);
-        var result = _tool.Execute("set_workbook_properties", sessionId: sessionId, title: "Updated Title");
+        var result = _tool.Execute("set", sessionId: sessionId, title: "Updated Title");
         var data = GetResultData<SuccessResult>(result);
         Assert.Contains("Workbook properties updated", data.Message);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
@@ -142,7 +142,7 @@ public class ExcelPropertiesToolTests : ExcelTestBase
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
         Assert.Throws<KeyNotFoundException>(() =>
-            _tool.Execute("get_workbook_properties", sessionId: "invalid_session"));
+            _tool.Execute("get", sessionId: "invalid_session"));
     }
 
     [Fact]
@@ -157,7 +157,7 @@ public class ExcelPropertiesToolTests : ExcelTestBase
         }
 
         var sessionId = OpenSession(workbookPath2);
-        var result = _tool.Execute("get_workbook_properties", workbookPath1, sessionId);
+        var result = _tool.Execute("get", workbookPath1, sessionId);
         var data = GetResultData<GetWorkbookPropertiesResult>(result);
         Assert.Equal("Session Title", data.Title);
     }

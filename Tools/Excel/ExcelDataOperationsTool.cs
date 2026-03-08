@@ -47,11 +47,11 @@ public class ExcelDataOperationsTool
     }
 
     /// <summary>
-    ///     Executes an Excel data operation (sort, find_replace, batch_write, get_content, get_statistics, or get_used_range).
+    ///     Executes an Excel data operation (sort, replace, batch, get, statistics, or used_range).
     /// </summary>
     /// <param name="operation">
-    ///     The operation to perform: sort, find_replace, batch_write, get_content, get_statistics, or
-    ///     get_used_range.
+    ///     The operation to perform: sort, replace, batch, get, statistics, or
+    ///     used_range.
     /// </param>
     /// <param name="path">Excel file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID for in-memory editing.</param>
@@ -77,17 +77,17 @@ public class ExcelDataOperationsTool
         ReadOnly = false,
         UseStructuredContent = true)]
     [Description(
-        @"Excel data operations. Supports 6 operations: sort, find_replace, batch_write, get_content, get_statistics, get_used_range.
+        @"Excel data operations. Supports 6 operations: sort, replace, batch, get, statistics, used_range.
 
 Usage examples:
 - Sort data: excel_data_operations(operation='sort', path='book.xlsx', range='A1:C10', sortColumn=0)
-- Find and replace: excel_data_operations(operation='find_replace', path='book.xlsx', findText='old', replaceText='new')
-- Batch write: excel_data_operations(operation='batch_write', path='book.xlsx', data=[{cell:'A1',value:'Value1'},{cell:'B1',value:'Value2'}])
-- Get content: excel_data_operations(operation='get_content', path='book.xlsx', range='A1:C10')
-- Get statistics: excel_data_operations(operation='get_statistics', path='book.xlsx', range='A1:A10')
-- Get used range: excel_data_operations(operation='get_used_range', path='book.xlsx')")]
+- Find and replace: excel_data_operations(operation='replace', path='book.xlsx', findText='old', replaceText='new')
+- Batch write: excel_data_operations(operation='batch', path='book.xlsx', data=[{cell:'A1',value:'Value1'},{cell:'B1',value:'Value2'}])
+- Get content: excel_data_operations(operation='get', path='book.xlsx', range='A1:C10')
+- Get statistics: excel_data_operations(operation='statistics', path='book.xlsx', range='A1:A10')
+- Get used range: excel_data_operations(operation='used_range', path='book.xlsx')")]
     public object Execute(
-        [Description("Operation: sort, find_replace, batch_write, get_content, get_statistics, get_used_range")]
+        [Description("Operation: sort, replace, batch, get, statistics, used_range")]
         string operation,
         [Description("Excel file path (required if no sessionId)")]
         string? path = null,
@@ -136,7 +136,7 @@ Usage examples:
         var result = handler.Execute(operationContext, parameters);
 
         var op = operation.ToLowerInvariant();
-        if (op == "get_content" || op == "get_statistics" || op == "get_used_range")
+        if (op == "get" || op == "statistics" || op == "used_range")
             return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
@@ -169,9 +169,9 @@ Usage examples:
         return operation.ToLowerInvariant() switch
         {
             "sort" => BuildSortParameters(parameters, range, sortColumn, ascending, hasHeader),
-            "find_replace" => BuildFindReplaceParameters(parameters, findText, replaceText, matchCase, matchEntireCell),
-            "batch_write" => BuildBatchWriteParameters(parameters, data),
-            "get_content" or "get_statistics" => BuildRangeParameters(parameters, range),
+            "replace" => BuildFindReplaceParameters(parameters, findText, replaceText, matchCase, matchEntireCell),
+            "batch" => BuildBatchWriteParameters(parameters, data),
+            "get" or "statistics" => BuildRangeParameters(parameters, range),
             _ => parameters
         };
     }

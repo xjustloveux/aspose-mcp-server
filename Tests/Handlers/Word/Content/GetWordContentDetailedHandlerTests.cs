@@ -14,7 +14,7 @@ public class GetWordContentDetailedHandlerTests : WordHandlerTestBase
     [Fact]
     public void Operation_Returns_GetContentDetailed()
     {
-        Assert.Equal("get_content_detailed", _handler.Operation);
+        Assert.Equal("get_detailed", _handler.Operation);
     }
 
     #endregion

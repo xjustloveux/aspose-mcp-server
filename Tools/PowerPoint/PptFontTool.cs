@@ -74,15 +74,15 @@ public class PptFontTool
 Usage examples:
 - Replace font: ppt_font(operation='replace', path='file.pptx', sourceFont='Arial', targetFont='Calibri')
 - Embed font: ppt_font(operation='embed', path='file.pptx', fontName='Custom Font')
-- Remove embedded: ppt_font(operation='remove_embedded', path='file.pptx', fontName='Custom Font')
-- Get used fonts: ppt_font(operation='get_used', path='file.pptx')
+- Remove embedded: ppt_font(operation='remove', path='file.pptx', fontName='Custom Font')
+- Get used fonts: ppt_font(operation='list', path='file.pptx')
 - Set fallback: ppt_font(operation='set_fallback', path='file.pptx', fallbackFont='Arial')")]
     public object Execute(
         [Description(@"Operation to perform.
 - 'replace': Replace font (required: sourceFont, targetFont)
 - 'embed': Embed font (required: fontName)
-- 'remove_embedded': Remove embedded font (required: fontName)
-- 'get_used': List all used fonts
+- 'remove': Remove embedded font (required: fontName)
+- 'list': List all used fonts
 - 'set_fallback': Set font fallback rule (required: fallbackFont)")]
         string operation,
         [Description("Presentation file path (required if no sessionId)")]
@@ -126,7 +126,7 @@ Usage examples:
 
         var result = handler.Execute(operationContext, parameters);
 
-        if (string.Equals(operation, "get_used", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(operation, "list", StringComparison.OrdinalIgnoreCase))
             return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
@@ -147,7 +147,7 @@ Usage examples:
         {
             "replace" => BuildReplaceParameters(sourceFont, targetFont),
             "embed" => BuildEmbedParameters(fontName, embedMode),
-            "remove_embedded" => BuildRemoveParameters(fontName),
+            "remove" => BuildRemoveParameters(fontName),
             "set_fallback" => BuildFallbackParameters(fallbackFont, unicodeStart, unicodeEnd),
             _ => new OperationParameters()
         };

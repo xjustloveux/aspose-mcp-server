@@ -264,7 +264,7 @@ public class AddPptTableHandlerTests : PptHandlerTestBase
         {
             { "rows", 2 },
             { "columns", 2 },
-            { "data", "[[\"A1\",\"B1\"],[\"A2\",\"B2\"]]" }
+            { "data", new[] { new[] { "A1", "B1" }, new[] { "A2", "B2" } } }
         });
 
         _handler.Execute(context, parameters);

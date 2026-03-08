@@ -14,7 +14,7 @@ public class SetHeaderFooterHandlerTests : WordHandlerTestBase
     [Fact]
     public void Operation_Returns_SetHeaderFooter()
     {
-        Assert.Equal("set_header_footer", _handler.Operation);
+        Assert.Equal("set_all", _handler.Operation);
     }
 
     #endregion

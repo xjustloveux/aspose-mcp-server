@@ -14,7 +14,7 @@ namespace AsposeMcpServer.Handlers.Excel.DataOperations;
 public class GetContentHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
-    public override string Operation => "get_content";
+    public override string Operation => "get";
 
     /// <summary>
     ///     Gets content from a range.

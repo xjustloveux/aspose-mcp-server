@@ -71,7 +71,7 @@ public class PptChartToolTests : PptTestBase
     {
         SkipIfNotWindows();
         var pptPath = CreatePresentationWithChart("test_get_data.pptx");
-        var result = _tool.Execute("get_data", 0, pptPath, shapeIndex: 0);
+        var result = _tool.Execute("get", 0, pptPath, shapeIndex: 0);
         var data = GetResultData<GetChartDataPptResult>(result);
         Assert.NotNull(data.ChartType);
         Assert.NotNull(data.Categories);
@@ -152,7 +152,7 @@ public class PptChartToolTests : PptTestBase
         SkipIfNotWindows();
         var pptPath = CreatePresentationWithChart("test_session_getdata.pptx");
         var sessionId = OpenSession(pptPath);
-        var result = _tool.Execute("get_data", 0, sessionId: sessionId, shapeIndex: 0);
+        var result = _tool.Execute("get", 0, sessionId: sessionId, shapeIndex: 0);
         var data = GetResultData<GetChartDataPptResult>(result);
         Assert.NotNull(data.ChartType);
         Assert.NotNull(data.Categories);
@@ -165,7 +165,7 @@ public class PptChartToolTests : PptTestBase
     {
         SkipIfNotWindows();
         Assert.Throws<KeyNotFoundException>(() =>
-            _tool.Execute("get_data", 0, sessionId: "invalid_session", shapeIndex: 0));
+            _tool.Execute("get", 0, sessionId: "invalid_session", shapeIndex: 0));
     }
 
     [SkippableFact]
@@ -175,7 +175,7 @@ public class PptChartToolTests : PptTestBase
         var pptPath1 = CreatePresentationWithChart("test_path_chart.pptx");
         var pptPath2 = CreatePresentationWithChart("test_session_chart.pptx", ChartType.Pie);
         var sessionId = OpenSession(pptPath2);
-        var result = _tool.Execute("get_data", 0, pptPath1, sessionId, shapeIndex: 0);
+        var result = _tool.Execute("get", 0, pptPath1, sessionId, shapeIndex: 0);
         var data = GetResultData<GetChartDataPptResult>(result);
         Assert.Contains("Pie", data.ChartType);
     }

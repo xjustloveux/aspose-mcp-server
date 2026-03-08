@@ -14,7 +14,7 @@ public class BatchWriteHandlerTests : ExcelHandlerTestBase
     [Fact]
     public void Operation_Returns_BatchWrite()
     {
-        Assert.Equal("batch_write", _handler.Operation);
+        Assert.Equal("batch", _handler.Operation);
     }
 
     #endregion

@@ -12,7 +12,7 @@ namespace AsposeMcpServer.Handlers.Pdf.Page;
 public class GetPdfPageDetailsHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "get_details";
+    public override string Operation => "details";
 
     /// <summary>
     ///     Gets detailed information about a specific page.

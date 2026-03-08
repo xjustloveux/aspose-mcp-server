@@ -14,7 +14,7 @@ namespace AsposeMcpServer.Handlers.Word.Styles;
 public class CopyWordStylesHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "copy_styles";
+    public override string Operation => "copy";
 
     /// <summary>
     ///     Copies styles from source document to target document.
@@ -30,7 +30,7 @@ public class CopyWordStylesHandler : OperationHandlerBase<Document>
         var p = ExtractCopyWordStylesParameters(parameters);
 
         if (string.IsNullOrEmpty(p.SourceDocument))
-            throw new ArgumentException("sourceDocument is required for copy_styles operation");
+            throw new ArgumentException("sourceDocument is required for copy operation");
 
         SecurityHelper.ValidateFilePath(p.SourceDocument, "sourceDocument", true);
 

@@ -80,13 +80,13 @@ public class PptLayoutTool
 
 Usage examples:
 - Set layout: ppt_layout(operation='set', path='presentation.pptx', slideIndex=0, layout='Title')
-- Get layouts: ppt_layout(operation='get_layouts', path='presentation.pptx', masterIndex=0)
-- Get masters: ppt_layout(operation='get_masters', path='presentation.pptx')
+- Get layouts: ppt_layout(operation='list', path='presentation.pptx', masterIndex=0)
+- Get masters: ppt_layout(operation='list_masters', path='presentation.pptx')
 - Apply master: ppt_layout(operation='apply_master', path='presentation.pptx', slideIndices=[0,1,2], masterIndex=0, layoutIndex=0)
-- Apply layout range: ppt_layout(operation='apply_layout_range', path='presentation.pptx', slideIndices=[0,1,2], layout='Title')
+- Apply layout range: ppt_layout(operation='apply_range', path='presentation.pptx', slideIndices=[0,1,2], layout='Title')
 - Apply theme: ppt_layout(operation='apply_theme', path='presentation.pptx', themePath='theme.potx')")]
     public object Execute(
-        [Description("Operation: set, get_layouts, get_masters, apply_master, apply_layout_range, apply_theme")]
+        [Description("Operation: set, list, list_masters, apply_master, apply_range, apply_theme")]
         string operation,
         [Description("Presentation file path (required if no sessionId)")]
         string? path = null,
@@ -128,7 +128,7 @@ Usage examples:
         var result = handler.Execute(operationContext, parameters);
 
         var opLower = operation.ToLowerInvariant();
-        if (opLower == "get_layouts" || opLower == "get_masters")
+        if (opLower == "list" || opLower == "list_masters")
             return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
@@ -154,10 +154,10 @@ Usage examples:
         return operation.ToLowerInvariant() switch
         {
             "set" => BuildSetParameters(slideIndex, layout),
-            "get_layouts" => BuildGetLayoutsParameters(masterIndex),
-            "get_masters" => new OperationParameters(),
+            "list" => BuildGetLayoutsParameters(masterIndex),
+            "list_masters" => new OperationParameters(),
             "apply_master" => BuildApplyMasterParameters(masterIndex, layoutIndex, slideIndices),
-            "apply_layout_range" => BuildApplyLayoutRangeParameters(slideIndices, layout),
+            "apply_range" => BuildApplyLayoutRangeParameters(slideIndices, layout),
             "apply_theme" => BuildApplyThemeParameters(themePath),
             _ => new OperationParameters()
         };

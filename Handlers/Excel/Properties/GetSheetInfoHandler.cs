@@ -13,7 +13,7 @@ namespace AsposeMcpServer.Handlers.Excel.Properties;
 public class GetSheetInfoHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
-    public override string Operation => "get_sheet_info";
+    public override string Operation => "sheet_info";
 
     /// <summary>
     ///     Gets information about all worksheets or a specific worksheet.

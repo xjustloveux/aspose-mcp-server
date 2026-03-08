@@ -59,7 +59,7 @@ public class PptShapeToolTests : PptTestBase
     {
         SkipIfNotWindows();
         var pptPath = CreatePresentationWithShape("test_get.pptx");
-        var result = _tool.Execute("get", pptPath, slideIndex: 0);
+        var result = _tool.Execute("get_shapes", pptPath, slideIndex: 0);
         var data = GetResultData<GetShapesResult>(result);
         Assert.True(data.Count >= 0);
         Assert.NotNull(data.Shapes);
@@ -71,7 +71,7 @@ public class PptShapeToolTests : PptTestBase
         SkipIfNotWindows();
         var pptPath = CreatePresentationWithShape("test_get_details.pptx");
         var shapeIndex = FindNonPlaceholderShapeIndex(pptPath);
-        var result = _tool.Execute("get_details", pptPath, slideIndex: 0, shapeIndex: shapeIndex);
+        var result = _tool.Execute("get_shape_details", pptPath, slideIndex: 0, shapeIndex: shapeIndex);
         var data = GetResultData<GetShapeDetailsResult>(result);
         Assert.Equal(shapeIndex, data.Index);
         Assert.True(data.X >= 0);
@@ -172,9 +172,9 @@ public class PptShapeToolTests : PptTestBase
     #region Operation Routing
 
     [SkippableTheory]
-    [InlineData("GET")]
-    [InlineData("Get")]
-    [InlineData("get")]
+    [InlineData("GET_SHAPES")]
+    [InlineData("Get_Shapes")]
+    [InlineData("get_shapes")]
     public void Operation_ShouldBeCaseInsensitive(string operation)
     {
         SkipIfNotWindows();
@@ -197,7 +197,7 @@ public class PptShapeToolTests : PptTestBase
     public void Execute_WithNoPathOrSessionId_ShouldThrowException()
     {
         SkipIfNotWindows();
-        Assert.ThrowsAny<Exception>(() => _tool.Execute("get", slideIndex: 0));
+        Assert.ThrowsAny<Exception>(() => _tool.Execute("get_shapes", slideIndex: 0));
     }
 
     #endregion
@@ -210,7 +210,7 @@ public class PptShapeToolTests : PptTestBase
         SkipIfNotWindows();
         var pptPath = CreatePresentationWithShape("test_session_get.pptx");
         var sessionId = OpenSession(pptPath);
-        var result = _tool.Execute("get", sessionId: sessionId, slideIndex: 0);
+        var result = _tool.Execute("get_shapes", sessionId: sessionId, slideIndex: 0);
         var data = GetResultData<GetShapesResult>(result);
         Assert.True(data.Count >= 0);
         Assert.NotNull(data.Shapes);
@@ -224,7 +224,7 @@ public class PptShapeToolTests : PptTestBase
         var sessionId = OpenSession(pptPath);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var shapeIndex = FindNonPlaceholderShapeIndex(ppt.Slides[0]);
-        var result = _tool.Execute("get_details", sessionId: sessionId, slideIndex: 0, shapeIndex: shapeIndex);
+        var result = _tool.Execute("get_shape_details", sessionId: sessionId, slideIndex: 0, shapeIndex: shapeIndex);
         var data = GetResultData<GetShapeDetailsResult>(result);
         Assert.Equal(shapeIndex, data.Index);
         Assert.True(data.X >= 0);
@@ -276,7 +276,8 @@ public class PptShapeToolTests : PptTestBase
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
         SkipIfNotWindows();
-        Assert.Throws<KeyNotFoundException>(() => _tool.Execute("get", sessionId: "invalid_session", slideIndex: 0));
+        Assert.Throws<KeyNotFoundException>(() =>
+            _tool.Execute("get_shapes", sessionId: "invalid_session", slideIndex: 0));
     }
 
     [SkippableFact]
@@ -287,7 +288,7 @@ public class PptShapeToolTests : PptTestBase
         var pptPath1 = CreatePresentationWithShape("test_path_shape.pptx");
         var pptPath2 = CreatePresentationWithTwoShapes("test_session_shape.pptx");
         var sessionId = OpenSession(pptPath2);
-        var result = _tool.Execute("get", pptPath1, sessionId, slideIndex: 0);
+        var result = _tool.Execute("get_shapes", pptPath1, sessionId, slideIndex: 0);
         var data = GetResultData<GetShapesResult>(result);
         Assert.True(data.Count >= 0);
         Assert.NotNull(data.Shapes);

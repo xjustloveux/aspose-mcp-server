@@ -13,7 +13,7 @@ namespace AsposeMcpServer.Handlers.Excel.PrintSettings;
 public class SetPageSetupHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
-    public override string Operation => "set_page_setup";
+    public override string Operation => "set_page";
 
     /// <summary>
     ///     Sets page setup options.

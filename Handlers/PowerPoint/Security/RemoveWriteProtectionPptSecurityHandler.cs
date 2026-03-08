@@ -12,7 +12,7 @@ namespace AsposeMcpServer.Handlers.PowerPoint.Security;
 public class RemoveWriteProtectionPptSecurityHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
-    public override string Operation => "remove_write_protection";
+    public override string Operation => "remove_write_protect";
 
     /// <summary>
     ///     Removes write protection from the presentation.

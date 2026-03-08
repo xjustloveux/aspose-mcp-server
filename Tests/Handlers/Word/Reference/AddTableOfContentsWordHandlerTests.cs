@@ -15,7 +15,7 @@ public class AddTableOfContentsWordHandlerTests : WordHandlerTestBase
     [Fact]
     public void Operation_Returns_AddTableOfContents()
     {
-        Assert.Equal("add_table_of_contents", _handler.Operation);
+        Assert.Equal("add_toc", _handler.Operation);
     }
 
     #endregion

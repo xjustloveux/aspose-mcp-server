@@ -13,7 +13,7 @@ namespace AsposeMcpServer.Handlers.Word.Styles;
 public class CreateWordStyleHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "create_style";
+    public override string Operation => "create";
 
     /// <summary>
     ///     Creates a new style in the document.
@@ -30,7 +30,7 @@ public class CreateWordStyleHandler : OperationHandlerBase<Document>
         var p = ExtractCreateWordStyleParameters(parameters);
 
         if (string.IsNullOrEmpty(p.StyleName))
-            throw new ArgumentException("styleName is required for create_style operation");
+            throw new ArgumentException("styleName is required for create operation");
 
         var doc = context.Document;
 

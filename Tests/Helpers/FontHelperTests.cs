@@ -208,6 +208,10 @@ public class FontHelperTests : TestBase
     [InlineData("none", Underline.None)]
     [InlineData("SINGLE", Underline.Single)]
     [InlineData("invalid", Underline.None)]
+    [InlineData("true", Underline.Single)]
+    [InlineData("false", Underline.None)]
+    [InlineData("True", Underline.Single)]
+    [InlineData("FALSE", Underline.None)]
     public void Word_ParseUnderline_ShouldReturnCorrectValue(string input, Underline expected)
     {
         var result = FontHelper.Word.ParseUnderline(input);

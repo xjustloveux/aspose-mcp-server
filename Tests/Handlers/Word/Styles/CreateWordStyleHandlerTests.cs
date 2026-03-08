@@ -14,7 +14,7 @@ public class CreateWordStyleHandlerTests : WordHandlerTestBase
     [Fact]
     public void Operation_Returns_CreateStyle()
     {
-        Assert.Equal("create_style", _handler.Operation);
+        Assert.Equal("create", _handler.Operation);
     }
 
     #endregion

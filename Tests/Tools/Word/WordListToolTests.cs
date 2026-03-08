@@ -30,7 +30,7 @@ public class WordListToolTests : WordTestBase
         var docPath = CreateWordDocument("test_add_list.docx");
         var outputPath = CreateTestFilePath("test_add_list_output.docx");
         var items = new JsonArray { "Item 1", "Item 2", "Item 3" };
-        _tool.Execute("add_list", docPath, outputPath: outputPath, items: items);
+        _tool.Execute("add", docPath, outputPath: outputPath, items: items);
         var doc = new Document(outputPath);
         var paragraphs = GetParagraphs(doc);
         Assert.True(paragraphs.Count >= 3);
@@ -45,7 +45,7 @@ public class WordListToolTests : WordTestBase
         var docPath = CreateWordDocument("test_add_numbered_list.docx");
         var outputPath = CreateTestFilePath("test_add_numbered_list_output.docx");
         var items = new JsonArray { "First", "Second" };
-        _tool.Execute("add_list", docPath, outputPath: outputPath, items: items, listType: "number");
+        _tool.Execute("add", docPath, outputPath: outputPath, items: items, listType: "number");
         var doc = new Document(outputPath);
         var docText = doc.GetText();
         Assert.Contains("First", docText);
@@ -57,7 +57,7 @@ public class WordListToolTests : WordTestBase
     {
         var docPath = CreateWordDocument("test_get_list_format.docx");
         var items = new JsonArray { "Item 1" };
-        _tool.Execute("add_list", docPath, outputPath: docPath, items: items);
+        _tool.Execute("add", docPath, outputPath: docPath, items: items);
         var result = _tool.Execute("get_format", docPath, paragraphIndex: 0);
         Assert.NotNull(result);
         var data = GetResultData<GetWordListFormatSingleResult>(result);
@@ -119,7 +119,7 @@ public class WordListToolTests : WordTestBase
     {
         var docPath = CreateWordDocument("test_set_format.docx");
         var items = new JsonArray { "Item 1", "Item 2" };
-        _tool.Execute("add_list", docPath, outputPath: docPath, items: items, listType: "number");
+        _tool.Execute("add", docPath, outputPath: docPath, items: items, listType: "number");
 
         var outputPath = CreateTestFilePath("test_set_format_output.docx");
         var result = _tool.Execute("set_format", docPath, outputPath: outputPath,
@@ -140,7 +140,7 @@ public class WordListToolTests : WordTestBase
         builder.Writeln("Second paragraph");
         doc.Save(docPath);
 
-        var result = _tool.Execute("convert_to_list", docPath, outputPath: outputPath,
+        var result = _tool.Execute("convert", docPath, outputPath: outputPath,
             startParagraphIndex: 0, endParagraphIndex: 1, listType: "bullet");
         Assert.IsType<FinalizedResult<SuccessResult>>(result);
         Assert.True(File.Exists(outputPath));
@@ -154,9 +154,9 @@ public class WordListToolTests : WordTestBase
         var outputPath = CreateTestFilePath("test_restart_numbering_output.docx");
 
         var items = new JsonArray { "Item 1", "Item 2", "Item 3" };
-        _tool.Execute("add_list", docPath, outputPath: docPath, items: items, listType: "number");
+        _tool.Execute("add", docPath, outputPath: docPath, items: items, listType: "number");
 
-        var result = _tool.Execute("restart_numbering", docPath, outputPath: outputPath,
+        var result = _tool.Execute("restart", docPath, outputPath: outputPath,
             paragraphIndex: 2, startAt: 1);
         Assert.IsType<FinalizedResult<SuccessResult>>(result);
         Assert.True(File.Exists(outputPath));
@@ -167,9 +167,9 @@ public class WordListToolTests : WordTestBase
     #region Operation Routing
 
     [Theory]
-    [InlineData("ADD_LIST")]
-    [InlineData("Add_List")]
-    [InlineData("add_list")]
+    [InlineData("ADD")]
+    [InlineData("Add")]
+    [InlineData("add")]
     public void Operation_ShouldBeCaseInsensitive(string operation)
     {
         var docPath = CreateWordDocument($"test_case_{operation}.docx");
@@ -206,7 +206,7 @@ public class WordListToolTests : WordTestBase
     {
         var docPath = CreateWordDocument("test_session_get_format.docx");
         var items = new JsonArray { "Session Item 1" };
-        _tool.Execute("add_list", docPath, outputPath: docPath, items: items);
+        _tool.Execute("add", docPath, outputPath: docPath, items: items);
 
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("get_format", sessionId: sessionId, paragraphIndex: 0);
@@ -224,7 +224,7 @@ public class WordListToolTests : WordTestBase
         var docPath = CreateWordDocument("test_session_add_list.docx");
         var sessionId = OpenSession(docPath);
         var items = new JsonArray { "Session Item A", "Session Item B" };
-        var result = _tool.Execute("add_list", sessionId: sessionId, items: items);
+        var result = _tool.Execute("add", sessionId: sessionId, items: items);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
 
@@ -288,7 +288,7 @@ public class WordListToolTests : WordTestBase
         doc.Save(docPath);
 
         var sessionId = OpenSession(docPath);
-        var result = _tool.Execute("convert_to_list", sessionId: sessionId,
+        var result = _tool.Execute("convert", sessionId: sessionId,
             startParagraphIndex: 0, endParagraphIndex: 1);
 
         var output = GetResultOutput<SuccessResult>(result);
@@ -305,7 +305,7 @@ public class WordListToolTests : WordTestBase
     {
         var docPath = CreateWordDocument("test_session_set_format.docx");
         var items = new JsonArray { "Item 1" };
-        _tool.Execute("add_list", docPath, outputPath: docPath, items: items, listType: "number");
+        _tool.Execute("add", docPath, outputPath: docPath, items: items, listType: "number");
 
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("set_format", sessionId: sessionId, paragraphIndex: 0, leftIndent: 50.0);

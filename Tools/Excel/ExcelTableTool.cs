@@ -79,16 +79,16 @@ Usage examples:
 - Get tables: excel_table(operation='get', path='book.xlsx')
 - Delete table: excel_table(operation='delete', path='book.xlsx', tableIndex=0)
 - Set style: excel_table(operation='set_style', path='book.xlsx', tableIndex=0, styleName='TableStyleMedium9')
-- Add total row: excel_table(operation='add_total_row', path='book.xlsx', tableIndex=0, columnIndex=2, totalFunction='sum')
-- Convert to range: excel_table(operation='convert_to_range', path='book.xlsx', tableIndex=0)")]
+- Add total row: excel_table(operation='add_total', path='book.xlsx', tableIndex=0, columnIndex=2, totalFunction='sum')
+- Convert to range: excel_table(operation='to_range', path='book.xlsx', tableIndex=0)")]
     public object Execute(
         [Description(@"Operation to perform.
 - 'create': Create a table from a cell range (required params: range)
 - 'get': Get table(s) information (optional: tableIndex)
 - 'delete': Delete a table (required params: tableIndex)
 - 'set_style': Set table style (required params: tableIndex, styleName)
-- 'add_total_row': Add/configure total row (required params: tableIndex)
-- 'convert_to_range': Convert table to normal range (required params: tableIndex)")]
+- 'add_total': Add/configure total row (required params: tableIndex)
+- 'to_range': Convert table to normal range (required params: tableIndex)")]
         string operation,
         [Description("Excel file path (required if no sessionId)")]
         string? path = null,
@@ -169,8 +169,8 @@ Usage examples:
             "get" => BuildTableIndexParameters(parameters, tableIndex),
             "delete" => BuildDeleteParameters(parameters, tableIndex, keepData),
             "set_style" => BuildSetStyleParameters(parameters, tableIndex, styleName),
-            "add_total_row" => BuildAddTotalRowParameters(parameters, tableIndex, columnIndex, totalFunction),
-            "convert_to_range" => BuildTableIndexParameters(parameters, tableIndex),
+            "add_total" => BuildAddTotalRowParameters(parameters, tableIndex, columnIndex, totalFunction),
+            "to_range" => BuildTableIndexParameters(parameters, tableIndex),
             _ => parameters
         };
     }

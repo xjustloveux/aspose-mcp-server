@@ -44,37 +44,37 @@ public class WordFieldTool
     }
 
     /// <summary>
-    ///     Executes a Word field operation (insert_field, edit_field, delete_field, update_field, update_all, get_fields,
-    ///     get_field_detail, add_form_field, edit_form_field, delete_form_field, get_form_fields).
+    ///     Executes a Word field operation (add, edit, delete, update, update_all, list,
+    ///     get, add_form, edit_form, delete_form, list_forms).
     /// </summary>
     /// <param name="operation">
-    ///     The operation to perform: insert_field, edit_field, delete_field, update_field, update_all,
-    ///     get_fields, get_field_detail, add_form_field, edit_form_field, delete_form_field, get_form_fields.
+    ///     The operation to perform: add, edit, delete, update, update_all,
+    ///     list, get, add_form, edit_form, delete_form, list_forms.
     /// </param>
     /// <param name="path">Word document file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID for in-memory editing.</param>
     /// <param name="outputPath">Output file path (file mode only).</param>
-    /// <param name="fieldType">Field type: DATE, TIME, PAGE, NUMPAGES, AUTHOR, etc. (for insert_field).</param>
-    /// <param name="fieldArgument">Field argument (for insert_field).</param>
-    /// <param name="paragraphIndex">Paragraph index (0-based, -1 for document end, for insert_field).</param>
-    /// <param name="insertAtStart">Insert at start of paragraph (for insert_field, default: false).</param>
-    /// <param name="fieldIndex">Field index (0-based, for edit_field/delete_field/update_field/get_field_detail).</param>
-    /// <param name="fieldCode">New field code (for edit_field).</param>
-    /// <param name="lockField">Lock the field (for edit_field).</param>
-    /// <param name="unlockField">Unlock the field (for edit_field).</param>
-    /// <param name="updateField">Update field after editing (for edit_field, default: true).</param>
-    /// <param name="keepResult">Keep field result text after deletion (for delete_field, default: false).</param>
-    /// <param name="updateAll">Update all fields (for update_field, default: false if fieldIndex provided).</param>
-    /// <param name="includeCode">Include field code in results (for get_fields, default: true).</param>
-    /// <param name="includeResult">Include field result in results (for get_fields, default: true).</param>
-    /// <param name="formFieldType">Form field type: TextInput, CheckBox, DropDown (for add_form_field).</param>
+    /// <param name="fieldType">Field type: DATE, TIME, PAGE, NUMPAGES, AUTHOR, etc. (for add).</param>
+    /// <param name="fieldArgument">Field argument (for add).</param>
+    /// <param name="paragraphIndex">Paragraph index (0-based, -1 for document end, for add).</param>
+    /// <param name="insertAtStart">Insert at start of paragraph (for add, default: false).</param>
+    /// <param name="fieldIndex">Field index (0-based, for edit/delete/update/get).</param>
+    /// <param name="fieldCode">New field code (for edit).</param>
+    /// <param name="lockField">Lock the field (for edit).</param>
+    /// <param name="unlockField">Unlock the field (for edit).</param>
+    /// <param name="updateField">Update field after editing (for edit, default: true).</param>
+    /// <param name="keepResult">Keep field result text after deletion (for delete, default: false).</param>
+    /// <param name="updateAll">Update all fields (for update, default: false if fieldIndex provided).</param>
+    /// <param name="includeCode">Include field code in results (for list, default: true).</param>
+    /// <param name="includeResult">Include field result in results (for list, default: true).</param>
+    /// <param name="formFieldType">Form field type: TextInput, CheckBox, DropDown (for add_form).</param>
     /// <param name="fieldName">Field name (for form field operations).</param>
-    /// <param name="defaultValue">Default value (for add_form_field/edit_form_field).</param>
-    /// <param name="options">Options for dropdown (for add_form_field with DropDown type).</param>
+    /// <param name="defaultValue">Default value (for add_form/edit_form).</param>
+    /// <param name="options">Options for dropdown (for add_form with DropDown type).</param>
     /// <param name="checkedValue">Checked state (for CheckBox type).</param>
-    /// <param name="value">New value (for TextInput type, for edit_form_field).</param>
-    /// <param name="selectedIndex">Selected option index (for DropDown type, for edit_form_field).</param>
-    /// <param name="fieldNames">Array of form field names to delete (for delete_form_field).</param>
+    /// <param name="value">New value (for TextInput type, for edit_form).</param>
+    /// <param name="selectedIndex">Selected option index (for DropDown type, for edit_form).</param>
+    /// <param name="fieldNames">Array of form field names to delete (for delete_form).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(
@@ -86,19 +86,19 @@ public class WordFieldTool
         ReadOnly = false,
         UseStructuredContent = true)]
     [Description(
-        @"Manage fields and form fields in Word documents. Supports 11 operations: insert_field, edit_field, delete_field, update_field, update_all, get_fields, get_field_detail, add_form_field, edit_form_field, delete_form_field, get_form_fields.
+        @"Manage fields and form fields in Word documents. Supports 11 operations: add, edit, delete, update, update_all, list, get, add_form, edit_form, delete_form, list_forms.
 
 Usage examples:
-- Insert field: word_field(operation='insert_field', path='doc.docx', fieldType='DATE', paragraphIndex=0)
-- Edit field: word_field(operation='edit_field', path='doc.docx', fieldIndex=0, fieldArgument='yyyy-MM-dd')
-- Delete field: word_field(operation='delete_field', path='doc.docx', fieldIndex=0)
-- Update field: word_field(operation='update_field', path='doc.docx', fieldIndex=0)
+- Insert field: word_field(operation='add', path='doc.docx', fieldType='DATE', paragraphIndex=0)
+- Edit field: word_field(operation='edit', path='doc.docx', fieldIndex=0, fieldArgument='yyyy-MM-dd')
+- Delete field: word_field(operation='delete', path='doc.docx', fieldIndex=0)
+- Update field: word_field(operation='update', path='doc.docx', fieldIndex=0)
 - Update all fields: word_field(operation='update_all', path='doc.docx')
-- Get fields: word_field(operation='get_fields', path='doc.docx')
-- Add form field: word_field(operation='add_form_field', path='doc.docx', formFieldType='TextInput', fieldName='name')")]
+- Get fields: word_field(operation='list', path='doc.docx')
+- Add form field: word_field(operation='add_form', path='doc.docx', formFieldType='TextInput', fieldName='name')")]
     public object Execute(
         [Description(
-            "Operation: insert_field, edit_field, delete_field, update_field, update_all, get_fields, get_field_detail, add_form_field, edit_form_field, delete_form_field, get_form_fields")]
+            "Operation: add, edit, delete, update, update_all, list, get, add_form, edit_form, delete_form, list_forms")]
         string operation,
         [Description("Word document file path (required if no sessionId)")]
         string? path = null,
@@ -106,47 +106,47 @@ Usage examples:
         string? sessionId = null,
         [Description("Output file path (file mode only)")]
         string? outputPath = null,
-        [Description("Field type: DATE, TIME, PAGE, NUMPAGES, AUTHOR, etc. (for insert_field)")]
+        [Description("Field type: DATE, TIME, PAGE, NUMPAGES, AUTHOR, etc. (for add)")]
         string? fieldType = null,
-        [Description("Field argument (for insert_field)")]
+        [Description("Field argument (for add)")]
         string? fieldArgument = null,
-        [Description("Paragraph index (0-based, -1 for document end, for insert_field)")]
+        [Description("Paragraph index (0-based, -1 for document end, for add)")]
         int? paragraphIndex = null,
-        [Description("Insert at start of paragraph (for insert_field, default: false)")]
+        [Description("Insert at start of paragraph (for add, default: false)")]
         bool insertAtStart = false,
-        [Description("Field index (0-based, for edit_field/delete_field/update_field/get_field_detail)")]
+        [Description("Field index (0-based, for edit/delete/update/get)")]
         int? fieldIndex = null,
-        [Description("New field code (for edit_field)")]
+        [Description("New field code (for edit)")]
         string? fieldCode = null,
-        [Description("Lock the field (for edit_field)")]
+        [Description("Lock the field (for edit)")]
         bool? lockField = null,
-        [Description("Unlock the field (for edit_field)")]
+        [Description("Unlock the field (for edit)")]
         bool? unlockField = null,
-        [Description("Update field after editing (for edit_field, default: true)")]
+        [Description("Update field after editing (for edit, default: true)")]
         bool updateField = true,
-        [Description("Keep field result text after deletion (for delete_field, default: false)")]
+        [Description("Keep field result text after deletion (for delete, default: false)")]
         bool keepResult = false,
-        [Description("Update all fields (for update_field, default: false if fieldIndex provided)")]
+        [Description("Update all fields (for update, default: false if fieldIndex provided)")]
         bool? updateAll = null,
-        [Description("Include field code in results (for get_fields, default: true)")]
+        [Description("Include field code in results (for list, default: true)")]
         bool includeCode = true,
-        [Description("Include field result in results (for get_fields, default: true)")]
+        [Description("Include field result in results (for list, default: true)")]
         bool includeResult = true,
-        [Description("Form field type: TextInput, CheckBox, DropDown (for add_form_field)")]
+        [Description("Form field type: TextInput, CheckBox, DropDown (for add_form)")]
         string? formFieldType = null,
         [Description("Field name (for form field operations)")]
         string? fieldName = null,
-        [Description("Default value (for add_form_field/edit_form_field)")]
+        [Description("Default value (for add_form/edit_form)")]
         string? defaultValue = null,
-        [Description("Options for dropdown (for add_form_field with DropDown type)")]
+        [Description("Options for dropdown (for add_form with DropDown type)")]
         string[]? options = null,
         [Description("Checked state (for CheckBox type)")]
         bool? checkedValue = null,
-        [Description("New value (for TextInput type, for edit_form_field)")]
+        [Description("New value (for TextInput type, for edit_form)")]
         string? value = null,
-        [Description("Selected option index (for DropDown type, for edit_form_field)")]
+        [Description("Selected option index (for DropDown type, for edit_form)")]
         int? selectedIndex = null,
-        [Description("Array of form field names to delete (for delete_form_field)")]
+        [Description("Array of form field names to delete (for delete_form)")]
         string[]? fieldNames = null)
     {
         using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
@@ -154,7 +154,7 @@ Usage examples:
         var op = operation.ToLower();
         if (op == "update_all")
         {
-            op = "update_field";
+            op = "update";
             updateAll = true;
         }
 
@@ -177,7 +177,7 @@ Usage examples:
         var result = handler.Execute(operationContext, parameters);
 
         // Read-only operations don't need to save
-        if (op is "get_fields" or "get_field_detail" or "get_form_fields")
+        if (op is "list" or "get" or "list_forms")
             return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
@@ -219,19 +219,19 @@ Usage examples:
 
         return operation switch
         {
-            "insert_field" => BuildInsertFieldParameters(parameters, fieldType, fieldArgument, paragraphIndex,
+            "add" => BuildInsertFieldParameters(parameters, fieldType, fieldArgument, paragraphIndex,
                 insertAtStart),
-            "edit_field" => BuildEditFieldParameters(parameters, fieldIndex, fieldCode, lockField, unlockField,
+            "edit" => BuildEditFieldParameters(parameters, fieldIndex, fieldCode, lockField, unlockField,
                 updateField),
-            "delete_field" => BuildDeleteFieldParameters(parameters, fieldIndex, keepResult),
-            "update_field" => BuildUpdateFieldParameters(parameters, fieldIndex, updateAll),
-            "get_fields" => BuildGetFieldsParameters(parameters, includeCode, includeResult),
-            "get_field_detail" => BuildFieldIndexParameters(parameters, fieldIndex),
-            "add_form_field" => BuildAddFormFieldParameters(parameters, formFieldType, fieldName, defaultValue, options,
+            "delete" => BuildDeleteFieldParameters(parameters, fieldIndex, keepResult),
+            "update" => BuildUpdateFieldParameters(parameters, fieldIndex, updateAll),
+            "list" => BuildGetFieldsParameters(parameters, includeCode, includeResult),
+            "get" => BuildFieldIndexParameters(parameters, fieldIndex),
+            "add_form" => BuildAddFormFieldParameters(parameters, formFieldType, fieldName, defaultValue, options,
                 checkedValue),
-            "edit_form_field" =>
+            "edit_form" =>
                 BuildEditFormFieldParameters(parameters, fieldName, value, checkedValue, selectedIndex),
-            "delete_form_field" => BuildDeleteFormFieldParameters(parameters, fieldName, fieldNames),
+            "delete_form" => BuildDeleteFormFieldParameters(parameters, fieldName, fieldNames),
             _ => parameters
         };
     }
@@ -322,7 +322,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds parameters for field index-based operations (get_field_detail).
+    ///     Builds parameters for field index-based operations (get).
     /// </summary>
     /// <param name="parameters">The base operation parameters.</param>
     /// <param name="fieldIndex">The field index (0-based).</param>

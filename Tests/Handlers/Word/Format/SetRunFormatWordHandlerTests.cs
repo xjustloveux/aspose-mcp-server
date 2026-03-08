@@ -13,7 +13,7 @@ public class SetRunFormatWordHandlerTests : WordHandlerTestBase
     [Fact]
     public void Operation_Returns_SetRunFormat()
     {
-        Assert.Equal("set_run_format", _handler.Operation);
+        Assert.Equal("set", _handler.Operation);
     }
 
     #endregion

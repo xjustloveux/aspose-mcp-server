@@ -48,22 +48,22 @@ public class WordHeaderFooterTool
     }
 
     /// <summary>
-    ///     Executes a Word header/footer operation (set_header_text, set_footer_text, set_header_image, set_footer_image,
-    ///     set_header_line, set_footer_line, set_header_tabs, set_footer_tabs, set_header_footer, get).
+    ///     Executes a Word header/footer operation (set_header, set_footer, set_header_image, set_footer_image,
+    ///     set_header_line, set_footer_line, set_header_tabs, set_footer_tabs, set_all, get).
     /// </summary>
     /// <param name="operation">
-    ///     The operation to perform: set_header_text, set_footer_text, set_header_image, set_footer_image,
-    ///     set_header_line, set_footer_line, set_header_tabs, set_footer_tabs, set_header_footer, get.
+    ///     The operation to perform: set_header, set_footer, set_header_image, set_footer_image,
+    ///     set_header_line, set_footer_line, set_header_tabs, set_footer_tabs, set_all, get.
     /// </param>
     /// <param name="path">Word document file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID for in-memory editing.</param>
     /// <param name="outputPath">Output file path (file mode only).</param>
-    /// <param name="headerLeft">Header left section text (for set_header_text).</param>
-    /// <param name="headerCenter">Header center section text (for set_header_text).</param>
-    /// <param name="headerRight">Header right section text (for set_header_text).</param>
-    /// <param name="footerLeft">Footer left section text (for set_footer_text).</param>
-    /// <param name="footerCenter">Footer center section text (for set_footer_text).</param>
-    /// <param name="footerRight">Footer right section text (for set_footer_text).</param>
+    /// <param name="headerLeft">Header left section text (for set_header).</param>
+    /// <param name="headerCenter">Header center section text (for set_header).</param>
+    /// <param name="headerRight">Header right section text (for set_header).</param>
+    /// <param name="footerLeft">Footer left section text (for set_footer).</param>
+    /// <param name="footerCenter">Footer center section text (for set_footer).</param>
+    /// <param name="footerRight">Footer right section text (for set_footer).</param>
     /// <param name="imagePath">Path to image file (for set_header_image/set_footer_image).</param>
     /// <param name="alignment">Image alignment: left, center, right (for image operations).</param>
     /// <param name="imageWidth">Image width in points (for image operations).</param>
@@ -93,24 +93,24 @@ public class WordHeaderFooterTool
         ReadOnly = false,
         UseStructuredContent = true)]
     [Description(
-        @"Manage headers and footers in Word documents. Supports 10 operations: set_header_text, set_footer_text, set_header_image, set_footer_image, set_header_line, set_footer_line, set_header_tabs, set_footer_tabs, set_header_footer, get.
+        @"Manage headers and footers in Word documents. Supports 10 operations: set_header, set_footer, set_header_image, set_footer_image, set_header_line, set_footer_line, set_header_tabs, set_footer_tabs, set_all, get.
 
 Usage examples:
-- Set header text: word_header_footer(operation='set_header_text', path='doc.docx', headerLeft='Left', headerCenter='Center', headerRight='Right')
-- Set footer text: word_header_footer(operation='set_footer_text', path='doc.docx', footerLeft='Page', footerCenter='', footerRight='{PAGE}')
+- Set header text: word_header_footer(operation='set_header', path='doc.docx', headerLeft='Left', headerCenter='Center', headerRight='Right')
+- Set footer text: word_header_footer(operation='set_footer', path='doc.docx', footerLeft='Page', footerCenter='', footerRight='{PAGE}')
 - Set header image: word_header_footer(operation='set_header_image', path='doc.docx', imagePath='logo.png')
 - Get headers/footers: word_header_footer(operation='get', path='doc.docx')")]
     public object Execute(
         [Description(@"Operation to perform.
-- 'set_header_text': Set header text (required params: path)
-- 'set_footer_text': Set footer text (required params: path)
+- 'set_header': Set header text (required params: path)
+- 'set_footer': Set footer text (required params: path)
 - 'set_header_image': Set header image (required params: path, imagePath)
 - 'set_footer_image': Set footer image (required params: path, imagePath)
 - 'set_header_line': Set header line (required params: path)
 - 'set_footer_line': Set footer line (required params: path)
 - 'set_header_tabs': Set header tab stops (required params: path)
 - 'set_footer_tabs': Set footer tab stops (required params: path)
-- 'set_header_footer': Set header and footer together (required params: path)
+- 'set_all': Set header and footer together (required params: path)
 - 'get': Get headers and footers info (required params: path)")]
         string operation,
         [Description("Document file path (required if no sessionId)")]
@@ -119,17 +119,17 @@ Usage examples:
         string? sessionId = null,
         [Description("Output file path (file mode only)")]
         string? outputPath = null,
-        [Description("Header left section text (optional, for set_header_text operation)")]
+        [Description("Header left section text (optional, for set_header operation)")]
         string? headerLeft = null,
-        [Description("Header center section text (optional, for set_header_text operation)")]
+        [Description("Header center section text (optional, for set_header operation)")]
         string? headerCenter = null,
-        [Description("Header right section text (optional, for set_header_text operation)")]
+        [Description("Header right section text (optional, for set_header operation)")]
         string? headerRight = null,
-        [Description("Footer left section text (optional, for set_footer_text operation)")]
+        [Description("Footer left section text (optional, for set_footer operation)")]
         string? footerLeft = null,
-        [Description("Footer center section text (optional, for set_footer_text operation)")]
+        [Description("Footer center section text (optional, for set_footer operation)")]
         string? footerCenter = null,
-        [Description("Footer right section text (optional, for set_footer_text operation)")]
+        [Description("Footer right section text (optional, for set_footer operation)")]
         string? footerRight = null,
         [Description("Path to image file (required for set_header_image/set_footer_image operations)")]
         string? imagePath = null,
@@ -239,15 +239,15 @@ Usage examples:
 
         return operation.ToLower() switch
         {
-            "set_header_text" => BuildHeaderTextParameters(parameters, headerLeft, headerCenter, headerRight, fontName,
+            "set_header" => BuildHeaderTextParameters(parameters, headerLeft, headerCenter, headerRight, fontName,
                 fontNameAscii, fontNameFarEast, fontSize, autoTabStops, clearExisting, clearTextOnly),
-            "set_footer_text" => BuildFooterTextParameters(parameters, footerLeft, footerCenter, footerRight, fontName,
+            "set_footer" => BuildFooterTextParameters(parameters, footerLeft, footerCenter, footerRight, fontName,
                 fontNameAscii, fontNameFarEast, fontSize, autoTabStops, clearExisting, clearTextOnly),
             "set_header_image" or "set_footer_image" => BuildImageParameters(parameters, imagePath, alignment,
                 imageWidth, imageHeight, isFloating, removeExisting),
             "set_header_line" or "set_footer_line" => BuildLineParameters(parameters, lineStyle, lineWidth),
             "set_header_tabs" or "set_footer_tabs" => BuildTabsParameters(parameters, tabStops),
-            "set_header_footer" => BuildHeaderFooterParameters(parameters, headerLeft, headerCenter, headerRight,
+            "set_all" => BuildHeaderFooterParameters(parameters, headerLeft, headerCenter, headerRight,
                 footerLeft, footerCenter, footerRight, fontName, fontNameAscii, fontNameFarEast, fontSize, autoTabStops,
                 clearExisting, clearTextOnly),
             _ => parameters

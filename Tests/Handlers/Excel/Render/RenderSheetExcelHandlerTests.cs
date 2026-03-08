@@ -14,7 +14,7 @@ public class RenderSheetExcelHandlerTests : ExcelHandlerTestBase
     [Fact]
     public void Operation_ShouldBeRenderSheet()
     {
-        Assert.Equal("render_sheet", _handler.Operation);
+        Assert.Equal("render", _handler.Operation);
     }
 
     #endregion

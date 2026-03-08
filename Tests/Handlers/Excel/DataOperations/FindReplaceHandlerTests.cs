@@ -13,7 +13,7 @@ public class FindReplaceHandlerTests : ExcelHandlerTestBase
     [Fact]
     public void Operation_Returns_FindReplace()
     {
-        Assert.Equal("find_replace", _handler.Operation);
+        Assert.Equal("replace", _handler.Operation);
     }
 
     #endregion

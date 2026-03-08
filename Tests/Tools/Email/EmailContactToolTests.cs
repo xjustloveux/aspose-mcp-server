@@ -85,7 +85,7 @@ public class EmailContactToolTests : EmailTestBase
     {
         var vcfPath = CreateTestVcfFile("tool_getinfo.vcf", "Info Contact", "info@example.com",
             "+1-555-0200", "Info Corp", "Analyst");
-        var result = _tool.Execute("get_info", vcfPath);
+        var result = _tool.Execute("get", vcfPath);
 
         Assert.IsType<FinalizedResult<ContactEmailInfo>>(result);
         var data = GetResultData<ContactEmailInfo>(result);
@@ -101,7 +101,7 @@ public class EmailContactToolTests : EmailTestBase
     public void Execute_GetInfo_WithMsgFile_ReturnsContactInfo()
     {
         var msgPath = CreateTestMsgContactFile("tool_getinfo.msg", "MSG Info Contact", "msginfo@example.com");
-        var result = _tool.Execute("get_info", msgPath);
+        var result = _tool.Execute("get", msgPath);
 
         Assert.IsType<FinalizedResult<ContactEmailInfo>>(result);
         var data = GetResultData<ContactEmailInfo>(result);
@@ -234,7 +234,7 @@ public class EmailContactToolTests : EmailTestBase
             email: "roundtrip@example.com", phone: "+1-555-0300",
             company: "Roundtrip Corp", jobTitle: "Tester");
 
-        var infoResult = _tool.Execute("get_info", outputPath);
+        var infoResult = _tool.Execute("get", outputPath);
         var data = GetResultData<ContactEmailInfo>(infoResult);
 
         Assert.Equal("Roundtrip Contact", data.DisplayName);
@@ -275,7 +275,7 @@ public class EmailContactToolTests : EmailTestBase
         _tool.Execute("save", msgPath, vcfPath2, format: "vcf");
         Assert.True(File.Exists(vcfPath2));
 
-        var infoResult = _tool.Execute("get_info", vcfPath2);
+        var infoResult = _tool.Execute("get", vcfPath2);
         var data = GetResultData<ContactEmailInfo>(infoResult);
         Assert.Equal("Format Test User", data.DisplayName);
     }

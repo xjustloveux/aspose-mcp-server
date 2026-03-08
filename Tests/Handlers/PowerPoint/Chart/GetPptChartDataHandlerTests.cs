@@ -18,7 +18,7 @@ public class GetPptChartDataHandlerTests : PptHandlerTestBase
     public void Operation_Returns_GetData()
     {
         SkipIfNotWindows();
-        Assert.Equal("get_data", _handler.Operation);
+        Assert.Equal("get", _handler.Operation);
     }
 
     #endregion

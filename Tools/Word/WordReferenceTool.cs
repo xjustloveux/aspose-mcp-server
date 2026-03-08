@@ -44,31 +44,31 @@ public class WordReferenceTool
     }
 
     /// <summary>
-    ///     Executes a Word reference operation (add_table_of_contents, update_table_of_contents, add_index,
-    ///     add_cross_reference).
+    ///     Executes a Word reference operation (add_toc, update_toc, add_index,
+    ///     add_xref).
     /// </summary>
     /// <param name="operation">
-    ///     The operation to perform: add_table_of_contents, update_table_of_contents, add_index,
-    ///     add_cross_reference.
+    ///     The operation to perform: add_toc, update_toc, add_index,
+    ///     add_xref.
     /// </param>
     /// <param name="path">Word document file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID for in-memory editing.</param>
     /// <param name="outputPath">Output file path (optional, defaults to overwrite input).</param>
-    /// <param name="position">Insert position: start, end (for add_table_of_contents, default: start).</param>
-    /// <param name="title">Table of contents title (for add_table_of_contents).</param>
-    /// <param name="maxLevel">Maximum heading level to include (for add_table_of_contents, default: 3).</param>
-    /// <param name="hyperlinks">Enable clickable hyperlinks (for add_table_of_contents, default: true).</param>
-    /// <param name="pageNumbers">Show page numbers (for add_table_of_contents, default: true).</param>
-    /// <param name="rightAlignPageNumbers">Right-align page numbers (for add_table_of_contents, default: true).</param>
-    /// <param name="tocIndex">TOC field index (0-based, for update_table_of_contents).</param>
+    /// <param name="position">Insert position: start, end (for add_toc, default: start).</param>
+    /// <param name="title">Table of contents title (for add_toc).</param>
+    /// <param name="maxLevel">Maximum heading level to include (for add_toc, default: 3).</param>
+    /// <param name="hyperlinks">Enable clickable hyperlinks (for add_toc, default: true).</param>
+    /// <param name="pageNumbers">Show page numbers (for add_toc, default: true).</param>
+    /// <param name="rightAlignPageNumbers">Right-align page numbers (for add_toc, default: true).</param>
+    /// <param name="tocIndex">TOC field index (0-based, for update_toc).</param>
     /// <param name="indexEntries">Array of index entries as JSON string (for add_index).</param>
     /// <param name="insertIndexAtEnd">Insert INDEX field at end of document (for add_index, default: true).</param>
     /// <param name="headingStyle">Heading style for index (for add_index, default: 'Heading 1').</param>
-    /// <param name="referenceType">Reference type: Heading, Bookmark, Figure, Table, Equation (for add_cross_reference).</param>
-    /// <param name="referenceText">Text to insert before reference (for add_cross_reference).</param>
-    /// <param name="targetName">Target name (heading text, bookmark name, etc.) (for add_cross_reference).</param>
-    /// <param name="insertAsHyperlink">Insert as hyperlink (for add_cross_reference, default: true).</param>
-    /// <param name="includeAboveBelow">Include 'above' or 'below' text (for add_cross_reference, default: false).</param>
+    /// <param name="referenceType">Reference type: Heading, Bookmark, Figure, Table, Equation (for add_xref).</param>
+    /// <param name="referenceText">Text to insert before reference (for add_xref).</param>
+    /// <param name="targetName">Target name (heading text, bookmark name, etc.) (for add_xref).</param>
+    /// <param name="insertAsHyperlink">Insert as hyperlink (for add_xref, default: true).</param>
+    /// <param name="includeAboveBelow">Include 'above' or 'below' text (for add_xref, default: false).</param>
     /// <returns>A message indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(
@@ -80,20 +80,20 @@ public class WordReferenceTool
         ReadOnly = false,
         UseStructuredContent = true)]
     [Description(
-        @"Manage references in Word documents. Supports 4 operations: add_table_of_contents, update_table_of_contents, add_index, add_cross_reference.
+        @"Manage references in Word documents. Supports 4 operations: add_toc, update_toc, add_index, add_xref.
 
 Usage examples:
-- Add table of contents: word_reference(operation='add_table_of_contents', path='doc.docx', title='Table of Contents', maxLevel=3)
-- Update table of contents: word_reference(operation='update_table_of_contents', path='doc.docx')
+- Add table of contents: word_reference(operation='add_toc', path='doc.docx', title='Table of Contents', maxLevel=3)
+- Update table of contents: word_reference(operation='update_toc', path='doc.docx')
 - Add index: word_reference(operation='add_index', path='doc.docx', indexEntries='[{""text"":""Index term""}]')
-- Add cross-reference: word_reference(operation='add_cross_reference', path='doc.docx', referenceType='Bookmark', targetName='Chapter1', referenceText='See ')
+- Add cross-reference: word_reference(operation='add_xref', path='doc.docx', referenceType='Bookmark', targetName='Chapter1', referenceText='See ')
 
 Notes:
 - TOC is automatically updated after insertion using UpdateFields()
 - For cross-references, targetName must be an existing bookmark name in the document
 - If headingStyle doesn't exist in the document, it falls back to 'Heading 1'")]
     public object Execute(
-        [Description("Operation: add_table_of_contents, update_table_of_contents, add_index, add_cross_reference")]
+        [Description("Operation: add_toc, update_toc, add_index, add_xref")]
         string operation,
         [Description("Document file path (required if no sessionId)")]
         string? path = null,
@@ -101,19 +101,19 @@ Notes:
         string? sessionId = null,
         [Description("Output file path (optional, defaults to overwrite input)")]
         string? outputPath = null,
-        [Description("Insert position: start, end (for add_table_of_contents, default: start)")]
+        [Description("Insert position: start, end (for add_toc, default: start)")]
         string position = "start",
-        [Description("Table of contents title (for add_table_of_contents, default: 'Table of Contents')")]
+        [Description("Table of contents title (for add_toc, default: 'Table of Contents')")]
         string title = "Table of Contents",
-        [Description("Maximum heading level to include (for add_table_of_contents, default: 3)")]
+        [Description("Maximum heading level to include (for add_toc, default: 3)")]
         int maxLevel = 3,
-        [Description("Enable clickable hyperlinks (for add_table_of_contents, default: true)")]
+        [Description("Enable clickable hyperlinks (for add_toc, default: true)")]
         bool hyperlinks = true,
-        [Description("Show page numbers (for add_table_of_contents, default: true)")]
+        [Description("Show page numbers (for add_toc, default: true)")]
         bool pageNumbers = true,
-        [Description("Right-align page numbers (for add_table_of_contents, default: true)")]
+        [Description("Right-align page numbers (for add_toc, default: true)")]
         bool rightAlignPageNumbers = true,
-        [Description("TOC field index (0-based, for update_table_of_contents, optional)")]
+        [Description("TOC field index (0-based, for update_toc, optional)")]
         int? tocIndex = null,
         [Description("Array of index entries as JSON string (for add_index)")]
         string? indexEntries = null,
@@ -121,15 +121,15 @@ Notes:
         bool insertIndexAtEnd = true,
         [Description("Heading style for index (for add_index, default: 'Heading 1')")]
         string headingStyle = "Heading 1",
-        [Description("Reference type: Heading, Bookmark, Figure, Table, Equation (for add_cross_reference)")]
+        [Description("Reference type: Heading, Bookmark, Figure, Table, Equation (for add_xref)")]
         string? referenceType = null,
-        [Description("Text to insert before reference (for add_cross_reference, optional)")]
+        [Description("Text to insert before reference (for add_xref, optional)")]
         string? referenceText = null,
-        [Description("Target name (heading text, bookmark name, etc.) (for add_cross_reference)")]
+        [Description("Target name (heading text, bookmark name, etc.) (for add_xref)")]
         string? targetName = null,
-        [Description("Insert as hyperlink (for add_cross_reference, default: true)")]
+        [Description("Insert as hyperlink (for add_xref, default: true)")]
         bool insertAsHyperlink = true,
-        [Description("Include 'above' or 'below' text (for add_cross_reference, default: false)")]
+        [Description("Include 'above' or 'below' text (for add_xref, default: false)")]
         bool includeAboveBelow = false)
     {
         var parameters = BuildParameters(operation, position, title, maxLevel, hyperlinks, pageNumbers,
@@ -185,18 +185,18 @@ Notes:
     {
         return operation.ToLower() switch
         {
-            "add_table_of_contents" => BuildAddTableOfContentsParameters(position, title, maxLevel, hyperlinks,
+            "add_toc" => BuildAddTableOfContentsParameters(position, title, maxLevel, hyperlinks,
                 pageNumbers, rightAlignPageNumbers),
-            "update_table_of_contents" => BuildUpdateTableOfContentsParameters(tocIndex),
+            "update_toc" => BuildUpdateTableOfContentsParameters(tocIndex),
             "add_index" => BuildAddIndexParameters(indexEntries, insertIndexAtEnd, headingStyle),
-            "add_cross_reference" => BuildAddCrossReferenceParameters(referenceType, referenceText, targetName,
+            "add_xref" => BuildAddCrossReferenceParameters(referenceType, referenceText, targetName,
                 insertAsHyperlink, includeAboveBelow),
             _ => new OperationParameters()
         };
     }
 
     /// <summary>
-    ///     Builds parameters for the add_table_of_contents operation.
+    ///     Builds parameters for the add_toc operation.
     /// </summary>
     /// <param name="position">The insert position: start, end.</param>
     /// <param name="title">The table of contents title.</param>
@@ -219,7 +219,7 @@ Notes:
     }
 
     /// <summary>
-    ///     Builds parameters for the update_table_of_contents operation.
+    ///     Builds parameters for the update_toc operation.
     /// </summary>
     /// <param name="tocIndex">The TOC field index (0-based).</param>
     /// <returns>OperationParameters configured for updating table of contents.</returns>
@@ -248,7 +248,7 @@ Notes:
     }
 
     /// <summary>
-    ///     Builds parameters for the add_cross_reference operation.
+    ///     Builds parameters for the add_xref operation.
     /// </summary>
     /// <param name="referenceType">The reference type: Heading, Bookmark, Figure, Table, Equation.</param>
     /// <param name="referenceText">The text to insert before reference.</param>

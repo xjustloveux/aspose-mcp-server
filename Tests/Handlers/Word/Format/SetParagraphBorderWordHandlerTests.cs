@@ -13,7 +13,7 @@ public class SetParagraphBorderWordHandlerTests : WordHandlerTestBase
     [Fact]
     public void Operation_Returns_SetParagraphBorder()
     {
-        Assert.Equal("set_paragraph_border", _handler.Operation);
+        Assert.Equal("set_border", _handler.Operation);
     }
 
     #endregion

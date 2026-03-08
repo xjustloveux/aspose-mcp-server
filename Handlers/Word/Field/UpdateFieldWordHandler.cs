@@ -12,7 +12,7 @@ namespace AsposeMcpServer.Handlers.Word.Field;
 public class UpdateFieldWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "update_field";
+    public override string Operation => "update";
 
     /// <summary>
     ///     Updates one or all fields in the document.

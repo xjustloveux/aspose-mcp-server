@@ -13,7 +13,7 @@ namespace AsposeMcpServer.Handlers.Excel.Properties;
 public class GetSheetPropertiesHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
-    public override string Operation => "get_sheet_properties";
+    public override string Operation => "get_sheet";
 
     /// <summary>
     ///     Gets worksheet properties including data counts, protection status, and print settings.

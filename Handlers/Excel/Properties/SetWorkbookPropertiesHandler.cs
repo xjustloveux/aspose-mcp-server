@@ -15,7 +15,7 @@ namespace AsposeMcpServer.Handlers.Excel.Properties;
 public class SetWorkbookPropertiesHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
-    public override string Operation => "set_workbook_properties";
+    public override string Operation => "set";
 
     /// <summary>
     ///     Sets workbook properties including built-in and custom properties.

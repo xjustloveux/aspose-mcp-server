@@ -14,7 +14,7 @@ public class ConvertToRangeExcelTableHandlerTests : ExcelHandlerTestBase
     [Fact]
     public void Operation_ShouldBeConvertToRange()
     {
-        Assert.Equal("convert_to_range", _handler.Operation);
+        Assert.Equal("to_range", _handler.Operation);
     }
 
     #endregion

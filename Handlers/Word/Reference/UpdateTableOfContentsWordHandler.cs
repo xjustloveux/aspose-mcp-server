@@ -13,7 +13,7 @@ namespace AsposeMcpServer.Handlers.Word.Reference;
 public class UpdateTableOfContentsWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "update_table_of_contents";
+    public override string Operation => "update_toc";
 
     /// <summary>
     ///     Updates the table of contents fields in the document.
@@ -39,7 +39,7 @@ public class UpdateTableOfContentsWordHandler : OperationHandlerBase<Document>
             var message = "No table of contents fields found in document.";
             if (allFields.Count > 0)
                 message += $" Found {allFields.Count} field(s) of other types: {string.Join(", ", fieldTypes)}.";
-            message += " Use 'add_table_of_contents' operation to add a table of contents first.";
+            message += " Use 'add_toc' operation to add a table of contents first.";
             return new SuccessResult { Message = message };
         }
 

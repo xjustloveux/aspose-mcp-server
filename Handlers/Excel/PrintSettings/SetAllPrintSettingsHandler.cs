@@ -13,7 +13,7 @@ namespace AsposeMcpServer.Handlers.Excel.PrintSettings;
 public class SetAllPrintSettingsHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
-    public override string Operation => "set_all";
+    public override string Operation => "set";
 
     /// <summary>
     ///     Sets all print settings at once.

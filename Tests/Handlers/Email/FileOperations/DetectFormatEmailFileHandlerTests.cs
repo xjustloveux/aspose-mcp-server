@@ -18,7 +18,7 @@ public class DetectFormatEmailFileHandlerTests : HandlerTestBase<object>
     [Fact]
     public void Operation_Returns_DetectFormat()
     {
-        Assert.Equal("detect_format", _handler.Operation);
+        Assert.Equal("detect", _handler.Operation);
     }
 
     #endregion

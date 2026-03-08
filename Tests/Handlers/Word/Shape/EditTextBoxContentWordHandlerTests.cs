@@ -17,7 +17,7 @@ public class EditTextBoxContentWordHandlerTests : WordHandlerTestBase
     [Fact]
     public void Operation_Returns_EditTextboxContent()
     {
-        Assert.Equal("edit_textbox_content", _handler.Operation);
+        Assert.Equal("edit_textbox", _handler.Operation);
     }
 
     #endregion

@@ -20,7 +20,7 @@ internal record TabStopTarget(List<WordParagraph> Paragraphs, string LocationDes
 public class GetTabStopsWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "get_tab_stops";
+    public override string Operation => "get_tabs";
 
     /// <summary>
     ///     Gets tab stops for a paragraph.

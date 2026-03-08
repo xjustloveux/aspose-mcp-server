@@ -14,7 +14,7 @@ public class GetExcelFilterStatusHandlerTests : ExcelHandlerTestBase
     [Fact]
     public void Operation_Returns_GetStatus()
     {
-        Assert.Equal("get_status", _handler.Operation);
+        Assert.Equal("status", _handler.Operation);
     }
 
     #endregion

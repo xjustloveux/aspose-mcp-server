@@ -1,4 +1,3 @@
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Words.Tables;
@@ -52,11 +51,10 @@ public class CreateWordTableHandler : OperationHandlerBase<Document>
         var builder = new DocumentBuilder(doc);
 
         var sectionResult = ValidateAndGetSection(doc, tableParams.SectionIndex);
-        var parsedTableData = ParseTableData(tableParams.TableData);
-        var tableDimensions = CalculateTableDimensions(parsedTableData, tableParams.Rows, tableParams.Columns);
+        var tableDimensions = CalculateTableDimensions(tableParams.TableData, tableParams.Rows, tableParams.Columns);
 
         MoveToInsertPosition(builder, sectionResult.Section, tableParams.ParagraphIndex, sectionResult.ActualIndex);
-        var table = BuildTable(builder, tableDimensions.NumRows, tableDimensions.NumColumns, parsedTableData,
+        var table = BuildTable(builder, tableDimensions.NumRows, tableDimensions.NumColumns, tableParams.TableData,
             tableParams);
         FinalizeTable(table, tableParams);
 
@@ -79,7 +77,7 @@ public class CreateWordTableHandler : OperationHandlerBase<Document>
             parameters.GetOptional("paragraphIndex", -1),
             parameters.GetOptional<int?>("rows"),
             parameters.GetOptional<int?>("columns"),
-            parameters.GetOptional<string?>("tableData"),
+            parameters.GetOptional<string[][]?>("tableData"),
             parameters.GetOptional<double?>("tableWidth"),
             parameters.GetOptional("autoFit", true),
             parameters.GetOptional("hasHeader", true),
@@ -114,15 +112,15 @@ public class CreateWordTableHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Calculates the table dimensions.
     /// </summary>
-    /// <param name="parsedData">The parsed table data.</param>
+    /// <param name="tableData">The 2D array of table data.</param>
     /// <param name="rows">The specified number of rows.</param>
     /// <param name="columns">The specified number of columns.</param>
     /// <returns>A TableDimensions containing the number of rows and columns.</returns>
-    private static TableDimensions CalculateTableDimensions(List<List<string>>? parsedData, int? rows,
+    private static TableDimensions CalculateTableDimensions(string[][]? tableData, int? rows,
         int? columns)
     {
-        if (parsedData is { Count: > 0 })
-            return new TableDimensions(parsedData.Count, parsedData.Max(r => r.Count));
+        if (tableData is { Length: > 0 })
+            return new TableDimensions(tableData.Length, tableData.Max(r => r.Length));
         return new TableDimensions(rows ?? 3, columns ?? 3);
     }
 
@@ -149,11 +147,11 @@ public class CreateWordTableHandler : OperationHandlerBase<Document>
     /// <param name="builder">The document builder.</param>
     /// <param name="numRows">The number of rows.</param>
     /// <param name="numCols">The number of columns.</param>
-    /// <param name="parsedTableData">The parsed table data.</param>
+    /// <param name="tableData">The 2D array of table data.</param>
     /// <param name="p">The table creation parameters.</param>
     /// <returns>The created table.</returns>
     private static Aspose.Words.Tables.Table BuildTable(DocumentBuilder builder, int numRows, int numCols,
-        List<List<string>>? parsedTableData, TableCreationParameters p)
+        string[][]? tableData, TableCreationParameters p)
     {
         var colorContext = CreateColorContext(p);
         var table = builder.StartTable();
@@ -161,7 +159,7 @@ public class CreateWordTableHandler : OperationHandlerBase<Document>
         for (var i = 0; i < numRows; i++)
         {
             for (var j = 0; j < numCols; j++)
-                InsertTableCell(builder, i, j, parsedTableData, p, colorContext);
+                InsertTableCell(builder, i, j, tableData, p, colorContext);
             builder.EndRow();
         }
 
@@ -192,11 +190,11 @@ public class CreateWordTableHandler : OperationHandlerBase<Document>
     /// <param name="builder">The document builder.</param>
     /// <param name="row">The row index.</param>
     /// <param name="col">The column index.</param>
-    /// <param name="parsedTableData">The parsed table data.</param>
+    /// <param name="tableData">The 2D array of table data.</param>
     /// <param name="p">The table creation parameters.</param>
     /// <param name="colorContext">The color context.</param>
     private static void InsertTableCell(DocumentBuilder builder, int row, int col,
-        List<List<string>>? parsedTableData, TableCreationParameters p, ColorContext colorContext)
+        string[][]? tableData, TableCreationParameters p, ColorContext colorContext)
     {
         builder.InsertCell();
 
@@ -206,8 +204,8 @@ public class CreateWordTableHandler : OperationHandlerBase<Document>
             ApplyCellBackgroundColor(cell, row, col, colorContext);
         }
 
-        var cellText = parsedTableData != null && row < parsedTableData.Count && col < parsedTableData[row].Count
-            ? parsedTableData[row][col]
+        var cellText = tableData != null && row < tableData.Length && col < tableData[row].Length
+            ? tableData[row][col]
             : "";
 
         if (p.FontSize.HasValue) builder.Font.Size = p.FontSize.Value;
@@ -234,38 +232,6 @@ public class CreateWordTableHandler : OperationHandlerBase<Document>
 
         foreach (var merge in mergeCellsList)
             WordTableHelper.ApplyMergeCells(table, merge.startRow, merge.endRow, merge.startCol, merge.endCol);
-    }
-
-    /// <summary>
-    ///     Parses table data from JSON string.
-    /// </summary>
-    /// <param name="tableData">JSON string representing 2D array of table data.</param>
-    /// <returns>Parsed table data as list of lists.</returns>
-    /// <exception cref="ArgumentException">Thrown when JSON format is invalid.</exception>
-    private static List<List<string>>? ParseTableData(string? tableData)
-    {
-        if (string.IsNullOrEmpty(tableData)) return null;
-
-        try
-        {
-            var jsonArray = JsonSerializer.Deserialize<JsonElement>(tableData);
-            if (jsonArray.ValueKind != JsonValueKind.Array) return null;
-
-            List<List<string>> result = [];
-            foreach (var row in jsonArray.EnumerateArray())
-            {
-                List<string> rowList = [];
-                foreach (var cell in row.EnumerateArray())
-                    rowList.Add(cell.ToString());
-                result.Add(rowList);
-            }
-
-            return result;
-        }
-        catch (Exception ex)
-        {
-            throw new ArgumentException($"Invalid tableData JSON format: {ex.Message}");
-        }
     }
 
     /// <summary>
@@ -324,7 +290,7 @@ public class CreateWordTableHandler : OperationHandlerBase<Document>
     /// <param name="ParagraphIndex">The paragraph index for table insertion.</param>
     /// <param name="Rows">The number of rows.</param>
     /// <param name="Columns">The number of columns.</param>
-    /// <param name="TableData">The table data JSON string.</param>
+    /// <param name="TableData">The 2D array of table data.</param>
     /// <param name="TableWidth">The table width.</param>
     /// <param name="AutoFit">Whether to auto-fit the table.</param>
     /// <param name="HasHeader">Whether the table has a header row.</param>
@@ -342,7 +308,7 @@ public class CreateWordTableHandler : OperationHandlerBase<Document>
         int ParagraphIndex,
         int? Rows,
         int? Columns,
-        string? TableData,
+        string[][]? TableData,
         double? TableWidth,
         bool AutoFit,
         bool HasHeader,

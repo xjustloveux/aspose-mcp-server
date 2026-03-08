@@ -13,7 +13,7 @@ public class GetSheetInfoHandlerTests : ExcelHandlerTestBase
     [Fact]
     public void Operation_Returns_GetSheetInfo()
     {
-        Assert.Equal("get_sheet_info", _handler.Operation);
+        Assert.Equal("sheet_info", _handler.Operation);
     }
 
     #endregion

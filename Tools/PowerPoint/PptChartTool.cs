@@ -47,14 +47,14 @@ public class PptChartTool
     }
 
     /// <summary>
-    ///     Executes a PowerPoint chart operation (add, edit, delete, get_data, update_data).
+    ///     Executes a PowerPoint chart operation (add, edit, delete, get, update_data).
     /// </summary>
-    /// <param name="operation">The operation to perform: add, edit, delete, get_data, update_data.</param>
+    /// <param name="operation">The operation to perform: add, edit, delete, get, update_data.</param>
     /// <param name="slideIndex">Slide index (0-based).</param>
     /// <param name="path">Presentation file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID for in-memory editing.</param>
     /// <param name="outputPath">Output file path (file mode only).</param>
-    /// <param name="shapeIndex">Chart index (0-based, required for edit/delete/get_data/update_data).</param>
+    /// <param name="shapeIndex">Chart index (0-based, required for edit/delete/get/update_data).</param>
     /// <param name="chartType">Chart type (Column, Bar, Line, Pie, etc., required for add, optional for edit).</param>
     /// <param name="title">Chart title (optional).</param>
     /// <param name="x">Chart X position in points (optional for add, default: 50).</param>
@@ -73,18 +73,18 @@ public class PptChartTool
         OpenWorld = false,
         ReadOnly = false,
         UseStructuredContent = true)]
-    [Description(@"Manage PowerPoint charts. Supports 5 operations: add, edit, delete, get_data, update_data.
+    [Description(@"Manage PowerPoint charts. Supports 5 operations: add, edit, delete, get, update_data.
 
 Usage examples:
 - Add chart: ppt_chart(operation='add', path='presentation.pptx', slideIndex=0, chartType='Column', x=100, y=100, width=400, height=300)
 - Edit chart: ppt_chart(operation='edit', path='presentation.pptx', slideIndex=0, shapeIndex=0, title='New Title')
 - Delete chart: ppt_chart(operation='delete', path='presentation.pptx', slideIndex=0, shapeIndex=0)
-- Get data: ppt_chart(operation='get_data', path='presentation.pptx', slideIndex=0, shapeIndex=0)
+- Get data: ppt_chart(operation='get', path='presentation.pptx', slideIndex=0, shapeIndex=0)
 - Update data: ppt_chart(operation='update_data', path='presentation.pptx', slideIndex=0, shapeIndex=0, data={categories:['A','B'],series:[{name:'Sales',values:[1,2]}]})
 
 Note: shapeIndex refers to the chart index (0-based) among all charts on the slide, not the absolute shape index.")]
     public object Execute(
-        [Description("Operation: add, edit, delete, get_data, update_data")]
+        [Description("Operation: add, edit, delete, get, update_data")]
         string operation,
         [Description("Slide index (0-based)")] int slideIndex,
         [Description("Presentation file path (required if no sessionId)")]
@@ -93,7 +93,7 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
         string? sessionId = null,
         [Description("Output file path (file mode only)")]
         string? outputPath = null,
-        [Description("Chart index (0-based, required for edit/delete/get_data/update_data)")]
+        [Description("Chart index (0-based, required for edit/delete/get/update_data)")]
         int? shapeIndex = null,
         [Description("Chart type (Column, Bar, Line, Pie, etc., required for add, optional for edit)")]
         string? chartType = null,
@@ -131,7 +131,7 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
 
         var result = handler.Execute(operationContext, parameters);
 
-        if (string.Equals(operation, "get_data", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(operation, "get", StringComparison.OrdinalIgnoreCase))
             return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
@@ -166,7 +166,7 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
             "add" => BuildAddParameters(parameters, chartType, title, x, y, width, height),
             "edit" => BuildEditParameters(parameters, shapeIndex, title, chartType),
             "delete" => BuildDeleteParameters(parameters, shapeIndex),
-            "get_data" => BuildGetDataParameters(parameters, shapeIndex),
+            "get" => BuildGetDataParameters(parameters, shapeIndex),
             "update_data" => BuildUpdateDataParameters(parameters, shapeIndex, data, clearExisting),
             _ => parameters
         };

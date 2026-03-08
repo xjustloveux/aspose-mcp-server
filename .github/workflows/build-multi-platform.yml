@@ -30,8 +30,42 @@ on:
   workflow_dispatch:
 
 jobs:
+  prepare:
+    name: Calculate Next Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.next_version.outputs.version }}
+      tag: ${{ steps.next_version.outputs.tag }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Calculate next version
+      id: next_version
+      shell: bash
+      run: |
+        git fetch --prune --tags --force
+        latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v1.0.0")
+        version=${latest_tag#v}
+        IFS='.' read -r major minor patch <<< "$version"
+        # Increment patch version until finding one that doesn't exist
+        while true; do
+          patch=$((patch + 1))
+          candidate="v${major}.${minor}.${patch}"
+          if ! git rev-parse "$candidate" >/dev/null 2>&1; then
+            break
+          fi
+          echo "Version $candidate already exists, trying next..."
+        done
+        echo "version=${major}.${minor}.${patch}" >> $GITHUB_OUTPUT
+        echo "tag=v${major}.${minor}.${patch}" >> $GITHUB_OUTPUT
+        echo "Next version: ${major}.${minor}.${patch} (tag: v${major}.${minor}.${patch})"
+
   build:
     name: Build ${{ matrix.platform }}
+    needs: prepare
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -58,15 +92,6 @@ jobs:
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-    
-    - name: Get version from Git tag
-      id: get_version
-      shell: bash
-      run: |
-        latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v1.0.0")
-        version=${latest_tag#v}
-        echo "version=$version" >> $GITHUB_OUTPUT
-        echo "Detected version: $version"
     
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
@@ -111,7 +136,7 @@ jobs:
     - name: Build and publish
       run: ${{ matrix.script }}
       env:
-        VERSION: ${{ steps.get_version.outputs.version }}
+        VERSION: ${{ needs.prepare.outputs.version }}
     
     - name: Clean up license files from build output (Unix)
       if: runner.os != 'Windows'
@@ -156,7 +181,7 @@ jobs:
 
   create-release:
     name: Create Release
-    needs: build
+    needs: [prepare, build]
     runs-on: ubuntu-latest
     # Security: Only create releases for pushes to main/master branches, not for PRs
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
@@ -174,40 +199,7 @@ jobs:
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-    
-    - name: Get latest version tag
-      id: get_version
-      shell: bash
-      run: |
-        # 確保獲取最新的 tag（包括遠程）
-        git fetch --prune --tags --force
-        latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v1.0.0")
-        echo "latest_tag=$latest_tag" >> $GITHUB_OUTPUT
-        echo "Latest tag: $latest_tag"
-    
-    - name: Calculate next version
-      id: next_version
-      shell: bash
-      run: |
-        latest_tag="${{ steps.get_version.outputs.latest_tag }}"
-        # 移除 v 前綴
-        version=${latest_tag#v}
-        # 分割版本號
-        IFS='.' read -r major minor patch <<< "$version"
-        # 遞增補丁版本號，直到找到不存在的版本號
-        while true; do
-          patch=$((patch + 1))
-          candidate_version="v${major}.${minor}.${patch}"
-          # 檢查 tag 是否已存在
-          if ! git rev-parse "$candidate_version" >/dev/null 2>&1; then
-            next_version="$candidate_version"
-            break
-          fi
-          echo "Version $candidate_version already exists, trying next..."
-        done
-        echo "next_version=$next_version" >> $GITHUB_OUTPUT
-        echo "Next version: $next_version"
-    
+
     - name: Download all artifacts
       uses: actions/download-artifact@v4
       with:
@@ -248,7 +240,7 @@ jobs:
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
-        tag_name="${{ steps.next_version.outputs.next_version }}"
+        tag_name="${{ needs.prepare.outputs.tag }}"
         release_notes=$(cat <<'EOF'
         Automated build from commit ${{ github.sha }}
 
@@ -322,7 +314,7 @@ jobs:
           exit 0
         fi
 
-        tag_name="${{ steps.next_version.outputs.next_version }}"
+        tag_name="${{ needs.prepare.outputs.tag }}"
         version="${tag_name#v}"
 
         # Calculate sha256 for macOS archives
@@ -376,7 +368,7 @@ jobs:
         fi
 
     outputs:
-      release_tag: ${{ steps.next_version.outputs.next_version }}
+      release_tag: ${{ needs.prepare.outputs.tag }}
 
   docker-build-and-push:
     name: Build and Push Docker Image

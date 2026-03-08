@@ -15,7 +15,7 @@ namespace AsposeMcpServer.Handlers.Word.HeaderFooter;
 public class SetHeaderTextHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "set_header_text";
+    public override string Operation => "set_header";
 
     /// <summary>
     ///     Sets text content in the document header.

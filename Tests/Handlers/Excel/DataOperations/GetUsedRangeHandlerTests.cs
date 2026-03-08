@@ -13,7 +13,7 @@ public class GetUsedRangeHandlerTests : ExcelHandlerTestBase
     [Fact]
     public void Operation_Returns_GetUsedRange()
     {
-        Assert.Equal("get_used_range", _handler.Operation);
+        Assert.Equal("used_range", _handler.Operation);
     }
 
     #endregion

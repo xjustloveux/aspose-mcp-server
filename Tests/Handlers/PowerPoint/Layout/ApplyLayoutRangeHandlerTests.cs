@@ -17,7 +17,7 @@ public class ApplyLayoutRangeHandlerTests : PptHandlerTestBase
     public void Operation_Returns_ApplyLayoutRange()
     {
         SkipIfNotWindows();
-        Assert.Equal("apply_layout_range", _handler.Operation);
+        Assert.Equal("apply_range", _handler.Operation);
     }
 
     #endregion

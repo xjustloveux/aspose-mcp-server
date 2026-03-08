@@ -15,7 +15,7 @@ public class AddFormFieldWordHandlerTests : WordHandlerTestBase
     [Fact]
     public void Operation_Returns_AddFormField()
     {
-        Assert.Equal("add_form_field", _handler.Operation);
+        Assert.Equal("add_form", _handler.Operation);
     }
 
     #endregion

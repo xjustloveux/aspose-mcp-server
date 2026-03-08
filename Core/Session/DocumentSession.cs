@@ -11,6 +11,11 @@ public sealed class DocumentSession : IDisposable
     private readonly SemaphoreSlim _lock = new(1, 1);
 
     /// <summary>
+    ///     Tracks the number of active users currently holding a usage scope on this session
+    /// </summary>
+    private int _activeUsers;
+
+    /// <summary>
     ///     Tracks whether this session has been disposed (0 = not disposed, 1 = disposed)
     /// </summary>
     private int _disposed;
@@ -113,6 +118,11 @@ public sealed class DocumentSession : IDisposable
     public bool IsDisposed => Volatile.Read(ref _disposed) == 1;
 
     /// <summary>
+    ///     Whether this session has active users currently executing operations
+    /// </summary>
+    public bool HasActiveUsers => Volatile.Read(ref _activeUsers) > 0;
+
+    /// <summary>
     ///     Disposes the session and releases all resources including the document.
     ///     Thread-safe: uses Interlocked to prevent double-dispose.
     /// </summary>
@@ -136,6 +146,33 @@ public sealed class DocumentSession : IDisposable
     {
         if (IsDisposed)
             throw new ObjectDisposedException(nameof(DocumentSession), $"Session {SessionId} has been disposed");
+    }
+
+    /// <summary>
+    ///     Acquires a usage scope that prevents the session from being cleaned up while in use.
+    ///     The caller must dispose the returned scope when the operation is complete.
+    /// </summary>
+    /// <returns>A disposable usage scope</returns>
+    /// <exception cref="ObjectDisposedException">Thrown when session is already disposed</exception>
+    public IDisposable AcquireUsage()
+    {
+        Interlocked.Increment(ref _activeUsers);
+        if (IsDisposed)
+        {
+            Interlocked.Decrement(ref _activeUsers);
+            throw new ObjectDisposedException(nameof(DocumentSession),
+                $"Session {SessionId} has been disposed");
+        }
+
+        return new UsageScope(this);
+    }
+
+    /// <summary>
+    ///     Releases a usage scope, decrementing the active user count
+    /// </summary>
+    private void ReleaseUsage()
+    {
+        Interlocked.Decrement(ref _activeUsers);
     }
 
     /// <summary>
@@ -291,6 +328,26 @@ public sealed class DocumentSession : IDisposable
         finally
         {
             _lock.Release();
+        }
+    }
+
+    /// <summary>
+    ///     Represents a usage scope that prevents the session from being cleaned up.
+    ///     Disposing this scope releases the usage count.
+    /// </summary>
+    private sealed class UsageScope : IDisposable
+    {
+        private DocumentSession? _session;
+
+        public UsageScope(DocumentSession session)
+        {
+            _session = session;
+        }
+
+        public void Dispose()
+        {
+            var s = Interlocked.Exchange(ref _session, null);
+            s?.ReleaseUsage();
         }
     }
 }

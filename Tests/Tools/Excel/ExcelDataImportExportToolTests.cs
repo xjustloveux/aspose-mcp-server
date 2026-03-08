@@ -74,7 +74,7 @@ public class ExcelDataImportExportToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbookWithData("test_export_image.xlsx");
         var outputPath = CreateTestFilePath("test_export_image_output.png");
-        var result = _tool.Execute("export_range_image", workbookPath, outputPath: outputPath);
+        var result = _tool.Execute("export_image", workbookPath, outputPath: outputPath);
         var data = GetResultData<ExportExcelResult>(result);
         Assert.Contains("export", data.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(File.Exists(outputPath));

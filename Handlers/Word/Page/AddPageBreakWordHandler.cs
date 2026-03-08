@@ -13,7 +13,7 @@ namespace AsposeMcpServer.Handlers.Word.Page;
 public class AddPageBreakWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "add_page_break";
+    public override string Operation => "add_break";
 
     /// <summary>
     ///     Adds a page break at the specified paragraph or at document end.

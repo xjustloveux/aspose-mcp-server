@@ -13,7 +13,7 @@ namespace AsposeMcpServer.Handlers.PowerPoint.Layout;
 public class ApplyLayoutRangeHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
-    public override string Operation => "apply_layout_range";
+    public override string Operation => "apply_range";
 
     /// <summary>
     ///     Applies layout to a range of slides.

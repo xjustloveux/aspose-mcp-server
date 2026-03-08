@@ -89,7 +89,7 @@ public class ExcelFilterToolTests : ExcelTestBase
     public void GetStatus_WithFilter_ShouldReturnEnabled()
     {
         var workbookPath = CreateWorkbookWithFilter("test_get_status_enabled.xlsx");
-        var result = _tool.Execute("get_status", workbookPath);
+        var result = _tool.Execute("status", workbookPath);
         var data = GetResultData<GetFilterStatusResult>(result);
         Assert.True(data.IsFilterEnabled);
         Assert.NotNull(data.FilterRange);
@@ -100,7 +100,7 @@ public class ExcelFilterToolTests : ExcelTestBase
     public void GetStatus_WithoutFilter_ShouldReturnDisabled()
     {
         var workbookPath = CreateExcelWorkbookWithData("test_get_status_disabled.xlsx", 3);
-        var result = _tool.Execute("get_status", workbookPath);
+        var result = _tool.Execute("status", workbookPath);
         var data = GetResultData<GetFilterStatusResult>(result);
         Assert.False(data.IsFilterEnabled);
     }
@@ -133,7 +133,7 @@ public class ExcelFilterToolTests : ExcelTestBase
     [Fact]
     public void Execute_WithNoPathOrSessionId_ShouldThrowException()
     {
-        Assert.ThrowsAny<Exception>(() => _tool.Execute("get_status"));
+        Assert.ThrowsAny<Exception>(() => _tool.Execute("status"));
     }
 
     #endregion
@@ -181,7 +181,7 @@ public class ExcelFilterToolTests : ExcelTestBase
     {
         var workbookPath = CreateWorkbookWithFilter("test_session_get_status.xlsx");
         var sessionId = OpenSession(workbookPath);
-        var result = _tool.Execute("get_status", sessionId: sessionId);
+        var result = _tool.Execute("status", sessionId: sessionId);
         var data = GetResultData<GetFilterStatusResult>(result);
         Assert.True(data.IsFilterEnabled);
     }
@@ -189,7 +189,7 @@ public class ExcelFilterToolTests : ExcelTestBase
     [Fact]
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
-        Assert.Throws<KeyNotFoundException>(() => _tool.Execute("get_status", sessionId: "invalid_session"));
+        Assert.Throws<KeyNotFoundException>(() => _tool.Execute("status", sessionId: "invalid_session"));
     }
 
     [Fact]
@@ -204,7 +204,7 @@ public class ExcelFilterToolTests : ExcelTestBase
         }
 
         var sessionId = OpenSession(sessionWorkbook);
-        var result = _tool.Execute("get_status", pathWorkbook, sessionId);
+        var result = _tool.Execute("status", pathWorkbook, sessionId);
         var data = GetResultData<GetFilterStatusResult>(result);
         Assert.Equal("SessionSheet", data.WorksheetName);
     }

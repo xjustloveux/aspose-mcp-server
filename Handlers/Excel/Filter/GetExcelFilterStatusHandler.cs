@@ -13,7 +13,7 @@ namespace AsposeMcpServer.Handlers.Excel.Filter;
 public class GetExcelFilterStatusHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
-    public override string Operation => "get_status";
+    public override string Operation => "status";
 
     /// <summary>
     ///     Gets the current filter status and details.

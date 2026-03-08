@@ -13,7 +13,7 @@ namespace AsposeMcpServer.Handlers.Excel.PrintSettings;
 public class SetPrintAreaHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
-    public override string Operation => "set_print_area";
+    public override string Operation => "set_area";
 
     /// <summary>
     ///     Sets the print area for a worksheet.

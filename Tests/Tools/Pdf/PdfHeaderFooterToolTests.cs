@@ -114,7 +114,7 @@ public class PdfHeaderFooterToolTests : PdfTestBase
         var pdfPath = CreateTestPdf("test_add_page_number.pdf", 3);
         var outputPath = CreateTestFilePath("test_add_page_number_output.pdf");
 
-        var result = _tool.Execute("add_page_number", pdfPath, outputPath: outputPath);
+        var result = _tool.Execute("add_number", pdfPath, outputPath: outputPath);
 
         var data = GetResultData<SuccessResult>(result);
         Assert.Contains("page numbers", data.Message, StringComparison.OrdinalIgnoreCase);
@@ -220,7 +220,7 @@ public class PdfHeaderFooterToolTests : PdfTestBase
         var pdfPath = CreateTestPdf("test_session_page_number.pdf", 3);
         var sessionId = OpenSession(pdfPath);
 
-        var result = _tool.Execute("add_page_number", sessionId: sessionId);
+        var result = _tool.Execute("add_number", sessionId: sessionId);
 
         var data = GetResultData<SuccessResult>(result);
         Assert.Contains("page numbers", data.Message, StringComparison.OrdinalIgnoreCase);

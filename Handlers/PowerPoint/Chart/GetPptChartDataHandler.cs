@@ -13,7 +13,7 @@ namespace AsposeMcpServer.Handlers.PowerPoint.Chart;
 public class GetPptChartDataHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
-    public override string Operation => "get_data";
+    public override string Operation => "get";
 
     /// <summary>
     ///     Gets chart data including categories and series.

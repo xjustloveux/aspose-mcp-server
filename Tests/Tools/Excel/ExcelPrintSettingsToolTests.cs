@@ -26,7 +26,7 @@ public class ExcelPrintSettingsToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbookWithData("test_set_print_area.xlsx", 10, 5);
         var outputPath = CreateTestFilePath("test_set_print_area_output.xlsx");
-        var result = _tool.Execute("set_print_area", workbookPath, range: "A1:D10", outputPath: outputPath);
+        var result = _tool.Execute("set_area", workbookPath, range: "A1:D10", outputPath: outputPath);
         var data = GetResultData<SuccessResult>(result);
         Assert.Contains("Print area", data.Message);
         using var workbook = new Workbook(outputPath);
@@ -38,7 +38,7 @@ public class ExcelPrintSettingsToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbookWithData("test_set_print_titles.xlsx", 10, 5);
         var outputPath = CreateTestFilePath("test_set_print_titles_output.xlsx");
-        var result = _tool.Execute("set_print_titles", workbookPath, rows: "$1:$1", columns: "$A:$A",
+        var result = _tool.Execute("set_titles", workbookPath, rows: "$1:$1", columns: "$A:$A",
             outputPath: outputPath);
         var data = GetResultData<SuccessResult>(result);
         Assert.Contains("titles updated", data.Message);
@@ -52,7 +52,7 @@ public class ExcelPrintSettingsToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbook("test_set_page_setup.xlsx");
         var outputPath = CreateTestFilePath("test_set_page_setup_output.xlsx");
-        var result = _tool.Execute("set_page_setup", workbookPath, orientation: "Landscape", paperSize: "A4",
+        var result = _tool.Execute("set_page", workbookPath, orientation: "Landscape", paperSize: "A4",
             outputPath: outputPath);
         var data = GetResultData<SuccessResult>(result);
         Assert.Contains("Page setup updated", data.Message);
@@ -66,7 +66,7 @@ public class ExcelPrintSettingsToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbookWithData("test_set_all.xlsx", 10, 5);
         var outputPath = CreateTestFilePath("test_set_all_output.xlsx");
-        var result = _tool.Execute("set_all", workbookPath, range: "A1:D10", orientation: "Portrait", paperSize: "A4",
+        var result = _tool.Execute("set", workbookPath, range: "A1:D10", orientation: "Portrait", paperSize: "A4",
             outputPath: outputPath);
         var data = GetResultData<SuccessResult>(result);
         Assert.Contains("Print settings updated", data.Message);
@@ -79,9 +79,9 @@ public class ExcelPrintSettingsToolTests : ExcelTestBase
     #region Operation Routing
 
     [Theory]
-    [InlineData("SET_PRINT_AREA")]
-    [InlineData("Set_Print_Area")]
-    [InlineData("set_print_area")]
+    [InlineData("SET_AREA")]
+    [InlineData("Set_Area")]
+    [InlineData("set_area")]
     public void Operation_ShouldBeCaseInsensitive(string operation)
     {
         var workbookPath = CreateExcelWorkbookWithData($"test_case_{operation.Replace("_", "")}.xlsx", 5, 5);
@@ -108,7 +108,7 @@ public class ExcelPrintSettingsToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbookWithData("test_session_print_area.xlsx", 10, 5);
         var sessionId = OpenSession(workbookPath);
-        var result = _tool.Execute("set_print_area", sessionId: sessionId, range: "A1:D10");
+        var result = _tool.Execute("set_area", sessionId: sessionId, range: "A1:D10");
         var data = GetResultData<SuccessResult>(result);
         Assert.Contains("Print area", data.Message);
         var output = GetResultOutput<SuccessResult>(result);
@@ -122,7 +122,7 @@ public class ExcelPrintSettingsToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbook("test_session_page_setup.xlsx");
         var sessionId = OpenSession(workbookPath);
-        var result = _tool.Execute("set_page_setup", sessionId: sessionId, orientation: "Landscape", paperSize: "A4");
+        var result = _tool.Execute("set_page", sessionId: sessionId, orientation: "Landscape", paperSize: "A4");
         var data = GetResultData<SuccessResult>(result);
         Assert.Contains("Page setup updated", data.Message);
         var output = GetResultOutput<SuccessResult>(result);
@@ -135,7 +135,7 @@ public class ExcelPrintSettingsToolTests : ExcelTestBase
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
         Assert.Throws<KeyNotFoundException>(() =>
-            _tool.Execute("set_print_area", sessionId: "invalid_session", range: "A1:D10"));
+            _tool.Execute("set_area", sessionId: "invalid_session", range: "A1:D10"));
     }
 
     [Fact]
@@ -144,7 +144,7 @@ public class ExcelPrintSettingsToolTests : ExcelTestBase
         var workbookPath1 = CreateExcelWorkbook("test_path_file.xlsx");
         var workbookPath2 = CreateExcelWorkbook("test_session_file.xlsx");
         var sessionId = OpenSession(workbookPath2);
-        _tool.Execute("set_print_area", workbookPath1, sessionId, range: "A1:D10");
+        _tool.Execute("set_area", workbookPath1, sessionId, range: "A1:D10");
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.Equal("A1:D10", workbook.Worksheets[0].PageSetup.PrintArea);
     }

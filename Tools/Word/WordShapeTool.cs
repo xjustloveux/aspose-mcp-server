@@ -44,12 +44,12 @@ public class WordShapeTool
     }
 
     /// <summary>
-    ///     Executes a Word shape operation (add_line, add_textbox, get_textboxes, edit_textbox_content, set_textbox_border,
+    ///     Executes a Word shape operation (add_line, add_textbox, list_textboxes, edit_textbox, set_border,
     ///     add_chart, add, get, delete).
     /// </summary>
     /// <param name="operation">
-    ///     The operation to perform: add_line, add_textbox, get_textboxes, edit_textbox_content,
-    ///     set_textbox_border, add_chart, add, get, delete.
+    ///     The operation to perform: add_line, add_textbox, list_textboxes, edit_textbox,
+    ///     set_border, add_chart, add, get, delete.
     /// </param>
     /// <param name="path">Word document file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID for in-memory editing.</param>
@@ -60,14 +60,14 @@ public class WordShapeTool
     /// <param name="lineWidth">Line width in points (for add_line, default: 1.0).</param>
     /// <param name="lineColor">Line color hex (for add_line, default: 000000).</param>
     /// <param name="width">Width/length in points (for add_line: line length; for add: shape width).</param>
-    /// <param name="text">Text content (for add_textbox, edit_textbox_content).</param>
+    /// <param name="text">Text content (for add_textbox, edit_textbox).</param>
     /// <param name="textboxWidth">Textbox width in points (for add_textbox, default: 200).</param>
     /// <param name="textboxHeight">Textbox height in points (for add_textbox, default: 100).</param>
     /// <param name="positionX">Horizontal position in points (for add_textbox, default: 100).</param>
     /// <param name="positionY">Vertical position in points (for add_textbox, default: 100).</param>
     /// <param name="backgroundColor">Background color hex (for add_textbox).</param>
-    /// <param name="borderColor">Border color hex (for add_textbox, set_textbox_border).</param>
-    /// <param name="borderWidth">Border width in points (for add_textbox, set_textbox_border, default: 1).</param>
+    /// <param name="borderColor">Border color hex (for add_textbox, set_border).</param>
+    /// <param name="borderWidth">Border width in points (for add_textbox, set_border, default: 1).</param>
     /// <param name="fontName">Font name.</param>
     /// <param name="fontSize">Font size in points.</param>
     /// <param name="fontNameAscii">Font name for ASCII characters.</param>
@@ -82,11 +82,11 @@ public class WordShapeTool
     /// <param name="height">Shape height in points (for add).</param>
     /// <param name="x">Shape X position in points (for add).</param>
     /// <param name="y">Shape Y position in points (for add).</param>
-    /// <param name="appendText">Append text to existing content (for edit_textbox_content).</param>
-    /// <param name="clearFormatting">Clear existing formatting (for edit_textbox_content).</param>
-    /// <param name="borderVisible">Show border (for set_textbox_border).</param>
-    /// <param name="borderStyle">Border style (for set_textbox_border).</param>
-    /// <param name="includeContent">Include textbox content (for get_textboxes).</param>
+    /// <param name="appendText">Append text to existing content (for edit_textbox).</param>
+    /// <param name="clearFormatting">Clear existing formatting (for edit_textbox).</param>
+    /// <param name="borderVisible">Show border (for set_border).</param>
+    /// <param name="borderStyle">Border style (for set_border).</param>
+    /// <param name="includeContent">Include textbox content (for list_textboxes).</param>
     /// <param name="chartType">Chart type: Column, Bar, Line, Pie, etc. (for add_chart).</param>
     /// <param name="data">Chart data as JSON 2D array (for add_chart).</param>
     /// <param name="chartTitle">Chart title (for add_chart).</param>
@@ -105,25 +105,25 @@ public class WordShapeTool
         ReadOnly = false,
         UseStructuredContent = true)]
     [Description(
-        @"Manage shapes in Word documents. Supports 9 operations: add_line, add_textbox, get_textboxes, edit_textbox_content, set_textbox_border, add_chart, add, get, delete.
+        @"Manage shapes in Word documents. Supports 9 operations: add_line, add_textbox, list_textboxes, edit_textbox, set_border, add_chart, add, get, delete.
 
 Note: All position/size values are in points (1 point = 1/72 inch, 72 points = 1 inch).
-Important: Textbox operations (get_textboxes, edit_textbox_content, set_textbox_border) use a separate textbox-only index system.
+Important: Textbox operations (list_textboxes, edit_textbox, set_border) use a separate textbox-only index system.
 General shape operations (add, get, delete) use an index that includes ALL shapes (lines, rectangles, textboxes, images, etc.).
 
 Usage examples:
 - Add line: word_shape(operation='add_line', path='doc.docx')
 - Add textbox: word_shape(operation='add_textbox', path='doc.docx', text='Textbox content', positionX=100, positionY=100, textboxWidth=200, textboxHeight=100)
-- Get textboxes: word_shape(operation='get_textboxes', path='doc.docx')
-- Edit textbox: word_shape(operation='edit_textbox_content', path='doc.docx', textboxIndex=0, text='Updated content')
-- Set border: word_shape(operation='set_textbox_border', path='doc.docx', textboxIndex=0, borderColor='#FF0000', borderWidth=2)
+- List textboxes: word_shape(operation='list_textboxes', path='doc.docx')
+- Edit textbox: word_shape(operation='edit_textbox', path='doc.docx', textboxIndex=0, text='Updated content')
+- Set border: word_shape(operation='set_border', path='doc.docx', textboxIndex=0, borderColor='#FF0000', borderWidth=2)
 - Add chart: word_shape(operation='add_chart', path='doc.docx', chartType='Column', data=[['A','B'],['1','2']])
 - Add generic shape: word_shape(operation='add', path='doc.docx', shapeType='Rectangle', width=100, height=50)
 - Get all shapes: word_shape(operation='get', path='doc.docx')
 - Delete shape: word_shape(operation='delete', path='doc.docx', shapeIndex=0)")]
     public object Execute(
         [Description(
-            "Operation: add_line, add_textbox, get_textboxes, edit_textbox_content, set_textbox_border, add_chart, add, get, delete")]
+            "Operation: add_line, add_textbox, list_textboxes, edit_textbox, set_border, add_chart, add, get, delete")]
         string operation,
         [Description("Document file path (required if no sessionId)")]
         string? path = null,
@@ -143,7 +143,7 @@ Usage examples:
         string lineColor = "000000",
         [Description("Width/length in points (for add_line: line length; for add: shape width)")]
         double? width = null,
-        [Description("Text content (for add_textbox, edit_textbox_content)")]
+        [Description("Text content (for add_textbox, edit_textbox)")]
         string? text = null,
         [Description("Textbox width in points (for add_textbox, default: 200)")]
         double textboxWidth = 200,
@@ -155,27 +155,27 @@ Usage examples:
         double positionY = 100,
         [Description("Background color hex (for add_textbox)")]
         string? backgroundColor = null,
-        [Description("Border color hex (for add_textbox, set_textbox_border)")]
+        [Description("Border color hex (for add_textbox, set_border)")]
         string? borderColor = null,
-        [Description("Border width in points (for add_textbox, set_textbox_border, default: 1)")]
+        [Description("Border width in points (for add_textbox, set_border, default: 1)")]
         double borderWidth = 1,
-        [Description("Font name (for add_textbox, edit_textbox_content)")]
+        [Description("Font name (for add_textbox, edit_textbox)")]
         string? fontName = null,
-        [Description("Font name for ASCII characters (for add_textbox, edit_textbox_content)")]
+        [Description("Font name for ASCII characters (for add_textbox, edit_textbox)")]
         string? fontNameAscii = null,
-        [Description("Font name for Far East characters (for add_textbox, edit_textbox_content)")]
+        [Description("Font name for Far East characters (for add_textbox, edit_textbox)")]
         string? fontNameFarEast = null,
-        [Description("Font size in points (for add_textbox, edit_textbox_content)")]
+        [Description("Font size in points (for add_textbox, edit_textbox)")]
         double? fontSize = null,
-        [Description("Bold text (for add_textbox, edit_textbox_content)")]
+        [Description("Bold text (for add_textbox, edit_textbox)")]
         bool? bold = null,
-        [Description("Italic text (for edit_textbox_content)")]
+        [Description("Italic text (for edit_textbox)")]
         bool? italic = null,
-        [Description("Text color hex (for edit_textbox_content)")]
+        [Description("Text color hex (for edit_textbox)")]
         string? color = null,
         [Description("Text alignment: left, center, right (for add_textbox, default: left)")]
         string textAlignment = "left",
-        [Description("Textbox index (0-based, textbox-only index for edit_textbox_content, set_textbox_border)")]
+        [Description("Textbox index (0-based, textbox-only index for edit_textbox, set_border)")]
         int? textboxIndex = null,
         [Description("Shape index (0-based, global index including all shapes, for delete operation)")]
         int? shapeIndex = null,
@@ -187,16 +187,16 @@ Usage examples:
         double x = 100,
         [Description("Shape Y position in points (for add operation, default: 100)")]
         double y = 100,
-        [Description("Append text to existing content (for edit_textbox_content, default: false)")]
+        [Description("Append text to existing content (for edit_textbox, default: false)")]
         bool appendText = false,
-        [Description("Clear existing formatting (for edit_textbox_content, default: false)")]
+        [Description("Clear existing formatting (for edit_textbox, default: false)")]
         bool clearFormatting = false,
-        [Description("Show border (for set_textbox_border, default: true)")]
+        [Description("Show border (for set_border, default: true)")]
         bool borderVisible = true,
         [Description(
-            "Border style: solid, dash, dot, dashDot, dashDotDot, roundDot (for set_textbox_border, default: solid)")]
+            "Border style: solid, dash, dot, dashDot, dashDotDot, roundDot (for set_border, default: solid)")]
         string borderStyle = "solid",
-        [Description("Include textbox content (for get_textboxes, default: true)")]
+        [Description("Include textbox content (for list_textboxes, default: true)")]
         bool includeContent = true,
         [Description("Chart type: column, bar, line, pie, area, scatter, doughnut (for add_chart, default: column)")]
         string chartType = "column",
@@ -299,10 +299,10 @@ Usage examples:
                 positionY, backgroundColor, borderColor, borderWidth, fontName, fontNameAscii, fontNameFarEast,
                 fontSize,
                 bold, textAlignment),
-            "get_textboxes" => BuildGetTextboxesParameters(parameters, includeContent),
-            "edit_textbox_content" => BuildEditTextboxContentParameters(parameters, textboxIndex, text, appendText,
+            "list_textboxes" => BuildGetTextboxesParameters(parameters, includeContent),
+            "edit_textbox" => BuildEditTextboxContentParameters(parameters, textboxIndex, text, appendText,
                 fontName, fontNameAscii, fontNameFarEast, fontSize, bold, italic, color, clearFormatting),
-            "set_textbox_border" => BuildSetTextboxBorderParameters(parameters, textboxIndex, borderVisible,
+            "set_border" => BuildSetTextboxBorderParameters(parameters, textboxIndex, borderVisible,
                 borderColor,
                 borderWidth, borderStyle),
             "add_chart" => BuildAddChartParameters(parameters, chartType, data, chartTitle, chartWidth, chartHeight,

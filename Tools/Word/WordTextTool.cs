@@ -45,17 +45,17 @@ public class WordTextTool
     }
 
     /// <summary>
-    ///     Executes a Word text operation (add, delete, replace, search, format, insert_at_position, delete_range,
-    ///     add_with_style).
+    ///     Executes a Word text operation (add, delete, replace, search, format, insert, delete_range,
+    ///     add_styled).
     /// </summary>
     /// <param name="operation">
-    ///     The operation to perform: add, delete, replace, search, format, insert_at_position,
-    ///     delete_range, add_with_style.
+    ///     The operation to perform: add, delete, replace, search, format, insert,
+    ///     delete_range, add_styled.
     /// </param>
     /// <param name="path">Word document file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID for in-memory editing.</param>
     /// <param name="outputPath">Output file path (for write operations).</param>
-    /// <param name="text">Text content (for add, replace, insert_at_position, add_with_style).</param>
+    /// <param name="text">Text content (for add, replace, insert, add_styled).</param>
     /// <param name="fontName">Font name.</param>
     /// <param name="fontNameAscii">Font name for ASCII characters.</param>
     /// <param name="fontNameFarEast">Font name for Far East characters.</param>
@@ -81,19 +81,19 @@ public class WordTextTool
     /// <param name="startRunIndex">Start run index (for delete_range).</param>
     /// <param name="endParagraphIndex">End paragraph index (for delete_range).</param>
     /// <param name="endRunIndex">End run index (for delete_range).</param>
-    /// <param name="insertParagraphIndex">Paragraph index for insert_at_position.</param>
-    /// <param name="charIndex">Character index for insert_at_position.</param>
+    /// <param name="insertParagraphIndex">Paragraph index for insert.</param>
+    /// <param name="charIndex">Character index for insert.</param>
     /// <param name="sectionIndex">Section index (0-based).</param>
-    /// <param name="insertBefore">Insert before position (for insert_at_position).</param>
+    /// <param name="insertBefore">Insert before position (for insert).</param>
     /// <param name="startCharIndex">Start character index (for delete_range).</param>
     /// <param name="endCharIndex">End character index (for delete_range).</param>
-    /// <param name="styleName">Style name (for add_with_style).</param>
-    /// <param name="alignment">Text alignment (for add_with_style).</param>
-    /// <param name="indentLevel">Indentation level (for add_with_style).</param>
-    /// <param name="leftIndent">Left indentation in points (for add_with_style).</param>
-    /// <param name="firstLineIndent">First line indentation in points (for add_with_style).</param>
-    /// <param name="paragraphIndexForAdd">Paragraph index to insert after (for add_with_style).</param>
-    /// <param name="tabStops">Custom tab stops as JSON array (for add_with_style).</param>
+    /// <param name="styleName">Style name (for add_styled).</param>
+    /// <param name="alignment">Text alignment (for add_styled).</param>
+    /// <param name="indentLevel">Indentation level (for add_styled).</param>
+    /// <param name="leftIndent">Left indentation in points (for add_styled).</param>
+    /// <param name="firstLineIndent">First line indentation in points (for add_styled).</param>
+    /// <param name="paragraphIndexForAdd">Paragraph index to insert after (for add_styled).</param>
+    /// <param name="tabStops">Custom tab stops as JSON array (for add_styled).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for search operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(
@@ -105,7 +105,7 @@ public class WordTextTool
         ReadOnly = false,
         UseStructuredContent = true)]
     [Description(
-        @"Perform text operations in Word documents. Supports 8 operations: add, delete, replace, search, format, insert_at_position, delete_range, add_with_style.
+        @"Perform text operations in Word documents. Supports 8 operations: add, delete, replace, search, format, insert, delete_range, add_styled.
 
 Usage examples:
 - Add text: word_text(operation='add', path='doc.docx', text='Hello World')
@@ -113,7 +113,7 @@ Usage examples:
 - Replace text: word_text(operation='replace', path='doc.docx', find='old', replace='new')
 - Search text: word_text(operation='search', path='doc.docx', searchText='keyword')
 - Format text: word_text(operation='format', path='doc.docx', paragraphIndex=0, runIndex=0, bold=true)
-- Insert at position: word_text(operation='insert_at_position', path='doc.docx', paragraphIndex=0, runIndex=0, text='Inserted')
+- Insert at position: word_text(operation='insert', path='doc.docx', paragraphIndex=0, runIndex=0, text='Inserted')
 - Delete text: word_text(operation='delete', path='doc.docx', searchText='text to delete') or word_text(operation='delete', path='doc.docx', startParagraphIndex=0, endParagraphIndex=0)
 - Delete range: word_text(operation='delete_range', path='doc.docx', startParagraphIndex=0, startRunIndex=0, endParagraphIndex=0, endRunIndex=5)")]
     public object Execute(
@@ -123,9 +123,9 @@ Usage examples:
 - 'replace': Replace text (required params: path, find, replace)
 - 'search': Search for text (required params: path, searchText)
 - 'format': Format existing text (required params: path, paragraphIndex, runIndex)
-- 'insert_at_position': Insert text at specific position (required params: path, paragraphIndex, runIndex, text)
+- 'insert': Insert text at specific position (required params: path, paragraphIndex, runIndex, text)
 - 'delete_range': Delete text range (required params: path, startParagraphIndex, startRunIndex, endParagraphIndex, endRunIndex)
-- 'add_with_style': Add text with style (required params: path, text, styleName)")]
+- 'add_styled': Add text with style (required params: path, text, styleName)")]
         string operation,
         [Description("Document file path (required if no sessionId)")]
         string? path = null,
@@ -134,7 +134,7 @@ Usage examples:
         [Description("Output file path (if not provided, overwrites input, for write operations)")]
         string? outputPath = null,
         // Common parameters
-        [Description("Text content (required for add, replace, insert_at_position, add_with_style operations)")]
+        [Description("Text content (required for add, replace, insert, add_styled operations)")]
         string? text = null,
         // Add/AddWithStyle parameters
         [Description("Font name (optional, e.g., 'Arial')")]
@@ -197,15 +197,15 @@ Usage examples:
             "Run index within the paragraph (0-based, optional, formats all runs if not provided, for format operation)")]
         int? runIndex = null,
         // Insert at position parameters
-        [Description("Paragraph index (0-based, required for insert_at_position operation)")]
+        [Description("Paragraph index (0-based, required for insert operation)")]
         int? insertParagraphIndex = null,
-        [Description("Character index within paragraph (0-based, required for insert_at_position operation)")]
+        [Description("Character index within paragraph (0-based, required for insert operation)")]
         int? charIndex = null,
         [Description(
-            "Section index (0-based, optional, default: 0, for format/insert_at_position/delete_range operations)")]
+            "Section index (0-based, optional, default: 0, for format/insert/delete_range operations)")]
         int? sectionIndex = null,
         [Description(
-            "Insert before position (optional, default: false, inserts after, for insert_at_position operation)")]
+            "Insert before position (optional, default: false, inserts after, for insert operation)")]
         bool insertBefore = false,
         // Delete range parameters
         [Description("Start character index within paragraph (0-based, required for delete_range operation)")]
@@ -213,23 +213,23 @@ Usage examples:
         [Description("End character index within paragraph (0-based, required for delete_range operation)")]
         int? endCharIndex = null,
         // AddWithStyle parameters
-        [Description("Style name to apply (e.g., 'Heading 1', 'Normal', optional, for add_with_style operation)")]
+        [Description("Style name to apply (e.g., 'Heading 1', 'Normal', optional, for add_styled operation)")]
         string? styleName = null,
-        [Description("Text alignment: left, center, right, justify (optional, for add_with_style operation)")]
+        [Description("Text alignment: left, center, right, justify (optional, for add_styled operation)")]
         string? alignment = null,
         [Description(
-            "Indentation level (0-8, where each level = 36 points / 0.5 inch, optional, for add_with_style operation)")]
+            "Indentation level (0-8, where each level = 36 points / 0.5 inch, optional, for add_styled operation)")]
         int? indentLevel = null,
-        [Description("Left indentation in points (optional, for add_with_style operation)")]
+        [Description("Left indentation in points (optional, for add_styled operation)")]
         double? leftIndent = null,
         [Description(
-            "First line indentation in points (positive = indent first line, negative = hanging indent, optional, for add_with_style operation)")]
+            "First line indentation in points (positive = indent first line, negative = hanging indent, optional, for add_styled operation)")]
         double? firstLineIndent = null,
         [Description(
-            "Index of the paragraph to insert after (0-based, optional, for add_with_style operation). Use -1 to insert at the beginning.")]
+            "Index of the paragraph to insert after (0-based, optional, for add_styled operation). Use -1 to insert at the beginning.")]
         int? paragraphIndexForAdd = null,
         [Description(
-            "Custom tab stops as JSON array (optional, for add_with_style operation). Example: [{\"position\":72,\"alignment\":\"Left\",\"leader\":\"None\"}]")]
+            "Custom tab stops as JSON array (optional, for add_styled operation). Example: [{\"position\":72,\"alignment\":\"Left\",\"leader\":\"None\"}]")]
         string? tabStops = null)
     {
         var effectiveOutputPath = outputPath ?? path;

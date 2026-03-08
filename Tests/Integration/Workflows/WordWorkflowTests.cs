@@ -137,9 +137,9 @@ public class WordWorkflowTests : IntegrationTestBase
         var openResult = _sessionTool.Execute("open", originalPath);
         var openData = GetResultData<OpenSessionResult>(openResult);
 
-        _headerFooterTool.Execute("set_header_text", sessionId: openData.SessionId, headerCenter: "My Header");
+        _headerFooterTool.Execute("set_header", sessionId: openData.SessionId, headerCenter: "My Header");
 
-        _headerFooterTool.Execute("set_footer_text", sessionId: openData.SessionId, footerCenter: "Page Footer");
+        _headerFooterTool.Execute("set_footer", sessionId: openData.SessionId, footerCenter: "Page Footer");
 
         var outputPath = CreateTestFilePath("header_footer_workflow.docx");
         _sessionTool.Execute("save", sessionId: openData.SessionId, outputPath: outputPath);

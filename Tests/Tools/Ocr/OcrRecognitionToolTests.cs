@@ -127,9 +127,9 @@ public class OcrRecognitionToolTests : TestBase
     }
 
     [Theory]
-    [InlineData("RECOGNIZE_ID_CARD")]
-    [InlineData("Recognize_Id_Card")]
-    [InlineData("recognize_id_card")]
+    [InlineData("RECOGNIZE_ID")]
+    [InlineData("Recognize_Id")]
+    [InlineData("recognize_id")]
     public void Execute_OperationIsCaseInsensitive_RecognizeIdCard(string operation)
     {
         var tempFile = Path.Combine(TestDir, "nonexistent_id_card.jpg");
@@ -210,7 +210,7 @@ public class OcrRecognitionToolTests : TestBase
     public void Execute_RecognizeIdCard_WithNonexistentFile_ShouldThrowFileNotFoundException()
     {
         Assert.Throws<FileNotFoundException>(() =>
-            _tool.Execute("recognize_id_card", Path.Combine(TestDir, "nonexistent_id_card.jpg")));
+            _tool.Execute("recognize_id", Path.Combine(TestDir, "nonexistent_id_card.jpg")));
     }
 
     [Fact]
@@ -274,7 +274,7 @@ public class OcrRecognitionToolTests : TestBase
         SkipInEvaluationMode(AsposeLibraryType.Ocr, "OCR recognition requires a valid license");
         var tempImage = CreateTestImageFile();
 
-        var result = _tool.Execute("recognize_id_card", tempImage);
+        var result = _tool.Execute("recognize_id", tempImage);
 
         var data = GetResultData<OcrRecognitionResult>(result);
         Assert.NotNull(data.Text);

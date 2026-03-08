@@ -14,7 +14,7 @@ public class UpdateFieldWordHandlerTests : WordHandlerTestBase
     [Fact]
     public void Operation_Returns_UpdateField()
     {
-        Assert.Equal("update_field", _handler.Operation);
+        Assert.Equal("update", _handler.Operation);
     }
 
     #endregion

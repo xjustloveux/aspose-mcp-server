@@ -14,7 +14,7 @@ namespace AsposeMcpServer.Handlers.Excel.ViewSettings;
 public class SetTabColorExcelViewHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
-    public override string Operation => "set_tab_color";
+    public override string Operation => "set_tab";
 
     /// <summary>
     ///     Sets the tab color of a worksheet.

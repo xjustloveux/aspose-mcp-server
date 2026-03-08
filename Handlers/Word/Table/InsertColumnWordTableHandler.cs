@@ -1,5 +1,3 @@
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Words.Tables;
 using AsposeMcpServer.Core;
@@ -51,17 +49,6 @@ public class InsertColumnWordTableHandler : OperationHandlerBase<Document>
         if (p.ColumnIndex < 0 || p.ColumnIndex >= firstRow.Cells.Count)
             throw new ArgumentException($"Column index {p.ColumnIndex} out of range");
 
-        JsonArray? dataArray = null;
-        if (!string.IsNullOrEmpty(p.ColumnData))
-            try
-            {
-                dataArray = JsonNode.Parse(p.ColumnData)?.AsArray();
-            }
-            catch
-            {
-                throw new ArgumentException("Invalid columnData JSON format");
-            }
-
         var insertPosition = p.InsertBefore ? p.ColumnIndex : p.ColumnIndex + 1;
 
         for (var rowIdx = 0; rowIdx < table.Rows.Count; rowIdx++)
@@ -69,7 +56,7 @@ public class InsertColumnWordTableHandler : OperationHandlerBase<Document>
             var row = table.Rows[rowIdx];
             var newCell = CreateNewCell(doc, row, p.ColumnIndex);
 
-            PopulateCellContent(doc, newCell, dataArray, rowIdx);
+            PopulateCellContent(doc, newCell, p.ColumnData, rowIdx);
 
             if (insertPosition < row.Cells.Count)
             {
@@ -120,19 +107,13 @@ public class InsertColumnWordTableHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="doc">The document.</param>
     /// <param name="cell">The cell to populate.</param>
-    /// <param name="dataArray">The data array.</param>
+    /// <param name="columnData">The column data array.</param>
     /// <param name="rowIndex">The row index.</param>
-    private static void PopulateCellContent(Document doc, Cell cell, JsonArray? dataArray, int rowIndex)
+    private static void PopulateCellContent(Document doc, Cell cell, string[]? columnData, int rowIndex)
     {
-        if (dataArray != null && rowIndex < dataArray.Count)
+        if (columnData != null && rowIndex < columnData.Length)
         {
-            var cellDataNode = dataArray[rowIndex];
-            var cellText = "";
-
-            if (cellDataNode != null)
-                cellText = cellDataNode.GetValueKind() == JsonValueKind.String
-                    ? cellDataNode.GetValue<string>()
-                    : cellDataNode.ToString();
+            var cellText = columnData[rowIndex];
 
             if (!string.IsNullOrEmpty(cellText))
             {
@@ -178,7 +159,7 @@ public class InsertColumnWordTableHandler : OperationHandlerBase<Document>
             throw new ArgumentException("columnIndex is required for insert_column operation");
 
         var tableIndex = parameters.GetOptional("tableIndex", 0);
-        var columnData = parameters.GetOptional<string?>("columnData");
+        var columnData = parameters.GetOptional<string[]?>("columnData");
         var insertBefore = parameters.GetOptional("insertBefore", false);
         var sectionIndex = parameters.GetOptional<int?>("sectionIndex");
 
@@ -188,7 +169,7 @@ public class InsertColumnWordTableHandler : OperationHandlerBase<Document>
     private sealed record InsertColumnParameters(
         int ColumnIndex,
         int TableIndex,
-        string? ColumnData,
+        string[]? ColumnData,
         bool InsertBefore,
         int? SectionIndex);
 }

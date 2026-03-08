@@ -14,7 +14,7 @@ public class SplitWindowExcelViewHandlerTests : ExcelHandlerTestBase
     [Fact]
     public void Operation_Returns_SplitWindow()
     {
-        Assert.Equal("split_window", _handler.Operation);
+        Assert.Equal("split", _handler.Operation);
     }
 
     #endregion

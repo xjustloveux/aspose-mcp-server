@@ -14,7 +14,7 @@ namespace AsposeMcpServer.Handlers.Word.Content;
 public class GetWordContentDetailedHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "get_content_detailed";
+    public override string Operation => "get_detailed";
 
     /// <summary>
     ///     Gets detailed document content including optional headers and footers.

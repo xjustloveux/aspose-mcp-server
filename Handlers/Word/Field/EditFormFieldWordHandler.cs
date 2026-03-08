@@ -13,7 +13,7 @@ namespace AsposeMcpServer.Handlers.Word.Field;
 public class EditFormFieldWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "edit_form_field";
+    public override string Operation => "edit_form";
 
     /// <summary>
     ///     Edits an existing form field's value or state.
@@ -61,7 +61,7 @@ public class EditFormFieldWordHandler : OperationHandlerBase<Document>
         var selectedIndex = parameters.GetOptional<int?>("selectedIndex");
 
         if (string.IsNullOrEmpty(fieldName))
-            throw new ArgumentException("fieldName is required for edit_form_field operation");
+            throw new ArgumentException("fieldName is required for edit_form operation");
 
         return new EditFormFieldParameters(fieldName, value, checkedValue, selectedIndex);
     }

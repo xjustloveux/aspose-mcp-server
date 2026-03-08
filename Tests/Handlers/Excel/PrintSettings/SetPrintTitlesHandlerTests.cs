@@ -13,7 +13,7 @@ public class SetPrintTitlesHandlerTests : ExcelHandlerTestBase
     [Fact]
     public void Operation_Returns_SetPrintTitles()
     {
-        Assert.Equal("set_print_titles", _handler.Operation);
+        Assert.Equal("set_titles", _handler.Operation);
     }
 
     #endregion

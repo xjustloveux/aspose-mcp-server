@@ -79,7 +79,7 @@ public class ExcelFormulaToolTests : ExcelTestBase
     public void GetResult_ShouldReturnFormulaResultFromFile()
     {
         var workbookPath = CreateWorkbookWithFormula("test_get_result.xlsx");
-        var result = _tool.Execute("get_result", workbookPath, cell: "A3");
+        var result = _tool.Execute("result", workbookPath, cell: "A3");
         var data = GetResultData<GetFormulaResultResult>(result);
         Assert.Equal("A3", data.Cell);
         Assert.Contains("30", data.CalculatedValue);
@@ -211,7 +211,7 @@ public class ExcelFormulaToolTests : ExcelTestBase
     {
         var workbookPath = CreateWorkbookWithFormula("test_session_get_result.xlsx");
         var sessionId = OpenSession(workbookPath);
-        var result = _tool.Execute("get_result", sessionId: sessionId, cell: "A3");
+        var result = _tool.Execute("result", sessionId: sessionId, cell: "A3");
         var data = GetResultData<GetFormulaResultResult>(result);
         Assert.Equal("A3", data.Cell);
         var output = GetResultOutput<GetFormulaResultResult>(result);

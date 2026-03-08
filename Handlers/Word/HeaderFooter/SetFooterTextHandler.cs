@@ -15,7 +15,7 @@ namespace AsposeMcpServer.Handlers.Word.HeaderFooter;
 public class SetFooterTextHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "set_footer_text";
+    public override string Operation => "set_footer";
 
     /// <summary>
     ///     Sets text content in the document footer.

@@ -14,7 +14,7 @@ namespace AsposeMcpServer.Handlers.Word.List;
 public class ConvertToWordListHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "convert_to_list";
+    public override string Operation => "convert";
 
     /// <summary>
     ///     Converts a range of paragraphs into a list.

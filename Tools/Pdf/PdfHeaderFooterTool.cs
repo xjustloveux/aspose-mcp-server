@@ -45,9 +45,9 @@ public class PdfHeaderFooterTool
     }
 
     /// <summary>
-    ///     Executes a PDF header/footer operation (add_text, add_image, add_page_number, remove).
+    ///     Executes a PDF header/footer operation (add_text, add_image, add_number, remove).
     /// </summary>
-    /// <param name="operation">The operation to perform: add_text, add_image, add_page_number, remove.</param>
+    /// <param name="operation">The operation to perform: add_text, add_image, add_number, remove.</param>
     /// <param name="path">PDF file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID for in-memory editing.</param>
     /// <param name="outputPath">Output file path (file mode only).</param>
@@ -73,15 +73,15 @@ public class PdfHeaderFooterTool
         ReadOnly = false,
         UseStructuredContent = true)]
     [Description(
-        @"Add text, images, or page numbers to PDF headers and footers. Supports 4 operations: add_text, add_image, add_page_number, remove.
+        @"Add text, images, or page numbers to PDF headers and footers. Supports 4 operations: add_text, add_image, add_number, remove.
 
 Usage examples:
 - Add text header: pdf_header_footer(operation='add_text', path='doc.pdf', outputPath='out.pdf', text='Confidential', position='header')
 - Add footer image: pdf_header_footer(operation='add_image', path='doc.pdf', outputPath='out.pdf', imagePath='logo.png', position='footer')
-- Add page numbers: pdf_header_footer(operation='add_page_number', path='doc.pdf', outputPath='out.pdf', position='footer', alignment='right')
+- Add page numbers: pdf_header_footer(operation='add_number', path='doc.pdf', outputPath='out.pdf', position='footer', alignment='right')
 - Remove stamps: pdf_header_footer(operation='remove', path='doc.pdf', outputPath='out.pdf')")]
     public object Execute(
-        [Description("Operation: add_text, add_image, add_page_number, remove")]
+        [Description("Operation: add_text, add_image, add_number, remove")]
         string operation,
         [Description("PDF file path (required if no sessionId)")]
         string? path = null,
@@ -171,7 +171,7 @@ Usage examples:
         {
             "add_text" => BuildAddTextParameters(text, position, alignment, fontSize, margin, pageRange),
             "add_image" => BuildAddImageParameters(imagePath, position, alignment, margin, width, height, pageRange),
-            "add_page_number" => BuildAddPageNumberParameters(format, position, alignment, fontSize, margin, startPage,
+            "add_number" => BuildAddPageNumberParameters(format, position, alignment, fontSize, margin, startPage,
                 pageRange),
             "remove" => BuildRemoveParameters(pageRange),
             _ => new OperationParameters()

@@ -74,7 +74,7 @@ Usage examples:
 - Recognize in French: ocr_recognition(operation='recognize', path='image.png', language='Fra')
 - Convert PDF to Word: ocr_recognition(operation='recognize_pdf', path='scan.pdf', outputPath='doc.docx')
 - Recognize receipt: ocr_recognition(operation='recognize_receipt', path='receipt.jpg')
-- Recognize ID card: ocr_recognition(operation='recognize_id_card', path='id_card.jpg')
+- Recognize ID card: ocr_recognition(operation='recognize_id', path='id_card.jpg')
 - Recognize passport: ocr_recognition(operation='recognize_passport', path='passport.jpg')
 
 Supported image formats: PNG, JPG, BMP, TIFF, GIF
@@ -87,7 +87,7 @@ Note: OCR requires ONNX Runtime and is not supported on Linux ARM64.")]
 - 'recognize': Recognize text from an image or PDF file (required params: path; optional: language, includeWords)
 - 'recognize_pdf': Convert scanned PDF to editable document (required params: path, outputPath, targetFormat; optional: language)
 - 'recognize_receipt': Recognize text from a receipt image (required params: path; optional: language)
-- 'recognize_id_card': Recognize text from an ID card image (required params: path; optional: language)
+- 'recognize_id': Recognize text from an ID card image (required params: path; optional: language)
 - 'recognize_passport': Recognize text from a passport image (required params: path; optional: language)")]
         string operation,
         [Description("Input file path (image file for recognize, PDF file for recognize_pdf)")]

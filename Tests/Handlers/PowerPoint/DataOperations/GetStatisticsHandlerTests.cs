@@ -16,7 +16,7 @@ public class GetStatisticsHandlerTests : PptHandlerTestBase
     public void Operation_Returns_GetStatistics()
     {
         SkipIfNotWindows();
-        Assert.Equal("get_statistics", _handler.Operation);
+        Assert.Equal("statistics", _handler.Operation);
     }
 
     #endregion

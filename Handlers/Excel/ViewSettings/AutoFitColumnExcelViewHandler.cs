@@ -13,7 +13,7 @@ namespace AsposeMcpServer.Handlers.Excel.ViewSettings;
 public class AutoFitColumnExcelViewHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
-    public override string Operation => "auto_fit_column";
+    public override string Operation => "autofit_col";
 
     /// <summary>
     ///     Auto-fits a column width based on its content.

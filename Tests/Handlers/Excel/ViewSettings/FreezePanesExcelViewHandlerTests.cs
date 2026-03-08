@@ -14,7 +14,7 @@ public class FreezePanesExcelViewHandlerTests : ExcelHandlerTestBase
     [Fact]
     public void Operation_Returns_FreezePanes()
     {
-        Assert.Equal("freeze_panes", _handler.Operation);
+        Assert.Equal("freeze", _handler.Operation);
     }
 
     #endregion

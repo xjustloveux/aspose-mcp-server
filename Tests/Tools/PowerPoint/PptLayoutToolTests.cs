@@ -29,7 +29,7 @@ public class PptLayoutToolTests : PptTestBase
     {
         SkipIfNotWindows();
         var pptPath = CreatePresentation("test_get_masters.pptx");
-        var result = _tool.Execute("get_masters", pptPath);
+        var result = _tool.Execute("list_masters", pptPath);
         var data = GetResultData<GetMastersResult>(result);
         Assert.True(data.Count > 0);
         Assert.True(data.Masters.Count > 0);
@@ -41,7 +41,7 @@ public class PptLayoutToolTests : PptTestBase
     {
         SkipIfNotWindows();
         var pptPath = CreatePresentation("test_get_layouts.pptx");
-        var result = _tool.Execute("get_layouts", pptPath);
+        var result = _tool.Execute("list", pptPath);
         var data = GetResultData<GetLayoutsResult>(result);
         Assert.NotNull(data.MastersCount);
         Assert.NotNull(data.Masters);
@@ -78,9 +78,9 @@ public class PptLayoutToolTests : PptTestBase
     #region Operation Routing
 
     [SkippableTheory]
-    [InlineData("GET_MASTERS")]
-    [InlineData("Get_Masters")]
-    [InlineData("get_masters")]
+    [InlineData("LIST_MASTERS")]
+    [InlineData("List_Masters")]
+    [InlineData("list_masters")]
     public void Operation_ShouldBeCaseInsensitive(string operation)
     {
         SkipIfNotWindows();
@@ -109,7 +109,7 @@ public class PptLayoutToolTests : PptTestBase
         SkipIfNotWindows();
         var pptPath = CreatePresentation("test_session_get_masters.pptx");
         var sessionId = OpenSession(pptPath);
-        var result = _tool.Execute("get_masters", sessionId: sessionId);
+        var result = _tool.Execute("list_masters", sessionId: sessionId);
         var data = GetResultData<GetMastersResult>(result);
         Assert.True(data.Count > 0);
         Assert.True(data.Masters.Count > 0);
@@ -150,7 +150,7 @@ public class PptLayoutToolTests : PptTestBase
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
         SkipIfNotWindows();
-        Assert.Throws<KeyNotFoundException>(() => _tool.Execute("get_masters", sessionId: "invalid_session"));
+        Assert.Throws<KeyNotFoundException>(() => _tool.Execute("list_masters", sessionId: "invalid_session"));
     }
 
     [SkippableFact]

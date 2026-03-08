@@ -12,7 +12,7 @@ namespace AsposeMcpServer.Handlers.PowerPoint.Security;
 public class GetStatusPptSecurityHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
-    public override string Operation => "get_status";
+    public override string Operation => "status";
 
     /// <summary>
     ///     Gets the security status of the presentation including encryption, write protection,

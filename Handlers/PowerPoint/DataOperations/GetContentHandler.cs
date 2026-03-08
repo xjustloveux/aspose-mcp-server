@@ -13,7 +13,7 @@ namespace AsposeMcpServer.Handlers.PowerPoint.DataOperations;
 public class GetContentHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
-    public override string Operation => "get_content";
+    public override string Operation => "get";
 
     /// <summary>
     ///     Gets presentation content including text from all slides.

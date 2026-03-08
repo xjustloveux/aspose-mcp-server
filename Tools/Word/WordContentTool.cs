@@ -44,9 +44,9 @@ public class WordContentTool
     }
 
     /// <summary>
-    ///     Executes a Word content operation (get_content, get_content_detailed, get_statistics, get_document_info).
+    ///     Executes a Word content operation (get, get_detailed, statistics, info).
     /// </summary>
-    /// <param name="operation">The operation to perform: get_content, get_content_detailed, get_statistics, get_document_info.</param>
+    /// <param name="operation">The operation to perform: get, get_detailed, statistics, info.</param>
     /// <param name="path">Word document file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID for in-memory editing.</param>
     /// <param name="includeHeaders">Include headers in content (for get_content_detailed, default: false).</param>
@@ -66,15 +66,15 @@ public class WordContentTool
         ReadOnly = true,
         UseStructuredContent = true)]
     [Description(
-        @"Get Word document content, statistics, and document information. Supports 4 operations: get_content, get_content_detailed, get_statistics, get_document_info.
+        @"Get Word document content, statistics, and document information. Supports 4 operations: get, get_detailed, statistics, info.
 
 Usage examples:
-- Get content: word_content(operation='get_content', path='doc.docx')
-- Get detailed content: word_content(operation='get_content_detailed', path='doc.docx', includeHeaders=true, includeFooters=true)
-- Get statistics: word_content(operation='get_statistics', path='doc.docx', includeFootnotes=true)
-- Get document info: word_content(operation='get_document_info', path='doc.docx', includeTabStops=true)")]
+- Get content: word_content(operation='get', path='doc.docx')
+- Get detailed content: word_content(operation='get_detailed', path='doc.docx', includeHeaders=true, includeFooters=true)
+- Get statistics: word_content(operation='statistics', path='doc.docx', includeFootnotes=true)
+- Get document info: word_content(operation='info', path='doc.docx', includeTabStops=true)")]
     public object Execute(
-        [Description("Operation: get_content, get_content_detailed, get_statistics, get_document_info")]
+        [Description("Operation: get, get_detailed, statistics, info")]
         string operation,
         [Description("Word document file path (required if no sessionId)")]
         string? path = null,
@@ -131,16 +131,16 @@ Usage examples:
     {
         return operation.ToLower() switch
         {
-            "get_content" => BuildGetContentParameters(maxChars, offset),
-            "get_content_detailed" => BuildGetContentDetailedParameters(includeHeaders, includeFooters),
-            "get_statistics" => BuildGetStatisticsParameters(includeFootnotes),
-            "get_document_info" => BuildGetDocumentInfoParameters(includeTabStops),
+            "get" => BuildGetContentParameters(maxChars, offset),
+            "get_detailed" => BuildGetContentDetailedParameters(includeHeaders, includeFooters),
+            "statistics" => BuildGetStatisticsParameters(includeFootnotes),
+            "info" => BuildGetDocumentInfoParameters(includeTabStops),
             _ => new OperationParameters()
         };
     }
 
     /// <summary>
-    ///     Builds parameters for the get_content operation.
+    ///     Builds parameters for the get operation.
     /// </summary>
     /// <param name="maxChars">The maximum characters to return.</param>
     /// <param name="offset">The character offset to start reading from.</param>
@@ -154,7 +154,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds parameters for the get_content_detailed operation.
+    ///     Builds parameters for the get_detailed operation.
     /// </summary>
     /// <param name="includeHeaders">Whether to include headers in content.</param>
     /// <param name="includeFooters">Whether to include footers in content.</param>
@@ -168,7 +168,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds parameters for the get_statistics operation.
+    ///     Builds parameters for the statistics operation.
     /// </summary>
     /// <param name="includeFootnotes">Whether to include footnotes in statistics.</param>
     /// <returns>OperationParameters configured for getting statistics.</returns>
@@ -180,7 +180,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds parameters for the get_document_info operation.
+    ///     Builds parameters for the info operation.
     /// </summary>
     /// <param name="includeTabStops">Whether to include tab stops in document info.</param>
     /// <returns>OperationParameters configured for getting document info.</returns>

@@ -47,11 +47,11 @@ public class WordNoteTool
 
     /// <summary>
     ///     Executes a Word note operation (add_footnote, add_endnote, delete_footnote, delete_endnote, edit_footnote,
-    ///     edit_endnote, get_footnotes, get_endnotes).
+    ///     edit_endnote, list_footnotes, list_endnotes).
     /// </summary>
     /// <param name="operation">
     ///     The operation to perform: add_footnote, add_endnote, delete_footnote, delete_endnote,
-    ///     edit_footnote, edit_endnote, get_footnotes, get_endnotes.
+    ///     edit_footnote, edit_endnote, list_footnotes, list_endnotes.
     /// </param>
     /// <param name="path">Word document file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID for in-memory editing.</param>
@@ -74,17 +74,17 @@ public class WordNoteTool
         ReadOnly = false,
         UseStructuredContent = true)]
     [Description(
-        @"Manage footnotes and endnotes in Word documents. Supports 8 operations: add_footnote, add_endnote, delete_footnote, delete_endnote, edit_footnote, edit_endnote, get_footnotes, get_endnotes.
+        @"Manage footnotes and endnotes in Word documents. Supports 8 operations: add_footnote, add_endnote, delete_footnote, delete_endnote, edit_footnote, edit_endnote, list_footnotes, list_endnotes.
 
 Usage examples:
 - Add footnote: word_note(operation='add_footnote', path='doc.docx', text='Footnote text', paragraphIndex=0)
 - Add endnote: word_note(operation='add_endnote', path='doc.docx', text='Endnote text', paragraphIndex=0)
 - Delete footnote: word_note(operation='delete_footnote', path='doc.docx', noteIndex=0)
 - Edit footnote: word_note(operation='edit_footnote', path='doc.docx', noteIndex=0, text='Updated footnote')
-- Get footnotes: word_note(operation='get_footnotes', path='doc.docx')")]
+- List footnotes: word_note(operation='list_footnotes', path='doc.docx')")]
     public object Execute(
         [Description(
-            "Operation: add_footnote, add_endnote, delete_footnote, delete_endnote, edit_footnote, edit_endnote, get_footnotes, get_endnotes")]
+            "Operation: add_footnote, add_endnote, delete_footnote, delete_endnote, edit_footnote, edit_endnote, list_footnotes, list_endnotes")]
         string operation,
         [Description("Document file path (required if no sessionId)")]
         string? path = null,

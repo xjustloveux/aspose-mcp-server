@@ -17,7 +17,7 @@ public class GetPptTableContentHandlerTests : PptHandlerTestBase
     public void Operation_Returns_GetContent()
     {
         SkipIfNotWindows();
-        Assert.Equal("get_content", _handler.Operation);
+        Assert.Equal("get", _handler.Operation);
     }
 
     #endregion

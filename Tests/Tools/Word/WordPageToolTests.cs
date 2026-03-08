@@ -61,7 +61,7 @@ public class WordPageToolTests : WordTestBase
     {
         var docPath = CreateWordDocument("test_set_page_number.docx");
         var outputPath = CreateTestFilePath("test_set_page_number_output.docx");
-        _tool.Execute("set_page_number", docPath, outputPath: outputPath, startingPageNumber: 5);
+        _tool.Execute("set_number", docPath, outputPath: outputPath, startingPageNumber: 5);
         var doc = new Document(outputPath);
         Assert.True(doc.Sections[0].PageSetup.RestartPageNumbering ||
                     doc.Sections[0].PageSetup.PageStartingNumber == 5);
@@ -72,7 +72,7 @@ public class WordPageToolTests : WordTestBase
     {
         var docPath = CreateWordDocument("test_page_setup.docx");
         var outputPath = CreateTestFilePath("test_page_setup_output.docx");
-        var result = _tool.Execute("set_page_setup", docPath, outputPath: outputPath,
+        var result = _tool.Execute("set_all", docPath, outputPath: outputPath,
             top: 50.0, bottom: 50.0, orientation: "landscape");
         Assert.IsType<FinalizedResult<SuccessResult>>(result);
         var doc = new Document(outputPath);
@@ -96,7 +96,7 @@ public class WordPageToolTests : WordTestBase
 
         var pageCountBefore = doc.PageCount;
         var outputPath = CreateTestFilePath("test_delete_page_output.docx");
-        _tool.Execute("delete_page", docPath, outputPath: outputPath, pageIndex: 1);
+        _tool.Execute("delete", docPath, outputPath: outputPath, pageIndex: 1);
         var resultDoc = new Document(outputPath);
         Assert.True(resultDoc.PageCount < pageCountBefore);
     }
@@ -108,7 +108,7 @@ public class WordPageToolTests : WordTestBase
         var docBefore = new Document(docPath);
         var pageCountBefore = docBefore.PageCount;
         var outputPath = CreateTestFilePath("test_insert_blank_output.docx");
-        _tool.Execute("insert_blank_page", docPath, outputPath: outputPath);
+        _tool.Execute("add", docPath, outputPath: outputPath);
         Assert.True(File.Exists(outputPath));
         var resultDoc = new Document(outputPath);
         Assert.True(resultDoc.PageCount > pageCountBefore);
@@ -119,7 +119,7 @@ public class WordPageToolTests : WordTestBase
     {
         var docPath = CreateWordDocumentWithContent("test_add_page_break.docx", "Content before break");
         var outputPath = CreateTestFilePath("test_add_page_break_output.docx");
-        var result = _tool.Execute("add_page_break", docPath, outputPath: outputPath);
+        var result = _tool.Execute("add_break", docPath, outputPath: outputPath);
         Assert.IsType<FinalizedResult<SuccessResult>>(result);
         Assert.True(File.Exists(outputPath));
     }
@@ -207,7 +207,7 @@ public class WordPageToolTests : WordTestBase
     {
         var docPath = CreateWordDocument("test_session_page_number.docx");
         var sessionId = OpenSession(docPath);
-        var result = _tool.Execute("set_page_number", sessionId: sessionId, startingPageNumber: 10);
+        var result = _tool.Execute("set_number", sessionId: sessionId, startingPageNumber: 10);
 
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
@@ -220,7 +220,7 @@ public class WordPageToolTests : WordTestBase
     {
         var docPath = CreateWordDocument("test_session_page_setup.docx");
         var sessionId = OpenSession(docPath);
-        var result = _tool.Execute("set_page_setup", sessionId: sessionId,
+        var result = _tool.Execute("set_all", sessionId: sessionId,
             top: 36.0, bottom: 36.0, orientation: "landscape");
 
         var output = GetResultOutput<SuccessResult>(result);
@@ -236,7 +236,7 @@ public class WordPageToolTests : WordTestBase
     {
         var docPath = CreateWordDocumentWithContent("test_session_pagebreak.docx", "Content before break");
         var sessionId = OpenSession(docPath);
-        var result = _tool.Execute("add_page_break", sessionId: sessionId);
+        var result = _tool.Execute("add_break", sessionId: sessionId);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
     }
@@ -258,7 +258,7 @@ public class WordPageToolTests : WordTestBase
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         sessionDoc.UpdatePageLayout();
         var pageCountBefore = sessionDoc.PageCount;
-        var result = _tool.Execute("delete_page", sessionId: sessionId, pageIndex: 1);
+        var result = _tool.Execute("delete", sessionId: sessionId, pageIndex: 1);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
         sessionDoc = SessionManager.GetDocument<Document>(sessionId);
@@ -274,7 +274,7 @@ public class WordPageToolTests : WordTestBase
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         sessionDoc.UpdatePageLayout();
         var pageCountBefore = sessionDoc.PageCount;
-        var result = _tool.Execute("insert_blank_page", sessionId: sessionId);
+        var result = _tool.Execute("add", sessionId: sessionId);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
         sessionDoc = SessionManager.GetDocument<Document>(sessionId);

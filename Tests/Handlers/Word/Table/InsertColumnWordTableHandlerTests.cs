@@ -204,11 +204,11 @@ public class InsertColumnWordTableHandlerTests : WordHandlerTestBase
     {
         var doc = CreateDocumentWithTable(3, 3);
         var context = CreateContext(doc);
-        var columnDataJson = "[\"Header\", \"Row1\", \"Row2\"]";
+
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "columnIndex", 0 },
-            { "columnData", columnDataJson }
+            { "columnData", new[] { "Header", "Row1", "Row2" } }
         });
 
         var res = _handler.Execute(context, parameters);
@@ -231,7 +231,7 @@ public class InsertColumnWordTableHandlerTests : WordHandlerTestBase
         });
 
         var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
-        Assert.Contains("Invalid columnData JSON", ex.Message);
+        Assert.Contains("Cannot convert", ex.Message);
     }
 
     [Fact]
@@ -239,11 +239,11 @@ public class InsertColumnWordTableHandlerTests : WordHandlerTestBase
     {
         var doc = CreateDocumentWithTable(2, 2);
         var context = CreateContext(doc);
-        var columnDataJson = "[\"Line1\\nLine2\", \"Single\"]";
+
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "columnIndex", 0 },
-            { "columnData", columnDataJson }
+            { "columnData", new[] { "Line1\nLine2", "Single" } }
         });
 
         var res = _handler.Execute(context, parameters);

@@ -13,7 +13,7 @@ public class GetSheetPropertiesHandlerTests : ExcelHandlerTestBase
     [Fact]
     public void Operation_Returns_GetSheetProperties()
     {
-        Assert.Equal("get_sheet_properties", _handler.Operation);
+        Assert.Equal("get_sheet", _handler.Operation);
     }
 
     #endregion

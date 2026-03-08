@@ -124,7 +124,7 @@ public class EmailCalendarToolTests : EmailTestBase
     {
         var icsPath = CreateTestIcsFile("tool_getinfo.ics", "Info Meeting", "Meeting description",
             "Office");
-        var result = _tool.Execute("get_info", icsPath);
+        var result = _tool.Execute("get", icsPath);
 
         Assert.IsType<FinalizedResult<AppointmentEmailInfo>>(result);
         var data = GetResultData<AppointmentEmailInfo>(result);
@@ -139,7 +139,7 @@ public class EmailCalendarToolTests : EmailTestBase
     {
         var icsPath = CreateTestIcsFile("tool_getinfo_att.ics", "Attendee Info", "",
             "", "x@example.com", "y@example.com");
-        var result = _tool.Execute("get_info", icsPath);
+        var result = _tool.Execute("get", icsPath);
 
         var data = GetResultData<AppointmentEmailInfo>(result);
         Assert.NotNull(data.Attendees);
@@ -252,7 +252,7 @@ public class EmailCalendarToolTests : EmailTestBase
             description: "E2E test", location: "Lab", startDate: "2025-08-01T10:00:00",
             endDate: "2025-08-01T11:00:00");
 
-        var infoResult = _tool.Execute("get_info", outputPath);
+        var infoResult = _tool.Execute("get", outputPath);
         var data = GetResultData<AppointmentEmailInfo>(infoResult);
 
         Assert.Equal("Roundtrip Meeting", data.Summary);
@@ -271,7 +271,7 @@ public class EmailCalendarToolTests : EmailTestBase
         _tool.Execute("set_recurrence", createPath, recurringPath,
             pattern: "weekly", count: 52);
 
-        var infoResult = _tool.Execute("get_info", recurringPath);
+        var infoResult = _tool.Execute("get", recurringPath);
         var data = GetResultData<AppointmentEmailInfo>(infoResult);
         Assert.Equal("Recurring Workflow", data.Summary);
         Assert.NotNull(data);

@@ -27,7 +27,7 @@ public class WordStyleToolTests : WordTestBase
     public void GetStyles_ShouldReturnAllStylesFromFile()
     {
         var docPath = CreateWordDocument("test_get_styles.docx");
-        var result = _tool.Execute("get_styles", docPath);
+        var result = _tool.Execute("list", docPath);
         var data = GetResultData<GetWordStylesResult>(result);
         Assert.True(data.Count > 0);
         Assert.NotNull(data.ParagraphStyles);
@@ -39,7 +39,7 @@ public class WordStyleToolTests : WordTestBase
     {
         var docPath = CreateWordDocument("test_create_style.docx");
         var outputPath = CreateTestFilePath("test_create_style_output.docx");
-        _tool.Execute("create_style", docPath, outputPath: outputPath,
+        _tool.Execute("create", docPath, outputPath: outputPath,
             styleName: "CustomStyle", styleType: "paragraph", fontSize: 14, bold: true);
         var doc = new Document(outputPath);
         var style = doc.Styles["CustomStyle"];
@@ -57,7 +57,7 @@ public class WordStyleToolTests : WordTestBase
         var customStyle = doc.Styles.Add(StyleType.Paragraph, "TestStyle");
         customStyle.Font.Size = 16;
         doc.Save(docPath);
-        _tool.Execute("apply_style", docPath, outputPath: outputPath,
+        _tool.Execute("apply", docPath, outputPath: outputPath,
             styleName: "TestStyle", paragraphIndex: 0);
         Assert.True(File.Exists(outputPath));
         var resultDoc = new Document(outputPath);
@@ -80,7 +80,7 @@ public class WordStyleToolTests : WordTestBase
         var tableStyle = doc.Styles.Add(StyleType.Table, "TestTableStyle");
         tableStyle.Font.Size = 12;
         doc.Save(docPath);
-        _tool.Execute("apply_style", docPath, outputPath: outputPath,
+        _tool.Execute("apply", docPath, outputPath: outputPath,
             styleName: "TestTableStyle", tableIndex: 0);
         var resultDoc = new Document(outputPath);
         var tables = resultDoc.GetChildNodes(NodeType.Table, true).Cast<Table>().ToList();
@@ -98,7 +98,7 @@ public class WordStyleToolTests : WordTestBase
 
         var targetPath = CreateWordDocument("test_copy_styles_target.docx");
         var outputPath = CreateTestFilePath("test_copy_styles_output.docx");
-        _tool.Execute("copy_styles", targetPath, outputPath: outputPath, sourceDocument: sourcePath);
+        _tool.Execute("copy", targetPath, outputPath: outputPath, sourceDocument: sourcePath);
         var resultDoc = new Document(outputPath);
         var copiedStyle = resultDoc.Styles["SourceStyle"];
         Assert.NotNull(copiedStyle);
@@ -109,9 +109,9 @@ public class WordStyleToolTests : WordTestBase
     #region Operation Routing
 
     [Theory]
-    [InlineData("GET_STYLES")]
-    [InlineData("Get_Styles")]
-    [InlineData("get_styles")]
+    [InlineData("LIST")]
+    [InlineData("List")]
+    [InlineData("list")]
     public void Operation_ShouldBeCaseInsensitive(string operation)
     {
         var docPath = CreateWordDocument($"test_{operation.GetHashCode()}_case.docx");
@@ -132,7 +132,7 @@ public class WordStyleToolTests : WordTestBase
     [Fact]
     public void Execute_WithNoPathOrSessionId_ShouldThrowException()
     {
-        Assert.ThrowsAny<Exception>(() => _tool.Execute("get_styles"));
+        Assert.ThrowsAny<Exception>(() => _tool.Execute("list"));
     }
 
     #endregion
@@ -149,7 +149,7 @@ public class WordStyleToolTests : WordTestBase
         doc.Save(docPath);
 
         var sessionId = OpenSession(docPath);
-        var result = _tool.Execute("get_styles", sessionId: sessionId);
+        var result = _tool.Execute("list", sessionId: sessionId);
         var data = GetResultData<GetWordStylesResult>(result);
         Assert.Contains(data.ParagraphStyles, s => s.Name == "SessionStyle");
         var output = GetResultOutput<GetWordStylesResult>(result);
@@ -161,7 +161,7 @@ public class WordStyleToolTests : WordTestBase
     {
         var docPath = CreateWordDocument("test_session_create_style.docx");
         var sessionId = OpenSession(docPath);
-        var result = _tool.Execute("create_style", sessionId: sessionId,
+        var result = _tool.Execute("create", sessionId: sessionId,
             styleName: "SessionCreatedStyle", styleType: "paragraph", fontSize: 20, bold: true);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
@@ -182,7 +182,7 @@ public class WordStyleToolTests : WordTestBase
         doc.Save(docPath);
 
         var sessionId = OpenSession(docPath);
-        var result = _tool.Execute("apply_style", sessionId: sessionId,
+        var result = _tool.Execute("apply", sessionId: sessionId,
             styleName: "ApplySessionStyle", paragraphIndex: 0);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
@@ -203,7 +203,7 @@ public class WordStyleToolTests : WordTestBase
         var targetPath = CreateWordDocument("test_copy_session_target.docx");
         var sessionId = OpenSession(targetPath);
 
-        var result = _tool.Execute("copy_styles", sessionId: sessionId, sourceDocument: sourcePath);
+        var result = _tool.Execute("copy", sessionId: sessionId, sourceDocument: sourcePath);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
 
@@ -215,7 +215,7 @@ public class WordStyleToolTests : WordTestBase
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
         Assert.Throws<KeyNotFoundException>(() =>
-            _tool.Execute("get_styles", sessionId: "invalid_session_id"));
+            _tool.Execute("list", sessionId: "invalid_session_id"));
     }
 
     [Fact]
@@ -232,7 +232,7 @@ public class WordStyleToolTests : WordTestBase
         doc2.Save(docPath2);
 
         var sessionId = OpenSession(docPath2);
-        var result = _tool.Execute("get_styles", docPath1, sessionId);
+        var result = _tool.Execute("list", docPath1, sessionId);
         var data = GetResultData<GetWordStylesResult>(result);
 
         Assert.Contains(data.ParagraphStyles, s => s.Name == "SessionStyle");

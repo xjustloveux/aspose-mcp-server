@@ -13,7 +13,7 @@ namespace AsposeMcpServer.Handlers.Word.Field;
 public class GetFieldDetailWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "get_field_detail";
+    public override string Operation => "get";
 
     /// <summary>
     ///     Gets detailed information about a specific field.
@@ -73,7 +73,7 @@ public class GetFieldDetailWordHandler : OperationHandlerBase<Document>
         var fieldIndex = parameters.GetOptional<int?>("fieldIndex");
 
         if (!fieldIndex.HasValue)
-            throw new ArgumentException("fieldIndex is required for get_field_detail operation");
+            throw new ArgumentException("fieldIndex is required for get operation");
 
         return new GetFieldDetailParameters(fieldIndex.Value);
     }

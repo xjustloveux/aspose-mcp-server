@@ -1,4 +1,3 @@
-using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Words.Tables;
 using AsposeMcpServer.Core;
@@ -45,19 +44,8 @@ public class InsertRowWordTableHandler : OperationHandlerBase<Document>
         if (p.RowIndex < 0 || p.RowIndex >= table.Rows.Count)
             throw new ArgumentException($"Row index {p.RowIndex} out of range");
 
-        JsonArray? dataArray = null;
-        if (!string.IsNullOrEmpty(p.RowData))
-            try
-            {
-                dataArray = JsonNode.Parse(p.RowData)?.AsArray();
-            }
-            catch
-            {
-                throw new ArgumentException("Invalid rowData JSON format");
-            }
-
         var targetRow = table.Rows[p.RowIndex];
-        var newRow = CreateNewRow(doc, targetRow, dataArray);
+        var newRow = CreateNewRow(doc, targetRow, p.RowData);
 
         if (p.InsertBefore)
             table.InsertBefore(newRow, targetRow);
@@ -75,9 +63,9 @@ public class InsertRowWordTableHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="doc">The document.</param>
     /// <param name="templateRow">The template row to copy format from.</param>
-    /// <param name="dataArray">Optional data array for cell content.</param>
+    /// <param name="rowData">Optional data array for cell content.</param>
     /// <returns>The created row.</returns>
-    private static Row CreateNewRow(Document doc, Row templateRow, JsonArray? dataArray)
+    private static Row CreateNewRow(Document doc, Row templateRow, string[]? rowData)
     {
         var newRow = new Row(doc);
 
@@ -101,9 +89,9 @@ public class InsertRowWordTableHandler : OperationHandlerBase<Document>
 
             newRow.AppendChild(newCell);
 
-            if (dataArray != null && i < dataArray.Count)
+            if (rowData != null && i < rowData.Length)
             {
-                var cellText = dataArray[i]?.GetValue<string>() ?? "";
+                var cellText = rowData[i];
                 if (!string.IsNullOrEmpty(cellText))
                 {
                     var para = new WordParagraph(doc);
@@ -147,7 +135,7 @@ public class InsertRowWordTableHandler : OperationHandlerBase<Document>
             throw new ArgumentException("rowIndex is required for insert_row operation");
 
         var tableIndex = parameters.GetOptional("tableIndex", 0);
-        var rowData = parameters.GetOptional<string?>("rowData");
+        var rowData = parameters.GetOptional<string[]?>("rowData");
         var insertBefore = parameters.GetOptional("insertBefore", false);
         var sectionIndex = parameters.GetOptional<int?>("sectionIndex");
 
@@ -157,7 +145,7 @@ public class InsertRowWordTableHandler : OperationHandlerBase<Document>
     private sealed record InsertRowParameters(
         int RowIndex,
         int TableIndex,
-        string? RowData,
+        string[]? RowData,
         bool InsertBefore,
         int? SectionIndex);
 }

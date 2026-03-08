@@ -13,7 +13,7 @@ namespace AsposeMcpServer.Handlers.Word.Format;
 public class AddTabStopWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "add_tab_stop";
+    public override string Operation => "add_tab";
 
     /// <summary>
     ///     Adds a tab stop to a paragraph.

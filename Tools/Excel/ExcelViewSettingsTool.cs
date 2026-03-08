@@ -101,14 +101,14 @@ Usage examples:
 - Set gridlines: excel_view_settings(operation='set_gridlines', path='book.xlsx', visible=false)
 - Set column width: excel_view_settings(operation='set_column_width', path='book.xlsx', columnIndex=0, width=20)
 - Set row height: excel_view_settings(operation='set_row_height', path='book.xlsx', rowIndex=0, height=30)
-- Freeze panes: excel_view_settings(operation='freeze_panes', path='book.xlsx', freezeRow=1, freezeColumn=1)
-- Split window: excel_view_settings(operation='split_window', path='book.xlsx', splitRow=5, splitColumn=2)
-- Auto fit column: excel_view_settings(operation='auto_fit_column', path='book.xlsx', columnIndex=0)
+- Freeze panes: excel_view_settings(operation='freeze', path='book.xlsx', freezeRow=1, freezeColumn=1)
+- Split window: excel_view_settings(operation='split', path='book.xlsx', splitRow=5, splitColumn=2)
+- Auto fit column: excel_view_settings(operation='autofit_col', path='book.xlsx', columnIndex=0)
 - Show formulas: excel_view_settings(operation='show_formulas', path='book.xlsx', visible=true)
-- Set all: excel_view_settings(operation='set_all', path='book.xlsx', zoom=150, showGridlines=true)")]
+- Set all: excel_view_settings(operation='set', path='book.xlsx', zoom=150, showGridlines=true)")]
     public object Execute(
         [Description(
-            "Operation: set_zoom, set_gridlines, set_headers, set_zero_values, set_column_width, set_row_height, set_background, set_tab_color, set_all, freeze_panes, split_window, auto_fit_column, auto_fit_row, show_formulas")]
+            "Operation: set_zoom, set_gridlines, set_headers, set_zero_values, set_column_width, set_row_height, set_background, set_tab, set, freeze, split, autofit_col, autofit_row, show_formulas")]
         string operation,
         [Description("Excel file path (required if no sessionId)")]
         string? path = null,
@@ -235,13 +235,13 @@ Usage examples:
             "set_column_width" => BuildColumnWidthParameters(parameters, columnIndex, width),
             "set_row_height" => BuildRowHeightParameters(parameters, rowIndex, height),
             "set_background" => BuildBackgroundParameters(parameters, imagePath, removeBackground),
-            "set_tab_color" => BuildTabColorParameters(parameters, color),
-            "set_all" => BuildSetAllParameters(parameters, zoom, showGridlines, showRowColumnHeaders,
+            "set_tab" => BuildTabColorParameters(parameters, color),
+            "set" => BuildSetAllParameters(parameters, zoom, showGridlines, showRowColumnHeaders,
                 showZeroValues, displayRightToLeft),
-            "freeze_panes" => BuildFreezePanesParameters(parameters, freezeRow, freezeColumn, unfreeze),
-            "split_window" => BuildSplitWindowParameters(parameters, splitRow, splitColumn, removeSplit),
-            "auto_fit_column" => BuildAutoFitColumnParameters(parameters, columnIndex, startRow, endRow),
-            "auto_fit_row" => BuildAutoFitRowParameters(parameters, rowIndex, startColumn, endColumn),
+            "freeze" => BuildFreezePanesParameters(parameters, freezeRow, freezeColumn, unfreeze),
+            "split" => BuildSplitWindowParameters(parameters, splitRow, splitColumn, removeSplit),
+            "autofit_col" => BuildAutoFitColumnParameters(parameters, columnIndex, startRow, endRow),
+            "autofit_row" => BuildAutoFitRowParameters(parameters, rowIndex, startColumn, endColumn),
             _ => parameters
         };
     }

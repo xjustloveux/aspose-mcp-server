@@ -14,7 +14,7 @@ public class AutoFitRowExcelViewHandlerTests : ExcelHandlerTestBase
     [Fact]
     public void Operation_Returns_AutoFitRow()
     {
-        Assert.Equal("auto_fit_row", _handler.Operation);
+        Assert.Equal("autofit_row", _handler.Operation);
     }
 
     #endregion

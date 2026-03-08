@@ -12,7 +12,7 @@ namespace AsposeMcpServer.Handlers.Word.Field;
 public class DeleteFormFieldWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "delete_form_field";
+    public override string Operation => "delete_form";
 
     /// <summary>
     ///     Deletes one or more form fields from the document.

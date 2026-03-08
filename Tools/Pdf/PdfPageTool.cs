@@ -77,8 +77,8 @@ Usage examples:
 - Rotate page: pdf_page(operation='rotate', path='doc.pdf', pageIndex=1, rotation=90)
 - Crop page: pdf_page(operation='crop', path='doc.pdf', pageIndex=1, x=50, y=50, width=400, height=600)
 - Resize page: pdf_page(operation='resize', path='doc.pdf', pageIndex=1, width=595, height=842)
-- Get page details: pdf_page(operation='get_details', path='doc.pdf', pageIndex=1)
-- Get page info: pdf_page(operation='get_info', path='doc.pdf')")]
+- Get page details: pdf_page(operation='details', path='doc.pdf', pageIndex=1)
+- Get page info: pdf_page(operation='info', path='doc.pdf')")]
     public object Execute(
         [Description(@"Operation to perform.
 - 'add': Add page(s) (required params: path)
@@ -86,8 +86,8 @@ Usage examples:
 - 'rotate': Rotate a page (required params: path, pageIndex, rotation)
 - 'crop': Crop a page (required params: path, pageIndex, x, y, width, height)
 - 'resize': Resize a page (required params: path, pageIndex, width, height)
-- 'get_details': Get page details (required params: path, pageIndex)
-- 'get_info': Get all pages info (required params: path)")]
+- 'details': Get page details (required params: path, pageIndex)
+- 'info': Get all pages info (required params: path)")]
         string operation,
         [Description("PDF file path (required if no sessionId)")]
         string? path = null,
@@ -133,7 +133,7 @@ Usage examples:
 
         var result = handler.Execute(operationContext, parameters);
 
-        if (operation.ToLowerInvariant() is "get_details" or "get_info")
+        if (operation.ToLowerInvariant() is "details" or "info")
             return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
@@ -166,7 +166,7 @@ Usage examples:
             "rotate" => BuildRotateParameters(pageIndex, rotation, pageIndices),
             "crop" => BuildCropParameters(pageIndex, x, y, width, height),
             "resize" => BuildResizeParameters(pageIndex, width, height),
-            "get_details" => BuildGetDetailsParameters(pageIndex),
+            "details" => BuildGetDetailsParameters(pageIndex),
             _ => new OperationParameters()
         };
     }

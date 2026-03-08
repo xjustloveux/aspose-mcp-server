@@ -58,7 +58,7 @@ public class EmailCalendarTool
 
 Usage examples:
 - Create appointment: email_calendar(operation='create', outputPath='meeting.ics', summary='Team Meeting', startDate='2024-01-15T10:00:00', endDate='2024-01-15T11:00:00')
-- Get info: email_calendar(operation='get_info', path='meeting.ics')
+- Get info: email_calendar(operation='get', path='meeting.ics')
 - Save as MSG: email_calendar(operation='save', path='meeting.ics', outputPath='meeting.msg', format='msg')
 - Set recurrence: email_calendar(operation='set_recurrence', path='meeting.ics', outputPath='recurring.ics', pattern='weekly', interval=1, count=52)
 - Set attendees: email_calendar(operation='set_attendees', path='meeting.ics', outputPath='updated.ics', attendees='user1@example.com,user2@example.com')
@@ -67,7 +67,7 @@ Supported formats: ICS (iCalendar), MSG (Outlook)")]
     public object Execute(
         [Description(@"Operation to perform.
 - 'create': Create a new appointment (required params: outputPath; optional: summary, description, startDate, endDate, location, attendees)
-- 'get_info': Get appointment information (required params: path)
+- 'get': Get appointment information (required params: path)
 - 'save': Save appointment to a different format (required params: path, outputPath; optional: format)
 - 'set_recurrence': Set recurrence pattern (required params: path, outputPath, pattern; optional: interval, count)
 - 'set_attendees': Set attendees (required params: path, outputPath, attendees)")]
@@ -110,7 +110,7 @@ Supported formats: ICS (iCalendar), MSG (Outlook)")]
 
         var result = handler.Execute(operationContext, parameters);
 
-        var effectiveOutputPath = string.Equals(operation, "get_info", StringComparison.OrdinalIgnoreCase)
+        var effectiveOutputPath = string.Equals(operation, "get", StringComparison.OrdinalIgnoreCase)
             ? path
             : outputPath;
 

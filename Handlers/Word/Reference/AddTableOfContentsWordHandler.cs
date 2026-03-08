@@ -12,7 +12,7 @@ namespace AsposeMcpServer.Handlers.Word.Reference;
 public class AddTableOfContentsWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "add_table_of_contents";
+    public override string Operation => "add_toc";
 
     /// <summary>
     ///     Adds a table of contents to the document.

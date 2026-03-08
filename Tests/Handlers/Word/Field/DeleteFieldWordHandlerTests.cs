@@ -14,7 +14,7 @@ public class DeleteFieldWordHandlerTests : WordHandlerTestBase
     [Fact]
     public void Operation_Returns_DeleteField()
     {
-        Assert.Equal("delete_field", _handler.Operation);
+        Assert.Equal("delete", _handler.Operation);
     }
 
     #endregion

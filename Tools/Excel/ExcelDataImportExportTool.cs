@@ -70,19 +70,19 @@ public class ExcelDataImportExportTool
         ReadOnly = false,
         UseStructuredContent = true)]
     [Description(
-        @"Import and export Excel data. Supports 4 operations: import_json, import_array, export_csv, export_range_image.
+        @"Import and export Excel data. Supports 4 operations: import_json, import_array, export_csv, export_image.
 
 Usage examples:
 - Import JSON: excel_data_import_export(operation='import_json', path='book.xlsx', jsonData='[{""name"":""John"",""age"":30}]', outputPath='out.xlsx')
 - Import array: excel_data_import_export(operation='import_array', path='book.xlsx', arrayData='A,B,C;1,2,3;4,5,6', outputPath='out.xlsx')
 - Export CSV: excel_data_import_export(operation='export_csv', path='book.xlsx', outputPath='data.csv')
-- Export image: excel_data_import_export(operation='export_range_image', path='book.xlsx', outputPath='sheet.png')")]
+- Export image: excel_data_import_export(operation='export_image', path='book.xlsx', outputPath='sheet.png')")]
     public object Execute(
         [Description(@"Operation to perform.
 - 'import_json': Import JSON data (required params: jsonData)
 - 'import_array': Import array data (required params: arrayData)
 - 'export_csv': Export worksheet to CSV (required params: outputPath)
-- 'export_range_image': Export worksheet to image (required params: outputPath)")]
+- 'export_image': Export worksheet to image (required params: outputPath)")]
         string operation,
         [Description("Excel file path (required if no sessionId)")]
         string? path = null,
@@ -148,7 +148,7 @@ Usage examples:
             "import_json" => BuildImportJsonParameters(parameters, jsonData, startCell),
             "import_array" => BuildImportArrayParameters(parameters, arrayData, startCell, isVertical),
             "export_csv" => BuildExportCsvParameters(parameters, outputPath, separator),
-            "export_range_image" => BuildExportRangeImageParameters(parameters, outputPath, format, dpi),
+            "export_image" => BuildExportRangeImageParameters(parameters, outputPath, format, dpi),
             _ => parameters
         };
     }

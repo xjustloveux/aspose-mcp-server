@@ -73,18 +73,18 @@ Warning: If outputPath is not provided for write operations, the original file w
 Usage examples:
 - Encrypt: ppt_security(operation='encrypt', path='file.pptx', password='secret')
 - Decrypt: ppt_security(operation='decrypt', path='file.pptx')
-- Set write protection: ppt_security(operation='set_write_protection', path='file.pptx', password='edit_pass')
-- Remove write protection: ppt_security(operation='remove_write_protection', path='file.pptx')
+- Set write protection: ppt_security(operation='set_write_protect', path='file.pptx', password='edit_pass')
+- Remove write protection: ppt_security(operation='remove_write_protect', path='file.pptx')
 - Mark as final: ppt_security(operation='mark_final', path='file.pptx')
-- Get status: ppt_security(operation='get_status', path='file.pptx')")]
+- Get status: ppt_security(operation='status', path='file.pptx')")]
     public object Execute(
         [Description(@"Operation to perform.
 - 'encrypt': Encrypt presentation (required: password)
 - 'decrypt': Remove encryption
-- 'set_write_protection': Set write protection (required: password)
-- 'remove_write_protection': Remove write protection
+- 'set_write_protect': Set write protection (required: password)
+- 'remove_write_protect': Remove write protection
 - 'mark_final': Mark presentation as final
-- 'get_status': Get security status")]
+- 'status': Get security status")]
         string operation,
         [Description("Presentation file path (required if no sessionId)")]
         string? path = null,
@@ -114,7 +114,7 @@ Usage examples:
 
         var result = handler.Execute(operationContext, parameters);
 
-        if (string.Equals(operation, "get_status", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(operation, "status", StringComparison.OrdinalIgnoreCase))
             return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
@@ -136,7 +136,7 @@ Usage examples:
 
         return operation.ToLowerInvariant() switch
         {
-            "encrypt" or "set_write_protection" => BuildPasswordParameters(parameters, password),
+            "encrypt" or "set_write_protect" => BuildPasswordParameters(parameters, password),
             "mark_final" => BuildMarkFinalParameters(parameters, markAsFinal),
             _ => parameters
         };

@@ -14,7 +14,7 @@ public class SetHeaderTextHandlerTests : WordHandlerTestBase
     [Fact]
     public void Operation_Returns_SetHeaderText()
     {
-        Assert.Equal("set_header_text", _handler.Operation);
+        Assert.Equal("set_header", _handler.Operation);
     }
 
     #endregion

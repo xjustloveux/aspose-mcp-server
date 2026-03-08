@@ -95,7 +95,7 @@ public class InsertRowWordTableHandlerTests : WordHandlerTestBase
         {
             { "rowIndex", 0 },
             { "insertBefore", true },
-            { "rowData", "[\"New1\", \"New2\", \"New3\"]" }
+            { "rowData", new[] { "New1", "New2", "New3" } }
         });
 
         _handler.Execute(context, parameters);
@@ -120,7 +120,7 @@ public class InsertRowWordTableHandlerTests : WordHandlerTestBase
         });
 
         var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
-        Assert.Contains("Invalid rowData", ex.Message);
+        Assert.Contains("Cannot convert", ex.Message);
     }
 
     #endregion

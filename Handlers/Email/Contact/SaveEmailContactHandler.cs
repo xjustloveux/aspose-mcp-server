@@ -38,7 +38,7 @@ public class SaveEmailContactHandler : OperationHandlerBase<object>
         if (!File.Exists(path))
             throw new FileNotFoundException($"Input file not found: {path}");
 
-        var contact = LoadEmailContactHandler.LoadContact(path);
+        var contact = GetEmailContactHandler.LoadContact(path);
 
         var ext = format?.ToLowerInvariant() ?? Path.GetExtension(outputPath).ToLowerInvariant().TrimStart('.');
         contact.Save(outputPath, ext == "msg" ? ContactSaveFormat.Msg : ContactSaveFormat.VCard);

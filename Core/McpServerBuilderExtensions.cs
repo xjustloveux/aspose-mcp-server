@@ -103,7 +103,7 @@ public static class McpServerBuilderExtensions
         ServerConfig serverConfig,
         SessionConfig sessionConfig)
     {
-        return WithFilteredToolsAndSchemas(builder, serverConfig, sessionConfig, new ExtensionConfig());
+        return builder.WithFilteredToolsAndSchemas(serverConfig, sessionConfig, new ExtensionConfig());
     }
 
     /// <summary>

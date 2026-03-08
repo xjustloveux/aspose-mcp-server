@@ -13,7 +13,7 @@ public class AddTabStopWordHandlerTests : WordHandlerTestBase
     [Fact]
     public void Operation_Returns_AddTabStop()
     {
-        Assert.Equal("add_tab_stop", _handler.Operation);
+        Assert.Equal("add_tab", _handler.Operation);
     }
 
     #endregion

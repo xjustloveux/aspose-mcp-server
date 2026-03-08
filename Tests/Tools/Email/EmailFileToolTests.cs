@@ -96,7 +96,7 @@ public class EmailFileToolTests : EmailTestBase
     {
         var emlPath = CreateEmlFile("test_info.eml", "Info Subject", "Info Body");
 
-        var result = _tool.Execute("get_info", emlPath);
+        var result = _tool.Execute("get", emlPath);
 
         var data = GetResultData<EmailFileInfo>(result);
         Assert.Contains("Info Subject", data.Subject!);
@@ -113,7 +113,7 @@ public class EmailFileToolTests : EmailTestBase
         SkipInEvaluationMode(AsposeLibraryType.Email);
         var msgPath = CreateMsgFile("test_info.msg", "MSG Info");
 
-        var result = _tool.Execute("get_info", msgPath);
+        var result = _tool.Execute("get", msgPath);
 
         var data = GetResultData<EmailFileInfo>(result);
         Assert.Equal("MSG", data.Format);
@@ -125,7 +125,7 @@ public class EmailFileToolTests : EmailTestBase
         var fakePath = CreateTestFilePath("nonexistent.eml");
 
         Assert.Throws<FileNotFoundException>(() =>
-            _tool.Execute("get_info", fakePath));
+            _tool.Execute("get", fakePath));
     }
 
     #endregion
@@ -236,7 +236,7 @@ public class EmailFileToolTests : EmailTestBase
     {
         var emlPath = CreateEmlFile("test_detect.eml");
 
-        var result = _tool.Execute("detect_format", emlPath);
+        var result = _tool.Execute("detect", emlPath);
 
         var data = GetResultData<DetectFormatEmailResult>(result);
         Assert.NotNull(data.Format);
@@ -250,7 +250,7 @@ public class EmailFileToolTests : EmailTestBase
         SkipInEvaluationMode(AsposeLibraryType.Email);
         var msgPath = CreateMsgFile("test_detect.msg");
 
-        var result = _tool.Execute("detect_format", msgPath);
+        var result = _tool.Execute("detect", msgPath);
 
         var data = GetResultData<DetectFormatEmailResult>(result);
         Assert.NotNull(data.Format);
@@ -263,7 +263,7 @@ public class EmailFileToolTests : EmailTestBase
         var fakePath = CreateTestFilePath("nonexistent_detect.eml");
 
         Assert.Throws<FileNotFoundException>(() =>
-            _tool.Execute("detect_format", fakePath));
+            _tool.Execute("detect", fakePath));
     }
 
     #endregion
@@ -310,7 +310,7 @@ public class EmailFileToolTests : EmailTestBase
     public void GetInfo_WithoutPath_ShouldThrowArgumentException()
     {
         Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("get_info"));
+            _tool.Execute("get"));
     }
 
     [Fact]
@@ -353,7 +353,7 @@ public class EmailFileToolTests : EmailTestBase
     public void DetectFormat_WithoutPath_ShouldThrowArgumentException()
     {
         Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("detect_format"));
+            _tool.Execute("detect"));
     }
 
     #endregion

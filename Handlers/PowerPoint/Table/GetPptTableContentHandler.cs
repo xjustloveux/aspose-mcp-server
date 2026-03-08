@@ -13,7 +13,7 @@ namespace AsposeMcpServer.Handlers.PowerPoint.Table;
 public class GetPptTableContentHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
-    public override string Operation => "get_content";
+    public override string Operation => "get";
 
     /// <summary>
     ///     Gets the content of a table.

@@ -44,12 +44,12 @@ public class WordFormatTool
     }
 
     /// <summary>
-    ///     Executes a Word format operation (get_run_format, set_run_format, get_tab_stops, add_tab_stop, clear_tab_stops,
-    ///     set_paragraph_border).
+    ///     Executes a Word format operation (get, set, get_tabs, add_tab, clear_tabs,
+    ///     set_border).
     /// </summary>
     /// <param name="operation">
-    ///     The operation to perform: get_run_format, set_run_format, get_tab_stops, add_tab_stop,
-    ///     clear_tab_stops, set_paragraph_border.
+    ///     The operation to perform: get, set, get_tabs, add_tab,
+    ///     clear_tabs, set_border.
     /// </param>
     /// <param name="path">Word document file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID for in-memory editing.</param>
@@ -57,29 +57,29 @@ public class WordFormatTool
     /// <param name="paragraphIndex">Paragraph index (0-based).</param>
     /// <param name="runIndex">Run index within paragraph (0-based, optional).</param>
     /// <param name="sectionIndex">Section index (0-based, default: 0).</param>
-    /// <param name="includeInherited">Include inherited format from paragraph/style (for get_run_format, default: false).</param>
-    /// <param name="fontName">Font name (for set_run_format).</param>
-    /// <param name="fontNameAscii">Font name for ASCII characters (for set_run_format).</param>
-    /// <param name="fontNameFarEast">Font name for Far East characters (for set_run_format).</param>
-    /// <param name="fontSize">Font size in points (for set_run_format).</param>
-    /// <param name="bold">Bold text (for set_run_format).</param>
-    /// <param name="italic">Italic text (for set_run_format).</param>
-    /// <param name="underline">Underline style (for set_run_format).</param>
-    /// <param name="color">Text color hex (for set_run_format).</param>
-    /// <param name="tabPosition">Tab stop position in points (for add_tab_stop).</param>
-    /// <param name="tabAlignment">Tab alignment: left, center, right, decimal (for add_tab_stop).</param>
-    /// <param name="tabLeader">Tab leader: none, dots, dashes, line (for add_tab_stop).</param>
-    /// <param name="borderPosition">Border position: all, top, bottom, left, right (for set_paragraph_border).</param>
-    /// <param name="borderTop">Show top border (for set_paragraph_border).</param>
-    /// <param name="borderBottom">Show bottom border (for set_paragraph_border).</param>
-    /// <param name="borderLeft">Show left border (for set_paragraph_border).</param>
-    /// <param name="borderRight">Show right border (for set_paragraph_border).</param>
-    /// <param name="lineStyle">Border line style: single, double, thick (for set_paragraph_border).</param>
-    /// <param name="lineWidth">Border line width in points (for set_paragraph_border).</param>
-    /// <param name="lineColor">Border color hex (for set_paragraph_border).</param>
-    /// <param name="location">Where to get tab stops from: header, footer, body (for get_tab_stops).</param>
-    /// <param name="allParagraphs">Read tab stops from all paragraphs (for get_tab_stops).</param>
-    /// <param name="includeStyle">Include tab stops from paragraph style (for get_tab_stops).</param>
+    /// <param name="includeInherited">Include inherited format from paragraph/style (for get, default: false).</param>
+    /// <param name="fontName">Font name (for set).</param>
+    /// <param name="fontNameAscii">Font name for ASCII characters (for set).</param>
+    /// <param name="fontNameFarEast">Font name for Far East characters (for set).</param>
+    /// <param name="fontSize">Font size in points (for set).</param>
+    /// <param name="bold">Bold text (for set).</param>
+    /// <param name="italic">Italic text (for set).</param>
+    /// <param name="underline">Underline style (for set).</param>
+    /// <param name="color">Text color hex (for set).</param>
+    /// <param name="tabPosition">Tab stop position in points (for add_tab).</param>
+    /// <param name="tabAlignment">Tab alignment: left, center, right, decimal (for add_tab).</param>
+    /// <param name="tabLeader">Tab leader: none, dots, dashes, line (for add_tab).</param>
+    /// <param name="borderPosition">Border position: all, top, bottom, left, right (for set_border).</param>
+    /// <param name="borderTop">Show top border (for set_border).</param>
+    /// <param name="borderBottom">Show bottom border (for set_border).</param>
+    /// <param name="borderLeft">Show left border (for set_border).</param>
+    /// <param name="borderRight">Show right border (for set_border).</param>
+    /// <param name="lineStyle">Border line style: single, double, thick (for set_border).</param>
+    /// <param name="lineWidth">Border line width in points (for set_border).</param>
+    /// <param name="lineColor">Border color hex (for set_border).</param>
+    /// <param name="location">Where to get tab stops from: header, footer, body (for get_tabs).</param>
+    /// <param name="allParagraphs">Read tab stops from all paragraphs (for get_tabs).</param>
+    /// <param name="includeStyle">Include tab stops from paragraph style (for get_tabs).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(
@@ -91,25 +91,25 @@ public class WordFormatTool
         ReadOnly = false,
         UseStructuredContent = true)]
     [Description(
-        @"Manage formatting in Word documents. Supports 6 operations: get_run_format, set_run_format, get_tab_stops, add_tab_stop, clear_tab_stops, set_paragraph_border.
+        @"Manage formatting in Word documents. Supports 6 operations: get, set, get_tabs, add_tab, clear_tabs, set_border.
 
 Usage examples:
-- Get run format: word_format(operation='get_run_format', path='doc.docx', paragraphIndex=0, runIndex=0)
-- Get inherited format: word_format(operation='get_run_format', path='doc.docx', paragraphIndex=0, runIndex=0, includeInherited=true)
-- Set run format: word_format(operation='set_run_format', path='doc.docx', paragraphIndex=0, runIndex=0, bold=true, fontSize=14)
-- Reset color to auto: word_format(operation='set_run_format', path='doc.docx', paragraphIndex=0, runIndex=0, color='auto')
-- Get tab stops: word_format(operation='get_tab_stops', path='doc.docx', paragraphIndex=0)
-- Add tab stop: word_format(operation='add_tab_stop', path='doc.docx', paragraphIndex=0, tabPosition=72, tabAlignment='center')
-- Clear tab stops: word_format(operation='clear_tab_stops', path='doc.docx', paragraphIndex=0)
-- Set paragraph border: word_format(operation='set_paragraph_border', path='doc.docx', paragraphIndex=0, borderPosition='all', lineStyle='single', lineWidth=1.0)")]
+- Get run format: word_format(operation='get', path='doc.docx', paragraphIndex=0, runIndex=0)
+- Get inherited format: word_format(operation='get', path='doc.docx', paragraphIndex=0, runIndex=0, includeInherited=true)
+- Set run format: word_format(operation='set', path='doc.docx', paragraphIndex=0, runIndex=0, bold=true, fontSize=14)
+- Reset color to auto: word_format(operation='set', path='doc.docx', paragraphIndex=0, runIndex=0, color='auto')
+- Get tab stops: word_format(operation='get_tabs', path='doc.docx', paragraphIndex=0)
+- Add tab stop: word_format(operation='add_tab', path='doc.docx', paragraphIndex=0, tabPosition=72, tabAlignment='center')
+- Clear tab stops: word_format(operation='clear_tabs', path='doc.docx', paragraphIndex=0)
+- Set paragraph border: word_format(operation='set_border', path='doc.docx', paragraphIndex=0, borderPosition='all', lineStyle='single', lineWidth=1.0)")]
     public object Execute(
         [Description(@"Operation to perform.
-- 'get_run_format': Get run formatting (required params: path, paragraphIndex, runIndex)
-- 'set_run_format': Set run formatting (required params: path, paragraphIndex, runIndex)
-- 'get_tab_stops': Get tab stops (required params: path, paragraphIndex)
-- 'add_tab_stop': Add a tab stop (required params: path, paragraphIndex, tabPosition)
-- 'clear_tab_stops': Clear tab stops (required params: path, paragraphIndex)
-- 'set_paragraph_border': Set paragraph border (required params: path, paragraphIndex)")]
+- 'get': Get run formatting (required params: path, paragraphIndex, runIndex)
+- 'set': Set run formatting (required params: path, paragraphIndex, runIndex)
+- 'get_tabs': Get tab stops (required params: path, paragraphIndex)
+- 'add_tab': Add a tab stop (required params: path, paragraphIndex, tabPosition)
+- 'clear_tabs': Clear tab stops (required params: path, paragraphIndex)
+- 'set_border': Set paragraph border (required params: path, paragraphIndex)")]
         string operation,
         [Description("Document file path (required if no sessionId)")]
         string? path = null,
@@ -124,52 +124,49 @@ Usage examples:
         [Description("Section index (0-based, default: 0)")]
         int sectionIndex = 0,
         [Description(
-            "Include inherited format from paragraph/style (for get_run_format, default: false). When true, shows the effective computed format.")]
+            "Include inherited format from paragraph/style (for get, default: false). When true, shows the effective computed format.")]
         bool includeInherited = false,
-        [Description("Font name (for set_run_format)")]
-        string? fontName = null,
-        [Description("Font name for ASCII characters (for set_run_format)")]
+        [Description("Font name (for set)")] string? fontName = null,
+        [Description("Font name for ASCII characters (for set)")]
         string? fontNameAscii = null,
-        [Description("Font name for Far East characters (for set_run_format)")]
+        [Description("Font name for Far East characters (for set)")]
         string? fontNameFarEast = null,
-        [Description("Font size in points (for set_run_format)")]
+        [Description("Font size in points (for set)")]
         double? fontSize = null,
-        [Description("Bold text (for set_run_format)")]
-        bool? bold = null,
-        [Description("Italic text (for set_run_format)")]
-        bool? italic = null,
-        [Description("Underline text (for set_run_format)")]
+        [Description("Bold text (for set)")] bool? bold = null,
+        [Description("Italic text (for set)")] bool? italic = null,
+        [Description("Underline text (for set)")]
         bool? underline = null,
-        [Description("Font color hex (for set_run_format)")]
+        [Description("Font color hex (for set)")]
         string? color = null,
-        [Description("Where to get tab stops from: header, footer, body (for get_tab_stops, default: body)")]
+        [Description("Where to get tab stops from: header, footer, body (for get_tabs, default: body)")]
         string location = "body",
-        [Description("Read tab stops from all paragraphs (for get_tab_stops, default: false)")]
+        [Description("Read tab stops from all paragraphs (for get_tabs, default: false)")]
         bool allParagraphs = false,
-        [Description("Include tab stops from paragraph style (for get_tab_stops, default: true)")]
+        [Description("Include tab stops from paragraph style (for get_tabs, default: true)")]
         bool includeStyle = true,
-        [Description("Tab stop position in points (for add_tab_stop, required)")]
+        [Description("Tab stop position in points (for add_tab, required)")]
         double? tabPosition = null,
-        [Description("Tab stop alignment (for add_tab_stop, default: left)")]
+        [Description("Tab stop alignment (for add_tab, default: left)")]
         string tabAlignment = "left",
-        [Description("Tab stop leader character (for add_tab_stop, default: none)")]
+        [Description("Tab stop leader character (for add_tab, default: none)")]
         string tabLeader = "none",
         [Description(
-            "Border position shortcut (for set_paragraph_border): 'all', 'top-bottom', 'left-right', 'box'. Overrides individual border flags.")]
+            "Border position shortcut (for set_border): 'all', 'top-bottom', 'left-right', 'box'. Overrides individual border flags.")]
         string? borderPosition = null,
-        [Description("Show top border (for set_paragraph_border, default: false)")]
+        [Description("Show top border (for set_border, default: false)")]
         bool borderTop = false,
-        [Description("Show bottom border (for set_paragraph_border, default: false)")]
+        [Description("Show bottom border (for set_border, default: false)")]
         bool borderBottom = false,
-        [Description("Show left border (for set_paragraph_border, default: false)")]
+        [Description("Show left border (for set_border, default: false)")]
         bool borderLeft = false,
-        [Description("Show right border (for set_paragraph_border, default: false)")]
+        [Description("Show right border (for set_border, default: false)")]
         bool borderRight = false,
-        [Description("Border line style: none, single, double, dotted, dashed, thick (for set_paragraph_border)")]
+        [Description("Border line style: none, single, double, dotted, dashed, thick (for set_border)")]
         string lineStyle = "single",
-        [Description("Border line width in points (for set_paragraph_border, default: 0.5)")]
+        [Description("Border line width in points (for set_border, default: 0.5)")]
         double lineWidth = 0.5,
-        [Description("Border line color hex (for set_paragraph_border, default: 000000)")]
+        [Description("Border line color hex (for set_border, default: 000000)")]
         string lineColor = "000000")
     {
         using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
@@ -194,7 +191,7 @@ Usage examples:
         var result = handler.Execute(operationContext, parameters);
 
         // Read-only operations don't need to save
-        if (operation.ToLower() is "get_run_format" or "get_tab_stops")
+        if (operation.ToLower() is "get" or "get_tabs")
             return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
@@ -239,21 +236,21 @@ Usage examples:
     {
         return operation.ToLower() switch
         {
-            "get_run_format" => BuildGetRunFormatParameters(paragraphIndex, runIndex, includeInherited),
-            "set_run_format" => BuildSetRunFormatParameters(paragraphIndex, runIndex, fontName, fontNameAscii,
+            "get" => BuildGetRunFormatParameters(paragraphIndex, runIndex, includeInherited),
+            "set" => BuildSetRunFormatParameters(paragraphIndex, runIndex, fontName, fontNameAscii,
                 fontNameFarEast, fontSize, bold, italic, underline, color),
-            "get_tab_stops" => BuildGetTabStopsParameters(location, paragraphIndex, sectionIndex, allParagraphs,
+            "get_tabs" => BuildGetTabStopsParameters(location, paragraphIndex, sectionIndex, allParagraphs,
                 includeStyle),
-            "add_tab_stop" => BuildAddTabStopParameters(paragraphIndex, tabPosition, tabAlignment, tabLeader),
-            "clear_tab_stops" => BuildClearTabStopsParameters(paragraphIndex),
-            "set_paragraph_border" => BuildSetParagraphBorderParameters(paragraphIndex, borderPosition, borderTop,
+            "add_tab" => BuildAddTabStopParameters(paragraphIndex, tabPosition, tabAlignment, tabLeader),
+            "clear_tabs" => BuildClearTabStopsParameters(paragraphIndex),
+            "set_border" => BuildSetParagraphBorderParameters(paragraphIndex, borderPosition, borderTop,
                 borderBottom, borderLeft, borderRight, lineStyle, lineWidth, lineColor),
             _ => new OperationParameters()
         };
     }
 
     /// <summary>
-    ///     Builds parameters for the get_run_format operation.
+    ///     Builds parameters for the get operation.
     /// </summary>
     /// <param name="paragraphIndex">The paragraph index (0-based).</param>
     /// <param name="runIndex">The run index within the paragraph (0-based).</param>
@@ -270,7 +267,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds parameters for the set_run_format operation.
+    ///     Builds parameters for the set operation.
     /// </summary>
     /// <param name="paragraphIndex">The paragraph index (0-based).</param>
     /// <param name="runIndex">The run index within the paragraph (0-based).</param>
@@ -303,7 +300,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds parameters for the get_tab_stops operation.
+    ///     Builds parameters for the get_tabs operation.
     /// </summary>
     /// <param name="location">Where to get tab stops from: header, footer, body.</param>
     /// <param name="paragraphIndex">The paragraph index (0-based).</param>
@@ -325,7 +322,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds parameters for the add_tab_stop operation.
+    ///     Builds parameters for the add_tab operation.
     /// </summary>
     /// <param name="paragraphIndex">The paragraph index (0-based).</param>
     /// <param name="tabPosition">The tab stop position in points.</param>
@@ -344,7 +341,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds parameters for the clear_tab_stops operation.
+    ///     Builds parameters for the clear_tabs operation.
     /// </summary>
     /// <param name="paragraphIndex">The paragraph index (0-based).</param>
     /// <returns>OperationParameters configured for clearing tab stops.</returns>
@@ -356,7 +353,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds parameters for the set_paragraph_border operation.
+    ///     Builds parameters for the set_border operation.
     /// </summary>
     /// <param name="paragraphIndex">The paragraph index (0-based).</param>
     /// <param name="borderPosition">The border position shortcut: all, top-bottom, left-right, box.</param>

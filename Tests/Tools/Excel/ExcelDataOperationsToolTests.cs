@@ -75,7 +75,7 @@ public class ExcelDataOperationsToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbookWithData("test_find_replace.xlsx", 3);
         var outputPath = CreateTestFilePath("test_find_replace_output.xlsx");
-        _tool.Execute("find_replace", workbookPath, findText: "R1C1", replaceText: "Replaced", outputPath: outputPath);
+        _tool.Execute("replace", workbookPath, findText: "R1C1", replaceText: "Replaced", outputPath: outputPath);
         using var workbook = new Workbook(outputPath);
         Assert.Equal("Replaced", workbook.Worksheets[0].Cells["A1"].Value);
     }
@@ -86,7 +86,7 @@ public class ExcelDataOperationsToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbook("test_batch_write.xlsx");
         var outputPath = CreateTestFilePath("test_batch_write_output.xlsx");
         var data = JsonNode.Parse("{\"A1\":\"Value1\",\"B1\":\"Value2\",\"A2\":\"Value3\"}");
-        _tool.Execute("batch_write", workbookPath, data: data, outputPath: outputPath);
+        _tool.Execute("batch", workbookPath, data: data, outputPath: outputPath);
         using var workbook = new Workbook(outputPath);
         Assert.Equal("Value1", workbook.Worksheets[0].Cells["A1"].Value);
         Assert.Equal("Value2", workbook.Worksheets[0].Cells["B1"].Value);
@@ -97,7 +97,7 @@ public class ExcelDataOperationsToolTests : ExcelTestBase
     public void GetContent_ShouldReturnContent()
     {
         var workbookPath = CreateExcelWorkbookWithData("test_get_content.xlsx", 3);
-        var result = _tool.Execute("get_content", workbookPath, range: "A1:B2");
+        var result = _tool.Execute("get", workbookPath, range: "A1:B2");
         var data = GetResultData<GetContentResult>(result);
         Assert.NotEmpty(data.Rows);
         Assert.Contains(data.Rows, r => r.Values.Any(v => v?.ToString() == "R1C1"));
@@ -107,7 +107,7 @@ public class ExcelDataOperationsToolTests : ExcelTestBase
     public void GetStatistics_ShouldReturnStatistics()
     {
         var workbookPath = CreateWorkbookWithNumericData("test_get_statistics.xlsx");
-        var result = _tool.Execute("get_statistics", workbookPath, range: "A1:A3");
+        var result = _tool.Execute("statistics", workbookPath, range: "A1:A3");
         var data = GetResultData<GetStatisticsResult>(result);
         Assert.NotEmpty(data.Worksheets);
         Assert.NotNull(data.Worksheets[0].RangeStatistics);
@@ -118,7 +118,7 @@ public class ExcelDataOperationsToolTests : ExcelTestBase
     public void GetUsedRange_ShouldReturnUsedRange()
     {
         var workbookPath = CreateExcelWorkbookWithData("test_get_used_range.xlsx", 3);
-        var result = _tool.Execute("get_used_range", workbookPath);
+        var result = _tool.Execute("used_range", workbookPath);
         var data = GetResultData<GetUsedRangeResult>(result);
         Assert.NotNull(data.Range);
         Assert.NotEmpty(data.WorksheetName);
@@ -152,7 +152,7 @@ public class ExcelDataOperationsToolTests : ExcelTestBase
     [Fact]
     public void Execute_WithNoPathOrSessionId_ShouldThrowException()
     {
-        Assert.ThrowsAny<Exception>(() => _tool.Execute("get_content"));
+        Assert.ThrowsAny<Exception>(() => _tool.Execute("get"));
     }
 
     #endregion
@@ -176,7 +176,7 @@ public class ExcelDataOperationsToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbookWithData("test_session_find_replace.xlsx", 3);
         var sessionId = OpenSession(workbookPath);
-        _tool.Execute("find_replace", sessionId: sessionId, findText: "R1C1", replaceText: "SessionReplaced");
+        _tool.Execute("replace", sessionId: sessionId, findText: "R1C1", replaceText: "SessionReplaced");
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.Equal("SessionReplaced", workbook.Worksheets[0].Cells["A1"].Value?.ToString());
     }
@@ -187,7 +187,7 @@ public class ExcelDataOperationsToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbook("test_session_batch_write.xlsx");
         var sessionId = OpenSession(workbookPath);
         var batchData = JsonNode.Parse("{\"A1\":\"SessionValue1\",\"B1\":\"SessionValue2\"}");
-        var result = _tool.Execute("batch_write", sessionId: sessionId, data: batchData);
+        var result = _tool.Execute("batch", sessionId: sessionId, data: batchData);
         var data = GetResultData<SuccessResult>(result);
         Assert.StartsWith("Batch write completed", data.Message);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
@@ -200,7 +200,7 @@ public class ExcelDataOperationsToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbookWithData("test_session_get_content.xlsx", 3);
         var sessionId = OpenSession(workbookPath);
-        var result = _tool.Execute("get_content", sessionId: sessionId, range: "A1:B2");
+        var result = _tool.Execute("get", sessionId: sessionId, range: "A1:B2");
         var data = GetResultData<GetContentResult>(result);
         Assert.NotEmpty(data.Rows);
         Assert.Contains(data.Rows, r => r.Values.Any(v => v?.ToString() == "R1C1"));
@@ -211,7 +211,7 @@ public class ExcelDataOperationsToolTests : ExcelTestBase
     {
         var workbookPath = CreateWorkbookWithNumericData("test_session_get_statistics.xlsx");
         var sessionId = OpenSession(workbookPath);
-        var result = _tool.Execute("get_statistics", sessionId: sessionId, range: "A1:A3");
+        var result = _tool.Execute("statistics", sessionId: sessionId, range: "A1:A3");
         var data = GetResultData<GetStatisticsResult>(result);
         Assert.NotEmpty(data.Worksheets);
         Assert.NotNull(data.Worksheets[0].RangeStatistics);
@@ -223,7 +223,7 @@ public class ExcelDataOperationsToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbookWithData("test_session_get_used_range.xlsx", 3);
         var sessionId = OpenSession(workbookPath);
-        var result = _tool.Execute("get_used_range", sessionId: sessionId);
+        var result = _tool.Execute("used_range", sessionId: sessionId);
         var data = GetResultData<GetUsedRangeResult>(result);
         Assert.NotNull(data.Range);
         Assert.NotEmpty(data.WorksheetName);
@@ -233,7 +233,7 @@ public class ExcelDataOperationsToolTests : ExcelTestBase
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
         Assert.Throws<KeyNotFoundException>(() =>
-            _tool.Execute("get_content", sessionId: "invalid_session", range: "A1:B2"));
+            _tool.Execute("get", sessionId: "invalid_session", range: "A1:B2"));
     }
 
     [Fact]
@@ -249,7 +249,7 @@ public class ExcelDataOperationsToolTests : ExcelTestBase
         }
 
         var sessionId = OpenSession(sessionWorkbook);
-        var result = _tool.Execute("get_used_range", pathWorkbook, sessionId);
+        var result = _tool.Execute("used_range", pathWorkbook, sessionId);
         var data = GetResultData<GetUsedRangeResult>(result);
         Assert.Equal("SessionSheet", data.WorksheetName);
     }

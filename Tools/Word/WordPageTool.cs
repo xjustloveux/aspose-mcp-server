@@ -47,12 +47,12 @@ public class WordPageTool
     }
 
     /// <summary>
-    ///     Executes a Word page operation (set_margins, set_orientation, set_size, set_page_number, set_page_setup,
-    ///     delete_page, insert_blank_page, add_page_break).
+    ///     Executes a Word page operation (set_margins, set_orientation, set_size, set_number, set_all,
+    ///     delete, add, add_break).
     /// </summary>
     /// <param name="operation">
-    ///     The operation to perform: set_margins, set_orientation, set_size, set_page_number,
-    ///     set_page_setup, delete_page, insert_blank_page, add_page_break.
+    ///     The operation to perform: set_margins, set_orientation, set_size, set_number,
+    ///     set_all, delete, add, add_break.
     /// </param>
     /// <param name="path">Word document file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID for in-memory editing.</param>
@@ -83,19 +83,19 @@ public class WordPageTool
         ReadOnly = false,
         UseStructuredContent = true)]
     [Description(
-        @"Manage page settings in Word documents. Supports 8 operations: set_margins, set_orientation, set_size, set_page_number, set_page_setup, delete_page, insert_blank_page, add_page_break.
+        @"Manage page settings in Word documents. Supports 8 operations: set_margins, set_orientation, set_size, set_number, set_all, delete, add, add_break.
 
 Usage examples:
 - Set margins: word_page(operation='set_margins', path='doc.docx', top=72, bottom=72, left=72, right=72)
 - Set orientation: word_page(operation='set_orientation', path='doc.docx', orientation='landscape')
 - Set page size: word_page(operation='set_size', path='doc.docx', width=792, height=612)
-- Set page number: word_page(operation='set_page_number', path='doc.docx', startingPageNumber=1)
-- Delete page: word_page(operation='delete_page', path='doc.docx', pageIndex=1)
-- Insert blank page: word_page(operation='insert_blank_page', path='doc.docx', insertAtPageIndex=2)
-- Add page break: word_page(operation='add_page_break', path='doc.docx', paragraphIndex=10)")]
+- Set page number: word_page(operation='set_number', path='doc.docx', startingPageNumber=1)
+- Delete page: word_page(operation='delete', path='doc.docx', pageIndex=1)
+- Insert blank page: word_page(operation='add', path='doc.docx', insertAtPageIndex=2)
+- Add page break: word_page(operation='add_break', path='doc.docx', paragraphIndex=10)")]
     public object Execute(
         [Description(
-            "Operation: set_margins, set_orientation, set_size, set_page_number, set_page_setup, delete_page, insert_blank_page, add_page_break")]
+            "Operation: set_margins, set_orientation, set_size, set_number, set_all, delete, add, add_break")]
         string operation,
         [Description("Document file path (required if no sessionId)")]
         string? path = null,
@@ -151,8 +151,8 @@ Usage examples:
 
         var result = handler.Execute(operationContext, parameters);
 
-        // Handle delete_page operation which creates a new document
-        if (string.Equals(operation, "delete_page", StringComparison.OrdinalIgnoreCase) &&
+        // Handle delete operation which creates a new document
+        if (string.Equals(operation, "delete", StringComparison.OrdinalIgnoreCase) &&
             operationContext.ResultDocument != null)
         {
             if (!ctx.IsSession)
@@ -207,13 +207,13 @@ Usage examples:
                 sectionIndices),
             "set_orientation" => BuildSetOrientationParameters(parameters, orientation, sectionIndex, sectionIndices),
             "set_size" => BuildSetSizeParameters(parameters, width, height, paperSize, sectionIndex, sectionIndices),
-            "set_page_number" => BuildSetPageNumberParameters(parameters, pageNumberFormat, startingPageNumber,
+            "set_number" => BuildSetPageNumberParameters(parameters, pageNumberFormat, startingPageNumber,
                 sectionIndex),
-            "set_page_setup" => BuildSetPageSetupParameters(parameters, top, bottom, left, right, orientation,
+            "set_all" => BuildSetPageSetupParameters(parameters, top, bottom, left, right, orientation,
                 sectionIndex),
-            "delete_page" => BuildDeletePageParameters(parameters, pageIndex),
-            "insert_blank_page" => BuildInsertBlankPageParameters(parameters, insertAtPageIndex),
-            "add_page_break" => BuildAddPageBreakParameters(parameters, paragraphIndex),
+            "delete" => BuildDeletePageParameters(parameters, pageIndex),
+            "add" => BuildInsertBlankPageParameters(parameters, insertAtPageIndex),
+            "add_break" => BuildAddPageBreakParameters(parameters, paragraphIndex),
             _ => parameters
         };
     }

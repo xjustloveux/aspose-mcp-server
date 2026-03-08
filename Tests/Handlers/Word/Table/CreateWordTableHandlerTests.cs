@@ -88,7 +88,7 @@ public class CreateWordTableHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
-            { "tableData", "[[\"A1\", \"B1\"], [\"A2\", \"B2\"]]" }
+            { "tableData", new[] { new[] { "A1", "B1" }, new[] { "A2", "B2" } } }
         });
 
         _handler.Execute(context, parameters);
@@ -157,7 +157,7 @@ public class CreateWordTableHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
-            { "tableData", "[[\"Header1\", \"Header2\"], [\"Data1\", \"Data2\"]]" },
+            { "tableData", new[] { new[] { "Header1", "Header2" }, new[] { "Data1", "Data2" } } },
             { "hasHeader", true }
         });
 

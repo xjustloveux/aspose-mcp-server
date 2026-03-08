@@ -143,7 +143,7 @@ public static class WordListHelper
             paragraphIndex = paraIndex,
             contentPreview = previewText,
             isListItem = false,
-            note = "This paragraph is not a list item. Use convert_to_list operation to convert it."
+            note = "This paragraph is not a list item. Use convert operation to convert it."
         };
     }
 
@@ -202,7 +202,7 @@ public static class WordListHelper
             ParagraphIndex = paraIndex,
             ContentPreview = previewText,
             IsListItem = false,
-            Note = "This paragraph is not a list item. Use convert_to_list operation to convert it."
+            Note = "This paragraph is not a list item. Use convert operation to convert it."
         };
     }
 

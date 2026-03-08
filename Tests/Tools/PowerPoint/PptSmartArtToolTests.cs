@@ -74,7 +74,7 @@ public class PptSmartArtToolTests : PptTestBase
 
         var outputPath = CreateTestFilePath("test_delete_node_output.pptx");
         var targetPathJson = JsonSerializer.Serialize(new[] { 0 });
-        var result = _tool.Execute("manage_nodes", smartArtInfo.Path, slideIndex: 0,
+        var result = _tool.Execute("manage", smartArtInfo.Path, slideIndex: 0,
             shapeIndex: smartArtInfo.ShapeIndex,
             action: "delete", targetPath: targetPathJson, outputPath: outputPath);
         var data = GetResultData<SuccessResult>(result);
@@ -150,7 +150,7 @@ public class PptSmartArtToolTests : PptTestBase
         var initialNodeCount = smartArt!.AllNodes.Count;
 
         var targetPathJson = JsonSerializer.Serialize(new[] { 0 });
-        var result = _tool.Execute("manage_nodes", sessionId: sessionId, slideIndex: 0,
+        var result = _tool.Execute("manage", sessionId: sessionId, slideIndex: 0,
             shapeIndex: smartArtInfo.ShapeIndex,
             action: "delete", targetPath: targetPathJson);
         var data = GetResultData<SuccessResult>(result);

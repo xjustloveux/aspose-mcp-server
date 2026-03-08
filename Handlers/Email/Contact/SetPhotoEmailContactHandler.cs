@@ -41,7 +41,7 @@ public class SetPhotoEmailContactHandler : OperationHandlerBase<object>
         if (!File.Exists(photoPath))
             throw new FileNotFoundException($"Photo file not found: {photoPath}");
 
-        var contact = LoadEmailContactHandler.LoadContact(path);
+        var contact = GetEmailContactHandler.LoadContact(path);
         var photoBytes = File.ReadAllBytes(photoPath);
         contact.Photo = new MapiContactPhoto(photoBytes, MapiContactPhotoImageFormat.Jpeg);
 

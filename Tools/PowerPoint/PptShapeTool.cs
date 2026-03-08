@@ -91,7 +91,7 @@ public class PptShapeTool
     [Description(@"Unified PowerPoint shape management tool. Supports 12 operations.
 
 Note: Position/size units are in points (1 point = 1/72 inch).
-Note: shapeIndex uses original slide.Shapes index. Use 'get' to see all shapes with their indices.
+Note: shapeIndex uses original slide.Shapes index. Use 'get_shapes' to see all shapes with their indices.
 
 Operations:
 - Basic: get, get_details, delete
@@ -99,8 +99,8 @@ Operations:
 - Advanced: group, ungroup, copy, reorder, align, flip
 
 Usage examples:
-- Get shapes: ppt_shape(operation='get', path='file.pptx', slideIndex=0)
-- Get details: ppt_shape(operation='get_details', path='file.pptx', slideIndex=0, shapeIndex=0)
+- Get shapes: ppt_shape(operation='get_shapes', path='file.pptx', slideIndex=0)
+- Get details: ppt_shape(operation='get_shape_details', path='file.pptx', slideIndex=0, shapeIndex=0)
 - Delete: ppt_shape(operation='delete', path='file.pptx', slideIndex=0, shapeIndex=0)
 - Edit: ppt_shape(operation='edit', path='file.pptx', slideIndex=0, shapeIndex=0, x=100, y=100)
 - Set format: ppt_shape(operation='set_format', path='file.pptx', slideIndex=0, shapeIndex=0, fillColor='#FF0000')
@@ -113,7 +113,7 @@ Usage examples:
 - Flip: ppt_shape(operation='flip', path='file.pptx', slideIndex=0, shapeIndex=0, flipHorizontal=true)")]
     public object Execute(
         [Description(
-            "Operation: get, get_details, delete, edit, set_format, clear_format, group, ungroup, copy, reorder, align, flip")]
+            "Operation: get_shapes, get_shape_details, delete, edit, set_format, clear_format, group, ungroup, copy, reorder, align, flip")]
         string operation,
         [Description("Presentation file path (required if no sessionId)")]
         string? path = null,
@@ -166,7 +166,7 @@ Usage examples:
     {
         using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
-        var handlerOperation = MapOperationToHandler(operation);
+        var handlerOperation = operation;
         var parameters = BuildParameters(operation, slideIndex, shapeIndex, shapeIndices, x, y, width, height,
             rotation, text, fillColor, lineColor, lineWidth, clearFill, clearLine, fromSlide, toSlide, toIndex,
             align, alignToSlide, flipHorizontal, flipVertical);
@@ -186,26 +186,13 @@ Usage examples:
         var result = handler.Execute(operationContext, parameters);
 
         var op = operation.ToLowerInvariant();
-        if (op == "get" || op == "get_details")
+        if (op == "get_shapes" || op == "get_shape_details")
             return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
         return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
-    }
-
-    /// <summary>
-    ///     Maps Tool operation name to Handler operation name.
-    /// </summary>
-    private static string MapOperationToHandler(string operation)
-    {
-        return operation.ToLowerInvariant() switch
-        {
-            "get" => "get_shapes",
-            "get_details" => "get_shape_details",
-            _ => operation
-        };
     }
 
     /// <summary>
@@ -241,7 +228,7 @@ Usage examples:
 
         return operation.ToLowerInvariant() switch
         {
-            "get" or "get_details" or "delete" or "ungroup"
+            "get_shapes" or "get_shape_details" or "delete" or "ungroup"
                 => BuildSlideShapeParameters(parameters, slideIndex, shapeIndex),
             "edit" => BuildEditParameters(parameters, slideIndex, shapeIndex, x, y, width, height, rotation, text),
             "set_format" => BuildSetFormatParameters(parameters, slideIndex, shapeIndex, fillColor, lineColor,

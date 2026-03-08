@@ -69,7 +69,7 @@ public class ExcelPageBreakToolTests : ExcelTestBase
     public void Get_ShouldReturnPageBreaks()
     {
         var workbookPath = CreateWorkbookWithBothPageBreaks("test_get.xlsx");
-        var result = _tool.Execute("get", workbookPath);
+        var result = _tool.Execute("list", workbookPath);
         var data = GetResultData<GetPageBreaksExcelResult>(result);
         Assert.True(data.Count >= 2);
         Assert.True(data.Items.Count >= 2);
@@ -129,7 +129,7 @@ public class ExcelPageBreakToolTests : ExcelTestBase
     [Fact]
     public void Execute_WithNoPathOrSessionId_ShouldThrowException()
     {
-        Assert.ThrowsAny<Exception>(() => _tool.Execute("get"));
+        Assert.ThrowsAny<Exception>(() => _tool.Execute("list"));
     }
 
     #endregion
@@ -169,7 +169,7 @@ public class ExcelPageBreakToolTests : ExcelTestBase
     {
         var workbookPath = CreateWorkbookWithBothPageBreaks("test_session_get.xlsx");
         var sessionId = OpenSession(workbookPath);
-        var result = _tool.Execute("get", sessionId: sessionId);
+        var result = _tool.Execute("list", sessionId: sessionId);
         var data = GetResultData<GetPageBreaksExcelResult>(result);
         Assert.True(data.Count >= 2);
         var output = GetResultOutput<GetPageBreaksExcelResult>(result);
@@ -190,7 +190,7 @@ public class ExcelPageBreakToolTests : ExcelTestBase
     [Fact]
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
-        Assert.Throws<KeyNotFoundException>(() => _tool.Execute("get", sessionId: "invalid_session"));
+        Assert.Throws<KeyNotFoundException>(() => _tool.Execute("list", sessionId: "invalid_session"));
     }
 
     [Fact]
@@ -199,7 +199,7 @@ public class ExcelPageBreakToolTests : ExcelTestBase
         var pathWorkbook = CreateExcelWorkbook("test_path_file.xlsx");
         var sessionWorkbook = CreateWorkbookWithHorizontalPageBreak("test_session_file.xlsx");
         var sessionId = OpenSession(sessionWorkbook);
-        var result = _tool.Execute("get", pathWorkbook, sessionId);
+        var result = _tool.Execute("list", pathWorkbook, sessionId);
         var data = GetResultData<GetPageBreaksExcelResult>(result);
         Assert.True(data.Count >= 1);
     }

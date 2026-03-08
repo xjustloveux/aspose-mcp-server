@@ -241,4 +241,79 @@ public class DocumentSessionTests : IDisposable
     }
 
     #endregion
+
+    #region Usage Scope Tests
+
+    [Fact]
+    public void HasActiveUsers_WhenNoUsage_ShouldBeFalse()
+    {
+        var session = CreateSession();
+
+        Assert.False(session.HasActiveUsers);
+    }
+
+    [Fact]
+    public void AcquireUsage_ShouldSetHasActiveUsersTrue()
+    {
+        var session = CreateSession();
+
+        var scope = session.AcquireUsage();
+
+        Assert.True(session.HasActiveUsers);
+        scope.Dispose();
+    }
+
+    [Fact]
+    public void AcquireUsage_AfterDispose_ShouldReturnToFalse()
+    {
+        var session = CreateSession();
+
+        var scope = session.AcquireUsage();
+        Assert.True(session.HasActiveUsers);
+
+        scope.Dispose();
+        Assert.False(session.HasActiveUsers);
+    }
+
+    [Fact]
+    public void AcquireUsage_MultipleConcurrent_ShouldTrackAll()
+    {
+        var session = CreateSession();
+
+        var scope1 = session.AcquireUsage();
+        var scope2 = session.AcquireUsage();
+        Assert.True(session.HasActiveUsers);
+
+        scope1.Dispose();
+        Assert.True(session.HasActiveUsers);
+
+        scope2.Dispose();
+        Assert.False(session.HasActiveUsers);
+    }
+
+    [Fact]
+    public void AcquireUsage_DoubleDispose_ShouldBeIdempotent()
+    {
+        var session = CreateSession();
+
+        var scope = session.AcquireUsage();
+        scope.Dispose();
+        scope.Dispose();
+
+        Assert.False(session.HasActiveUsers);
+    }
+
+    [Fact]
+    public void AcquireUsage_OnDisposedSession_ShouldThrow()
+    {
+        var mockDocument = new MockDocument();
+        var session = new DocumentSession("sess_usage_disposed", "test.docx", DocumentType.Word, mockDocument,
+            "readwrite");
+
+        session.Dispose();
+
+        Assert.Throws<ObjectDisposedException>(() => session.AcquireUsage());
+    }
+
+    #endregion
 }

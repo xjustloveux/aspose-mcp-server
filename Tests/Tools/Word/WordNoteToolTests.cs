@@ -53,13 +53,13 @@ public class WordNoteToolTests : WordTestBase
     [Fact]
     public void GetFootnotes_ShouldReturnFootnotesFromFile()
     {
-        var docPath = CreateWordDocument("test_get_footnotes.docx");
+        var docPath = CreateWordDocument("test_list_footnotes.docx");
         var doc = new Document(docPath);
         var builder = new DocumentBuilder(doc);
         builder.Write("Text");
         builder.InsertFootnote(FootnoteType.Footnote, "Test footnote");
         doc.Save(docPath);
-        var result = _tool.Execute("get_footnotes", docPath);
+        var result = _tool.Execute("list_footnotes", docPath);
         var data = GetResultData<GetWordNotesResult>(result);
         Assert.Equal("footnote", data.NoteType);
         Assert.True(data.Count > 0);
@@ -69,13 +69,13 @@ public class WordNoteToolTests : WordTestBase
     [Fact]
     public void GetEndnotes_ShouldReturnEndnotesFromFile()
     {
-        var docPath = CreateWordDocument("test_get_endnotes.docx");
+        var docPath = CreateWordDocument("test_list_endnotes.docx");
         var doc = new Document(docPath);
         var builder = new DocumentBuilder(doc);
         builder.Write("Text");
         builder.InsertFootnote(FootnoteType.Endnote, "Test endnote");
         doc.Save(docPath);
-        var result = _tool.Execute("get_endnotes", docPath);
+        var result = _tool.Execute("list_endnotes", docPath);
         var data = GetResultData<GetWordNotesResult>(result);
         Assert.Equal("endnote", data.NoteType);
         Assert.True(data.Count > 0);
@@ -187,7 +187,7 @@ public class WordNoteToolTests : WordTestBase
     [Fact]
     public void Execute_WithNoPathOrSessionId_ShouldThrowException()
     {
-        Assert.ThrowsAny<Exception>(() => _tool.Execute("get_footnotes"));
+        Assert.ThrowsAny<Exception>(() => _tool.Execute("list_footnotes"));
     }
 
     #endregion
@@ -197,7 +197,7 @@ public class WordNoteToolTests : WordTestBase
     [Fact]
     public void GetFootnotes_WithSessionId_ShouldReturnFootnotes()
     {
-        var docPath = CreateWordDocument("test_session_get_footnotes.docx");
+        var docPath = CreateWordDocument("test_session_list_footnotes.docx");
         var doc = new Document(docPath);
         var builder = new DocumentBuilder(doc);
         builder.Write("Text");
@@ -205,7 +205,7 @@ public class WordNoteToolTests : WordTestBase
         doc.Save(docPath);
 
         var sessionId = OpenSession(docPath);
-        var result = _tool.Execute("get_footnotes", sessionId: sessionId);
+        var result = _tool.Execute("list_footnotes", sessionId: sessionId);
         var data = GetResultData<GetWordNotesResult>(result);
         Assert.Equal("footnote", data.NoteType);
         Assert.Contains(data.Notes, n => n.Text.Contains("Session footnote"));
@@ -216,7 +216,7 @@ public class WordNoteToolTests : WordTestBase
     [Fact]
     public void GetEndnotes_WithSessionId_ShouldReturnEndnotes()
     {
-        var docPath = CreateWordDocument("test_session_get_endnotes.docx");
+        var docPath = CreateWordDocument("test_session_list_endnotes.docx");
         var doc = new Document(docPath);
         var builder = new DocumentBuilder(doc);
         builder.Write("Text");
@@ -224,7 +224,7 @@ public class WordNoteToolTests : WordTestBase
         doc.Save(docPath);
 
         var sessionId = OpenSession(docPath);
-        var result = _tool.Execute("get_endnotes", sessionId: sessionId);
+        var result = _tool.Execute("list_endnotes", sessionId: sessionId);
         var data = GetResultData<GetWordNotesResult>(result);
         Assert.Equal("endnote", data.NoteType);
         Assert.Contains(data.Notes, n => n.Text.Contains("Session endnote"));
@@ -355,7 +355,7 @@ public class WordNoteToolTests : WordTestBase
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
         Assert.Throws<KeyNotFoundException>(() =>
-            _tool.Execute("get_footnotes", sessionId: "invalid_session_id"));
+            _tool.Execute("list_footnotes", sessionId: "invalid_session_id"));
     }
 
     [Fact]
@@ -376,7 +376,7 @@ public class WordNoteToolTests : WordTestBase
         doc2.Save(docPath2);
 
         var sessionId = OpenSession(docPath2);
-        var result = _tool.Execute("get_footnotes", docPath1, sessionId);
+        var result = _tool.Execute("list_footnotes", docPath1, sessionId);
         var data = GetResultData<GetWordNotesResult>(result);
         Assert.Contains(data.Notes, n => n.Text.Contains("Session footnote"));
         Assert.DoesNotContain(data.Notes, n => n.Text.Contains("Path footnote"));

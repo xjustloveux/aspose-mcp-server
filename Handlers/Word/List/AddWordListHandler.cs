@@ -24,7 +24,7 @@ internal record ListResult(WordList List, bool IsContinuing);
 public class AddWordListHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "add_list";
+    public override string Operation => "add";
 
     /// <summary>
     ///     Adds a new list with the specified items and formatting.

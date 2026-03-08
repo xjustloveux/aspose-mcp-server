@@ -13,7 +13,7 @@ namespace AsposeMcpServer.Handlers.Pdf.Info;
 public class GetPdfStatisticsHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "get_statistics";
+    public override string Operation => "statistics";
 
     /// <summary>
     ///     Retrieves statistics about the PDF document.

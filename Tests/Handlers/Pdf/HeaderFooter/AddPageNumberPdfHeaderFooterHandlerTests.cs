@@ -16,7 +16,7 @@ public class AddPageNumberPdfHeaderFooterHandlerTests : PdfHandlerTestBase
     [Fact]
     public void Operation_Returns_AddPageNumber()
     {
-        Assert.Equal("add_page_number", _handler.Operation);
+        Assert.Equal("add_number", _handler.Operation);
     }
 
     #endregion

@@ -17,7 +17,7 @@ public class RemoveEmbeddedPptFontHandlerTests : PptHandlerTestBase
     public void Operation_Returns_RemoveEmbedded()
     {
         SkipIfNotWindows();
-        Assert.Equal("remove_embedded", _handler.Operation);
+        Assert.Equal("remove", _handler.Operation);
     }
 
     #endregion

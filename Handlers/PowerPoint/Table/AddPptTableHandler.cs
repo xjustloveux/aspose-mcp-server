@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Aspose.Slides;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
@@ -61,7 +60,7 @@ public class AddPptTableHandler : OperationHandlerBase<Presentation>
             parameters.GetOptional("y", 100.0),
             parameters.GetOptional("columnWidth", 100.0),
             parameters.GetOptional("rowHeight", 30.0),
-            parameters.GetOptional<string?>("data")
+            parameters.GetOptional<string[][]?>("data")
         );
     }
 
@@ -95,27 +94,24 @@ public class AddPptTableHandler : OperationHandlerBase<Presentation>
     /// <param name="p">The table parameters containing data.</param>
     private static void PopulateTableCells(ITable table, TableParameters p)
     {
-        if (!string.IsNullOrEmpty(p.DataJson))
-            PopulateFromJson(table, p);
+        if (p.Data is { Length: > 0 })
+            PopulateFromData(table, p);
         else
             PopulateEmpty(table, p.Rows, p.Columns);
     }
 
     /// <summary>
-    ///     Populates table cells from JSON data.
+    ///     Populates table cells from data array.
     /// </summary>
     /// <param name="table">The table to populate.</param>
     /// <param name="p">The table parameters containing data.</param>
-    private static void PopulateFromJson(ITable table, TableParameters p)
+    private static void PopulateFromData(ITable table, TableParameters p)
     {
-        if (string.IsNullOrEmpty(p.DataJson)) return;
+        if (p.Data == null) return;
 
-        var data = JsonSerializer.Deserialize<string?[][]>(p.DataJson);
-        if (data == null) return;
-
-        for (var row = 0; row < Math.Min(p.Rows, data.Length); row++)
-        for (var col = 0; col < Math.Min(p.Columns, data[row].Length); col++)
-            table[col, row].TextFrame.Text = data[row][col] ?? string.Empty;
+        for (var row = 0; row < Math.Min(p.Rows, p.Data.Length); row++)
+        for (var col = 0; col < Math.Min(p.Columns, p.Data[row].Length); col++)
+            table[col, row].TextFrame.Text = p.Data[row][col];
     }
 
     /// <summary>
@@ -141,7 +137,7 @@ public class AddPptTableHandler : OperationHandlerBase<Presentation>
     /// <param name="Y">The Y position.</param>
     /// <param name="ColumnWidth">The column width.</param>
     /// <param name="RowHeight">The row height.</param>
-    /// <param name="DataJson">The optional data JSON string.</param>
+    /// <param name="Data">The optional 2D array of cell data.</param>
     private sealed record TableParameters(
         int SlideIndex,
         int Rows,
@@ -150,5 +146,5 @@ public class AddPptTableHandler : OperationHandlerBase<Presentation>
         double Y,
         double ColumnWidth,
         double RowHeight,
-        string? DataJson);
+        string[][]? Data);
 }

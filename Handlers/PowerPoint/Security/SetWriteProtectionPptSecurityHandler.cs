@@ -12,7 +12,7 @@ namespace AsposeMcpServer.Handlers.PowerPoint.Security;
 public class SetWriteProtectionPptSecurityHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
-    public override string Operation => "set_write_protection";
+    public override string Operation => "set_write_protect";
 
     /// <summary>
     ///     Sets write protection on the presentation with the specified password.

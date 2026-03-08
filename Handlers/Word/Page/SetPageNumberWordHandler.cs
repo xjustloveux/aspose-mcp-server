@@ -12,7 +12,7 @@ namespace AsposeMcpServer.Handlers.Word.Page;
 public class SetPageNumberWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "set_page_number";
+    public override string Operation => "set_number";
 
     /// <summary>
     ///     Sets page number format and starting number for a section.

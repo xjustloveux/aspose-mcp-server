@@ -14,7 +14,7 @@ namespace AsposeMcpServer.Handlers.Pdf.Info;
 public class GetPdfContentHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "get_content";
+    public override string Operation => "get";
 
     /// <summary>
     ///     Extracts text content from the PDF document.

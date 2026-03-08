@@ -13,7 +13,7 @@ public class GetContentHandlerTests : ExcelHandlerTestBase
     [Fact]
     public void Operation_Returns_GetContent()
     {
-        Assert.Equal("get_content", _handler.Operation);
+        Assert.Equal("get", _handler.Operation);
     }
 
     #endregion

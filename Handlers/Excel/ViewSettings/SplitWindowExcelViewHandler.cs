@@ -13,7 +13,7 @@ namespace AsposeMcpServer.Handlers.Excel.ViewSettings;
 public class SplitWindowExcelViewHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
-    public override string Operation => "split_window";
+    public override string Operation => "split";
 
     /// <summary>
     ///     Splits the window or removes an existing split.

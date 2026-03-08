@@ -16,7 +16,7 @@ public class RemoveWriteProtectionPptSecurityHandlerTests : PptHandlerTestBase
     public void Operation_Returns_RemoveWriteProtection()
     {
         SkipIfNotWindows();
-        Assert.Equal("remove_write_protection", _handler.Operation);
+        Assert.Equal("remove_write_protect", _handler.Operation);
     }
 
     #endregion

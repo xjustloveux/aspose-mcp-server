@@ -67,7 +67,7 @@ public class PptPageSetupToolTests : PptTestBase
         SkipIfNotWindows();
         var pptPath = CreatePresentation("test_numbering_show.pptx");
         var outputPath = CreateTestFilePath("test_numbering_show_output.pptx");
-        var result = _tool.Execute("set_slide_numbering", pptPath, showSlideNumber: true, outputPath: outputPath);
+        var result = _tool.Execute("set_numbering", pptPath, showSlideNumber: true, outputPath: outputPath);
         var data = GetResultData<SuccessResult>(result);
         Assert.StartsWith("Slide numbers", data.Message);
         Assert.True(File.Exists(outputPath));
@@ -147,7 +147,7 @@ public class PptPageSetupToolTests : PptTestBase
         SkipIfNotWindows();
         var pptPath = CreatePresentation("test_session_numbering.pptx");
         var sessionId = OpenSession(pptPath);
-        var result = _tool.Execute("set_slide_numbering", sessionId: sessionId, showSlideNumber: true, firstNumber: 10);
+        var result = _tool.Execute("set_numbering", sessionId: sessionId, showSlideNumber: true, firstNumber: 10);
         var data = GetResultData<SuccessResult>(result);
         Assert.StartsWith("Slide numbers", data.Message);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
@@ -169,7 +169,7 @@ public class PptPageSetupToolTests : PptTestBase
         var pptPath1 = CreatePresentation("test_path_setup.pptx");
         var pptPath2 = CreatePresentation("test_session_setup.pptx");
         var sessionId = OpenSession(pptPath2);
-        _tool.Execute("set_slide_numbering", pptPath1, sessionId, showSlideNumber: true, firstNumber: 99);
+        _tool.Execute("set_numbering", pptPath1, sessionId, showSlideNumber: true, firstNumber: 99);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         Assert.Equal(99, ppt.FirstSlideNumber);
     }

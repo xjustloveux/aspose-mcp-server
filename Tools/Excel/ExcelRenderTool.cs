@@ -68,12 +68,12 @@ public class ExcelRenderTool
     [Description(@"Render Excel worksheets and charts to images. Supports 2 operations: render_sheet, render_chart.
 
 Usage examples:
-- Render sheet: excel_render(operation='render_sheet', path='book.xlsx', outputPath='sheet.png')
-- Render with JPEG: excel_render(operation='render_sheet', path='book.xlsx', outputPath='sheet.jpg', format='jpeg', dpi=300)
+- Render sheet: excel_render(operation='render', path='book.xlsx', outputPath='sheet.png')
+- Render with JPEG: excel_render(operation='render', path='book.xlsx', outputPath='sheet.jpg', format='jpeg', dpi=300)
 - Render chart: excel_render(operation='render_chart', path='book.xlsx', outputPath='chart.png', chartIndex=0)")]
     public object Execute(
         [Description(@"Operation to perform.
-- 'render_sheet': Render worksheet to image (required params: outputPath)
+- 'render': Render worksheet to image (required params: outputPath)
 - 'render_chart': Render chart to image (required params: outputPath, chartIndex)")]
         string operation,
         [Description("Excel file path (required if no sessionId)")]
@@ -126,7 +126,7 @@ Usage examples:
 
         return operation.ToLowerInvariant() switch
         {
-            "render_sheet" => BuildRenderSheetParameters(parameters, dpi),
+            "render" => BuildRenderSheetParameters(parameters, dpi),
             "render_chart" => BuildRenderChartParameters(parameters, chartIndex),
             _ => parameters
         };

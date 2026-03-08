@@ -14,7 +14,7 @@ namespace AsposeMcpServer.Handlers.Pdf.HeaderFooter;
 public class AddPageNumberPdfHeaderFooterHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "add_page_number";
+    public override string Operation => "add_number";
 
     /// <summary>
     ///     Adds page number stamps to the header or footer of specified pages.

@@ -14,7 +14,7 @@ namespace AsposeMcpServer.Handlers.Word.Render;
 public class RenderThumbnailWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "render_thumbnail";
+    public override string Operation => "thumbnail";
 
     /// <summary>
     ///     Renders a thumbnail of the first page of a Word document.
@@ -83,7 +83,7 @@ public class RenderThumbnailWordHandler : OperationHandlerBase<Document>
     }
 
     /// <summary>
-    ///     Parameters for the render_thumbnail operation.
+    ///     Parameters for the thumbnail operation.
     /// </summary>
     /// <param name="Path">The source document file path.</param>
     /// <param name="OutputPath">The output image file path.</param>

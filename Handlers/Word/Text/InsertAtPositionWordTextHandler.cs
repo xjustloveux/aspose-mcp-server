@@ -20,7 +20,7 @@ internal record RunPosition(int RunIndex, int CharacterIndex);
 public class InsertAtPositionWordTextHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "insert_at_position";
+    public override string Operation => "insert";
 
     /// <summary>
     ///     Inserts text at a specific paragraph and character position.

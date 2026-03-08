@@ -62,7 +62,7 @@ public class WordTableTool
     /// <param name="rows">Number of rows (for create).</param>
     /// <param name="columns">Number of columns (for create).</param>
     /// <param name="paragraphIndex">Paragraph index to insert after (-1 for end, for create).</param>
-    /// <param name="tableData">Table data as JSON 2D array (for create).</param>
+    /// <param name="data">Table data as 2D array (for create).</param>
     /// <param name="tableWidth">Table width in points (for create).</param>
     /// <param name="autoFit">Auto-fit table (for create, default: true).</param>
     /// <param name="hasHeader">Header row with alternating colors (for create, default: true).</param>
@@ -77,8 +77,8 @@ public class WordTableTool
     /// <param name="rowIndex">Row index (0-based, for insert_row/delete_row/set_row_height).</param>
     /// <param name="columnIndex">Column index (0-based, for insert_column/delete_column/set_column_width).</param>
     /// <param name="verticalAlignment">Vertical alignment (for create).</param>
-    /// <param name="rowData">Row data as JSON array (for insert_row).</param>
-    /// <param name="columnData">Column data as JSON array (for insert_column).</param>
+    /// <param name="rowData">Row data as array (for insert_row).</param>
+    /// <param name="columnData">Column data as array (for insert_column).</param>
     /// <param name="insertBefore">Insert before target position (for insert_row/insert_column).</param>
     /// <param name="startRow">Start row for merge (for merge_cells).</param>
     /// <param name="endRow">End row for merge (for merge_cells).</param>
@@ -140,7 +140,7 @@ Usage examples:
 
 Notes:
 - All indices are 0-based
-- Use rowData/columnData as JSON arrays to provide data when inserting rows/columns
+- Use rowData/columnData as arrays to provide data when inserting rows/columns
 - Use sectionIndex to specify which section's tables to work with
 - cellColors format: [[row, col, '#RRGGBB'], ...] for per-cell coloring
 - mergeCells format: [{startRow, endRow, startCol, endCol}, ...] for batch merging")]
@@ -163,8 +163,8 @@ Notes:
         int? columns = null,
         [Description("Paragraph index to insert after (-1 for end, for create)")]
         int paragraphIndex = -1,
-        [Description("Table data as JSON 2D array (for create)")]
-        string? tableData = null,
+        [Description("Table data as 2D array (for create)")]
+        string[][]? data = null,
         [Description("Table width in points (for create)")]
         double? tableWidth = null,
         [Description("Auto-fit table (for create, default: true)")]
@@ -193,10 +193,10 @@ Notes:
         int? rowIndex = null,
         [Description("Column index (0-based, for column/cell operations)")]
         int? columnIndex = null,
-        [Description("Row data as JSON array (for insert_row)")]
-        string? rowData = null,
-        [Description("Column data as JSON array (for insert_column)")]
-        string? columnData = null,
+        [Description("Row data as array (for insert_row)")]
+        string[]? rowData = null,
+        [Description("Column data as array (for insert_column)")]
+        string[]? columnData = null,
         [Description("Insert before target position (default: false)")]
         bool insertBefore = false,
         [Description("Start row for merge (0-based)")]
@@ -279,7 +279,7 @@ Notes:
         if (!string.IsNullOrEmpty(effectiveOutputPath))
             SecurityHelper.ValidateFilePath(effectiveOutputPath, nameof(outputPath), true);
 
-        var parameters = BuildParameters(tableIndex, sectionIndex, rows, columns, paragraphIndex, tableData,
+        var parameters = BuildParameters(tableIndex, sectionIndex, rows, columns, paragraphIndex, data,
             tableWidth, autoFit, hasHeader, headerBackgroundColor, cellBackgroundColor, alternatingRowColor,
             rowColors, cellColors, mergeCells, fontName, fontSize, verticalAlignment, rowIndex, columnIndex,
             rowData, columnData, insertBefore, startRow, endRow, startCol, endCol, splitRows, splitCols,
@@ -317,11 +317,11 @@ Notes:
     /// </summary>
     /// <returns>OperationParameters configured with all input values for table operations.</returns>
     private static OperationParameters BuildParameters(
-        int tableIndex, int? sectionIndex, int? rows, int? columns, int paragraphIndex, string? tableData,
+        int tableIndex, int? sectionIndex, int? rows, int? columns, int paragraphIndex, string[][]? data,
         double? tableWidth, bool autoFit, bool hasHeader, string? headerBackgroundColor, string? cellBackgroundColor,
         string? alternatingRowColor, string? rowColors, string? cellColors, string? mergeCells, string? fontName,
-        double? fontSize, string verticalAlignment, int? rowIndex, int? columnIndex, string? rowData,
-        string? columnData, bool insertBefore, int? startRow, int? endRow, int? startCol, int? endCol,
+        double? fontSize, string verticalAlignment, int? rowIndex, int? columnIndex, string[]? rowData,
+        string[]? columnData, bool insertBefore, int? startRow, int? endRow, int? startCol, int? endCol,
         int splitRows, int splitCols, bool applyToRow, bool applyToColumn, bool applyToTable,
         string? backgroundColor, string? alignment, string? verticalAlignmentFormat, double? paddingTop,
         double? paddingBottom, double? paddingLeft, double? paddingRight, string? fontNameAscii,
@@ -338,7 +338,7 @@ Notes:
         parameters.Set("rows", rows);
         parameters.Set("columns", columns);
         parameters.Set("paragraphIndex", paragraphIndex);
-        parameters.Set("tableData", tableData);
+        parameters.Set("tableData", data);
         parameters.Set("tableWidth", tableWidth);
         parameters.Set("autoFit", autoFit);
         parameters.Set("hasHeader", hasHeader);

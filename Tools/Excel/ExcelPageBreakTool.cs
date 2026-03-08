@@ -45,7 +45,7 @@ public class ExcelPageBreakTool
     }
 
     /// <summary>
-    ///     Executes an Excel page break operation (add_horizontal, add_vertical, remove, clear, get).
+    ///     Executes an Excel page break operation (add_horizontal, add_vertical, remove, clear, list).
     /// </summary>
     /// <param name="operation">The operation to perform.</param>
     /// <param name="path">Excel file path (required if no sessionId).</param>
@@ -66,21 +66,21 @@ public class ExcelPageBreakTool
         OpenWorld = false,
         ReadOnly = false,
         UseStructuredContent = true)]
-    [Description(@"Manage Excel page breaks. Supports 5 operations: add_horizontal, add_vertical, remove, clear, get.
+    [Description(@"Manage Excel page breaks. Supports 5 operations: add_horizontal, add_vertical, remove, clear, list.
 
 Usage examples:
 - Add horizontal: excel_page_break(operation='add_horizontal', path='book.xlsx', row=10)
 - Add vertical: excel_page_break(operation='add_vertical', path='book.xlsx', column=5)
 - Remove: excel_page_break(operation='remove', path='book.xlsx', breakType='horizontal', breakIndex=0)
 - Clear all: excel_page_break(operation='clear', path='book.xlsx')
-- Get: excel_page_break(operation='get', path='book.xlsx')")]
+- List: excel_page_break(operation='list', path='book.xlsx')")]
     public object Execute(
         [Description(@"Operation to perform.
 - 'add_horizontal': Add horizontal page break (required params: row)
 - 'add_vertical': Add vertical page break (required params: column)
 - 'remove': Remove a page break (required params: breakType, breakIndex)
-- 'clear': Clear page breaks (optional: breakType defaults to 'all')
-- 'get': Get all page breaks")]
+- 'clear': Clear page breaks (optional: breakType defaults to 'list')
+- 'list': List all page breaks")]
         string operation,
         [Description("Excel file path (required if no sessionId)")]
         string? path = null,
@@ -117,7 +117,7 @@ Usage examples:
 
         var result = handler.Execute(operationContext, parameters);
 
-        if (string.Equals(operation, "get", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(operation, "list", StringComparison.OrdinalIgnoreCase))
             return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)

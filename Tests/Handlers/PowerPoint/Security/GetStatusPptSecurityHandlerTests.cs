@@ -17,7 +17,7 @@ public class GetStatusPptSecurityHandlerTests : PptHandlerTestBase
     public void Operation_Returns_GetStatus()
     {
         SkipIfNotWindows();
-        Assert.Equal("get_status", _handler.Operation);
+        Assert.Equal("status", _handler.Operation);
     }
 
     #endregion

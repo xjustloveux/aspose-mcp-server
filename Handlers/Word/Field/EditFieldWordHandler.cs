@@ -12,7 +12,7 @@ namespace AsposeMcpServer.Handlers.Word.Field;
 public class EditFieldWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "edit_field";
+    public override string Operation => "edit";
 
     /// <summary>
     ///     Edits a field's code, lock state, or triggers an update.
@@ -128,7 +128,7 @@ public class EditFieldWordHandler : OperationHandlerBase<Document>
         var updateFieldAfter = parameters.GetOptional("updateField", true);
 
         if (!fieldIndex.HasValue)
-            throw new ArgumentException("fieldIndex is required for edit_field operation");
+            throw new ArgumentException("fieldIndex is required for edit operation");
 
         return new EditFieldParameters(fieldIndex.Value, fieldCode, lockField, unlockField, updateFieldAfter);
     }

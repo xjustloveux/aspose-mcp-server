@@ -12,7 +12,7 @@ namespace AsposeMcpServer.Handlers.PowerPoint.Slide;
 public class GetPptSlidesInfoHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
-    public override string Operation => "get_info";
+    public override string Operation => "get";
 
     /// <summary>
     ///     Gets information about all slides in the presentation.

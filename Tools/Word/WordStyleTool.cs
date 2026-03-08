@@ -44,37 +44,37 @@ public class WordStyleTool
     }
 
     /// <summary>
-    ///     Executes a Word style operation (get_styles, create_style, apply_style, copy_styles).
+    ///     Executes a Word style operation (list, create, apply, copy).
     /// </summary>
-    /// <param name="operation">The operation to perform: get_styles, create_style, apply_style, copy_styles.</param>
+    /// <param name="operation">The operation to perform: list, create, apply, copy.</param>
     /// <param name="path">Word document file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID for in-memory editing.</param>
     /// <param name="outputPath">Output file path (file mode only).</param>
-    /// <param name="includeBuiltIn">Include built-in styles (for get_styles, default: false).</param>
-    /// <param name="styleName">Style name (for create_style, apply_style).</param>
-    /// <param name="styleType">Style type: paragraph, character, table, list (for create_style, default: paragraph).</param>
-    /// <param name="baseStyle">Base style to inherit from (for create_style).</param>
-    /// <param name="fontName">Font name (for create_style).</param>
-    /// <param name="fontNameAscii">Font name for ASCII characters (for create_style).</param>
-    /// <param name="fontNameFarEast">Font name for Far East characters (for create_style).</param>
-    /// <param name="fontSize">Font size in points (for create_style).</param>
-    /// <param name="bold">Bold text (for create_style).</param>
-    /// <param name="italic">Italic text (for create_style).</param>
-    /// <param name="underline">Underline text (for create_style).</param>
-    /// <param name="color">Text color hex (for create_style).</param>
-    /// <param name="alignment">Paragraph alignment: left, center, right, justify (for create_style).</param>
-    /// <param name="spaceBefore">Space before paragraph in points (for create_style).</param>
-    /// <param name="spaceAfter">Space after paragraph in points (for create_style).</param>
-    /// <param name="lineSpacing">Line spacing multiplier (for create_style).</param>
-    /// <param name="paragraphIndex">Paragraph index (0-based, for apply_style).</param>
-    /// <param name="paragraphIndices">Array of paragraph indices (for apply_style).</param>
-    /// <param name="sectionIndex">Section index (0-based, for apply_style, default: 0).</param>
-    /// <param name="tableIndex">Table index (0-based, for apply_style).</param>
-    /// <param name="applyToAllParagraphs">Apply to all paragraphs (for apply_style, default: false).</param>
-    /// <param name="sourceDocument">Source document path to copy styles from (for copy_styles).</param>
-    /// <param name="styleNames">Array of style names to copy (for copy_styles).</param>
-    /// <param name="overwriteExisting">Overwrite existing styles (for copy_styles, default: false).</param>
-    /// <returns>A message indicating the result of the operation, or JSON data for get_styles.</returns>
+    /// <param name="includeBuiltIn">Include built-in styles (for list, default: false).</param>
+    /// <param name="styleName">Style name (for create, apply).</param>
+    /// <param name="styleType">Style type: paragraph, character, table, list (for create, default: paragraph).</param>
+    /// <param name="baseStyle">Base style to inherit from (for create).</param>
+    /// <param name="fontName">Font name (for create).</param>
+    /// <param name="fontNameAscii">Font name for ASCII characters (for create).</param>
+    /// <param name="fontNameFarEast">Font name for Far East characters (for create).</param>
+    /// <param name="fontSize">Font size in points (for create).</param>
+    /// <param name="bold">Bold text (for create).</param>
+    /// <param name="italic">Italic text (for create).</param>
+    /// <param name="underline">Underline text (for create).</param>
+    /// <param name="color">Text color hex (for create).</param>
+    /// <param name="alignment">Paragraph alignment: left, center, right, justify (for create).</param>
+    /// <param name="spaceBefore">Space before paragraph in points (for create).</param>
+    /// <param name="spaceAfter">Space after paragraph in points (for create).</param>
+    /// <param name="lineSpacing">Line spacing multiplier (for create).</param>
+    /// <param name="paragraphIndex">Paragraph index (0-based, for apply).</param>
+    /// <param name="paragraphIndices">Array of paragraph indices (for apply).</param>
+    /// <param name="sectionIndex">Section index (0-based, for apply, default: 0).</param>
+    /// <param name="tableIndex">Table index (0-based, for apply).</param>
+    /// <param name="applyToAllParagraphs">Apply to all paragraphs (for apply, default: false).</param>
+    /// <param name="sourceDocument">Source document path to copy styles from (for copy).</param>
+    /// <param name="styleNames">Array of style names to copy (for copy).</param>
+    /// <param name="overwriteExisting">Overwrite existing styles (for copy, default: false).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for list.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(
         Name = "word_style",
@@ -85,15 +85,15 @@ public class WordStyleTool
         ReadOnly = false,
         UseStructuredContent = true)]
     [Description(
-        @"Manage styles in Word documents. Supports 4 operations: get_styles, create_style, apply_style, copy_styles.
+        @"Manage styles in Word documents. Supports 4 operations: list, create, apply, copy.
 
 Usage examples:
-- Get styles: word_style(operation='get_styles', path='doc.docx', includeBuiltIn=true)
-- Create style: word_style(operation='create_style', path='doc.docx', styleName='CustomStyle', styleType='paragraph', fontSize=14, bold=true)
-- Apply style: word_style(operation='apply_style', path='doc.docx', styleName='Heading 1', paragraphIndex=0)
-- Copy styles: word_style(operation='copy_styles', path='doc.docx', sourceDocument='template.docx')")]
+- Get styles: word_style(operation='list', path='doc.docx', includeBuiltIn=true)
+- Create style: word_style(operation='create', path='doc.docx', styleName='CustomStyle', styleType='paragraph', fontSize=14, bold=true)
+- Apply style: word_style(operation='apply', path='doc.docx', styleName='Heading 1', paragraphIndex=0)
+- Copy styles: word_style(operation='copy', path='doc.docx', sourceDocument='template.docx')")]
     public object Execute(
-        [Description("Operation: get_styles, create_style, apply_style, copy_styles")]
+        [Description("Operation: list, create, apply, copy")]
         string operation,
         [Description("Document file path (required if no sessionId)")]
         string? path = null,
@@ -101,53 +101,53 @@ Usage examples:
         string? sessionId = null,
         [Description("Output file path (file mode only)")]
         string? outputPath = null,
-        [Description("Include built-in styles (for get_styles, default: false)")]
+        [Description("Include built-in styles (for list, default: false)")]
         bool includeBuiltIn = false,
-        [Description("Style name (for create_style, apply_style)")]
+        [Description("Style name (for create, apply)")]
         string? styleName = null,
-        [Description("Style type: paragraph, character, table, list (for create_style, default: paragraph)")]
+        [Description("Style type: paragraph, character, table, list (for create, default: paragraph)")]
         string styleType = "paragraph",
-        [Description("Base style to inherit from (for create_style)")]
+        [Description("Base style to inherit from (for create)")]
         string? baseStyle = null,
-        [Description("Font name (for create_style)")]
+        [Description("Font name (for create)")]
         string? fontName = null,
-        [Description("Font name for ASCII characters (for create_style)")]
+        [Description("Font name for ASCII characters (for create)")]
         string? fontNameAscii = null,
-        [Description("Font name for Far East characters (for create_style)")]
+        [Description("Font name for Far East characters (for create)")]
         string? fontNameFarEast = null,
-        [Description("Font size in points (for create_style)")]
+        [Description("Font size in points (for create)")]
         double? fontSize = null,
-        [Description("Bold text (for create_style)")]
+        [Description("Bold text (for create)")]
         bool? bold = null,
-        [Description("Italic text (for create_style)")]
+        [Description("Italic text (for create)")]
         bool? italic = null,
-        [Description("Underline text (for create_style)")]
+        [Description("Underline text (for create)")]
         bool? underline = null,
-        [Description("Text color hex (for create_style)")]
+        [Description("Text color hex (for create)")]
         string? color = null,
-        [Description("Paragraph alignment: left, center, right, justify (for create_style)")]
+        [Description("Paragraph alignment: left, center, right, justify (for create)")]
         string? alignment = null,
-        [Description("Space before paragraph in points (for create_style)")]
+        [Description("Space before paragraph in points (for create)")]
         double? spaceBefore = null,
-        [Description("Space after paragraph in points (for create_style)")]
+        [Description("Space after paragraph in points (for create)")]
         double? spaceAfter = null,
-        [Description("Line spacing multiplier (for create_style)")]
+        [Description("Line spacing multiplier (for create)")]
         double? lineSpacing = null,
-        [Description("Paragraph index (0-based, for apply_style)")]
+        [Description("Paragraph index (0-based, for apply)")]
         int? paragraphIndex = null,
-        [Description("Array of paragraph indices (for apply_style)")]
+        [Description("Array of paragraph indices (for apply)")]
         int[]? paragraphIndices = null,
-        [Description("Section index (0-based, for apply_style, default: 0)")]
+        [Description("Section index (0-based, for apply, default: 0)")]
         int sectionIndex = 0,
-        [Description("Table index (0-based, for apply_style)")]
+        [Description("Table index (0-based, for apply)")]
         int? tableIndex = null,
-        [Description("Apply to all paragraphs (for apply_style, default: false)")]
+        [Description("Apply to all paragraphs (for apply, default: false)")]
         bool applyToAllParagraphs = false,
-        [Description("Source document path to copy styles from (for copy_styles)")]
+        [Description("Source document path to copy styles from (for copy)")]
         string? sourceDocument = null,
-        [Description("Array of style names to copy (for copy_styles)")]
+        [Description("Array of style names to copy (for copy)")]
         string[]? styleNames = null,
-        [Description("Overwrite existing styles (for copy_styles, default: false)")]
+        [Description("Overwrite existing styles (for copy, default: false)")]
         bool overwriteExisting = false)
     {
         var parameters = BuildParameters(operation, includeBuiltIn, styleName, styleType, baseStyle, fontName,
@@ -213,19 +213,19 @@ Usage examples:
     {
         return operation.ToLower() switch
         {
-            "get_styles" => BuildGetStylesParameters(includeBuiltIn),
-            "create_style" => BuildCreateStyleParameters(styleName, styleType, baseStyle, fontName, fontNameAscii,
+            "list" => BuildGetStylesParameters(includeBuiltIn),
+            "create" => BuildCreateStyleParameters(styleName, styleType, baseStyle, fontName, fontNameAscii,
                 fontNameFarEast, fontSize, bold, italic, underline, color, alignment, spaceBefore, spaceAfter,
                 lineSpacing),
-            "apply_style" => BuildApplyStyleParameters(styleName, paragraphIndex, paragraphIndices, sectionIndex,
+            "apply" => BuildApplyStyleParameters(styleName, paragraphIndex, paragraphIndices, sectionIndex,
                 tableIndex, applyToAllParagraphs),
-            "copy_styles" => BuildCopyStylesParameters(sourceDocument, styleNames, overwriteExisting),
+            "copy" => BuildCopyStylesParameters(sourceDocument, styleNames, overwriteExisting),
             _ => new OperationParameters()
         };
     }
 
     /// <summary>
-    ///     Builds parameters for the get_styles operation.
+    ///     Builds parameters for the list operation.
     /// </summary>
     /// <param name="includeBuiltIn">Whether to include built-in styles.</param>
     /// <returns>OperationParameters configured for getting styles.</returns>
@@ -237,7 +237,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds parameters for the create_style operation.
+    ///     Builds parameters for the create operation.
     /// </summary>
     /// <param name="styleName">The style name.</param>
     /// <param name="styleType">The style type: paragraph, character, table, list.</param>
@@ -280,7 +280,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds parameters for the apply_style operation.
+    ///     Builds parameters for the apply operation.
     /// </summary>
     /// <param name="styleName">The style name to apply.</param>
     /// <param name="paragraphIndex">The paragraph index (0-based).</param>
@@ -303,7 +303,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds parameters for the copy_styles operation.
+    ///     Builds parameters for the copy operation.
     /// </summary>
     /// <param name="sourceDocument">The source document path to copy styles from.</param>
     /// <param name="styleNames">The array of style names to copy.</param>

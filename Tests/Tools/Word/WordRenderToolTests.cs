@@ -25,7 +25,7 @@ public class WordRenderToolTests : WordTestBase
     {
         var docPath = CreateWordDocumentWithContent("test_render_tool.docx", "Render test content");
         var outputPath = CreateTestFilePath("test_render_output.png");
-        var result = _tool.Execute("render_page", docPath, outputPath, 1);
+        var result = _tool.Execute("render", docPath, outputPath, 1);
         var data = GetResultData<RenderResult>(result);
         Assert.Contains("Page 1", data.Message);
         Assert.Single(data.OutputPaths);
@@ -37,7 +37,7 @@ public class WordRenderToolTests : WordTestBase
     {
         var docPath = CreateWordDocumentWithContent("test_thumb_tool.docx", "Thumbnail test content");
         var outputPath = CreateTestFilePath("test_thumb_output.png");
-        var result = _tool.Execute("render_thumbnail", docPath, outputPath);
+        var result = _tool.Execute("thumbnail", docPath, outputPath);
         var data = GetResultData<RenderResult>(result);
         Assert.Contains("Thumbnail", data.Message);
         Assert.Single(data.OutputPaths);
@@ -49,7 +49,7 @@ public class WordRenderToolTests : WordTestBase
     {
         var docPath = CreateWordDocumentWithContent("test_render_jpeg.docx", "JPEG render");
         var outputPath = CreateTestFilePath("test_render_output.jpeg");
-        var result = _tool.Execute("render_page", docPath, outputPath, 1, "jpeg");
+        var result = _tool.Execute("render", docPath, outputPath, 1, "jpeg");
         var data = GetResultData<RenderResult>(result);
         Assert.Equal("jpeg", data.Format);
     }
@@ -66,7 +66,7 @@ public class WordRenderToolTests : WordTestBase
         doc.Save(docPath);
 
         var outputPath = CreateTestFilePath("test_render_all.png");
-        var result = _tool.Execute("render_page", docPath, outputPath);
+        var result = _tool.Execute("render", docPath, outputPath);
         var data = GetResultData<RenderResult>(result);
         Assert.True(data.OutputPaths.Count >= 2);
     }
@@ -76,7 +76,7 @@ public class WordRenderToolTests : WordTestBase
     {
         var docPath = CreateWordDocumentWithContent("test_render_dpi.docx", "DPI test");
         var outputPath = CreateTestFilePath("test_render_dpi.png");
-        var result = _tool.Execute("render_page", docPath, outputPath, 1, dpi: 300);
+        var result = _tool.Execute("render", docPath, outputPath, 1, dpi: 300);
         var data = GetResultData<RenderResult>(result);
         Assert.NotNull(data);
     }
@@ -86,9 +86,9 @@ public class WordRenderToolTests : WordTestBase
     #region Operation Routing
 
     [Theory]
-    [InlineData("RENDER_PAGE")]
-    [InlineData("Render_Page")]
-    [InlineData("render_page")]
+    [InlineData("RENDER")]
+    [InlineData("Render")]
+    [InlineData("render")]
     public void Operation_ShouldBeCaseInsensitive(string operation)
     {
         var docPath = CreateWordDocumentWithContent($"test_render_case_{operation}.docx", "Test");
@@ -111,7 +111,7 @@ public class WordRenderToolTests : WordTestBase
     public void Execute_WithNoPath_ShouldThrowException()
     {
         Assert.ThrowsAny<Exception>(() =>
-            _tool.Execute("render_page", outputPath: "output.png"));
+            _tool.Execute("render", outputPath: "output.png"));
     }
 
     #endregion

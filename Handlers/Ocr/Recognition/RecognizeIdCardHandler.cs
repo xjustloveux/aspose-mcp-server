@@ -13,7 +13,7 @@ namespace AsposeMcpServer.Handlers.Ocr.Recognition;
 public class RecognizeIdCardHandler : OperationHandlerBase<AsposeOcr>
 {
     /// <inheritdoc />
-    public override string Operation => "recognize_id_card";
+    public override string Operation => "recognize_id";
 
     /// <summary>
     ///     Recognizes text from an ID card image using specialized OCR settings.

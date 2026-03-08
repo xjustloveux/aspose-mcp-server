@@ -15,7 +15,7 @@ namespace AsposeMcpServer.Handlers.Word.Shape;
 public class EditTextBoxContentWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "edit_textbox_content";
+    public override string Operation => "edit_textbox";
 
     /// <summary>
     ///     Edits the content of a textbox.
@@ -123,7 +123,7 @@ public class EditTextBoxContentWordHandler : OperationHandlerBase<Document>
         var clearFormatting = parameters.GetOptional("clearFormatting", false);
 
         if (!textboxIndex.HasValue)
-            throw new ArgumentException("textboxIndex is required for edit_textbox_content operation");
+            throw new ArgumentException("textboxIndex is required for edit_textbox operation");
 
         return new EditTextBoxContentParameters(
             textboxIndex.Value,

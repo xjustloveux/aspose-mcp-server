@@ -23,7 +23,7 @@ internal record SmartArtNodeTarget(ISmartArtNode TargetNode, int RootIndex);
 public class ManageSmartArtNodesHandler : OperationHandlerBase<Presentation>
 {
     /// <inheritdoc />
-    public override string Operation => "manage_nodes";
+    public override string Operation => "manage";
 
     /// <summary>
     ///     Manages SmartArt nodes.

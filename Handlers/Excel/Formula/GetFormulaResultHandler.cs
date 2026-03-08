@@ -13,7 +13,7 @@ namespace AsposeMcpServer.Handlers.Excel.Formula;
 public class GetFormulaResultHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
-    public override string Operation => "get_result";
+    public override string Operation => "result";
 
     /// <summary>
     ///     Gets the calculated result of a formula in a cell.

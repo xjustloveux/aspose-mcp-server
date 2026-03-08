@@ -15,7 +15,7 @@ public class AddCrossReferenceWordHandlerTests : WordHandlerTestBase
     [Fact]
     public void Operation_Returns_AddCrossReference()
     {
-        Assert.Equal("add_cross_reference", _handler.Operation);
+        Assert.Equal("add_xref", _handler.Operation);
     }
 
     #endregion

@@ -16,7 +16,7 @@ public class RestartWordListNumberingHandlerTests : WordHandlerTestBase
     [Fact]
     public void Operation_Returns_RestartNumbering()
     {
-        Assert.Equal("restart_numbering", _handler.Operation);
+        Assert.Equal("restart", _handler.Operation);
     }
 
     #endregion

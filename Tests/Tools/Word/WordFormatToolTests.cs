@@ -26,7 +26,7 @@ public class WordFormatToolTests : WordTestBase
     public void GetRunFormat_ShouldReturnFormatInfoFromFile()
     {
         var docPath = CreateWordDocumentWithContent("test_get_run_format.docx", "Test text");
-        var result = _tool.Execute("get_run_format", docPath, paragraphIndex: 0, runIndex: 0);
+        var result = _tool.Execute("get", docPath, paragraphIndex: 0, runIndex: 0);
         var data = GetResultData<GetRunFormatWordResult>(result);
         Assert.Equal(0, data.ParagraphIndex);
         Assert.Equal(0, data.RunIndex);
@@ -38,7 +38,7 @@ public class WordFormatToolTests : WordTestBase
     {
         var docPath = CreateWordDocumentWithContent("test_set_run_format.docx", "Format this");
         var outputPath = CreateTestFilePath("test_set_run_format_output.docx");
-        _tool.Execute("set_run_format", docPath, outputPath: outputPath,
+        _tool.Execute("set", docPath, outputPath: outputPath,
             paragraphIndex: 0, runIndex: 0, bold: true, fontSize: 14);
         var doc = new Document(outputPath);
         var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
@@ -53,7 +53,7 @@ public class WordFormatToolTests : WordTestBase
     public void GetTabStops_ShouldReturnTabStopsFromFile()
     {
         var docPath = CreateWordDocumentWithContent("test_get_tab_stops.docx", "Test");
-        var result = _tool.Execute("get_tab_stops", docPath, paragraphIndex: 0);
+        var result = _tool.Execute("get_tabs", docPath, paragraphIndex: 0);
         var data = GetResultData<GetTabStopsWordResult>(result);
         Assert.NotNull(data.TabStops);
         Assert.Equal(0, data.SectionIndex);
@@ -64,7 +64,7 @@ public class WordFormatToolTests : WordTestBase
     {
         var docPath = CreateWordDocumentWithContent("test_set_border.docx", "Test paragraph");
         var outputPath = CreateTestFilePath("test_set_border_output.docx");
-        _tool.Execute("set_paragraph_border", docPath, outputPath: outputPath,
+        _tool.Execute("set_border", docPath, outputPath: outputPath,
             paragraphIndex: 0, borderPosition: "all", lineStyle: "single", lineWidth: 1.0);
         Assert.True(File.Exists(outputPath));
         var doc = new Document(outputPath);
@@ -76,7 +76,7 @@ public class WordFormatToolTests : WordTestBase
     {
         var docPath = CreateWordDocumentWithContent("test_add_tab_stop.docx", "Test text with tab");
         var outputPath = CreateTestFilePath("test_add_tab_stop_output.docx");
-        _tool.Execute("add_tab_stop", docPath, outputPath: outputPath,
+        _tool.Execute("add_tab", docPath, outputPath: outputPath,
             paragraphIndex: 0, tabPosition: 72.0, tabAlignment: "left", tabLeader: "none");
         Assert.True(File.Exists(outputPath));
     }
@@ -94,7 +94,7 @@ public class WordFormatToolTests : WordTestBase
         }
 
         var outputPath = CreateTestFilePath("test_clear_tab_stops_output.docx");
-        _tool.Execute("clear_tab_stops", docPath, outputPath: outputPath, paragraphIndex: 0);
+        _tool.Execute("clear_tabs", docPath, outputPath: outputPath, paragraphIndex: 0);
         var resultDoc = new Document(outputPath);
         var resultParagraphs = GetParagraphs(resultDoc);
         Assert.Equal(0, resultParagraphs[0].ParagraphFormat.TabStops.Count);
@@ -105,9 +105,9 @@ public class WordFormatToolTests : WordTestBase
     #region Operation Routing
 
     [Theory]
-    [InlineData("GET_RUN_FORMAT")]
-    [InlineData("Get_Run_Format")]
-    [InlineData("get_run_format")]
+    [InlineData("GET")]
+    [InlineData("Get")]
+    [InlineData("get")]
     public void Operation_ShouldBeCaseInsensitive(string operation)
     {
         var docPath = CreateWordDocumentWithContent($"test_case_{operation.Replace("_", "")}.docx", "Test");
@@ -128,7 +128,7 @@ public class WordFormatToolTests : WordTestBase
     [Fact]
     public void Execute_WithNoPathOrSessionId_ShouldThrowException()
     {
-        Assert.ThrowsAny<Exception>(() => _tool.Execute("get_run_format", paragraphIndex: 0, runIndex: 0));
+        Assert.ThrowsAny<Exception>(() => _tool.Execute("get", paragraphIndex: 0, runIndex: 0));
     }
 
     #endregion
@@ -140,7 +140,7 @@ public class WordFormatToolTests : WordTestBase
     {
         var docPath = CreateWordDocumentWithContent("test_session_get_format.docx", "Session text");
         var sessionId = OpenSession(docPath);
-        var result = _tool.Execute("get_run_format", sessionId: sessionId, paragraphIndex: 0, runIndex: 0);
+        var result = _tool.Execute("get", sessionId: sessionId, paragraphIndex: 0, runIndex: 0);
         var data = GetResultData<GetRunFormatWordResult>(result);
         Assert.NotNull(data.FontName);
         var output = GetResultOutput<GetRunFormatWordResult>(result);
@@ -152,7 +152,7 @@ public class WordFormatToolTests : WordTestBase
     {
         var docPath = CreateWordDocumentWithContent("test_session_set_format.docx", "Format this text");
         var sessionId = OpenSession(docPath);
-        var result = _tool.Execute("set_run_format", sessionId: sessionId,
+        var result = _tool.Execute("set", sessionId: sessionId,
             paragraphIndex: 0, runIndex: 0, bold: true, italic: true, fontSize: 16);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.Equal(sessionId, output.SessionId);
@@ -171,7 +171,7 @@ public class WordFormatToolTests : WordTestBase
     {
         var docPath = CreateWordDocumentWithContent("test_session_add_tab.docx", "Tab test");
         var sessionId = OpenSession(docPath);
-        var result = _tool.Execute("add_tab_stop", sessionId: sessionId,
+        var result = _tool.Execute("add_tab", sessionId: sessionId,
             paragraphIndex: 0, tabPosition: 72.0, tabAlignment: "left", tabLeader: "none");
         var output = GetResultOutput<SuccessResult>(result);
         Assert.Equal(sessionId, output.SessionId);
@@ -186,7 +186,7 @@ public class WordFormatToolTests : WordTestBase
     {
         var docPath = CreateWordDocumentWithContent("test_session_set_border.docx", "Border test");
         var sessionId = OpenSession(docPath);
-        var result = _tool.Execute("set_paragraph_border", sessionId: sessionId,
+        var result = _tool.Execute("set_border", sessionId: sessionId,
             paragraphIndex: 0, borderPosition: "all", lineStyle: "single", lineWidth: 1.5);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.Equal(sessionId, output.SessionId);
@@ -208,7 +208,7 @@ public class WordFormatToolTests : WordTestBase
         }
 
         var sessionId = OpenSession(docPath);
-        var result = _tool.Execute("clear_tab_stops", sessionId: sessionId, paragraphIndex: 0);
+        var result = _tool.Execute("clear_tabs", sessionId: sessionId, paragraphIndex: 0);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.Equal(sessionId, output.SessionId);
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
@@ -221,7 +221,7 @@ public class WordFormatToolTests : WordTestBase
     {
         var docPath = CreateWordDocumentWithContent("test_session_get_tabs.docx", "Tab test");
         var sessionId = OpenSession(docPath);
-        var result = _tool.Execute("get_tab_stops", sessionId: sessionId, paragraphIndex: 0);
+        var result = _tool.Execute("get_tabs", sessionId: sessionId, paragraphIndex: 0);
         var data = GetResultData<GetTabStopsWordResult>(result);
         Assert.NotNull(data.TabStops);
         var output = GetResultOutput<GetTabStopsWordResult>(result);
@@ -232,7 +232,7 @@ public class WordFormatToolTests : WordTestBase
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
         Assert.Throws<KeyNotFoundException>(() =>
-            _tool.Execute("get_run_format", sessionId: "invalid_session_id", paragraphIndex: 0, runIndex: 0));
+            _tool.Execute("get", sessionId: "invalid_session_id", paragraphIndex: 0, runIndex: 0));
     }
 
     [Fact]
@@ -241,7 +241,7 @@ public class WordFormatToolTests : WordTestBase
         var docPath1 = CreateWordDocumentWithContent("test_path_format.docx", "PathContent");
         var docPath2 = CreateWordDocumentWithContent("test_session_format.docx", "SessionContent");
         var sessionId = OpenSession(docPath2);
-        var result = _tool.Execute("get_run_format", docPath1, sessionId, paragraphIndex: 0, runIndex: 0);
+        var result = _tool.Execute("get", docPath1, sessionId, paragraphIndex: 0, runIndex: 0);
         var data = GetResultData<GetRunFormatWordResult>(result);
         Assert.NotNull(data.FontName);
         var output = GetResultOutput<GetRunFormatWordResult>(result);

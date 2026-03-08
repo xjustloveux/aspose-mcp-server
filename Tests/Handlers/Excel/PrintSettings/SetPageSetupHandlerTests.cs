@@ -14,7 +14,7 @@ public class SetPageSetupHandlerTests : ExcelHandlerTestBase
     [Fact]
     public void Operation_Returns_SetPageSetup()
     {
-        Assert.Equal("set_page_setup", _handler.Operation);
+        Assert.Equal("set_page", _handler.Operation);
     }
 
     #endregion

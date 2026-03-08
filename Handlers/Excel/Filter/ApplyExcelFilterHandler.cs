@@ -32,6 +32,20 @@ public class ApplyExcelFilterHandler : OperationHandlerBase<Workbook>
         var worksheet = ExcelHelper.GetWorksheet(workbook, applyFilterParams.SheetIndex);
 
         ExcelHelper.CreateRange(worksheet.Cells, applyFilterParams.Range);
+
+        var targetRange = worksheet.Cells.CreateRange(applyFilterParams.Range);
+        foreach (var table in worksheet.ListObjects)
+        {
+            var tableRange = table.DataRange;
+            if (targetRange.FirstRow <= tableRange.FirstRow + tableRange.RowCount - 1 &&
+                targetRange.FirstRow + targetRange.RowCount - 1 >= tableRange.FirstRow &&
+                targetRange.FirstColumn <= tableRange.FirstColumn + tableRange.ColumnCount - 1 &&
+                targetRange.FirstColumn + targetRange.ColumnCount - 1 >= tableRange.FirstColumn)
+                throw new InvalidOperationException(
+                    $"Cannot apply auto filter: the range '{applyFilterParams.Range}' overlaps with an existing Table '{table.DisplayName}'. " +
+                    "Tables have their own built-in filter. Remove the table first or use the table's filter instead.");
+        }
+
         worksheet.AutoFilter.Range = applyFilterParams.Range;
 
         MarkModified(context);

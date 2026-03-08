@@ -14,7 +14,7 @@ public class SetTabColorExcelViewHandlerTests : ExcelHandlerTestBase
     [Fact]
     public void Operation_Returns_SetTabColor()
     {
-        Assert.Equal("set_tab_color", _handler.Operation);
+        Assert.Equal("set_tab", _handler.Operation);
     }
 
     #endregion

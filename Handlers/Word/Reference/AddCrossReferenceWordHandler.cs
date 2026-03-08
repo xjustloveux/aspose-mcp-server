@@ -12,7 +12,7 @@ namespace AsposeMcpServer.Handlers.Word.Reference;
 public class AddCrossReferenceWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "add_cross_reference";
+    public override string Operation => "add_xref";
 
     /// <summary>
     ///     Adds a cross-reference (REF field) to the document.
@@ -56,9 +56,9 @@ public class AddCrossReferenceWordHandler : OperationHandlerBase<Document>
         var targetName = parameters.GetOptional<string?>("targetName");
 
         if (string.IsNullOrEmpty(referenceType))
-            throw new ArgumentException("referenceType is required for add_cross_reference operation");
+            throw new ArgumentException("referenceType is required for add_xref operation");
         if (string.IsNullOrEmpty(targetName))
-            throw new ArgumentException("targetName is required for add_cross_reference operation");
+            throw new ArgumentException("targetName is required for add_xref operation");
 
         return new AddCrossReferenceParameters(
             referenceType,

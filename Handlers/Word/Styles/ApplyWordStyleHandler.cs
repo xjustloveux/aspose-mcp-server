@@ -15,7 +15,7 @@ namespace AsposeMcpServer.Handlers.Word.Styles;
 public class ApplyWordStyleHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "apply_style";
+    public override string Operation => "apply";
 
     /// <summary>
     ///     Applies a style to paragraphs or tables.
@@ -31,7 +31,7 @@ public class ApplyWordStyleHandler : OperationHandlerBase<Document>
         var p = ExtractApplyWordStyleParameters(parameters);
 
         if (string.IsNullOrEmpty(p.StyleName))
-            throw new ArgumentException("styleName is required for apply_style operation");
+            throw new ArgumentException("styleName is required for apply operation");
 
         var doc = context.Document;
         var style = doc.Styles[p.StyleName];

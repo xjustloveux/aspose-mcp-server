@@ -13,7 +13,7 @@ public class AddPageBreakWordHandlerTests : WordHandlerTestBase
     [Fact]
     public void Operation_Returns_AddPageBreak()
     {
-        Assert.Equal("add_page_break", _handler.Operation);
+        Assert.Equal("add_break", _handler.Operation);
     }
 
     #endregion

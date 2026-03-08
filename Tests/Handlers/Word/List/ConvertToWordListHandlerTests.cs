@@ -15,7 +15,7 @@ public class ConvertToWordListHandlerTests : WordHandlerTestBase
     [Fact]
     public void Operation_Returns_ConvertToList()
     {
-        Assert.Equal("convert_to_list", _handler.Operation);
+        Assert.Equal("convert", _handler.Operation);
     }
 
     #endregion

@@ -82,19 +82,19 @@ public class ExcelPrintSettingsTool
         @"Manage Excel print settings. Supports 4 operations: set_print_area, set_print_titles, set_page_setup, set_all.
 
 Usage examples:
-- Set print area: excel_print_settings(operation='set_print_area', path='book.xlsx', range='A1:D10')
-- Set multiple print areas: excel_print_settings(operation='set_print_area', path='book.xlsx', range='A1:D10,F1:H10')
-- Set print titles: excel_print_settings(operation='set_print_titles', path='book.xlsx', rows='1:1', columns='A:A')
-- Set page setup: excel_print_settings(operation='set_page_setup', path='book.xlsx', orientation='Landscape', paperSize='A4')
-- Set margins: excel_print_settings(operation='set_page_setup', path='book.xlsx', leftMargin=0.5, topMargin=0.75)
-- Set fit to page: excel_print_settings(operation='set_all', path='book.xlsx', fitToPage=true, fitToPagesWide=1, fitToPagesTall=0)
-- Set all: excel_print_settings(operation='set_all', path='book.xlsx', range='A1:D10', orientation='Portrait')")]
+- Set print area: excel_print_settings(operation='set_area', path='book.xlsx', range='A1:D10')
+- Set multiple print areas: excel_print_settings(operation='set_area', path='book.xlsx', range='A1:D10,F1:H10')
+- Set print titles: excel_print_settings(operation='set_titles', path='book.xlsx', rows='1:1', columns='A:A')
+- Set page setup: excel_print_settings(operation='set_page', path='book.xlsx', orientation='Landscape', paperSize='A4')
+- Set margins: excel_print_settings(operation='set_page', path='book.xlsx', leftMargin=0.5, topMargin=0.75)
+- Set fit to page: excel_print_settings(operation='set', path='book.xlsx', fitToPage=true, fitToPagesWide=1, fitToPagesTall=0)
+- Set all: excel_print_settings(operation='set', path='book.xlsx', range='A1:D10', orientation='Portrait')")]
     public object Execute(
         [Description(@"Operation to perform.
-- 'set_print_area': Set print area (required params: path, range or clearPrintArea)
-- 'set_print_titles': Set print titles (required params: path)
-- 'set_page_setup': Set page setup (required params: path)
-- 'set_all': Set all print settings (required params: path)")]
+- 'set_area': Set print area (required params: path, range or clearPrintArea)
+- 'set_titles': Set print titles (required params: path)
+- 'set_page': Set page setup (required params: path)
+- 'set': Set all print settings (required params: path)")]
         string operation,
         [Description("Excel file path (required if no sessionId)")]
         string? path = null,
@@ -198,11 +198,11 @@ Usage examples:
 
         return operation.ToLowerInvariant() switch
         {
-            "set_print_area" => BuildSetPrintAreaParameters(parameters, range, clearPrintArea),
-            "set_print_titles" => BuildSetPrintTitlesParameters(parameters, rows, columns, clearTitles),
-            "set_page_setup" => BuildSetPageSetupParameters(parameters, orientation, paperSize, leftMargin, rightMargin,
+            "set_area" => BuildSetPrintAreaParameters(parameters, range, clearPrintArea),
+            "set_titles" => BuildSetPrintTitlesParameters(parameters, rows, columns, clearTitles),
+            "set_page" => BuildSetPageSetupParameters(parameters, orientation, paperSize, leftMargin, rightMargin,
                 topMargin, bottomMargin, header, footer, fitToPage, fitToPagesWide, fitToPagesTall),
-            "set_all" => BuildSetAllParameters(parameters, range, rows, columns, orientation, paperSize, leftMargin,
+            "set" => BuildSetAllParameters(parameters, range, rows, columns, orientation, paperSize, leftMargin,
                 rightMargin, topMargin, bottomMargin, header, footer, fitToPage, fitToPagesWide, fitToPagesTall),
             _ => parameters
         };

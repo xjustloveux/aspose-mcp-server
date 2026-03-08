@@ -46,7 +46,7 @@ public class ExcelViewSettingsToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbook("test_set_tab_color.xlsx");
         var outputPath = CreateTestFilePath("test_set_tab_color_output.xlsx");
-        _tool.Execute("set_tab_color", workbookPath, outputPath: outputPath, color: "FF0000");
+        _tool.Execute("set_tab", workbookPath, outputPath: outputPath, color: "FF0000");
         var workbook = new Workbook(outputPath);
         var tabColor = workbook.Worksheets[0].TabColor.ToArgb() & 0xFFFFFF;
         Assert.Equal(0xFF0000, tabColor);
@@ -57,7 +57,7 @@ public class ExcelViewSettingsToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbookWithData("test_freeze.xlsx", 10, 5);
         var outputPath = CreateTestFilePath("test_freeze_output.xlsx");
-        var result = _tool.Execute("freeze_panes", workbookPath, outputPath: outputPath,
+        var result = _tool.Execute("freeze", workbookPath, outputPath: outputPath,
             freezeRow: 2, freezeColumn: 1);
         var data = GetResultData<SuccessResult>(result);
         Assert.StartsWith("Panes frozen", data.Message);
@@ -122,7 +122,7 @@ public class ExcelViewSettingsToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbookWithData("test_session_freeze.xlsx", 10, 5);
         var sessionId = OpenSession(workbookPath);
-        var result = _tool.Execute("freeze_panes", sessionId: sessionId, freezeRow: 2, freezeColumn: 1);
+        var result = _tool.Execute("freeze", sessionId: sessionId, freezeRow: 2, freezeColumn: 1);
         var data = GetResultData<SuccessResult>(result);
         Assert.StartsWith("Panes frozen", data.Message);
         var output = GetResultOutput<SuccessResult>(result);
@@ -198,7 +198,7 @@ public class ExcelViewSettingsToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbookWithData("test_autofit_col.xlsx", 5, 5);
         var outputPath = CreateTestFilePath("test_autofit_col_output.xlsx");
-        var result = _tool.Execute("auto_fit_column", workbookPath, outputPath: outputPath, columnIndex: 0);
+        var result = _tool.Execute("autofit_col", workbookPath, outputPath: outputPath, columnIndex: 0);
         var data = GetResultData<SuccessResult>(result);
         Assert.Contains("auto-fit", data.Message.ToLower());
         Assert.True(File.Exists(outputPath));
@@ -209,7 +209,7 @@ public class ExcelViewSettingsToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbookWithData("test_autofit_row.xlsx", 5, 5);
         var outputPath = CreateTestFilePath("test_autofit_row_output.xlsx");
-        var result = _tool.Execute("auto_fit_row", workbookPath, outputPath: outputPath, rowIndex: 0);
+        var result = _tool.Execute("autofit_row", workbookPath, outputPath: outputPath, rowIndex: 0);
         var data = GetResultData<SuccessResult>(result);
         Assert.Contains("auto-fit", data.Message.ToLower());
         Assert.True(File.Exists(outputPath));
@@ -220,7 +220,7 @@ public class ExcelViewSettingsToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbookWithData("test_split.xlsx", 10, 5);
         var outputPath = CreateTestFilePath("test_split_output.xlsx");
-        var result = _tool.Execute("split_window", workbookPath, outputPath: outputPath, splitRow: 5, splitColumn: 2);
+        var result = _tool.Execute("split", workbookPath, outputPath: outputPath, splitRow: 5, splitColumn: 2);
         var data = GetResultData<SuccessResult>(result);
         Assert.Contains("split", data.Message.ToLower());
         Assert.True(File.Exists(outputPath));
@@ -242,7 +242,7 @@ public class ExcelViewSettingsToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbook("test_set_all.xlsx");
         var outputPath = CreateTestFilePath("test_set_all_output.xlsx");
-        var result = _tool.Execute("set_all", workbookPath, outputPath: outputPath,
+        var result = _tool.Execute("set", workbookPath, outputPath: outputPath,
             zoom: 125, showGridlines: false, showRowColumnHeaders: false, showZeroValues: false);
         var data = GetResultData<SuccessResult>(result);
         Assert.Contains("view settings", data.Message.ToLower());
@@ -255,8 +255,8 @@ public class ExcelViewSettingsToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbookWithData("test_unfreeze.xlsx", 10, 5);
         var outputPath = CreateTestFilePath("test_unfreeze_output.xlsx");
-        _tool.Execute("freeze_panes", workbookPath, outputPath: outputPath, freezeRow: 2, freezeColumn: 1);
-        var result = _tool.Execute("freeze_panes", outputPath, outputPath: outputPath, unfreeze: true);
+        _tool.Execute("freeze", workbookPath, outputPath: outputPath, freezeRow: 2, freezeColumn: 1);
+        var result = _tool.Execute("freeze", outputPath, outputPath: outputPath, unfreeze: true);
         var data = GetResultData<SuccessResult>(result);
         Assert.Contains("unfrozen", data.Message.ToLower());
     }

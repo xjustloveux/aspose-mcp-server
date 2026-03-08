@@ -16,7 +16,7 @@ public class SetSlideNumberingHandlerTests : PptHandlerTestBase
     public void Operation_Returns_SetSlideNumbering()
     {
         SkipIfNotWindows();
-        Assert.Equal("set_slide_numbering", _handler.Operation);
+        Assert.Equal("set_numbering", _handler.Operation);
     }
 
     #endregion

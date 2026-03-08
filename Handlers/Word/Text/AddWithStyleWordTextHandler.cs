@@ -22,7 +22,7 @@ internal record BuilderPositionResult(WordParagraph? TargetParagraph, string War
 public class AddWithStyleWordTextHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "add_with_style";
+    public override string Operation => "add_styled";
 
     /// <summary>
     ///     Adds text with specified style and formatting.

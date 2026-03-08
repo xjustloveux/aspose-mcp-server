@@ -76,7 +76,7 @@ public class PdfPageToolTests : PdfTestBase
     public void GetInfo_ShouldReturnPageInfoFromFile()
     {
         var pdfPath = CreateTestPdf("test_info.pdf");
-        var result = _tool.Execute("get_info", pdfPath);
+        var result = _tool.Execute("info", pdfPath);
         var data = GetResultData<GetPdfPageInfoResult>(result);
         Assert.Equal(2, data.Count);
         Assert.NotNull(data.Items);
@@ -87,7 +87,7 @@ public class PdfPageToolTests : PdfTestBase
     public void GetDetails_ShouldReturnPageDetailsFromFile()
     {
         var pdfPath = CreateTestPdf("test_details.pdf");
-        var result = _tool.Execute("get_details", pdfPath, pageIndex: 1);
+        var result = _tool.Execute("details", pdfPath, pageIndex: 1);
         var data = GetResultData<GetPdfPageDetailsResult>(result);
         Assert.Equal(1, data.PageIndex);
         Assert.True(data.Width > 0);
@@ -123,7 +123,7 @@ public class PdfPageToolTests : PdfTestBase
     [Fact]
     public void Execute_WithNoPathOrSessionId_ShouldThrowException()
     {
-        Assert.ThrowsAny<Exception>(() => _tool.Execute("get_info"));
+        Assert.ThrowsAny<Exception>(() => _tool.Execute("info"));
     }
 
     #endregion
@@ -136,7 +136,7 @@ public class PdfPageToolTests : PdfTestBase
         var pdfPath = CreateTestPdf("test_session_info.pdf");
         var sessionId = OpenSession(pdfPath);
 
-        var result = _tool.Execute("get_info", sessionId: sessionId);
+        var result = _tool.Execute("info", sessionId: sessionId);
         var data = GetResultData<GetPdfPageInfoResult>(result);
 
         Assert.Equal(2, data.Count);
@@ -199,7 +199,7 @@ public class PdfPageToolTests : PdfTestBase
         var pdfPath = CreateTestPdf("test_session_details.pdf");
         var sessionId = OpenSession(pdfPath);
 
-        var result = _tool.Execute("get_details", sessionId: sessionId, pageIndex: 1);
+        var result = _tool.Execute("details", sessionId: sessionId, pageIndex: 1);
         var data = GetResultData<GetPdfPageDetailsResult>(result);
 
         Assert.Equal(1, data.PageIndex);
@@ -210,7 +210,7 @@ public class PdfPageToolTests : PdfTestBase
     [Fact]
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
-        Assert.Throws<KeyNotFoundException>(() => _tool.Execute("get_info", sessionId: "invalid_session"));
+        Assert.Throws<KeyNotFoundException>(() => _tool.Execute("info", sessionId: "invalid_session"));
     }
 
     [Fact]
@@ -220,7 +220,7 @@ public class PdfPageToolTests : PdfTestBase
         var pdfPath2 = CreateTestPdf("test_session_page.pdf", 3);
         var sessionId = OpenSession(pdfPath2);
 
-        var result = _tool.Execute("get_info", pdfPath1, sessionId);
+        var result = _tool.Execute("info", pdfPath1, sessionId);
         var data = GetResultData<GetPdfPageInfoResult>(result);
 
         Assert.Equal(3, data.Count);

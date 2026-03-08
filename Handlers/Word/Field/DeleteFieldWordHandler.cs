@@ -12,7 +12,7 @@ namespace AsposeMcpServer.Handlers.Word.Field;
 public class DeleteFieldWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "delete_field";
+    public override string Operation => "delete";
 
     /// <summary>
     ///     Deletes a field from the document, optionally keeping its result text.
@@ -65,7 +65,7 @@ public class DeleteFieldWordHandler : OperationHandlerBase<Document>
         var keepResult = parameters.GetOptional("keepResult", false);
 
         if (!fieldIndex.HasValue)
-            throw new ArgumentException("fieldIndex is required for delete_field operation");
+            throw new ArgumentException("fieldIndex is required for delete operation");
 
         return new DeleteFieldParameters(fieldIndex.Value, keepResult);
     }

@@ -66,12 +66,12 @@ public class PptDataOperationsTool
     [Description(@"PowerPoint data operations. Supports 3 operations: get_statistics, get_content, get_slide_details.
 
 Usage examples:
-- Get statistics: ppt_data_operations(operation='get_statistics', path='presentation.pptx')
-- Get content: ppt_data_operations(operation='get_content', path='presentation.pptx')
-- Get slide details: ppt_data_operations(operation='get_slide_details', path='presentation.pptx', slideIndex=0)
-- Get slide details with thumbnail: ppt_data_operations(operation='get_slide_details', path='presentation.pptx', slideIndex=0, includeThumbnail=true)")]
+- Get statistics: ppt_data_operations(operation='statistics', path='presentation.pptx')
+- Get content: ppt_data_operations(operation='get', path='presentation.pptx')
+- Get slide details: ppt_data_operations(operation='slide_details', path='presentation.pptx', slideIndex=0)
+- Get slide details with thumbnail: ppt_data_operations(operation='slide_details', path='presentation.pptx', slideIndex=0, includeThumbnail=true)")]
     public object Execute(
-        [Description("Operation: get_statistics, get_content, get_slide_details")]
+        [Description("Operation: statistics, get, slide_details")]
         string operation,
         [Description("Presentation file path (required if no sessionId)")]
         string? path = null,
@@ -113,7 +113,7 @@ Usage examples:
     {
         return operation.ToLowerInvariant() switch
         {
-            "get_slide_details" => BuildGetSlideDetailsParameters(slideIndex, includeThumbnail),
+            "slide_details" => BuildGetSlideDetailsParameters(slideIndex, includeThumbnail),
             _ => new OperationParameters()
         };
     }

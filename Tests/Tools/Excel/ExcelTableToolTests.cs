@@ -99,7 +99,7 @@ public class ExcelTableToolTests : ExcelTestBase
     {
         var workbookPath = CreateWorkbookWithTable("test_total_row.xlsx");
         var outputPath = CreateTestFilePath("test_total_row_output.xlsx");
-        var result = _tool.Execute("add_total_row", workbookPath, tableIndex: 0, outputPath: outputPath);
+        var result = _tool.Execute("add_total", workbookPath, tableIndex: 0, outputPath: outputPath);
         var data = GetResultData<SuccessResult>(result);
         Assert.Contains("total", data.Message, StringComparison.OrdinalIgnoreCase);
         using var workbook = new Workbook(outputPath);
@@ -111,7 +111,7 @@ public class ExcelTableToolTests : ExcelTestBase
     {
         var workbookPath = CreateWorkbookWithTable("test_convert.xlsx");
         var outputPath = CreateTestFilePath("test_convert_output.xlsx");
-        var result = _tool.Execute("convert_to_range", workbookPath, tableIndex: 0, outputPath: outputPath);
+        var result = _tool.Execute("to_range", workbookPath, tableIndex: 0, outputPath: outputPath);
         var data = GetResultData<SuccessResult>(result);
         Assert.Contains("convert", data.Message, StringComparison.OrdinalIgnoreCase);
         using var workbook = new Workbook(outputPath);

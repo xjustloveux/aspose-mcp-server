@@ -22,7 +22,7 @@ internal record CellValueStats(List<double> NumericValues, int NonNumericCount, 
 public class GetStatisticsHandler : OperationHandlerBase<Workbook>
 {
     /// <inheritdoc />
-    public override string Operation => "get_statistics";
+    public override string Operation => "statistics";
 
     /// <summary>
     ///     Gets statistics for a range (count, sum, average, min, max).

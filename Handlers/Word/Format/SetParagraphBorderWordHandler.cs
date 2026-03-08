@@ -14,7 +14,7 @@ namespace AsposeMcpServer.Handlers.Word.Format;
 public class SetParagraphBorderWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "set_paragraph_border";
+    public override string Operation => "set_border";
 
     /// <summary>
     ///     Sets paragraph border properties.

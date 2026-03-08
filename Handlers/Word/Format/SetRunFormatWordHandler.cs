@@ -15,7 +15,7 @@ namespace AsposeMcpServer.Handlers.Word.Format;
 public class SetRunFormatWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "set_run_format";
+    public override string Operation => "set";
 
     /// <summary>
     ///     Sets run format properties.

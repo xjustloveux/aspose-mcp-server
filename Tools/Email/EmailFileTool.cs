@@ -55,19 +55,19 @@ public class EmailFileTool
 
 Usage examples:
 - Create email: email_file(operation='create', outputPath='email.eml', subject='Hello', body='World', from='a@b.com', to='c@d.com')
-- Get email info: email_file(operation='get_info', path='email.eml')
+- Get email info: email_file(operation='get', path='email.eml')
 - Save email: email_file(operation='save', path='email.eml', outputPath='copy.eml')
 - Convert email: email_file(operation='convert', path='email.eml', outputPath='email.msg')
-- Detect format: email_file(operation='detect_format', path='email.eml')
+- Detect format: email_file(operation='detect', path='email.eml')
 
 Supported email formats: EML, MSG, MHTML/MHT, HTML")]
     public object Execute(
         [Description(@"Operation to perform.
 - 'create': Create a new email file (required params: outputPath; optional: subject, body, from, to, isHtml)
-- 'get_info': Load email and return metadata (required params: path)
+- 'get': Load email and return metadata (required params: path)
 - 'save': Save email to a new location (required params: path, outputPath)
 - 'convert': Convert email to another format (required params: path, outputPath)
-- 'detect_format': Detect the format of an email file (required params: path)")]
+- 'detect': Detect the format of an email file (required params: path)")]
         string operation,
         [Description("Input email file path (required for get_info, save, convert, detect_format)")]
         string? path = null,

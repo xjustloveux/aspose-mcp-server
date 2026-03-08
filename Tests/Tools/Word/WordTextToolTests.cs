@@ -91,7 +91,7 @@ public class WordTextToolTests : WordTestBase
         var docPath = CreateWordDocumentWithParagraphs("test_insert_position.docx", "First", "Third");
         var outputPath = CreateTestFilePath("test_insert_position_output.docx");
 
-        _tool.Execute("insert_at_position", docPath, outputPath: outputPath,
+        _tool.Execute("insert", docPath, outputPath: outputPath,
             insertParagraphIndex: 0, charIndex: 0, text: "Second ");
 
         Assert.True(File.Exists(outputPath));
@@ -136,7 +136,7 @@ public class WordTextToolTests : WordTestBase
         doc.Save(docPath);
 
         var outputPath = CreateTestFilePath("test_add_text_with_style_output.docx");
-        _tool.Execute("add_with_style", docPath, outputPath: outputPath,
+        _tool.Execute("add_styled", docPath, outputPath: outputPath,
             text: "Styled Text", styleName: "CustomTextStyle");
 
         var resultDoc = new Document(outputPath);
@@ -246,7 +246,7 @@ public class WordTextToolTests : WordTestBase
         var docPath = CreateWordDocumentWithContent("test_session_insert.docx", "Original text");
         var sessionId = OpenSession(docPath);
 
-        _tool.Execute("insert_at_position", sessionId: sessionId,
+        _tool.Execute("insert", sessionId: sessionId,
             insertParagraphIndex: 0, charIndex: 0, text: "Inserted: ");
 
         var doc = SessionManager.GetDocument<Document>(sessionId);
@@ -281,7 +281,7 @@ public class WordTextToolTests : WordTestBase
         var docPath = CreateWordDocument("test_session_add_style.docx");
         var sessionId = OpenSession(docPath);
 
-        _tool.Execute("add_with_style", sessionId: sessionId,
+        _tool.Execute("add_styled", sessionId: sessionId,
             text: "Styled Session Text", styleName: "Normal");
 
         var doc = SessionManager.GetDocument<Document>(sessionId);

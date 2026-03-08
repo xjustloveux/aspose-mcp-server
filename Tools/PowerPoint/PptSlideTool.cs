@@ -78,7 +78,7 @@ public class PptSlideTool
 Usage examples:
 - Add slide: ppt_slide(operation='add', path='presentation.pptx', layoutType='Blank')
 - Delete slide: ppt_slide(operation='delete', path='presentation.pptx', slideIndex=0)
-- Get info: ppt_slide(operation='get_info', path='presentation.pptx')
+- Get info: ppt_slide(operation='get', path='presentation.pptx')
 - Move slide: ppt_slide(operation='move', path='presentation.pptx', fromIndex=0, toIndex=2)
 - Duplicate slide: ppt_slide(operation='duplicate', path='presentation.pptx', slideIndex=0)
 - Hide slide: ppt_slide(operation='hide', path='presentation.pptx', slideIndex=0, hidden=true)
@@ -88,7 +88,7 @@ Usage examples:
         [Description(@"Operation to perform.
 - 'add': Add a new slide (required params: path)
 - 'delete': Delete a slide (required params: path, slideIndex)
-- 'get_info': Get slides info (required params: path)
+- 'get': Get slides info (required params: path)
 - 'move': Move a slide (required params: path, fromIndex, toIndex)
 - 'duplicate': Duplicate a slide (required params: path, slideIndex)
 - 'hide': Hide/show a slide (required params: path, slideIndex, hidden)
@@ -137,7 +137,7 @@ Usage examples:
 
         var result = handler.Execute(operationContext, parameters);
 
-        if (string.Equals(operation, "get_info", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(operation, "get", StringComparison.OrdinalIgnoreCase))
             return ResultHelper.FinalizeResult((dynamic)result, ctx, outputPath);
 
         if (operationContext.IsModified)
@@ -168,7 +168,7 @@ Usage examples:
         {
             "add" => BuildAddParameters(parameters, layoutType),
             "delete" or "clear" => BuildSlideIndexParameters(parameters, slideIndex),
-            "get_info" => parameters,
+            "get" => parameters,
             "move" => BuildMoveParameters(parameters, fromIndex, toIndex),
             "duplicate" => BuildDuplicateParameters(parameters, slideIndex, insertAt),
             "hide" => BuildHideParameters(parameters, slideIndex, slideIndices, hidden),

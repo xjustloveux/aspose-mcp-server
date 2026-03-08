@@ -14,7 +14,7 @@ public class GetFormulaResultHandlerTests : ExcelHandlerTestBase
     [Fact]
     public void Operation_Returns_GetResult()
     {
-        Assert.Equal("get_result", _handler.Operation);
+        Assert.Equal("result", _handler.Operation);
     }
 
     #endregion

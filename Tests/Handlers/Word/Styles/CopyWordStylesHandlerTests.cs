@@ -12,7 +12,7 @@ public class CopyWordStylesHandlerTests : WordHandlerTestBase
     [Fact]
     public void Operation_Returns_CopyStyles()
     {
-        Assert.Equal("copy_styles", _handler.Operation);
+        Assert.Equal("copy", _handler.Operation);
     }
 
     #endregion

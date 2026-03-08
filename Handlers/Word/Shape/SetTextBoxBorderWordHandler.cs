@@ -14,7 +14,7 @@ namespace AsposeMcpServer.Handlers.Word.Shape;
 public class SetTextBoxBorderWordHandler : OperationHandlerBase<Document>
 {
     /// <inheritdoc />
-    public override string Operation => "set_textbox_border";
+    public override string Operation => "set_border";
 
     /// <summary>
     ///     Sets border properties for a textbox.
@@ -67,7 +67,7 @@ public class SetTextBoxBorderWordHandler : OperationHandlerBase<Document>
         var borderStyle = parameters.GetOptional("borderStyle", "solid");
 
         if (!textboxIndex.HasValue)
-            throw new ArgumentException("textboxIndex is required for set_textbox_border operation");
+            throw new ArgumentException("textboxIndex is required for set_border operation");
 
         return new SetTextBoxBorderParameters(
             textboxIndex.Value,

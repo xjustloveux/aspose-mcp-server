@@ -63,14 +63,14 @@ public class PdfInfoTool
     [Description(@"Get content and statistics from PDF documents. Supports 2 operations: get_content, get_statistics.
 
 Usage examples:
-- Get content from page: pdf_info(operation='get_content', path='doc.pdf', pageIndex=1)
-- Get content from all pages: pdf_info(operation='get_content', path='doc.pdf')
-- Get content with limit: pdf_info(operation='get_content', path='doc.pdf', maxPages=50)
-- Get statistics: pdf_info(operation='get_statistics', path='doc.pdf')")]
+- Get content from page: pdf_info(operation='get', path='doc.pdf', pageIndex=1)
+- Get content from all pages: pdf_info(operation='get', path='doc.pdf')
+- Get content with limit: pdf_info(operation='get', path='doc.pdf', maxPages=50)
+- Get statistics: pdf_info(operation='statistics', path='doc.pdf')")]
     public object Execute(
         [Description(@"Operation to perform.
-- 'get_content': Get text content from page(s) (required params: path)
-- 'get_statistics': Get document statistics (required params: path)")]
+- 'get': Get text content from page(s) (required params: path)
+- 'statistics': Get document statistics (required params: path)")]
         string operation,
         [Description("PDF file path (required if no sessionId)")]
         string? path = null,

@@ -14,7 +14,7 @@ public class ApplyWordStyleHandlerTests : WordHandlerTestBase
     [Fact]
     public void Operation_Returns_ApplyStyle()
     {
-        Assert.Equal("apply_style", _handler.Operation);
+        Assert.Equal("apply", _handler.Operation);
     }
 
     #endregion
