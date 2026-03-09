@@ -994,11 +994,34 @@ public class Extension : IAsyncDisposable
                     return false;
                 }
 
-                return await StartProcessAsync();
+                if (!await StartProcessAsync())
+                    return false;
             }
             finally
             {
                 _processLock.Release();
+            }
+
+            try
+            {
+                await PerformHandshakeAsync();
+
+                _logger.LogInformation(
+                    "Extension {ExtensionId} restarted and handshake completed successfully",
+                    _definition.Id);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Handshake failed after restarting extension {ExtensionId}",
+                    _definition.Id);
+
+                if (_state is not (ExtensionState.Stopping or ExtensionState.Unloaded))
+                    SetState(ExtensionState.Error);
+
+                return false;
             }
         }
         finally
@@ -1042,11 +1065,35 @@ public class Extension : IAsyncDisposable
 
             Interlocked.Exchange(ref _restartCount, 0);
             await CleanupProcessAsync();
-            return await StartProcessAsync();
+
+            if (!await StartProcessAsync())
+                return false;
         }
         finally
         {
             _processLock.Release();
+        }
+
+        try
+        {
+            await PerformHandshakeAsync();
+
+            _logger.LogInformation(
+                "Extension {ExtensionId} recovered from Error state and handshake completed",
+                _definition.Id);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Handshake failed after recovering extension {ExtensionId} from Error state",
+                _definition.Id);
+
+            if (_state is not (ExtensionState.Stopping or ExtensionState.Unloaded))
+                SetState(ExtensionState.Error);
+
+            return false;
         }
     }
 
