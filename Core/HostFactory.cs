@@ -71,8 +71,7 @@ internal static class HostFactory
 
         builder.Services.AddMcpServer(ConfigureServerOptions)
             .WithStdioServerTransport()
-            .WithFilteredToolsAndSchemas(bundle.ServerConfig, bundle.SessionConfig, bundle.ExtensionConfig)
-            .AddCallToolFilter(CreateErrorDetailFilter());
+            .WithFilteredToolsAndSchemas(bundle.ServerConfig, bundle.SessionConfig, bundle.ExtensionConfig);
 
         return builder.Build();
     }
@@ -90,8 +89,7 @@ internal static class HostFactory
         builder.Services.AddSingleton(bundle.ServerConfig);
         builder.Services.AddMcpServer(ConfigureServerOptions)
             .WithHttpTransport()
-            .WithFilteredToolsAndSchemas(bundle.ServerConfig, bundle.SessionConfig, bundle.ExtensionConfig)
-            .AddCallToolFilter(CreateErrorDetailFilter());
+            .WithFilteredToolsAndSchemas(bundle.ServerConfig, bundle.SessionConfig, bundle.ExtensionConfig);
         var app = builder.Build();
 
         LogServerStartup(
@@ -115,8 +113,7 @@ internal static class HostFactory
             bundle.TrackingConfig, bundle.ExtensionConfig);
         builder.Services.AddSingleton(bundle.ServerConfig);
         builder.Services.AddMcpServer(ConfigureServerOptions)
-            .WithFilteredToolsAndSchemas(bundle.ServerConfig, bundle.SessionConfig, bundle.ExtensionConfig)
-            .AddCallToolFilter(CreateErrorDetailFilter());
+            .WithFilteredToolsAndSchemas(bundle.ServerConfig, bundle.SessionConfig, bundle.ExtensionConfig);
         var app = builder.Build();
 
         LogServerStartup(
@@ -396,6 +393,7 @@ internal static class HostFactory
             Description = ServerDescription,
             WebsiteUrl = ServerWebsiteUrl
         };
+        options.Filters.Request.CallToolFilters.Add(CreateErrorDetailFilter());
     }
 
     /// <summary>
