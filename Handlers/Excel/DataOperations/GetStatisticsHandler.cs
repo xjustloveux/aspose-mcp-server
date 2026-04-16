@@ -2,6 +2,8 @@ using System.Globalization;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Errors;
+using AsposeMcpServer.Errors.Excel;
 using AsposeMcpServer.Helpers.Excel;
 using AsposeMcpServer.Results.Excel.DataOperations;
 
@@ -62,7 +64,7 @@ public class GetStatisticsHandler : OperationHandlerBase<Workbook>
         }
         catch (CellsException ex)
         {
-            throw new ArgumentException($"Excel operation failed: {ex.Message}");
+            throw CellsErrorTranslator.Translate(ex);
         }
     }
 
@@ -132,9 +134,9 @@ public class GetStatisticsHandler : OperationHandlerBase<Workbook>
             var rangeStats = CalculateRangeStatistics(worksheet, range);
             return baseStats with { RangeStatistics = rangeStats };
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return baseStats with { RangeStatisticsError = ex.Message };
+            return baseStats with { RangeStatisticsError = ErrorMessageBuilder.ProcessingFailed() };
         }
     }
 

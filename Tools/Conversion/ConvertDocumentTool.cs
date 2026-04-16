@@ -26,6 +26,11 @@ public class ConvertDocumentTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     The server configuration used to propagate the allowlist to DocumentConverter sinks.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     The document session manager for managing in-memory document sessions.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -35,11 +40,14 @@ public class ConvertDocumentTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document operations.</param>
     /// <param name="identityAccessor">Optional identity accessor for session isolation.</param>
+    /// <param name="serverConfig">Optional server configuration providing the allowed base-path allowlist.</param>
     public ConvertDocumentTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
     }
 
     /// <summary>
@@ -134,7 +142,8 @@ Usage examples:
             HtmlSingleFile = htmlSingleFile,
             JpegQuality = Math.Clamp(jpegQuality, 1, 100),
             CsvSeparator = csvSeparator,
-            PdfCompliance = pdfCompliance
+            PdfCompliance = pdfCompliance,
+            AllowedBasePaths = _serverConfig?.AllowedBasePaths ?? []
         };
 
         if (!string.IsNullOrEmpty(sessionId))
@@ -271,7 +280,8 @@ Usage examples:
                 throw new ArgumentException(
                     $"Format '{inputExtension}' can only be converted to PDF, not '{outputExtension}'");
 
-            sourceFormat = DocumentConverter.ConvertToPdfFromSpecialFormat(inputPath, outputPath);
+            sourceFormat =
+                DocumentConverter.ConvertToPdfFromSpecialFormat(inputPath, outputPath, options.AllowedBasePaths);
         }
         else
         {

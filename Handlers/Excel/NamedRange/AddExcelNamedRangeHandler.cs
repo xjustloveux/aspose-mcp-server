@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Errors.Excel;
 using AsposeMcpServer.Helpers.Excel;
 using AsposeMcpServer.Results.Common;
 
@@ -64,8 +65,7 @@ public class AddExcelNamedRangeHandler : OperationHandlerBase<Workbook>
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException(
-                $"Failed to create named range '{p.Name}' with range '{p.Range}': {ex.Message}", ex);
+            throw CellsErrorTranslator.Translate(ex);
         }
     }
 

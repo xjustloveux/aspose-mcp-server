@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Errors.Excel;
 using AsposeMcpServer.Helpers.Excel;
 using AsposeMcpServer.Results.Common;
 
@@ -44,8 +45,7 @@ public class CopyExcelRangeHandler : OperationHandlerBase<Workbook>
         }
         catch (Exception ex)
         {
-            throw new ArgumentException(
-                $"Invalid range format. Source range: '{p.SourceRange}', Destination cell: '{p.DestCell}'. Range exceeds Excel limits (valid range: A1:XFD1048576). Error: {ex.Message}");
+            throw CellsErrorTranslator.Translate(ex);
         }
 
         var pasteType = ExcelRangeHelper.GetPasteType(p.CopyOptions);

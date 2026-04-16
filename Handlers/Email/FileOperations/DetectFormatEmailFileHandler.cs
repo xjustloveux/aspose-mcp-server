@@ -32,7 +32,7 @@ public class DetectFormatEmailFileHandler : OperationHandlerBase<object>
         SecurityHelper.ValidateFilePath(path, "path", true);
 
         if (!File.Exists(path))
-            throw new FileNotFoundException($"Email file not found: {path}");
+            throw new FileNotFoundException("The specified file was not found.");
 
         var formatInfo = FileFormatUtil.DetectFileFormat(path);
         var formatName = formatInfo.FileFormatType.ToString();

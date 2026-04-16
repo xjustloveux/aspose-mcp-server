@@ -115,7 +115,10 @@ public class CreateWordDocumentHandler : OperationHandlerBase<Document>
             builder.Write(p.Content);
         }
 
-        doc.Save(p.OutputPath);
+        // H7: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
+        var resolvedOutputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.OutputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], "outputPath");
+        doc.Save(resolvedOutputPath);
         return new SuccessResult { Message = $"Word document created successfully at: {p.OutputPath}" };
     }
 

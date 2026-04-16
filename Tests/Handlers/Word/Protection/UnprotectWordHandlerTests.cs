@@ -19,6 +19,17 @@ public class UnprotectWordHandlerTests : WordHandlerTestBase
 
     #endregion
 
+    #region Helper Methods
+
+    private static Document CreateProtectedDocument(string password, ProtectionType type = ProtectionType.ReadOnly)
+    {
+        var doc = new Document();
+        doc.Protect(type, password);
+        return doc;
+    }
+
+    #endregion
+
     #region Error Handling
 
     [Fact]
@@ -34,15 +45,41 @@ public class UnprotectWordHandlerTests : WordHandlerTestBase
         Assert.Throws<InvalidOperationException>(() => _handler.Execute(context, parameters));
     }
 
-    #endregion
+    // ─── Sanitization regression (Phase B): no raw Aspose text in error message ─
 
-    #region Helper Methods
-
-    private static Document CreateProtectedDocument(string password, ProtectionType type = ProtectionType.ReadOnly)
+    [Fact]
+    public void Execute_WithWrongPassword_ErrorMessageContainsNoRawAsposeText()
     {
-        var doc = new Document();
-        doc.Protect(type, password);
-        return doc;
+        var doc = CreateProtectedDocument("correctpassword");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "password", "wrongpassword" }
+        });
+
+        var ex = Assert.Throws<InvalidOperationException>(() => _handler.Execute(context, parameters));
+
+        // The message must not carry Aspose internal class names or stack-frame tokens.
+        Assert.DoesNotContain("Aspose", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("   at ", ex.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("StackTrace", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Execute_WithWrongPassword_ErrorMessageContainsNoFilePath()
+    {
+        var doc = CreateProtectedDocument("correctpassword");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "password", "wrongpassword" }
+        });
+
+        var ex = Assert.Throws<InvalidOperationException>(() => _handler.Execute(context, parameters));
+
+        // Neither forward-slash paths nor backslash-paths should leak.
+        Assert.DoesNotContain("\\Users\\", ex.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("/home/", ex.Message, StringComparison.Ordinal);
     }
 
     #endregion

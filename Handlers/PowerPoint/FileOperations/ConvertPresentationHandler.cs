@@ -39,6 +39,9 @@ public class ConvertPresentationHandler : OperationHandlerBase<Presentation>
             throw new ArgumentException("Either inputPath, path, or sessionId is required for convert operation");
 
         SecurityHelper.ValidateFilePath(p.OutputPath, "outputPath", true);
+        // H22: resolve symlinks immediately before all sinks (bug 20260415-symlink-toctou-sweep).
+        var resolvedOutputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.OutputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], "outputPath");
 
         var format = p.Format.ToLower();
 
@@ -74,7 +77,7 @@ public class ConvertPresentationHandler : OperationHandlerBase<Presentation>
 
                 using var bitmap = slide.GetThumbnail(targetSize);
                 var imageFormat = format == "png" ? ImageFormat.Png : ImageFormat.Jpeg;
-                bitmap.Save(p.OutputPath, imageFormat);
+                bitmap.Save(resolvedOutputPath, imageFormat);
 
                 var formatName = format == "png" ? "PNG" : "JPEG";
                 return new SuccessResult
@@ -102,11 +105,11 @@ public class ConvertPresentationHandler : OperationHandlerBase<Presentation>
                 {
                     ProgressCallback = new SlidesProgressAdapter(context.Progress)
                 };
-                presentation.Save(p.OutputPath, SaveFormat.Pdf, pdfOptions);
+                presentation.Save(resolvedOutputPath, SaveFormat.Pdf, pdfOptions);
             }
             else
             {
-                presentation.Save(p.OutputPath, saveFormat);
+                presentation.Save(resolvedOutputPath, saveFormat);
             }
 
             return new SuccessResult

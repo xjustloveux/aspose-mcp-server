@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Errors.Excel;
 using AsposeMcpServer.Helpers.Excel;
 using AsposeMcpServer.Results.Common;
 
@@ -55,7 +56,7 @@ public class ConvertToRangeExcelTableHandler : OperationHandlerBase<Workbook>
         }
         catch (CellsException ex)
         {
-            throw new ArgumentException($"Failed to convert table to range: {ex.Message}");
+            throw CellsErrorTranslator.Translate(ex);
         }
     }
 }

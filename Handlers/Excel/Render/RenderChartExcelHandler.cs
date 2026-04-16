@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Errors.Excel;
 using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Helpers.Excel;
 using AsposeMcpServer.Results.Excel.Render;
@@ -65,7 +66,7 @@ public class RenderChartExcelHandler : OperationHandlerBase<Workbook>
         }
         catch (CellsException ex)
         {
-            throw new ArgumentException($"Failed to render chart: {ex.Message}");
+            throw CellsErrorTranslator.Translate(ex);
         }
     }
 }

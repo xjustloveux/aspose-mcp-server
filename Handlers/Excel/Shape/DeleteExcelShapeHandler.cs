@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Errors.Excel;
 using AsposeMcpServer.Helpers.Excel;
 using AsposeMcpServer.Results.Common;
 
@@ -52,7 +53,7 @@ public class DeleteExcelShapeHandler : OperationHandlerBase<Workbook>
         }
         catch (CellsException ex)
         {
-            throw new ArgumentException($"Failed to delete shape: {ex.Message}");
+            throw CellsErrorTranslator.Translate(ex);
         }
     }
 }

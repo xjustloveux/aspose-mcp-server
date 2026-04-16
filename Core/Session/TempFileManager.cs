@@ -1,4 +1,5 @@
 using System.Text.Json;
+using AsposeMcpServer.Helpers;
 
 namespace AsposeMcpServer.Core.Session;
 
@@ -13,6 +14,15 @@ public class TempFileManager : IHostedService, IDisposable
     private readonly SessionConfig _config;
 
     private readonly ILogger<TempFileManager>? _logger;
+
+    /// <summary>
+    ///     Optional server configuration. When non-null, every user-supplied path entering
+    ///     RecoverSession is checked against <see cref="ServerConfig.AllowedBasePaths" />.
+    ///     Test constructions that don't supply this leave it null → allowlist becomes a
+    ///     no-op (backward compatible).
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
     private Timer? _cleanupTimer;
     private int _disposed;
 
@@ -21,10 +31,18 @@ public class TempFileManager : IHostedService, IDisposable
     /// </summary>
     /// <param name="config">Session configuration</param>
     /// <param name="loggerFactory">Logger factory for logging</param>
-    public TempFileManager(SessionConfig config, ILoggerFactory? loggerFactory = null)
+    /// <param name="serverConfig">
+    ///     Optional server configuration carrying the
+    ///     <see cref="ServerConfig.AllowedBasePaths" /> allowlist. When null (default,
+    ///     used by tests), allowlist enforcement is skipped while shape validation
+    ///     still runs on every user-supplied path.
+    /// </param>
+    public TempFileManager(SessionConfig config, ILoggerFactory? loggerFactory = null,
+        ServerConfig? serverConfig = null)
     {
         _config = config;
         _logger = loggerFactory?.CreateLogger<TempFileManager>();
+        _serverConfig = serverConfig;
     }
 
     /// <summary>
@@ -154,10 +172,23 @@ public class TempFileManager : IHostedService, IDisposable
                     var fileInfo = new FileInfo(orphanedFile);
                     if (fileInfo.LastWriteTimeUtc < cutoffTime)
                     {
+                        // T4: resolve immediately before File.Delete to catch a planted
+                        // symlink inside TempDirectory pointing outside
+                        // (bug 20260415-symlink-toctou-sweep, Phase 1).
+                        SecurityHelper.ResolveAndEnsureWithinAllowlist(
+                            orphanedFile,
+                            [_config.TempDirectory],
+                            "orphanedFile");
                         File.Delete(orphanedFile);
                         result.DeletedCount++;
                         _logger?.LogDebug("Deleted orphaned temp file: {Path}", orphanedFile);
                     }
+                }
+                catch (ArgumentException ex)
+                {
+                    result.ErrorCount++;
+                    _logger?.LogWarning(ex,
+                        "Refusing to delete orphaned file outside TempDirectory: {Path}", orphanedFile);
                 }
                 catch (Exception ex)
                 {
@@ -269,6 +300,12 @@ public class TempFileManager : IHostedService, IDisposable
     {
         var result = new RecoverResult { SessionId = sessionId };
 
+        // Validate user-supplied targetPath BEFORE doing any disk work
+        // (bug 20260415-session-loader-path, U3).
+        if (!string.IsNullOrEmpty(targetPath))
+            SecurityHelper.ValidateUserPath(targetPath, _serverConfig?.AllowedBasePaths ?? [],
+                nameof(targetPath));
+
         try
         {
             var metadataFiles =
@@ -304,19 +341,56 @@ public class TempFileManager : IHostedService, IDisposable
                 return result;
             }
 
+            // Defence-in-depth: metadata is on-disk JSON; reject TempPath that does not
+            // resolve under our configured TempDirectory (CRITICAL-1, bug
+            // 20260415-session-loader-path). Symlink-aware check: ResolveAndEnsureWithinAllowlist
+            // follows symbolic links and verifies the resolved target is still within TempDirectory,
+            // closing the TOCTOU gap where a lexical check passes but the OS follows a planted link.
+            try
+            {
+                SecurityHelper.ResolveAndEnsureWithinAllowlist(
+                    metadata.TempPath,
+                    [_config.TempDirectory],
+                    "tempPath");
+            }
+            catch (ArgumentException)
+            {
+                _logger?.LogWarning(
+                    "Refusing recovery: TempPath outside TempDirectory for session {SessionId}",
+                    sessionId);
+                result.Success = false;
+                result.ErrorMessage = "Recovery rejected: invalid temp file location";
+                return result;
+            }
+
             if (!File.Exists(metadata.TempPath))
             {
                 result.Success = false;
-                result.ErrorMessage = $"Temp file not found: {metadata.TempPath}";
+                result.ErrorMessage = "Temp file not found";
                 return result;
             }
 
             var destination = targetPath ?? metadata.OriginalPath;
 
+            // When falling back to metadata.OriginalPath (no user targetPath), revalidate
+            // it through the same pipeline: metadata is attacker-influenceable on disk
+            // (CRITICAL-1). A user-supplied targetPath was already validated above.
+            if (string.IsNullOrEmpty(targetPath))
+                SecurityHelper.ValidateUserPath(destination,
+                    _serverConfig?.AllowedBasePaths ?? [], "destination");
+
             var targetDir = Path.GetDirectoryName(destination);
             if (!string.IsNullOrEmpty(targetDir) && !Directory.Exists(targetDir))
                 Directory.CreateDirectory(targetDir);
 
+            // T1: second resolve immediately before the File.Copy sink.
+            // second resolve: narrows the TOCTOU window between the defence-in-depth check
+            // above and the actual sink; a symlink could be planted between those two points.
+            // (bug 20260415-symlink-toctou-sweep, Phase 1)
+            SecurityHelper.ResolveAndEnsureWithinAllowlist(
+                metadata.TempPath,
+                [_config.TempDirectory],
+                "tempPath");
             File.Copy(metadata.TempPath, destination, true);
 
             result.Success = true;
@@ -333,8 +407,11 @@ public class TempFileManager : IHostedService, IDisposable
         }
         catch (Exception ex)
         {
+            // Do NOT echo ex.Message to caller: it can carry full file-system paths or
+            // Aspose internals (charter §5, MEDIUM-1). The exception is logged with full
+            // detail server-side; caller receives a generic message.
             result.Success = false;
-            result.ErrorMessage = ex.Message;
+            result.ErrorMessage = "Recovery failed";
             _logger?.LogError(ex, "Error recovering session {SessionId}", sessionId);
         }
 
@@ -495,11 +572,43 @@ public class TempFileManager : IHostedService, IDisposable
         {
             var metadata = ReadMetadata(metadataPath);
 
+            // Only delete TempPath when it resolves under our configured TempDirectory.
+            // T2: ResolveAndEnsureWithinAllowlist follows symbolic links so a planted
+            // symlink whose lexical path is inside TempDirectory but whose target is outside
+            // cannot be used as a delete-anywhere primitive (bug 20260415-symlink-toctou-sweep).
             if (metadata?.TempPath != null && File.Exists(metadata.TempPath))
-                File.Delete(metadata.TempPath);
+                try
+                {
+                    // Resolve immediately before the File.Delete sink.
+                    SecurityHelper.ResolveAndEnsureWithinAllowlist(
+                        metadata.TempPath,
+                        [_config.TempDirectory],
+                        "tempPath");
+                    File.Delete(metadata.TempPath);
+                }
+                catch (ArgumentException)
+                {
+                    _logger?.LogWarning(
+                        "Refusing to delete temp file outside TempDirectory (metadata: {Metadata})",
+                        metadataPath);
+                }
 
+            // T3: resolve metadata path before deleting it.
             if (File.Exists(metadataPath))
-                File.Delete(metadataPath);
+                try
+                {
+                    SecurityHelper.ResolveAndEnsureWithinAllowlist(
+                        metadataPath,
+                        [_config.TempDirectory],
+                        "metadataPath");
+                    File.Delete(metadataPath);
+                }
+                catch (ArgumentException)
+                {
+                    _logger?.LogWarning(
+                        "Refusing to delete metadata file outside TempDirectory: {Metadata}",
+                        metadataPath);
+                }
         }
         catch (Exception ex)
         {

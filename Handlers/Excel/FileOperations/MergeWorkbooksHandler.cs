@@ -68,6 +68,9 @@ public class MergeWorkbooksHandler : OperationHandlerBase<Workbook>
             });
         }
 
+        // H13: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
+        targetPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(targetPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], nameof(targetPath));
         targetWorkbook.Save(targetPath);
         context.Progress?.Report(new ProgressNotificationValue
             { Progress = 100, Total = 100, Message = "Merge completed" });

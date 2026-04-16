@@ -88,7 +88,7 @@ public abstract class HeaderFooterImageHandlerBase : OperationHandlerBase<Docume
             throw new ArgumentException("imagePath cannot be null or empty");
         SecurityHelper.ValidateFilePath(imagePath, nameof(imagePath), true);
         if (!IOFile.Exists(imagePath))
-            throw new FileNotFoundException($"Image file not found: {imagePath}");
+            throw new FileNotFoundException("The specified file was not found.");
     }
 
     /// <summary>

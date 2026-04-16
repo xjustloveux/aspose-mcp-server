@@ -46,6 +46,9 @@ public class ExportSlidesHandler : OperationHandlerBase<Presentation>
         {
             using var bmp = presentation.Slides[i].GetThumbnail(p.Scale, p.Scale);
             var fileName = Path.Combine(p.OutputDir, $"slide_{i + 1}.{p.Extension}");
+            // H26: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
+            fileName = SecurityHelper.ResolveAndEnsureWithinAllowlist(fileName,
+                context.ServerConfig?.AllowedBasePaths ?? [], nameof(fileName));
             bmp.Save(fileName, p.IsJpeg
                 ? ImageFormat.Jpeg
                 : ImageFormat.Png);

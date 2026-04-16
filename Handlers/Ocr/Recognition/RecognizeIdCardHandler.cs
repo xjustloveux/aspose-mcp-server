@@ -36,7 +36,7 @@ public class RecognizeIdCardHandler : OperationHandlerBase<AsposeOcr>
         SecurityHelper.ValidateFilePath(path, "path", true);
 
         if (!File.Exists(path))
-            throw new FileNotFoundException($"File not found: {path}");
+            throw new FileNotFoundException("The specified file was not found.");
 
         var engine = context.Document;
 

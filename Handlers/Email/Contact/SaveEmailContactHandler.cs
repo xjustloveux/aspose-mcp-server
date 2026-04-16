@@ -36,11 +36,14 @@ public class SaveEmailContactHandler : OperationHandlerBase<object>
         SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
         if (!File.Exists(path))
-            throw new FileNotFoundException($"Input file not found: {path}");
+            throw new FileNotFoundException("The specified file was not found.");
 
         var contact = GetEmailContactHandler.LoadContact(path);
 
         var ext = format?.ToLowerInvariant() ?? Path.GetExtension(outputPath).ToLowerInvariant().TrimStart('.');
+        // H39: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
+        outputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(outputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], nameof(outputPath));
         contact.Save(outputPath, ext == "msg" ? ContactSaveFormat.Msg : ContactSaveFormat.VCard);
 
         return new SuccessResult

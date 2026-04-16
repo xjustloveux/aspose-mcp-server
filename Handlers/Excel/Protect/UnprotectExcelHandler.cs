@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Errors.Excel;
 using AsposeMcpServer.Helpers.Excel;
 using AsposeMcpServer.Results.Common;
 
@@ -46,15 +47,22 @@ public class UnprotectExcelHandler : OperationHandlerBase<Workbook>
             }
             catch (Exception ex)
             {
-                throw new ArgumentException(
-                    $"Incorrect password. Cannot unprotect worksheet '{worksheet.Name}'. Error: {ex.Message}");
+                throw CellsErrorTranslator.Translate(ex);
             }
 
             MarkModified(context);
             return new SuccessResult { Message = $"Worksheet '{worksheet.Name}' protection removed successfully." };
         }
 
-        workbook.Unprotect(p.Password);
+        try
+        {
+            workbook.Unprotect(p.Password);
+        }
+        catch (Exception ex)
+        {
+            throw CellsErrorTranslator.Translate(ex);
+        }
+
         MarkModified(context);
         return new SuccessResult { Message = "Workbook protection removed successfully." };
     }

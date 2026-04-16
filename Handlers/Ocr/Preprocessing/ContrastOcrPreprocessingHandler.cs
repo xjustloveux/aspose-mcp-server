@@ -33,7 +33,7 @@ public class ContrastOcrPreprocessingHandler : OcrPreprocessingHandlerBase
 
         var filters = new PreprocessingFilter { PreprocessingFilter.ContrastCorrectionFilter() };
 
-        SavePreprocessedImage(p.Path, p.OutputPath, filters);
+        SavePreprocessedImage(p.Path, p.OutputPath, filters, context.ServerConfig?.AllowedBasePaths ?? []);
 
         return CreatePreprocessingResult(p, Operation, "Contrast correction applied");
     }

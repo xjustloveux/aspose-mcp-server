@@ -31,7 +31,7 @@ public class GetBodyEmailContentHandler : OperationHandlerBase<object>
         SecurityHelper.ValidateFilePath(path, "path", true);
 
         if (!File.Exists(path))
-            throw new FileNotFoundException($"Email file not found: {path}");
+            throw new FileNotFoundException("The specified file was not found.");
 
         var message = MailMessage.Load(path);
         var isHtml = !string.IsNullOrEmpty(message.HtmlBody);

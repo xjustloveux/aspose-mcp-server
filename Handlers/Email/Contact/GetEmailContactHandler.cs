@@ -32,7 +32,7 @@ public class GetEmailContactHandler : OperationHandlerBase<object>
         SecurityHelper.ValidateFilePath(path, "path", true);
 
         if (!File.Exists(path))
-            throw new FileNotFoundException($"Input file not found: {path}");
+            throw new FileNotFoundException("The specified file was not found.");
 
         var contact = LoadContact(path);
 

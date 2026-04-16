@@ -32,12 +32,15 @@ public class AddVideoHandler : OperationHandlerBase<Presentation>
         SecurityHelper.ValidateFilePath(p.VideoPath, "videoPath", true);
 
         if (!File.Exists(p.VideoPath))
-            throw new FileNotFoundException($"Video file not found: {p.VideoPath}", p.VideoPath);
+            throw new FileNotFoundException("The specified file was not found.");
 
         var presentation = context.Document;
         var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
 
-        using var videoStream = new FileStream(p.VideoPath, FileMode.Open, FileAccess.Read);
+        // H48: resolve symlinks immediately before the read sink (bug 20260415-symlink-toctou-sweep).
+        var resolvedVideoPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.VideoPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], "videoPath");
+        using var videoStream = new FileStream(resolvedVideoPath, FileMode.Open, FileAccess.Read);
         var video = presentation.Videos.AddVideo(videoStream, LoadingStreamBehavior.ReadStreamAndRelease);
         var videoFrame = slide.Shapes.AddVideoFrame(p.X, p.Y, p.Width, p.Height, video);
 

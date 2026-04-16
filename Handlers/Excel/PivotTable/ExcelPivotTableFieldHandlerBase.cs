@@ -2,6 +2,7 @@ using Aspose.Cells;
 using Aspose.Cells.Pivot;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Errors.Excel;
 using AsposeMcpServer.Helpers.Excel;
 using AsposeMcpServer.Results.Common;
 
@@ -75,10 +76,15 @@ public abstract class ExcelPivotTableFieldHandlerBase : OperationHandlerBase<Wor
 
             return ExecuteFieldOperation(context, pivotTable, p, fieldIndex, fieldTypeEnum);
         }
+        catch (ArgumentException)
+        {
+            // Re-throw informative ArgumentExceptions from field-not-found / index-out-of-range
+            // checks above and from ExecuteFieldOperation — these are already sanitized.
+            throw;
+        }
         catch (Exception outerEx)
         {
-            throw new ArgumentException(
-                $"Failed to {OperationVerb} field '{p.FieldName}' {GetPreposition()} pivot table: {outerEx.Message}");
+            throw CellsErrorTranslator.Translate(outerEx);
         }
     }
 

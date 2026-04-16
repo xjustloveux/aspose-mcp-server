@@ -35,7 +35,7 @@ public class SignPdfHandler : OperationHandlerBase<Document>
         SecurityHelper.ValidateFilePath(p.CertificatePath, "certificatePath", true);
 
         if (!File.Exists(p.CertificatePath))
-            throw new FileNotFoundException($"Certificate file not found: {p.CertificatePath}", p.CertificatePath);
+            throw new FileNotFoundException("The specified file was not found.");
 
         var document = context.Document;
 
@@ -56,9 +56,16 @@ public class SignPdfHandler : OperationHandlerBase<Document>
 
         var savePath = context.OutputPath ?? context.SourcePath;
         if (context.SessionId == null && !string.IsNullOrEmpty(savePath))
+        {
+            // H30: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
+            savePath = SecurityHelper.ResolveAndEnsureWithinAllowlist(savePath,
+                context.ServerConfig?.AllowedBasePaths ?? [], nameof(savePath));
             pdfSign.Save(savePath);
+        }
         else
+        {
             MarkModified(context);
+        }
 
         return new SuccessResult { Message = $"Document signed on page {p.PageIndex}." };
     }

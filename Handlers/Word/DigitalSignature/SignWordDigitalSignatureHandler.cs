@@ -37,7 +37,7 @@ public class SignWordDigitalSignatureHandler : OperationHandlerBase<Document>
         SecurityHelper.ValidateFilePath(p.CertificatePath, "certificatePath", true);
 
         if (!System.IO.File.Exists(p.CertificatePath))
-            throw new FileNotFoundException($"Certificate file not found: {p.CertificatePath}");
+            throw new FileNotFoundException("The specified file was not found.");
 
         var outputDir = Path.GetDirectoryName(p.OutputPath);
         if (!string.IsNullOrEmpty(outputDir))

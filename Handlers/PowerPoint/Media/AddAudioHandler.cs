@@ -32,12 +32,15 @@ public class AddAudioHandler : OperationHandlerBase<Presentation>
         SecurityHelper.ValidateFilePath(p.AudioPath, "audioPath", true);
 
         if (!File.Exists(p.AudioPath))
-            throw new FileNotFoundException($"Audio file not found: {p.AudioPath}", p.AudioPath);
+            throw new FileNotFoundException("The specified file was not found.");
 
         var presentation = context.Document;
         var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
 
-        using var audioStream = new FileStream(p.AudioPath, FileMode.Open, FileAccess.Read);
+        // H48: resolve symlinks immediately before the read sink (bug 20260415-symlink-toctou-sweep).
+        var resolvedAudioPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.AudioPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], "audioPath");
+        using var audioStream = new FileStream(resolvedAudioPath, FileMode.Open, FileAccess.Read);
         var audio = presentation.Audios.AddAudio(audioStream, LoadingStreamBehavior.ReadStreamAndRelease);
         var audioFrame = slide.Shapes.AddAudioFrameEmbedded(p.X, p.Y, p.Width, p.Height, audio);
 

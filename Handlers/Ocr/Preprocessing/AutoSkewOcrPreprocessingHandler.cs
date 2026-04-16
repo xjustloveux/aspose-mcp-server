@@ -33,7 +33,7 @@ public class AutoSkewOcrPreprocessingHandler : OcrPreprocessingHandlerBase
 
         var filters = new PreprocessingFilter { PreprocessingFilter.AutoSkew() };
 
-        SavePreprocessedImage(p.Path, p.OutputPath, filters);
+        SavePreprocessedImage(p.Path, p.OutputPath, filters, context.ServerConfig?.AllowedBasePaths ?? []);
 
         return CreatePreprocessingResult(p, Operation, "Auto-skew correction applied");
     }

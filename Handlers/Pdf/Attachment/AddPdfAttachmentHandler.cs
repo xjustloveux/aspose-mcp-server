@@ -35,7 +35,7 @@ public class AddPdfAttachmentHandler : OperationHandlerBase<Document>
             SecurityHelper.ValidateStringLength(addParams.Description, "description", 1000);
 
         if (!File.Exists(addParams.AttachmentPath))
-            throw new FileNotFoundException($"Attachment file not found: {addParams.AttachmentPath}");
+            throw new FileNotFoundException("The specified file was not found.");
 
         var document = context.Document;
         var existingNames = PdfAttachmentHelper.CollectAttachmentNames(document.EmbeddedFiles);
@@ -44,7 +44,10 @@ public class AddPdfAttachmentHandler : OperationHandlerBase<Document>
                                        StringComparison.OrdinalIgnoreCase)))
             throw new ArgumentException($"Attachment with name '{addParams.AttachmentName}' already exists");
 
-        var fileBytes = File.ReadAllBytes(addParams.AttachmentPath);
+        // B-1: resolve symlinks immediately before the read sink (bug 20260415-symlink-toctou-sweep).
+        var resolvedAttachmentPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(addParams.AttachmentPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], "attachmentPath");
+        var fileBytes = File.ReadAllBytes(resolvedAttachmentPath);
         var fileSpecification = new FileSpecification(new MemoryStream(fileBytes), addParams.AttachmentName)
         {
             Description = addParams.Description ?? ""

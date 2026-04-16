@@ -36,7 +36,7 @@ public class RemoveEmailAttachmentHandler : OperationHandlerBase<object>
         SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
         if (!File.Exists(path))
-            throw new FileNotFoundException($"Email file not found: {path}");
+            throw new FileNotFoundException("The specified file was not found.");
 
         var message = MailMessage.Load(path);
 
@@ -51,6 +51,9 @@ public class RemoveEmailAttachmentHandler : OperationHandlerBase<object>
 
         var removedName = message.Attachments[idx].Name;
         message.Attachments.RemoveAt(idx);
+        // H41: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
+        outputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(outputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], nameof(outputPath));
         message.Save(outputPath, EmailFormatHelper.DetermineEmailSaveFormat(outputPath));
 
         return new SuccessResult

@@ -67,6 +67,9 @@ public class MergePresentationsHandler : OperationHandlerBase<Presentation>
                 }
         }
 
+        // H20: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
+        savePath = SecurityHelper.ResolveAndEnsureWithinAllowlist(savePath,
+            context.ServerConfig?.AllowedBasePaths ?? [], nameof(savePath));
         masterPresentation.Save(savePath, SaveFormat.Pptx);
 
         return new SuccessResult

@@ -76,7 +76,7 @@ public class RecognizeHandler : OperationHandlerBase<AsposeOcr>
         SecurityHelper.ValidateFilePath(p.Path, "path", true);
 
         if (!File.Exists(p.Path))
-            throw new FileNotFoundException($"File not found: {p.Path}");
+            throw new FileNotFoundException("The specified file was not found.");
 
         var ocr = context.Document;
         var inputType = DetectInputType(p.Path);

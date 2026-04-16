@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Errors.Excel;
 using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Helpers.Excel;
 using AsposeMcpServer.Results.Excel.DataImportExport;
@@ -48,6 +49,9 @@ public class ExportCsvExcelHandler : OperationHandlerBase<Workbook>
             };
 
             workbook.Worksheets.ActiveSheetIndex = sheetIndex;
+            // H16: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
+            outputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(outputPath,
+                context.ServerConfig?.AllowedBasePaths ?? [], nameof(outputPath));
             workbook.Save(outputPath, saveOptions);
 
             var worksheet = workbook.Worksheets[sheetIndex];
@@ -62,7 +66,7 @@ public class ExportCsvExcelHandler : OperationHandlerBase<Workbook>
         }
         catch (CellsException ex)
         {
-            throw new ArgumentException($"Failed to export to CSV: {ex.Message}");
+            throw CellsErrorTranslator.Translate(ex);
         }
     }
 }

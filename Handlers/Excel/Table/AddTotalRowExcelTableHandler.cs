@@ -2,6 +2,7 @@ using Aspose.Cells;
 using Aspose.Cells.Tables;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Errors.Excel;
 using AsposeMcpServer.Helpers.Excel;
 using AsposeMcpServer.Results.Common;
 
@@ -61,7 +62,7 @@ public class AddTotalRowExcelTableHandler : OperationHandlerBase<Workbook>
         }
         catch (CellsException ex)
         {
-            throw new ArgumentException($"Failed to add total row: {ex.Message}");
+            throw CellsErrorTranslator.Translate(ex);
         }
     }
 

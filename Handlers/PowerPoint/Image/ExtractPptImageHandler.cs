@@ -40,7 +40,7 @@ public class ExtractPptImageHandler : OperationHandlerBase<Presentation>
 
         Directory.CreateDirectory(extractParams.OutputDir);
 
-        var stats = ExtractAllImages(context.Document, extractParams);
+        var stats = ExtractAllImages(context.Document, extractParams, context.ServerConfig?.AllowedBasePaths ?? []);
 
         return new SuccessResult { Message = BuildResultMessage(stats.Count, stats.SkippedCount, extractParams) };
     }
@@ -82,8 +82,10 @@ public class ExtractPptImageHandler : OperationHandlerBase<Presentation>
     /// </summary>
     /// <param name="presentation">The presentation to extract images from.</param>
     /// <param name="p">The extraction parameters.</param>
+    /// <param name="allowedBasePaths">Allowlist of permitted base paths forwarded to the per-image save step.</param>
     /// <returns>An <see cref="ExtractionStats" /> with extraction counts.</returns>
-    private static ExtractionStats ExtractAllImages(Presentation presentation, ExtractionParameters p)
+    private static ExtractionStats ExtractAllImages(Presentation presentation, ExtractionParameters p,
+        IReadOnlyList<string> allowedBasePaths)
     {
         var count = 0;
         var skippedCount = 0;
@@ -96,7 +98,7 @@ public class ExtractPptImageHandler : OperationHandlerBase<Presentation>
             foreach (var shape in slide.Shapes)
                 if (shape is PictureFrame { PictureFormat.Picture.Image: not null } pic)
                 {
-                    var extracted = TryExtractImage(pic, slideNum, ref count, p, exportedHashes);
+                    var extracted = TryExtractImage(pic, slideNum, ref count, p, exportedHashes, allowedBasePaths);
                     if (!extracted) skippedCount++;
                 }
         }
@@ -112,9 +114,10 @@ public class ExtractPptImageHandler : OperationHandlerBase<Presentation>
     /// <param name="count">The current extraction count.</param>
     /// <param name="p">The extraction parameters.</param>
     /// <param name="exportedHashes">The set of exported image hashes.</param>
+    /// <param name="allowedBasePaths">Allowlist of permitted base paths used to validate the resolved output path.</param>
     /// <returns>True if the image was extracted, false if skipped.</returns>
     private static bool TryExtractImage(PictureFrame pic, int slideNum, ref int count,
-        ExtractionParameters p, HashSet<string> exportedHashes)
+        ExtractionParameters p, HashSet<string> exportedHashes, IReadOnlyList<string> allowedBasePaths)
     {
         var image = pic.PictureFormat.Picture.Image;
 
@@ -126,6 +129,8 @@ public class ExtractPptImageHandler : OperationHandlerBase<Presentation>
         }
 
         var fileName = Path.Combine(p.OutputDir, $"slide{slideNum}_img{++count}.{p.Extension}");
+        // H25: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
+        fileName = SecurityHelper.ResolveAndEnsureWithinAllowlist(fileName, allowedBasePaths, nameof(fileName));
         image.SystemImage.Save(fileName, p.IsJpeg
             ? ImageFormat.Jpeg
             : ImageFormat.Png);

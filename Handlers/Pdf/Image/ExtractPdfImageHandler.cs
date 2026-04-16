@@ -55,6 +55,9 @@ public class ExtractPdfImageHandler : OperationHandlerBase<Document>
             var image = images[p.ImageIndex.Value];
             var fileName = p.OutputPath ??
                            Path.Combine(targetDir, $"page_{p.PageIndex}_image_{p.ImageIndex.Value}.png");
+            // H32: resolve symlinks immediately before the FileStream sink (bug 20260415-symlink-toctou-sweep).
+            fileName = SecurityHelper.ResolveAndEnsureWithinAllowlist(fileName,
+                context.ServerConfig?.AllowedBasePaths ?? [], nameof(fileName));
             using var imageStream = new FileStream(fileName, FileMode.Create);
             image.Save(imageStream, ImageFormat.Png);
             return new SuccessResult
@@ -66,6 +69,9 @@ public class ExtractPdfImageHandler : OperationHandlerBase<Document>
         {
             var image = images[i];
             var fileName = Path.Combine(targetDir, $"page_{p.PageIndex}_image_{i}.png");
+            // H32: resolve symlinks immediately before the FileStream sink (bug 20260415-symlink-toctou-sweep).
+            fileName = SecurityHelper.ResolveAndEnsureWithinAllowlist(fileName,
+                context.ServerConfig?.AllowedBasePaths ?? [], nameof(fileName));
             using var imageStream = new FileStream(fileName, FileMode.Create);
             image.Save(imageStream, ImageFormat.Png);
             count++;

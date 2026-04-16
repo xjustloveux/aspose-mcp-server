@@ -61,7 +61,10 @@ public class CreateEmailCalendarHandler : OperationHandlerBase<object>
                          StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                 appointment.Attendees.Add(new MailAddress(attendee));
 
-        appointment.Save(outputPath, AppointmentSaveFormat.Ics);
+        // H40: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
+        var resolvedOutputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(outputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], "outputPath");
+        appointment.Save(resolvedOutputPath, AppointmentSaveFormat.Ics);
 
         return new SuccessResult
         {

@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using AsposeMcpServer.Core.Extension.Transport;
+using AsposeMcpServer.Errors;
 
 namespace AsposeMcpServer.Core.Extension;
 
@@ -595,14 +596,14 @@ public class ExtensionManager : IHostedService, IAsyncDisposable
         {
             _logger.LogWarning(ex, "Handshake timeout for extension {Id}", definition.Id);
             definition.IsAvailable = false;
-            definition.UnavailableReason = $"Handshake timeout: {ex.Message}";
+            definition.UnavailableReason = ErrorMessageBuilder.ExtensionUnavailable("handshake-timeout");
             return false;
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to initialize extension {Id}", definition.Id);
             definition.IsAvailable = false;
-            definition.UnavailableReason = $"Initialization failed: {ex.Message}";
+            definition.UnavailableReason = ErrorMessageBuilder.ExtensionUnavailable("initialization-failed");
             return false;
         }
     }
@@ -681,7 +682,7 @@ public class ExtensionManager : IHostedService, IAsyncDisposable
         if (command.Type is "executable" or "custom" && !File.Exists(command.Executable))
         {
             definition.IsAvailable = false;
-            definition.UnavailableReason = $"Executable not found: {command.Executable}";
+            definition.UnavailableReason = ErrorMessageBuilder.ExtensionUnavailable("executable-not-found");
             _logger.LogWarning(
                 "Extension {Id} marked unavailable: {Reason}",
                 definition.Id, definition.UnavailableReason);
@@ -691,7 +692,7 @@ public class ExtensionManager : IHostedService, IAsyncDisposable
         if (command.Type is "node" or "python" or "dotnet" && !File.Exists(command.Executable))
         {
             definition.IsAvailable = false;
-            definition.UnavailableReason = $"Script not found: {command.Executable}";
+            definition.UnavailableReason = ErrorMessageBuilder.ExtensionUnavailable("script-not-found");
             _logger.LogWarning(
                 "Extension {Id} marked unavailable: {Reason}",
                 definition.Id, definition.UnavailableReason);

@@ -34,7 +34,7 @@ public class ExtractAllEmailAttachmentHandler : OperationHandlerBase<object>
         SecurityHelper.ValidateFilePath(outputDir, "outputDir", true);
 
         if (!File.Exists(path))
-            throw new FileNotFoundException($"Email file not found: {path}");
+            throw new FileNotFoundException("The specified file was not found.");
 
         var message = MailMessage.Load(path);
 
@@ -47,10 +47,14 @@ public class ExtractAllEmailAttachmentHandler : OperationHandlerBase<object>
         Directory.CreateDirectory(outputDir);
 
         var extractedFiles = new List<string>();
+        var allowedBasePaths = context.ServerConfig?.AllowedBasePaths ?? [];
         foreach (var attachment in message.Attachments)
         {
             var fileName = SecurityHelper.SanitizeFileName(attachment.Name);
             var outputPath = Path.Combine(outputDir, fileName);
+            // H42: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
+            outputPath =
+                SecurityHelper.ResolveAndEnsureWithinAllowlist(outputPath, allowedBasePaths, nameof(outputPath));
             attachment.Save(outputPath);
             extractedFiles.Add(fileName);
         }

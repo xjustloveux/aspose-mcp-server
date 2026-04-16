@@ -2,6 +2,7 @@ using Aspose.Cells;
 using Aspose.Cells.Utility;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Errors.Excel;
 using AsposeMcpServer.Helpers.Excel;
 using AsposeMcpServer.Results.Excel.DataImportExport;
 
@@ -66,7 +67,7 @@ public class ImportJsonExcelHandler : OperationHandlerBase<Workbook>
         }
         catch (CellsException ex)
         {
-            throw new ArgumentException($"Failed to import JSON data: {ex.Message}");
+            throw CellsErrorTranslator.Translate(ex);
         }
     }
 }

@@ -2,6 +2,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Errors;
 using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
@@ -178,11 +179,13 @@ public class AddWithStyleWordTextHandler : OperationHandlerBase<Document>
                 throw new ArgumentException(
                     $"Style '{styleName}' not found. Use word_get_styles tool to view available styles");
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not ArgumentException)
         {
+            // ArgumentException is thrown by the style-not-found guard above and must
+            // propagate unchanged. All other failures (Aspose internal, IO, etc.) are
+            // sanitized so that raw exception text never reaches the MCP caller.
             throw new InvalidOperationException(
-                $"Unable to apply style '{styleName}': {ex.Message}. Use word_get_styles tool to view available styles",
-                ex);
+                ErrorMessageBuilder.StyleApplicationFailed(styleName));
         }
     }
 

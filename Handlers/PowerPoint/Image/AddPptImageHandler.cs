@@ -32,15 +32,19 @@ public class AddPptImageHandler : OperationHandlerBase<Presentation>
         SecurityHelper.ValidateFilePath(p.ImagePath, "imagePath", true);
 
         if (!File.Exists(p.ImagePath))
-            throw new FileNotFoundException($"Image file not found: {p.ImagePath}");
+            throw new FileNotFoundException("The specified file was not found.");
 
         var presentation = context.Document;
         var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
 
+        // H47: resolve symlinks immediately before the read sink (bug 20260415-symlink-toctou-sweep).
+        var resolvedImagePath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.ImagePath,
+            context.ServerConfig?.AllowedBasePaths ?? [], "imagePath");
+
         IPPImage pictureImage;
         int pixelWidth, pixelHeight;
 
-        using (var fileStream = new FileStream(p.ImagePath, FileMode.Open, FileAccess.Read))
+        using (var fileStream = new FileStream(resolvedImagePath, FileMode.Open, FileAccess.Read))
         {
             pictureImage = presentation.Images.AddImage(fileStream);
             pixelWidth = pictureImage.Width;

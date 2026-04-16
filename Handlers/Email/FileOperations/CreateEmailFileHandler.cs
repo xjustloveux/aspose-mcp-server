@@ -45,7 +45,10 @@ public class CreateEmailFileHandler : OperationHandlerBase<object>
             message.To.Add(p.To);
 
         var saveOptions = DetectSaveOptions(p.OutputPath);
-        message.Save(p.OutputPath, saveOptions);
+        // H35: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
+        var resolvedOutputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.OutputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], "outputPath");
+        message.Save(resolvedOutputPath, saveOptions);
 
         return new SuccessResult
         {

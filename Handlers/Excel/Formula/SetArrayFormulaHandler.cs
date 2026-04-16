@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Errors;
 using AsposeMcpServer.Helpers.Excel;
 using AsposeMcpServer.Results.Common;
 
@@ -46,8 +47,7 @@ public class SetArrayFormulaHandler : OperationHandlerBase<Workbook>
             return new SuccessResult { Message = result.Message };
         }
 
-        throw new ArgumentException(
-            $"Failed to set array formula. Range: {setParams.Range}, Formula: {cleanFormula}. Errors: {result.Message}");
+        throw new ArgumentException(ErrorMessageBuilder.OperationFailed("set the array formula"));
     }
 
     /// <summary>
@@ -147,9 +147,9 @@ public class SetArrayFormulaHandler : OperationHandlerBase<Workbook>
             firstCell.SetArrayFormula(formulaToSet, ctx.RangeObj.RowCount, ctx.RangeObj.ColumnCount);
             return new FormulaResult(true, $"Array formula set in range {ctx.Range}.");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return new FormulaResult(false, ex.Message);
+            return new FormulaResult(false, "primary method failed");
         }
     }
 
@@ -171,11 +171,11 @@ public class SetArrayFormulaHandler : OperationHandlerBase<Workbook>
             if (firstCell.IsArrayFormula)
                 return new FormulaResult(true, $"Array formula set in range {ctx.Range}.");
 
-            return new FormulaResult(false, "SetArrayFormula with 5 parameters did not work");
+            return new FormulaResult(false, "alternative method did not set array formula");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return new FormulaResult(false, ex.Message);
+            return new FormulaResult(false, "alternative method failed");
         }
     }
 
@@ -196,9 +196,9 @@ public class SetArrayFormulaHandler : OperationHandlerBase<Workbook>
 
             return new FormulaResult(true, $"Formula set to range {ctx.Range} (not a true array formula).");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return new FormulaResult(false, ex.Message);
+            return new FormulaResult(false, "fallback method failed");
         }
     }
 

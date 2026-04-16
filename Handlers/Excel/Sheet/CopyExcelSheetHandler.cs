@@ -50,7 +50,10 @@ public class CopyExcelSheetHandler : OperationHandlerBase<Workbook>
             using var targetWorkbook = new Workbook();
             targetWorkbook.Worksheets[0].Copy(sourceSheet);
             targetWorkbook.Worksheets[0].Name = newName ?? sheetName;
-            targetWorkbook.Save(p.CopyToPath);
+            // H15: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
+            var copyToPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.CopyToPath,
+                context.ServerConfig?.AllowedBasePaths ?? [], "copyToPath");
+            targetWorkbook.Save(copyToPath);
             return new SuccessResult
                 { Message = $"Worksheet '{sheetName}' copied to external file. Output: {p.CopyToPath}" };
         }

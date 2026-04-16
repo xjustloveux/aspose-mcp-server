@@ -31,7 +31,10 @@ public class CreatePdfFileHandler : OperationHandlerBase<Document>
 
         using var document = new Document();
         document.Pages.Add();
-        document.Save(createParams.OutputPath);
+        // H29: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
+        var resolvedOutputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(createParams.OutputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], "outputPath");
+        document.Save(resolvedOutputPath);
 
         return new SuccessResult { Message = $"PDF document created. Output: {createParams.OutputPath}" };
     }

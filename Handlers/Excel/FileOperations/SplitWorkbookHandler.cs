@@ -13,6 +13,15 @@ namespace AsposeMcpServer.Handlers.Excel.FileOperations;
 [ResultType(typeof(SuccessResult))]
 public class SplitWorkbookHandler : OperationHandlerBase<Workbook>
 {
+    /// <summary>
+    ///     Maximum allowed total work units (sheetCount × outputFileCount) per split call.
+    ///     For workbook split the formula simplifies to outputSheetCount² because each
+    ///     selected sheet produces exactly one file.  A 316-sheet workbook hits ~100,000
+    ///     units at the limit.  This guards against adversarially crafted workbooks with
+    ///     hundreds of sheets that would flood the output directory.
+    /// </summary>
+    private const int MaxTotalWorkUnits = 100_000;
+
     /// <inheritdoc />
     public override string Operation => "split";
 
@@ -25,16 +34,39 @@ public class SplitWorkbookHandler : OperationHandlerBase<Workbook>
     ///     Optional: inputPath, path, sessionId (one is required), sheetIndices, outputFileNamePattern
     /// </param>
     /// <returns>Success message with split details.</returns>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when required parameters are missing, when a path fails
+    ///     <see cref="SecurityHelper.ValidateFilePath" /> or the server allowlist,
+    ///     when the square of the selected sheet count exceeds <see cref="MaxTotalWorkUnits" />
+    ///     (DoS guard), or when <c>outputFileNamePattern</c> resolves outside
+    ///     <c>outputDirectory</c>.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">
+    ///     Thrown when <c>sessionId</c> is supplied but session management is disabled.
+    /// </exception>
     public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractSplitParameters(parameters);
 
         ValidateParameters(p.InputPath, p.Path, p.SessionId, p.OutputDirectory);
+        EnforcePathAllowlist(context, p.InputPath ?? p.Path, p.OutputDirectory);
         EnsureOutputDirectoryExists(p.OutputDirectory!);
 
         var sourceWorkbook = GetSourceWorkbook(context, p.SessionId, p.InputPath ?? p.Path);
         var indicesToSplit = GetIndicesToSplit(p.SheetIndices, sourceWorkbook.Worksheets.Count);
-        var splitFiles = SplitWorksheets(sourceWorkbook, indicesToSplit, p.OutputDirectory!, p.OutputFileNamePattern);
+
+        // Orthogonal DoS guard: each selected sheet produces exactly one output file, so
+        // work units = sheetCount × sheetCount = sheetCount².  Adversarially crafted workbooks
+        // with hundreds of sheets are blocked here even though no user-controlled multiplier exists.
+        var outputSheetCount = indicesToSplit.Count;
+        var totalWorkUnits = (long)outputSheetCount * outputSheetCount;
+        if (totalWorkUnits > MaxTotalWorkUnits)
+            throw new ArgumentException(
+                $"Split would require {totalWorkUnits} work units (outputSheets² = {outputSheetCount}²). " +
+                $"Maximum allowed is {MaxTotalWorkUnits}. Use sheetIndices to select a smaller subset.");
+
+        var splitFiles = SplitWorksheets(sourceWorkbook, indicesToSplit, p.OutputDirectory!, p.OutputFileNamePattern,
+            context.ServerConfig?.AllowedBasePaths ?? []);
 
         return new SuccessResult
             { Message = $"Split workbook into {splitFiles.Count} files. Output: {p.OutputDirectory}" };
@@ -47,7 +79,11 @@ public class SplitWorkbookHandler : OperationHandlerBase<Workbook>
     /// <param name="path">Alternative path parameter.</param>
     /// <param name="sessionId">The session ID for session-based operations.</param>
     /// <param name="outputDirectory">The output directory path.</param>
-    /// <exception cref="ArgumentException">Thrown when required parameters are missing.</exception>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when required parameters are missing or when <paramref name="inputPath" />,
+    ///     <paramref name="path" />, or <paramref name="outputDirectory" /> fails
+    ///     <see cref="SecurityHelper.ValidateFilePath" />.
+    /// </exception>
     private static void ValidateParameters(string? inputPath, string? path, string? sessionId, string? outputDirectory)
     {
         var sourcePath = inputPath ?? path;
@@ -55,7 +91,37 @@ public class SplitWorkbookHandler : OperationHandlerBase<Workbook>
             throw new ArgumentException("Either inputPath, path, or sessionId is required");
         if (string.IsNullOrEmpty(outputDirectory))
             throw new ArgumentException("outputDirectory is required for split operation");
+        if (!string.IsNullOrEmpty(sourcePath))
+            SecurityHelper.ValidateFilePath(sourcePath, "inputPath", true);
         SecurityHelper.ValidateFilePath(outputDirectory, nameof(outputDirectory), true);
+    }
+
+    /// <summary>
+    ///     Enforces the server-wide path allowlist (CRITICAL-2, bug 20260415-excel-split-path-traversal).
+    ///     When <see cref="OperationContext{T}.ServerConfig" /> is non-null, every user-supplied path
+    ///     must resolve under one of <see cref="ServerConfig.AllowedBasePaths" />. No-op when no
+    ///     config is supplied (test contexts, backward compat with callers that haven't opted in).
+    /// </summary>
+    /// <param name="context">
+    ///     The handler's operation context; the allowlist is read from
+    ///     <see cref="OperationContext{T}.ServerConfig" />. When <c>ServerConfig</c> is null,
+    ///     the method is a no-op (test / legacy DI).
+    /// </param>
+    /// <param name="sourcePath">The user-supplied input path, or null/empty to skip.</param>
+    /// <param name="outputDirectory">The user-supplied output directory, or null/empty to skip.</param>
+    /// <exception cref="ArgumentException">
+    ///     Thrown by <see cref="SecurityHelper.ValidatePathWithinAllowedBases" /> when a
+    ///     supplied path resolves outside every configured base.
+    /// </exception>
+    private static void EnforcePathAllowlist(OperationContext<Workbook> context, string? sourcePath,
+        string? outputDirectory)
+    {
+        if (context.ServerConfig == null) return;
+        var allowed = context.ServerConfig.AllowedBasePaths;
+        if (!string.IsNullOrEmpty(sourcePath))
+            SecurityHelper.ValidatePathWithinAllowedBases(sourcePath, allowed, "inputPath");
+        if (!string.IsNullOrEmpty(outputDirectory))
+            SecurityHelper.ValidatePathWithinAllowedBases(outputDirectory, allowed, nameof(outputDirectory));
     }
 
     /// <summary>
@@ -108,9 +174,10 @@ public class SplitWorkbookHandler : OperationHandlerBase<Workbook>
     /// <param name="indicesToSplit">The list of worksheet indices to split.</param>
     /// <param name="outputDirectory">The output directory path.</param>
     /// <param name="outputFileNamePattern">The output file name pattern.</param>
+    /// <param name="allowedBasePaths">Allowlist of permitted base paths forwarded to the per-worksheet save step.</param>
     /// <returns>A list of created file paths.</returns>
     private static List<string> SplitWorksheets(Workbook sourceWorkbook, List<int> indicesToSplit,
-        string outputDirectory, string outputFileNamePattern)
+        string outputDirectory, string outputFileNamePattern, IReadOnlyList<string> allowedBasePaths)
     {
         List<string> splitFiles = [];
 
@@ -120,7 +187,8 @@ public class SplitWorkbookHandler : OperationHandlerBase<Workbook>
                 continue;
 
             var outputFilePath =
-                SaveWorksheetAsNewFile(sourceWorkbook, sheetIndex, outputDirectory, outputFileNamePattern);
+                SaveWorksheetAsNewFile(sourceWorkbook, sheetIndex, outputDirectory, outputFileNamePattern,
+                    allowedBasePaths);
             splitFiles.Add(outputFilePath);
         }
 
@@ -134,15 +202,34 @@ public class SplitWorkbookHandler : OperationHandlerBase<Workbook>
     /// <param name="sheetIndex">The index of the worksheet to save.</param>
     /// <param name="outputDirectory">The output directory path.</param>
     /// <param name="outputFileNamePattern">The output file name pattern with placeholders.</param>
+    /// <param name="allowedBasePaths">Allowlist of permitted base paths used to validate the resolved output path.</param>
     /// <returns>The path to the created file.</returns>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when <paramref name="outputFileNamePattern" />, after sanitation and
+    ///     placeholder substitution, resolves to a path outside
+    ///     <paramref name="outputDirectory" /> (directory-escape guard).
+    /// </exception>
     private static string SaveWorksheetAsNewFile(Workbook sourceWorkbook, int sheetIndex,
-        string outputDirectory, string outputFileNamePattern)
+        string outputDirectory, string outputFileNamePattern, IReadOnlyList<string> allowedBasePaths)
     {
         var worksheet = sourceWorkbook.Worksheets[sheetIndex];
-        var fileName = outputFileNamePattern
+        var safePattern = SecurityHelper.SanitizeFileNamePattern(outputFileNamePattern);
+        var fileName = safePattern
             .Replace("{index}", sheetIndex.ToString())
             .Replace("{name}", SecurityHelper.SanitizeFileName(worksheet.Name));
         var outputFilePath = Path.Combine(outputDirectory, fileName);
+        // Normalize for prefix comparison (trailing sep avoids "/out2" matching "/out")
+        var normalizedOutputDir =
+            Path.GetFullPath(outputDirectory).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            + Path.DirectorySeparatorChar;
+        if (!Path.GetFullPath(outputFilePath)
+                .StartsWith(normalizedOutputDir, StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException(
+                "outputFileNamePattern resolves to a path outside outputDirectory");
+
+        // H12: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
+        outputFilePath =
+            SecurityHelper.ResolveAndEnsureWithinAllowlist(outputFilePath, allowedBasePaths, nameof(outputFilePath));
 
         using var newWorkbook = new Workbook();
         newWorkbook.Worksheets.RemoveAt(0);

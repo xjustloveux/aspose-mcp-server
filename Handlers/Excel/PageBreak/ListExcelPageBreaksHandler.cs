@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Errors.Excel;
 using AsposeMcpServer.Helpers.Excel;
 using AsposeMcpServer.Results.Excel.PageBreak;
 
@@ -69,7 +70,7 @@ public class ListExcelPageBreaksHandler : OperationHandlerBase<Workbook>
         }
         catch (CellsException ex)
         {
-            throw new ArgumentException($"Failed to get page breaks from sheet {sheetIndex}: {ex.Message}");
+            throw CellsErrorTranslator.Translate(ex);
         }
     }
 }

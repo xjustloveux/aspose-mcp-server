@@ -1,6 +1,7 @@
 using Aspose.Pdf;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Errors.Pdf;
 using AsposeMcpServer.Results.Pdf.Image;
 
 namespace AsposeMcpServer.Handlers.Pdf.Image;
@@ -127,7 +128,11 @@ public class GetPdfImagesHandler : OperationHandlerBase<Document>
             }
             catch (Exception ex)
             {
-                imageList.Add(new PdfImageInfo { Index = i, PageIndex = pageNum, Error = ex.Message });
+                imageList.Add(new PdfImageInfo
+                {
+                    Index = i, PageIndex = pageNum,
+                    Error = PdfErrorTranslator.TranslateImageAccessError(ex)
+                });
             }
 
         return imageList;

@@ -37,19 +37,22 @@ public class SaveEmailCalendarHandler : OperationHandlerBase<object>
         SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
         if (!File.Exists(path))
-            throw new FileNotFoundException($"Calendar file not found: {path}");
+            throw new FileNotFoundException("The specified file was not found.");
 
         var appointment = Appointment.Load(path);
 
+        // H40: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
+        var resolvedOutputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(outputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], "outputPath");
         switch (format)
         {
             case "ics":
-                appointment.Save(outputPath, AppointmentSaveFormat.Ics);
+                appointment.Save(resolvedOutputPath, AppointmentSaveFormat.Ics);
                 break;
             case "msg":
                 var message = new MailMessage();
                 message.AlternateViews.Add(appointment.RequestApointment());
-                message.Save(outputPath, SaveOptions.DefaultMsgUnicode);
+                message.Save(resolvedOutputPath, SaveOptions.DefaultMsgUnicode);
                 break;
             default:
                 throw new ArgumentException(

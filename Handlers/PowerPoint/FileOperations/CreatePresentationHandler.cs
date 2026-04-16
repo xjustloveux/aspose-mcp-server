@@ -35,6 +35,9 @@ public class CreatePresentationHandler : OperationHandlerBase<Presentation>
         SecurityHelper.ValidateFilePath(savePath, allowAbsolutePaths: true);
 
         using var presentation = new Presentation();
+        // H21: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
+        savePath = SecurityHelper.ResolveAndEnsureWithinAllowlist(savePath,
+            context.ServerConfig?.AllowedBasePaths ?? [], nameof(savePath));
         presentation.Save(savePath, SaveFormat.Pptx);
 
         return new SuccessResult { Message = $"PowerPoint presentation created successfully. Output: {savePath}" };

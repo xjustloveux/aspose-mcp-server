@@ -62,6 +62,15 @@ public class ServerConfig
     public IReadOnlyList<string> AllowedBasePaths { get; private set; } = [];
 
     /// <summary>
+    ///     Maximum cumulative bytes written by a single <c>extract_all</c> call on the
+    ///     OLE tools (<c>word_ole_object</c> / <c>excel_ole_object</c> / <c>ppt_ole_object</c>)
+    ///     before the operation halts and returns a truncated result (security amendment
+    ///     F-8 from bug 20260415-ole-extract-unified). Defaults to 10 GiB. Operators may
+    ///     raise or lower via configuration; values ≤ 0 are treated as "no cap".
+    /// </summary>
+    public long MaxExtractAllBytes { get; private set; } = 10L * 1024L * 1024L * 1024L;
+
+    /// <summary>
     ///     Loads configuration from environment variables and command line arguments.
     ///     Command line arguments take precedence over environment variables.
     /// </summary>
@@ -86,6 +95,10 @@ public class ServerConfig
 
         var tools = Environment.GetEnvironmentVariable("ASPOSE_TOOLS");
         if (!string.IsNullOrEmpty(tools)) ParseTools(tools);
+
+        var maxExtractAllBytes = Environment.GetEnvironmentVariable("MAX_EXTRACT_ALL_BYTES");
+        if (!string.IsNullOrEmpty(maxExtractAllBytes) && long.TryParse(maxExtractAllBytes, out var envBytes))
+            MaxExtractAllBytes = envBytes;
     }
 
     /// <summary>
@@ -239,6 +252,22 @@ public class ServerConfig
                         var paths = AllowedBasePaths.ToList();
                         paths.Add(Path.GetFullPath(originalArg["--allowed-path=".Length..]));
                         AllowedBasePaths = paths.AsReadOnly();
+                    }
+                    else if (arg == "--max-extract-all-bytes" && i + 1 < args.Length)
+                    {
+                        if (long.TryParse(args[i + 1], out var cliBytes))
+                            MaxExtractAllBytes = cliBytes;
+                        i++;
+                    }
+                    else if (originalArg.StartsWith("--max-extract-all-bytes:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (long.TryParse(originalArg["--max-extract-all-bytes:".Length..], out var cliBytes))
+                            MaxExtractAllBytes = cliBytes;
+                    }
+                    else if (originalArg.StartsWith("--max-extract-all-bytes=", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (long.TryParse(originalArg["--max-extract-all-bytes=".Length..], out var cliBytes))
+                            MaxExtractAllBytes = cliBytes;
                     }
 
                     break;

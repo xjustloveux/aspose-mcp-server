@@ -46,7 +46,7 @@ public class RecognizePdfHandler : OperationHandlerBase<AsposeOcr>
         SecurityHelper.ValidateFilePath(p.OutputPath, "outputPath", true);
 
         if (!File.Exists(p.Path))
-            throw new FileNotFoundException($"PDF file not found: {p.Path}");
+            throw new FileNotFoundException("The specified file was not found.");
 
         var ext = Path.GetExtension(p.Path);
         if (!string.Equals(ext, ".pdf", StringComparison.OrdinalIgnoreCase))
@@ -69,13 +69,16 @@ public class RecognizePdfHandler : OperationHandlerBase<AsposeOcr>
         var saveFormat = ParseSaveFormat(formatLower);
         string? repairUsed = null;
 
-        AsposeOcr.SaveMultipageDocument(p.OutputPath, saveFormat, results);
+        // H43: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
+        var resolvedOutputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.OutputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], "outputPath");
+        AsposeOcr.SaveMultipageDocument(resolvedOutputPath, saveFormat, results);
 
-        if (p.Validate && formatLower == "docx" && HasInvalidXmlValues(p.OutputPath))
+        if (p.Validate && formatLower == "docx" && HasInvalidXmlValues(resolvedOutputPath))
         {
             if (p.EnableWord)
             {
-                RepairDocxWithAsposeWords(p.OutputPath);
+                RepairDocxWithAsposeWords(resolvedOutputPath);
                 repairUsed = "Aspose.Words";
             }
             else
@@ -86,7 +89,7 @@ public class RecognizePdfHandler : OperationHandlerBase<AsposeOcr>
             }
         }
 
-        var fileInfo = new FileInfo(p.OutputPath);
+        var fileInfo = new FileInfo(resolvedOutputPath);
         return new OcrConversionResult
         {
             SourcePath = p.Path,

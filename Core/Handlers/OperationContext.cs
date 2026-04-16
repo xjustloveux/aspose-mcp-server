@@ -81,4 +81,18 @@ public class OperationContext<TContext> where TContext : class
     ///     May be null if the client did not request progress notifications.
     /// </summary>
     public IProgress<ProgressNotificationValue>? Progress { get; init; }
+
+    /// <summary>
+    ///     Gets the server configuration for path-allowlist enforcement.
+    ///     When non-null, handlers should call
+    ///     <see cref="Helpers.SecurityHelper.ResolveAndEnsureWithinAllowlist" /> with
+    ///     <see cref="ServerConfig.AllowedBasePaths" /> for every user-supplied file path immediately
+    ///     before it reaches an Aspose sink. This helper resolves symbolic links and re-checks the
+    ///     resolved path against the allowlist, closing the TOCTOU gap that
+    ///     <c>ValidatePathWithinAllowedBases</c> alone did not address. The upgrade is transparent
+    ///     to callers — the method signature accepts the same arguments and the allowlist semantics
+    ///     are identical; only symlink-escape attempts are now rejected. May be null in test contexts
+    ///     or when the tool does not receive the config via DI.
+    /// </summary>
+    public ServerConfig? ServerConfig { get; init; }
 }

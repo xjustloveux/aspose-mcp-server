@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Errors.Excel;
 using AsposeMcpServer.Helpers.Excel;
 using AsposeMcpServer.Results.Excel.DataImportExport;
 
@@ -84,7 +85,7 @@ public class ImportArrayExcelHandler : OperationHandlerBase<Workbook>
         }
         catch (CellsException ex)
         {
-            throw new ArgumentException($"Failed to import array data: {ex.Message}");
+            throw CellsErrorTranslator.Translate(ex);
         }
     }
 }

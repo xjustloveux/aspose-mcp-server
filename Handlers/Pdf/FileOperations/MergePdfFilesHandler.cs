@@ -62,7 +62,10 @@ public class MergePdfFilesHandler : OperationHandlerBase<Document>
             });
         }
 
-        mergedDocument.Save(mergeParams.OutputPath);
+        // H28: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
+        var resolvedOutputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(mergeParams.OutputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], "outputPath");
+        mergedDocument.Save(resolvedOutputPath);
         context.Progress?.Report(new ProgressNotificationValue
             { Progress = 100, Total = 100, Message = "Merge completed" });
 

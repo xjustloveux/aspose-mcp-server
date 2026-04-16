@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using Aspose.Cells.Pivot;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Errors.Excel;
 using AsposeMcpServer.Helpers.Excel;
 using AsposeMcpServer.Results.Common;
 
@@ -64,6 +65,9 @@ public class AddFieldExcelPivotTableHandler : ExcelPivotTableFieldHandlerBase
         }
         catch (Exception ex)
         {
+            // Aspose may throw when the field is already in the area; treat as idempotent
+            // success rather than an error. The ex.Message check is an internal behavioral
+            // guard — it is never forwarded to the MCP caller.
             if (ex.Message.Contains("already exists") || ex.Message.Contains("duplicate"))
             {
                 MarkModified(context);
@@ -74,8 +78,7 @@ public class AddFieldExcelPivotTableHandler : ExcelPivotTableFieldHandlerBase
                 };
             }
 
-            throw new ArgumentException(
-                $"Failed to add field '{parameters.FieldName}' to pivot table: {ex.Message}. Field index: {fieldIndex}, Field type: {parameters.FieldType}");
+            throw CellsErrorTranslator.Translate(ex);
         }
     }
 }

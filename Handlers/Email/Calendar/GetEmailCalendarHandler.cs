@@ -31,7 +31,7 @@ public class GetEmailCalendarHandler : OperationHandlerBase<object>
         SecurityHelper.ValidateFilePath(path, "path", true);
 
         if (!File.Exists(path))
-            throw new FileNotFoundException($"Calendar file not found: {path}");
+            throw new FileNotFoundException("The specified file was not found.");
 
         var appointment = Appointment.Load(path);
 

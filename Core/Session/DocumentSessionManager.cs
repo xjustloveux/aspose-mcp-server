@@ -30,6 +30,15 @@ public class DocumentSessionManager : IDisposable
     private readonly ILogger<DocumentSessionManager>? _logger;
 
     /// <summary>
+    ///     Optional server configuration. When non-null, every user-supplied path entering the
+    ///     session manager is checked against <see cref="ServerConfig.AllowedBasePaths" /> in
+    ///     addition to the standard <see cref="SecurityHelper.ValidateFilePath" /> shape check.
+    ///     Test constructions and DI consumers that don't supply this leave it null →
+    ///     allowlist becomes a no-op (backward compatible).
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Thread-safe dictionary of active sessions grouped by owner key
     ///     Key: Owner storage key, Value: Dictionary of SessionId -> Session
     /// </summary>
@@ -46,10 +55,19 @@ public class DocumentSessionManager : IDisposable
     /// </summary>
     /// <param name="config">Session configuration</param>
     /// <param name="loggerFactory">Logger factory for logging</param>
-    public DocumentSessionManager(SessionConfig config, ILoggerFactory? loggerFactory = null)
+    /// <param name="serverConfig">
+    ///     Optional server configuration carrying the
+    ///     <see cref="ServerConfig.AllowedBasePaths" /> allowlist. When null (default,
+    ///     used by tests), allowlist enforcement is skipped while shape validation
+    ///     (<see cref="SecurityHelper.ValidateFilePath" />) still runs on every
+    ///     user-supplied path.
+    /// </param>
+    public DocumentSessionManager(SessionConfig config, ILoggerFactory? loggerFactory = null,
+        ServerConfig? serverConfig = null)
     {
         Config = config;
         _logger = loggerFactory?.CreateLogger<DocumentSessionManager>();
+        _serverConfig = serverConfig;
 
         if (config.IdleTimeoutMinutes > 0)
             _cleanupTimer = new Timer(
@@ -131,6 +149,12 @@ public class DocumentSessionManager : IDisposable
         if (normalizedMode != "readonly" && normalizedMode != "readwrite")
             throw new ArgumentException($"Invalid mode: '{mode}'. Must be 'readonly' or 'readwrite'.", nameof(mode));
 
+        // Validate BEFORE new FileInfo(path) to close the existence/size stat-oracle
+        // side channel (bug 20260415-session-loader-path, HIGH-3) and the four
+        // LoadDocument read sinks (Word/Excel/PPT/PDF) at once. Single upstream guard
+        // mirrors the Core/Session/DocumentContext.cs:147-149 in-repo precedent.
+        SecurityHelper.ValidateUserPath(path, _serverConfig?.AllowedBasePaths ?? []);
+
         var ownerKey = owner.GetStorageKey(Config.IsolationMode);
         var ownerSessions =
             _sessionsByOwner.GetOrAdd(ownerKey, _ => new ConcurrentDictionary<string, DocumentSession>());
@@ -139,7 +163,11 @@ public class DocumentSessionManager : IDisposable
             throw new InvalidOperationException($"Maximum session limit ({Config.MaxSessions}) reached for this user");
 
         var fileInfo = new FileInfo(path);
-        if (!fileInfo.Exists) throw new FileNotFoundException($"File not found: {path}");
+        if (!fileInfo.Exists)
+        {
+            _logger?.LogWarning("OpenDocument: file not found at {Path}", path);
+            throw new FileNotFoundException("File not found");
+        }
 
         var fileSizeMb = fileInfo.Length / (1024.0 * 1024.0);
         if (fileSizeMb > Config.MaxFileSizeMb)
@@ -318,6 +346,14 @@ public class DocumentSessionManager : IDisposable
     /// <exception cref="InvalidOperationException">Thrown when trying to save a readonly session</exception>
     public void SaveDocument(string sessionId, SessionIdentity requestor, string? outputPath = null)
     {
+        // Validate the user-supplied outputPath at the trust boundary, BEFORE looking up
+        // the session, so an invalid path never reaches the .Save sink (bug
+        // 20260415-session-loader-path, U2). Null/empty means "use session.Path", which
+        // was validated when the session was opened.
+        if (!string.IsNullOrEmpty(outputPath))
+            SecurityHelper.ValidateUserPath(outputPath, _serverConfig?.AllowedBasePaths ?? [],
+                nameof(outputPath));
+
         var session = FindSessionWithAuth(sessionId, requestor);
         if (session == null)
             throw new KeyNotFoundException($"Session not found: {sessionId}");
@@ -325,6 +361,14 @@ public class DocumentSessionManager : IDisposable
         if (session.Mode == "readonly") throw new InvalidOperationException("Cannot save a readonly session");
 
         var savePath = outputPath ?? session.Path;
+
+        // Re-check allowlist on the resolved savePath right before write (HIGH-1).
+        // session.Path was admitted at open time, but ServerConfig.AllowedBasePaths is
+        // mutable (Core/ServerConfig.cs:226-241). A configuration reload that narrows
+        // the allowlist must not let pre-existing sessions auto-save outside the new
+        // bounds. Path-shape is immutable so ValidateFilePath is not re-run.
+        ReassertAllowlistForResolvedPath(savePath, nameof(savePath));
+
         session.Execute(doc => SaveDocumentToFile(doc, session.Type, savePath));
         session.IsDirty = false;
 
@@ -389,7 +433,10 @@ public class DocumentSessionManager : IDisposable
         try
         {
             if (!discard && session.IsDirty)
+            {
+                ReassertAllowlistForResolvedPath(sessionPath, nameof(sessionPath));
                 session.Execute(doc => SaveDocumentToFile(doc, sessionType, sessionPath));
+            }
         }
         finally
         {
@@ -554,6 +601,32 @@ public class DocumentSessionManager : IDisposable
     }
 
     /// <summary>
+    ///     Re-asserts the admin-configured path allowlist against a save path immediately before the
+    ///     .Save sink, resolving symbolic links in the process. Closes the configuration-reload race
+    ///     (bug 20260415-session-loader-path, HIGH-1) and the symlink TOCTOU gap
+    ///     (bug 20260415-symlink-toctou-sweep, Phase 1): a session path that passed the allowlist
+    ///     check at open time could be a symlink whose target escapes the (possibly narrowed) current
+    ///     allowlist. Path shape validation (<see cref="SecurityHelper.ValidateFilePath" />) is not
+    ///     re-invoked here because shape is immutable for the session lifetime. No-op when no
+    ///     <c>ServerConfig</c> is wired in (test contexts).
+    /// </summary>
+    /// <param name="resolvedPath">
+    ///     The write target (typically <c>session.Path</c> or a generated temp path under
+    ///     <c>Config.TempDirectory</c>).
+    /// </param>
+    /// <param name="paramName">Parameter name used in thrown exception messages.</param>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when the path (after following symlinks) is outside the configured allowlist,
+    ///     or when a circular symbolic link is detected.
+    /// </exception>
+    private void ReassertAllowlistForResolvedPath(string resolvedPath, string paramName)
+    {
+        var allowed = _serverConfig?.AllowedBasePaths;
+        if (allowed is { Count: > 0 })
+            SecurityHelper.ResolveAndEnsureWithinAllowlist(resolvedPath, allowed, paramName);
+    }
+
+    /// <summary>
     ///     Handles disconnect behavior for a session based on configuration.
     ///     Always disposes the session, even if save fails or session is not dirty.
     /// </summary>
@@ -575,6 +648,7 @@ public class DocumentSessionManager : IDisposable
             switch (Config.OnDisconnect)
             {
                 case DisconnectBehavior.AutoSave:
+                    ReassertAllowlistForResolvedPath(sessionPath, nameof(sessionPath));
                     session.Execute(doc => SaveDocumentToFile(doc, sessionType, sessionPath));
                     DeleteSessionTempFiles(session.SessionId);
                     _logger?.LogInformation("Auto-saved session {SessionId} and cleaned up temp files",
@@ -583,6 +657,7 @@ public class DocumentSessionManager : IDisposable
 
                 case DisconnectBehavior.SaveToTemp:
                     var tempPath = GetTempPath(session);
+                    ReassertAllowlistForResolvedPath(tempPath, nameof(tempPath));
                     session.Execute(doc => SaveDocumentToFile(doc, sessionType, tempPath));
                     SaveSessionMetadata(session, tempPath);
                     _logger?.LogInformation("Saved session {SessionId} to temp: {TempPath}", session.SessionId,
@@ -597,6 +672,7 @@ public class DocumentSessionManager : IDisposable
 
                 case DisconnectBehavior.PromptOnReconnect:
                     var promptTempPath = GetTempPath(session);
+                    ReassertAllowlistForResolvedPath(promptTempPath, nameof(promptTempPath));
                     session.Execute(doc => SaveDocumentToFile(doc, sessionType, promptTempPath));
                     SaveSessionMetadata(session, promptTempPath, true);
                     _logger?.LogInformation("Saved session {SessionId} for prompt on reconnect", session.SessionId);
@@ -670,6 +746,7 @@ public class DocumentSessionManager : IDisposable
             try
             {
                 var tempPath = GetTempPath(session);
+                ReassertAllowlistForResolvedPath(tempPath, nameof(tempPath));
                 session.Execute(doc => SaveDocumentToFile(doc, session.Type, tempPath));
                 SaveSessionMetadata(session, tempPath);
                 _logger?.LogInformation("Auto-saved dirty session {SessionId} to temp: {TempPath}",
@@ -753,6 +830,7 @@ public class DocumentSessionManager : IDisposable
         }
     }
 
+
     /// <summary>
     ///     Generates a temporary file path for session recovery
     /// </summary>
@@ -784,11 +862,38 @@ public class DocumentSessionManager : IDisposable
                     var json = File.ReadAllText(metadataPath);
                     var metadata = JsonSerializer.Deserialize<TempFileMetadata>(json);
 
+                    // T5: symlink-aware check before File.Delete on metadata-sourced TempPath.
+                    // ResolveAndEnsureWithinAllowlist follows symbolic links so a planted link
+                    // whose lexical path is inside TempDirectory but whose target is outside
+                    // cannot be used as a delete-anywhere primitive
+                    // (bug 20260415-symlink-toctou-sweep, Phase 1).
                     if (metadata?.TempPath != null && File.Exists(metadata.TempPath))
-                        File.Delete(metadata.TempPath);
+                        try
+                        {
+                            SecurityHelper.ResolveAndEnsureWithinAllowlist(
+                                metadata.TempPath,
+                                [Config.TempDirectory],
+                                "tempPath");
+                            File.Delete(metadata.TempPath);
+                        }
+                        catch (ArgumentException)
+                        {
+                            _logger?.LogWarning(
+                                "Refusing to delete temp file outside TempDirectory for session {SessionId}",
+                                sessionId);
+                        }
 
+                    // T6: resolve metadata path before deleting it.
+                    SecurityHelper.ResolveAndEnsureWithinAllowlist(
+                        metadataPath,
+                        [Config.TempDirectory],
+                        "metadataPath");
                     File.Delete(metadataPath);
                     _logger?.LogDebug("Deleted temp file for session {SessionId}: {Path}", sessionId, metadataPath);
+                }
+                catch (ArgumentException ex)
+                {
+                    _logger?.LogWarning(ex, "Refusing to delete metadata outside TempDirectory: {Path}", metadataPath);
                 }
                 catch (Exception ex)
                 {
@@ -822,6 +927,18 @@ public class DocumentSessionManager : IDisposable
         };
 
         var metadataPath = tempPath + ".meta.json";
+        // T7: resolve immediately before File.WriteAllText to catch a symlink planted at
+        // metadataPath redirecting the JSON write outside TempDirectory.
+        // allowedBase is derived from tempPath's parent since this is a static method without
+        // Config access; tempPath was already validated by ReassertAllowlistForResolvedPath
+        // at the call site (bug 20260415-symlink-toctou-sweep, Phase 1).
+        var metaAllowedBase = Path.GetDirectoryName(Path.GetFullPath(tempPath))
+                              ?? throw new InvalidOperationException(
+                                  "GetFullPath returned a path without a directory component");
+        SecurityHelper.ResolveAndEnsureWithinAllowlist(
+            metadataPath,
+            [metaAllowedBase],
+            "metadataPath");
         File.WriteAllText(metadataPath, JsonSerializer.Serialize(metadata, JsonDefaults.Indented));
     }
 }

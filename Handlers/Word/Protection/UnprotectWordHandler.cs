@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Errors.Word;
 using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Protection;
@@ -38,9 +39,7 @@ public class UnprotectWordHandler : OperationHandlerBase<Document>
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException(
-                $"Failed to unprotect document: The password may be incorrect or the document has additional restrictions. Details: {ex.Message}",
-                ex);
+            throw WordErrorTranslator.Translate(ex);
         }
 
         if (doc.ProtectionType != ProtectionType.NoProtection)

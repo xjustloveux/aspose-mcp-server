@@ -59,6 +59,9 @@ public class GenerateBarcodeHandler : OperationHandlerBase<object>
         if (!string.IsNullOrEmpty(outputDir) && !Directory.Exists(outputDir))
             Directory.CreateDirectory(outputDir);
 
+        // H33: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
+        outputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(outputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], nameof(outputPath));
         generator.Save(outputPath, imageFormat);
 
         var formatName = Path.GetExtension(outputPath).TrimStart('.').ToUpperInvariant();

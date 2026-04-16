@@ -36,6 +36,9 @@ public class CreateWorkbookHandler : OperationHandlerBase<Workbook>
         if (!string.IsNullOrEmpty(p.SheetName))
             workbook.Worksheets[0].Name = p.SheetName;
 
+        // H14: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
+        targetPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(targetPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], nameof(targetPath));
         workbook.Save(targetPath);
 
         return new SuccessResult { Message = $"Excel workbook created successfully. Output: {targetPath}" };

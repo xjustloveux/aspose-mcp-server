@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using Aspose.Cells.Pivot;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Errors.Excel;
 using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Excel.PivotTable;
@@ -74,6 +75,9 @@ public class DeleteFieldExcelPivotTableHandler : ExcelPivotTableFieldHandlerBase
         }
         catch (Exception ex)
         {
+            // Aspose may throw when the field is already absent; treat as idempotent
+            // success rather than an error. The ex.Message check is an internal behavioral
+            // guard — it is never forwarded to the MCP caller.
             if (ex.Message.Contains("not found") || ex.Message.Contains("does not exist"))
             {
                 MarkModified(context);
@@ -84,8 +88,7 @@ public class DeleteFieldExcelPivotTableHandler : ExcelPivotTableFieldHandlerBase
                 };
             }
 
-            throw new ArgumentException(
-                $"Failed to remove field '{parameters.FieldName}' from pivot table: {ex.Message}. Field index: {fieldIndex}, Field type: {parameters.FieldType}");
+            throw CellsErrorTranslator.Translate(ex);
         }
     }
 }

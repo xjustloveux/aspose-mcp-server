@@ -34,13 +34,16 @@ public class ConvertEmailHandler : OperationHandlerBase<object>
         SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
         if (!File.Exists(path))
-            throw new FileNotFoundException($"Input file not found: {path}");
+            throw new FileNotFoundException("The specified file was not found.");
 
         var message = MailMessage.Load(path);
 
         var outputExt = Path.GetExtension(outputPath).ToLowerInvariant();
         var saveOptions = GetSaveOptions(outputExt);
 
+        // H37: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
+        outputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(outputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], nameof(outputPath));
         message.Save(outputPath, saveOptions);
 
         var inputExt = Path.GetExtension(path).ToLowerInvariant();

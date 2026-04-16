@@ -2,6 +2,7 @@ using Aspose.Pdf;
 using Aspose.Pdf.Text;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Errors;
 using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.Table;
@@ -242,9 +243,11 @@ public class EditPdfTableHandler : OperationHandlerBase<Document>
                 }
             }
         }
-        catch (Exception ex)
+        catch
         {
-            pageInfo.Add($"Error analyzing pages: {ex.Message}");
+            // Swallow structure-analysis errors; the caller receives a best-effort
+            // diagnostic already built from pages processed before the failure.
+            pageInfo.Add(ErrorMessageBuilder.ProcessingFailed());
         }
 
         return (totalParagraphs, paragraphTypes, pageInfo);

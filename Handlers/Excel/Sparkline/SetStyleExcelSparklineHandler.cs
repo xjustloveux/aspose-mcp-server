@@ -2,6 +2,7 @@ using Aspose.Cells;
 using Aspose.Cells.Charts;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Errors.Excel;
 using AsposeMcpServer.Helpers.Excel;
 using AsposeMcpServer.Results.Common;
 
@@ -66,7 +67,7 @@ public class SetStyleExcelSparklineHandler : OperationHandlerBase<Workbook>
         }
         catch (CellsException ex)
         {
-            throw new ArgumentException($"Failed to set sparkline style: {ex.Message}");
+            throw CellsErrorTranslator.Translate(ex);
         }
     }
 

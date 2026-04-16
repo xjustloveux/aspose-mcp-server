@@ -37,7 +37,11 @@ public class AddImagePptWatermarkHandler : OperationHandlerBase<Presentation>
             throw new ArgumentException($"Image file not found: {imagePath}");
 
         var presentation = context.Document;
-        var imageBytes = File.ReadAllBytes(imagePath);
+        // B-3: resolve symlinks immediately before the read sink (bug 20260415-symlink-toctou-sweep).
+        var resolvedImagePath =
+            SecurityHelper.ResolveAndEnsureWithinAllowlist(imagePath, context.ServerConfig?.AllowedBasePaths ?? [],
+                "imagePath");
+        var imageBytes = File.ReadAllBytes(resolvedImagePath);
         var ppImage = presentation.Images.AddImage(imageBytes);
 
         var slideCount = 0;

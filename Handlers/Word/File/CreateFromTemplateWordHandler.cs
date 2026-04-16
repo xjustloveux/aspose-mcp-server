@@ -65,7 +65,7 @@ public class CreateFromTemplateWordHandler : OperationHandlerBase<Document>
         {
             SecurityHelper.ValidateFilePath(p.TemplatePath!, "templatePath", true);
             if (!System.IO.File.Exists(p.TemplatePath))
-                throw new FileNotFoundException($"Template file not found: {p.TemplatePath}");
+                throw new FileNotFoundException("The specified file was not found.");
             doc = new Document(p.TemplatePath);
             templateSource = Path.GetFileName(p.TemplatePath);
         }
@@ -86,7 +86,10 @@ public class CreateFromTemplateWordHandler : OperationHandlerBase<Document>
 
         engine.BuildReport(doc, dataSource, "ds");
 
-        doc.Save(p.OutputPath);
+        // H8: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
+        var resolvedOutputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.OutputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], "outputPath");
+        doc.Save(resolvedOutputPath);
         return new SuccessResult
         {
             Message =

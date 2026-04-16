@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Errors.Excel;
 using AsposeMcpServer.Helpers.Excel;
 using AsposeMcpServer.Results.Excel.Style;
 
@@ -52,8 +53,7 @@ public class GetCellFormatHandler : OperationHandlerBase<Workbook>
         }
         catch (Exception ex)
         {
-            throw new ArgumentException(
-                $"Invalid cell range: '{cellOrRange}'. Expected format: single cell (e.g., 'A1') or range (e.g., 'A1:C5'). Error: {ex.Message}");
+            throw CellsErrorTranslator.Translate(ex);
         }
     }
 

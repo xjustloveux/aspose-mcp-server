@@ -37,7 +37,7 @@ public class AddImageWatermarkWordHandler : OperationHandlerBase<Document>
         SecurityHelper.ValidateFilePath(p.ImagePath, "imagePath", true);
 
         if (!System.IO.File.Exists(p.ImagePath))
-            throw new FileNotFoundException($"Image file not found: {p.ImagePath}");
+            throw new FileNotFoundException("The specified file was not found.");
 
         var doc = context.Document;
 
@@ -47,7 +47,10 @@ public class AddImageWatermarkWordHandler : OperationHandlerBase<Document>
             IsWashout = p.IsWashout
         };
 
-        using var bitmap = SKBitmap.Decode(p.ImagePath);
+        // H51: resolve symlinks immediately before the read sink (bug 20260415-symlink-toctou-sweep).
+        var resolvedImagePath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.ImagePath,
+            context.ServerConfig?.AllowedBasePaths ?? [], "imagePath");
+        using var bitmap = SKBitmap.Decode(resolvedImagePath);
         if (bitmap == null)
             throw new ArgumentException(
                 $"Failed to decode image: {p.ImagePath}. Ensure the file is a valid image format.");

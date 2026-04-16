@@ -13,6 +13,17 @@ namespace AsposeMcpServer.Handlers.Pdf.FileOperations;
 [ResultType(typeof(SuccessResult))]
 public class SplitPdfFileHandler : OperationHandlerBase<Document>
 {
+    /// <summary>
+    ///     Maximum allowed total work units (totalPages × outputFileCount) per split call.
+    ///     Applies only to full-document split mode (no explicit startPage/endPage), where the
+    ///     caller controls <c>pagesPerFile</c> and therefore the number of output files.
+    ///     A 100-page PDF split into 1 page per file = 100 × 100 = 10,000 units (well within
+    ///     the cap); a 10,000-page PDF split into 1 page per file = 100M units (rejected).
+    ///     The bound ensures that the total I/O load stays proportional to document size even
+    ///     when pagesPerFile is small.
+    /// </summary>
+    private const int MaxTotalWorkUnits = 100_000;
+
     /// <inheritdoc />
     public override string Operation => "split";
 
@@ -25,6 +36,12 @@ public class SplitPdfFileHandler : OperationHandlerBase<Document>
     ///     Optional: pagesPerFile (default: 1), startPage, endPage, fileBaseName
     /// </param>
     /// <returns>Success message with split result.</returns>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when <c>pagesPerFile</c> is outside [1,1000]; when <c>startPage</c> or
+    ///     <c>endPage</c> is out of range; when, in full-split mode (no explicit page range),
+    ///     the product of totalPages and output file count exceeds <see cref="MaxTotalWorkUnits" />;
+    ///     or when path validation fails.
+    /// </exception>
     public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var splitParams = ExtractSplitParameters(parameters);
@@ -60,6 +77,9 @@ public class SplitPdfFileHandler : OperationHandlerBase<Document>
             var safeFileName =
                 SecurityHelper.SanitizeFileName($"{baseName}_pages_{actualStartPage}-{actualEndPage}.pdf");
             var splitOutputPath = Path.Combine(splitParams.OutputDir, safeFileName);
+            // H27: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
+            splitOutputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(splitOutputPath,
+                context.ServerConfig?.AllowedBasePaths ?? [], nameof(splitOutputPath));
             newDocument.Save(splitOutputPath);
 
             return new SuccessResult
@@ -72,6 +92,14 @@ public class SplitPdfFileHandler : OperationHandlerBase<Document>
         var fileCount = 0;
         var totalSplits = (int)Math.Ceiling((double)totalPages / splitParams.PagesPerFile);
 
+        // Orthogonal DoS guard: even with pagesPerFile ≥ 1, a very large document combined
+        // with a small pagesPerFile creates excessive I/O (e.g., 10,000 pages × 10,000 files).
+        var totalWorkUnits = (long)totalPages * totalSplits;
+        if (totalWorkUnits > MaxTotalWorkUnits)
+            throw new ArgumentException(
+                $"Split would require {totalWorkUnits} work units (totalPages × outputFiles = {totalPages} × {totalSplits}). " +
+                $"Maximum allowed is {MaxTotalWorkUnits}. Increase pagesPerFile to reduce the number of output files.");
+
         for (var i = 0; i < totalPages; i += splitParams.PagesPerFile)
         {
             using var newDocument = new Document();
@@ -80,6 +108,9 @@ public class SplitPdfFileHandler : OperationHandlerBase<Document>
 
             var safeFileName = SecurityHelper.SanitizeFileName($"{baseName}_part_{++fileCount}.pdf");
             var splitOutputPath = Path.Combine(splitParams.OutputDir, safeFileName);
+            // H27: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
+            splitOutputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(splitOutputPath,
+                context.ServerConfig?.AllowedBasePaths ?? [], nameof(splitOutputPath));
             newDocument.Save(splitOutputPath);
 
             var splitProgress = fileCount * 100 / totalSplits;

@@ -34,6 +34,9 @@ public class ExecuteMailMergeHandler : OperationHandlerBase<Document>
         var p = ExtractMailMergeParameters(parameters);
 
         SecurityHelper.ValidateFilePath(p.OutputPath, "outputPath", true);
+        // H3: resolve symlinks once at handler entry; the resolved path is forwarded to the private helpers.
+        var resolvedOutputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.OutputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], "outputPath");
 
         JsonObject? dataObject = null;
         JsonArray? dataArrayObject = null;
@@ -55,10 +58,10 @@ public class ExecuteMailMergeHandler : OperationHandlerBase<Document>
         var cleanupOptionsFlags = ParseCleanupOptions(p.CleanupOptions);
 
         if (dataArrayObject is { Count: > 0 })
-            return ExecuteMultipleRecords(context, p.OutputPath, dataArrayObject, cleanupOptionsFlags);
+            return ExecuteMultipleRecords(context, resolvedOutputPath, dataArrayObject, cleanupOptionsFlags);
 
         if (dataObject != null)
-            return ExecuteSingleRecord(context, p.OutputPath, dataObject, cleanupOptionsFlags);
+            return ExecuteSingleRecord(context, resolvedOutputPath, dataObject, cleanupOptionsFlags);
 
         throw new ArgumentException("No data provided for mail merge");
     }
@@ -145,7 +148,9 @@ public class ExecuteMailMergeHandler : OperationHandlerBase<Document>
             var recordOutputPath = dataArray.Count == 1
                 ? outputPath
                 : Path.Combine(outputDir, $"{outputName}_{i + 1}{outputExt}");
-
+            // H3: re-resolve each per-record path immediately before its sink (bug 20260415-symlink-toctou-sweep).
+            recordOutputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(recordOutputPath,
+                context.ServerConfig?.AllowedBasePaths ?? [], nameof(recordOutputPath));
             doc.Save(recordOutputPath);
             outputFiles.Add(recordOutputPath);
         }

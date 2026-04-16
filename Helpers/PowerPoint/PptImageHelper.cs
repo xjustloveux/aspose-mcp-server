@@ -79,15 +79,25 @@ public static class PptImageHelper
     /// <param name="maxWidth">The maximum width in pixels for resize (optional).</param>
     /// <param name="maxHeight">The maximum height in pixels for resize (optional).</param>
     /// <param name="processingDetails">Output list of processing details performed.</param>
+    /// <param name="allowedBasePaths">
+    ///     The allowlist of base paths used for symlink resolution before the read sink.
+    ///     Pass an empty list to skip allowlist enforcement (allowlist disabled).
+    /// </param>
     /// <returns>The processed image added to the presentation.</returns>
+    /// <exception cref="ArgumentException">Thrown when imagePath resolves to a location outside the allowlist.</exception>
     public static IPPImage ProcessAndAddImage(IPresentation presentation, string imagePath, int? jpegQuality,
-        int? maxWidth, int? maxHeight, out List<string> processingDetails)
+        int? maxWidth, int? maxHeight, out List<string> processingDetails,
+        IReadOnlyList<string>? allowedBasePaths = null)
     {
         processingDetails = [];
 
+        // H52: resolve symlinks immediately before the read sinks (bug 20260415-symlink-toctou-sweep).
+        var resolvedImagePath =
+            SecurityHelper.ResolveAndEnsureWithinAllowlist(imagePath, allowedBasePaths ?? [], nameof(imagePath));
+
         if (jpegQuality.HasValue || maxWidth.HasValue || maxHeight.HasValue)
         {
-            using var fileStream = new FileStream(imagePath, FileMode.Open, FileAccess.Read);
+            using var fileStream = new FileStream(resolvedImagePath, FileMode.Open, FileAccess.Read);
             using var src = Image.FromStream(fileStream);
 
             var processedImage = src;
@@ -127,7 +137,7 @@ public static class PptImageHelper
             return presentation.Images.AddImage(ms);
         }
 
-        using var fs = new FileStream(imagePath, FileMode.Open, FileAccess.Read);
+        using var fs = new FileStream(resolvedImagePath, FileMode.Open, FileAccess.Read);
         processingDetails.Add("image replaced");
         return presentation.Images.AddImage(fs);
     }

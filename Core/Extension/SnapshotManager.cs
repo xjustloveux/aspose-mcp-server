@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using AsposeMcpServer.Core.Extension.Transport;
+using AsposeMcpServer.Helpers;
 
 namespace AsposeMcpServer.Core.Extension;
 
@@ -429,6 +430,12 @@ public class SnapshotManager : IHostedService, IDisposable
             {
                 if (File.Exists(filePath))
                 {
+                    // T15: resolve immediately before File.Delete to catch a symlink planted
+                    // at filePath. Use _config.TempDirectory as the allowedBase since snapshot
+                    // file paths are generated under that directory by FileTransport
+                    // (bug 20260415-symlink-toctou-sweep, Phase 1).
+                    SecurityHelper.ResolveAndEnsureWithinAllowlist(
+                        filePath, [_config.TempDirectory], "filePath");
                     File.Delete(filePath);
                     _logger.LogDebug(
                         "Cleaned up orphaned snapshot file for extension {ExtensionId}, sequence {SequenceNumber}: {FilePath}",

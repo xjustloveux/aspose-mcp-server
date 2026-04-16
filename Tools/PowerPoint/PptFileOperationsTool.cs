@@ -70,8 +70,8 @@ public class PptFileOperationsTool
     [McpServerTool(
         Name = "ppt_file_operations",
         Title = "PowerPoint File Operations",
-        Destructive = false,
-        Idempotent = true,
+        Destructive = true,
+        Idempotent = false,
         OpenWorld = false,
         ReadOnly = false,
         UseStructuredContent = true)]

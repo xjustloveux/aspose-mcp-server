@@ -50,8 +50,11 @@ public class RenderPageWordHandler : OperationHandlerBase<Document>
             if (!string.IsNullOrEmpty(outputDir))
                 Directory.CreateDirectory(outputDir);
 
-            doc.Save(p.OutputPath, options);
-            outputPaths.Add(p.OutputPath);
+            // H2: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
+            var resolvedOutputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.OutputPath,
+                context.ServerConfig?.AllowedBasePaths ?? [], "outputPath");
+            doc.Save(resolvedOutputPath, options);
+            outputPaths.Add(resolvedOutputPath);
         }
         else
         {
@@ -68,6 +71,9 @@ public class RenderPageWordHandler : OperationHandlerBase<Document>
                 var options = CreateImageSaveOptions(saveFormat, p.Dpi, i);
                 var pagePath = Path.Combine(outputDir ?? ".",
                     $"{baseName}_page_{i + 1}{ext}");
+                // H2: resolve symlinks immediately before each per-page sink (bug 20260415-symlink-toctou-sweep).
+                pagePath = SecurityHelper.ResolveAndEnsureWithinAllowlist(pagePath,
+                    context.ServerConfig?.AllowedBasePaths ?? [], nameof(pagePath));
                 doc.Save(pagePath, options);
                 outputPaths.Add(pagePath);
             }

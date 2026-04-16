@@ -35,15 +35,24 @@ public class AddEmailAttachmentHandler : OperationHandlerBase<object>
         SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
         SecurityHelper.ValidateFilePath(attachmentPath, "attachmentPath", true);
 
+        // Allowlist + symlink resolution for read sinks (bug 20260416-handler-allowlist-bypass).
+        var allowedBases = context.ServerConfig?.AllowedBasePaths ?? [];
+        path = SecurityHelper.ResolveAndEnsureWithinAllowlist(path, allowedBases, nameof(path));
+        attachmentPath =
+            SecurityHelper.ResolveAndEnsureWithinAllowlist(attachmentPath, allowedBases, nameof(attachmentPath));
+
         if (!File.Exists(path))
-            throw new FileNotFoundException($"Email file not found: {path}");
+            throw new FileNotFoundException("The specified file was not found.");
 
         if (!File.Exists(attachmentPath))
-            throw new FileNotFoundException($"Attachment file not found: {attachmentPath}");
+            throw new FileNotFoundException("The specified file was not found.");
 
         var message = MailMessage.Load(path);
         var attachment = new Aspose.Email.Attachment(attachmentPath);
         message.Attachments.Add(attachment);
+        // H41: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
+        outputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(outputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], nameof(outputPath));
         message.Save(outputPath, EmailFormatHelper.DetermineEmailSaveFormat(outputPath));
 
         return new SuccessResult

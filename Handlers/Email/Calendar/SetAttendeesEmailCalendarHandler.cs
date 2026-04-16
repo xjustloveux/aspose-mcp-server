@@ -37,7 +37,7 @@ public class SetAttendeesEmailCalendarHandler : OperationHandlerBase<object>
         SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
         if (!File.Exists(path))
-            throw new FileNotFoundException($"Calendar file not found: {path}");
+            throw new FileNotFoundException("The specified file was not found.");
 
         var appointment = Appointment.Load(path);
 
@@ -48,6 +48,9 @@ public class SetAttendeesEmailCalendarHandler : OperationHandlerBase<object>
         foreach (var attendee in attendeeList)
             appointment.Attendees.Add(new MailAddress(attendee));
 
+        // H40: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
+        outputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(outputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], nameof(outputPath));
         appointment.Save(outputPath, AppointmentSaveFormat.Ics);
 
         return new SuccessResult

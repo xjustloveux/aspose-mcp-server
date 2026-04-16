@@ -270,6 +270,24 @@
     }
   },
 
+  "_範例20": "========================================",
+  "_範例20說明": "HTTP 模式 + 路徑白名單（選用強化）",
+  "_範例20適用": "生產 HTTP/WebSocket 部署；僅允許在指定基礎目錄下存取檔案",
+  "_範例20注意": "此為選用配置，未指定 --allowed-path 時預設不限制（維持開箱即用行為）",
+  "_範例20符號連結說明": "符號連結（symbolic link）在驗證前會解析至最終目標；若最終目標位於允許路徑之外，該操作將被拒絕",
+  "mcpServers_example20_allowed_path": {
+    "aspose-all": {
+      "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",
+      "args": [
+        "--all",
+        "--http",
+        "--port", "3000",
+        "--allowed-path", "C:/srv/docs",
+        "--allowed-path", "C:/tmp/uploads"
+      ]
+    }
+  },
+
   "_參數說明": "========================================",
   "_參數列表_工具": {
     "--word": "啟用 Word 工具（自動包含轉換功能）",
@@ -280,7 +298,8 @@
     "--email": "啟用 Email 工具（郵件、日曆、聯絡人）",
     "--barcode": "啟用 BarCode 工具（條碼產生與辨識）",
     "--all": "啟用所有工具（Word、Excel、PowerPoint、PDF、OCR、Email、BarCode）",
-    "--license 路徑": "指定授權文件路徑（可選）"
+    "--license 路徑": "指定授權文件路徑（可選）",
+    "--allowed-path 路徑": "限制檔案存取於指定基礎目錄下（可重複指定；未指定則不限制，建議 HTTP/WebSocket 部署時啟用）"
   },
   "_參數列表_傳輸": {
     "--stdio": "標準輸入輸出模式（預設）",

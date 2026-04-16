@@ -55,8 +55,11 @@ public class EditPdfImageHandler : OperationHandlerBase<Document>
             else
             {
                 SecurityHelper.ValidateFilePath(imagePath, "imagePath", true);
+                // Allowlist + symlink resolution for read sink (bug 20260416-handler-allowlist-bypass).
+                imagePath = SecurityHelper.ResolveAndEnsureWithinAllowlist(imagePath,
+                    context.ServerConfig?.AllowedBasePaths ?? [], nameof(imagePath));
                 if (!File.Exists(imagePath))
-                    throw new FileNotFoundException($"Image file not found: {imagePath}");
+                    throw new FileNotFoundException("The specified file was not found.");
             }
 
             images.Delete(p.ImageIndex);

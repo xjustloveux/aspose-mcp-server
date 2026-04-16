@@ -35,7 +35,7 @@ public class ScaleOcrPreprocessingHandler : OcrPreprocessingHandlerBase
 
         var filters = new PreprocessingFilter { PreprocessingFilter.Scale((float)scaleFactor) };
 
-        SavePreprocessedImage(p.Path, p.OutputPath, filters);
+        SavePreprocessedImage(p.Path, p.OutputPath, filters, context.ServerConfig?.AllowedBasePaths ?? []);
 
         return CreatePreprocessingResult(p, Operation,
             $"Image scaled by factor {scaleFactor:F1}");

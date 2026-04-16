@@ -31,10 +31,14 @@ public class ExportPdfFormDataHandler : OperationHandlerBase<Document>
         var p = ExtractExportParameters(parameters);
 
         SecurityHelper.ValidateFilePath(p.DataPath, "dataPath", true);
+        // H31: resolve symlinks immediately before the FileStream sink (bug 20260415-symlink-toctou-sweep).
+        var dataPath =
+            SecurityHelper.ResolveAndEnsureWithinAllowlist(p.DataPath, context.ServerConfig?.AllowedBasePaths ?? [],
+                "dataPath");
 
         using var form = new Form(context.Document);
 
-        using var stream = new FileStream(p.DataPath, FileMode.Create);
+        using var stream = new FileStream(dataPath, FileMode.Create);
         switch (p.Format.ToLowerInvariant())
         {
             case "fdf":

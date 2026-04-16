@@ -178,6 +178,9 @@
             <a href="#session">Session 設定</a><span class="var-count">(11)</span>
         </li>
         <li>
+            <a href="#allowlist">路徑白名單</a><span class="var-count">(1)</span>
+        </li>
+        <li>
             <a href="#origin">Origin 驗證</a><span class="var-count">(4)</span>
         </li>
         <li>
@@ -413,6 +416,39 @@
             </tr>
             </tbody>
         </table>
+    </div>
+</div>
+
+<div class="section" id="allowlist">
+    <h2>📁 路徑白名單</h2>
+    <p>限制檔案存取於指定的基礎目錄下，可有效阻擋絕對路徑存取敏感位置（如 <code>/etc</code>、<code>C:\Windows</code>）。未設定時不限制，建議 HTTP/WebSocket 部署時啟用。</p>
+
+    <div class="table-wrapper">
+        <table class="config-table">
+            <thead>
+            <tr>
+                <th style="width: 280px;">環境變數</th>
+                <th style="width: 200px;">命令行參數</th>
+                <th>說明</th>
+                <th style="width: 100px;">預設值</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>-</td>
+                <td>
+                    <code>--allowed-path path</code>
+                </td>
+                <td>允許存取的基礎目錄。可重複指定以允許多個基礎目錄（例如 <code>--allowed-path /srv/docs --allowed-path /tmp/uploads</code>）。任何檔案操作的路徑若不在清單任何一個基礎目錄下，將被拒絕。符號連結（symbolic link）在驗證前會解析至最終目標；若最終目標位於允許路徑之外，該操作將被拒絕。</td>
+                <td>-</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="info-box" style="margin-top: 15px;">
+        <strong>💡 說明</strong>
+        <p style="margin-top: 8px; margin-bottom: 0;">未指定 <code>--allowed-path</code> 時不啟用白名單（預設允許所有絕對路徑，維持開箱即用行為）。對應的 <code>ServerConfig</code> 屬性為 <code>AllowedBasePaths</code>。目前僅支援 CLI 參數，無對應環境變數。</p>
     </div>
 </div>
 
@@ -1251,7 +1287,7 @@
 
 <footer>
     <div class="container">
-        <p>基於 .NET 8.0、Aspose.Total 23.10.0 和 MCP SDK 0.6.0 構建</p>
+        <p>基於 .NET 8.0、Aspose.Total 23.10.0 和 MCP SDK 1.2.0 構建</p>
         <p class="footer-links" style="margin-top: 10px;">
             <a href="https://github.com/xjustloveux/aspose-mcp-server" target="_blank">GitHub</a> |
             <a href="https://www.aspose.com/" target="_blank">Aspose</a> |

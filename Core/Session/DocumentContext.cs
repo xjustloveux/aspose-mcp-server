@@ -209,19 +209,17 @@ public sealed class DocumentContext<T> : IDisposable
     /// <param name="path">The file path to load.</param>
     /// <param name="password">The optional password for protected documents.</param>
     /// <returns>The loaded Word document.</returns>
+    /// <exception cref="IncorrectPasswordException">
+    ///     Thrown when <paramref name="password" /> is supplied but does not match the
+    ///     protected document. Previously swallowed (bug 20260415-session-pwd-swallow).
+    /// </exception>
     private static Document LoadWordDocument(string path, string? password)
     {
         if (!string.IsNullOrEmpty(password))
-            try
-            {
-                var loadOptions = new LoadOptions { Password = password };
-                return new Document(path, loadOptions);
-            }
-            catch (IncorrectPasswordException)
-            {
-                // Password didn't work for opening, try without password
-                // (file might not be encrypted, password is for other operations like protection)
-            }
+        {
+            var loadOptions = new LoadOptions { Password = password };
+            return new Document(path, loadOptions);
+        }
 
         return new Document(path);
     }
@@ -232,6 +230,12 @@ public sealed class DocumentContext<T> : IDisposable
     /// <param name="path">The file path to load.</param>
     /// <param name="password">The optional password for protected workbooks.</param>
     /// <returns>The loaded Excel workbook.</returns>
+    /// <exception cref="CellsException">
+    ///     Thrown when <paramref name="password" /> is supplied but is incorrect
+    ///     (<c>Code == ExceptionType.IncorrectPassword</c>), or when any other Cells
+    ///     load error occurs. Previously the incorrect-password case was swallowed
+    ///     (bug 20260415-session-pwd-swallow).
+    /// </exception>
     private static Workbook LoadExcelWorkbook(string path, string? password)
     {
         if (!string.IsNullOrEmpty(password))
@@ -240,9 +244,9 @@ public sealed class DocumentContext<T> : IDisposable
                 var loadOptions = new Aspose.Cells.LoadOptions { Password = password };
                 return new Workbook(path, loadOptions);
             }
-            catch (CellsException)
+            catch (CellsException ex) when (ex.Code == ExceptionType.IncorrectPassword)
             {
-                // Password didn't work for opening, try without password
+                throw;
             }
 
         return new Workbook(path);
@@ -254,18 +258,17 @@ public sealed class DocumentContext<T> : IDisposable
     /// <param name="path">The file path to load.</param>
     /// <param name="password">The optional password for protected presentations.</param>
     /// <returns>The loaded PowerPoint presentation.</returns>
+    /// <exception cref="Aspose.Slides.InvalidPasswordException">
+    ///     Thrown when <paramref name="password" /> is supplied but does not match the
+    ///     protected presentation. Previously swallowed (bug 20260415-session-pwd-swallow).
+    /// </exception>
     private static Presentation LoadPowerPointPresentation(string path, string? password)
     {
         if (!string.IsNullOrEmpty(password))
-            try
-            {
-                var loadOptions = new Aspose.Slides.LoadOptions { Password = password };
-                return new Presentation(path, loadOptions);
-            }
-            catch (InvalidPasswordException)
-            {
-                // Password didn't work for opening, try without password
-            }
+        {
+            var loadOptions = new Aspose.Slides.LoadOptions { Password = password };
+            return new Presentation(path, loadOptions);
+        }
 
         return new Presentation(path);
     }
@@ -276,17 +279,13 @@ public sealed class DocumentContext<T> : IDisposable
     /// <param name="path">The file path to load.</param>
     /// <param name="password">The optional password for protected PDFs.</param>
     /// <returns>The loaded PDF document.</returns>
+    /// <exception cref="Aspose.Pdf.InvalidPasswordException">
+    ///     Thrown when <paramref name="password" /> is supplied but does not match the
+    ///     protected PDF. Previously swallowed (bug 20260415-session-pwd-swallow).
+    /// </exception>
     private static Aspose.Pdf.Document LoadPdfDocument(string path, string? password)
     {
-        if (!string.IsNullOrEmpty(password))
-            try
-            {
-                return new Aspose.Pdf.Document(path, password);
-            }
-            catch (Aspose.Pdf.InvalidPasswordException)
-            {
-                // Password didn't work for opening, try without password
-            }
+        if (!string.IsNullOrEmpty(password)) return new Aspose.Pdf.Document(path, password);
 
         return new Aspose.Pdf.Document(path);
     }

@@ -2,6 +2,7 @@ using Aspose.Words;
 using Aspose.Words.Drawing;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Errors.Word;
 using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
@@ -58,7 +59,7 @@ public class ReplaceImageWordHandler : OperationHandlerBase<Document>
         SecurityHelper.ValidateFilePath(p.NewImagePath, "newImagePath", true);
 
         if (!IOFile.Exists(p.NewImagePath))
-            throw new FileNotFoundException($"Image file not found: {p.NewImagePath}");
+            throw new FileNotFoundException("The specified file was not found.");
     }
 
     /// <summary>
@@ -101,7 +102,7 @@ public class ReplaceImageWordHandler : OperationHandlerBase<Document>
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException($"Error occurred while replacing image: {ex.Message}", ex);
+            throw WordErrorTranslator.Translate(ex);
         }
     }
 

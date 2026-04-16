@@ -9,7 +9,7 @@
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=xjustloveux_aspose-mcp-server&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=xjustloveux_aspose-mcp-server)
 [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=xjustloveux_aspose-mcp-server&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=xjustloveux_aspose-mcp-server)
 [![MCP Version](https://img.shields.io/badge/MCP-2025--11--25-blue)](https://modelcontextprotocol.io/)
-[![MCP SDK](https://img.shields.io/badge/MCP%20SDK-0.6.0-purple)](https://github.com/modelcontextprotocol/csharp-sdk)
+[![MCP SDK](https://img.shields.io/badge/MCP%20SDK-1.2.0-purple)](https://github.com/modelcontextprotocol/csharp-sdk)
 [![Aspose Version](https://img.shields.io/badge/Aspose-23.10.0-orange)](https://products.aspose.com/total/net/)
 [![xUnit](https://img.shields.io/badge/xUnit-2.9.3-blue?logo=xunit)](https://xunit.net/)
 
@@ -20,7 +20,7 @@
 ## ✨ 特性
 
 ### 核心功能
-- **115 個統一工具** - Word(27)、Excel(31)、PowerPoint(25)、PDF(19)、OCR(2)、Email(6)、BarCode(2)、轉換(1)、Session(1)、Extension(1) 已整合
+- **118 個統一工具** - Word(28)、Excel(32)、PowerPoint(26)、PDF(19)、OCR(2)、Email(6)、BarCode(2)、轉換(1)、Session(1)、Extension(1) 已整合
 - **按需啟用** - 只啟用需要的文檔類型，減少資源佔用
 - **跨平台** - Windows、Linux、macOS (Intel + ARM)，單一可執行檔案
 - **開箱即用** - 預編譯版本無需安裝 .NET Runtime
@@ -39,7 +39,7 @@
 - **Origin 驗證** - 防止 DNS 重綁定攻擊（HTTP/WebSocket 模式）
 
 ### 技術特性
-- **MCP SDK 0.6.0** - 使用官方 ModelContextProtocol NuGet 套件，支援 Tool Annotations 和 outputSchema
+- **MCP SDK 1.2.0** - 使用官方 ModelContextProtocol NuGet 套件，支援 Tool Annotations 和 outputSchema
 - **Tool Annotations** - 所有工具標註 ReadOnly、Destructive、Idempotent、OpenWorld 行為特性
 - **結構化輸出** - Handler 返回強型別結果，SDK 自動生成 outputSchema（oneOf JSON Schema）
 - **統一字型設定** - 多個工具支援中英文字型分別設定（`fontNameAscii` 和 `fontNameFarEast` 參數）
@@ -93,6 +93,7 @@ brew install xjustloveux/tap/aspose-mcp-server
 - `--extension-enabled` - 啟用擴充功能系統（需搭配 `--session-enabled`）
 - `--extension-config 路徑` - 指定擴充功能配置檔案路徑（`extension` 工具）
 - `--license 路徑` - 指定授權檔案路徑（可選）
+- `--allowed-path 路徑` - 限制檔案存取於指定基礎目錄下（可重複指定；未指定則不限制，建議在 HTTP/WebSocket 部署時啟用）
 
 > **工具過濾**：指定工具參數時，只有啟用的工具類別會出現在 MCP 工具列表中。例如使用 `--word` 時，只會顯示 `word_*` 相關工具。
 
@@ -109,9 +110,9 @@ brew install xjustloveux/tap/aspose-mcp-server
 
 | 模組 | 工具數 | 主要功能 |
 |------|--------|---------|
-| **Word** | 27 | 檔案操作、文字/段落/表格/圖片編輯、格式/樣式/頁面設定、書籤/超連結/註釋/目錄/修訂/郵件合併/數位簽章/內容控制項/渲染 |
-| **Excel** | 31 | 檔案/工作表/行列/單元格操作、排序/篩選/驗證、圖表/公式/樞紐分析、表格/形狀/迷你圖/JSON匯入/渲染 |
-| **PowerPoint** | 25 | 檔案/投影片管理、文字/圖片/表格/圖表/形狀/SmartArt/媒體、動畫/轉場/備註/註解/加密/浮水印/字型管理 |
+| **Word** | 28 | 檔案操作、文字/段落/表格/圖片/OLE編輯、格式/樣式/頁面設定、書籤/超連結/註釋/目錄/修訂/郵件合併/數位簽章/內容控制項/渲染 |
+| **Excel** | 32 | 檔案/工作表/行列/單元格操作、排序/篩選/驗證、圖表/公式/樞紐分析、表格/形狀/OLE/迷你圖/JSON匯入/渲染 |
+| **PowerPoint** | 26 | 檔案/投影片管理、文字/圖片/表格/圖表/形狀/SmartArt/OLE/媒體、動畫/轉場/備註/註解/加密/浮水印/字型管理 |
 | **PDF** | 19 | 檔案操作（含加密/解密）、文字/圖片/表格/水印/頁面（含裁切）、書籤/註釋/表單（含匯入匯出）、頁首頁尾/印章/目錄/PDF/A合規 |
 | **OCR** | 2 | 影像前處理（校正/降噪/對比/縮放）、文字辨識（圖片/PDF/收據/身分證/護照） |
 | **Email** | 6 | 郵件建立/讀取/轉換、內容編輯、附件管理、日曆事件、聯絡人、格式轉換（EML↔MSG↔HTML） |
@@ -142,9 +143,10 @@ brew install xjustloveux/tap/aspose-mcp-server
 
 ## 🔒 安全特性
 
-- **路徑驗證** - 所有檔案路徑經 `SecurityHelper.ValidateFilePath()` 驗證，防止路徑遍歷攻擊
+- **路徑驗證** - 所有檔案路徑經 `SecurityHelper.ValidateFilePath()` 驗證，防止路徑遍歷攻擊；額外拒絕控制字元、NTFS Alternate Data Stream 冒號語法、路徑段末尾點號/空白、及 Windows 保留裝置名稱（CON/NUL/COM1–9 等）；符號連結（symbolic link）在任何 I/O 操作前均會解析至最終目標，並再次比對白名單，確保符號連結無法繞過路徑限制
+- **路徑白名單**（可選強化）- 透過 `--allowed-path` 限制檔案存取於指定基礎目錄下（可重複指定）；未設定時不限制，建議 HTTP/WebSocket 部署時啟用；符號連結的最終目標若位於白名單之外，將被拒絕
 - **輸入驗證** - 陣列大小上限 1000 項、字串長度上限 10000 字元
-- **錯誤處理** - 錯誤訊息清理，防止資訊洩露（移除路徑、堆疊追蹤等敏感資訊）
+- **錯誤處理** - 結構化錯誤翻譯器（per-family translator 模式）將 Aspose/BCL 例外對應為固定安全哨兵字串；移除路徑、堆疊追蹤等敏感資訊，確保原始例外訊息不傳遞給呼叫方
 - **Origin 驗證** - HTTP/WebSocket 模式預設啟用，防止 DNS 重綁定攻擊
 
 | 限制項目 | 上限值 |

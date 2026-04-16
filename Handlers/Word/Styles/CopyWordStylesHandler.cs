@@ -35,7 +35,7 @@ public class CopyWordStylesHandler : OperationHandlerBase<Document>
         SecurityHelper.ValidateFilePath(p.SourceDocument, "sourceDocument", true);
 
         if (!System.IO.File.Exists(p.SourceDocument))
-            throw new FileNotFoundException($"Source document not found: {p.SourceDocument}");
+            throw new FileNotFoundException("The specified file was not found.");
 
         var targetDoc = context.Document;
         var sourceDoc = new Document(p.SourceDocument);

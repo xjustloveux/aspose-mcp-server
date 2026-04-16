@@ -154,7 +154,7 @@ public class UnprotectExcelHandlerTests : ExcelHandlerTestBase
             { "password", "wrong" }
         });
 
-        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+        var ex = Assert.Throws<UnauthorizedAccessException>(() => _handler.Execute(context, parameters));
         Assert.Contains("password", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 

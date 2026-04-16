@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Errors.Excel;
 using AsposeMcpServer.Helpers.Excel;
 using AsposeMcpServer.Results.Excel.Shape;
 
@@ -57,7 +58,7 @@ public class GetExcelShapesHandler : OperationHandlerBase<Workbook>
         }
         catch (CellsException ex)
         {
-            throw new ArgumentException($"Failed to get shapes from sheet {sheetIndex}: {ex.Message}");
+            throw CellsErrorTranslator.Translate(ex);
         }
     }
 

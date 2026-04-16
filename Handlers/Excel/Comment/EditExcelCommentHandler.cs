@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Errors.Excel;
 using AsposeMcpServer.Helpers.Excel;
 using AsposeMcpServer.Results.Common;
 
@@ -51,8 +52,7 @@ public class EditExcelCommentHandler : OperationHandlerBase<Workbook>
         }
         catch (CellsException ex)
         {
-            throw new InvalidOperationException($"Excel operation failed for cell '{editParams.Cell}': {ex.Message}",
-                ex);
+            throw CellsErrorTranslator.Translate(ex);
         }
     }
 

@@ -3,6 +3,7 @@ using Aspose.Cells.Drawing;
 using Aspose.Cells.Rendering;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Errors.Excel;
 using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Helpers.Excel;
 using AsposeMcpServer.Results.Excel.Render;
@@ -88,7 +89,7 @@ public class RenderSheetExcelHandler : OperationHandlerBase<Workbook>
         }
         catch (CellsException ex)
         {
-            throw new ArgumentException($"Failed to render sheet: {ex.Message}");
+            throw CellsErrorTranslator.Translate(ex);
         }
     }
 

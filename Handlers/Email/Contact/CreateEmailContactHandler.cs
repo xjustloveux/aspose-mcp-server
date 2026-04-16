@@ -59,7 +59,10 @@ public class CreateEmailContactHandler : OperationHandlerBase<object>
             contact.ProfessionalInfo.Title = jobTitle;
 
         var ext = Path.GetExtension(outputPath).ToLowerInvariant();
-        contact.Save(outputPath, ext == ".msg" ? ContactSaveFormat.Msg : ContactSaveFormat.VCard);
+        // H39: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
+        var resolvedOutputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(outputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], "outputPath");
+        contact.Save(resolvedOutputPath, ext == ".msg" ? ContactSaveFormat.Msg : ContactSaveFormat.VCard);
 
         return new SuccessResult
         {

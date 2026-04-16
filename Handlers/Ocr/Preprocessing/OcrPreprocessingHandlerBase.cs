@@ -17,9 +17,14 @@ public abstract class OcrPreprocessingHandlerBase : OperationHandlerBase<AsposeO
     /// <param name="inputPath">The input image file path.</param>
     /// <param name="outputPath">The output file path for the preprocessed image.</param>
     /// <param name="filters">The preprocessing filters to apply.</param>
+    /// <param name="allowedBasePaths">
+    ///     The allowlist of base paths used for symlink resolution before the write sink.
+    ///     Pass an empty list to skip allowlist enforcement (allowlist disabled).
+    /// </param>
     /// <exception cref="InvalidOperationException">Thrown when preprocessing produces no output files.</exception>
+    /// <exception cref="ArgumentException">Thrown when outputPath resolves to a location outside the allowlist.</exception>
     protected static void SavePreprocessedImage(string inputPath, string outputPath,
-        PreprocessingFilter filters)
+        PreprocessingFilter filters, IReadOnlyList<string> allowedBasePaths)
     {
         var input = new OcrInput(InputType.SingleImage, filters);
         input.Add(inputPath);
@@ -38,13 +43,16 @@ public abstract class OcrPreprocessingHandlerBase : OperationHandlerBase<AsposeO
             if (!string.IsNullOrEmpty(outputDir) && !Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
-            File.Copy(generatedFiles[0], outputPath, true);
+            // H44: resolve symlinks immediately before the write sink (bug 20260415-symlink-toctou-sweep).
+            var resolvedOutputPath =
+                SecurityHelper.ResolveAndEnsureWithinAllowlist(outputPath, allowedBasePaths, nameof(outputPath));
+            File.Copy(generatedFiles[0], resolvedOutputPath, true);
         }
         finally
         {
             try
             {
-                Directory.Delete(tempDir, true);
+                SecurityHelper.SafeRecursiveDelete(tempDir, [], nameof(tempDir));
             }
             catch
             {
@@ -69,7 +77,7 @@ public abstract class OcrPreprocessingHandlerBase : OperationHandlerBase<AsposeO
         SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
         if (!File.Exists(path))
-            throw new FileNotFoundException($"Input file not found: {path}");
+            throw new FileNotFoundException("The specified file was not found.");
 
         return new PreprocessingParameters(path, outputPath);
     }

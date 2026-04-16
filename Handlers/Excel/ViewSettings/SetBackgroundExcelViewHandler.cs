@@ -40,8 +40,11 @@ public class SetBackgroundExcelViewHandler : OperationHandlerBase<Workbook>
         {
             SecurityHelper.ValidateFilePath(p.ImagePath, "imagePath", true);
             if (!File.Exists(p.ImagePath))
-                throw new FileNotFoundException($"Image file not found: {p.ImagePath}");
-            var imageBytes = File.ReadAllBytes(p.ImagePath);
+                throw new FileNotFoundException("The specified file was not found.");
+            // B-3/H50: resolve symlinks immediately before the read sink (bug 20260415-symlink-toctou-sweep).
+            var resolvedImagePath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.ImagePath,
+                context.ServerConfig?.AllowedBasePaths ?? [], "imagePath");
+            var imageBytes = File.ReadAllBytes(resolvedImagePath);
             worksheet.BackgroundImage = imageBytes;
         }
         else

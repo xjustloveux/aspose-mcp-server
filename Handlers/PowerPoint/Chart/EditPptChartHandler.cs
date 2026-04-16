@@ -1,6 +1,7 @@
 using Aspose.Slides;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Errors;
 using AsposeMcpServer.Helpers.PowerPoint;
 using AsposeMcpServer.Results.Common;
 
@@ -37,9 +38,10 @@ public class EditPptChartHandler : OperationHandlerBase<Presentation>
             {
                 PptChartHelper.SetChartTitle(chart, p.Title);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                throw new InvalidOperationException($"Failed to set chart title: {ex.Message}", ex);
+                throw new InvalidOperationException(
+                    ErrorMessageBuilder.ChartOperationFailed("set title"));
             }
 
         if (!string.IsNullOrEmpty(p.ChartType))
@@ -47,9 +49,10 @@ public class EditPptChartHandler : OperationHandlerBase<Presentation>
             {
                 chart.Type = PptChartHelper.ParseChartType(p.ChartType, chart.Type);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                throw new InvalidOperationException($"Failed to change chart type: {ex.Message}", ex);
+                throw new InvalidOperationException(
+                    ErrorMessageBuilder.ChartOperationFailed("change type"));
             }
 
         MarkModified(context);

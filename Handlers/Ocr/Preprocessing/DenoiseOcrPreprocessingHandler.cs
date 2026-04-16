@@ -33,7 +33,7 @@ public class DenoiseOcrPreprocessingHandler : OcrPreprocessingHandlerBase
 
         var filters = new PreprocessingFilter { PreprocessingFilter.AutoDenoising() };
 
-        SavePreprocessedImage(p.Path, p.OutputPath, filters);
+        SavePreprocessedImage(p.Path, p.OutputPath, filters, context.ServerConfig?.AllowedBasePaths ?? []);
 
         return CreatePreprocessingResult(p, Operation, "Automatic denoising applied");
     }

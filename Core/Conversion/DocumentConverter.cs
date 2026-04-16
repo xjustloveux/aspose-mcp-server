@@ -8,6 +8,7 @@ using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Core.Progress;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol;
 using TxtSaveOptions = Aspose.Cells.TxtSaveOptions;
 using Document = Aspose.Words.Document;
@@ -64,6 +65,13 @@ public class ConversionOptions
     ///     Null means no specific compliance.
     /// </summary>
     public string? PdfCompliance { get; init; }
+
+    /// <summary>
+    ///     The allowlist of base paths used for symlink resolution before every filesystem sink.
+    ///     Populated from <c>ServerConfig.AllowedBasePaths</c> by the caller.
+    ///     An empty list disables allowlist enforcement (open-world mode).
+    /// </summary>
+    public IReadOnlyList<string> AllowedBasePaths { get; init; } = [];
 }
 
 /// <summary>
@@ -139,6 +147,28 @@ public static class DocumentConverter
                 }
             }
         };
+
+    /// <summary>
+    ///     Resolves symlinks in <paramref name="outputPath" /> and validates the result against
+    ///     <paramref name="allowedBasePaths" /> immediately before a filesystem sink.
+    ///     When <paramref name="allowedBasePaths" /> is empty (allowlist disabled) the method
+    ///     still resolves symlinks and returns the resolved path without an allowlist check —
+    ///     consistent with the behaviour of <see cref="SecurityHelper.ResolveAndEnsureWithinAllowlist" />.
+    /// </summary>
+    /// <param name="outputPath">The user-supplied output file path to resolve.</param>
+    /// <param name="allowedBasePaths">
+    ///     The allowlist of allowed base paths from <c>ConversionOptions.AllowedBasePaths</c>.
+    ///     Pass <see cref="Array.Empty{T}" /> to disable enforcement.
+    /// </param>
+    /// <returns>The resolved (symlink-free) output path that should be passed to the sink.</returns>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when the resolved path lies outside the allowlist or when a circular
+    ///     symlink is encountered.
+    /// </exception>
+    private static string ResolveOutputPath(string outputPath, IReadOnlyList<string> allowedBasePaths)
+    {
+        return SecurityHelper.ResolveAndEnsureWithinAllowlist(outputPath, allowedBasePaths, "outputPath");
+    }
 
     #region Document Type Detection
 
@@ -413,6 +443,9 @@ public static class DocumentConverter
             return;
         }
 
+        // H45: resolve symlinks immediately before every write sink (bug 20260415-symlink-toctou-sweep).
+        var resolvedOutput = ResolveOutputPath(outputPath, options.AllowedBasePaths);
+
         if (format == "pdf")
         {
             var saveOptions = new PdfSaveOptions
@@ -420,7 +453,7 @@ public static class DocumentConverter
                 ProgressCallback = new WordsProgressAdapter(progress)
             };
             ApplyWordPdfCompliance(saveOptions, options.PdfCompliance);
-            document.Save(outputPath, saveOptions);
+            document.Save(resolvedOutput, saveOptions);
         }
         else if (format is "html" or "htm")
         {
@@ -429,12 +462,12 @@ public static class DocumentConverter
                 ExportImagesAsBase64 = options.HtmlEmbedImages || options.HtmlSingleFile,
                 ExportFontsAsBase64 = options.HtmlSingleFile
             };
-            document.Save(outputPath, saveOptions);
+            document.Save(resolvedOutput, saveOptions);
         }
         else
         {
             var saveFormat = GetWordSaveFormat(format);
-            document.Save(outputPath, saveFormat);
+            document.Save(resolvedOutput, saveFormat);
         }
     }
 
@@ -492,6 +525,9 @@ public static class DocumentConverter
             return;
         }
 
+        // H45: resolve symlinks immediately before every write sink (bug 20260415-symlink-toctou-sweep).
+        var resolvedOutput = ResolveOutputPath(outputPath, options.AllowedBasePaths);
+
         if (format == "pdf")
         {
             var saveOptions = new Aspose.Cells.PdfSaveOptions
@@ -499,7 +535,7 @@ public static class DocumentConverter
                 PageSavingCallback = new CellsProgressAdapter(progress)
             };
             ApplyExcelPdfCompliance(saveOptions, options.PdfCompliance);
-            workbook.Save(outputPath, saveOptions);
+            workbook.Save(resolvedOutput, saveOptions);
         }
         else if (format is "html" or "htm")
         {
@@ -510,7 +546,7 @@ public static class DocumentConverter
                 ShowAllSheets = options.HtmlSingleFile
             };
 
-            workbook.Save(outputPath, saveOptions);
+            workbook.Save(resolvedOutput, saveOptions);
         }
         else if (format == "csv")
         {
@@ -518,12 +554,12 @@ public static class DocumentConverter
             {
                 Separator = string.IsNullOrEmpty(options.CsvSeparator) ? ',' : options.CsvSeparator[0]
             };
-            workbook.Save(outputPath, saveOptions);
+            workbook.Save(resolvedOutput, saveOptions);
         }
         else
         {
             var saveFormat = GetExcelSaveFormat(format);
-            workbook.Save(outputPath, saveFormat);
+            workbook.Save(resolvedOutput, saveFormat);
         }
     }
 
@@ -560,6 +596,9 @@ public static class DocumentConverter
         options ??= new ConversionOptions();
         var format = NormalizeExtension(outputFormat);
 
+        // H45: resolve symlinks immediately before every write sink (bug 20260415-symlink-toctou-sweep).
+        var resolvedOutput = ResolveOutputPath(outputPath, options.AllowedBasePaths);
+
         if (format == "pdf")
         {
             var saveOptions = new PdfOptions
@@ -568,12 +607,12 @@ public static class DocumentConverter
                 JpegQuality = (byte)options.JpegQuality
             };
             ApplySlidesPdfCompliance(saveOptions, options.PdfCompliance);
-            presentation.Save(outputPath, Aspose.Slides.Export.SaveFormat.Pdf, saveOptions);
+            presentation.Save(resolvedOutput, Aspose.Slides.Export.SaveFormat.Pdf, saveOptions);
         }
         else
         {
             var saveFormat = GetPresentationSaveFormat(format);
-            presentation.Save(outputPath, saveFormat);
+            presentation.Save(resolvedOutput, saveFormat);
         }
     }
 
@@ -618,31 +657,37 @@ public static class DocumentConverter
 
         if (IsImageFormat(format))
         {
-            ConvertPdfToImages(pdfDocument, outputPath, format, options.PageIndex);
-        }
-        else if (format is "html" or "htm")
-        {
-            var htmlOptions = new Aspose.Pdf.HtmlSaveOptions
-            {
-                PartsEmbeddingMode = Aspose.Pdf.HtmlSaveOptions.PartsEmbeddingModes.EmbedAllIntoHtml,
-                RasterImagesSavingMode =
-                    Aspose.Pdf.HtmlSaveOptions.RasterImagesSavingModes.AsEmbeddedPartsOfPngPageBackground,
-                FontSavingMode = Aspose.Pdf.HtmlSaveOptions.FontSavingModes.SaveInAllFormats
-            };
-            pdfDocument.Save(outputPath, htmlOptions);
-        }
-        else if (format == "svg")
-        {
-            var svgOptions = new SvgSaveOptions
-            {
-                CompressOutputToZipArchive = false
-            };
-            pdfDocument.Save(outputPath, svgOptions);
+            ConvertPdfToImages(pdfDocument, outputPath, format, options.PageIndex, options);
         }
         else
         {
-            var saveFormat = GetPdfSaveFormat(format);
-            pdfDocument.Save(outputPath, saveFormat);
+            // H45: resolve symlinks immediately before every write sink (bug 20260415-symlink-toctou-sweep).
+            var resolvedOutput = ResolveOutputPath(outputPath, options.AllowedBasePaths);
+
+            if (format is "html" or "htm")
+            {
+                var htmlOptions = new Aspose.Pdf.HtmlSaveOptions
+                {
+                    PartsEmbeddingMode = Aspose.Pdf.HtmlSaveOptions.PartsEmbeddingModes.EmbedAllIntoHtml,
+                    RasterImagesSavingMode =
+                        Aspose.Pdf.HtmlSaveOptions.RasterImagesSavingModes.AsEmbeddedPartsOfPngPageBackground,
+                    FontSavingMode = Aspose.Pdf.HtmlSaveOptions.FontSavingModes.SaveInAllFormats
+                };
+                pdfDocument.Save(resolvedOutput, htmlOptions);
+            }
+            else if (format == "svg")
+            {
+                var svgOptions = new SvgSaveOptions
+                {
+                    CompressOutputToZipArchive = false
+                };
+                pdfDocument.Save(resolvedOutput, svgOptions);
+            }
+            else
+            {
+                var saveFormat = GetPdfSaveFormat(format);
+                pdfDocument.Save(resolvedOutput, saveFormat);
+            }
         }
     }
 
@@ -695,12 +740,16 @@ public static class DocumentConverter
             if (format is "tiff" or "tif")
             {
                 var tiffDevice = new TiffDevice(resolution);
-                using var stream = new FileStream(outputPath, FileMode.Create);
+                // H46: resolve symlinks immediately before the write sink (bug 20260415-symlink-toctou-sweep).
+                var resolvedSingleTiff = ResolveOutputPath(outputPath, options.AllowedBasePaths);
+                using var stream = new FileStream(resolvedSingleTiff, FileMode.Create);
                 tiffDevice.Process(pdfDocument, pageIndex.Value, pageIndex.Value, stream);
             }
             else
             {
-                using var stream = new FileStream(outputPath, FileMode.Create);
+                // H46: resolve symlinks immediately before the write sink (bug 20260415-symlink-toctou-sweep).
+                var resolvedSinglePage = ResolveOutputPath(outputPath, options.AllowedBasePaths);
+                using var stream = new FileStream(resolvedSinglePage, FileMode.Create);
                 PageDevice device = format switch
                 {
                     "png" => new PngDevice(resolution),
@@ -717,7 +766,9 @@ public static class DocumentConverter
         if (format is "tiff" or "tif")
         {
             var tiffDevice = new TiffDevice(resolution);
-            using var stream = new FileStream(outputPath, FileMode.Create);
+            // H46: resolve symlinks immediately before the write sink (bug 20260415-symlink-toctou-sweep).
+            var resolvedTiff = ResolveOutputPath(outputPath, options.AllowedBasePaths);
+            using var stream = new FileStream(resolvedTiff, FileMode.Create);
             tiffDevice.Process(pdfDocument, stream);
             return;
         }
@@ -731,7 +782,9 @@ public static class DocumentConverter
                 ? outputPath
                 : Path.Combine(dir, $"{nameWithoutExt}_{i}{ext}");
 
-            using var stream = new FileStream(pagePath, FileMode.Create);
+            // H46: resolve symlinks immediately before the write sink (bug 20260415-symlink-toctou-sweep).
+            var resolvedPagePath = ResolveOutputPath(pagePath, options.AllowedBasePaths);
+            using var stream = new FileStream(resolvedPagePath, FileMode.Create);
             PageDevice device = format switch
             {
                 "png" => new PngDevice(resolution),
@@ -774,7 +827,9 @@ public static class DocumentConverter
 
             var imageOptions = CreateWordImageSaveOptions(saveFormat, options);
             imageOptions.PageSet = new PageSet(options.PageIndex.Value - 1);
-            document.Save(outputPath, imageOptions);
+            // H45: resolve symlinks immediately before the write sink (bug 20260415-symlink-toctou-sweep).
+            var resolvedSinglePage = ResolveOutputPath(outputPath, options.AllowedBasePaths);
+            document.Save(resolvedSinglePage, imageOptions);
         }
         else
         {
@@ -789,7 +844,9 @@ public static class DocumentConverter
                 var pagePath = document.PageCount == 1
                     ? outputPath
                     : Path.Combine(dir, $"{baseName}_{i + 1}{ext}");
-                document.Save(pagePath, imageOptions);
+                // H45: resolve symlinks immediately before the write sink (bug 20260415-symlink-toctou-sweep).
+                var resolvedPagePath = ResolveOutputPath(pagePath, options.AllowedBasePaths);
+                document.Save(resolvedPagePath, imageOptions);
             }
         }
     }
@@ -855,7 +912,9 @@ public static class DocumentConverter
 
             var sheet = workbook.Worksheets[options.PageIndex.Value - 1];
             var sr = new SheetRender(sheet, imageOptions);
-            sr.ToImage(0, outputPath);
+            // H45: resolve symlinks immediately before the write sink (bug 20260415-symlink-toctou-sweep).
+            var resolvedSingleSheet = ResolveOutputPath(outputPath, options.AllowedBasePaths);
+            sr.ToImage(0, resolvedSingleSheet);
         }
         else
         {
@@ -870,7 +929,9 @@ public static class DocumentConverter
                 var sheetPath = workbook.Worksheets.Count == 1
                     ? outputPath
                     : Path.Combine(dir, $"{baseName}_{i + 1}{ext}");
-                sr.ToImage(0, sheetPath);
+                // H45: resolve symlinks immediately before the write sink (bug 20260415-symlink-toctou-sweep).
+                var resolvedSheetPath = ResolveOutputPath(sheetPath, options.AllowedBasePaths);
+                sr.ToImage(0, resolvedSheetPath);
             }
         }
     }
@@ -880,11 +941,20 @@ public static class DocumentConverter
     /// </summary>
     /// <param name="inputPath">The input file path.</param>
     /// <param name="outputPath">The output PDF file path.</param>
+    /// <param name="allowedBasePaths">
+    ///     The allowlist of base paths used for symlink resolution before the write sink.
+    ///     Pass an empty list to skip allowlist enforcement (allowlist disabled).
+    /// </param>
     /// <returns>The source format name for result reporting.</returns>
-    /// <exception cref="ArgumentException">Thrown when the input format is not supported.</exception>
-    public static string ConvertToPdfFromSpecialFormat(string inputPath, string outputPath)
+    /// <exception cref="ArgumentException">
+    ///     Thrown when the input format is not supported or when outputPath resolves outside the allowlist.
+    /// </exception>
+    public static string ConvertToPdfFromSpecialFormat(string inputPath, string outputPath,
+        IReadOnlyList<string>? allowedBasePaths = null)
     {
         var extension = NormalizeExtension(Path.GetExtension(inputPath));
+        // H45: resolve symlinks immediately before every write sink (bug 20260415-symlink-toctou-sweep).
+        var resolvedOutput = ResolveOutputPath(outputPath, allowedBasePaths ?? []);
 
         switch (extension)
         {
@@ -892,7 +962,7 @@ public static class DocumentConverter
             case "htm":
                 using (var pdfDoc = new Aspose.Pdf.Document(inputPath, new HtmlLoadOptions()))
                 {
-                    pdfDoc.Save(outputPath);
+                    pdfDoc.Save(resolvedOutput);
                 }
 
                 return "HTML";
@@ -900,7 +970,7 @@ public static class DocumentConverter
             case "epub":
                 using (var pdfDoc = new Aspose.Pdf.Document(inputPath, new EpubLoadOptions()))
                 {
-                    pdfDoc.Save(outputPath);
+                    pdfDoc.Save(resolvedOutput);
                 }
 
                 return "EPUB";
@@ -908,7 +978,7 @@ public static class DocumentConverter
             case "md":
                 using (var pdfDoc = new Aspose.Pdf.Document(inputPath, new MdLoadOptions()))
                 {
-                    pdfDoc.Save(outputPath);
+                    pdfDoc.Save(resolvedOutput);
                 }
 
                 return "Markdown";
@@ -916,7 +986,7 @@ public static class DocumentConverter
             case "svg":
                 using (var pdfDoc = new Aspose.Pdf.Document(inputPath, new SvgLoadOptions()))
                 {
-                    pdfDoc.Save(outputPath);
+                    pdfDoc.Save(resolvedOutput);
                 }
 
                 return "SVG";
@@ -924,7 +994,7 @@ public static class DocumentConverter
             case "xps":
                 using (var pdfDoc = new Aspose.Pdf.Document(inputPath, new XpsLoadOptions()))
                 {
-                    pdfDoc.Save(outputPath);
+                    pdfDoc.Save(resolvedOutput);
                 }
 
                 return "XPS";
@@ -932,7 +1002,7 @@ public static class DocumentConverter
             case "tex":
                 using (var pdfDoc = new Aspose.Pdf.Document(inputPath, new TeXLoadOptions()))
                 {
-                    pdfDoc.Save(outputPath);
+                    pdfDoc.Save(resolvedOutput);
                 }
 
                 return "LaTeX";
@@ -941,7 +1011,7 @@ public static class DocumentConverter
             case "mhtml":
                 using (var pdfDoc = new Aspose.Pdf.Document(inputPath, new MhtLoadOptions()))
                 {
-                    pdfDoc.Save(outputPath);
+                    pdfDoc.Save(resolvedOutput);
                 }
 
                 return "MHT";

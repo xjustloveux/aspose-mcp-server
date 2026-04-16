@@ -1,6 +1,7 @@
 using Aspose.Pdf;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Errors.Pdf;
 using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.Properties;
@@ -44,8 +45,7 @@ public class SetPdfPropertiesHandler : OperationHandlerBase<Document>
         }
         catch (Exception ex)
         {
-            throw new ArgumentException(
-                $"Failed to set document properties: {ex.Message}. Note: Some PDF files may have restrictions on modifying metadata, or the document may be encrypted/protected.");
+            throw PdfErrorTranslator.Translate(ex);
         }
 
         MarkModified(context);

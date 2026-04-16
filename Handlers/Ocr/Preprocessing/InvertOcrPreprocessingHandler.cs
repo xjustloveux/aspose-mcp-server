@@ -33,7 +33,7 @@ public class InvertOcrPreprocessingHandler : OcrPreprocessingHandlerBase
 
         var filters = new PreprocessingFilter { PreprocessingFilter.Invert() };
 
-        SavePreprocessedImage(p.Path, p.OutputPath, filters);
+        SavePreprocessedImage(p.Path, p.OutputPath, filters, context.ServerConfig?.AllowedBasePaths ?? []);
 
         return CreatePreprocessingResult(p, Operation, "Color inversion applied");
     }

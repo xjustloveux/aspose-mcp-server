@@ -2,6 +2,7 @@ using Aspose.Cells;
 using Aspose.Cells.Tables;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Errors.Excel;
 using AsposeMcpServer.Helpers.Excel;
 using AsposeMcpServer.Results.Excel.Table;
 
@@ -58,7 +59,7 @@ public class GetExcelTablesHandler : OperationHandlerBase<Workbook>
         }
         catch (CellsException ex)
         {
-            throw new ArgumentException($"Failed to get tables from sheet {sheetIndex}: {ex.Message}");
+            throw CellsErrorTranslator.Translate(ex);
         }
     }
 

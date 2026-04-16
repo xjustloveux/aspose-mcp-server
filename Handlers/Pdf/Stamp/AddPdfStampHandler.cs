@@ -37,7 +37,7 @@ public class AddPdfStampHandler : OperationHandlerBase<Document>
         SecurityHelper.ValidateFilePath(p.PdfPath, "pdfPath", true);
 
         if (!File.Exists(p.PdfPath))
-            throw new FileNotFoundException($"PDF file not found: {p.PdfPath}");
+            throw new FileNotFoundException("The specified file was not found.");
 
         var document = context.Document;
 

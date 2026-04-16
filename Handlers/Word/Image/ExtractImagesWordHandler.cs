@@ -63,6 +63,9 @@ public class ExtractImagesWordHandler : OperationHandlerBase<Document>
             var safePrefix = SecurityHelper.SanitizeFileName(p.Prefix);
             var filename = $"{safePrefix}_{i + 1:D3}.{extension}";
             var outputFilePath = Path.Combine(p.OutputDir, filename);
+            // H11: resolve symlinks immediately before the File.Create sink (bug 20260415-symlink-toctou-sweep).
+            outputFilePath = SecurityHelper.ResolveAndEnsureWithinAllowlist(outputFilePath,
+                context.ServerConfig?.AllowedBasePaths ?? [], nameof(outputFilePath));
 
             using (var stream = IOFile.Create(outputFilePath))
             {

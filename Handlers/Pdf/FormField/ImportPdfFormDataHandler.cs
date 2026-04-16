@@ -33,12 +33,16 @@ public class ImportPdfFormDataHandler : OperationHandlerBase<Document>
 
         SecurityHelper.ValidateFilePath(p.DataPath, "dataPath", true);
         if (!File.Exists(p.DataPath))
-            throw new FileNotFoundException($"Data file not found: {p.DataPath}");
+            throw new FileNotFoundException("The specified file was not found.");
 
         var format = p.Format ?? DetectFormatFromExtension(p.DataPath);
 
         using var form = new Form(context.Document);
-        using var stream = new FileStream(p.DataPath, FileMode.Open, FileAccess.Read);
+        // H49: resolve symlinks immediately before the read sink (bug 20260415-symlink-toctou-sweep).
+        var resolvedDataPath =
+            SecurityHelper.ResolveAndEnsureWithinAllowlist(p.DataPath, context.ServerConfig?.AllowedBasePaths ?? [],
+                "dataPath");
+        using var stream = new FileStream(resolvedDataPath, FileMode.Open, FileAccess.Read);
 
         switch (format.ToLowerInvariant())
         {

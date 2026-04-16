@@ -76,7 +76,10 @@ public class MergeWordDocumentsHandler : OperationHandlerBase<Document>
             foreach (var section in mergedDoc.Sections.Cast<Section>())
                 section.HeadersFooters.LinkToPrevious(false);
 
-        mergedDoc.Save(p.OutputPath);
+        // H6: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
+        var resolvedOutputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.OutputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], "outputPath");
+        mergedDoc.Save(resolvedOutputPath);
         context.Progress?.Report(new ProgressNotificationValue
             { Progress = 100, Total = 100, Message = "Merge completed" });
         return new SuccessResult

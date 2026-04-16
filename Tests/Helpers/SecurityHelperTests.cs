@@ -142,6 +142,94 @@ public class SecurityHelperTests
 
     #endregion
 
+    #region IsSafeFilePath — Control Character Tests (hardening 20260416)
+
+    [Theory]
+    [InlineData("/tmp/file\u0001name.txt")]
+    [InlineData("/tmp/file\u001Fname.txt")]
+    [InlineData("/tmp/file\u000Aname.txt")]
+    [InlineData("/tmp/file\u000Dname.txt")]
+    public void IsSafeFilePath_WithControlChar_ShouldReturnFalse(string path)
+    {
+        Assert.False(SecurityHelper.IsSafeFilePath(path, true));
+    }
+
+    [Fact]
+    public void IsSafeFilePath_WithNoControlChars_ShouldReturnTrue()
+    {
+        // Plain absolute path with no control characters — must pass.
+        Assert.True(SecurityHelper.IsSafeFilePath("/tmp/filename.txt", true));
+    }
+
+    #endregion
+
+    #region IsSafeFilePath — NTFS ADS Colon Tests (hardening 20260416)
+
+    [Theory]
+    [InlineData("/tmp/file.txt:hidden")]
+    [InlineData("C:\\file.txt:stream")]
+    public void IsSafeFilePath_WithAdsColon_ShouldReturnFalse(string path)
+    {
+        Assert.False(SecurityHelper.IsSafeFilePath(path, true));
+    }
+
+    [Fact]
+    public void IsSafeFilePath_WithDriveLetterColonOnly_ShouldReturnTrue()
+    {
+        // Colon only at index 1 for drive letter — must be accepted.
+        Assert.True(SecurityHelper.IsSafeFilePath("C:\\normal\\file.txt", true));
+    }
+
+    #endregion
+
+    #region IsSafeFilePath — Trailing Dot/Space Per Segment Tests (hardening 20260416)
+
+    [Theory]
+    [InlineData("/tmp/file.txt.")]
+    [InlineData("/tmp/file ")]
+    [InlineData("/tmp/dir./file.txt")]
+    public void IsSafeFilePath_WithTrailingDotOrSpaceInSegment_ShouldReturnFalse(string path)
+    {
+        Assert.False(SecurityHelper.IsSafeFilePath(path, true));
+    }
+
+    [Fact]
+    public void IsSafeFilePath_WithNormalExtension_ShouldReturnTrue()
+    {
+        // Trailing dot is on the extension separator, not the segment end — must pass.
+        Assert.True(SecurityHelper.IsSafeFilePath("/tmp/file.txt", true));
+    }
+
+    #endregion
+
+    #region IsSafeFilePath — Windows Reserved Device Name Tests (hardening 20260416)
+
+    [Theory]
+    [InlineData("/tmp/CON")]
+    [InlineData("/tmp/nul.txt")]
+    [InlineData("/tmp/COM1")]
+    [InlineData("/tmp/LPT9.log")]
+    [InlineData("/tmp/AUX")]
+    [InlineData("/tmp/PRN")]
+    [InlineData("/tmp/con")]
+    [InlineData("/tmp/Nul.TXT")]
+    public void IsSafeFilePath_WithReservedDeviceName_ShouldReturnFalse(string path)
+    {
+        Assert.False(SecurityHelper.IsSafeFilePath(path, true));
+    }
+
+    [Theory]
+    [InlineData("/tmp/COM10")]
+    [InlineData("/tmp/CONX")]
+    [InlineData("/tmp/normal.txt")]
+    [InlineData("/tmp/LPT0")]
+    public void IsSafeFilePath_WithNonReservedName_ShouldReturnTrue(string path)
+    {
+        Assert.True(SecurityHelper.IsSafeFilePath(path, true));
+    }
+
+    #endregion
+
     #region ValidateFilePath Tests
 
     [Fact]

@@ -41,7 +41,8 @@ public class EditPptImageHandler : OperationHandlerBase<Presentation>
         {
             var newImage = PptImageHelper.ProcessAndAddImage(presentation, p.ImagePath, p.JpegQuality, p.MaxWidth,
                 p.MaxHeight,
-                out var processingDetails);
+                out var processingDetails,
+                context.ServerConfig?.AllowedBasePaths ?? []);
             pictureFrame.PictureFormat.Picture.Image = newImage;
             changes.AddRange(processingDetails);
         }

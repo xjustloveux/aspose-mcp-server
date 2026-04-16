@@ -132,7 +132,8 @@
 
     <h3>核心功能</h3>
     <ul class="feature-list">
-        <li><strong>115 個統一工具</strong> - Word(27)、Excel(31)、PowerPoint(25)、PDF(19)、OCR(2)、Email(6)、BarCode(2)、轉換(1)、Session(1)、擴充功能(1) 已整合</li>
+        <li><strong>118 個統一工具</strong> - Word(28)、Excel(32)、PowerPoint(26)、PDF(19)、OCR(2)、Email(6)、BarCode(2)、轉換(1)、Session(1)、擴充功能(1) 已整合</li>
+        <li><strong>OLE 嵌入物件處理</strong> - Word/Excel/PowerPoint 統一的 OLE 物件管理（list/extract/extract_all/remove），支援檔案模式與 Session 模式</li>
         <li><strong>按需啟用</strong> - 只啟用需要的文檔類型，減少資源佔用</li>
         <li><strong>跨平台</strong> - Windows、Linux、macOS (Intel + ARM) 原生支援，無需外部圖形庫，單一可執行檔案</li>
         <li><strong>開箱即用</strong> - 預編譯版本無需安裝 .NET Runtime</li>
@@ -158,6 +159,12 @@
         <li>防止路徑遍歷攻擊（`../`, `..\`）</li>
         <li>限制路徑長度（最大260字元）和檔案名稱長度（最大255字元）</li>
         <li>驗證路徑中的非法字元</li>
+        <li>拒絕控制字元（`\x01`–`\x1F`）：Linux 平台的 `GetInvalidPathChars` 僅包含 `\0`，本項明確補充以保持跨平台一致性</li>
+        <li>拒絕 NTFS Alternate Data Stream（路徑段中的冒號，例如 `file.txt:hidden`），防止資料隱藏與路徑驗證繞過</li>
+        <li>拒絕路徑段末尾的點號或空白（Windows 靜默截斷，可繞過副檔名驗證，例如 `file.exe.` → `file.exe`）</li>
+        <li>拒絕 Windows 保留裝置名稱（CON、NUL、AUX、PRN、COM1–9、LPT1–9），跨平台一律阻擋以防止 OS 副作用</li>
+        <li>可選路徑白名單：使用 `--allowed-path` 將檔案存取限制於指定基礎目錄下（可重複指定；未設定則不限制，建議 HTTP/WebSocket 部署時啟用）</li>
+        <li>符號連結解析（symbolic link resolution）：所有路徑在任何 I/O 前均透過 `SecurityHelper.ResolveAndEnsureWithinAllowlist()` 解析至最終目標，並再次比對白名單；白名單內部的符號連結若最終目標仍在白名單內則允許，目標位於白名單之外則拒絕；懸空符號連結（dangling symlink）的目標路徑亦須位於白名單內</li>
     </ul>
 
     <h3>輸入驗證</h3>
@@ -171,6 +178,12 @@
         <li>錯誤訊息清理，防止資訊洩露</li>
         <li>移除檔案路徑、堆疊追蹤等敏感資訊</li>
         <li>生產環境不暴露詳細錯誤資訊</li>
+        <li>結構化錯誤翻譯器（per-family translator 模式）：`CellsErrorTranslator`、`WordErrorTranslator`、`PdfErrorTranslator`、`PptErrorTranslator`、`EmailErrorTranslator` 將 Aspose/BCL 例外對應為固定的安全哨兵字串，確保原始例外訊息絕不傳遞給 MCP 呼叫方</li>
+    </ul>
+
+    <h3>拆分操作資源保護</h3>
+    <ul class="feature-list">
+        <li>Word、Excel、PowerPoint、PDF 的拆分工具均設有總工作單元上限（100,000 單元），以防止超大文檔觸發的 DoS 攻擊；超過上限時操作將被拒絕並回傳明確的錯誤訊息</li>
     </ul>
 
     <h3>Origin 驗證（DNS 重綁定攻擊防護）</h3>
@@ -208,7 +221,7 @@
     <h3>MCP 2025-11-25 規範支援</h3>
     <ul class="feature-list">
         <li>符合最新 MCP 協議規範（protocolVersion: 2025-11-25）</li>
-        <li>使用 ModelContextProtocol SDK 0.6.0-preview.1</li>
+        <li>使用 ModelContextProtocol SDK 1.2.0</li>
         <li>完整的 JSON-RPC 2.0 錯誤處理</li>
     </ul>
 
@@ -348,7 +361,7 @@
 
 <footer>
     <div class="container">
-        <p>基於 .NET 8.0、Aspose.Total 23.10.0 和 MCP SDK 0.6.0 構建</p>
+        <p>基於 .NET 8.0、Aspose.Total 23.10.0 和 MCP SDK 1.2.0 構建</p>
         <p class="footer-links" style="margin-top: 10px;">
             <a href="https://github.com/xjustloveux/aspose-mcp-server" target="_blank">GitHub</a> |
             <a href="https://www.aspose.com/" target="_blank">Aspose</a> |

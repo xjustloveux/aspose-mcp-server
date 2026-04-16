@@ -80,7 +80,7 @@ public class AddImageWordHandler : OperationHandlerBase<Document>
             throw new FileNotFoundException("Image file not found: path is required");
         SecurityHelper.ValidateFilePath(imagePath, nameof(imagePath), true);
         if (!IOFile.Exists(imagePath))
-            throw new FileNotFoundException($"Image file not found: {imagePath}");
+            throw new FileNotFoundException("The specified file was not found.");
     }
 
     /// <summary>

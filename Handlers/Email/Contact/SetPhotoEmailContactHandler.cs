@@ -36,17 +36,23 @@ public class SetPhotoEmailContactHandler : OperationHandlerBase<object>
         SecurityHelper.ValidateFilePath(photoPath, "photoPath", true);
 
         if (!File.Exists(path))
-            throw new FileNotFoundException($"Input file not found: {path}");
+            throw new FileNotFoundException("The specified file was not found.");
 
         if (!File.Exists(photoPath))
-            throw new FileNotFoundException($"Photo file not found: {photoPath}");
+            throw new FileNotFoundException("The specified file was not found.");
 
         var contact = GetEmailContactHandler.LoadContact(path);
-        var photoBytes = File.ReadAllBytes(photoPath);
+        // B-2/H39: resolve symlinks immediately before the read and write sinks (bug 20260415-symlink-toctou-sweep).
+        var resolvedPhotoPath =
+            SecurityHelper.ResolveAndEnsureWithinAllowlist(photoPath, context.ServerConfig?.AllowedBasePaths ?? [],
+                "photoPath");
+        var photoBytes = File.ReadAllBytes(resolvedPhotoPath);
         contact.Photo = new MapiContactPhoto(photoBytes, MapiContactPhotoImageFormat.Jpeg);
 
         var ext = Path.GetExtension(outputPath).ToLowerInvariant();
-        contact.Save(outputPath, ext == ".msg" ? ContactSaveFormat.Msg : ContactSaveFormat.VCard);
+        var resolvedOutputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(outputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], "outputPath");
+        contact.Save(resolvedOutputPath, ext == ".msg" ? ContactSaveFormat.Msg : ContactSaveFormat.VCard);
 
         return new SuccessResult
         {

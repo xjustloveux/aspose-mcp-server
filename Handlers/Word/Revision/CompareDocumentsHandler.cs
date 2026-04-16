@@ -42,7 +42,10 @@ public class CompareDocumentsHandler : OperationHandlerBase<Document>
 
         originalDoc.Compare(revisedDoc, p.AuthorName, DateTime.Now, compareOptions);
         var revisionCount = originalDoc.Revisions.Count;
-        originalDoc.Save(p.OutputPath);
+        // H4: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
+        var outputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.OutputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], "outputPath");
+        originalDoc.Save(outputPath);
 
         return new CompareDocumentsResult
         {

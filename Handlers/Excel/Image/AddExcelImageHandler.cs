@@ -32,7 +32,7 @@ public class AddExcelImageHandler : OperationHandlerBase<Workbook>
         SecurityHelper.ValidateFilePath(addParams.ImagePath, "imagePath", true);
 
         if (!File.Exists(addParams.ImagePath))
-            throw new FileNotFoundException($"Image file not found: {addParams.ImagePath}");
+            throw new FileNotFoundException("The specified file was not found.");
 
         ExcelImageHelper.ValidateImageFormat(addParams.ImagePath);
 

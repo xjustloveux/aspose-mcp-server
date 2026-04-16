@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO.Hashing;
 using System.Text.Json;
+using AsposeMcpServer.Helpers;
 
 namespace AsposeMcpServer.Core.Extension.Transport;
 
@@ -135,6 +136,9 @@ public class FileTransport : IExtensionTransport, IDisposable
             var fileName = $"ext_snapshot_{sanitizedSessionId}_{metadata.SequenceNumber}_{uniqueId}.{sanitizedFormat}";
             filePath = Path.Combine(_tempDirectory, fileName);
 
+            // T10: resolve immediately before the write sink to catch a symlink planted inside
+            // _tempDirectory pointing outside (bug 20260415-symlink-toctou-sweep, Phase 1).
+            SecurityHelper.ResolveAndEnsureWithinAllowlist(filePath, [_tempDirectory], "filePath");
             await File.WriteAllBytesAsync(filePath, data, cancellationToken);
 
             metadata.FilePath = filePath;
@@ -193,7 +197,13 @@ public class FileTransport : IExtensionTransport, IDisposable
         try
         {
             if (File.Exists(metadata.FilePath))
+            {
+                // T10: resolve immediately before File.Delete to catch a symlink planted at
+                // metadata.FilePath (bug 20260415-symlink-toctou-sweep, Phase 1).
+                SecurityHelper.ResolveAndEnsureWithinAllowlist(
+                    metadata.FilePath, [_tempDirectory], "filePath");
                 File.Delete(metadata.FilePath);
+            }
         }
         catch (Exception ex)
         {
@@ -223,6 +233,10 @@ public class FileTransport : IExtensionTransport, IDisposable
                     foreach (var file in orphanedFiles)
                         try
                         {
+                            // T10: resolve before deleting enumerated orphan files
+                            // (bug 20260415-symlink-toctou-sweep, Phase 1).
+                            SecurityHelper.ResolveAndEnsureWithinAllowlist(
+                                file, [_tempDirectory], "file");
                             File.Delete(file);
                         }
                         catch (Exception ex)
@@ -245,16 +259,36 @@ public class FileTransport : IExtensionTransport, IDisposable
     /// <summary>
     ///     Cleans up a partially written file after a failure.
     /// </summary>
-    /// <param name="filePath">Path to the file to clean up.</param>
+    /// <param name="filePath">
+    ///     Path to the file to clean up. Must be null or a path that was already validated
+    ///     by the T10 resolver in the calling method; this method does not perform full
+    ///     symlink resolution itself (see Remarks).
+    /// </param>
     /// <remarks>
-    ///     This is a best-effort cleanup. Exceptions are intentionally suppressed
-    ///     because this is called during error handling paths where we don't want
-    ///     to mask the original error. The file may be locked by another process
-    ///     or already deleted.
+    ///     <para>
+    ///         This is a best-effort cleanup. Exceptions are intentionally suppressed
+    ///         because this is called during error handling paths where we don't want
+    ///         to mask the original error. The file may be locked by another process
+    ///         or already deleted.
+    ///     </para>
+    ///     <para>
+    ///         <b>Caller invariant:</b> this method must only be called for paths already
+    ///         resolved by the T10 <see cref="SecurityHelper.ResolveAndEnsureWithinAllowlist" />
+    ///         check in <c>SendSnapshot</c>. It does not itself re-validate the full symlink
+    ///         chain. A defensive <see cref="SecurityHelper.IsPathUnder" /> lexical check is
+    ///         applied to guard against mid-error races where a symlink is planted between
+    ///         the T10 validation and this cleanup call.
+    ///     </para>
     /// </remarks>
-    private static void CleanupFailedFile(string? filePath)
+    private void CleanupFailedFile(string? filePath)
     {
         if (filePath == null)
+            return;
+
+        // Defensive lexical guard: confirm the path is still under _tempDirectory even after
+        // a potential mid-error symlink swap. Full re-resolution is not performed because we
+        // are already in a catch block; IsPathUnder is I/O-free and safe to call here.
+        if (!SecurityHelper.IsPathUnder(filePath, _tempDirectory))
             return;
 
         try
@@ -383,7 +417,10 @@ public class FileTransport : IExtensionTransport, IDisposable
         {
             if (Directory.Exists(_tempDirectory))
             {
-                Directory.Delete(_tempDirectory, true);
+                // T11: replace Directory.Delete(path, true) with SafeRecursiveDelete so that
+                // child symlinks are not followed into directories outside _tempDirectory
+                // (bug 20260415-symlink-toctou-sweep, Phase 1).
+                SecurityHelper.SafeRecursiveDelete(_tempDirectory, [_tempDirectory], nameof(_tempDirectory));
                 _logger?.LogDebug("Cleaned up temp directory: {TempDirectory}", _tempDirectory);
             }
         }
@@ -422,7 +459,10 @@ public class FileTransport : IExtensionTransport, IDisposable
                 if (IsOrphanedDirectory(dir, pid))
                     try
                     {
-                        Directory.Delete(dir, true);
+                        // T11: SafeRecursiveDelete instead of Directory.Delete(_, true) to avoid
+                        // following child symlinks outside baseTempDirectory
+                        // (bug 20260415-symlink-toctou-sweep, Phase 1).
+                        SecurityHelper.SafeRecursiveDelete(dir, [baseTempDirectory], nameof(dir));
                         cleanedCount++;
                     }
                     catch (Exception ex)

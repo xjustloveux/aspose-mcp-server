@@ -31,7 +31,7 @@ public class AddPdfImageHandler : OperationHandlerBase<Document>
         SecurityHelper.ValidateFilePath(p.ImagePath, "imagePath", true);
 
         if (!File.Exists(p.ImagePath))
-            throw new FileNotFoundException($"Image file not found: {p.ImagePath}");
+            throw new FileNotFoundException("The specified file was not found.");
 
         var document = context.Document;
 

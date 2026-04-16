@@ -57,7 +57,10 @@ public class RenderThumbnailWordHandler : OperationHandlerBase<Document>
         if (!string.IsNullOrEmpty(outputDir))
             Directory.CreateDirectory(outputDir);
 
-        doc.Save(p.OutputPath, options);
+        // H1: resolve symlinks immediately before the sink to close TOCTOU (bug 20260415-symlink-toctou-sweep).
+        var outputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.OutputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], "outputPath");
+        doc.Save(outputPath, options);
 
         return new RenderResult
         {

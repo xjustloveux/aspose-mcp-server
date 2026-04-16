@@ -30,7 +30,7 @@ public class ApplyThemeHandler : OperationHandlerBase<Presentation>
         SecurityHelper.ValidateFilePath(p.ThemePath, "themePath", true);
 
         if (!File.Exists(p.ThemePath))
-            throw new FileNotFoundException($"Theme file not found: {p.ThemePath}");
+            throw new FileNotFoundException("The specified file was not found.");
 
         var presentation = context.Document;
         using var themePresentation = new Presentation(p.ThemePath);

@@ -38,7 +38,10 @@ public class SetPptBackgroundHandler : OperationHandlerBase<Presentation>
         if (!string.IsNullOrWhiteSpace(p.ImagePath))
         {
             SecurityHelper.ValidateFilePath(p.ImagePath, "imagePath", true);
-            img = presentation.Images.AddImage(File.ReadAllBytes(p.ImagePath));
+            // B-3: resolve symlinks immediately before the read sink (bug 20260415-symlink-toctou-sweep).
+            var resolvedImagePath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.ImagePath,
+                context.ServerConfig?.AllowedBasePaths ?? [], "imagePath");
+            img = presentation.Images.AddImage(File.ReadAllBytes(resolvedImagePath));
         }
 
         Color? color = null;

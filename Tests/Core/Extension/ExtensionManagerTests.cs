@@ -55,7 +55,7 @@ public class ExtensionManagerTests : IAsyncDisposable
         {
         }
 
-        await Task.CompletedTask;
+        await ValueTask.CompletedTask;
         GC.SuppressFinalize(this);
     }
 
@@ -296,7 +296,7 @@ public class ExtensionManagerTests : IAsyncDisposable
 
         await Task.Delay(500);
 
-        var timeout = DateTime.UtcNow.AddSeconds(60);
+        var timeout = DateTime.UtcNow.AddSeconds(30);
         ExtensionDefinition? extension = null;
         while (DateTime.UtcNow < timeout)
         {
@@ -310,9 +310,9 @@ public class ExtensionManagerTests : IAsyncDisposable
         Assert.False(extension.IsAvailable,
             $"Extension should be marked unavailable after handshake failure. Current state: IsAvailable={extension.IsAvailable}, Reason={extension.UnavailableReason}");
         Assert.True(
-            extension.UnavailableReason?.Contains("Handshake") == true ||
-            extension.UnavailableReason?.Contains("Initialization") == true,
-            $"Expected 'Handshake' or 'Initialization' in UnavailableReason, got: {extension.UnavailableReason}");
+            extension.UnavailableReason?.Contains("handshake-timeout") == true ||
+            extension.UnavailableReason?.Contains("initialization-failed") == true,
+            $"Expected 'handshake-timeout' or 'initialization-failed' in UnavailableReason, got: {extension.UnavailableReason}");
     }
 
     [Fact]
@@ -412,7 +412,7 @@ public class ExtensionManagerTests : IAsyncDisposable
             {
                 Id = "unavailable-ext",
                 IsAvailable = false,
-                UnavailableReason = "Executable not found"
+                UnavailableReason = "Extension is unavailable: executable-not-found."
             }
         ]);
         InitializeConfig(configPath);
@@ -766,7 +766,7 @@ public class ExtensionManagerTests : IAsyncDisposable
         var statuses = manager.GetExtensionStatuses();
 
         Assert.False(statuses["unavailable-ext"].IsAvailable);
-        Assert.Contains("Executable not found", statuses["unavailable-ext"].UnavailableReason);
+        Assert.Contains("executable-not-found", statuses["unavailable-ext"].UnavailableReason);
     }
 
     #endregion
