@@ -22,6 +22,27 @@ public static class OutputSchemaGenerator
     }
 
     /// <summary>
+    ///     Creates schema inference options that force <c>additionalProperties: false</c> on every
+    ///     generated object sub-schema. Required to avoid oneOf ambiguity: if one result type's
+    ///     required fields are a proper subset of another's (e.g. <c>GetWordContentDetailedResult</c>
+    ///     only requires <c>content</c> while <c>GetWordContentResult</c> requires
+    ///     <c>{content, totalLength, offset, hasMore}</c>), then a full-content wire payload would
+    ///     validate against both branches of the oneOf and Claude Desktop's strict validator would
+    ///     report "Tool execution failed" even though the tool ran correctly.
+    /// </summary>
+    /// <returns>A new options instance with <c>DisallowAdditionalProperties = true</c>.</returns>
+    private static AIJsonSchemaCreateOptions CreateSchemaOptions()
+    {
+        return new AIJsonSchemaCreateOptions
+        {
+            TransformOptions = new AIJsonSchemaTransformOptions
+            {
+                DisallowAdditionalProperties = true
+            }
+        };
+    }
+
+    /// <summary>
     ///     Generates JSON Schema from all Handlers in the specified namespace.
     ///     Returns schema for FinalizedResult with data field containing handler result types,
     ///     wrapped in a top-level <c>result</c> property so the schema matches the MCP SDK 1.2.0
@@ -88,10 +109,15 @@ public static class OutputSchemaGenerator
     private static JsonElement GenerateFinalizedResultSchema(IReadOnlyCollection<Type> dataTypes)
     {
         var outputSchema = AIJsonUtilities.CreateJsonSchema(
-            typeof(OutputInfo), serializerOptions: CreateCamelCaseOptions());
+            typeof(OutputInfo),
+            serializerOptions: CreateCamelCaseOptions(),
+            inferenceOptions: CreateSchemaOptions());
 
         var dataSchema = dataTypes.Count == 1
-            ? AIJsonUtilities.CreateJsonSchema(dataTypes.First(), serializerOptions: CreateCamelCaseOptions())
+            ? AIJsonUtilities.CreateJsonSchema(
+                dataTypes.First(),
+                serializerOptions: CreateCamelCaseOptions(),
+                inferenceOptions: CreateSchemaOptions())
             : GenerateOneOfSchema(dataTypes);
 
         var schemaNode = new JsonObject
@@ -102,7 +128,8 @@ public static class OutputSchemaGenerator
                 ["data"] = JsonNode.Parse(dataSchema.GetRawText()),
                 ["output"] = JsonNode.Parse(outputSchema.GetRawText())
             },
-            ["required"] = new JsonArray("data", "output")
+            ["required"] = new JsonArray("data", "output"),
+            ["additionalProperties"] = false
         };
 
         var json = schemaNode.ToJsonString();
@@ -117,7 +144,10 @@ public static class OutputSchemaGenerator
     private static JsonElement GenerateOneOfSchema(IReadOnlyCollection<Type> types)
     {
         var schemas = types.Select(t =>
-            AIJsonUtilities.CreateJsonSchema(t, serializerOptions: CreateCamelCaseOptions())
+            AIJsonUtilities.CreateJsonSchema(
+                t,
+                serializerOptions: CreateCamelCaseOptions(),
+                inferenceOptions: CreateSchemaOptions())
         ).ToList();
 
         var oneOfNode = new JsonObject
@@ -150,7 +180,8 @@ public static class OutputSchemaGenerator
             {
                 ["result"] = JsonNode.Parse(innerSchema.GetRawText())
             },
-            ["required"] = new JsonArray("result")
+            ["required"] = new JsonArray("result"),
+            ["additionalProperties"] = false
         };
 
         var json = schemaNode.ToJsonString();

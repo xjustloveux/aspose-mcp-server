@@ -243,7 +243,7 @@ jobs:
 
     - name: Install mcpb CLI
       shell: bash
-      run: npm install -g @anthropic-ai/mcpb@2.1.2
+      run: npm install -g --ignore-scripts @anthropic-ai/mcpb@2.1.2
 
     - name: Pack .mcpb bundles
       shell: bash
