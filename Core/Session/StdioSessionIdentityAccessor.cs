@@ -25,8 +25,8 @@ public class StdioSessionIdentityAccessor : ISessionIdentityAccessor
         else
             _identity = new SessionIdentity
             {
-                GroupId = groupId,
-                UserId = userId
+                GroupId = string.IsNullOrEmpty(groupId) ? null : groupId,
+                UserId = string.IsNullOrEmpty(userId) ? null : userId
             };
     }
 

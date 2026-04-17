@@ -502,6 +502,7 @@
     <ul class="tool-list">
         <li>
             <span class="tool-name">pdf_file</span><span class="tool-desc">- 創建、合併、拆分、壓縮、加密、解密、線性化PDF</span><span class="tool-ops">（7個操作：create, merge, split, compress, encrypt, decrypt, linearize）</span>
+            <br><small class="small-hint" style="margin-left: 20px;"><code>encrypt</code>：必填 <code>userPassword</code>、<code>ownerPassword</code>；選填 <code>algorithm</code>（RC4x40 / RC4x128 / AESx128 / AESx256，預設 AESx256）、<code>permissions</code>（PrintDocument / ModifyContent / ExtractContent / ModifyTextAnnotations / FillForm / ExtractContentWithDisabilities / AssembleDocument / PrintingQuality，預設 [PrintDocument, ModifyContent]，空陣列表示無權限）、<code>usePdf20</code>（PDF 2.0 安全修訂，需搭配 algorithm=AESx256，預設 false）</small>
         </li>
     </ul>
 

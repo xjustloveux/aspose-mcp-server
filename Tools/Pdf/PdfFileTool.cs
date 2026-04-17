@@ -63,6 +63,20 @@ public class PdfFileTool
     /// <param name="removeUnusedObjects">Remove unused objects (for compress, default: true).</param>
     /// <param name="userPassword">User password for opening PDF (required for encrypt).</param>
     /// <param name="ownerPassword">Owner password for permissions control (required for encrypt).</param>
+    /// <param name="algorithm">
+    ///     Encryption algorithm for encrypt (optional, default: AESx256).
+    ///     Valid values: RC4x40, RC4x128, AESx128, AESx256.
+    /// </param>
+    /// <param name="permissions">
+    ///     Document permission flags for encrypt (optional, default: [PrintDocument, ModifyContent]).
+    ///     Pass an empty array to grant no permissions.
+    ///     Valid values: PrintDocument, ModifyContent, ExtractContent, ModifyTextAnnotations,
+    ///     FillForm, ExtractContentWithDisabilities, AssembleDocument, PrintingQuality.
+    /// </param>
+    /// <param name="usePdf20">
+    ///     When true, encrypts using the PDF 2.0 security revision (for encrypt, default: false).
+    ///     Requires algorithm=AESx256.
+    /// </param>
     /// <param name="password">Password to open an encrypted PDF (required for decrypt).</param>
     /// <param name="progress">Optional progress reporter for long-running operations.</param>
     /// <returns>A message indicating the result of the operation.</returns>
@@ -85,6 +99,7 @@ Usage examples:
 - Split PDF (page range): pdf_file(operation='split', path='doc.pdf', outputDir='output/', startPage=2, endPage=5)
 - Compress PDF: pdf_file(operation='compress', path='doc.pdf', outputPath='compressed.pdf', compressImages=true)
 - Encrypt PDF: pdf_file(operation='encrypt', path='doc.pdf', outputPath='encrypted.pdf', userPassword='user', ownerPassword='owner')
+- Encrypt PDF (custom params): pdf_file(operation='encrypt', path='doc.pdf', outputPath='encrypted.pdf', userPassword='user', ownerPassword='owner', algorithm='AESx128', permissions=['PrintDocument','FillForm'], usePdf20=false)
 - Decrypt PDF: pdf_file(operation='decrypt', path='encrypted.pdf', outputPath='decrypted.pdf', password='user')
 - Linearize PDF: pdf_file(operation='linearize', path='doc.pdf', outputPath='linearized.pdf')")]
     public object Execute(
@@ -93,7 +108,7 @@ Usage examples:
 - 'merge': Merge multiple PDFs (required params: inputPaths, outputPath)
 - 'split': Split PDF into multiple files (required params: path, outputDir; optional: startPage, endPage, pagesPerFile)
 - 'compress': Compress PDF file (required params: path, outputPath)
-- 'encrypt': Encrypt PDF file (required params: path, outputPath, userPassword, ownerPassword)
+- 'encrypt': Encrypt PDF file (required params: path, outputPath, userPassword, ownerPassword; optional: algorithm, permissions, usePdf20)
 - 'decrypt': Remove password protection (required params: path, outputPath, password)
 - 'linearize': Optimize PDF for fast web view (required params: path, outputPath)")]
         string operation,
@@ -123,6 +138,18 @@ Usage examples:
         string? userPassword = null,
         [Description("Owner password for permissions control (required for encrypt)")]
         string? ownerPassword = null,
+        [Description(
+            "Encryption algorithm (for encrypt, optional, default: AESx256). Valid values: RC4x40, RC4x128, AESx128, AESx256.")]
+        string? algorithm = null,
+        [Description(
+            "Document permission flags (for encrypt, optional, default: [PrintDocument, ModifyContent]). " +
+            "Pass empty array for no permissions. " +
+            "Valid values: PrintDocument, ModifyContent, ExtractContent, ModifyTextAnnotations, " +
+            "FillForm, ExtractContentWithDisabilities, AssembleDocument, PrintingQuality.")]
+        string[]? permissions = null,
+        [Description(
+            "Use PDF 2.0 security revision (for encrypt, optional, default: false). Requires algorithm=AESx256.")]
+        bool usePdf20 = false,
         [Description("Password to open an encrypted PDF (required for decrypt)")]
         string? password = null,
         IProgress<ProgressNotificationValue>? progress = null)
@@ -136,8 +163,8 @@ Usage examples:
         }
 
         var result = ExecuteWithContext(lowerOperation, path, sessionId, outputPath, outputDir, pagesPerFile, startPage,
-            endPage, compressImages, compressFonts, removeUnusedObjects, userPassword, ownerPassword, password,
-            progress);
+            endPage, compressImages, compressFonts, removeUnusedObjects, userPassword, ownerPassword, algorithm,
+            permissions, usePdf20, password, progress);
         return ResultHelper.FinalizeResult((dynamic)result, outputPath, sessionId);
     }
 
@@ -199,14 +226,15 @@ Usage examples:
     /// </summary>
     private object ExecuteWithContext(string operation, string? path, string? sessionId, string? outputPath,
         string? outputDir, int pagesPerFile, int? startPage, int? endPage, bool compressImages, bool compressFonts,
-        bool removeUnusedObjects, string? userPassword, string? ownerPassword, string? password,
+        bool removeUnusedObjects, string? userPassword, string? ownerPassword, string? algorithm,
+        string[]? permissions, bool usePdf20, string? password,
         IProgress<ProgressNotificationValue>? progress)
     {
         using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor, password);
 
         var parameters = BuildParameters(operation, outputDir, pagesPerFile, startPage, endPage,
-            compressImages, compressFonts, removeUnusedObjects, userPassword, ownerPassword,
-            ctx.IsSession ? null : path);
+            compressImages, compressFonts, removeUnusedObjects, userPassword, ownerPassword, algorithm,
+            permissions, usePdf20, ctx.IsSession ? null : path);
 
         var handler = _handlerRegistry.GetHandler(operation);
 
@@ -262,13 +290,16 @@ Usage examples:
         bool removeUnusedObjects,
         string? userPassword,
         string? ownerPassword,
+        string? algorithm,
+        string[]? permissions,
+        bool usePdf20,
         string? fileBaseName)
     {
         return operation switch
         {
             "split" => BuildSplitParameters(outputDir, pagesPerFile, startPage, endPage, fileBaseName),
             "compress" => BuildCompressParameters(compressImages, compressFonts, removeUnusedObjects),
-            "encrypt" => BuildEncryptParameters(userPassword, ownerPassword),
+            "encrypt" => BuildEncryptParameters(userPassword, ownerPassword, algorithm, permissions, usePdf20),
             _ => new OperationParameters()
         };
     }
@@ -316,12 +347,27 @@ Usage examples:
     /// </summary>
     /// <param name="userPassword">The user password for opening the PDF.</param>
     /// <param name="ownerPassword">The owner password for permissions control.</param>
+    /// <param name="algorithm">
+    ///     Optional encryption algorithm name; <see langword="null" /> uses the handler default (AESx256).
+    /// </param>
+    /// <param name="permissions">
+    ///     Optional array of permission flag names; <see langword="null" /> uses the handler default
+    ///     (PrintDocument | ModifyContent). An empty array resolves to no permissions.
+    /// </param>
+    /// <param name="usePdf20">
+    ///     When <see langword="true" />, the handler encrypts the document using the PDF 2.0 security revision.
+    ///     Requires algorithm to resolve to AESx256.
+    /// </param>
     /// <returns>OperationParameters configured for encrypting a PDF.</returns>
-    private static OperationParameters BuildEncryptParameters(string? userPassword, string? ownerPassword)
+    private static OperationParameters BuildEncryptParameters(string? userPassword, string? ownerPassword,
+        string? algorithm, string[]? permissions, bool usePdf20)
     {
         var parameters = new OperationParameters();
         if (userPassword != null) parameters.Set("userPassword", userPassword);
         if (ownerPassword != null) parameters.Set("ownerPassword", ownerPassword);
+        if (algorithm != null) parameters.Set("algorithm", algorithm);
+        if (permissions != null) parameters.Set("permissions", permissions);
+        parameters.Set("usePdf20", usePdf20);
         return parameters;
     }
 }

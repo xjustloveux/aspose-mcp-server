@@ -269,9 +269,9 @@ jobs:
       run: |
         tag_name="${{ needs.prepare.outputs.tag }}"
         release_notes=$(cat <<'EOF'
-        Automated build from commit ${{ github.sha }}
+        自動建置於 commit ${{ github.sha }}
 
-        Includes binaries for:
+        包含以下平台的執行檔：
         - Windows (x64) — `.zip`
         - Linux (x64) — `.tar.gz`
         - macOS (x64 + ARM64) — `.tar.gz`
@@ -302,7 +302,7 @@ jobs:
 
         ### Claude Desktop 一鍵安裝（.mcpb）
 
-        For Claude Desktop users — download the `.mcpb` for your platform and double-click to install natively on your host OS (bypasses the Linux sandbox; Windows paths work). Prompted for your Aspose license at install; skip for evaluation mode (watermarks).
+        Claude Desktop 使用者請下載對應平台的 `.mcpb` 檔，雙擊即可原生安裝於主機作業系統（繞過 Linux 沙盒、Windows 路徑可正常使用）。安裝時會提示輸入 Aspose 授權檔；略過則以評估模式執行（文件會帶浮水印）。
 
         - Windows x64 — `aspose-mcp-server-windows-x64.mcpb`
         - macOS ARM64 — `aspose-mcp-server-macos-arm64.mcpb`
@@ -311,8 +311,8 @@ jobs:
 
         ---
 
-        **Build Number:** ${{ github.run_number }}
-        **Commit:** ${{ github.sha }}
+        **建置編號：** ${{ github.run_number }}
+        **Commit：** ${{ github.sha }}
         EOF
         )
 
