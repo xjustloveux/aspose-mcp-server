@@ -113,6 +113,16 @@ print('manifest.json written successfully', file=sys.stderr)
 PYEOF
 
 # ---------------------------------------------------------------------------
+# Validate the generated manifest against the mcpb schema before we zip.
+# `mcpb validate` accepts a manifest.json path (not a .mcpb bundle), so this
+# is the right moment — after token substitution, before bundling.
+# Any schema failure here is hard-fail (set -e).
+# ---------------------------------------------------------------------------
+
+echo "--- Validating manifest against mcpb schema ---" >&2
+mcpb validate "${STAGING_DIR}/manifest.json" >&2
+
+# ---------------------------------------------------------------------------
 # Gap #4: Ensure executable bit is set on the binary in staging.
 # For Unix targets this is required for the bit to be preserved in the ZIP.
 # For Windows .exe the chmod is a no-op on Linux staging, which is harmless.

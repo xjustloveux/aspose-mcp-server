@@ -201,7 +201,7 @@ jobs:
         fetch-depth: 0
 
     - name: Download all artifacts
-      uses: actions/download-artifact@v6
+      uses: actions/download-artifact@v7
       with:
         path: artifacts
     
@@ -239,7 +239,7 @@ jobs:
       shell: bash
       run: |
         sudo apt-get install -y librsvg2-bin
-        rsvg-convert -w 128 -h 128 docs/favicon.svg -o icon.png
+        rsvg-convert -w 512 -h 512 docs/favicon.svg -o icon.png
 
     - name: Install mcpb CLI
       shell: bash
@@ -248,6 +248,9 @@ jobs:
     - name: Pack .mcpb bundles
       shell: bash
       run: |
+        # Each pack-mcpb.sh call internally runs `mcpb validate` on the
+        # generated manifest.json before zipping, so manifest-schema errors
+        # fail this step rather than a separate validate step.
         VERSION="${{ needs.prepare.outputs.version }}"
         chmod +x deploy/pack-mcpb.sh
         ./deploy/pack-mcpb.sh windows-x64   "$VERSION" "server/AsposeMcpServer.exe" '${__dirname}/server/AsposeMcpServer.exe' '["win32"]'
@@ -255,9 +258,9 @@ jobs:
         ./deploy/pack-mcpb.sh macos-arm64   "$VERSION" "server/AsposeMcpServer"     '${__dirname}/server/AsposeMcpServer'     '["darwin"]'
         ./deploy/pack-mcpb.sh macos-x64     "$VERSION" "server/AsposeMcpServer"     '${__dirname}/server/AsposeMcpServer'     '["darwin"]'
 
-    - name: Validate .mcpb manifests
+    - name: Inspect .mcpb bundles
       shell: bash
-      run: for f in aspose-mcp-server-*.mcpb; do mcpb validate "$f"; done
+      run: for f in aspose-mcp-server-*.mcpb; do mcpb info "$f"; done
 
     - name: Create Release with GitHub CLI
       shell: bash
