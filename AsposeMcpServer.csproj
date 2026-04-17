@@ -21,7 +21,7 @@
   </PropertyGroup>
   
   <!-- Embed the project icon into the Windows PE executable.
-       Fires for win-x64 runtime only (including the IIS build, which also uses --runtime win-x64 — cosmetically harmless there).
+       Fires for win-x64 runtime only (including the IIS build, which also targets win-x64 — cosmetically harmless there).
        ApplicationIcon is a no-op for Linux/macOS publish paths; the condition provides belt-and-suspenders protection.
        The .ico file itself is NOT copied to the publish output directory and never enters the .mcpb bundle. -->
   <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'win-x64'">

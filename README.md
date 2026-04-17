@@ -10,6 +10,7 @@
 [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=xjustloveux_aspose-mcp-server&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=xjustloveux_aspose-mcp-server)
 [![MCP Version](https://img.shields.io/badge/MCP-2025--11--25-blue)](https://modelcontextprotocol.io/)
 [![MCP SDK](https://img.shields.io/badge/MCP%20SDK-1.2.0-purple)](https://github.com/modelcontextprotocol/csharp-sdk)
+[![Desktop Extension](https://img.shields.io/badge/Desktop%20Extension-.mcpb-blue)](https://xjustloveux.github.io/aspose-mcp-server/getting-started.html#mcpb)
 [![Aspose Version](https://img.shields.io/badge/Aspose-23.10.0-orange)](https://products.aspose.com/total/net/)
 [![xUnit](https://img.shields.io/badge/xUnit-2.9.3-blue?logo=xunit)](https://xunit.net/)
 
@@ -108,23 +109,23 @@ brew install xjustloveux/tap/aspose-mcp-server
 
 ## 🖥️ Claude Desktop Extension (.mcpb)
 
-Claude Desktop users on Windows can now install Aspose MCP Server as a native extension, bypassing the Linux sandbox so that Windows paths (`C:\Users\...`) work directly (closes [Issue #1](https://github.com/xjustloveux/aspose-mcp-server/issues/1)).
+Claude Desktop 使用者可將 Aspose MCP Server 以原生擴充功能安裝，繞過 Linux 沙箱限制，讓 Windows 路徑（`C:\Users\...`）直接可用。
 
-| Platform | File |
-|----------|------|
+| 平台 | 檔案 |
+|------|------|
 | Windows x64 | `aspose-mcp-server-windows-x64.mcpb` |
 | macOS ARM64 | `aspose-mcp-server-macos-arm64.mcpb` |
 | macOS x64 | `aspose-mcp-server-macos-x64.mcpb` |
 | Linux x64 | `aspose-mcp-server-linux-x64.mcpb` |
 
-**Install in 3 steps:**
-1. Download the `.mcpb` for your platform from [GitHub Releases](https://github.com/xjustloveux/aspose-mcp-server/releases).
-2. Double-click the file — Claude Desktop opens the install dialog.
-3. When prompted, select your `Aspose.Total.lic` file, or skip to run in evaluation mode (output documents will carry Aspose watermarks).
+**三步驟安裝：**
+1. 從 [GitHub Releases](https://github.com/xjustloveux/aspose-mcp-server/releases) 下載對應平台的 `.mcpb` 檔案。
+2. 雙擊檔案 — Claude Desktop 會開啟安裝對話框。
+3. 依提示選擇 `Aspose.Total.lic` 授權檔；若跳過則以評估模式執行（輸出文件將帶有 Aspose 浮水印）。
 
-> macOS users: quarantine removal is handled automatically by Claude Desktop — no `xattr` command required.
+> macOS 使用者：Claude Desktop 會自動處理隔離標記，**無需**手動執行 `xattr` 指令。
 >
-> For non-Claude-Desktop clients (Cursor, Continue, custom), use the `.zip` / `.tar.gz` method described in [快速開始](https://xjustloveux.github.io/aspose-mcp-server/getting-started.html).
+> 非 Claude Desktop 客戶端（Cursor、Continue 等）請使用 `.zip` / `.tar.gz` 安裝方式，詳見 [快速開始](https://xjustloveux.github.io/aspose-mcp-server/getting-started.html)。
 
 ## 📦 功能概覽
 
