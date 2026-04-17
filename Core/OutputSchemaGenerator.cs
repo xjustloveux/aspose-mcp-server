@@ -23,7 +23,10 @@ public static class OutputSchemaGenerator
 
     /// <summary>
     ///     Generates JSON Schema from all Handlers in the specified namespace.
-    ///     Returns schema for FinalizedResult with data field containing handler result types.
+    ///     Returns schema for FinalizedResult with data field containing handler result types,
+    ///     wrapped in a top-level <c>result</c> property so the schema matches the MCP SDK 1.2.0
+    ///     wire format for tools whose method return type is <c>object</c> (the SDK auto-wraps
+    ///     the tool's return value as <c>structuredContent.result</c>).
     /// </summary>
     /// <param name="handlerNamespace">The namespace containing Handler classes.</param>
     /// <param name="assembly">The assembly to scan. Defaults to executing assembly.</param>
@@ -45,7 +48,7 @@ public static class OutputSchemaGenerator
         if (resultTypes.Count == 0)
             return null;
 
-        return GenerateFinalizedResultSchema(resultTypes);
+        return WrapInResult(GenerateFinalizedResultSchema(resultTypes));
     }
 
     /// <summary>
@@ -123,6 +126,34 @@ public static class OutputSchemaGenerator
         };
 
         var json = oneOfNode.ToJsonString();
+        return JsonDocument.Parse(json).RootElement.Clone();
+    }
+
+    /// <summary>
+    ///     Wraps a JSON Schema element in a top-level <c>result</c> property, producing
+    ///     <c>{"type":"object","properties":{"result":&lt;inner&gt;},"required":["result"]}</c>.
+    ///     This aligns the declared outputSchema with the MCP SDK 1.2.0 wire format for
+    ///     tools whose method return type is <c>object</c>: the SDK auto-wraps the tool's
+    ///     return value as <c>structuredContent.result</c>, and Claude Desktop strictly
+    ///     validates <c>structuredContent</c> against the declared schema. Without this
+    ///     wrap, all successful calls fail schema validation and Claude Desktop reports
+    ///     a generic "Tool execution failed" message even though the tool ran correctly.
+    /// </summary>
+    /// <param name="innerSchema">The inner schema to wrap under the <c>result</c> key.</param>
+    /// <returns>A schema element with the wrapped <c>result</c> property.</returns>
+    private static JsonElement WrapInResult(JsonElement innerSchema)
+    {
+        var schemaNode = new JsonObject
+        {
+            ["type"] = "object",
+            ["properties"] = new JsonObject
+            {
+                ["result"] = JsonNode.Parse(innerSchema.GetRawText())
+            },
+            ["required"] = new JsonArray("result")
+        };
+
+        var json = schemaNode.ToJsonString();
         return JsonDocument.Parse(json).RootElement.Clone();
     }
 }

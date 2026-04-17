@@ -6,7 +6,7 @@
   "description": "Office document processing MCP server powered by Aspose.Total. Supports Word, Excel, PowerPoint, PDF, OCR, Email, and BarCode operations.",
   "long_description": "Aspose MCP Server exposes Aspose.Total document processing capabilities as MCP tools for Claude Desktop. 118 tools across 7 categories: Word, Excel, PowerPoint, PDF, OCR, Email, BarCode.\n\nRequires an Aspose license for production use. Evaluation mode (with Aspose watermarks) works without a license.",
   "author": {
-    "name": "xjustloveux",
+    "name": "JaJa",
     "url": "https://github.com/xjustloveux"
   },
   "homepage": "https://xjustloveux.github.io/aspose-mcp-server",

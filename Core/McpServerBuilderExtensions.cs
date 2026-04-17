@@ -154,7 +154,6 @@ public static class McpServerBuilderExtensions
 
                 var mappingAttr = toolType.GetCustomAttribute<ToolHandlerMappingAttribute>();
                 if (mappingAttr != null)
-                {
                     try
                     {
                         var schema = OutputSchemaGenerator.GenerateFromNamespace(mappingAttr.HandlerNamespace);
@@ -166,24 +165,17 @@ public static class McpServerBuilderExtensions
                         Console.Error.WriteLine(
                             $"[WARN] Failed to generate OutputSchema for {toolAttr.Name} from namespace {mappingAttr.HandlerNamespace}: {ex.Message}");
                     }
-                }
                 else
-                {
-                    var schemaAttr = method.GetCustomAttribute<OutputSchemaAttribute>();
-                    if (schemaAttr != null)
-                        try
-                        {
-                            var schema = OutputSchemaGenerator.GenerateForType(schemaAttr.SchemaType);
-                            tool.ProtocolTool.OutputSchema = schema;
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.Error.WriteLine(
-                                $"[WARN] Failed to create OutputSchema for {toolAttr.Name} from {schemaAttr.SchemaType.Name}: {ex.Message}");
-                        }
-                    else
-                        tool.ProtocolTool.OutputSchema = null;
-                }
+                    // For explicit [OutputSchema(...)]-attributed tools (e.g. convert_document,
+                    // document_session, extension) the wire format varies per tool — some return
+                    // concrete types directly (SDK does not wrap, wire is flat), others return
+                    // `object` with polymorphic results (SDK wraps, wire is {result: <oneOf>}).
+                    // The static FinalizedResult-shaped schema produced by GenerateForType does
+                    // not match either wire, so we intentionally skip outputSchema for these
+                    // tools — Claude Desktop falls back to rendering the content[] text (plain
+                    // JSON of the return value), which is sufficient for the current UX.
+                    // Re-enable once per-tool-accurate schema generation is available.
+                    tool.ProtocolTool.OutputSchema = null;
 
                 builder.Services.AddSingleton(tool);
             }
