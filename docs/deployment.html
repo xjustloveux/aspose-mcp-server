@@ -89,6 +89,46 @@
 <div class="container">
 
 <div class="section">
+    <h2>🖥️ Claude Desktop 擴充功能 (.mcpb)</h2>
+    <p>對於 Claude Desktop 使用者，<code>.mcpb</code> 是推薦的交付方式。每個平台的 <code>.mcpb</code> 套件包含完整的自包含可執行檔，使用者下載後雙擊即可安裝，伺服器將以原生方式在主機作業系統執行，不受 Claude Desktop Linux 沙箱限制。Windows 使用者可直接使用 <code>C:\Users\...</code> 等 Windows 路徑，無需任何額外設定。詳細安裝步驟請參閱 <a href="getting-started.html">快速開始 — 透過 Claude Desktop Extension (.mcpb) 安裝</a>。</p>
+    <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+        <thead>
+        <tr style="background: var(--card-bg);">
+            <th style="padding: 12px; border: 1px solid var(--border-color); text-align: left;">平台</th>
+            <th style="padding: 12px; border: 1px solid var(--border-color); text-align: left;">檔案</th>
+            <th style="padding: 12px; border: 1px solid var(--border-color); text-align: left;">說明</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td style="padding: 10px; border: 1px solid var(--border-color);">Windows x64</td>
+            <td style="padding: 10px; border: 1px solid var(--border-color);"><code>aspose-mcp-server-windows-x64.mcpb</code></td>
+            <td style="padding: 10px; border: 1px solid var(--border-color);">原生 Windows 執行，支援 Windows 路徑</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid var(--border-color);">macOS ARM64</td>
+            <td style="padding: 10px; border: 1px solid var(--border-color);"><code>aspose-mcp-server-macos-arm64.mcpb</code></td>
+            <td style="padding: 10px; border: 1px solid var(--border-color);">M1/M2/M3，隔離標記由 Claude Desktop 自動處理</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid var(--border-color);">macOS x64</td>
+            <td style="padding: 10px; border: 1px solid var(--border-color);"><code>aspose-mcp-server-macos-x64.mcpb</code></td>
+            <td style="padding: 10px; border: 1px solid var(--border-color);">Intel Mac</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid var(--border-color);">Linux x64</td>
+            <td style="padding: 10px; border: 1px solid var(--border-color);"><code>aspose-mcp-server-linux-x64.mcpb</code></td>
+            <td style="padding: 10px; border: 1px solid var(--border-color);">Linux 桌面環境</td>
+        </tr>
+        </tbody>
+    </table>
+    <div class="info-box">
+        <strong>📦 非 Claude Desktop 部署</strong>
+        <p style="margin-top: 8px; margin-bottom: 0;">伺服器、Docker、Kubernetes 及 IIS 部署請使用下方各節說明的 <code>.zip</code>、<code>.tar.gz</code> 或 Docker 映像方式。</p>
+    </div>
+</div>
+
+<div class="section">
     <h2>🐳 Docker 部署</h2>
     <p>使用 Docker 快速部署 Aspose MCP Server。</p>
 

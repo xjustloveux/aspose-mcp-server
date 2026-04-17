@@ -1,0 +1,48 @@
+{
+  "manifest_version": "0.3",
+  "name": "aspose-mcp-server",
+  "display_name": "Aspose MCP Server",
+  "version": "{{VERSION}}",
+  "description": "Office document processing MCP server powered by Aspose.Total. Supports Word, Excel, PowerPoint, PDF, OCR, Email, and BarCode operations.",
+  "long_description": "Aspose MCP Server exposes Aspose.Total document processing capabilities as MCP tools for Claude Desktop. 118 tools across 7 categories: Word, Excel, PowerPoint, PDF, OCR, Email, BarCode.\n\nRequires an Aspose license for production use. Evaluation mode (with Aspose watermarks) works without a license.",
+  "author": {
+    "name": "xjustloveux",
+    "url": "https://github.com/xjustloveux"
+  },
+  "homepage": "https://xjustloveux.github.io/aspose-mcp-server",
+  "documentation": "https://xjustloveux.github.io/aspose-mcp-server/getting-started.html",
+  "support": "https://github.com/xjustloveux/aspose-mcp-server/issues",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xjustloveux/aspose-mcp-server"
+  },
+  "license": "MIT",
+  "icon": "icon.png",
+  "keywords": ["aspose", "office", "word", "excel", "powerpoint", "pdf", "ocr", "email", "barcode", "document"],
+  "tools_generated": true,
+  "server": {
+    "type": "binary",
+    "entry_point": "{{ENTRY_POINT}}",
+    "mcp_config": {
+      "command": "{{COMMAND}}",
+      "args": ["--stdio", "--all"],
+      "env": {
+        "ASPOSE_LICENSE_PATH": "${user_config.license_path}",
+        "ASPOSE_TRANSPORT": "stdio"
+      }
+    }
+  },
+  "user_config": {
+    "license_path": {
+      "type": "file",
+      "title": "Aspose License File / Aspose 授權檔",
+      "description": "Path to your Aspose.Total.lic or individual component .lic file. Leave empty to run in evaluation mode (Aspose watermarks will appear on output). / 您的 Aspose.Total.lic 或元件 .lic 檔案路徑。留空則以評估模式執行（輸出將帶 Aspose 浮水印）。",
+      "required": false,
+      "sensitive": false,
+      "multiple": false
+    }
+  },
+  "compatibility": {
+    "platforms": {{PLATFORM_FILTER}}
+  }
+}

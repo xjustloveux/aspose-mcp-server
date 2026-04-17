@@ -106,6 +106,26 @@ brew install xjustloveux/tap/aspose-mcp-server
 
 完成配置後，重啟您使用的 MCP 客戶端（如 Claude Desktop、Cursor 等）即可開始使用。
 
+## 🖥️ Claude Desktop Extension (.mcpb)
+
+Claude Desktop users on Windows can now install Aspose MCP Server as a native extension, bypassing the Linux sandbox so that Windows paths (`C:\Users\...`) work directly (closes [Issue #1](https://github.com/xjustloveux/aspose-mcp-server/issues/1)).
+
+| Platform | File |
+|----------|------|
+| Windows x64 | `aspose-mcp-server-windows-x64.mcpb` |
+| macOS ARM64 | `aspose-mcp-server-macos-arm64.mcpb` |
+| macOS x64 | `aspose-mcp-server-macos-x64.mcpb` |
+| Linux x64 | `aspose-mcp-server-linux-x64.mcpb` |
+
+**Install in 3 steps:**
+1. Download the `.mcpb` for your platform from [GitHub Releases](https://github.com/xjustloveux/aspose-mcp-server/releases).
+2. Double-click the file — Claude Desktop opens the install dialog.
+3. When prompted, select your `Aspose.Total.lic` file, or skip to run in evaluation mode (output documents will carry Aspose watermarks).
+
+> macOS users: quarantine removal is handled automatically by Claude Desktop — no `xattr` command required.
+>
+> For non-Claude-Desktop clients (Cursor, Continue, custom), use the `.zip` / `.tar.gz` method described in [快速開始](https://xjustloveux.github.io/aspose-mcp-server/getting-started.html).
+
 ## 📦 功能概覽
 
 | 模組 | 工具數 | 主要功能 |

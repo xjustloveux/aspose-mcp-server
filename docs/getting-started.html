@@ -146,6 +146,45 @@
     </div>
 </div>
 
+<div class="section" id="mcpb">
+    <h2>透過 Claude Desktop Extension (.mcpb) 安裝</h2>
+    <p>Claude Desktop 使用者可透過 <code>.mcpb</code> 擴充功能套件一鍵安裝，伺服器將以原生方式在您的主機作業系統上執行，不受 Claude Desktop Linux 沙箱限制（Windows 路徑如 <code>C:\Users\...</code> 可直接使用）。</p>
+
+    <div class="step">
+        <span class="step-number">1</span>
+        <strong>下載對應平台的 .mcpb 檔案</strong>
+        <p style="margin-top: 10px;">從 <a href="https://github.com/xjustloveux/aspose-mcp-server/releases" target="_blank">GitHub Releases</a> 下載：</p>
+        <ul class="param-list" style="margin-top: 10px;">
+            <li>Windows x64: <code>aspose-mcp-server-windows-x64.mcpb</code></li>
+            <li>macOS ARM64: <code>aspose-mcp-server-macos-arm64.mcpb</code></li>
+            <li>macOS x64: <code>aspose-mcp-server-macos-x64.mcpb</code></li>
+            <li>Linux x64: <code>aspose-mcp-server-linux-x64.mcpb</code></li>
+        </ul>
+    </div>
+
+    <div class="step">
+        <span class="step-number">2</span>
+        <strong>雙擊開啟 — Claude Desktop 安裝對話框自動彈出</strong>
+        <p style="margin-top: 10px;">Claude Desktop 會顯示伺服器名稱、說明與圖示，並提示您選擇授權檔案。</p>
+    </div>
+
+    <div class="step">
+        <span class="step-number">3</span>
+        <strong>選擇 Aspose 授權檔案（或略過以評估模式執行）</strong>
+        <p style="margin-top: 10px;">透過檔案選擇器指定 <code>Aspose.Total.lic</code> 或單一元件 <code>.lic</code> 檔案。略過時伺服器以評估模式執行，輸出文件將帶有 Aspose 浮水印。</p>
+    </div>
+
+    <div class="info-box" style="margin-top: 15px;">
+        <strong>💡 macOS 使用者注意</strong>
+        <p style="margin-top: 8px; margin-bottom: 0;">透過 <code>.mcpb</code> 安裝時，Claude Desktop 會自動處理 macOS 隔離標記，<strong>無需</strong>手動執行 <code>xattr -d com.apple.quarantine</code> 指令。若您使用 <code>.tar.gz</code> 手動安裝，仍需執行一次 <code>xattr</code>。</p>
+    </div>
+
+    <div class="info-box" style="margin-top: 15px;">
+        <strong>🔌 非 Claude Desktop 客戶端</strong>
+        <p style="margin-top: 8px; margin-bottom: 0;">Cursor、Continue 或自訂 MCP 客戶端請使用上方「步驟 1：下載預編譯版本」的 <code>.zip</code> / <code>.tar.gz</code> 方式安裝，並依「步驟 3：配置 MCP 客戶端」手動設定 <code>config.json</code>。</p>
+    </div>
+</div>
+
 <div class="section">
     <h2>步驟 2：配置授權檔案</h2>
 
