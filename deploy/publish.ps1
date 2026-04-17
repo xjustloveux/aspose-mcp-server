@@ -62,6 +62,7 @@ function Build-Platform {
         -p:PublishSingleFile=true `
         -p:PublishTrimmed=false `
         -p:IncludeNativeLibrariesForSelfExtract=true `
+        -p:EnableCompressionInSingleFile=true `
         -p:DebugType=none `
         --nologo `
         --verbosity quiet
