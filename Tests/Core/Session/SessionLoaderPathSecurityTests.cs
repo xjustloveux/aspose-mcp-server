@@ -29,14 +29,13 @@ public class SessionLoaderPathSecurityTests : WordTestBase
     //   - absolute paths outside the allowlist when one is configured.
     // =====================================================================
 
-    public static IEnumerable<object[]> TraversalPayloads =>
-        new List<object[]>
-        {
-            // Relative traversal payload — shape-rejected by ValidateFilePath.
-            new object[] { "../../etc/passwd" },
-            // NUL-byte injection — rejected as invalid path character.
-            new object[] { "file\0.docx" }
-        };
+    public static TheoryData<string> TraversalPayloads =>
+    [
+        // Relative traversal payload — shape-rejected by ValidateFilePath.
+        "../../etc/passwd",
+        // NUL-byte injection — rejected as invalid path character.
+        "file\0.docx"
+    ];
     // ---------------------------------------------------------------------
     // Fixture helpers — build ServerConfigs with a given allowlist without
     // going through the command-line parser. AllowedBasePaths' setter is

@@ -876,9 +876,10 @@ public class DocumentSessionManager : IDisposable
                                 "tempPath");
                             File.Delete(metadata.TempPath);
                         }
-                        catch (ArgumentException)
+                        catch (ArgumentException ex)
                         {
                             _logger?.LogWarning(
+                                ex,
                                 "Refusing to delete temp file outside TempDirectory for session {SessionId}",
                                 sessionId);
                         }

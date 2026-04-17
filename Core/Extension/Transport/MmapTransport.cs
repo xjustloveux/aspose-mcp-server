@@ -402,10 +402,11 @@ public class MmapTransport : IExtensionTransport, IDisposable
 
         try
         {
+            // T13 (best-effort): this method is static and lacks the allowedBases reference,
+            // so symlink protection is applied at the creation site (T12). Removing the link
+            // here deletes the directory entry only — on POSIX the target file is unaffected
+            // by the unlink call.
             if (File.Exists(filePath))
-                // T13 (best-effort): this method is static and lacks the allowedBases reference;
-                // symlink protection is applied at the creation site (T12). Delete the link itself
-                // (on POSIX File.Delete unlinks the directory entry, not the target).
                 File.Delete(filePath);
         }
         catch

@@ -264,10 +264,10 @@ public class ServerConfig
                         if (long.TryParse(originalArg["--max-extract-all-bytes:".Length..], out var cliBytes))
                             MaxExtractAllBytes = cliBytes;
                     }
-                    else if (originalArg.StartsWith("--max-extract-all-bytes=", StringComparison.OrdinalIgnoreCase))
+                    else if (originalArg.StartsWith("--max-extract-all-bytes=", StringComparison.OrdinalIgnoreCase) &&
+                             long.TryParse(originalArg["--max-extract-all-bytes=".Length..], out var cliBytes))
                     {
-                        if (long.TryParse(originalArg["--max-extract-all-bytes=".Length..], out var cliBytes))
-                            MaxExtractAllBytes = cliBytes;
+                        MaxExtractAllBytes = cliBytes;
                     }
 
                     break;

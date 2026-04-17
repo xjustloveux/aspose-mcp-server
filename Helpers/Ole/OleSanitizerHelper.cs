@@ -20,31 +20,41 @@ public static class OleSanitizerHelper
     private const int MaxFileNameBytes = 255;
 
     /// <summary>
+    ///     Match timeout applied to every <see cref="Regex" /> in this class. 100 ms is
+    ///     ample for any legitimate filename (ext4 NAME_MAX = 255 bytes); if a crafted
+    ///     input ever manages to stall the engine beyond this bound the call site receives
+    ///     a <see cref="System.Text.RegularExpressions.RegexMatchTimeoutException" />,
+    ///     which propagates as an unhandled exception and aborts the tool invocation
+    ///     rather than tying up the thread indefinitely (DoS / ReDoS defense-in-depth).
+    /// </summary>
+    private static readonly TimeSpan RegexTimeout = TimeSpan.FromMilliseconds(100);
+
+    /// <summary>
     ///     Regex stripping BiDi override code points (U+200E, U+200F, U+202A-U+202E, U+2066-U+2069).
     ///     RTLO attacks (e.g. <c>photo\u202egpj.exe</c>) are defeated here prior to other passes.
     /// </summary>
     private static readonly Regex BiDiOverrides =
-        new("[\u200E\u200F\u202A-\u202E\u2066-\u2069]", RegexOptions.Compiled);
+        new("[\u200E\u200F\u202A-\u202E\u2066-\u2069]", RegexOptions.Compiled, RegexTimeout);
 
     /// <summary>
     ///     Regex stripping C0 controls (U+0000-U+001F) and C1 controls (U+007F-U+009F).
     /// </summary>
     private static readonly Regex ControlChars =
-        new("[\u0000-\u001F\u007F-\u009F]", RegexOptions.Compiled);
+        new("[\u0000-\u001F\u007F-\u009F]", RegexOptions.Compiled, RegexTimeout);
 
     /// <summary>
     ///     Regex matching ANSI CSI escape sequences. Strips terminal-control injection
     ///     in log/error content (F-4).
     /// </summary>
     private static readonly Regex AnsiCsi =
-        new("\u001B\\[[0-9;]*[A-Za-z]", RegexOptions.Compiled);
+        new("\u001B\\[[0-9;]*[A-Za-z]", RegexOptions.Compiled, RegexTimeout);
 
     /// <summary>
     ///     Regex matching trailing whitespace / dot characters that are stripped at the end
     ///     of a candidate filename (space, tab, form-feed, vertical tab, NBSP, dot).
     /// </summary>
     private static readonly Regex TrailingJunk =
-        new("[\\s.\u00A0\u000B\u000C]+$", RegexOptions.Compiled);
+        new("[\\s.\u00A0\u000B\u000C]+$", RegexOptions.Compiled, RegexTimeout);
 
     /// <summary>
     ///     Windows reserved device names. Kept cross-platform so a file authored on Linux
@@ -87,6 +97,10 @@ public static class OleSanitizerHelper
     ///     Idempotent: <c>Sanitize(Sanitize(x)) == Sanitize(x)</c>. Unicode normalization is
     ///     deliberately NOT applied to keep idempotence guaranteed.
     /// </remarks>
+    /// <exception cref="System.Text.RegularExpressions.RegexMatchTimeoutException">
+    ///     Thrown if any regex pass exceeds <see cref="RegexTimeout" /> (100 ms). Indicates a
+    ///     pathological input; callers should treat this as an untrusted-input rejection signal.
+    /// </exception>
     public static (string suggested, bool sanitizedFromRaw) SanitizeOleFileName(
         string? rawName, int index, string? progId)
     {
@@ -233,6 +247,10 @@ public static class OleSanitizerHelper
     ///     <see cref="string.Empty" />.
     /// </param>
     /// <returns>A log-safe rendering (never <c>null</c>; empty input → empty string).</returns>
+    /// <exception cref="System.Text.RegularExpressions.RegexMatchTimeoutException">
+    ///     Thrown if any regex pass exceeds <see cref="RegexTimeout" /> (100 ms). Indicates a
+    ///     pathological input; callers should treat this as an untrusted-input rejection signal.
+    /// </exception>
     public static string SanitizeForLog(string? value)
     {
         if (string.IsNullOrEmpty(value)) return string.Empty;

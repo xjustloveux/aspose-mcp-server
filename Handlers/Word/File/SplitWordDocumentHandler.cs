@@ -93,9 +93,10 @@ public class SplitWordDocumentHandler : OperationHandlerBase<Document>
 
         var pageCount = doc.PageCount;
 
-        // Orthogonal DoS guard: in page-split mode each page produces one output file, so
-        // work units = pageCount × pageCount = pageCount².  A 316-page document is at the cap;
-        // larger documents must use section-split or a range-aware tool instead.
+        // Orthogonal DoS guard: in page-split mode each page produces one output file,
+        // so the total work count equals the page count squared. A 316-page document
+        // reaches the cap — larger documents must use section-split or a range-aware
+        // tool instead.
         var totalWorkUnits = (long)pageCount * pageCount;
         if (totalWorkUnits > MaxTotalWorkUnits)
             throw new ArgumentException(

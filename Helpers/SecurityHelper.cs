@@ -103,9 +103,8 @@ public static class SecurityHelper
         if (filePath.Length > MaxPathLength) return false;
 
         // Reject control characters \x01–\x1F explicitly (Linux GetInvalidPathChars only has \0).
-        foreach (var c in filePath)
-            if (c is >= '\x01' and <= '\x1F')
-                return false;
+        if (filePath.Any(c => c is >= '\x01' and <= '\x1F'))
+            return false;
 
         if (filePath.Contains("..", StringComparison.Ordinal) || filePath.Contains('~')) return false;
 
@@ -139,7 +138,9 @@ public static class SecurityHelper
         if (filePath.IndexOf(':', adsCheckStart) >= 0) return false;
 
         // Reject trailing dots or spaces in any path segment (Windows silently strips them).
-        foreach (var segment in filePath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+        foreach (var segment in filePath.Split(
+                     [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+                     StringSplitOptions.None))
         {
             if (segment.Length == 0) continue;
             var last = segment[^1];
@@ -166,7 +167,9 @@ public static class SecurityHelper
     /// </returns>
     private static bool ContainsWindowsReservedName(string filePath)
     {
-        foreach (var segment in filePath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+        foreach (var segment in filePath.Split(
+                     [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+                     StringSplitOptions.None))
         {
             if (segment.Length == 0) continue;
             // Reserved names match with or without extension: "CON", "CON.txt", "NUL.anything".
@@ -379,11 +382,14 @@ public static class SecurityHelper
     private static string ResolveSymlinkChain(string fullPath)
     {
         // Try direct resolution first (common case: path exists and is not a symlink).
-        var fsi = File.Exists(fullPath)
-            ? (FileSystemInfo)new FileInfo(fullPath)
-            : Directory.Exists(fullPath)
-                ? new DirectoryInfo(fullPath)
-                : null;
+        // File.Exists is checked before Directory.Exists to avoid a redundant I/O call.
+        FileSystemInfo? fsi;
+        if (File.Exists(fullPath))
+            fsi = new FileInfo(fullPath);
+        else if (Directory.Exists(fullPath))
+            fsi = new DirectoryInfo(fullPath);
+        else
+            fsi = null;
 
         if (fsi != null)
         {

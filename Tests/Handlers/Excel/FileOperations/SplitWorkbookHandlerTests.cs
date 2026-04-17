@@ -225,16 +225,16 @@ public class SplitWorkbookHandlerTests : ExcelHandlerTestBase
 
     #region Path Traversal / Validation (bug 20260415-excel-split-path-traversal)
 
-    public static IEnumerable<object[]> MaliciousSourcePaths()
+    public static TheoryData<string> MaliciousSourcePaths()
     {
         return
         [
-            ["../../../etc/passwd"], // relative traversal
-            ["foo/../../secret.xlsx"], // nested traversal
-            ["foo\\..\\..\\secret.xlsx"], // mixed-separator traversal
-            ["~/.ssh/id_rsa"], // home-dir expansion
-            ["good\\\\..\\\\evil.xlsx"], // double-separator
-            ["file\0name.xlsx"] // NUL byte (invalid path char)
+            "../../../etc/passwd",
+            "foo/../../secret.xlsx",
+            "foo\\..\\..\\secret.xlsx",
+            "~/.ssh/id_rsa",
+            "good\\\\..\\\\evil.xlsx",
+            "file\0name.xlsx" // NUL byte (invalid path char)
         ];
     }
 

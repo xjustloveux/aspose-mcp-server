@@ -167,7 +167,7 @@ public static class DocumentConverter
     /// </exception>
     private static string ResolveOutputPath(string outputPath, IReadOnlyList<string> allowedBasePaths)
     {
-        return SecurityHelper.ResolveAndEnsureWithinAllowlist(outputPath, allowedBasePaths, "outputPath");
+        return SecurityHelper.ResolveAndEnsureWithinAllowlist(outputPath, allowedBasePaths, nameof(outputPath));
     }
 
     #region Document Type Detection

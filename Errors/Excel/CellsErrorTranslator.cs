@@ -87,7 +87,7 @@ public static class CellsErrorTranslator
         {
             case ArgumentOutOfRangeException:
                 return new ArgumentOutOfRangeException(
-                    null, ErrorMessageBuilder.IndexOutOfRange());
+                    nameof(ex), ErrorMessageBuilder.IndexOutOfRange());
 
             case UnauthorizedAccessException:
             case DirectoryNotFoundException:

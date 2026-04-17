@@ -63,9 +63,8 @@ public static class OleExtensionGuard
             throw new ArgumentException(OleErrorMessageBuilder.InvalidPath(path), nameof(path));
 
         var ext = Path.GetExtension(path);
-        foreach (var candidate in accepted)
-            if (string.Equals(ext, candidate, StringComparison.OrdinalIgnoreCase))
-                return;
+        if (accepted.Any(candidate => string.Equals(ext, candidate, StringComparison.OrdinalIgnoreCase)))
+            return;
 
         throw new ArgumentException(OleErrorMessageBuilder.InvalidPath(path), nameof(path));
     }

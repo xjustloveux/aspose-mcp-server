@@ -175,9 +175,12 @@ public class CellsErrorTranslatorTests
     {
         // ReSharper disable once NotResolvedInText — "index" is the param name the simulated Aspose caller would supply
         var ex = new ArgumentOutOfRangeException("index", 42, "raw detail");
-        var result = CellsErrorTranslator.Translate(ex);
+        var result = Assert.IsType<ArgumentOutOfRangeException>(CellsErrorTranslator.Translate(ex));
 
-        Assert.Equal(ErrorMessageBuilder.IndexOutOfRange(), result.Message);
+        // .NET appends "(Parameter 'ex')" to Message when ParamName is set; sentinel must be the prefix.
+        var expectedSentinel = ErrorMessageBuilder.IndexOutOfRange();
+        Assert.StartsWith(expectedSentinel, result.Message, StringComparison.Ordinal);
+        Assert.Equal("ex", result.ParamName);
     }
 
     [Fact]

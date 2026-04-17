@@ -42,7 +42,7 @@ public static class OleErrorTranslator
 
             case ArgumentOutOfRangeException:
                 return new ArgumentOutOfRangeException(
-                    null, OleErrorMessageBuilder.IndexOutOfRange(null, null));
+                    nameof(ex), OleErrorMessageBuilder.IndexOutOfRange(null, null));
 
             case UnauthorizedAccessException:
             case DirectoryNotFoundException:

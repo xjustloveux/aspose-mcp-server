@@ -39,11 +39,13 @@ public sealed class FixtureIsLinkDiagTests
     {
         using var wb = new Workbook(_fixtures.Paths[FixtureKind.ExcelLinkedXlsx]);
         var ole = wb.Worksheets[0].OleObjects[0];
-        // Assert the observable state — flag in metadata whether IsLink actually round-trips.
-        // The linked fixture may report IsLink=false on reload because Aspose.Cells 23.10.0
-        // treats OLE with a payload as embedded even when ObjectSourceFullName is set.
-        // Tests depending on a reliable linked-Excel fixture should use a different vector.
-        _ = ole.IsLink;
+        // Aspose.Cells 23.10.0 treats OLE-with-payload as embedded even when
+        // ObjectSourceFullName is set, so IsLink returns false on reload.
+        // Tests that require a reliably linked Excel fixture should use a different vector.
+        // This assertion pins the known observable state so downstream tests can depend on it.
+        Assert.False(ole.IsLink,
+            "Aspose.Cells 23.10.0 reports IsLink=false for the ExcelLinkedXlsx fixture " +
+            "because OLE-with-payload is treated as embedded; see class summary.");
     }
 
     /// <summary>Confirms the PPT linked fixture produces an IsObjectLink=true frame on reload.</summary>

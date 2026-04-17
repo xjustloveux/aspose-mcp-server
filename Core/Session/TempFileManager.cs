@@ -353,9 +353,10 @@ public class TempFileManager : IHostedService, IDisposable
                     [_config.TempDirectory],
                     "tempPath");
             }
-            catch (ArgumentException)
+            catch (ArgumentException ex)
             {
                 _logger?.LogWarning(
+                    ex,
                     "Refusing recovery: TempPath outside TempDirectory for session {SessionId}",
                     sessionId);
                 result.Success = false;
@@ -586,9 +587,10 @@ public class TempFileManager : IHostedService, IDisposable
                         "tempPath");
                     File.Delete(metadata.TempPath);
                 }
-                catch (ArgumentException)
+                catch (ArgumentException ex)
                 {
                     _logger?.LogWarning(
+                        ex,
                         "Refusing to delete temp file outside TempDirectory (metadata: {Metadata})",
                         metadataPath);
                 }
@@ -600,12 +602,13 @@ public class TempFileManager : IHostedService, IDisposable
                     SecurityHelper.ResolveAndEnsureWithinAllowlist(
                         metadataPath,
                         [_config.TempDirectory],
-                        "metadataPath");
+                        nameof(metadataPath));
                     File.Delete(metadataPath);
                 }
-                catch (ArgumentException)
+                catch (ArgumentException ex)
                 {
                     _logger?.LogWarning(
+                        ex,
                         "Refusing to delete metadata file outside TempDirectory: {Metadata}",
                         metadataPath);
                 }

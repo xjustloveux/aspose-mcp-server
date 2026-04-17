@@ -238,9 +238,7 @@ public static class OleHandlerShared
         ArgumentNullException.ThrowIfNull(presentation);
         var count = 0;
         foreach (var slide in presentation.Slides)
-        foreach (var shape in slide.Shapes)
-            if (shape is IOleObjectFrame)
-                count++;
+            count += slide.Shapes.OfType<IOleObjectFrame>().Count();
         return count;
     }
 }

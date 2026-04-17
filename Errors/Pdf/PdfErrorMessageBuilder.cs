@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace AsposeMcpServer.Errors.Pdf;
 
 /// <summary>
@@ -17,6 +19,10 @@ public static class PdfErrorMessageBuilder
     /// <returns>
     ///     The fixed string <c>"Image could not be accessed or decoded."</c>.
     /// </returns>
+    [SuppressMessage("SonarAnalyzer.CSharp", "S3400",
+        Justification = "Intentional method form, paralleling the cross-family ErrorMessageBuilder " +
+                        "API shape. Converting to a field would break uniformity with peer sentinels " +
+                        "and response-field embedding patterns (PdfImageInfo.Error).")]
     public static string ImageAccessError()
     {
         return "Image could not be accessed or decoded.";

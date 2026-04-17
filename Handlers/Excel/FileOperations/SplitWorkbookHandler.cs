@@ -92,7 +92,7 @@ public class SplitWorkbookHandler : OperationHandlerBase<Workbook>
         if (string.IsNullOrEmpty(outputDirectory))
             throw new ArgumentException("outputDirectory is required for split operation");
         if (!string.IsNullOrEmpty(sourcePath))
-            SecurityHelper.ValidateFilePath(sourcePath, "inputPath", true);
+            SecurityHelper.ValidateFilePath(sourcePath, nameof(inputPath), true);
         SecurityHelper.ValidateFilePath(outputDirectory, nameof(outputDirectory), true);
     }
 

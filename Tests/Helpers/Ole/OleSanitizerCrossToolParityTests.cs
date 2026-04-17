@@ -18,21 +18,21 @@ public class OleSanitizerCrossToolParityTests
     ///     the same sanitized output regardless of which container the sanitizer is
     ///     invoked on behalf of.
     /// </summary>
-    public static IEnumerable<object?[]> ParityInputs()
+    public static TheoryData<string?, string?> ParityInputs()
     {
-        return
-        [
-            ["report.xlsx", "Excel.Sheet.12"],
-            ["..\\..\\etc\\passwd", "Excel.Sheet.12"],
-            ["\\\\attacker\\share\\x.exe", "Word.Document.12"],
-            ["C:\\Users\\victim\\x.xlsx", "Excel.Sheet.12"],
-            ["photo\u202egpj.exe", "Package"],
-            ["file\u00A0\u00A0", "PowerPoint.Show.12"],
-            ["CON.xlsx", "Excel.Sheet.12"],
-            [null, "Excel.Sheet.12"],
-            ["", null],
-            ["\r\n\t\u0000injected", "Excel.Sheet.12"]
-        ];
+        return new TheoryData<string?, string?>
+        {
+            { "report.xlsx", "Excel.Sheet.12" },
+            { "..\\..\\etc\\passwd", "Excel.Sheet.12" },
+            { "\\\\attacker\\share\\x.exe", "Word.Document.12" },
+            { "C:\\Users\\victim\\x.xlsx", "Excel.Sheet.12" },
+            { "photo\u202egpj.exe", "Package" },
+            { "file\u00A0\u00A0", "PowerPoint.Show.12" },
+            { "CON.xlsx", "Excel.Sheet.12" },
+            { null, "Excel.Sheet.12" },
+            { "", null },
+            { "\r\n\t\u0000injected", "Excel.Sheet.12" }
+        };
     }
 
     /// <summary>

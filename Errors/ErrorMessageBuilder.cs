@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace AsposeMcpServer.Errors;
 
 /// <summary>
@@ -17,6 +19,11 @@ public static class ErrorMessageBuilder
     ///     A fixed string that never contains file-path, stack-trace, or inner-exception
     ///     text.
     /// </returns>
+    [SuppressMessage("SonarAnalyzer.CSharp", "S3400",
+        Justification = "Intentional method form. ErrorMessageBuilder is a builder API whose " +
+                        "sibling members accept parameters (OperationFailed(verb), UnsupportedFormat(extension), " +
+                        "IndexOutOfRange(itemName, rangeHint)). Exposing some sentinels as methods and " +
+                        "others as fields would break call-site consistency across 27+ callers.")]
     public static string InvalidPassword()
     {
         return "The source file requires a password, or the supplied password is incorrect.";
@@ -105,6 +112,11 @@ public static class ErrorMessageBuilder
     ///     The fixed string
     ///     <c>"An internal processing error occurred. Check inputs and retry."</c>.
     /// </returns>
+    [SuppressMessage("SonarAnalyzer.CSharp", "S3400",
+        Justification = "Intentional method form. ErrorMessageBuilder is a builder API whose " +
+                        "sibling members accept parameters (OperationFailed(verb), UnsupportedFormat(extension), " +
+                        "IndexOutOfRange(itemName, rangeHint)). Exposing some sentinels as methods and " +
+                        "others as fields would break call-site consistency across 18+ callers.")]
     public static string ProcessingFailed()
     {
         return "An internal processing error occurred. Check inputs and retry.";
