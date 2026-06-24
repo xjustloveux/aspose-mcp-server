@@ -59,6 +59,13 @@ public class WordHyperlinkTool
     /// <param name="hyperlinkIndex">Hyperlink index (0-based, for edit/delete).</param>
     /// <param name="displayText">New display text (for edit).</param>
     /// <param name="keepText">Keep display text when deleting hyperlink (default: false).</param>
+    /// <param name="storyType">
+    ///     Story the paragraph index is relative to (Body, Header, Footer, TextBox, Comment, Footnote,
+    ///     Endnote).
+    /// </param>
+    /// <param name="headerFooterType">For Header/Footer stories: Primary, First, or Even.</param>
+    /// <param name="containerIndex">Instance selector for multi-instance stories (TextBox/Comment/Footnote/Endnote).</param>
+    /// <param name="handle">Stable paragraph handle from a prior get/search result (session mode only).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(
@@ -108,10 +115,18 @@ Usage examples:
         string? displayText = null,
         [Description(
             "Keep display text when deleting hyperlink (unlink instead of remove, optional, default: false, for delete operation)")]
-        bool keepText = false)
+        bool keepText = false,
+        [Description(WordAddressing.StoryTypeDesc)]
+        string? storyType = null,
+        [Description(WordAddressing.HeaderFooterTypeDesc)]
+        string? headerFooterType = null,
+        [Description(WordAddressing.ContainerIndexDesc)]
+        int? containerIndex = null,
+        [Description(WordAddressing.HandleDesc)]
+        string? handle = null)
     {
         var parameters = BuildParameters(operation, text, url, subAddress, paragraphIndex, tooltip, hyperlinkIndex,
-            displayText, keepText);
+            displayText, keepText, storyType, headerFooterType, containerIndex, handle);
 
         var handler = _handlerRegistry.GetHandler(operation);
 
@@ -151,30 +166,37 @@ Usage examples:
         string? tooltip,
         int? hyperlinkIndex,
         string? displayText,
-        bool keepText)
+        bool keepText,
+        string? storyType,
+        string? headerFooterType,
+        int? containerIndex,
+        string? handle)
     {
+        var parameters = new OperationParameters();
+        WordAddressing.Apply(parameters, storyType, headerFooterType, containerIndex, handle);
+
         return operation.ToLower() switch
         {
-            "add" => BuildAddParameters(text, url, subAddress, paragraphIndex, tooltip),
-            "edit" => BuildEditParameters(hyperlinkIndex, url, subAddress, displayText, tooltip),
-            "delete" => BuildDeleteParameters(hyperlinkIndex, keepText),
-            _ => new OperationParameters()
+            "add" => BuildAddParameters(parameters, text, url, subAddress, paragraphIndex, tooltip),
+            "edit" => BuildEditParameters(parameters, hyperlinkIndex, url, subAddress, displayText, tooltip),
+            "delete" => BuildDeleteParameters(parameters, hyperlinkIndex, keepText),
+            _ => parameters
         };
     }
 
     /// <summary>
     ///     Builds parameters for the add hyperlink operation.
     /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
     /// <param name="text">The display text for the hyperlink.</param>
     /// <param name="url">The URL or target address.</param>
     /// <param name="subAddress">Internal bookmark name for document navigation.</param>
     /// <param name="paragraphIndex">The paragraph index to insert after (0-based).</param>
     /// <param name="tooltip">The tooltip text.</param>
     /// <returns>OperationParameters configured for adding a hyperlink.</returns>
-    private static OperationParameters BuildAddParameters(string? text, string? url, string? subAddress,
-        int? paragraphIndex, string? tooltip)
+    private static OperationParameters BuildAddParameters(OperationParameters parameters, string? text, string? url,
+        string? subAddress, int? paragraphIndex, string? tooltip)
     {
-        var parameters = new OperationParameters();
         if (text != null) parameters.Set("text", text);
         if (url != null) parameters.Set("url", url);
         if (subAddress != null) parameters.Set("subAddress", subAddress);
@@ -186,16 +208,16 @@ Usage examples:
     /// <summary>
     ///     Builds parameters for the edit hyperlink operation.
     /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
     /// <param name="hyperlinkIndex">The hyperlink index (0-based).</param>
     /// <param name="url">The new URL or target address.</param>
     /// <param name="subAddress">New internal bookmark name.</param>
     /// <param name="displayText">New display text.</param>
     /// <param name="tooltip">New tooltip text.</param>
     /// <returns>OperationParameters configured for editing a hyperlink.</returns>
-    private static OperationParameters BuildEditParameters(int? hyperlinkIndex, string? url, string? subAddress,
-        string? displayText, string? tooltip)
+    private static OperationParameters BuildEditParameters(OperationParameters parameters, int? hyperlinkIndex,
+        string? url, string? subAddress, string? displayText, string? tooltip)
     {
-        var parameters = new OperationParameters();
         parameters.Set("hyperlinkIndex", hyperlinkIndex ?? 0);
         if (url != null) parameters.Set("url", url);
         if (subAddress != null) parameters.Set("subAddress", subAddress);
@@ -207,12 +229,13 @@ Usage examples:
     /// <summary>
     ///     Builds parameters for the delete hyperlink operation.
     /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
     /// <param name="hyperlinkIndex">The hyperlink index (0-based).</param>
     /// <param name="keepText">Whether to keep the display text when deleting.</param>
     /// <returns>OperationParameters configured for deleting a hyperlink.</returns>
-    private static OperationParameters BuildDeleteParameters(int? hyperlinkIndex, bool keepText)
+    private static OperationParameters BuildDeleteParameters(OperationParameters parameters, int? hyperlinkIndex,
+        bool keepText)
     {
-        var parameters = new OperationParameters();
         parameters.Set("hyperlinkIndex", hyperlinkIndex ?? 0);
         parameters.Set("keepText", keepText);
         return parameters;

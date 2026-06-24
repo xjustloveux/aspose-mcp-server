@@ -201,7 +201,7 @@ public class WordListHelperTests
         var para = doc.FirstSection.Body.FirstParagraph;
         var indices = new Dictionary<(int listId, int paraIndex), int>();
 
-        var result = WordListHelper.BuildListFormatSingleResult(para, 0, indices);
+        var result = WordListHelper.BuildListFormatSingleResult(ParagraphResolver.AddressOf(doc, para), indices);
 
         Assert.IsType<GetWordListFormatSingleResult>(result);
         Assert.False(result.IsListItem);
@@ -224,7 +224,7 @@ public class WordListHelperTests
             { (list.ListId, 0), 0 }
         };
 
-        var result = WordListHelper.BuildListFormatSingleResult(para, 0, indices);
+        var result = WordListHelper.BuildListFormatSingleResult(ParagraphResolver.AddressOf(doc, para), indices);
 
         Assert.True(result.IsListItem);
         Assert.Equal(0, result.ListLevel);
@@ -247,7 +247,7 @@ public class WordListHelperTests
         var para = doc.FirstSection.Body.FirstParagraph;
         var indices = new Dictionary<(int listId, int paraIndex), int>();
 
-        var result = WordListHelper.BuildListParagraphInfo(para, 0, indices);
+        var result = WordListHelper.BuildListParagraphInfo(ParagraphResolver.AddressOf(doc, para), indices);
 
         Assert.IsType<ListParagraphInfo>(result);
         Assert.False(result.IsListItem);
@@ -269,7 +269,7 @@ public class WordListHelperTests
             { (list.ListId, 0), 0 }
         };
 
-        var result = WordListHelper.BuildListParagraphInfo(para, 0, indices);
+        var result = WordListHelper.BuildListParagraphInfo(ParagraphResolver.AddressOf(doc, para), indices);
 
         Assert.True(result.IsListItem);
         Assert.Equal(list.ListId, result.ListId);

@@ -1,3 +1,5 @@
+using Aspose.Words;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Handlers.Word.Text;
 using AsposeMcpServer.Results.Word.Text;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -14,6 +16,36 @@ public class SearchWordTextHandlerTests : WordHandlerTestBase
     public void Operation_Returns_Search()
     {
         Assert.Equal("search", _handler.Operation);
+    }
+
+    #endregion
+
+    #region Story Type (Issue #1 self-describing index)
+
+    [Fact]
+    public void Execute_ReportsStoryTypeForBodyAndHeaderMatches()
+    {
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        builder.Write("BodyText");
+        builder.MoveToHeaderFooter(HeaderFooterType.HeaderPrimary);
+        builder.Write("HdrText");
+
+        var bodyResult = (TextSearchResult)_handler.Execute(CreateContext(doc),
+            CreateParameters(new Dictionary<string, object?> { { "searchText", "BodyText" } }));
+        var headerResult = (TextSearchResult)_handler.Execute(CreateContext(doc),
+            CreateParameters(new Dictionary<string, object?> { { "searchText", "HdrText" } }));
+
+        var bodyMatch = Assert.Single(bodyResult.Matches);
+        Assert.Equal("Body", bodyMatch.StoryType);
+        Assert.Equal(0, bodyMatch.ParagraphIndex);
+        Assert.Equal(0, bodyMatch.SectionIndex);
+
+        var headerMatch = Assert.Single(headerResult.Matches);
+        Assert.Equal("Header", headerMatch.StoryType);
+        Assert.Equal("Primary", headerMatch.HeaderFooterType);
+        Assert.Equal(0, headerMatch.ParagraphIndex);
+        Assert.True(headerMatch.DocumentOrderIndex >= 0);
     }
 
     #endregion
@@ -119,6 +151,44 @@ public class SearchWordTextHandlerTests : WordHandlerTestBase
         Assert.Equal(0, result.MatchCount);
         Assert.Empty(result.Matches);
         AssertNotModified(context);
+    }
+
+    #endregion
+
+    #region Session Handles (L3)
+
+    [Fact]
+    public void Execute_SessionMode_EmitsHandleOnMatches()
+    {
+        var doc = CreateDocumentWithText("find me here");
+        var context = new OperationContext<Document> { Document = doc, SessionId = "session-1" };
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "searchText", "find" }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<TextSearchResult>(res);
+        var match = Assert.Single(result.Matches);
+        Assert.False(string.IsNullOrEmpty(match.Handle));
+    }
+
+    [Fact]
+    public void Execute_FileMode_DoesNotEmitHandle()
+    {
+        var doc = CreateDocumentWithText("find me here");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "searchText", "find" }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<TextSearchResult>(res);
+        var match = Assert.Single(result.Matches);
+        Assert.Null(match.Handle);
     }
 
     #endregion

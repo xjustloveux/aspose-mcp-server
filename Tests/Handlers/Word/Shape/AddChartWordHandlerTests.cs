@@ -315,9 +315,9 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
     #region Paragraph Index Tests
 
     [Fact]
-    public void Execute_WithParagraphIndexMinusOne_InsertsAtBeginning()
+    public void Execute_WithParagraphIndexMinusOne_InsertsAtLastParagraph()
     {
-        var doc = CreateDocumentWithText("Existing content");
+        var doc = CreateDocumentWithParagraphs("First paragraph", "Second paragraph", "Last paragraph");
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -331,6 +331,10 @@ public class AddChartWordHandlerTests : WordHandlerTestBase
 
         var charts = GetChartShapes(doc);
         Assert.NotEmpty(charts);
+
+        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().ToList();
+        var lastParagraph = paragraphs[^1];
+        Assert.Same(lastParagraph, charts[0].GetAncestor(NodeType.Paragraph));
         AssertModified(context);
     }
 

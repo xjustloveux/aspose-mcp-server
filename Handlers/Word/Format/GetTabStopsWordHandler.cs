@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Word.Format;
 using WordParagraph = Aspose.Words.Paragraph;
 
@@ -37,13 +38,8 @@ public class GetTabStopsWordHandler : OperationHandlerBase<Document>
 
         var doc = context.Document;
 
-        if (p.SectionIndex >= doc.Sections.Count)
-            throw new ArgumentException(
-                $"Section index {p.SectionIndex} out of range (total sections: {doc.Sections.Count})");
-
-        var section = doc.Sections[p.SectionIndex];
         var tabStopTarget =
-            GetTargetParagraphs(section, p.Location, p.ParagraphIndex, p.AllParagraphs);
+            GetTargetParagraphs(doc, p.Location, p.SectionIndex, p.ParagraphIndex, p.AllParagraphs);
         var targetParagraphs = tabStopTarget.Paragraphs;
         var locationDesc = tabStopTarget.LocationDescription;
 
@@ -81,91 +77,40 @@ public class GetTabStopsWordHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Gets the target paragraphs based on location and settings.
     /// </summary>
-    /// <param name="section">The document section.</param>
+    /// <param name="doc">The document.</param>
     /// <param name="location">The location type (body, header, footer).</param>
+    /// <param name="sectionIndex">The section index.</param>
     /// <param name="paragraphIndex">The paragraph index for body location.</param>
     /// <param name="allParagraphs">Whether to get all paragraphs.</param>
     /// <returns>A TabStopTarget containing the list of paragraphs and location description.</returns>
-    private static TabStopTarget GetTargetParagraphs(
-        Section section, string location, int paragraphIndex, bool allParagraphs)
+    private static TabStopTarget GetTargetParagraphs(Document doc, string location, int sectionIndex,
+        int paragraphIndex, bool allParagraphs)
     {
-        return location.ToLower() switch
+        var (storyType, desc) = location.ToLower() switch
         {
-            "header" => GetHeaderParagraphs(section, allParagraphs),
-            "footer" => GetFooterParagraphs(section, allParagraphs),
-            _ => GetBodyParagraphs(section, paragraphIndex, allParagraphs)
+            "header" => (StoryTypes.Header, "Header"),
+            "footer" => (StoryTypes.Footer, "Footer"),
+            _ => (StoryTypes.Body, "Body")
         };
-    }
 
-    /// <summary>
-    ///     Gets paragraphs from the header.
-    /// </summary>
-    /// <param name="section">The document section.</param>
-    /// <param name="allParagraphs">Whether to get all paragraphs.</param>
-    /// <returns>A TabStopTarget containing the list of paragraphs and location description.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when header is not found.</exception>
-    private static TabStopTarget GetHeaderParagraphs(Section section, bool allParagraphs)
-    {
-        var header = section.HeadersFooters[HeaderFooterType.HeaderPrimary];
-        if (header == null)
-            throw new InvalidOperationException("Header not found");
-
-        var headerParas = header.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
-        var paragraphs = GetParagraphsToProcess(headerParas, allParagraphs);
-        return new TabStopTarget(paragraphs, "Header");
-    }
-
-    /// <summary>
-    ///     Gets paragraphs from the footer.
-    /// </summary>
-    /// <param name="section">The document section.</param>
-    /// <param name="allParagraphs">Whether to get all paragraphs.</param>
-    /// <returns>A TabStopTarget containing the list of paragraphs and location description.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when footer is not found.</exception>
-    private static TabStopTarget GetFooterParagraphs(Section section, bool allParagraphs)
-    {
-        var footer = section.HeadersFooters[HeaderFooterType.FooterPrimary];
-        if (footer == null)
-            throw new InvalidOperationException("Footer not found");
-
-        var footerParas = footer.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
-        var paragraphs = GetParagraphsToProcess(footerParas, allParagraphs);
-        return new TabStopTarget(paragraphs, "Footer");
-    }
-
-    /// <summary>
-    ///     Gets the paragraphs to process based on the allParagraphs flag.
-    /// </summary>
-    /// <param name="allParas">All paragraphs in the section.</param>
-    /// <param name="allParagraphs">Whether to return all paragraphs or just the first.</param>
-    /// <returns>The list of paragraphs to process.</returns>
-    private static List<WordParagraph> GetParagraphsToProcess(List<WordParagraph> allParas, bool allParagraphs)
-    {
-        if (allParagraphs) return allParas;
-        return allParas.Count > 0 ? [allParas[0]] : [];
-    }
-
-    /// <summary>
-    ///     Gets paragraphs from the body.
-    /// </summary>
-    /// <param name="section">The document section.</param>
-    /// <param name="paragraphIndex">The paragraph index.</param>
-    /// <param name="allParagraphs">Whether to get all paragraphs.</param>
-    /// <returns>A TabStopTarget containing the list of paragraphs and location description.</returns>
-    /// <exception cref="ArgumentException">Thrown when paragraph index is out of range.</exception>
-    private static TabStopTarget GetBodyParagraphs(Section section, int paragraphIndex,
-        bool allParagraphs)
-    {
-        var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+        if (storyType is StoryTypes.Header or StoryTypes.Footer
+            && sectionIndex >= 0 && sectionIndex < doc.Sections.Count)
+        {
+            var hfType = storyType == StoryTypes.Header
+                ? HeaderFooterType.HeaderPrimary
+                : HeaderFooterType.FooterPrimary;
+            if (doc.Sections[sectionIndex].HeadersFooters[hfType] == null)
+                throw new InvalidOperationException($"{desc} not found");
+        }
 
         if (allParagraphs)
-            return new TabStopTarget(paragraphs, "Body");
+            return new TabStopTarget(
+                ParagraphResolver.GetStoryParagraphs(doc, new ParagraphAddress(0, storyType, sectionIndex)), desc);
 
-        if (paragraphIndex >= paragraphs.Count)
-            throw new ArgumentException(
-                $"Paragraph index {paragraphIndex} out of range (total paragraphs: {paragraphs.Count})");
-
-        return new TabStopTarget([paragraphs[paragraphIndex]], $"Body Paragraph {paragraphIndex}");
+        var index = storyType == StoryTypes.Body ? paragraphIndex : 0;
+        var para = ParagraphResolver.Resolve(doc, new ParagraphAddress(index, storyType, sectionIndex)).Paragraph;
+        var singleDesc = storyType == StoryTypes.Body ? $"Body Paragraph {paragraphIndex}" : desc;
+        return new TabStopTarget([para], singleDesc);
     }
 
     /// <summary>

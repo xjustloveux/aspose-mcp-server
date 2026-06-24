@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 
@@ -21,7 +22,6 @@ public class DeleteRangeWordTextHandler : OperationHandlerBase<Document>
     /// <param name="context">The document context.</param>
     /// <param name="parameters">
     ///     Required: startParagraphIndex, startCharIndex, endParagraphIndex, endCharIndex.
-    ///     Optional: sectionIndex.
     /// </param>
     /// <returns>Success message.</returns>
     /// <exception cref="ArgumentException">Thrown when indices are out of range.</exception>
@@ -31,9 +31,8 @@ public class DeleteRangeWordTextHandler : OperationHandlerBase<Document>
 
         var doc = context.Document;
 
-        ValidateSectionIndex(doc, p.SectionIndex);
-        var section = doc.Sections[p.SectionIndex];
-        var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+        var paragraphs =
+            ParagraphResolver.GetStoryParagraphs(doc, ParagraphAddress.From(parameters, p.StartParagraphIndex));
 
         ValidateParagraphIndices(paragraphs, p.StartParagraphIndex, p.EndParagraphIndex);
 
@@ -57,20 +56,7 @@ public class DeleteRangeWordTextHandler : OperationHandlerBase<Document>
             parameters.GetRequired<int>("startParagraphIndex"),
             parameters.GetRequired<int>("startCharIndex"),
             parameters.GetRequired<int>("endParagraphIndex"),
-            parameters.GetRequired<int>("endCharIndex"),
-            parameters.GetOptional("sectionIndex", 0));
-    }
-
-    /// <summary>
-    ///     Validates the section index is within range.
-    /// </summary>
-    /// <param name="doc">The document.</param>
-    /// <param name="sectionIndex">The section index to validate.</param>
-    /// <exception cref="ArgumentException">Thrown when section index is out of range.</exception>
-    private static void ValidateSectionIndex(Document doc, int sectionIndex)
-    {
-        if (sectionIndex < 0 || sectionIndex >= doc.Sections.Count)
-            throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
+            parameters.GetRequired<int>("endCharIndex"));
     }
 
     /// <summary>
@@ -152,6 +138,7 @@ public class DeleteRangeWordTextHandler : OperationHandlerBase<Document>
     /// <param name="endCharIndex">The end character index within the run.</param>
     private static void DeleteWithinSameRun(Run run, int startCharIndex, int endCharIndex)
     {
+        if (FieldBoundaryHelper.GetEnclosingField(run) != null) return;
         run.Text = run.Text.Remove(startCharIndex, endCharIndex - startCharIndex);
     }
 
@@ -167,15 +154,18 @@ public class DeleteRangeWordTextHandler : OperationHandlerBase<Document>
         int endRunIndex, int endRunCharIndex)
     {
         var startRun = runs[startRunIndex];
-        startRun.Text = startRun.Text.Substring(0, startRunCharIndex);
+        if (FieldBoundaryHelper.GetEnclosingField(startRun) == null)
+            startRun.Text = startRun.Text.Substring(0, startRunCharIndex);
 
         for (var i = startRunIndex + 1; i < endRunIndex; i++)
-            runs[i].Remove();
+            if (FieldBoundaryHelper.GetEnclosingField(runs[i]) == null)
+                runs[i].Remove();
 
         if (endRunIndex < runs.Count)
         {
             var endRun = runs[endRunIndex];
-            endRun.Text = endRun.Text.Substring(endRunCharIndex);
+            if (FieldBoundaryHelper.GetEnclosingField(endRun) == null)
+                endRun.Text = endRun.Text.Substring(endRunCharIndex);
         }
     }
 
@@ -207,7 +197,8 @@ public class DeleteRangeWordTextHandler : OperationHandlerBase<Document>
     {
         var runs = para.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
         var lastRun = runs.LastOrDefault();
-        if (lastRun != null && lastRun.Text.Length > startCharIndex)
+        if (lastRun != null && lastRun.Text.Length > startCharIndex &&
+            FieldBoundaryHelper.GetEnclosingField(lastRun) == null)
             lastRun.Text = lastRun.Text.Substring(0, startCharIndex);
     }
 
@@ -233,9 +224,11 @@ public class DeleteRangeWordTextHandler : OperationHandlerBase<Document>
         var runs = para.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
         if (runs.Count > 0 && endCharIndex < runs[0].Text.Length)
         {
-            runs[0].Text = runs[0].Text.Substring(endCharIndex);
+            if (FieldBoundaryHelper.GetEnclosingField(runs[0]) == null)
+                runs[0].Text = runs[0].Text.Substring(endCharIndex);
             for (var i = 1; i < runs.Count; i++)
-                runs[i].Remove();
+                if (FieldBoundaryHelper.GetEnclosingField(runs[i]) == null)
+                    runs[i].Remove();
         }
     }
 
@@ -243,6 +236,5 @@ public class DeleteRangeWordTextHandler : OperationHandlerBase<Document>
         int StartParagraphIndex,
         int StartCharIndex,
         int EndParagraphIndex,
-        int EndCharIndex,
-        int SectionIndex);
+        int EndCharIndex);
 }

@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Paragraph;
@@ -32,7 +33,9 @@ public class CopyParagraphFormatWordHandler : OperationHandlerBase<Document>
             throw new ArgumentException("targetParagraphIndex parameter is required for copy_format operation");
 
         var doc = context.Document;
-        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
+        var paragraphs =
+            ParagraphResolver.GetStoryParagraphs(doc,
+                ParagraphAddress.From(parameters, copyParams.SourceParagraphIndex.Value));
 
         if (copyParams.SourceParagraphIndex.Value < 0 || copyParams.SourceParagraphIndex.Value >= paragraphs.Count)
             throw new ArgumentException(
@@ -42,8 +45,8 @@ public class CopyParagraphFormatWordHandler : OperationHandlerBase<Document>
             throw new ArgumentException(
                 $"Target paragraph index {copyParams.TargetParagraphIndex.Value} is out of range. The document has {paragraphs.Count} paragraphs (valid indices: 0-{paragraphs.Count - 1}).");
 
-        var sourcePara = paragraphs[copyParams.SourceParagraphIndex.Value] as Aspose.Words.Paragraph;
-        var targetPara = paragraphs[copyParams.TargetParagraphIndex.Value] as Aspose.Words.Paragraph;
+        var sourcePara = paragraphs[copyParams.SourceParagraphIndex.Value];
+        var targetPara = paragraphs[copyParams.TargetParagraphIndex.Value];
 
         if (sourcePara == null || targetPara == null)
             throw new InvalidOperationException("Unable to get paragraphs");

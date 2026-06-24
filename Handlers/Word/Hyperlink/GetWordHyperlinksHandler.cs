@@ -35,9 +35,8 @@ public class GetWordHyperlinksHandler : OperationHandlerBase<Document>
                 Message = "No hyperlinks found in document"
             };
 
-        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
-
         List<HyperlinkInfo> hyperlinkList = [];
+        var addressingContext = new ParagraphResolver.AddressingContext(doc);
         for (var index = 0; index < hyperlinkFields.Count; index++)
         {
             var hyperlinkField = hyperlinkFields[index];
@@ -45,7 +44,7 @@ public class GetWordHyperlinksHandler : OperationHandlerBase<Document>
             var address = "";
             var subAddress = "";
             var tooltip = "";
-            int? paragraphIndexValue = null;
+            ParagraphRef? pref = null;
 
             try
             {
@@ -54,17 +53,19 @@ public class GetWordHyperlinksHandler : OperationHandlerBase<Document>
                 subAddress = hyperlinkField.SubAddress ?? "";
                 tooltip = hyperlinkField.ScreenTip ?? "";
 
-                var fieldStart = hyperlinkField.Start;
-                if (fieldStart?.ParentNode is WordParagraph para)
-                {
-                    paragraphIndexValue = paragraphs.IndexOf(para);
-                    if (paragraphIndexValue == -1) paragraphIndexValue = null;
-                }
+                if (hyperlinkField.Start?.ParentNode is WordParagraph para)
+                    pref = ParagraphResolver.AddressOf(doc, para, addressingContext);
             }
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"[WARN] Error reading hyperlink properties: {ex.Message}");
             }
+
+            var addr = pref?.Address;
+            var headerFooterType = addr is not null &&
+                                   (addr.StoryType == StoryTypes.Header || addr.StoryType == StoryTypes.Footer)
+                ? addr.HeaderFooterType
+                : null;
 
             hyperlinkList.Add(new HyperlinkInfo
             {
@@ -73,7 +74,12 @@ public class GetWordHyperlinksHandler : OperationHandlerBase<Document>
                 Address = address,
                 SubAddress = string.IsNullOrEmpty(subAddress) ? null : subAddress,
                 Tooltip = string.IsNullOrEmpty(tooltip) ? null : tooltip,
-                ParagraphIndex = paragraphIndexValue
+                ParagraphIndex = addr?.Index,
+                StoryType = addr?.StoryType,
+                SectionIndex = addr?.SectionIndex,
+                HeaderFooterType = headerFooterType,
+                ContainerIndex = addr?.ContainerIndex,
+                DocumentOrderIndex = pref?.DocumentOrderIndex
             });
         }
 

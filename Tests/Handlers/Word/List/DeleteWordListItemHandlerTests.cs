@@ -204,17 +204,30 @@ public class DeleteWordListItemHandlerTests : WordHandlerTestBase
     }
 
     [Fact]
-    public void Execute_WithNegativeParagraphIndex_ThrowsArgumentException()
+    public void Execute_WithParagraphIndexMinusOne_DeletesLastParagraph()
     {
-        var doc = CreateDocumentWithParagraphs("Item 1");
+        var doc = CreateDocumentWithParagraphs("First", "Second", "Last");
+        var countBefore = doc.GetChildNodes(NodeType.Paragraph, true).Count;
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "paragraphIndex", -1 }
         });
 
-        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
-        Assert.Contains("out of range", ex.Message);
+        var res = _handler.Execute(context, parameters);
+
+        Assert.IsType<SuccessResult>(res);
+
+        var countAfter = doc.GetChildNodes(NodeType.Paragraph, true).Count;
+        Assert.Equal(countBefore - 1, countAfter);
+
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            AssertDoesNotContainText(doc, "Last");
+            AssertContainsText(doc, "First");
+        }
+
+        AssertModified(context);
     }
 
     #endregion

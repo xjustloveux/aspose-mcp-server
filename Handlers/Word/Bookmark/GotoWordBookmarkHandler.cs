@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 
@@ -37,20 +38,24 @@ public class GotoWordBookmarkHandler : OperationHandlerBase<Document>
 
         var bookmarkText = bookmark.Text;
         var bookmarkRange = bookmark.BookmarkStart?.ParentNode as WordParagraph;
-
-        var paragraphIndex = -1;
-        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
-        for (var i = 0; i < paragraphs.Count; i++)
-            if (paragraphs[i] == bookmarkRange)
-            {
-                paragraphIndex = i;
-                break;
-            }
+        var pref = bookmarkRange != null ? ParagraphResolver.AddressOf(doc, bookmarkRange) : null;
 
         var message = "Bookmark location information\n";
         message += $"Bookmark name: {p.Name}\n";
         message += $"Bookmark text: {bookmarkText}\n";
-        if (paragraphIndex >= 0) message += $"Paragraph index: {paragraphIndex}\n";
+        if (pref != null)
+        {
+            var addr = pref.Address;
+            message += $"Paragraph index: {addr.Index}\n";
+            message += $"Story type: {addr.StoryType}\n";
+            message += $"Section index: {addr.SectionIndex}\n";
+            if (addr.StoryType is StoryTypes.Header or StoryTypes.Footer)
+                message += $"Header/footer type: {addr.HeaderFooterType}\n";
+            if (addr.ContainerIndex.HasValue)
+                message += $"Container index: {addr.ContainerIndex.Value}\n";
+            message += $"Document order index: {pref.DocumentOrderIndex}\n";
+        }
+
         message += $"Bookmark range length: {bookmarkText.Length} characters";
 
         if (bookmarkRange != null)

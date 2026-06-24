@@ -242,17 +242,37 @@ public class RestartWordListNumberingHandlerTests : WordHandlerTestBase
     }
 
     [Fact]
-    public void Execute_WithNegativeParagraphIndex_ThrowsArgumentException()
+    public void Execute_WithParagraphIndexMinusOne_RestartsLastListItem()
     {
-        var doc = CreateDocumentWithList(3);
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        var list = doc.Lists.Add(ListTemplate.NumberDefault);
+        builder.ListFormat.List = list;
+        builder.Writeln("List Item 1");
+        builder.ListFormat.List = list;
+        builder.Writeln("List Item 2");
+        builder.ListFormat.List = list;
+        builder.Write("List Item 3");
+
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "paragraphIndex", -1 }
         });
 
-        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
-        Assert.Contains("out of range", ex.Message);
+        var lastListPara = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>()
+            .Last(para => para.ListFormat.IsListItem);
+        var originalListId = lastListPara.ListFormat.List.ListId;
+
+        var res = _handler.Execute(context, parameters);
+
+        Assert.IsType<SuccessResult>(res);
+
+        var refreshed = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>()
+            .Last(para => para.ListFormat.IsListItem);
+        Assert.True(refreshed.ListFormat.IsListItem);
+        Assert.NotEqual(originalListId, refreshed.ListFormat.List.ListId);
+        AssertModified(context);
     }
 
     [Fact]

@@ -21,6 +21,34 @@ public class WordTextToolTests : WordTestBase
         _tool = new WordTextTool(SessionManager);
     }
 
+    #region Story-Relative Addressing (C1: params reach the handler)
+
+    [SkippableFact]
+    public void Format_WithStoryTypeHeader_FormatsHeaderParagraphNotBodyThroughToolLayer()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Words,
+            "Evaluation mode injects a watermark paragraph that perturbs runs");
+
+        var docPath = CreateTestFilePath("test_text_storytype_header.docx");
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        builder.Write("body text");
+        builder.MoveToHeaderFooter(HeaderFooterType.HeaderPrimary);
+        builder.Write("header text");
+        doc.Save(docPath);
+        var outputPath = CreateTestFilePath("test_text_storytype_header_out.docx");
+
+        _tool.Execute("format", docPath, outputPath: outputPath, paragraphIndex: 0, runIndex: 0, bold: true,
+            storyType: "Header");
+
+        var result = new Document(outputPath);
+        var headerRun = result.FirstSection.HeadersFooters[HeaderFooterType.HeaderPrimary].FirstParagraph.Runs[0];
+        Assert.True(headerRun.Font.Bold);
+        Assert.False(result.FirstSection.Body.FirstParagraph.Runs[0].Font.Bold);
+    }
+
+    #endregion
+
     #region File I/O Smoke Tests
 
     [Fact]

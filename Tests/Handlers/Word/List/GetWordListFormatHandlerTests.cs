@@ -88,6 +88,33 @@ public class GetWordListFormatHandlerTests : WordHandlerTestBase
         Assert.NotNull(result);
     }
 
+    [Fact]
+    public void Execute_ListInSecondSection_ReportsSectionRelativeAddress()
+    {
+        // A list item living in the second section must be reported in that section's Body index
+        // space (sectionIndex 1, paragraphIndex 0), not as a flat global document-order index, so
+        // the address round-trips back to edit/format/delete.
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        builder.Writeln("Intro paragraph in section 0");
+        builder.InsertBreak(BreakType.SectionBreakNewPage);
+        var list = doc.Lists.Add(ListTemplate.BulletDefault);
+        builder.ListFormat.List = list;
+        builder.Writeln("List item in section 1");
+        builder.ListFormat.RemoveNumbers();
+        var context = CreateContext(doc);
+        var parameters = CreateEmptyParameters();
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<GetWordListFormatResult>(res);
+
+        var listItem = Assert.Single(result.ListParagraphs);
+        Assert.Equal("Body", listItem.StoryType);
+        Assert.Equal(1, listItem.SectionIndex);
+        Assert.Equal(0, listItem.ParagraphIndex);
+    }
+
     #endregion
 
     #region Get Specific Paragraph
@@ -165,17 +192,22 @@ public class GetWordListFormatHandlerTests : WordHandlerTestBase
     }
 
     [Fact]
-    public void Execute_WithNegativeParagraphIndex_ThrowsArgumentException()
+    public void Execute_WithParagraphIndexMinusOne_ReturnsLastParagraphInfo()
     {
-        var doc = CreateDocumentWithParagraphs("Item");
+        var doc = CreateDocumentWithList(3);
+        var lastIndex = doc.GetChildNodes(NodeType.Paragraph, true).Count - 1;
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "paragraphIndex", -1 }
         });
 
-        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
-        Assert.Contains("out of range", ex.Message);
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<GetWordListFormatSingleResult>(res);
+
+        Assert.NotNull(result);
+        Assert.Equal(lastIndex, result.ParagraphIndex);
     }
 
     #endregion

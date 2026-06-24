@@ -32,7 +32,7 @@ public class SetParagraphBorderWordHandler : OperationHandlerBase<Document>
         var p = ExtractSetParagraphBorderParameters(parameters);
 
         var doc = context.Document;
-        var para = WordFormatHelper.GetTargetParagraph(doc, p.ParagraphIndex);
+        var para = ParagraphResolver.Resolve(doc, ParagraphAddress.From(parameters, p.ParagraphIndex)).Paragraph;
         var borders = para.ParagraphFormat.Borders;
 
         bool actualBorderTop, actualBorderBottom, actualBorderLeft, actualBorderRight;

@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using Aspose.Words;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Word.Text;
 using WordParagraph = Aspose.Words.Paragraph;
 
@@ -33,6 +34,7 @@ public class SearchWordTextHandler : OperationHandlerBase<Document>
         var searchParams = ExtractSearchParameters(parameters);
         var doc = context.Document;
         var matches = FindAllMatches(doc, searchParams);
+        var emitHandles = context.SessionId != null;
 
         return new TextSearchResult
         {
@@ -44,7 +46,15 @@ public class SearchWordTextHandler : OperationHandlerBase<Document>
             Matches = matches.Select(m => new TextSearchMatch
             {
                 Text = m.text,
-                ParagraphIndex = m.paragraphIndex,
+                ParagraphIndex = m.pref.Address.Index,
+                StoryType = m.pref.Address.StoryType,
+                SectionIndex = m.pref.Address.SectionIndex,
+                HeaderFooterType = m.pref.Address.StoryType is StoryTypes.Header or StoryTypes.Footer
+                    ? m.pref.Address.HeaderFooterType
+                    : null,
+                ContainerIndex = m.pref.Address.ContainerIndex,
+                DocumentOrderIndex = m.pref.DocumentOrderIndex,
+                Handle = emitHandles ? ParagraphResolver.MintHandle(doc, m.pref.Paragraph) : null,
                 Context = m.context
             }).ToList()
         };
@@ -71,22 +81,24 @@ public class SearchWordTextHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="doc">The Word document.</param>
     /// <param name="p">The search parameters.</param>
-    /// <returns>A list of matches with text, paragraph index, and context.</returns>
-    private static List<(string text, int paragraphIndex, string context)> FindAllMatches(Document doc,
-        SearchParameters p)
+    /// <returns>A list of matches with text, resolved paragraph address, and context.</returns>
+    private static List<(string text, ParagraphRef pref, string context)> FindAllMatches(
+        Document doc, SearchParameters p)
     {
-        List<(string text, int paragraphIndex, string context)> matches = [];
+        List<(string text, ParagraphRef pref, string context)> matches = [];
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
+        var addressingContext = new ParagraphResolver.AddressingContext(doc);
 
         for (var i = 0; i < paragraphs.Count && matches.Count < p.MaxResults; i++)
         {
             if (paragraphs[i] is not WordParagraph para) continue;
             var paraText = para.GetText();
+            var pref = ParagraphResolver.AddressOf(doc, para, addressingContext);
 
             if (p.UseRegex)
-                FindRegexMatches(paraText, i, p, matches);
+                FindRegexMatches(paraText, pref, p, matches);
             else
-                FindLiteralMatches(paraText, i, p, matches);
+                FindLiteralMatches(paraText, pref, p, matches);
         }
 
         return matches;
@@ -96,11 +108,11 @@ public class SearchWordTextHandler : OperationHandlerBase<Document>
     ///     Finds matches using regular expression.
     /// </summary>
     /// <param name="paraText">The paragraph text.</param>
-    /// <param name="paraIndex">The paragraph index.</param>
+    /// <param name="pref">The resolved address of the paragraph.</param>
     /// <param name="p">The search parameters.</param>
     /// <param name="matches">The list to add matches to.</param>
-    private static void FindRegexMatches(string paraText, int paraIndex, SearchParameters p,
-        List<(string text, int paragraphIndex, string context)> matches)
+    private static void FindRegexMatches(string paraText, ParagraphRef pref, SearchParameters p,
+        List<(string text, ParagraphRef pref, string context)> matches)
     {
         var options = p.CaseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase;
         var regex = new Regex(p.SearchText, options, RegexTimeout);
@@ -109,7 +121,7 @@ public class SearchWordTextHandler : OperationHandlerBase<Document>
         {
             if (matches.Count >= p.MaxResults) break;
             var ctx = GetContext(paraText, match.Index, match.Length, p.ContextLength);
-            matches.Add((match.Value, paraIndex, ctx));
+            matches.Add((match.Value, pref, ctx));
         }
     }
 
@@ -117,11 +129,11 @@ public class SearchWordTextHandler : OperationHandlerBase<Document>
     ///     Finds matches using literal string comparison.
     /// </summary>
     /// <param name="paraText">The paragraph text.</param>
-    /// <param name="paraIndex">The paragraph index.</param>
+    /// <param name="pref">The resolved address of the paragraph.</param>
     /// <param name="p">The search parameters.</param>
     /// <param name="matches">The list to add matches to.</param>
-    private static void FindLiteralMatches(string paraText, int paraIndex, SearchParameters p,
-        List<(string text, int paragraphIndex, string context)> matches)
+    private static void FindLiteralMatches(string paraText, ParagraphRef pref, SearchParameters p,
+        List<(string text, ParagraphRef pref, string context)> matches)
     {
         var comparison = p.CaseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
         var index = 0;
@@ -130,7 +142,7 @@ public class SearchWordTextHandler : OperationHandlerBase<Document>
         {
             if (matches.Count >= p.MaxResults) break;
             var ctx = GetContext(paraText, index, p.SearchText.Length, p.ContextLength);
-            matches.Add((p.SearchText, paraIndex, ctx));
+            matches.Add((p.SearchText, pref, ctx));
             index += p.SearchText.Length;
         }
     }

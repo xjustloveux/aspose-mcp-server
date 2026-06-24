@@ -94,6 +94,13 @@ public class WordShapeTool
     /// <param name="chartHeight">Chart height in points (for add_chart).</param>
     /// <param name="paragraphIndex">Paragraph index to insert after (for add_chart).</param>
     /// <param name="alignment">Chart alignment (for add_chart).</param>
+    /// <param name="storyType">
+    ///     Story the paragraph index is relative to (Body, Header, Footer, TextBox, Comment, Footnote,
+    ///     Endnote).
+    /// </param>
+    /// <param name="headerFooterType">Header/Footer discriminator (Primary, First, Even) for Header/Footer stories.</param>
+    /// <param name="containerIndex">Instance selector for multi-instance stories (TextBox/Comment/Footnote/Endnote).</param>
+    /// <param name="handle">Stable paragraph handle from a prior 'get'/'search' result (session mode only).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(
@@ -211,7 +218,15 @@ Usage examples:
         [Description("Paragraph index to insert after (for add_chart, optional, use -1 for beginning)")]
         int? paragraphIndex = null,
         [Description("Chart alignment: left, center, right (for add_chart, default: left)")]
-        string alignment = "left")
+        string alignment = "left",
+        [Description(WordAddressing.StoryTypeDesc)]
+        string? storyType = null,
+        [Description(WordAddressing.HeaderFooterTypeDesc)]
+        string? headerFooterType = null,
+        [Description(WordAddressing.ContainerIndexDesc)]
+        int? containerIndex = null,
+        [Description(WordAddressing.HandleDesc)]
+        string? handle = null)
     {
         using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
@@ -219,7 +234,8 @@ Usage examples:
             text, textboxWidth, textboxHeight, positionX, positionY, backgroundColor, borderColor, borderWidth,
             fontName, fontNameAscii, fontNameFarEast, fontSize, bold, italic, color, textAlignment, textboxIndex,
             shapeIndex, shapeType, height, x, y, appendText, clearFormatting, borderVisible, borderStyle,
-            includeContent, chartType, data, chartTitle, chartWidth, chartHeight, paragraphIndex, alignment);
+            includeContent, chartType, data, chartTitle, chartWidth, chartHeight, paragraphIndex, alignment,
+            storyType, headerFooterType, containerIndex, handle);
 
         var handler = _handlerRegistry.GetHandler(operation);
 
@@ -287,9 +303,14 @@ Usage examples:
         double chartWidth,
         double chartHeight,
         int? paragraphIndex,
-        string alignment)
+        string alignment,
+        string? storyType,
+        string? headerFooterType,
+        int? containerIndex,
+        string? handle)
     {
         var parameters = new OperationParameters();
+        WordAddressing.Apply(parameters, storyType, headerFooterType, containerIndex, handle);
 
         return operation.ToLower() switch
         {

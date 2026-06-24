@@ -75,6 +75,10 @@ public class WordListTool
     /// <param name="startAt">Number to restart at (default: 1).</param>
     /// <param name="startParagraphIndex">Starting paragraph index (for convert).</param>
     /// <param name="endParagraphIndex">Ending paragraph index (for convert).</param>
+    /// <param name="storyType">Story the paragraph index is relative to (Body default).</param>
+    /// <param name="headerFooterType">Header/Footer discriminator: Primary, First, or Even.</param>
+    /// <param name="containerIndex">Instance selector for multi-instance stories.</param>
+    /// <param name="handle">Stable paragraph handle from a prior 'get'/'search' result (session mode only).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get_format operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(
@@ -140,11 +144,20 @@ Usage examples:
         [Description("Starting paragraph index (for convert)")]
         int? startParagraphIndex = null,
         [Description("Ending paragraph index (for convert)")]
-        int? endParagraphIndex = null)
+        int? endParagraphIndex = null,
+        [Description(WordAddressing.StoryTypeDesc)]
+        string? storyType = null,
+        [Description(WordAddressing.HeaderFooterTypeDesc)]
+        string? headerFooterType = null,
+        [Description(WordAddressing.ContainerIndexDesc)]
+        int? containerIndex = null,
+        [Description(WordAddressing.HandleDesc)]
+        string? handle = null)
     {
         var parameters = BuildParameters(operation, items, listType, bulletChar, numberFormat, continuePrevious,
             text, styleName, listLevel, applyStyleIndent, paragraphIndex, level, numberStyle, indentLevel,
-            leftIndent, firstLineIndent, startAt, startParagraphIndex, endParagraphIndex);
+            leftIndent, firstLineIndent, startAt, startParagraphIndex, endParagraphIndex,
+            storyType, headerFooterType, containerIndex, handle);
 
         var handler = _handlerRegistry.GetHandler(operation);
 
@@ -194,9 +207,14 @@ Usage examples:
         double? firstLineIndent,
         int startAt,
         int? startParagraphIndex,
-        int? endParagraphIndex)
+        int? endParagraphIndex,
+        string? storyType,
+        string? headerFooterType,
+        int? containerIndex,
+        string? handle)
     {
         var parameters = new OperationParameters();
+        WordAddressing.Apply(parameters, storyType, headerFooterType, containerIndex, handle);
 
         return operation.ToLower() switch
         {

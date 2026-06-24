@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 using WordTable = Aspose.Words.Tables.Table;
@@ -46,30 +47,9 @@ public class CopyWordTableHandler : OperationHandlerBase<Document>
 
         var sourceTable = sourceTables[p.TableIndex];
         var targetSection = doc.Sections[targetSectionIdx];
-        var targetParagraphs =
-            targetSection.Body.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
 
-        WordParagraph? targetPara;
-        if (p.TargetParagraphIndex == -1)
-        {
-            if (targetParagraphs.Count > 0)
-                targetPara = targetParagraphs[^1];
-            else
-                throw new ArgumentException(
-                    "Cannot copy table: target section has no paragraphs. Use a valid paragraph index.");
-        }
-        else if (p.TargetParagraphIndex < 0 || p.TargetParagraphIndex >= targetParagraphs.Count)
-        {
-            throw new ArgumentException(
-                $"targetParagraphIndex must be between 0 and {targetParagraphs.Count - 1}, or use -1 for document end");
-        }
-        else
-        {
-            targetPara = targetParagraphs[p.TargetParagraphIndex];
-        }
-
-        if (targetPara == null)
-            throw new ArgumentException("Cannot find target paragraph");
+        var targetPara = ParagraphResolver
+            .Resolve(doc, new ParagraphAddress(p.TargetParagraphIndex, StoryTypes.Body, targetSectionIdx)).Paragraph;
 
         var insertionPoint = FindInsertionPoint(targetSection, targetPara);
 

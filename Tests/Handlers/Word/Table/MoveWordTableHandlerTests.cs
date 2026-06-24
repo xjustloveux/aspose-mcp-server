@@ -89,6 +89,44 @@ public class MoveWordTableHandlerTests : WordHandlerTestBase
         Assert.Contains("moved", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void Execute_TargetResolvesIntoTableCell_AnchorsAtBodyLevelAndDoesNotThrow()
+    {
+        // The resolver's Body story is deep, so a target index can land on a paragraph inside a
+        // table cell. The move must anchor at the body-level block (the containing table) instead of
+        // failing when the cell paragraph is not a direct child of the body.
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        builder.StartTable();
+        builder.InsertCell();
+        builder.Write("T0 cell");
+        builder.EndRow();
+        builder.EndTable();
+        builder.Writeln("middle");
+        builder.StartTable();
+        builder.InsertCell();
+        builder.Write("T1 cell");
+        builder.EndRow();
+        builder.EndTable();
+        builder.Writeln("end");
+
+        var deep = doc.FirstSection.Body.GetChildNodes(NodeType.Paragraph, true)
+            .Cast<Aspose.Words.Paragraph>().ToList();
+        var cellParaIndex = deep.FindIndex(par => par.GetText().Contains("T0 cell"));
+        Assert.True(cellParaIndex >= 0);
+
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "tableIndex", 1 },
+            { "targetParagraphIndex", cellParaIndex }
+        });
+
+        var ex = Record.Exception(() => _handler.Execute(context, parameters));
+
+        Assert.Null(ex);
+    }
+
     #endregion
 
     #region Error Handling
@@ -118,7 +156,7 @@ public class MoveWordTableHandlerTests : WordHandlerTestBase
         });
 
         var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
-        Assert.Contains("targetParagraphIndex", ex.Message);
+        Assert.Contains("paragraphIndex", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

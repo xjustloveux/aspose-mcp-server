@@ -21,6 +21,32 @@ public class WordParagraphToolTests : WordTestBase
         _tool = new WordParagraphTool(SessionManager);
     }
 
+    #region Story-Relative Addressing (C1: params reach the handler)
+
+    [Fact]
+    public void Edit_WithStoryTypeHeader_EditsHeaderParagraphThroughToolLayer()
+    {
+        var docPath = CreateTestFilePath("test_storytype_header.docx");
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        builder.Write("body para");
+        builder.MoveToHeaderFooter(HeaderFooterType.HeaderPrimary);
+        builder.Write("old header");
+        doc.Save(docPath);
+        var outputPath = CreateTestFilePath("test_storytype_header_out.docx");
+
+        _tool.Execute("edit", docPath, outputPath: outputPath, paragraphIndex: 0, storyType: "Header",
+            text: "new header");
+
+        var result = new Document(outputPath);
+        var headerText = result.FirstSection.HeadersFooters[HeaderFooterType.HeaderPrimary].GetText();
+        Assert.Contains("new header", headerText);
+        Assert.DoesNotContain("old header", headerText);
+        Assert.Contains("body para", result.FirstSection.Body.GetText());
+    }
+
+    #endregion
+
     #region File I/O Smoke Tests
 
     [Fact]

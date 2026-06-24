@@ -59,11 +59,7 @@ public class ApplyWordStyleHandler : OperationHandlerBase<Document>
         }
         else if (p.ParagraphIndices is { Length: > 0 })
         {
-            if (p.SectionIndex < 0 || p.SectionIndex >= doc.Sections.Count)
-                throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
-
-            var section = doc.Sections[p.SectionIndex];
-            var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+            var paragraphs = ParagraphResolver.GetStoryParagraphs(doc, ParagraphAddress.From(parameters, 0));
 
             foreach (var idx in p.ParagraphIndices)
                 if (idx >= 0 && idx < paragraphs.Count)
@@ -74,17 +70,9 @@ public class ApplyWordStyleHandler : OperationHandlerBase<Document>
         }
         else if (p.ParagraphIndex.HasValue)
         {
-            if (p.SectionIndex < 0 || p.SectionIndex >= doc.Sections.Count)
-                throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
-
-            var section = doc.Sections[p.SectionIndex];
-            var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
-
-            if (p.ParagraphIndex.Value < 0 || p.ParagraphIndex.Value >= paragraphs.Count)
-                throw new ArgumentException(
-                    $"paragraphIndex must be between 0 and {paragraphs.Count - 1} (section {p.SectionIndex} has {paragraphs.Count} paragraphs, total document paragraphs: {doc.GetChildNodes(NodeType.Paragraph, true).Count})");
-
-            WordStyleHelper.ApplyStyleToParagraph(paragraphs[p.ParagraphIndex.Value], style, p.StyleName);
+            var para = ParagraphResolver.Resolve(doc, ParagraphAddress.From(parameters, p.ParagraphIndex.Value))
+                .Paragraph;
+            WordStyleHelper.ApplyStyleToParagraph(para, style, p.StyleName);
             appliedCount = 1;
         }
         else
@@ -104,7 +92,6 @@ public class ApplyWordStyleHandler : OperationHandlerBase<Document>
             parameters.GetRequired<string>("styleName"),
             parameters.GetOptional<int?>("paragraphIndex"),
             parameters.GetOptional<int[]?>("paragraphIndices"),
-            parameters.GetOptional("sectionIndex", 0),
             parameters.GetOptional<int?>("tableIndex"),
             parameters.GetOptional("applyToAllParagraphs", false));
     }
@@ -113,7 +100,6 @@ public class ApplyWordStyleHandler : OperationHandlerBase<Document>
         string StyleName,
         int? ParagraphIndex,
         int[]? ParagraphIndices,
-        int SectionIndex,
         int? TableIndex,
         bool ApplyToAllParagraphs);
 }

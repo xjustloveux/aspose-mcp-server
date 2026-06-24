@@ -74,6 +74,13 @@ public class WordStyleTool
     /// <param name="sourceDocument">Source document path to copy styles from (for copy).</param>
     /// <param name="styleNames">Array of style names to copy (for copy).</param>
     /// <param name="overwriteExisting">Overwrite existing styles (for copy, default: false).</param>
+    /// <param name="storyType">
+    ///     Story the paragraph index is relative to (for apply): Body, Header, Footer, TextBox, Comment,
+    ///     Footnote, Endnote.
+    /// </param>
+    /// <param name="headerFooterType">Header/Footer discriminator (for apply): Primary, First, or Even.</param>
+    /// <param name="containerIndex">Instance selector for multi-instance stories (for apply).</param>
+    /// <param name="handle">Stable paragraph handle from a prior get/search result (session mode only, for apply).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for list.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(
@@ -148,12 +155,21 @@ Usage examples:
         [Description("Array of style names to copy (for copy)")]
         string[]? styleNames = null,
         [Description("Overwrite existing styles (for copy, default: false)")]
-        bool overwriteExisting = false)
+        bool overwriteExisting = false,
+        [Description(WordAddressing.StoryTypeDesc)]
+        string? storyType = null,
+        [Description(WordAddressing.HeaderFooterTypeDesc)]
+        string? headerFooterType = null,
+        [Description(WordAddressing.ContainerIndexDesc)]
+        int? containerIndex = null,
+        [Description(WordAddressing.HandleDesc)]
+        string? handle = null)
     {
         var parameters = BuildParameters(operation, includeBuiltIn, styleName, styleType, baseStyle, fontName,
             fontNameAscii, fontNameFarEast, fontSize, bold, italic, underline, color, alignment, spaceBefore,
             spaceAfter, lineSpacing, paragraphIndex, paragraphIndices, sectionIndex, tableIndex,
-            applyToAllParagraphs, sourceDocument, styleNames, overwriteExisting);
+            applyToAllParagraphs, sourceDocument, styleNames, overwriteExisting,
+            storyType, headerFooterType, containerIndex, handle);
 
         var handler = _handlerRegistry.GetHandler(operation);
 
@@ -209,29 +225,36 @@ Usage examples:
         bool applyToAllParagraphs,
         string? sourceDocument,
         string[]? styleNames,
-        bool overwriteExisting)
+        bool overwriteExisting,
+        string? storyType,
+        string? headerFooterType,
+        int? containerIndex,
+        string? handle)
     {
+        var parameters = new OperationParameters();
+        WordAddressing.Apply(parameters, storyType, headerFooterType, containerIndex, handle);
+
         return operation.ToLower() switch
         {
-            "list" => BuildGetStylesParameters(includeBuiltIn),
-            "create" => BuildCreateStyleParameters(styleName, styleType, baseStyle, fontName, fontNameAscii,
+            "list" => BuildGetStylesParameters(parameters, includeBuiltIn),
+            "create" => BuildCreateStyleParameters(parameters, styleName, styleType, baseStyle, fontName, fontNameAscii,
                 fontNameFarEast, fontSize, bold, italic, underline, color, alignment, spaceBefore, spaceAfter,
                 lineSpacing),
-            "apply" => BuildApplyStyleParameters(styleName, paragraphIndex, paragraphIndices, sectionIndex,
+            "apply" => BuildApplyStyleParameters(parameters, styleName, paragraphIndex, paragraphIndices, sectionIndex,
                 tableIndex, applyToAllParagraphs),
-            "copy" => BuildCopyStylesParameters(sourceDocument, styleNames, overwriteExisting),
-            _ => new OperationParameters()
+            "copy" => BuildCopyStylesParameters(parameters, sourceDocument, styleNames, overwriteExisting),
+            _ => parameters
         };
     }
 
     /// <summary>
     ///     Builds parameters for the list operation.
     /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
     /// <param name="includeBuiltIn">Whether to include built-in styles.</param>
     /// <returns>OperationParameters configured for getting styles.</returns>
-    private static OperationParameters BuildGetStylesParameters(bool includeBuiltIn)
+    private static OperationParameters BuildGetStylesParameters(OperationParameters parameters, bool includeBuiltIn)
     {
-        var parameters = new OperationParameters();
         parameters.Set("includeBuiltIn", includeBuiltIn);
         return parameters;
     }
@@ -239,6 +262,7 @@ Usage examples:
     /// <summary>
     ///     Builds parameters for the create operation.
     /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
     /// <param name="styleName">The style name.</param>
     /// <param name="styleType">The style type: paragraph, character, table, list.</param>
     /// <param name="baseStyle">The base style to inherit from.</param>
@@ -255,12 +279,12 @@ Usage examples:
     /// <param name="spaceAfter">The space after paragraph in points.</param>
     /// <param name="lineSpacing">The line spacing multiplier.</param>
     /// <returns>OperationParameters configured for creating a style.</returns>
-    private static OperationParameters BuildCreateStyleParameters(string? styleName, string styleType,
+    private static OperationParameters BuildCreateStyleParameters(OperationParameters parameters, string? styleName,
+        string styleType,
         string? baseStyle,
         string? fontName, string? fontNameAscii, string? fontNameFarEast, double? fontSize, bool? bold, bool? italic,
         bool? underline, string? color, string? alignment, double? spaceBefore, double? spaceAfter, double? lineSpacing)
     {
-        var parameters = new OperationParameters();
         if (styleName != null) parameters.Set("styleName", styleName);
         parameters.Set("styleType", styleType);
         if (baseStyle != null) parameters.Set("baseStyle", baseStyle);
@@ -282,6 +306,7 @@ Usage examples:
     /// <summary>
     ///     Builds parameters for the apply operation.
     /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
     /// <param name="styleName">The style name to apply.</param>
     /// <param name="paragraphIndex">The paragraph index (0-based).</param>
     /// <param name="paragraphIndices">The array of paragraph indices.</param>
@@ -289,10 +314,10 @@ Usage examples:
     /// <param name="tableIndex">The table index (0-based).</param>
     /// <param name="applyToAllParagraphs">Whether to apply to all paragraphs.</param>
     /// <returns>OperationParameters configured for applying a style.</returns>
-    private static OperationParameters BuildApplyStyleParameters(string? styleName, int? paragraphIndex,
+    private static OperationParameters BuildApplyStyleParameters(OperationParameters parameters, string? styleName,
+        int? paragraphIndex,
         int[]? paragraphIndices, int sectionIndex, int? tableIndex, bool applyToAllParagraphs)
     {
-        var parameters = new OperationParameters();
         if (styleName != null) parameters.Set("styleName", styleName);
         if (paragraphIndex.HasValue) parameters.Set("paragraphIndex", paragraphIndex.Value);
         if (paragraphIndices != null) parameters.Set("paragraphIndices", paragraphIndices);
@@ -305,14 +330,15 @@ Usage examples:
     /// <summary>
     ///     Builds parameters for the copy operation.
     /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
     /// <param name="sourceDocument">The source document path to copy styles from.</param>
     /// <param name="styleNames">The array of style names to copy.</param>
     /// <param name="overwriteExisting">Whether to overwrite existing styles.</param>
     /// <returns>OperationParameters configured for copying styles.</returns>
-    private static OperationParameters BuildCopyStylesParameters(string? sourceDocument, string[]? styleNames,
+    private static OperationParameters BuildCopyStylesParameters(OperationParameters parameters,
+        string? sourceDocument, string[]? styleNames,
         bool overwriteExisting)
     {
-        var parameters = new OperationParameters();
         if (sourceDocument != null) parameters.Set("sourceDocument", sourceDocument);
         if (styleNames != null) parameters.Set("styleNames", styleNames);
         parameters.Set("overwriteExisting", overwriteExisting);

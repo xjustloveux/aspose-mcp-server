@@ -150,13 +150,17 @@ public static class WordListHelper
     /// <summary>
     ///     Builds list format single result for a paragraph.
     /// </summary>
-    /// <param name="para">The paragraph to get list format information from.</param>
-    /// <param name="paraIndex">The paragraph index.</param>
+    /// <param name="pref">The resolved paragraph (address + document-order index).</param>
     /// <param name="listItemIndices">The dictionary mapping list items to their indices within lists.</param>
     /// <returns>A GetWordListFormatSingleResult containing the list format information.</returns>
-    public static GetWordListFormatSingleResult BuildListFormatSingleResult(WordParagraph para, int paraIndex,
+    public static GetWordListFormatSingleResult BuildListFormatSingleResult(ParagraphRef pref,
         Dictionary<(int listId, int paraIndex), int> listItemIndices)
     {
+        var para = pref.Paragraph;
+        var address = pref.Address;
+        var headerFooterType = address.StoryType is StoryTypes.Header or StoryTypes.Footer
+            ? address.HeaderFooterType
+            : null;
         var previewText = para.ToString(SaveFormat.Text).Trim();
         if (previewText.Length > 50) previewText = previewText[..50] + "...";
 
@@ -168,7 +172,7 @@ public static class WordListHelper
             if (para.ListFormat.List != null)
             {
                 listId = para.ListFormat.List.ListId;
-                if (listItemIndices.TryGetValue((listId.Value, paraIndex), out var idx))
+                if (listItemIndices.TryGetValue((listId.Value, pref.DocumentOrderIndex), out var idx))
                     listItemIndex = idx;
             }
 
@@ -187,7 +191,12 @@ public static class WordListHelper
 
             return new GetWordListFormatSingleResult
             {
-                ParagraphIndex = paraIndex,
+                ParagraphIndex = address.Index,
+                StoryType = address.StoryType,
+                SectionIndex = address.SectionIndex,
+                HeaderFooterType = headerFooterType,
+                ContainerIndex = address.ContainerIndex,
+                DocumentOrderIndex = pref.DocumentOrderIndex,
                 ContentPreview = previewText,
                 IsListItem = true,
                 ListLevel = para.ListFormat.ListLevelNumber,
@@ -199,7 +208,12 @@ public static class WordListHelper
 
         return new GetWordListFormatSingleResult
         {
-            ParagraphIndex = paraIndex,
+            ParagraphIndex = address.Index,
+            StoryType = address.StoryType,
+            SectionIndex = address.SectionIndex,
+            HeaderFooterType = headerFooterType,
+            ContainerIndex = address.ContainerIndex,
+            DocumentOrderIndex = pref.DocumentOrderIndex,
             ContentPreview = previewText,
             IsListItem = false,
             Note = "This paragraph is not a list item. Use convert operation to convert it."
@@ -209,13 +223,17 @@ public static class WordListHelper
     /// <summary>
     ///     Builds list paragraph info for a paragraph that is a list item.
     /// </summary>
-    /// <param name="para">The paragraph to get list format information from.</param>
-    /// <param name="paraIndex">The paragraph index.</param>
+    /// <param name="pref">The resolved paragraph (address + document-order index).</param>
     /// <param name="listItemIndices">The dictionary mapping list items to their indices within lists.</param>
     /// <returns>A ListParagraphInfo containing the list format information.</returns>
-    public static ListParagraphInfo BuildListParagraphInfo(WordParagraph para, int paraIndex,
+    public static ListParagraphInfo BuildListParagraphInfo(ParagraphRef pref,
         Dictionary<(int listId, int paraIndex), int> listItemIndices)
     {
+        var para = pref.Paragraph;
+        var address = pref.Address;
+        var headerFooterType = address.StoryType is StoryTypes.Header or StoryTypes.Footer
+            ? address.HeaderFooterType
+            : null;
         var previewText = para.ToString(SaveFormat.Text).Trim();
         if (previewText.Length > 50) previewText = previewText[..50] + "...";
 
@@ -225,7 +243,7 @@ public static class WordListHelper
         if (para.ListFormat?.List != null)
         {
             listId = para.ListFormat.List.ListId;
-            if (listItemIndices.TryGetValue((listId.Value, paraIndex), out var idx))
+            if (listItemIndices.TryGetValue((listId.Value, pref.DocumentOrderIndex), out var idx))
                 listItemIndex = idx;
         }
 
@@ -244,7 +262,12 @@ public static class WordListHelper
 
         return new ListParagraphInfo
         {
-            ParagraphIndex = paraIndex,
+            ParagraphIndex = address.Index,
+            StoryType = address.StoryType,
+            SectionIndex = address.SectionIndex,
+            HeaderFooterType = headerFooterType,
+            ContainerIndex = address.ContainerIndex,
+            DocumentOrderIndex = pref.DocumentOrderIndex,
             ContentPreview = previewText,
             IsListItem = para.ListFormat is { IsListItem: true },
             ListLevel = para.ListFormat?.ListLevelNumber,

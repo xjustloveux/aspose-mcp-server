@@ -1,9 +1,9 @@
 using Aspose.Words;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 using static Aspose.Words.ConvertUtil;
-using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.List;
 
@@ -30,15 +30,8 @@ public class SetWordListFormatHandler : OperationHandlerBase<Document>
         var p = ExtractSetListFormatParameters(parameters);
 
         var doc = context.Document;
-        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
 
-        if (p.ParagraphIndex < 0 || p.ParagraphIndex >= paragraphs.Count)
-            throw new ArgumentException(
-                $"Paragraph index {p.ParagraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
-
-        var para = paragraphs[p.ParagraphIndex] as WordParagraph;
-        if (para == null)
-            throw new InvalidOperationException($"Unable to find paragraph at index {p.ParagraphIndex}");
+        var para = ParagraphResolver.Resolve(doc, ParagraphAddress.From(parameters, p.ParagraphIndex)).Paragraph;
 
         List<string> changes = [];
 

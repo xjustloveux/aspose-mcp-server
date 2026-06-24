@@ -4,6 +4,7 @@ using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Errors;
 using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 
@@ -48,7 +49,7 @@ public class AddWithStyleWordTextHandler : OperationHandlerBase<Document>
         if (!string.IsNullOrEmpty(p.TabStopsJson))
             tabStops = JsonNode.Parse(p.TabStopsJson) as JsonArray;
 
-        var positionResult = SetupBuilderPosition(doc, builder, p.ParagraphIndex);
+        var positionResult = SetupBuilderPosition(doc, builder, parameters, p.ParagraphIndex);
 
         var para = CreateStyledParagraph(doc, p, tabStops);
 
@@ -91,50 +92,26 @@ public class AddWithStyleWordTextHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="doc">The document.</param>
     /// <param name="builder">The document builder.</param>
-    /// <param name="paragraphIndex">The optional paragraph index.</param>
+    /// <param name="parameters">The operation parameters (for resolving the paragraph address).</param>
+    /// <param name="paragraphIndex">The optional paragraph index (-1 = beginning, omitted = end).</param>
     /// <returns>A <see cref="BuilderPositionResult" /> with target paragraph and warning message.</returns>
     /// <exception cref="ArgumentException">Thrown when paragraph index is out of range.</exception>
-    /// <exception cref="InvalidOperationException">Thrown when paragraph cannot be found.</exception>
     private static BuilderPositionResult SetupBuilderPosition(Document doc,
-        DocumentBuilder builder, int? paragraphIndex)
+        DocumentBuilder builder, OperationParameters parameters, int? paragraphIndex)
     {
-        WordParagraph? targetPara = null;
-        var warningMessage = "";
-
         if (!paragraphIndex.HasValue)
         {
             builder.MoveToDocumentEnd();
-            return new BuilderPositionResult(targetPara, warningMessage);
+            return new BuilderPositionResult(null, "");
         }
 
-        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
-        if (paragraphIndex.Value == -1)
-        {
-            if (paragraphs.Count > 0 && paragraphs[0] is WordParagraph firstPara)
-            {
-                targetPara = firstPara;
-                builder.MoveTo(targetPara);
-            }
-        }
-        else if (paragraphIndex.Value >= 0 && paragraphIndex.Value < paragraphs.Count)
-        {
-            if (paragraphs[paragraphIndex.Value] is WordParagraph para)
-            {
-                targetPara = para;
-                builder.MoveTo(targetPara);
-            }
-            else
-            {
-                throw new InvalidOperationException($"Unable to find paragraph at index {paragraphIndex.Value}");
-            }
-        }
-        else
-        {
-            throw new ArgumentException(
-                $"Paragraph index {paragraphIndex.Value} is out of range (document has {paragraphs.Count} paragraphs)");
-        }
+        // -1 anchors to the first paragraph (the caller inserts before it); >=0 anchors to that
+        // paragraph (inserted after). The resolver validates the index and handles out-of-range.
+        var index = paragraphIndex.Value == -1 ? 0 : paragraphIndex.Value;
+        var targetPara = ParagraphResolver.Resolve(doc, ParagraphAddress.From(parameters, index)).Paragraph;
+        builder.MoveTo(targetPara);
 
-        return new BuilderPositionResult(targetPara, warningMessage);
+        return new BuilderPositionResult(targetPara, "");
     }
 
     /// <summary>

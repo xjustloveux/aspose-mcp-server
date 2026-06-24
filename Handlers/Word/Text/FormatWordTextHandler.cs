@@ -2,6 +2,7 @@
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 
@@ -22,7 +23,7 @@ public class FormatWordTextHandler : OperationHandlerBase<Document>
     /// <param name="context">The document context.</param>
     /// <param name="parameters">
     ///     Required: paragraphIndex.
-    ///     Optional: runIndex, sectionIndex, fontName, fontNameAscii, fontNameFarEast,
+    ///     Optional: runIndex, fontName, fontNameAscii, fontNameFarEast,
     ///     fontSize, bold, italic, underline, color, strikethrough, superscript, subscript.
     /// </param>
     /// <returns>Success message with formatting details.</returns>
@@ -34,12 +35,7 @@ public class FormatWordTextHandler : OperationHandlerBase<Document>
 
         var doc = context.Document;
 
-        ValidateSectionIndex(doc, p.SectionIndex);
-        var section = doc.Sections[p.SectionIndex];
-        var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
-
-        ValidateParagraphIndex(paragraphs, p.ParagraphIndex, p.SectionIndex);
-        var para = paragraphs[p.ParagraphIndex];
+        var para = ParagraphResolver.Resolve(doc, ParagraphAddress.From(parameters, p.ParagraphIndex)).Paragraph;
 
         var runs = EnsureRuns(doc, para, p.ParagraphIndex);
         var runsToFormat = GetRunsToFormat(runs, p.RunIndex);
@@ -64,7 +60,6 @@ public class FormatWordTextHandler : OperationHandlerBase<Document>
         return new FormatParameters(
             parameters.GetRequired<int>("paragraphIndex"),
             parameters.GetOptional<int?>("runIndex"),
-            parameters.GetOptional("sectionIndex", 0),
             parameters.GetOptional<string?>("fontName"),
             parameters.GetOptional<string?>("fontNameAscii"),
             parameters.GetOptional<string?>("fontNameFarEast"),
@@ -76,33 +71,6 @@ public class FormatWordTextHandler : OperationHandlerBase<Document>
             parameters.GetOptional<bool?>("strikethrough"),
             parameters.GetOptional<bool?>("superscript"),
             parameters.GetOptional<bool?>("subscript"));
-    }
-
-    /// <summary>
-    ///     Validates the section index is within range.
-    /// </summary>
-    /// <param name="doc">The document.</param>
-    /// <param name="sectionIndex">The section index to validate.</param>
-    /// <exception cref="ArgumentException">Thrown when section index is out of range.</exception>
-    private static void ValidateSectionIndex(Document doc, int sectionIndex)
-    {
-        if (sectionIndex < 0 || sectionIndex >= doc.Sections.Count)
-            throw new ArgumentException(
-                $"sectionIndex {sectionIndex} is out of range (document has {doc.Sections.Count} sections)");
-    }
-
-    /// <summary>
-    ///     Validates the paragraph index is within range.
-    /// </summary>
-    /// <param name="paragraphs">The list of paragraphs.</param>
-    /// <param name="paragraphIndex">The paragraph index to validate.</param>
-    /// <param name="sectionIndex">The section index for error message.</param>
-    /// <exception cref="ArgumentException">Thrown when paragraph index is out of range.</exception>
-    private static void ValidateParagraphIndex(List<WordParagraph> paragraphs, int paragraphIndex, int sectionIndex)
-    {
-        if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
-            throw new ArgumentException(
-                $"Paragraph index {paragraphIndex} is out of range (section {sectionIndex} body has {paragraphs.Count} paragraphs)");
     }
 
     /// <summary>
@@ -274,7 +242,6 @@ public class FormatWordTextHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="ParagraphIndex">The paragraph index.</param>
     /// <param name="RunIndex">The run index.</param>
-    /// <param name="SectionIndex">The section index.</param>
     /// <param name="FontName">The font name.</param>
     /// <param name="FontNameAscii">The ASCII font name.</param>
     /// <param name="FontNameFarEast">The Far East font name.</param>
@@ -289,7 +256,6 @@ public class FormatWordTextHandler : OperationHandlerBase<Document>
     private sealed record FormatParameters(
         int ParagraphIndex,
         int? RunIndex,
-        int SectionIndex,
         string? FontName,
         string? FontNameAscii,
         string? FontNameFarEast,

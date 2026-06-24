@@ -28,7 +28,7 @@ public class ClearTabStopsWordHandler : OperationHandlerBase<Document>
         var p = ExtractClearTabStopsParameters(parameters);
 
         var doc = context.Document;
-        var para = WordFormatHelper.GetTargetParagraph(doc, p.ParagraphIndex);
+        var para = ParagraphResolver.Resolve(doc, ParagraphAddress.From(parameters, p.ParagraphIndex)).Paragraph;
 
         var count = para.ParagraphFormat.TabStops.Count;
         para.ParagraphFormat.TabStops.Clear();

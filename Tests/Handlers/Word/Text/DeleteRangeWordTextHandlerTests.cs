@@ -1,3 +1,4 @@
+using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Text;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -14,6 +15,33 @@ public class DeleteRangeWordTextHandlerTests : WordHandlerTestBase
     public void Operation_Returns_DeleteRange()
     {
         Assert.Equal("delete_range", _handler.Operation);
+    }
+
+    #endregion
+
+    #region Field Preservation (Issue #7)
+
+    [Fact]
+    public void Execute_CharRangeOverlappingFieldCode_PreservesFieldCode()
+    {
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        builder.Write("Hello ");
+        builder.InsertField("MERGEFIELD Name");
+        builder.Write(" World");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "startParagraphIndex", 0 },
+            { "startCharIndex", 3 },
+            { "endParagraphIndex", 0 },
+            { "endCharIndex", 10 }
+        });
+
+        _handler.Execute(context, parameters);
+
+        Assert.Equal(1, doc.Range.Fields.Count);
+        Assert.Equal("MERGEFIELD Name", doc.Range.Fields[0].GetFieldCode().Trim());
     }
 
     #endregion
@@ -92,6 +120,60 @@ public class DeleteRangeWordTextHandlerTests : WordHandlerTestBase
         AssertContainsText(doc, "Hello");
         AssertContainsText(doc, "Test");
         AssertModified(context);
+    }
+
+    #endregion
+
+    #region Global Paragraph Index (Issue #1 unification)
+
+    [Fact]
+    public void Execute_WithStoryTypeHeader_TargetsHeaderParagraph()
+    {
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        builder.Write("Body");
+        builder.MoveToHeaderFooter(HeaderFooterType.HeaderPrimary);
+        builder.Write("HeaderTrim");
+
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "startParagraphIndex", 0 },
+            { "endParagraphIndex", 0 },
+            { "startCharIndex", 0 },
+            { "endCharIndex", 4 },
+            { "storyType", "Header" }
+        });
+
+        _handler.Execute(context, parameters);
+
+        var headerPara = doc.FirstSection.HeadersFooters[HeaderFooterType.HeaderPrimary]
+            .GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().First();
+        Assert.StartsWith("erTrim", headerPara.GetText());
+    }
+
+    #endregion
+
+    #region Error Handling - Invalid Indices
+
+    [Theory]
+    [InlineData(-1, 0)]
+    [InlineData(0, -1)]
+    [InlineData(100, 0)]
+    [InlineData(0, 100)]
+    public void Execute_WithInvalidParagraphIndices_ThrowsArgumentException(int startPara, int endPara)
+    {
+        var doc = CreateDocumentWithText("Test");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "startParagraphIndex", startPara },
+            { "startCharIndex", 0 },
+            { "endParagraphIndex", endPara },
+            { "endCharIndex", 4 }
+        });
+
+        Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
     #endregion
@@ -210,47 +292,6 @@ public class DeleteRangeWordTextHandlerTests : WordHandlerTestBase
 
         var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
         Assert.Contains("endCharIndex", ex.Message, StringComparison.OrdinalIgnoreCase);
-    }
-
-    #endregion
-
-    #region Error Handling - Invalid Indices
-
-    [Theory]
-    [InlineData(-1, 0)]
-    [InlineData(0, -1)]
-    [InlineData(100, 0)]
-    [InlineData(0, 100)]
-    public void Execute_WithInvalidParagraphIndices_ThrowsArgumentException(int startPara, int endPara)
-    {
-        var doc = CreateDocumentWithText("Test");
-        var context = CreateContext(doc);
-        var parameters = CreateParameters(new Dictionary<string, object?>
-        {
-            { "startParagraphIndex", startPara },
-            { "startCharIndex", 0 },
-            { "endParagraphIndex", endPara },
-            { "endCharIndex", 4 }
-        });
-
-        Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
-    }
-
-    [Fact]
-    public void Execute_WithInvalidSectionIndex_ThrowsArgumentException()
-    {
-        var doc = CreateDocumentWithText("Test");
-        var context = CreateContext(doc);
-        var parameters = CreateParameters(new Dictionary<string, object?>
-        {
-            { "startParagraphIndex", 0 },
-            { "startCharIndex", 0 },
-            { "endParagraphIndex", 0 },
-            { "endCharIndex", 4 },
-            { "sectionIndex", 100 }
-        });
-
-        Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
     #endregion

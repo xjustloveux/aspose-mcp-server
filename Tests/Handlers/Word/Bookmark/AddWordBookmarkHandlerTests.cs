@@ -93,13 +93,13 @@ public class AddWordBookmarkHandlerTests : WordHandlerTestBase
     }
 
     [Fact]
-    public void Execute_WithParagraphIndexMinusOne_InsertsAtBeginning()
+    public void Execute_WithParagraphIndexMinusOne_InsertsAtLastParagraph()
     {
         var doc = CreateDocumentWithParagraphs(3);
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
-            { "name", "StartBookmark" },
+            { "name", "LastBookmark" },
             { "paragraphIndex", -1 }
         });
 
@@ -107,7 +107,7 @@ public class AddWordBookmarkHandlerTests : WordHandlerTestBase
 
         var result = Assert.IsType<SuccessResult>(res).Message;
 
-        Assert.Contains("beginning of document", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("last paragraph", result, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

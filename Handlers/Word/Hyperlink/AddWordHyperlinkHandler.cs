@@ -38,7 +38,7 @@ public class AddWordHyperlinkHandler : OperationHandlerBase<Document>
         var doc = context.Document;
         var builder = new DocumentBuilder(doc);
 
-        PositionBuilder(doc, builder, p.ParagraphIndex);
+        PositionBuilder(doc, builder, parameters, p.ParagraphIndex);
         InsertHyperlink(builder, p.Text, p.Url, p.SubAddress);
         ApplyHyperlinkSettings(doc, p.Url, p.SubAddress, p.Tooltip);
 
@@ -78,8 +78,10 @@ public class AddWordHyperlinkHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="doc">The Word document.</param>
     /// <param name="builder">The document builder.</param>
+    /// <param name="parameters">The operation parameters (carry the optional story address).</param>
     /// <param name="paragraphIndex">The paragraph index to position at.</param>
-    private static void PositionBuilder(Document doc, DocumentBuilder builder, int? paragraphIndex)
+    private static void PositionBuilder(Document doc, DocumentBuilder builder, OperationParameters parameters,
+        int? paragraphIndex)
     {
         if (!paragraphIndex.HasValue)
         {
@@ -87,50 +89,23 @@ public class AddWordHyperlinkHandler : OperationHandlerBase<Document>
             return;
         }
 
-        if (paragraphIndex.Value == -1)
-            PositionAtDocumentStart(doc, builder);
-        else
-            PositionAfterParagraph(doc, builder, paragraphIndex.Value);
+        PositionAfterParagraph(doc, builder, parameters, paragraphIndex.Value);
     }
 
     /// <summary>
-    ///     Positions the builder at the start of the document.
+    ///     Positions the builder after the paragraph resolved from the address (-1 = last paragraph in
+    ///     the story).
     /// </summary>
     /// <param name="doc">The Word document.</param>
     /// <param name="builder">The document builder.</param>
-    private static void PositionAtDocumentStart(Document doc, DocumentBuilder builder)
-    {
-        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
-        if (paragraphs.Count > 0 && paragraphs[0] is WordParagraph firstPara)
-        {
-            var newPara = new WordParagraph(doc);
-            doc.FirstSection.Body.InsertBefore(newPara, firstPara);
-            builder.MoveTo(newPara);
-        }
-        else
-        {
-            builder.MoveToDocumentStart();
-        }
-    }
-
-    /// <summary>
-    ///     Positions the builder after the specified paragraph.
-    /// </summary>
-    /// <param name="doc">The Word document.</param>
-    /// <param name="builder">The document builder.</param>
-    /// <param name="paragraphIndex">The paragraph index to position after.</param>
+    /// <param name="parameters">The operation parameters (carry the optional story address).</param>
+    /// <param name="paragraphIndex">The story-relative paragraph index to position after.</param>
     /// <exception cref="ArgumentException">Thrown when paragraph index is out of range.</exception>
-    /// <exception cref="InvalidOperationException">Thrown when paragraph or parent node cannot be found.</exception>
-    private static void PositionAfterParagraph(Document doc, DocumentBuilder builder, int paragraphIndex)
+    /// <exception cref="InvalidOperationException">Thrown when the parent node cannot be found.</exception>
+    private static void PositionAfterParagraph(Document doc, DocumentBuilder builder, OperationParameters parameters,
+        int paragraphIndex)
     {
-        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
-
-        if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
-            throw new ArgumentException(
-                $"Paragraph index {paragraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
-
-        if (paragraphs[paragraphIndex] is not WordParagraph targetPara)
-            throw new InvalidOperationException($"Unable to find paragraph at index {paragraphIndex}");
+        var targetPara = ParagraphResolver.Resolve(doc, ParagraphAddress.From(parameters, paragraphIndex)).Paragraph;
 
         var parentNode = targetPara.ParentNode;
         if (parentNode == null)
@@ -207,7 +182,7 @@ public class AddWordHyperlinkHandler : OperationHandlerBase<Document>
             return "Insert position: end of document";
 
         return paragraphIndex.Value == -1
-            ? "Insert position: beginning of document"
+            ? "Insert position: after last paragraph"
             : $"Insert position: after paragraph #{paragraphIndex.Value}";
     }
 

@@ -113,6 +113,32 @@ public class GotoWordBookmarkHandlerTests : WordHandlerTestBase
     }
 
     [Fact]
+    public void Execute_BookmarkInHeader_ReportsHeaderStoryInMessage()
+    {
+        // A bookmark in the page header must be located in the header story's own index space
+        // (paragraphIndex 0, storyType Header), not as a flat global paragraph index.
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        builder.Writeln("Body content");
+        builder.MoveToHeaderFooter(HeaderFooterType.HeaderPrimary);
+        builder.StartBookmark("HdrBm");
+        builder.Write("header bookmark");
+        builder.EndBookmark("HdrBm");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "name", "HdrBm" }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<SuccessResult>(res).Message;
+
+        Assert.Contains("Story type: Header", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Paragraph index: 0", result, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Execute_ReturnsRangeLength()
     {
         var doc = new Document();

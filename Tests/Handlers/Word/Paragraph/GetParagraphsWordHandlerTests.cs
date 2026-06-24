@@ -1,3 +1,5 @@
+using Aspose.Words;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Handlers.Word.Paragraph;
 using AsposeMcpServer.Results.Word.Paragraph;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -14,28 +16,6 @@ public class GetParagraphsWordHandlerTests : WordHandlerTestBase
     public void Operation_Returns_Get()
     {
         Assert.Equal("get", _handler.Operation);
-    }
-
-    #endregion
-
-    #region Paragraph Properties
-
-    [Fact]
-    public void Execute_ReturnsParagraphProperties()
-    {
-        var doc = CreateDocumentWithParagraphs("Test paragraph");
-        var context = CreateContext(doc);
-        var parameters = CreateEmptyParameters();
-
-        var res = _handler.Execute(context, parameters);
-
-        var result = Assert.IsType<GetParagraphsWordResult>(res);
-
-        Assert.True(result.Paragraphs.Count > 0);
-        var firstPara = result.Paragraphs[0];
-        Assert.Equal(0, firstPara.Index);
-        Assert.NotNull(firstPara.Location);
-        Assert.NotNull(firstPara.Text);
     }
 
     #endregion
@@ -151,6 +131,85 @@ public class GetParagraphsWordHandlerTests : WordHandlerTestBase
         var result = Assert.IsType<GetParagraphsWordResult>(res);
 
         Assert.True(result.Count >= 0);
+    }
+
+    #endregion
+
+    #region Paragraph Properties
+
+    [Fact]
+    public void Execute_ReturnsParagraphProperties()
+    {
+        var doc = CreateDocumentWithParagraphs("Test paragraph");
+        var context = CreateContext(doc);
+        var parameters = CreateEmptyParameters();
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<GetParagraphsWordResult>(res);
+
+        Assert.True(result.Paragraphs.Count > 0);
+        var firstPara = result.Paragraphs[0];
+        Assert.Equal(0, firstPara.ParagraphIndex);
+        Assert.NotNull(firstPara.Location);
+        Assert.NotNull(firstPara.Text);
+    }
+
+    [Fact]
+    public void Execute_FilteredList_ReportsStoryRelativeParagraphIndexNotListPosition()
+    {
+        // Empty first paragraph + a real second one. Filtering out empties drops the first,
+        // so the surviving item sits at list position 0 but its Body story index is 1. The
+        // emitted paragraphIndex must be the story index (so it round-trips back to edit/delete),
+        // proving the get-paragraphs result no longer reports the misleading list position (#1).
+        var doc = CreateDocumentWithParagraphs("", "Real content");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "includeEmpty", false }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<GetParagraphsWordResult>(res);
+
+        var item = Assert.Single(result.Paragraphs);
+        Assert.Equal("Real content", item.Text);
+        Assert.Equal(1, item.ParagraphIndex);
+        Assert.Equal("Body", item.StoryType);
+        Assert.Equal(0, item.SectionIndex);
+    }
+
+    #endregion
+
+    #region Session Handles (L3)
+
+    [Fact]
+    public void Execute_SessionMode_EmitsStableParagraphHandles()
+    {
+        var doc = CreateDocumentWithParagraphs("First", "Second");
+        var context = new OperationContext<Document> { Document = doc, SessionId = "session-1" };
+        var parameters = CreateEmptyParameters();
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<GetParagraphsWordResult>(res);
+        Assert.NotEmpty(result.Paragraphs);
+        Assert.All(result.Paragraphs, p => Assert.False(string.IsNullOrEmpty(p.Handle)));
+    }
+
+    [Fact]
+    public void Execute_FileMode_DoesNotEmitHandles()
+    {
+        var doc = CreateDocumentWithParagraphs("First", "Second");
+        var context = CreateContext(doc);
+        var parameters = CreateEmptyParameters();
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<GetParagraphsWordResult>(res);
+        Assert.NotEmpty(result.Paragraphs);
+        Assert.All(result.Paragraphs, p => Assert.Null(p.Handle));
     }
 
     #endregion

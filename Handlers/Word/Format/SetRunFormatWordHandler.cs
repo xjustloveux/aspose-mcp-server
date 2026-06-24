@@ -33,7 +33,7 @@ public class SetRunFormatWordHandler : OperationHandlerBase<Document>
         var fontParams = ExtractFontParameters(parameters);
 
         var doc = context.Document;
-        var para = WordFormatHelper.GetTargetParagraph(doc, paragraphIndex);
+        var para = ParagraphResolver.Resolve(doc, ParagraphAddress.From(parameters, paragraphIndex)).Paragraph;
         var runs = EnsureRunsExist(doc, para, runIndex);
         var runsToFormat = GetRunsToFormat(runs, runIndex);
 

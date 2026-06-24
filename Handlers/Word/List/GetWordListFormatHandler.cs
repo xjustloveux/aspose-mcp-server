@@ -45,12 +45,8 @@ public class GetWordListFormatHandler : OperationHandlerBase<Document>
 
         if (p.ParagraphIndex.HasValue)
         {
-            if (p.ParagraphIndex.Value < 0 || p.ParagraphIndex.Value >= paragraphs.Count)
-                throw new ArgumentException(
-                    $"Paragraph index {p.ParagraphIndex.Value} is out of range (document has {paragraphs.Count} paragraphs)");
-
-            var para = paragraphs[p.ParagraphIndex.Value];
-            var listInfo = WordListHelper.BuildListFormatSingleResult(para, p.ParagraphIndex.Value, listItemIndices);
+            var paraRef = ParagraphResolver.Resolve(doc, ParagraphAddress.From(parameters, p.ParagraphIndex.Value));
+            var listInfo = WordListHelper.BuildListFormatSingleResult(paraRef, listItemIndices);
 
             return listInfo;
         }
@@ -68,10 +64,11 @@ public class GetWordListFormatHandler : OperationHandlerBase<Document>
             };
 
         List<ListParagraphInfo> listInfos = [];
+        var addressingContext = new ParagraphResolver.AddressingContext(doc);
         foreach (var para in listParagraphs)
         {
-            var paraIndex = paragraphs.IndexOf(para);
-            listInfos.Add(WordListHelper.BuildListParagraphInfo(para, paraIndex, listItemIndices));
+            var pref = ParagraphResolver.AddressOf(doc, para, addressingContext);
+            listInfos.Add(WordListHelper.BuildListParagraphInfo(pref, listItemIndices));
         }
 
         return new GetWordListFormatResult

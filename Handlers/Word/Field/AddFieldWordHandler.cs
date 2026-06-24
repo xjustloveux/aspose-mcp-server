@@ -1,8 +1,8 @@
 using Aspose.Words;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
-using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.Field;
 
@@ -30,7 +30,7 @@ public class AddFieldWordHandler : OperationHandlerBase<Document>
         var document = context.Document;
         var builder = new DocumentBuilder(document);
 
-        MoveToInsertPosition(builder, document, fieldParams.ParagraphIndex, fieldParams.InsertAtStart);
+        MoveToInsertPosition(builder, document, parameters, fieldParams.ParagraphIndex, fieldParams.InsertAtStart);
 
         var code = BuildFieldCode(fieldParams.FieldType, fieldParams.FieldArgument);
         var field = builder.InsertField(code);
@@ -62,53 +62,31 @@ public class AddFieldWordHandler : OperationHandlerBase<Document>
     }
 
     /// <summary>
-    ///     Moves the document builder to the insertion position.
+    ///     Moves the document builder to the insertion position for the new field.
     /// </summary>
     /// <param name="builder">The document builder.</param>
     /// <param name="document">The Word document.</param>
-    /// <param name="paragraphIndex">The target paragraph index.</param>
+    /// <param name="parameters">The operation parameters (for resolving the paragraph address).</param>
+    /// <param name="paragraphIndex">The target paragraph index (-1 or omitted = document end).</param>
     /// <param name="insertAtStart">Whether to insert at the start of the paragraph.</param>
     private static void MoveToInsertPosition(DocumentBuilder builder, Document document,
-        int? paragraphIndex, bool insertAtStart)
+        OperationParameters parameters, int? paragraphIndex, bool insertAtStart)
     {
-        if (!paragraphIndex.HasValue)
+        if (!paragraphIndex.HasValue || paragraphIndex.Value == -1)
         {
             builder.MoveToDocumentEnd();
             return;
         }
 
-        if (paragraphIndex.Value == -1)
-        {
-            builder.MoveToDocumentEnd();
-            return;
-        }
+        var targetPara = ParagraphResolver.Resolve(document, ParagraphAddress.From(parameters, paragraphIndex.Value))
+            .Paragraph;
 
-        var paragraphs = document.GetChildNodes(NodeType.Paragraph, true);
-        ValidateAndMoveToPararaph(builder, paragraphs, paragraphIndex.Value, insertAtStart);
-    }
-
-    /// <summary>
-    ///     Validates the paragraph index and moves the builder to the target paragraph.
-    /// </summary>
-    /// <param name="builder">The document builder.</param>
-    /// <param name="paragraphs">The collection of paragraphs.</param>
-    /// <param name="index">The target paragraph index.</param>
-    /// <param name="insertAtStart">Whether to insert at the start of the paragraph.</param>
-    /// <exception cref="ArgumentException">Thrown when paragraph index is out of range.</exception>
-    /// <exception cref="InvalidOperationException">Thrown when paragraph cannot be found.</exception>
-    private static void ValidateAndMoveToPararaph(DocumentBuilder builder, NodeCollection paragraphs,
-        int index, bool insertAtStart)
-    {
-        if (index < 0 || index >= paragraphs.Count)
-            throw new ArgumentException(
-                $"Paragraph index {index} is out of range (document has {paragraphs.Count} paragraphs)");
-
-        if (paragraphs[index] is not WordParagraph targetPara)
-            throw new InvalidOperationException($"Unable to find paragraph at index {index}");
-
+        // Anchor to the paragraph boundary, not to a Run: MoveTo(paragraph) lands at the paragraph
+        // end (after any trailing field) and MoveTo(FirstChild) lands before any leading field, so
+        // the inserted field becomes a sibling instead of nesting inside an existing field's range.
         builder.MoveTo(targetPara);
-        if (targetPara.Runs.Count > 0)
-            builder.MoveTo(insertAtStart ? targetPara.Runs[0] : targetPara.Runs[^1]);
+        if (insertAtStart && targetPara.FirstChild != null)
+            builder.MoveTo(targetPara.FirstChild);
     }
 
     /// <summary>

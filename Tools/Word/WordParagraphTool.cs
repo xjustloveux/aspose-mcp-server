@@ -83,6 +83,13 @@ public class WordParagraphTool
     /// <param name="targetParagraphIndex">Target paragraph index (for copy_format).</param>
     /// <param name="startParagraphIndex">Start paragraph index (for merge).</param>
     /// <param name="endParagraphIndex">End paragraph index (for merge).</param>
+    /// <param name="storyType">
+    ///     Story the paragraph index is relative to (Body, Header, Footer, TextBox, Comment, Footnote,
+    ///     Endnote).
+    /// </param>
+    /// <param name="headerFooterType">For Header/Footer stories: Primary, First, or Even.</param>
+    /// <param name="containerIndex">Instance selector for multi-instance stories (TextBox/Comment/Footnote/Endnote).</param>
+    /// <param name="handle">Stable paragraph handle from a prior get/search result (session mode).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(
@@ -112,7 +119,9 @@ Important notes for 'get' operation:
 - Paragraphs inside Comment objects are marked with '[Comment]' in the location field
 - Paragraphs inside table cells are marked with '[Cell]' in the location field
 - Paragraphs inside TextBoxes are marked with '[TextBox]' in the location field
-- To check paragraph styles in table cells, use includeCommentParagraphs=true")]
+- To check paragraph styles in table cells, use includeCommentParagraphs=true
+
+Paragraph addressing: paragraphIndex is story-relative (0-based within its story), addressing the Body by default. To target other stories pass storyType (Body/Header/Footer/TextBox/Comment/Footnote/Endnote) with sectionIndex/headerFooterType/containerIndex as needed. 'get' and word_text 'search' report each paragraph's storyType + paragraphIndex (+ sectionIndex/containerIndex) — feed those exact values back to address the same paragraph in insert/delete/edit/get_format/copy_format/merge. In session mode, results also include a stable 'handle' you can pass back to target a paragraph even after intervening edits shift indices.")]
     public object Execute(
         [Description("Operation: insert, delete, edit, get, get_format, copy_format, merge")]
         string operation,
@@ -124,7 +133,8 @@ Important notes for 'get' operation:
         string? outputPath = null,
         [Description("Paragraph index (0-based, -1 for last paragraph)")]
         int? paragraphIndex = null,
-        [Description("Text content for the paragraph")]
+        [Description(
+            "Text content for the paragraph. For 'edit', replaces the paragraph's non-field text and preserves existing fields, bookmarks and inline objects in place (to change text inside a field, use word_text replace).")]
         string? text = null,
         [Description("Style name to apply (e.g., 'Heading 1', 'Normal')")]
         string? styleName = null,
@@ -173,7 +183,15 @@ Important notes for 'get' operation:
         [Description("Start paragraph index (for merge)")]
         int? startParagraphIndex = null,
         [Description("End paragraph index (for merge)")]
-        int? endParagraphIndex = null)
+        int? endParagraphIndex = null,
+        [Description(WordAddressing.StoryTypeDesc)]
+        string? storyType = null,
+        [Description(WordAddressing.HeaderFooterTypeDesc)]
+        string? headerFooterType = null,
+        [Description(WordAddressing.ContainerIndexDesc)]
+        int? containerIndex = null,
+        [Description(WordAddressing.HandleDesc)]
+        string? handle = null)
     {
         using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
@@ -181,7 +199,8 @@ Important notes for 'get' operation:
             includeEmpty, styleFilter, includeCommentParagraphs, includeTextboxParagraphs, includeRunDetails,
             fontName, fontNameAscii, fontNameFarEast, fontSize, bold, italic, underline, color, indentLeft,
             indentRight, firstLineIndent, spaceBefore, spaceAfter, lineSpacing, lineSpacingRule, tabStops,
-            sourceParagraphIndex, targetParagraphIndex, startParagraphIndex, endParagraphIndex);
+            sourceParagraphIndex, targetParagraphIndex, startParagraphIndex, endParagraphIndex,
+            storyType, headerFooterType, containerIndex, handle);
 
         var handler = _handlerRegistry.GetHandler(operation);
 
@@ -239,9 +258,14 @@ Important notes for 'get' operation:
         int? sourceParagraphIndex,
         int? targetParagraphIndex,
         int? startParagraphIndex,
-        int? endParagraphIndex)
+        int? endParagraphIndex,
+        string? storyType,
+        string? headerFooterType,
+        int? containerIndex,
+        string? handle)
     {
         var parameters = new OperationParameters();
+        WordAddressing.Apply(parameters, storyType, headerFooterType, containerIndex, handle);
 
         return operation.ToLower() switch
         {

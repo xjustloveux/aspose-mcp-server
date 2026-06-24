@@ -58,6 +58,13 @@ public class WordCommentTool
     /// <param name="endRunIndex">End run index.</param>
     /// <param name="commentIndex">Comment index (0-based).</param>
     /// <param name="replyText">Reply text content.</param>
+    /// <param name="storyType">
+    ///     Story the paragraph index is relative to (Body, Header, Footer, TextBox, Comment, Footnote,
+    ///     Endnote).
+    /// </param>
+    /// <param name="headerFooterType">Header/Footer discriminator (Primary, First, Even).</param>
+    /// <param name="containerIndex">Instance selector for multi-instance stories.</param>
+    /// <param name="handle">Stable paragraph handle from a prior 'get'/'search' result (session mode only).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(
@@ -93,10 +100,18 @@ Usage examples:
         [Description("End run index")] int? endRunIndex = null,
         [Description("Comment index (0-based)")]
         int? commentIndex = null,
-        [Description("Reply text content")] string? replyText = null)
+        [Description("Reply text content")] string? replyText = null,
+        [Description(WordAddressing.StoryTypeDesc)]
+        string? storyType = null,
+        [Description(WordAddressing.HeaderFooterTypeDesc)]
+        string? headerFooterType = null,
+        [Description(WordAddressing.ContainerIndexDesc)]
+        int? containerIndex = null,
+        [Description(WordAddressing.HandleDesc)]
+        string? handle = null)
     {
         var parameters = BuildParameters(operation, text, author, authorInitial, paragraphIndex, startRunIndex,
-            endRunIndex, commentIndex, replyText);
+            endRunIndex, commentIndex, replyText, storyType, headerFooterType, containerIndex, handle);
 
         var handler = _handlerRegistry.GetHandler(operation);
 
@@ -136,20 +151,29 @@ Usage examples:
         int? startRunIndex,
         int? endRunIndex,
         int? commentIndex,
-        string? replyText)
+        string? replyText,
+        string? storyType,
+        string? headerFooterType,
+        int? containerIndex,
+        string? handle)
     {
+        var parameters = new OperationParameters();
+        WordAddressing.Apply(parameters, storyType, headerFooterType, containerIndex, handle);
+
         return operation.ToLower() switch
         {
-            "add" => BuildAddParameters(text, author, authorInitial, paragraphIndex, startRunIndex, endRunIndex),
-            "delete" => BuildDeleteParameters(commentIndex),
-            "reply" => BuildReplyParameters(commentIndex, replyText, text, author, authorInitial),
-            _ => new OperationParameters()
+            "add" => BuildAddParameters(parameters, text, author, authorInitial, paragraphIndex, startRunIndex,
+                endRunIndex),
+            "delete" => BuildDeleteParameters(parameters, commentIndex),
+            "reply" => BuildReplyParameters(parameters, commentIndex, replyText, text, author, authorInitial),
+            _ => parameters
         };
     }
 
     /// <summary>
     ///     Builds parameters for the add comment operation.
     /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
     /// <param name="text">The comment text content.</param>
     /// <param name="author">The comment author name.</param>
     /// <param name="authorInitial">The author initials.</param>
@@ -157,10 +181,9 @@ Usage examples:
     /// <param name="startRunIndex">The start run index.</param>
     /// <param name="endRunIndex">The end run index.</param>
     /// <returns>OperationParameters configured for adding a comment.</returns>
-    private static OperationParameters BuildAddParameters(string? text, string? author, string? authorInitial,
-        int? paragraphIndex, int? startRunIndex, int? endRunIndex)
+    private static OperationParameters BuildAddParameters(OperationParameters parameters, string? text, string? author,
+        string? authorInitial, int? paragraphIndex, int? startRunIndex, int? endRunIndex)
     {
-        var parameters = new OperationParameters();
         if (text != null) parameters.Set("text", text);
         parameters.Set("author", author ?? "Comment Author");
         if (authorInitial != null) parameters.Set("authorInitial", authorInitial);
@@ -173,11 +196,11 @@ Usage examples:
     /// <summary>
     ///     Builds parameters for the delete comment operation.
     /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
     /// <param name="commentIndex">The comment index (0-based).</param>
     /// <returns>OperationParameters configured for deleting a comment.</returns>
-    private static OperationParameters BuildDeleteParameters(int? commentIndex)
+    private static OperationParameters BuildDeleteParameters(OperationParameters parameters, int? commentIndex)
     {
-        var parameters = new OperationParameters();
         if (commentIndex.HasValue) parameters.Set("commentIndex", commentIndex.Value);
         return parameters;
     }
@@ -185,16 +208,16 @@ Usage examples:
     /// <summary>
     ///     Builds parameters for the reply to comment operation.
     /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
     /// <param name="commentIndex">The comment index (0-based).</param>
     /// <param name="replyText">The reply text content.</param>
     /// <param name="text">Fallback text content if replyText is null.</param>
     /// <param name="author">The reply author name.</param>
     /// <param name="authorInitial">The author initials.</param>
     /// <returns>OperationParameters configured for replying to a comment.</returns>
-    private static OperationParameters BuildReplyParameters(int? commentIndex, string? replyText, string? text,
-        string? author, string? authorInitial)
+    private static OperationParameters BuildReplyParameters(OperationParameters parameters, int? commentIndex,
+        string? replyText, string? text, string? author, string? authorInitial)
     {
-        var parameters = new OperationParameters();
         if (commentIndex.HasValue) parameters.Set("commentIndex", commentIndex.Value);
         parameters.Set("replyText", replyText ?? text);
         parameters.Set("author", author ?? "Reply Author");

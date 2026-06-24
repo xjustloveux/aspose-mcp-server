@@ -185,25 +185,26 @@ public class AddWordHyperlinkHandlerTests : WordHandlerTestBase
     }
 
     [Fact]
-    public void Execute_WithParagraphIndexMinusOne_InsertsAtBeginning()
+    public void Execute_WithParagraphIndexMinusOne_InsertsAfterLastParagraph()
     {
         var doc = CreateDocumentWithParagraphs("First", "Second");
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
-            { "text", "Start Link" },
+            { "text", "Last Link" },
             { "url", "https://example.com" },
             { "paragraphIndex", -1 }
         });
 
         var res = _handler.Execute(context, parameters);
 
-        Assert.IsType<SuccessResult>(res);
+        var result = Assert.IsType<SuccessResult>(res).Message;
+        Assert.Contains("after last paragraph", result, StringComparison.OrdinalIgnoreCase);
 
         var hyperlinks = WordHyperlinkHelper.GetAllHyperlinks(doc);
         Assert.NotEmpty(hyperlinks);
         Assert.Equal("https://example.com", hyperlinks[^1].Address);
-        if (!IsEvaluationMode(AsposeLibraryType.Words)) AssertContainsText(doc, "Start Link");
+        if (!IsEvaluationMode(AsposeLibraryType.Words)) AssertContainsText(doc, "Last Link");
     }
 
     [Fact]

@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Paragraph;
@@ -30,23 +31,11 @@ public class DeleteParagraphWordHandler : OperationHandlerBase<Document>
             throw new ArgumentException("paragraphIndex parameter is required for delete operation");
 
         var doc = context.Document;
-        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
 
-        var idx = deleteParams.ParagraphIndex.Value;
-        if (idx == -1)
-        {
-            if (paragraphs.Count == 0)
-                throw new ArgumentException("Cannot delete paragraph: document has no paragraphs");
-            idx = paragraphs.Count - 1;
-        }
-
-        if (idx < 0 || idx >= paragraphs.Count)
-            throw new ArgumentException(
-                $"Paragraph index {idx} is out of range. The document has {paragraphs.Count} paragraphs (valid indices: 0-{paragraphs.Count - 1}, or -1 for last).");
-
-        var paragraphToDelete = paragraphs[idx] as Aspose.Words.Paragraph;
-        if (paragraphToDelete == null)
-            throw new InvalidOperationException($"Unable to get paragraph at index {idx}");
+        var paragraphRef = ParagraphResolver.Resolve(doc,
+            ParagraphAddress.From(parameters, deleteParams.ParagraphIndex.Value));
+        var idx = paragraphRef.Address.Index;
+        var paragraphToDelete = paragraphRef.Paragraph;
 
         var textPreview = paragraphToDelete.GetText().Trim();
         if (textPreview.Length > 50) textPreview = string.Concat(textPreview.AsSpan(0, 50), "...");

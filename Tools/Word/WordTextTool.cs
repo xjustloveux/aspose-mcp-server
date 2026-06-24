@@ -83,7 +83,6 @@ public class WordTextTool
     /// <param name="endRunIndex">End run index (for delete_range).</param>
     /// <param name="insertParagraphIndex">Paragraph index for insert.</param>
     /// <param name="charIndex">Character index for insert.</param>
-    /// <param name="sectionIndex">Section index (0-based).</param>
     /// <param name="insertBefore">Insert before position (for insert).</param>
     /// <param name="startCharIndex">Start character index (for delete_range).</param>
     /// <param name="endCharIndex">End character index (for delete_range).</param>
@@ -94,6 +93,10 @@ public class WordTextTool
     /// <param name="firstLineIndent">First line indentation in points (for add_styled).</param>
     /// <param name="paragraphIndexForAdd">Paragraph index to insert after (for add_styled).</param>
     /// <param name="tabStops">Custom tab stops as JSON array (for add_styled).</param>
+    /// <param name="storyType">Story the paragraph index is relative to (Body by default).</param>
+    /// <param name="headerFooterType">Header/Footer discriminator (Primary by default).</param>
+    /// <param name="containerIndex">Instance selector for multi-instance stories (TextBox/Comment/Footnote/Endnote).</param>
+    /// <param name="handle">Stable paragraph handle from a prior get/search result (session mode only).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for search operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(
@@ -115,7 +118,9 @@ Usage examples:
 - Format text: word_text(operation='format', path='doc.docx', paragraphIndex=0, runIndex=0, bold=true)
 - Insert at position: word_text(operation='insert', path='doc.docx', paragraphIndex=0, runIndex=0, text='Inserted')
 - Delete text: word_text(operation='delete', path='doc.docx', searchText='text to delete') or word_text(operation='delete', path='doc.docx', startParagraphIndex=0, endParagraphIndex=0)
-- Delete range: word_text(operation='delete_range', path='doc.docx', startParagraphIndex=0, startRunIndex=0, endParagraphIndex=0, endRunIndex=5)")]
+- Delete range: word_text(operation='delete_range', path='doc.docx', startParagraphIndex=0, startRunIndex=0, endParagraphIndex=0, endRunIndex=5)
+
+All paragraph indices are story-relative (0-based within their story), addressing the Body by default. To target other stories pass storyType (Body/Header/Footer/TextBox/Comment/Footnote/Endnote) with sectionIndex/headerFooterType/containerIndex as needed. 'search' results report each match's storyType (+ sectionIndex/containerIndex) so you can tell what a paragraphIndex points at — feed those exact values back to address the same paragraph. In session mode, results also include a stable 'handle' you can pass back to target a paragraph even after intervening edits shift indices. 'insert' and 'format' accept paragraphIndex=-1 for the last paragraph; 'delete' and 'delete_range' require explicit non-negative indices.")]
     public object Execute(
         [Description(@"Operation to perform.
 - 'add': Add text at document end (required params: path, text)
@@ -202,9 +207,6 @@ Usage examples:
         [Description("Character index within paragraph (0-based, required for insert operation)")]
         int? charIndex = null,
         [Description(
-            "Section index (0-based, optional, default: 0, for format/insert/delete_range operations)")]
-        int? sectionIndex = null,
-        [Description(
             "Insert before position (optional, default: false, inserts after, for insert operation)")]
         bool insertBefore = false,
         // Delete range parameters
@@ -230,7 +232,15 @@ Usage examples:
         int? paragraphIndexForAdd = null,
         [Description(
             "Custom tab stops as JSON array (optional, for add_styled operation). Example: [{\"position\":72,\"alignment\":\"Left\",\"leader\":\"None\"}]")]
-        string? tabStops = null)
+        string? tabStops = null,
+        [Description(WordAddressing.StoryTypeDesc)]
+        string? storyType = null,
+        [Description(WordAddressing.HeaderFooterTypeDesc)]
+        string? headerFooterType = null,
+        [Description(WordAddressing.ContainerIndexDesc)]
+        int? containerIndex = null,
+        [Description(WordAddressing.HandleDesc)]
+        string? handle = null)
     {
         var effectiveOutputPath = outputPath ?? path;
         if (!string.IsNullOrEmpty(effectiveOutputPath))
@@ -239,9 +249,9 @@ Usage examples:
         var parameters = BuildParameters(text, fontName, fontNameAscii, fontNameFarEast, fontSize, bold, italic,
             underline, color, strikethrough, superscript, subscript, find, replace, useRegex, replaceInFields,
             searchText, caseSensitive, maxResults, contextLength, startParagraphIndex, startRunIndex,
-            endParagraphIndex, endRunIndex, paragraphIndex, runIndex, insertParagraphIndex, charIndex, sectionIndex,
+            endParagraphIndex, endRunIndex, paragraphIndex, runIndex, insertParagraphIndex, charIndex,
             insertBefore, startCharIndex, endCharIndex, styleName, alignment, indentLevel, leftIndent,
-            firstLineIndent, paragraphIndexForAdd, tabStops);
+            firstLineIndent, paragraphIndexForAdd, tabStops, storyType, headerFooterType, containerIndex, handle);
 
         var handler = _handlerRegistry.GetHandler(operation);
 
@@ -276,11 +286,13 @@ Usage examples:
         bool? subscript, string? find, string? replace, bool useRegex, bool replaceInFields, string? searchText,
         bool caseSensitive, int maxResults, int contextLength, int? startParagraphIndex, int startRunIndex,
         int? endParagraphIndex, int? endRunIndex, int? paragraphIndex, int? runIndex, int? insertParagraphIndex,
-        int? charIndex, int? sectionIndex, bool insertBefore, int? startCharIndex, int? endCharIndex,
+        int? charIndex, bool insertBefore, int? startCharIndex, int? endCharIndex,
         string? styleName, string? alignment, int? indentLevel, double? leftIndent, double? firstLineIndent,
-        int? paragraphIndexForAdd, string? tabStops)
+        int? paragraphIndexForAdd, string? tabStops, string? storyType, string? headerFooterType,
+        int? containerIndex, string? handle)
     {
         var parameters = new OperationParameters();
+        WordAddressing.Apply(parameters, storyType, headerFooterType, containerIndex, handle);
 
         // Common parameters
         parameters.Set("text", text);
@@ -317,7 +329,6 @@ Usage examples:
         // Format parameters
         parameters.Set("paragraphIndex", paragraphIndex);
         parameters.Set("runIndex", runIndex);
-        parameters.Set("sectionIndex", sectionIndex);
 
         // Insert at position parameters
         parameters.Set("insertParagraphIndex", insertParagraphIndex);

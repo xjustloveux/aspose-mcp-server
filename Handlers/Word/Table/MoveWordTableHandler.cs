@@ -1,8 +1,8 @@
 using Aspose.Words;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
-using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.Table;
 
@@ -35,36 +35,30 @@ public class MoveWordTableHandler : OperationHandlerBase<Document>
 
         var section = doc.Sections[sectionIdx];
         var tables = section.Body.GetChildNodes(NodeType.Table, true).Cast<Aspose.Words.Tables.Table>().ToList();
-        var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, false).Cast<WordParagraph>().ToList();
 
         if (p.TableIndex < 0 || p.TableIndex >= tables.Count)
             throw new ArgumentException($"tableIndex must be between 0 and {tables.Count - 1}");
 
         var table = tables[p.TableIndex];
-        WordParagraph? targetPara;
 
-        if (p.TargetParagraphIndex == -1)
-        {
-            if (paragraphs.Count > 0)
-                targetPara = paragraphs[^1];
-            else
-                throw new ArgumentException(
-                    "Cannot move table: section has no paragraphs. Use a valid paragraph index.");
-        }
-        else if (p.TargetParagraphIndex < 0 || p.TargetParagraphIndex >= paragraphs.Count)
-        {
+        var targetPara = ParagraphResolver
+            .Resolve(doc, ParagraphAddress.From(parameters, p.TargetParagraphIndex)).Paragraph;
+
+        // The resolver can address paragraphs nested in table cells, but a table is inserted relative
+        // to a body-level block. Walk up to the direct child of the section body so the structural
+        // insert has a valid sibling anchor instead of throwing on a cell paragraph.
+        Node anchor = targetPara;
+        while (anchor.ParentNode != null && anchor.ParentNode != section.Body)
+            anchor = anchor.ParentNode;
+        if (anchor.ParentNode != section.Body)
             throw new ArgumentException(
-                $"targetParagraphIndex must be between 0 and {paragraphs.Count - 1}, or use -1 for document end");
-        }
-        else
-        {
-            targetPara = paragraphs[p.TargetParagraphIndex];
-        }
+                $"targetParagraphIndex {p.TargetParagraphIndex} does not resolve to a paragraph within " +
+                $"section {sectionIdx}'s body.");
+        if (anchor == table)
+            throw new ArgumentException(
+                "Cannot move a table to a target paragraph inside the table being moved.");
 
-        if (targetPara == null)
-            throw new ArgumentException("Cannot find target paragraph");
-
-        section.Body.InsertAfter(table, targetPara);
+        section.Body.InsertAfter(table, anchor);
 
         MarkModified(context);
 

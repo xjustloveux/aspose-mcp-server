@@ -1,3 +1,4 @@
+using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Text;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -211,7 +212,6 @@ public class InsertAtPositionWordTextHandlerTests : WordHandlerTestBase
     }
 
     [Theory]
-    [InlineData(-1)]
     [InlineData(100)]
     public void Execute_WithInvalidParagraphIndex_ThrowsArgumentException(int paragraphIndex)
     {
@@ -227,20 +227,142 @@ public class InsertAtPositionWordTextHandlerTests : WordHandlerTestBase
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
+    #endregion
+
+    #region Global Paragraph Index (Issue #1 unification)
+
     [Fact]
-    public void Execute_WithInvalidSectionIndex_ThrowsArgumentException()
+    public void Execute_WithStoryTypeHeader_TargetsHeaderParagraph()
     {
-        var doc = CreateDocumentWithText("Test");
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        builder.Write("BodyOnly");
+        builder.MoveToHeaderFooter(HeaderFooterType.HeaderPrimary);
+        builder.Write("HeaderOnly");
+
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "insertParagraphIndex", 0 },
+            { "storyType", "Header" },
+            { "charIndex", 0 },
+            { "text", "X" },
+            { "insertBefore", true }
+        });
+
+        _handler.Execute(context, parameters);
+
+        var headerPara = doc.FirstSection.HeadersFooters[HeaderFooterType.HeaderPrimary]
+            .GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().First();
+        Assert.StartsWith("X", headerPara.GetText());
+    }
+
+    [Fact]
+    public void Execute_WithParagraphIndexMinusOne_InsertsAtLastParagraph()
+    {
+        var doc = CreateDocumentWithParagraphs("First", "Last");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "insertParagraphIndex", -1 },
+            { "charIndex", 0 },
+            { "text", "X" },
+            { "insertBefore", true }
+        });
+
+        _handler.Execute(context, parameters);
+
+        var lastPara = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().Last();
+        Assert.StartsWith("X", lastPara.GetText());
+    }
+
+    [Fact]
+    public void Execute_WithCharIndexBeyondText_AppendsAtParagraphEnd()
+    {
+        var doc = CreateDocumentWithText("Hello");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "insertParagraphIndex", 0 },
+            { "charIndex", 999 },
+            { "text", "X" },
+            { "insertBefore", false }
+        });
+
+        _handler.Execute(context, parameters);
+
+        Assert.StartsWith("HelloX", GetDocumentText(doc));
+    }
+
+    #endregion
+
+    #region Field-Leading Paragraph (Issue #4)
+
+    [Fact]
+    public void Execute_AtCharZeroOfFieldLeadingParagraph_InsertsBeforeFieldNotIntoCode()
+    {
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        builder.InsertField("MERGEFIELD Name");
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "insertParagraphIndex", 0 },
             { "charIndex", 0 },
-            { "text", "Insert" },
-            { "sectionIndex", 100 }
+            { "text", "PREFIX " },
+            { "insertBefore", true }
         });
 
-        Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+        _handler.Execute(context, parameters);
+
+        Assert.Equal(1, doc.Range.Fields.Count);
+        Assert.Equal("MERGEFIELD Name", doc.Range.Fields[0].GetFieldCode().Trim());
+        AssertContainsText(doc, "PREFIX");
+    }
+
+    [Fact]
+    public void Execute_AfterFieldOnlyParagraph_InsertsAfterFieldNotIntoCode()
+    {
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        builder.InsertField("MERGEFIELD Name");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "insertParagraphIndex", 0 },
+            { "charIndex", 0 },
+            { "text", "SUFFIX" },
+            { "insertBefore", false }
+        });
+
+        _handler.Execute(context, parameters);
+
+        Assert.Equal(1, doc.Range.Fields.Count);
+        Assert.Equal("MERGEFIELD Name", doc.Range.Fields[0].GetFieldCode().Trim());
+        AssertContainsText(doc, "SUFFIX");
+    }
+
+    [Fact]
+    public void Execute_AfterFieldFollowedByText_InsertsAfterFieldNotIntoCode()
+    {
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        builder.InsertField("MERGEFIELD Name");
+        builder.Write(" Tail");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "insertParagraphIndex", 0 },
+            { "charIndex", 0 },
+            { "text", "MID" },
+            { "insertBefore", false }
+        });
+
+        _handler.Execute(context, parameters);
+
+        Assert.Equal(1, doc.Range.Fields.Count);
+        Assert.Equal("MERGEFIELD Name", doc.Range.Fields[0].GetFieldCode().Trim());
+        AssertContainsText(doc, "MID");
     }
 
     #endregion

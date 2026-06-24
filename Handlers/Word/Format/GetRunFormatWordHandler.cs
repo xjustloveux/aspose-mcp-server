@@ -30,14 +30,16 @@ public class GetRunFormatWordHandler : OperationHandlerBase<Document>
 
         var doc = context.Document;
 
-        var para = WordFormatHelper.GetTargetParagraph(doc, p.ParagraphIndex);
+        var paragraphRef = ParagraphResolver.Resolve(doc, ParagraphAddress.From(parameters, p.ParagraphIndex));
+        var para = paragraphRef.Paragraph;
+        var address = paragraphRef.Address;
         var runs = para.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
 
         if (p.RunIndex.HasValue)
         {
             if (p.RunIndex.Value < 0 || p.RunIndex.Value >= runs.Count)
                 throw new ArgumentException(
-                    $"runIndex {p.RunIndex.Value} is out of range (paragraph #{p.ParagraphIndex} has {runs.Count} Runs, valid range: 0-{runs.Count - 1})");
+                    $"runIndex {p.RunIndex.Value} is out of range (paragraph #{address.Index} has {runs.Count} Runs, valid range: 0-{runs.Count - 1})");
 
             var run = runs[p.RunIndex.Value];
             var font = run.Font;
@@ -46,7 +48,14 @@ public class GetRunFormatWordHandler : OperationHandlerBase<Document>
 
             return new GetRunFormatWordResult
             {
-                ParagraphIndex = p.ParagraphIndex,
+                ParagraphIndex = address.Index,
+                StoryType = address.StoryType,
+                SectionIndex = address.SectionIndex,
+                HeaderFooterType = address.StoryType is StoryTypes.Header or StoryTypes.Footer
+                    ? address.HeaderFooterType
+                    : null,
+                ContainerIndex = address.ContainerIndex,
+                DocumentOrderIndex = paragraphRef.DocumentOrderIndex,
                 RunIndex = p.RunIndex.Value,
                 Text = run.Text,
                 FormatType = p.IncludeInherited ? "inherited" : "explicit",
@@ -90,7 +99,14 @@ public class GetRunFormatWordHandler : OperationHandlerBase<Document>
 
         return new GetRunFormatAllResult
         {
-            ParagraphIndex = p.ParagraphIndex,
+            ParagraphIndex = address.Index,
+            StoryType = address.StoryType,
+            SectionIndex = address.SectionIndex,
+            HeaderFooterType = address.StoryType is StoryTypes.Header or StoryTypes.Footer
+                ? address.HeaderFooterType
+                : null,
+            ContainerIndex = address.ContainerIndex,
+            DocumentOrderIndex = paragraphRef.DocumentOrderIndex,
             Count = runs.Count,
             Runs = runsList
         };

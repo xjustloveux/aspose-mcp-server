@@ -1,8 +1,8 @@
 using Aspose.Words;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
-using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.Bookmark;
 
@@ -33,7 +33,7 @@ public class AddWordBookmarkHandler : OperationHandlerBase<Document>
         var builder = new DocumentBuilder(doc);
 
         ValidateBookmarkDoesNotExist(doc, p.Name);
-        MoveToInsertPosition(builder, doc, p.ParagraphIndex);
+        MoveToInsertPosition(builder, doc, parameters, p.ParagraphIndex);
 
         builder.StartBookmark(p.Name);
         if (!string.IsNullOrEmpty(p.Text)) builder.Write(p.Text);
@@ -64,9 +64,11 @@ public class AddWordBookmarkHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="builder">The document builder.</param>
     /// <param name="doc">The Word document.</param>
+    /// <param name="parameters">The operation parameters (carry the optional story address).</param>
     /// <param name="paragraphIndex">The paragraph index to move to, or null for end of document.</param>
     /// <exception cref="ArgumentException">Thrown when the paragraph index is out of range.</exception>
-    private static void MoveToInsertPosition(DocumentBuilder builder, Document doc, int? paragraphIndex)
+    private static void MoveToInsertPosition(DocumentBuilder builder, Document doc, OperationParameters parameters,
+        int? paragraphIndex)
     {
         if (!paragraphIndex.HasValue)
         {
@@ -74,40 +76,8 @@ public class AddWordBookmarkHandler : OperationHandlerBase<Document>
             return;
         }
 
-        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
-
-        if (paragraphs.Count == 0)
-        {
-            builder.MoveToDocumentEnd();
-            return;
-        }
-
-        if (paragraphIndex.Value == -1)
-        {
-            MoveToParagraph(builder, paragraphs[0], 0);
-            return;
-        }
-
-        if (paragraphIndex.Value < 0 || paragraphIndex.Value >= paragraphs.Count)
-            throw new ArgumentException(
-                $"Paragraph index {paragraphIndex.Value} is out of range (document has {paragraphs.Count} paragraphs)");
-
-        MoveToParagraph(builder, paragraphs[paragraphIndex.Value], paragraphIndex.Value);
-    }
-
-    /// <summary>
-    ///     Moves the document builder to the specified paragraph node.
-    /// </summary>
-    /// <param name="builder">The document builder.</param>
-    /// <param name="node">The paragraph node to move to.</param>
-    /// <param name="index">The paragraph index for error reporting.</param>
-    /// <exception cref="InvalidOperationException">Thrown when the node is not a valid paragraph.</exception>
-    private static void MoveToParagraph(DocumentBuilder builder, Node node, int index)
-    {
-        if (node is WordParagraph para)
-            builder.MoveTo(para);
-        else
-            throw new InvalidOperationException($"Unable to find paragraph at index {index}");
+        var para = ParagraphResolver.Resolve(doc, ParagraphAddress.From(parameters, paragraphIndex.Value)).Paragraph;
+        builder.MoveTo(para);
     }
 
     /// <summary>
@@ -136,7 +106,7 @@ public class AddWordBookmarkHandler : OperationHandlerBase<Document>
         if (!paragraphIndex.HasValue)
             return "Insert position: end of document";
         return paragraphIndex.Value == -1
-            ? "Insert position: beginning of document"
+            ? "Insert position: last paragraph"
             : $"Insert position: after paragraph #{paragraphIndex.Value}";
     }
 

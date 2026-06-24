@@ -39,15 +39,15 @@ public class InsertParagraphWordHandler : OperationHandlerBase<Document>
             throw new ArgumentException("text parameter is required for insert operation");
 
         var doc = context.Document;
-        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
 
-        var insertTarget = FindInsertTarget(paragraphs, insertParams.ParagraphIndex);
+        var insertTarget = FindInsertTarget(doc, parameters, insertParams.ParagraphIndex);
         var para = CreateParagraph(doc, insertParams);
         InsertParagraph(doc, para, insertTarget.TargetParagraph, insertParams.ParagraphIndex);
 
         MarkModified(context);
 
-        return BuildResultMessage(insertTarget.PositionDescription, insertParams, paragraphs.Count + 1);
+        var totalParagraphs = doc.GetChildNodes(NodeType.Paragraph, true).Count;
+        return BuildResultMessage(insertTarget.PositionDescription, insertParams, totalParagraphs);
     }
 
     /// <summary>
@@ -73,25 +73,23 @@ public class InsertParagraphWordHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Finds the target position for insertion.
     /// </summary>
-    /// <param name="paragraphs">The collection of paragraphs.</param>
-    /// <param name="paragraphIndex">The paragraph index.</param>
+    /// <param name="doc">The Word document.</param>
+    /// <param name="parameters">The operation parameters (for resolving the paragraph address).</param>
+    /// <param name="paragraphIndex">The paragraph index (-1 for beginning, omitted for end).</param>
     /// <returns>An <see cref="InsertTarget" /> with the target paragraph and position description.</returns>
     /// <exception cref="ArgumentException">Thrown when paragraph index is out of range.</exception>
-    private static InsertTarget FindInsertTarget(NodeCollection paragraphs, int? paragraphIndex)
+    private static InsertTarget FindInsertTarget(Document doc, OperationParameters parameters, int? paragraphIndex)
     {
         if (!paragraphIndex.HasValue)
             return new InsertTarget(null, "end of document");
 
-        if (paragraphIndex.Value == -1 && paragraphs.Count > 0)
-            return new InsertTarget(paragraphs[0] as WordParagraph, "beginning of document");
+        if (paragraphIndex.Value == -1)
+            return new InsertTarget(
+                ParagraphResolver.Resolve(doc, ParagraphAddress.From(parameters, 0)).Paragraph,
+                "beginning of document");
 
-        if (paragraphIndex.Value >= 0 && paragraphIndex.Value < paragraphs.Count)
-            return new InsertTarget(paragraphs[paragraphIndex.Value] as WordParagraph,
-                $"after paragraph #{paragraphIndex.Value}");
-
-        var validRange = paragraphs.Count > 0 ? $"0-{paragraphs.Count - 1}" : "none (document is empty)";
-        throw new ArgumentException(
-            $"Paragraph index {paragraphIndex.Value} is out of range. The document has {paragraphs.Count} paragraphs (valid indices: {validRange}, or -1 for beginning).");
+        var para = ParagraphResolver.Resolve(doc, ParagraphAddress.From(parameters, paragraphIndex.Value)).Paragraph;
+        return new InsertTarget(para, $"after paragraph #{paragraphIndex.Value}");
     }
 
     /// <summary>

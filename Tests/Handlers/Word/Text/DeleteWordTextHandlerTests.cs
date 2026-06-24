@@ -1,3 +1,4 @@
+using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Text;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -14,6 +15,30 @@ public class DeleteWordTextHandlerTests : WordHandlerTestBase
     public void Operation_Returns_Delete()
     {
         Assert.Equal("delete", _handler.Operation);
+    }
+
+    #endregion
+
+    #region Field Preservation (Issue #7)
+
+    [Fact]
+    public void Execute_DeleteTextResolvingToFieldCode_PreservesField()
+    {
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        builder.Write("Hello ");
+        builder.InsertField("MERGEFIELD Name");
+        builder.Write(" World");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "searchText", "MERGEFIELD" }
+        });
+
+        _handler.Execute(context, parameters);
+
+        Assert.Equal(1, doc.Range.Fields.Count);
+        Assert.Equal("MERGEFIELD Name", doc.Range.Fields[0].GetFieldCode().Trim());
     }
 
     #endregion

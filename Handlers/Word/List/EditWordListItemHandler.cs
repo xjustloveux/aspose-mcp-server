@@ -1,9 +1,9 @@
 using Aspose.Words;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 using static Aspose.Words.ConvertUtil;
-using WordParagraph = Aspose.Words.Paragraph;
 using WordRun = Aspose.Words.Run;
 
 namespace AsposeMcpServer.Handlers.Word.List;
@@ -34,14 +34,8 @@ public class EditWordListItemHandler : OperationHandlerBase<Document>
             throw new ArgumentException("text parameter is required for edit_item operation");
 
         var doc = context.Document;
-        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
 
-        if (p.ParagraphIndex < 0 || p.ParagraphIndex >= paragraphs.Count)
-            throw new ArgumentException(
-                $"Paragraph index {p.ParagraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
-
-        if (paragraphs[p.ParagraphIndex] is not WordParagraph para)
-            throw new InvalidOperationException($"Unable to get paragraph at index {p.ParagraphIndex}");
+        var para = ParagraphResolver.Resolve(doc, ParagraphAddress.From(parameters, p.ParagraphIndex)).Paragraph;
 
         para.Runs.Clear();
         var run = new WordRun(doc, p.Text);

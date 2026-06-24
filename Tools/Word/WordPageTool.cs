@@ -72,6 +72,13 @@ public class WordPageTool
     /// <param name="pageIndex">Page index to delete (0-based).</param>
     /// <param name="insertAtPageIndex">Page index to insert blank page at (0-based).</param>
     /// <param name="paragraphIndex">Paragraph index to insert page break after (0-based).</param>
+    /// <param name="storyType">
+    ///     Story the paragraph index is relative to (Body, Header, Footer, TextBox, Comment, Footnote,
+    ///     Endnote).
+    /// </param>
+    /// <param name="headerFooterType">Header/Footer discriminator (Primary, First, Even) for Header/Footer stories.</param>
+    /// <param name="containerIndex">Instance selector for multi-instance stories (TextBox/Comment/Footnote/Endnote).</param>
+    /// <param name="handle">Stable paragraph handle from a prior 'get'/'search' result (session mode only).</param>
     /// <returns>A message indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(
@@ -129,13 +136,21 @@ Usage examples:
         [Description("Page index to insert blank page at (0-based)")]
         int? insertAtPageIndex = null,
         [Description("Paragraph index to insert page break after (0-based)")]
-        int? paragraphIndex = null)
+        int? paragraphIndex = null,
+        [Description(WordAddressing.StoryTypeDesc)]
+        string? storyType = null,
+        [Description(WordAddressing.HeaderFooterTypeDesc)]
+        string? headerFooterType = null,
+        [Description(WordAddressing.ContainerIndexDesc)]
+        int? containerIndex = null,
+        [Description(WordAddressing.HandleDesc)]
+        string? handle = null)
     {
         using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         var parameters = BuildParameters(operation, top, bottom, left, right, orientation, width, height, paperSize,
             pageNumberFormat, startingPageNumber, sectionIndex, sectionIndices, pageIndex, insertAtPageIndex,
-            paragraphIndex);
+            paragraphIndex, storyType, headerFooterType, containerIndex, handle);
 
         var handler = _handlerRegistry.GetHandler(operation);
 
@@ -197,9 +212,14 @@ Usage examples:
         JsonArray? sectionIndices,
         int? pageIndex,
         int? insertAtPageIndex,
-        int? paragraphIndex)
+        int? paragraphIndex,
+        string? storyType,
+        string? headerFooterType,
+        int? containerIndex,
+        string? handle)
     {
         var parameters = new OperationParameters();
+        WordAddressing.Apply(parameters, storyType, headerFooterType, containerIndex, handle);
 
         return operation.ToLower() switch
         {

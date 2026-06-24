@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 
@@ -29,17 +30,14 @@ public class RestartWordListNumberingHandler : OperationHandlerBase<Document>
         var p = ExtractRestartNumberingParameters(parameters);
 
         var doc = context.Document;
-        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
 
-        if (p.ParagraphIndex < 0 || p.ParagraphIndex >= paragraphs.Count)
-            throw new ArgumentException(
-                $"Paragraph index {p.ParagraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
-
-        var para = paragraphs[p.ParagraphIndex];
+        var paraRef = ParagraphResolver.Resolve(doc, ParagraphAddress.From(parameters, p.ParagraphIndex));
+        var para = paraRef.Paragraph;
+        var startIndex = paraRef.DocumentOrderIndex;
 
         if (!para.ListFormat.IsListItem)
             throw new ArgumentException(
-                $"Paragraph at index {p.ParagraphIndex} is not a list item. Use get_format operation to find list item paragraphs.");
+                $"Paragraph at index {startIndex} is not a list item. Use get_format operation to find list item paragraphs.");
 
         var originalList = para.ListFormat.List;
         if (originalList == null)
@@ -50,8 +48,9 @@ public class RestartWordListNumberingHandler : OperationHandlerBase<Document>
 
         newList.ListLevels[level].StartAt = p.StartAt;
 
+        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
         var applyCount = 0;
-        for (var i = p.ParagraphIndex; i < paragraphs.Count; i++)
+        for (var i = startIndex; i < paragraphs.Count; i++)
         {
             var currentPara = paragraphs[i];
             if (currentPara.ListFormat.IsListItem && currentPara.ListFormat.List?.ListId == originalList.ListId)
@@ -59,7 +58,7 @@ public class RestartWordListNumberingHandler : OperationHandlerBase<Document>
                 currentPara.ListFormat.List = newList;
                 applyCount++;
             }
-            else if (i > p.ParagraphIndex && !currentPara.ListFormat.IsListItem)
+            else if (i > startIndex && !currentPara.ListFormat.IsListItem)
             {
                 break;
             }
@@ -68,7 +67,7 @@ public class RestartWordListNumberingHandler : OperationHandlerBase<Document>
         MarkModified(context);
 
         var result = "List numbering restarted successfully\n";
-        result += $"Paragraph index: {p.ParagraphIndex}\n";
+        result += $"Paragraph index: {startIndex}\n";
         result += $"Start at: {p.StartAt}\n";
         result += $"Paragraphs affected: {applyCount}\n";
         result += $"New list ID: {newList.ListId}";

@@ -1,5 +1,6 @@
 using Aspose.Words;
 using Aspose.Words.Notes;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Tests.Infrastructure;
 
@@ -249,7 +250,8 @@ public class WordNoteHelperTests : WordTestBase
         builder.Writeln("Second paragraph");
         var section = doc.Sections[0];
 
-        var result = WordNoteHelper.InsertNoteAtParagraph(builder, section, 0, FootnoteType.Footnote, "Note", null);
+        var result = WordNoteHelper.InsertNoteAtParagraph(builder, section, 0, FootnoteType.Footnote, "Note", null,
+            new OperationParameters());
 
         Assert.NotNull(result);
     }
@@ -263,7 +265,8 @@ public class WordNoteHelperTests : WordTestBase
         builder.Writeln("Second paragraph");
         var section = doc.Sections[0];
 
-        var result = WordNoteHelper.InsertNoteAtParagraph(builder, section, -1, FootnoteType.Footnote, "Note", null);
+        var result = WordNoteHelper.InsertNoteAtParagraph(builder, section, -1, FootnoteType.Footnote, "Note", null,
+            new OperationParameters());
 
         Assert.NotNull(result);
     }
@@ -277,9 +280,10 @@ public class WordNoteHelperTests : WordTestBase
         var section = doc.Sections[0];
 
         var ex = Assert.Throws<ArgumentException>(() =>
-            WordNoteHelper.InsertNoteAtParagraph(builder, section, 100, FootnoteType.Footnote, "Note", null));
+            WordNoteHelper.InsertNoteAtParagraph(builder, section, 100, FootnoteType.Footnote, "Note", null,
+                new OperationParameters()));
 
-        Assert.Contains("paragraphIndex must be between", ex.Message);
+        Assert.Contains("is out of range", ex.Message);
     }
 
     #endregion

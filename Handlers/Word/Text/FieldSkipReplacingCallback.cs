@@ -1,5 +1,5 @@
-using Aspose.Words;
 using Aspose.Words.Replacing;
+using AsposeMcpServer.Helpers.Word;
 
 namespace AsposeMcpServer.Handlers.Word.Text;
 
@@ -12,13 +12,11 @@ internal class FieldSkipReplacingCallback : IReplacingCallback
     ///     Determines whether to replace or skip text replacement based on field context.
     /// </summary>
     /// <param name="args">Replacing arguments containing match information.</param>
-    /// <returns>ReplaceAction.Skip if inside a field, ReplaceAction.Replace otherwise.</returns>
+    /// <returns>ReplaceAction.Skip if the match begins inside a field, ReplaceAction.Replace otherwise.</returns>
     public ReplaceAction Replacing(ReplacingArgs args)
     {
-        if (args.MatchNode.GetAncestor(NodeType.FieldStart) != null ||
-            args.MatchNode.GetAncestor(NodeType.FieldSeparator) != null ||
-            args.MatchNode.GetAncestor(NodeType.FieldEnd) != null)
-            return ReplaceAction.Skip;
-        return ReplaceAction.Replace;
+        return FieldBoundaryHelper.GetEnclosingField(args.MatchNode) != null
+            ? ReplaceAction.Skip
+            : ReplaceAction.Replace;
     }
 }

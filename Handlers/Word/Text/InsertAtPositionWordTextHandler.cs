@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 
@@ -28,7 +29,7 @@ public class InsertAtPositionWordTextHandler : OperationHandlerBase<Document>
     /// <param name="context">The document context.</param>
     /// <param name="parameters">
     ///     Required: insertParagraphIndex, charIndex, text.
-    ///     Optional: sectionIndex, insertBefore.
+    ///     Optional: insertBefore.
     /// </param>
     /// <returns>Success message.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or indices are out of range.</exception>
@@ -38,14 +39,9 @@ public class InsertAtPositionWordTextHandler : OperationHandlerBase<Document>
 
         var doc = context.Document;
 
-        ValidateSectionIndex(doc, p.SectionIndex);
-        var section = doc.Sections[p.SectionIndex];
-        var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+        var para = ParagraphResolver.Resolve(doc, ParagraphAddress.From(parameters, p.ParagraphIndex)).Paragraph;
 
-        ValidateParagraphIndex(paragraphs, p.ParagraphIndex);
-        var para = paragraphs[p.ParagraphIndex];
-
-        InsertText(doc, para, p.ParagraphIndex, p.CharIndex, p.Text, p.InsertBefore);
+        InsertText(doc, para, p.CharIndex, p.Text, p.InsertBefore);
 
         MarkModified(context);
 
@@ -58,32 +54,7 @@ public class InsertAtPositionWordTextHandler : OperationHandlerBase<Document>
             parameters.GetRequired<int>("insertParagraphIndex"),
             parameters.GetRequired<int>("charIndex"),
             parameters.GetRequired<string>("text"),
-            parameters.GetOptional("sectionIndex", 0),
             parameters.GetOptional("insertBefore", false));
-    }
-
-    /// <summary>
-    ///     Validates the section index is within range.
-    /// </summary>
-    /// <param name="doc">The document.</param>
-    /// <param name="sectionIndex">The section index to validate.</param>
-    /// <exception cref="ArgumentException">Thrown when section index is out of range.</exception>
-    private static void ValidateSectionIndex(Document doc, int sectionIndex)
-    {
-        if (sectionIndex < 0 || sectionIndex >= doc.Sections.Count)
-            throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
-    }
-
-    /// <summary>
-    ///     Validates the paragraph index is within range.
-    /// </summary>
-    /// <param name="paragraphs">The list of paragraphs.</param>
-    /// <param name="paragraphIndex">The paragraph index to validate.</param>
-    /// <exception cref="ArgumentException">Thrown when paragraph index is out of range.</exception>
-    private static void ValidateParagraphIndex(List<WordParagraph> paragraphs, int paragraphIndex)
-    {
-        if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
-            throw new ArgumentException($"paragraphIndex must be between 0 and {paragraphs.Count - 1}");
     }
 
     /// <summary>
@@ -91,11 +62,10 @@ public class InsertAtPositionWordTextHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="doc">The document.</param>
     /// <param name="para">The target paragraph.</param>
-    /// <param name="paragraphIndex">The paragraph index.</param>
     /// <param name="charIndex">The character index.</param>
     /// <param name="text">The text to insert.</param>
     /// <param name="insertBefore">Whether to insert before the position.</param>
-    private static void InsertText(Document doc, WordParagraph? para, int paragraphIndex, int charIndex,
+    private static void InsertText(Document doc, WordParagraph? para, int charIndex,
         string text, bool insertBefore)
     {
         if (para == null)
@@ -105,9 +75,41 @@ public class InsertAtPositionWordTextHandler : OperationHandlerBase<Document>
         var runPosition = FindTargetRunPosition(runs, charIndex);
 
         if (runPosition.RunIndex == -1)
-            InsertUsingBuilder(doc, para, paragraphIndex, text, insertBefore);
+        {
+            InsertUsingBuilder(doc, para, text);
+            return;
+        }
+
+        var targetRun = runs[runPosition.RunIndex];
+        var enclosingField = FieldBoundaryHelper.GetEnclosingField(targetRun);
+        if (enclosingField != null)
+        {
+            InsertAtFieldBoundary(doc, enclosingField, text, insertBefore);
+            return;
+        }
+
+        InsertIntoRun(targetRun, runPosition.CharacterIndex, text);
+    }
+
+    /// <summary>
+    ///     Inserts text at a field boundary instead of inside the field's node range, preventing
+    ///     field-code/result corruption. When insertBefore is true the text is placed before the
+    ///     field's start; otherwise it is placed after the field's end.
+    /// </summary>
+    /// <param name="doc">The document.</param>
+    /// <param name="field">The field whose boundary anchors the insertion.</param>
+    /// <param name="text">The text to insert.</param>
+    /// <param name="insertBefore">Whether to insert before the field rather than after it.</param>
+    private static void InsertAtFieldBoundary(Document doc, Aspose.Words.Fields.Field field, string text,
+        bool insertBefore)
+    {
+        var builder = new DocumentBuilder(doc);
+        if (insertBefore)
+            builder.MoveTo(field.Start);
         else
-            InsertIntoRun(runs[runPosition.RunIndex], runPosition.CharacterIndex, text);
+            FieldBoundaryHelper.MoveToAfterField(builder, field);
+
+        builder.Write(text);
     }
 
     /// <summary>
@@ -132,25 +134,19 @@ public class InsertAtPositionWordTextHandler : OperationHandlerBase<Document>
     }
 
     /// <summary>
-    ///     Inserts text using DocumentBuilder when no suitable run is found.
+    ///     Inserts text at the end of the paragraph using DocumentBuilder when no run matches the
+    ///     requested character position (e.g. an empty paragraph).
     /// </summary>
     /// <param name="doc">The document.</param>
     /// <param name="para">The target paragraph.</param>
-    /// <param name="paragraphIndex">The paragraph index.</param>
     /// <param name="text">The text to insert.</param>
-    /// <param name="insertBefore">Whether to insert before the position.</param>
-    private static void InsertUsingBuilder(Document doc, WordParagraph? para, int paragraphIndex,
-        string text, bool insertBefore)
+    private static void InsertUsingBuilder(Document doc, WordParagraph? para, string text)
     {
         if (para == null)
             throw new ArgumentNullException(nameof(para), "Paragraph cannot be null");
 
         var builder = new DocumentBuilder(doc);
         builder.MoveTo(para);
-
-        if (!insertBefore)
-            builder.MoveToParagraph(paragraphIndex, para.GetText().Length);
-
         builder.Write(text);
     }
 
@@ -169,6 +165,5 @@ public class InsertAtPositionWordTextHandler : OperationHandlerBase<Document>
         int ParagraphIndex,
         int CharIndex,
         string Text,
-        int SectionIndex,
         bool InsertBefore);
 }

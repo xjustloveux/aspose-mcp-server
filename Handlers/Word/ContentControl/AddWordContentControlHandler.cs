@@ -2,6 +2,7 @@ using Aspose.Words;
 using Aspose.Words.Markup;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.ContentControl;
@@ -34,7 +35,7 @@ public class AddWordContentControlHandler : OperationHandlerBase<Document>
         var builder = new DocumentBuilder(doc);
         var sdtType = ResolveSdtType(p.Type);
 
-        MoveToInsertPosition(builder, doc, p.ParagraphIndex);
+        MoveToInsertPosition(builder, doc, parameters, p.ParagraphIndex);
 
         var sdt = new StructuredDocumentTag(doc, sdtType, MarkupLevel.Inline);
 
@@ -111,9 +112,11 @@ public class AddWordContentControlHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="builder">The document builder.</param>
     /// <param name="doc">The Word document.</param>
+    /// <param name="parameters">The operation parameters supplying optional story coordinates.</param>
     /// <param name="paragraphIndex">The paragraph index to move to, or null for end of document.</param>
     /// <exception cref="ArgumentException">Thrown when the paragraph index is out of range.</exception>
-    private static void MoveToInsertPosition(DocumentBuilder builder, Document doc, int? paragraphIndex)
+    private static void MoveToInsertPosition(DocumentBuilder builder, Document doc, OperationParameters parameters,
+        int? paragraphIndex)
     {
         if (!paragraphIndex.HasValue)
         {
@@ -121,22 +124,8 @@ public class AddWordContentControlHandler : OperationHandlerBase<Document>
             return;
         }
 
-        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
-
-        if (paragraphs.Count == 0)
-        {
-            builder.MoveToDocumentEnd();
-            return;
-        }
-
-        if (paragraphIndex.Value < 0 || paragraphIndex.Value >= paragraphs.Count)
-            throw new ArgumentException(
-                $"Paragraph index {paragraphIndex.Value} is out of range (document has {paragraphs.Count} paragraphs)");
-
-        if (paragraphs[paragraphIndex.Value] is Aspose.Words.Paragraph para)
-            builder.MoveTo(para);
-        else
-            throw new InvalidOperationException($"Unable to find paragraph at index {paragraphIndex.Value}");
+        var para = ParagraphResolver.Resolve(doc, ParagraphAddress.From(parameters, paragraphIndex.Value)).Paragraph;
+        builder.MoveTo(para);
     }
 
     /// <summary>

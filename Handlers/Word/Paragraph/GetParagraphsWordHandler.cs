@@ -2,6 +2,7 @@ using Aspose.Words;
 using Aspose.Words.Drawing;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Word.Paragraph;
 using WordComment = Aspose.Words.Comment;
 using WordShape = Aspose.Words.Drawing.Shape;
@@ -42,7 +43,7 @@ public class GetParagraphsWordHandler : OperationHandlerBase<Document>
         paragraphs = ApplyFilters(paragraphs, getParams.IncludeEmpty, getParams.StyleFilter,
             getParams.IncludeTextboxParagraphs);
 
-        var paragraphList = BuildParagraphList(paragraphs);
+        var paragraphList = BuildParagraphList(doc, paragraphs, context.SessionId != null);
 
         var result = new GetParagraphsWordResult
         {
@@ -119,19 +120,30 @@ public class GetParagraphsWordHandler : OperationHandlerBase<Document>
         return false;
     }
 
-    private static List<ParagraphInfo> BuildParagraphList(List<Aspose.Words.Paragraph> paragraphs)
+    private static List<ParagraphInfo> BuildParagraphList(Document doc, List<Aspose.Words.Paragraph> paragraphs,
+        bool emitHandles)
     {
         List<ParagraphInfo> paragraphList = [];
+        var addressingContext = new ParagraphResolver.AddressingContext(doc);
 
-        for (var i = 0; i < paragraphs.Count; i++)
+        foreach (var para in paragraphs)
         {
-            var para = paragraphs[i];
             var text = para.GetText().Trim();
             var paragraphLocation = DetermineLocation(para);
+            var pref = ParagraphResolver.AddressOf(doc, para, addressingContext);
+            var address = pref.Address;
 
             var paraInfo = new ParagraphInfo
             {
-                Index = i,
+                ParagraphIndex = address.Index,
+                StoryType = address.StoryType,
+                SectionIndex = address.SectionIndex,
+                HeaderFooterType = address.StoryType is StoryTypes.Header or StoryTypes.Footer
+                    ? address.HeaderFooterType
+                    : null,
+                ContainerIndex = address.ContainerIndex,
+                DocumentOrderIndex = pref.DocumentOrderIndex,
+                Handle = emitHandles ? ParagraphResolver.MintHandle(doc, para) : null,
                 Location = paragraphLocation.Location,
                 Style = para.ParagraphFormat.Style?.Name,
                 Text = text.Length > 100 ? text[..100] + "..." : text,

@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 
@@ -39,8 +40,7 @@ public class AddWordCommentHandler : OperationHandlerBase<Document>
         var p = ExtractAddParameters(parameters);
 
         var doc = context.Document;
-        var paragraphs = GetAllParagraphs(doc);
-        var targetPara = GetTargetParagraph(doc, paragraphs, p.ParagraphIndex);
+        var targetPara = GetTargetParagraph(doc, parameters, p.ParagraphIndex);
         var runRange = GetCommentRunRange(doc, targetPara, p.StartRunIndex, p.EndRunIndex);
 
         var para = GetContainingParagraph(runRange.StartRun);
@@ -55,48 +55,19 @@ public class AddWordCommentHandler : OperationHandlerBase<Document>
     }
 
     /// <summary>
-    ///     Gets all paragraphs from all sections of the document.
-    /// </summary>
-    /// <param name="doc">The Word document.</param>
-    /// <returns>A list of all paragraphs in the document.</returns>
-    private static List<WordParagraph> GetAllParagraphs(Document doc)
-    {
-        List<WordParagraph> paragraphs = [];
-        foreach (var section in doc.Sections.Cast<Section>())
-        {
-            var bodyParagraphs = section.Body.GetChildNodes(NodeType.Paragraph, false).Cast<WordParagraph>().ToList();
-            paragraphs.AddRange(bodyParagraphs);
-        }
-
-        return paragraphs;
-    }
-
-    /// <summary>
     ///     Gets the target paragraph for the comment based on the paragraph index.
     /// </summary>
     /// <param name="doc">The Word document.</param>
-    /// <param name="paragraphs">The list of all paragraphs.</param>
+    /// <param name="parameters">The operation parameters supplying the paragraph address.</param>
     /// <param name="paragraphIndex">The paragraph index, or null to create a new paragraph.</param>
     /// <returns>The target paragraph.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when document has no paragraphs.</exception>
-    /// <exception cref="ArgumentException">Thrown when paragraph index is out of range.</exception>
-    private static WordParagraph GetTargetParagraph(Document doc, List<WordParagraph> paragraphs, int? paragraphIndex)
+    /// <exception cref="ArgumentException">Thrown when the paragraph index is out of range.</exception>
+    private static WordParagraph GetTargetParagraph(Document doc, OperationParameters parameters, int? paragraphIndex)
     {
         if (!paragraphIndex.HasValue)
             return CreateNewParagraph(doc);
 
-        if (paragraphIndex.Value == -1)
-        {
-            if (paragraphs.Count == 0)
-                throw new InvalidOperationException("Document has no paragraphs to add comment to");
-            return paragraphs[^1];
-        }
-
-        if (paragraphIndex.Value < 0 || paragraphIndex.Value >= paragraphs.Count)
-            throw new ArgumentException(
-                $"Paragraph index {paragraphIndex.Value} is out of range (document has {paragraphs.Count} paragraphs)");
-
-        return paragraphs[paragraphIndex.Value];
+        return ParagraphResolver.Resolve(doc, ParagraphAddress.From(parameters, paragraphIndex.Value)).Paragraph;
     }
 
     /// <summary>

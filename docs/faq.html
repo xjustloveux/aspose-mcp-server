@@ -338,11 +338,12 @@
     </div>
 
     <div class="faq-item">
-        <div class="faq-question">Q: paragraphIndex 的有效範圍是什麼？</div>
+        <div class="faq-question">Q: Word 的 paragraphIndex 有效範圍與定址方式？</div>
         <div class="faq-answer">
-            <p>有效範圍：<code>0</code> 到 <code>段落總數-1</code>，或使用 <code>-1</code> 表示最後一個段落。</p>
+            <p><code>paragraphIndex</code> 是<strong>故事相對（story-relative）</strong>索引：該故事內的 <code>0</code>-based 位置（預設 Body），範圍 <code>0</code> 到「該故事段落數-1」，或 <code>-1</code> 表示最後一段。它<strong>不是</strong>全文件的全域索引。</p>
             <ul>
-                <li>使用 <code>get</code> 操作可以獲取當前文檔的段落總數</li>
+                <li>定址非 Body 故事時，加上 <code>storyType</code>（Body/Header/Footer/TextBox/Comment/Footnote/Endnote），必要時搭配 <code>sectionIndex</code>/<code>headerFooterType</code>/<code>containerIndex</code></li>
+                <li>使用 <code>get</code>（及 <code>word_text</code> 的 <code>search</code>）會回報每段的 <code>storyType</code> + <code>paragraphIndex</code>，原樣帶回即可定址同一段；session 模式還會回傳穩定的 <code>handle</code>，索引位移後仍能精準命中</li>
                 <li>某些操作（如 <code>word_hyperlink</code> 的 <code>add</code>）會在指定段落<strong>之後</strong>創建新段落，而不是插入到段落內部</li>
                 <li>刪除段落後，後續段落的索引會自動調整</li>
             </ul>

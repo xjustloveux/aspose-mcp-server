@@ -1,6 +1,7 @@
 using Aspose.Words;
 using Aspose.Words.Notes;
 using Aspose.Words.Replacing;
+using AsposeMcpServer.Core.Handlers;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Helpers.Word;
@@ -64,13 +65,15 @@ public static class WordNoteHelper
     /// <param name="noteType">The type of note to insert.</param>
     /// <param name="noteText">The text content of the note.</param>
     /// <param name="customMark">Optional custom reference mark.</param>
+    /// <param name="parameters">The operation parameters used to resolve the paragraph address.</param>
     /// <returns>The inserted footnote.</returns>
     /// <exception cref="ArgumentException">Thrown when paragraph index is out of range.</exception>
     /// <exception cref="InvalidOperationException">Thrown when trying to add an endnote in a header or footer.</exception>
     public static Footnote InsertNoteAtParagraph(DocumentBuilder builder, Section section,
-        int paragraphIndex, FootnoteType noteType, string noteText, string? customMark)
+        int paragraphIndex, FootnoteType noteType, string noteText, string? customMark,
+        OperationParameters parameters)
     {
-        MoveToTargetParagraph(builder, section, paragraphIndex, noteType);
+        MoveToTargetParagraph(builder, section, paragraphIndex, noteType, parameters);
         return CreateFootnote(builder, noteType, noteText, customMark);
     }
 
@@ -79,10 +82,11 @@ public static class WordNoteHelper
     /// </summary>
     /// <param name="builder">The document builder.</param>
     /// <param name="section">The section containing the paragraph.</param>
-    /// <param name="paragraphIndex">The paragraph index (-1 for last).</param>
+    /// <param name="paragraphIndex">The paragraph index (-1 for document end).</param>
     /// <param name="noteType">The footnote type.</param>
+    /// <param name="parameters">The operation parameters used to resolve the paragraph address.</param>
     private static void MoveToTargetParagraph(DocumentBuilder builder, Section section,
-        int paragraphIndex, FootnoteType noteType)
+        int paragraphIndex, FootnoteType noteType, OperationParameters parameters)
     {
         if (paragraphIndex == -1)
         {
@@ -90,10 +94,8 @@ public static class WordNoteHelper
             return;
         }
 
-        var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
-        ValidateParagraphIndex(paragraphIndex, paragraphs.Count);
-
-        var para = paragraphs[paragraphIndex];
+        var para = ParagraphResolver.Resolve(builder.Document, ParagraphAddress.From(parameters, paragraphIndex))
+            .Paragraph;
         ValidateEndnoteLocation(para, paragraphIndex, noteType);
         builder.MoveTo(para);
     }
@@ -110,19 +112,6 @@ public static class WordNoteHelper
             builder.MoveTo(bodyParagraphs[^1]);
         else
             builder.MoveToDocumentEnd();
-    }
-
-    /// <summary>
-    ///     Validates that the paragraph index is within range.
-    /// </summary>
-    /// <param name="paragraphIndex">The paragraph index to validate.</param>
-    /// <param name="paragraphCount">The total number of paragraphs.</param>
-    /// <exception cref="ArgumentException">Thrown when paragraph index is out of range.</exception>
-    private static void ValidateParagraphIndex(int paragraphIndex, int paragraphCount)
-    {
-        if (paragraphIndex < 0 || paragraphIndex >= paragraphCount)
-            throw new ArgumentException(
-                $"paragraphIndex must be between 0 and {paragraphCount - 1}, or use -1 for document end");
     }
 
     /// <summary>

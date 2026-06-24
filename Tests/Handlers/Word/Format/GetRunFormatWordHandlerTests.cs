@@ -1,3 +1,4 @@
+using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Format;
 using AsposeMcpServer.Results.Word.Format;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -96,6 +97,80 @@ public class GetRunFormatWordHandlerTests : WordHandlerTestBase
 
         Assert.NotNull(result);
         Assert.Equal("inherited", result.FormatType);
+    }
+
+    #endregion
+
+    #region Story-Relative Address
+
+    [Fact]
+    public void Execute_AllRuns_WithStoryTypeHeader_ReportsHeaderAddress()
+    {
+        var doc = CreateEmptyDocument();
+        var builder = new DocumentBuilder(doc);
+        builder.Write("body");
+        builder.MoveToHeaderFooter(HeaderFooterType.HeaderPrimary);
+        builder.Write("header-text");
+
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "paragraphIndex", 0 },
+            { "storyType", "Header" }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<GetRunFormatAllResult>(res);
+
+        Assert.Equal("Header", result.StoryType);
+        Assert.Equal("Primary", result.HeaderFooterType);
+        Assert.Equal(0, result.ParagraphIndex);
+    }
+
+    [Fact]
+    public void Execute_SingleRun_WithStoryTypeHeader_ReportsHeaderAddress()
+    {
+        var doc = CreateEmptyDocument();
+        var builder = new DocumentBuilder(doc);
+        builder.Write("body");
+        builder.MoveToHeaderFooter(HeaderFooterType.HeaderPrimary);
+        builder.Write("header-text");
+
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "paragraphIndex", 0 },
+            { "storyType", "Header" },
+            { "runIndex", 0 }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<GetRunFormatWordResult>(res);
+
+        Assert.Equal("Header", result.StoryType);
+        Assert.Equal("Primary", result.HeaderFooterType);
+        Assert.Equal(0, result.ParagraphIndex);
+    }
+
+    [Fact]
+    public void Execute_AllRuns_WithMinusOneIndex_ReportsResolvedIndexNotRawInput()
+    {
+        var doc = CreateDocumentWithParagraphs("first", "second");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "paragraphIndex", -1 }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<GetRunFormatAllResult>(res);
+
+        Assert.Equal(1, result.ParagraphIndex);
+        Assert.Equal("Body", result.StoryType);
+        Assert.Null(result.HeaderFooterType);
     }
 
     #endregion

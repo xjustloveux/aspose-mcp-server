@@ -1,8 +1,8 @@
 using Aspose.Words;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
-using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.List;
 
@@ -28,14 +28,9 @@ public class DeleteWordListItemHandler : OperationHandlerBase<Document>
         var p = ExtractDeleteListItemParameters(parameters);
 
         var doc = context.Document;
-        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
 
-        if (p.ParagraphIndex < 0 || p.ParagraphIndex >= paragraphs.Count)
-            throw new ArgumentException(
-                $"Paragraph index {p.ParagraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
-
-        if (paragraphs[p.ParagraphIndex] is not WordParagraph paraToDelete)
-            throw new InvalidOperationException($"Unable to get paragraph at index {p.ParagraphIndex}");
+        var paraToDelete = ParagraphResolver.Resolve(doc, ParagraphAddress.From(parameters, p.ParagraphIndex))
+            .Paragraph;
 
         var itemText = paraToDelete.GetText().Trim();
         var itemPreview = itemText.Length > 50 ? string.Concat(itemText.AsSpan(0, 50), "...") : itemText;

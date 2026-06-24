@@ -154,4 +154,74 @@ public class AddFieldWordHandlerTests : WordHandlerTestBase
     }
 
     #endregion
+
+    #region Sibling Field Insertion (Issue #2)
+
+    [Fact]
+    public void Execute_AppendIntoParagraphWithExistingField_InsertsSiblingNotNested()
+    {
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        builder.InsertField("MERGEFIELD Name");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "fieldType", "PAGE" },
+            { "paragraphIndex", 0 }
+        });
+
+        _handler.Execute(context, parameters);
+
+        Assert.Equal(2, doc.Range.Fields.Count);
+        Assert.Equal(1, MaxFieldNestingDepth(doc));
+    }
+
+    [Fact]
+    public void Execute_InsertAtStartIntoParagraphWithExistingField_InsertsSiblingNotNested()
+    {
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        builder.InsertField("MERGEFIELD Name");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "fieldType", "PAGE" },
+            { "paragraphIndex", 0 },
+            { "insertAtStart", true }
+        });
+
+        _handler.Execute(context, parameters);
+
+        Assert.Equal(2, doc.Range.Fields.Count);
+        Assert.Equal(1, MaxFieldNestingDepth(doc));
+    }
+
+    /// <summary>
+    ///     Computes the maximum field nesting depth across all paragraphs by walking each
+    ///     paragraph's child nodes in document order (+1 on FieldStart, -1 on FieldEnd).
+    ///     Sibling fields stay at depth 1; a nested field reaches depth 2.
+    /// </summary>
+    private static int MaxFieldNestingDepth(Document doc)
+    {
+        var maxDepth = 0;
+        foreach (var para in doc.GetChildNodes(NodeType.Paragraph, true).OfType<Aspose.Words.Paragraph>())
+        {
+            var depth = 0;
+            for (var node = para.FirstChild; node != null; node = node.NextSibling)
+                switch (node.NodeType)
+                {
+                    case NodeType.FieldStart:
+                        depth++;
+                        if (depth > maxDepth) maxDepth = depth;
+                        break;
+                    case NodeType.FieldEnd:
+                        depth--;
+                        break;
+                }
+        }
+
+        return maxDepth;
+    }
+
+    #endregion
 }

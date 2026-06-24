@@ -56,7 +56,7 @@ public abstract class AddWordNoteHandlerBase : OperationHandlerBase<Document>
         {
             var section = doc.Sections[p.SectionIndex];
             insertedNote = WordNoteHelper.InsertNoteAtParagraph(builder, section, p.ParagraphIndex.Value,
-                NoteType, p.Text, p.CustomMark);
+                NoteType, p.Text, p.CustomMark, parameters);
         }
         else
         {

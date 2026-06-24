@@ -6,16 +6,8 @@ using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
-using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.Table;
-
-/// <summary>
-///     Represents a section and its actual index.
-/// </summary>
-/// <param name="Section">The document section.</param>
-/// <param name="ActualIndex">The actual section index.</param>
-internal record SectionResult(Section Section, int ActualIndex);
 
 /// <summary>
 ///     Represents the dimensions of a table.
@@ -50,10 +42,9 @@ public class CreateWordTableHandler : OperationHandlerBase<Document>
         var doc = context.Document;
         var builder = new DocumentBuilder(doc);
 
-        var sectionResult = ValidateAndGetSection(doc, tableParams.SectionIndex);
         var tableDimensions = CalculateTableDimensions(tableParams.TableData, tableParams.Rows, tableParams.Columns);
 
-        MoveToInsertPosition(builder, sectionResult.Section, tableParams.ParagraphIndex, sectionResult.ActualIndex);
+        MoveToInsertPosition(builder, doc, parameters, tableParams.ParagraphIndex);
         var table = BuildTable(builder, tableDimensions.NumRows, tableDimensions.NumColumns, tableParams.TableData,
             tableParams);
         FinalizeTable(table, tableParams);
@@ -89,24 +80,8 @@ public class CreateWordTableHandler : OperationHandlerBase<Document>
             parameters.GetOptional<string?>("mergeCells"),
             parameters.GetOptional<string?>("fontName"),
             parameters.GetOptional<double?>("fontSize"),
-            parameters.GetOptional("verticalAlignment", "center"),
-            parameters.GetOptional<int?>("sectionIndex")
+            parameters.GetOptional("verticalAlignment", "center")
         );
-    }
-
-    /// <summary>
-    ///     Validates and gets the target section.
-    /// </summary>
-    /// <param name="doc">The Word document.</param>
-    /// <param name="sectionIndex">The section index.</param>
-    /// <returns>A SectionResult containing the section and actual index.</returns>
-    /// <exception cref="ArgumentException">Thrown when section index is out of range.</exception>
-    private static SectionResult ValidateAndGetSection(Document doc, int? sectionIndex)
-    {
-        var actualSectionIndex = sectionIndex ?? 0;
-        if (actualSectionIndex < 0 || actualSectionIndex >= doc.Sections.Count)
-            throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
-        return new SectionResult(doc.Sections[actualSectionIndex], actualSectionIndex);
     }
 
     /// <summary>
@@ -125,20 +100,18 @@ public class CreateWordTableHandler : OperationHandlerBase<Document>
     }
 
     /// <summary>
-    ///     Moves the builder to the insert position.
+    ///     Moves the builder to the insert position resolved through the shared paragraph resolver,
+    ///     so the paragraph-index space (including -1 for the last paragraph) is consistent across tools.
     /// </summary>
     /// <param name="builder">The document builder.</param>
-    /// <param name="section">The document section.</param>
-    /// <param name="paragraphIndex">The paragraph index.</param>
-    /// <param name="sectionIndex">The section index.</param>
-    private static void MoveToInsertPosition(DocumentBuilder builder, Section section, int paragraphIndex,
-        int sectionIndex)
+    /// <param name="doc">The document.</param>
+    /// <param name="parameters">The operation parameters supplying the address coordinates.</param>
+    /// <param name="paragraphIndex">The story-relative paragraph index (-1 for the last paragraph).</param>
+    private static void MoveToInsertPosition(DocumentBuilder builder, Document doc, OperationParameters parameters,
+        int paragraphIndex)
     {
-        var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
-        if (paragraphIndex >= 0 && paragraphIndex < paragraphs.Count)
-            builder.MoveTo(paragraphs[paragraphIndex]);
-        else
-            builder.MoveToSection(sectionIndex);
+        var para = ParagraphResolver.Resolve(doc, ParagraphAddress.From(parameters, paragraphIndex)).Paragraph;
+        builder.MoveTo(para);
     }
 
     /// <summary>
@@ -303,7 +276,6 @@ public class CreateWordTableHandler : OperationHandlerBase<Document>
     /// <param name="FontName">The font name.</param>
     /// <param name="FontSize">The font size.</param>
     /// <param name="VerticalAlignment">The vertical alignment.</param>
-    /// <param name="SectionIndex">The section index.</param>
     private sealed record TableCreationParameters(
         int ParagraphIndex,
         int? Rows,
@@ -320,8 +292,7 @@ public class CreateWordTableHandler : OperationHandlerBase<Document>
         string? MergeCells,
         string? FontName,
         double? FontSize,
-        string VerticalAlignment,
-        int? SectionIndex);
+        string VerticalAlignment);
 
     /// <summary>
     ///     Record to hold color context for table cells.

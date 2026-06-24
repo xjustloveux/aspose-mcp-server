@@ -55,6 +55,13 @@ public class WordSectionTool
     /// <param name="insertAtParagraphIndex">Paragraph index to insert section break after (0-based, for insert).</param>
     /// <param name="sectionIndex">Section index (0-based, for insert/delete/get).</param>
     /// <param name="sectionIndices">Array of section indices to delete (0-based, for delete).</param>
+    /// <param name="storyType">
+    ///     Story the paragraph index is relative to (Body, Header, Footer, TextBox, Comment, Footnote,
+    ///     Endnote).
+    /// </param>
+    /// <param name="headerFooterType">For Header/Footer stories: Primary, First, or Even.</param>
+    /// <param name="containerIndex">Instance selector for multi-instance stories (TextBox/Comment/Footnote/Endnote).</param>
+    /// <param name="handle">Stable paragraph handle from a prior 'get'/'search' result (session mode only).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(
@@ -92,10 +99,18 @@ Notes:
         [Description("Section index (0-based, for insert/delete/get)")]
         int? sectionIndex = null,
         [Description("Array of section indices to delete (0-based, overrides sectionIndex, for delete)")]
-        int[]? sectionIndices = null)
+        int[]? sectionIndices = null,
+        [Description(WordAddressing.StoryTypeDesc)]
+        string? storyType = null,
+        [Description(WordAddressing.HeaderFooterTypeDesc)]
+        string? headerFooterType = null,
+        [Description(WordAddressing.ContainerIndexDesc)]
+        int? containerIndex = null,
+        [Description(WordAddressing.HandleDesc)]
+        string? handle = null)
     {
         var parameters = BuildParameters(operation, sectionBreakType, insertAtParagraphIndex, sectionIndex,
-            sectionIndices);
+            sectionIndices, storyType, headerFooterType, containerIndex, handle);
 
         var handler = _handlerRegistry.GetHandler(operation);
 
@@ -131,28 +146,35 @@ Notes:
         string? sectionBreakType,
         int? insertAtParagraphIndex,
         int? sectionIndex,
-        int[]? sectionIndices)
+        int[]? sectionIndices,
+        string? storyType,
+        string? headerFooterType,
+        int? containerIndex,
+        string? handle)
     {
+        var parameters = new OperationParameters();
+        WordAddressing.Apply(parameters, storyType, headerFooterType, containerIndex, handle);
+
         return operation.ToLower() switch
         {
-            "insert" => BuildInsertParameters(sectionBreakType, insertAtParagraphIndex, sectionIndex),
-            "delete" => BuildDeleteParameters(sectionIndex, sectionIndices),
-            "get" => BuildGetParameters(sectionIndex),
-            _ => new OperationParameters()
+            "insert" => BuildInsertParameters(parameters, sectionBreakType, insertAtParagraphIndex, sectionIndex),
+            "delete" => BuildDeleteParameters(parameters, sectionIndex, sectionIndices),
+            "get" => BuildGetParameters(parameters, sectionIndex),
+            _ => parameters
         };
     }
 
     /// <summary>
     ///     Builds parameters for the insert section operation.
     /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
     /// <param name="sectionBreakType">The section break type (NextPage, Continuous, etc.).</param>
     /// <param name="insertAtParagraphIndex">The paragraph index to insert section break after.</param>
     /// <param name="sectionIndex">The section index.</param>
     /// <returns>OperationParameters configured for inserting a section.</returns>
-    private static OperationParameters BuildInsertParameters(string? sectionBreakType, int? insertAtParagraphIndex,
-        int? sectionIndex)
+    private static OperationParameters BuildInsertParameters(OperationParameters parameters, string? sectionBreakType,
+        int? insertAtParagraphIndex, int? sectionIndex)
     {
-        var parameters = new OperationParameters();
         if (sectionBreakType != null) parameters.Set("sectionBreakType", sectionBreakType);
         if (insertAtParagraphIndex.HasValue) parameters.Set("insertAtParagraphIndex", insertAtParagraphIndex.Value);
         if (sectionIndex.HasValue) parameters.Set("sectionIndex", sectionIndex.Value);
@@ -162,12 +184,13 @@ Notes:
     /// <summary>
     ///     Builds parameters for the delete section operation.
     /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
     /// <param name="sectionIndex">The section index to delete (0-based).</param>
     /// <param name="sectionIndices">Array of section indices to delete.</param>
     /// <returns>OperationParameters configured for deleting sections.</returns>
-    private static OperationParameters BuildDeleteParameters(int? sectionIndex, int[]? sectionIndices)
+    private static OperationParameters BuildDeleteParameters(OperationParameters parameters, int? sectionIndex,
+        int[]? sectionIndices)
     {
-        var parameters = new OperationParameters();
         if (sectionIndex.HasValue) parameters.Set("sectionIndex", sectionIndex.Value);
         if (sectionIndices != null) parameters.Set("sectionIndices", sectionIndices);
         return parameters;
@@ -176,11 +199,11 @@ Notes:
     /// <summary>
     ///     Builds parameters for the get section info operation.
     /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
     /// <param name="sectionIndex">The section index to get info for (0-based, optional).</param>
     /// <returns>OperationParameters configured for getting section info.</returns>
-    private static OperationParameters BuildGetParameters(int? sectionIndex)
+    private static OperationParameters BuildGetParameters(OperationParameters parameters, int? sectionIndex)
     {
-        var parameters = new OperationParameters();
         if (sectionIndex.HasValue) parameters.Set("sectionIndex", sectionIndex.Value);
         return parameters;
     }

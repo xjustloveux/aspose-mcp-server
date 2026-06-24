@@ -1,8 +1,8 @@
 using Aspose.Words;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
-using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.Page;
 
@@ -32,11 +32,10 @@ public class AddPageBreakWordHandler : OperationHandlerBase<Document>
 
         if (addParams.ParagraphIndex.HasValue)
         {
-            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
-            if (addParams.ParagraphIndex.Value < 0 || addParams.ParagraphIndex.Value >= paragraphs.Count)
-                throw new ArgumentException($"paragraphIndex must be between 0 and {paragraphs.Count - 1}");
+            var para = ParagraphResolver.Resolve(doc,
+                ParagraphAddress.From(parameters, addParams.ParagraphIndex.Value)).Paragraph;
 
-            builder.MoveTo(paragraphs[addParams.ParagraphIndex.Value]);
+            builder.MoveTo(para);
             builder.InsertBreak(BreakType.PageBreak);
         }
         else

@@ -219,8 +219,31 @@ public class FormatWordTextHandlerTests : WordHandlerTestBase
         Assert.Contains("paragraphIndex", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void Execute_WithStoryTypeHeader_FormatsHeaderParagraph()
+    {
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        builder.Write("BodyOnly");
+        builder.MoveToHeaderFooter(HeaderFooterType.HeaderPrimary);
+        builder.Write("HeaderOnly");
+
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "paragraphIndex", 0 },
+            { "storyType", "Header" },
+            { "bold", true }
+        });
+
+        _handler.Execute(context, parameters);
+
+        var headerRun = doc.FirstSection.HeadersFooters[HeaderFooterType.HeaderPrimary]
+            .GetChildNodes(NodeType.Run, true).Cast<Run>().First();
+        Assert.True(headerRun.Font.Bold);
+    }
+
     [Theory]
-    [InlineData(-1)]
     [InlineData(100)]
     public void Execute_WithInvalidParagraphIndex_ThrowsArgumentException(int paragraphIndex)
     {

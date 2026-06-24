@@ -273,18 +273,29 @@ public class EditWordListItemHandlerTests : WordHandlerTestBase
     }
 
     [Fact]
-    public void Execute_WithNegativeParagraphIndex_ThrowsArgumentException()
+    public void Execute_WithParagraphIndexMinusOne_EditsLastParagraph()
     {
-        var doc = CreateDocumentWithParagraphs("Item 1");
+        var doc = CreateDocumentWithParagraphs("Item 1", "Item 2", "Item 3");
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "paragraphIndex", -1 },
-            { "text", "Updated" }
+            { "text", "Updated Last" }
         });
 
-        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
-        Assert.Contains("out of range", ex.Message);
+        var res = _handler.Execute(context, parameters);
+
+        Assert.IsType<SuccessResult>(res);
+
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+            var runs = paragraphs[^1].Runs.Cast<Run>().ToList();
+            Assert.Single(runs);
+            Assert.Equal("Updated Last", runs[0].Text);
+        }
+
+        AssertModified(context);
     }
 
     #endregion

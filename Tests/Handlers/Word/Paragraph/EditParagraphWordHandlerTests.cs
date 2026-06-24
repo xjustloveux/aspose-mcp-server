@@ -1,6 +1,8 @@
 using System.Text.Json.Nodes;
 using Aspose.Words;
+using Aspose.Words.Drawing;
 using AsposeMcpServer.Handlers.Word.Paragraph;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 
@@ -97,6 +99,135 @@ public class EditParagraphWordHandlerTests : WordHandlerTestBase
         Assert.Equal(TabAlignment.Center, para.ParagraphFormat.TabStops[0].Alignment);
         Assert.Equal(TabLeader.Dots, para.ParagraphFormat.TabStops[0].Leader);
         AssertModified(context);
+    }
+
+    #endregion
+
+    #region Non-Body Story Addressing
+
+    [Fact]
+    public void Execute_TextBoxStory_EditsTextBoxParagraphNotBody()
+    {
+        // Addressing a non-body story (a text box) by storyType + containerIndex must edit the
+        // paragraph inside that text box, leaving the body untouched.
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        builder.Write("body text");
+        var shape = builder.InsertShape(ShapeType.TextBox, 100, 50);
+        shape.RemoveAllChildren();
+        var tbPara = new Aspose.Words.Paragraph(doc);
+        tbPara.AppendChild(new Run(doc, "old textbox"));
+        shape.AppendChild(tbPara);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "paragraphIndex", 0 },
+            { "storyType", "TextBox" },
+            { "containerIndex", 0 },
+            { "text", "new textbox" }
+        });
+
+        _handler.Execute(context, parameters);
+
+        Assert.Equal("new textbox", tbPara.GetText().Trim());
+        AssertContainsText(doc, "body text");
+    }
+
+    [Fact]
+    public void Execute_ByHandle_EditsHandleTargetEvenAfterIndexShift()
+    {
+        // Mint a handle for "Second" (index 1), then insert a paragraph in front so it shifts to
+        // index 2. Editing by handle must still hit the original paragraph, not whatever now sits
+        // at the old index.
+        var doc = CreateDocumentWithParagraphs("First", "Second");
+        var second = doc.FirstSection.Body.Paragraphs[1];
+        var handle = ParagraphResolver.MintHandle(doc, second);
+
+        var inserted = new Aspose.Words.Paragraph(doc);
+        inserted.AppendChild(new Run(doc, "Inserted"));
+        doc.FirstSection.Body.InsertBefore(inserted, doc.FirstSection.Body.FirstParagraph);
+
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "paragraphIndex", 0 },
+            { "handle", handle },
+            { "text", "Edited Second" }
+        });
+
+        _handler.Execute(context, parameters);
+
+        Assert.Equal("Edited Second", second.GetText().Trim());
+    }
+
+    [Fact]
+    public void Execute_ByStaleHandle_AfterRemoval_ThrowsThroughHandler()
+    {
+        var doc = CreateDocumentWithParagraphs("First", "Second");
+        var second = doc.FirstSection.Body.Paragraphs[1];
+        var handle = ParagraphResolver.MintHandle(doc, second);
+        second.Remove();
+
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "paragraphIndex", 0 },
+            { "handle", handle },
+            { "text", "should not apply" }
+        });
+
+        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+        Assert.Contains("stale", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    #endregion
+
+    #region Field Preservation (Issue #3)
+
+    [Fact]
+    public void Execute_WithText_PreservesFieldsInParagraph()
+    {
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        builder.Write("Label: ");
+        builder.InsertField("MERGEFIELD User");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "paragraphIndex", 0 },
+            { "text", "Printed by: " }
+        });
+
+        _handler.Execute(context, parameters);
+
+        Assert.Equal(1, doc.Range.Fields.Count);
+        Assert.Equal("MERGEFIELD User", doc.Range.Fields[0].GetFieldCode().Trim());
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+        {
+            AssertContainsText(doc, "Printed by:");
+            AssertDoesNotContainText(doc, "Label:");
+        }
+    }
+
+    [Fact]
+    public void Execute_WithText_OnFieldOnlyParagraph_PreservesFieldAndAppendsText()
+    {
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        builder.InsertField("MERGEFIELD Name");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "paragraphIndex", 0 },
+            { "text", "After" }
+        });
+
+        _handler.Execute(context, parameters);
+
+        Assert.Equal(1, doc.Range.Fields.Count);
+        Assert.Equal("MERGEFIELD Name", doc.Range.Fields[0].GetFieldCode().Trim());
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+            Assert.Contains("After", doc.GetText());
     }
 
     #endregion
@@ -337,7 +468,32 @@ public class EditParagraphWordHandlerTests : WordHandlerTestBase
     }
 
     [Fact]
-    public void Execute_WithInvalidSectionIndex_ThrowsArgumentException()
+    public void Execute_WithStoryTypeHeader_TargetsHeaderParagraph()
+    {
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        builder.Write("BodyOnly");
+        builder.MoveToHeaderFooter(HeaderFooterType.HeaderPrimary);
+        builder.Write("HeaderOnly");
+
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "paragraphIndex", 0 },
+            { "storyType", "Header" },
+            { "text", "NewHeader" }
+        });
+
+        _handler.Execute(context, parameters);
+
+        var headerPara = doc.FirstSection.HeadersFooters[HeaderFooterType.HeaderPrimary]
+            .GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().First();
+        if (!IsEvaluationMode(AsposeLibraryType.Words))
+            Assert.Contains("NewHeader", headerPara.GetText());
+    }
+
+    [Fact]
+    public void Execute_WithOutOfRangeSectionIndex_ThrowsArgumentException()
     {
         var doc = CreateDocumentWithParagraphs("Test paragraph");
         var context = CreateContext(doc);
@@ -348,7 +504,7 @@ public class EditParagraphWordHandlerTests : WordHandlerTestBase
         });
 
         var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
-        Assert.Contains("Section", ex.Message);
+        Assert.Contains("sectionIndex", ex.Message);
     }
 
     [Fact]

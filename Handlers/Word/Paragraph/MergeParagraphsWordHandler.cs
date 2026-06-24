@@ -1,6 +1,7 @@
 ﻿using Aspose.Words;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Paragraph;
@@ -34,7 +35,9 @@ public class MergeParagraphsWordHandler : OperationHandlerBase<Document>
             throw new ArgumentException("endParagraphIndex parameter is required for merge operation");
 
         var doc = context.Document;
-        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
+        var paragraphs =
+            ParagraphResolver.GetStoryParagraphs(doc,
+                ParagraphAddress.From(parameters, mergeParams.StartParagraphIndex.Value));
 
         if (mergeParams.StartParagraphIndex.Value < 0 || mergeParams.StartParagraphIndex.Value >= paragraphs.Count)
             throw new ArgumentException(
@@ -51,11 +54,11 @@ public class MergeParagraphsWordHandler : OperationHandlerBase<Document>
         if (mergeParams.StartParagraphIndex.Value == mergeParams.EndParagraphIndex.Value)
             throw new ArgumentException("Start and end paragraph indices are the same, no merge needed");
 
-        var startPara = paragraphs[mergeParams.StartParagraphIndex.Value] as Aspose.Words.Paragraph;
+        var startPara = paragraphs[mergeParams.StartParagraphIndex.Value];
         if (startPara == null) throw new InvalidOperationException("Unable to get start paragraph");
 
         for (var i = mergeParams.StartParagraphIndex.Value + 1; i <= mergeParams.EndParagraphIndex.Value; i++)
-            if (paragraphs[i] is Aspose.Words.Paragraph para)
+            if (paragraphs[i] is { } para)
             {
                 if (startPara.Runs.Count > 0)
                 {

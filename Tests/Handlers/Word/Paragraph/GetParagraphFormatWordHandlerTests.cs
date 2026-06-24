@@ -294,7 +294,7 @@ public class GetParagraphFormatWordHandlerTests : WordHandlerTestBase
     }
 
     [Theory]
-    [InlineData(-1)]
+    [InlineData(-2)]
     [InlineData(100)]
     public void Execute_WithInvalidParagraphIndex_ThrowsArgumentException(int invalidIndex)
     {
@@ -501,6 +501,58 @@ public class GetParagraphFormatWordHandlerTests : WordHandlerTestBase
 
         Assert.NotNull(result.FontFormat);
         Assert.NotNull(result.FontFormat.HighlightColor);
+    }
+
+    #endregion
+
+    #region Story-Relative Address
+
+    [Fact]
+    public void Execute_ReportsBodyAddressBlock()
+    {
+        var doc = CreateDocumentWithParagraphs("First", "Second");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "paragraphIndex", 1 }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<GetParagraphFormatWordResult>(res);
+
+        Assert.Equal("Body", result.StoryType);
+        Assert.Equal(0, result.SectionIndex);
+        Assert.Equal(1, result.ParagraphIndex);
+        Assert.True(result.DocumentOrderIndex >= 0);
+        Assert.Null(result.HeaderFooterType);
+        Assert.Null(result.ContainerIndex);
+    }
+
+    [Fact]
+    public void Execute_WithStoryTypeHeader_ReportsHeaderAddress()
+    {
+        var doc = CreateEmptyDocument();
+        var builder = new DocumentBuilder(doc);
+        builder.Write("body");
+        builder.MoveToHeaderFooter(HeaderFooterType.HeaderPrimary);
+        builder.Write("header-text");
+
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "paragraphIndex", 0 },
+            { "storyType", "Header" }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<GetParagraphFormatWordResult>(res);
+
+        Assert.Equal("Header", result.StoryType);
+        Assert.Equal("Primary", result.HeaderFooterType);
+        Assert.Equal(0, result.ParagraphIndex);
+        AssertNotModified(context);
     }
 
     #endregion

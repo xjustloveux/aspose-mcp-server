@@ -9,13 +9,6 @@ using AsposeMcpServer.Results.Common;
 namespace AsposeMcpServer.Handlers.Word.Paragraph;
 
 /// <summary>
-///     Represents the target paragraph and its resolved index.
-/// </summary>
-/// <param name="Paragraph">The target paragraph.</param>
-/// <param name="ResolvedIndex">The resolved paragraph index.</param>
-internal record ParagraphTarget(Aspose.Words.Paragraph Paragraph, int ResolvedIndex);
-
-/// <summary>
 ///     Handler for editing paragraphs in Word documents.
 /// </summary>
 [ResultType(typeof(SuccessResult))]
@@ -43,10 +36,11 @@ public class EditParagraphWordHandler : OperationHandlerBase<Document>
             throw new ArgumentException("paragraphIndex parameter is required for edit operation");
 
         var doc = context.Document;
-        var target =
-            GetTargetParagraph(doc, editParams.ParagraphIndex.Value, editParams.SectionIndex ?? 0);
-        var para = target.Paragraph;
-        var resolvedIndex = target.ResolvedIndex;
+
+        var paragraphRef =
+            ParagraphResolver.Resolve(doc, ParagraphAddress.From(parameters, editParams.ParagraphIndex.Value));
+        var para = paragraphRef.Paragraph;
+        var resolvedIndex = paragraphRef.Address.Index;
 
         var builder = new DocumentBuilder(doc);
         builder.MoveTo(para.FirstChild ?? para);
@@ -72,45 +66,6 @@ public class EditParagraphWordHandler : OperationHandlerBase<Document>
         var resultMsg = $"Paragraph {resolvedIndex} format edited successfully";
         if (!string.IsNullOrEmpty(editParams.Text)) resultMsg += ", text content updated";
         return new SuccessResult { Message = resultMsg };
-    }
-
-    /// <summary>
-    ///     Gets the target paragraph by index.
-    /// </summary>
-    /// <param name="doc">The Word document.</param>
-    /// <param name="paragraphIndex">The paragraph index (-1 for last).</param>
-    /// <param name="sectionIndex">The section index.</param>
-    /// <returns>A ParagraphTarget containing the paragraph and resolved index.</returns>
-    /// <exception cref="ArgumentException">Thrown when indices are out of range.</exception>
-    private static ParagraphTarget GetTargetParagraph(Document doc, int paragraphIndex,
-        int sectionIndex)
-    {
-        var secIdx = sectionIndex;
-        var paraIdx = paragraphIndex;
-
-        if (paraIdx == -1)
-        {
-            var lastSection = doc.LastSection;
-            var bodyParagraphs = lastSection.Body.GetChildNodes(NodeType.Paragraph, false);
-            if (bodyParagraphs.Count == 0)
-                throw new ArgumentException(
-                    "Cannot edit paragraph: document has no paragraphs. Use insert operation to add paragraphs first.");
-            paraIdx = bodyParagraphs.Count - 1;
-            secIdx = doc.Sections.Count - 1;
-        }
-
-        if (secIdx < 0 || secIdx >= doc.Sections.Count)
-            throw new ArgumentException(
-                $"Section index {secIdx} out of range (total sections: {doc.Sections.Count}, valid range: 0-{doc.Sections.Count - 1})");
-
-        var section = doc.Sections[secIdx];
-        var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().ToList();
-
-        if (paraIdx < 0 || paraIdx >= paragraphs.Count)
-            throw new ArgumentException(
-                $"Paragraph index {paraIdx} out of range (total paragraphs: {paragraphs.Count}, valid range: 0-{paragraphs.Count - 1})");
-
-        return new ParagraphTarget(paragraphs[paraIdx], paraIdx);
     }
 
     /// <summary>
@@ -228,12 +183,7 @@ public class EditParagraphWordHandler : OperationHandlerBase<Document>
     {
         if (!string.IsNullOrEmpty(text))
         {
-            para.RemoveAllChildren();
-            var newRun = new Run(doc, text);
-            FontHelper.Word.ApplyFontSettings(newRun, fontParams.FontName, fontParams.FontNameAscii,
-                fontParams.FontNameFarEast, fontParams.FontSize, fontParams.Bold, fontParams.Italic,
-                fontParams.UnderlineStr, fontParams.Color);
-            para.AppendChild(newRun);
+            ReplaceParagraphText(doc, para, text, fontParams);
             return;
         }
 
@@ -259,6 +209,36 @@ public class EditParagraphWordHandler : OperationHandlerBase<Document>
     }
 
     /// <summary>
+    ///     Replaces the paragraph's plain-text runs with a single new run carrying the supplied
+    ///     text, while preserving any fields, bookmarks, and inline objects in place. The new run
+    ///     takes the position of the first replaced text run; when the paragraph contains only
+    ///     field content it is appended after it.
+    /// </summary>
+    /// <param name="doc">The document.</param>
+    /// <param name="para">The paragraph whose text is replaced.</param>
+    /// <param name="text">The new text content.</param>
+    /// <param name="fontParams">The font parameters to apply to the new run.</param>
+    private static void ReplaceParagraphText(Document doc, Aspose.Words.Paragraph para, string text,
+        FontParams fontParams)
+    {
+        var newRun = new Run(doc, text);
+        FontHelper.Word.ApplyFontSettings(newRun, fontParams.FontName, fontParams.FontNameAscii,
+            fontParams.FontNameFarEast, fontParams.FontSize, fontParams.Bold, fontParams.Italic,
+            fontParams.UnderlineStr, fontParams.Color);
+
+        var textRuns = para.GetChildNodes(NodeType.Run, true).Cast<Run>()
+            .Where(run => FieldBoundaryHelper.GetEnclosingField(run) == null).ToList();
+
+        if (textRuns.Count == 0)
+            para.AppendChild(newRun);
+        else
+            textRuns[0].ParentNode.InsertBefore(newRun, textRuns[0]);
+
+        foreach (var run in textRuns)
+            run.Remove();
+    }
+
+    /// <summary>
     ///     Extracts edit paragraph parameters from operation parameters.
     /// </summary>
     /// <param name="parameters">The operation parameters.</param>
@@ -267,7 +247,6 @@ public class EditParagraphWordHandler : OperationHandlerBase<Document>
     {
         return new EditParagraphParameters(
             parameters.GetOptional<int?>("paragraphIndex"),
-            parameters.GetOptional<int?>("sectionIndex"),
             parameters.GetOptional<string?>("text"),
             parameters.GetOptional<string?>("styleName"),
             parameters.GetOptional<string?>("alignment"),
@@ -305,7 +284,6 @@ public class EditParagraphWordHandler : OperationHandlerBase<Document>
     ///     Record to hold edit paragraph parameters.
     /// </summary>
     /// <param name="ParagraphIndex">The paragraph index to edit (-1 for last).</param>
-    /// <param name="SectionIndex">The section index.</param>
     /// <param name="Text">The text content.</param>
     /// <param name="StyleName">The style name.</param>
     /// <param name="Alignment">The text alignment.</param>
@@ -327,7 +305,6 @@ public class EditParagraphWordHandler : OperationHandlerBase<Document>
     /// <param name="TabStops">The tab stops array.</param>
     private sealed record EditParagraphParameters(
         int? ParagraphIndex,
-        int? SectionIndex,
         string? Text,
         string? StyleName,
         string? Alignment,

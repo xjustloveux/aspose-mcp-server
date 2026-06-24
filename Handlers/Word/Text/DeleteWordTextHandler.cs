@@ -2,6 +2,7 @@ using System.Text;
 using Aspose.Words;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
 
@@ -72,6 +73,19 @@ public class DeleteWordTextHandler : OperationHandlerBase<Document>
                 throw new ArgumentException("startParagraphIndex is required when searchText is not provided");
             if (!endParagraphIndex.HasValue)
                 throw new ArgumentException("endParagraphIndex is required when searchText is not provided");
+
+            // Delete is destructive, so reject negative indices outright instead of inheriting the
+            // resolver's -1 = last-paragraph convention: a caller that miscomputes an index to -1
+            // must not silently delete the final paragraph.
+            if (startParagraphIndex.Value < 0 || endParagraphIndex.Value < 0)
+                throw new ArgumentException("startParagraphIndex and endParagraphIndex must be non-negative");
+
+            // Resolve the caller's story-relative start/end to nodes, then map to document-order
+            // positions so the (global) deletion logic and #7 field guards operate unchanged.
+            startParagraphIndex = paragraphs.IndexOf(
+                ParagraphResolver.Resolve(doc, ParagraphAddress.From(parameters, startParagraphIndex.Value)).Paragraph);
+            endParagraphIndex = paragraphs.IndexOf(
+                ParagraphResolver.Resolve(doc, ParagraphAddress.From(parameters, endParagraphIndex.Value)).Paragraph);
         }
 
         // ReSharper disable once RedundantSuppressNullableWarningExpression - Complex control flow guarantees non-null
@@ -287,7 +301,8 @@ public class DeleteWordTextHandler : OperationHandlerBase<Document>
         if (!IsValidRunRange(startRunIndex, actualEndRunIndex, runs.Count)) return;
 
         for (var i = actualEndRunIndex; i >= startRunIndex; i--)
-            runs[i]?.Remove();
+            if (runs[i] is Run run && FieldBoundaryHelper.GetEnclosingField(run) == null)
+                run.Remove();
     }
 
     /// <summary>
@@ -299,7 +314,8 @@ public class DeleteWordTextHandler : OperationHandlerBase<Document>
         var startRuns = startPara.GetChildNodes(NodeType.Run, false);
         if (startRuns != null && startRuns.Count > startRunIndex)
             for (var i = startRuns.Count - 1; i >= startRunIndex; i--)
-                startRuns[i]?.Remove();
+                if (startRuns[i] is Run run && FieldBoundaryHelper.GetEnclosingField(run) == null)
+                    run.Remove();
 
         for (var p = endParagraphIndex - 1; p > startParagraphIndex; p--)
             paragraphs[p]?.Remove();
@@ -309,8 +325,9 @@ public class DeleteWordTextHandler : OperationHandlerBase<Document>
         {
             var actualEndRunIndex = endRunIndex ?? endRuns.Count - 1;
             for (var i = actualEndRunIndex; i >= 0; i--)
-                if (i < endRuns.Count)
-                    endRuns[i]?.Remove();
+                if (i < endRuns.Count && endRuns[i] is Run run &&
+                    FieldBoundaryHelper.GetEnclosingField(run) == null)
+                    run.Remove();
         }
     }
 

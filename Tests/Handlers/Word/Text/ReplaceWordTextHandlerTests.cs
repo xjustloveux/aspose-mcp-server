@@ -1,3 +1,4 @@
+using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Text;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -99,6 +100,47 @@ public class ReplaceWordTextHandlerTests : WordHandlerTestBase
 
         Assert.Contains("replaced", result.Message, StringComparison.OrdinalIgnoreCase);
         AssertContainsText(doc, "Hello World");
+    }
+
+    #endregion
+
+    #region Field Protection
+
+    [Fact]
+    public void Execute_Default_DoesNotReplaceInsideFieldCode()
+    {
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        builder.InsertField("MERGEFIELD Name");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "find", "Name" },
+            { "replace", "Surname" }
+        });
+
+        _handler.Execute(context, parameters);
+
+        Assert.Equal("MERGEFIELD Name", doc.Range.Fields[0].GetFieldCode().Trim());
+    }
+
+    [Fact]
+    public void Execute_ReplaceInFieldsTrue_DoesReplaceInsideFieldCode()
+    {
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        builder.InsertField("MERGEFIELD Name");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "find", "Name" },
+            { "replace", "Surname" },
+            { "replaceInFields", true }
+        });
+
+        _handler.Execute(context, parameters);
+
+        Assert.Equal("MERGEFIELD Surname", doc.Range.Fields[0].GetFieldCode().Trim());
     }
 
     #endregion

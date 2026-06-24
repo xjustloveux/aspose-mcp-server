@@ -75,6 +75,10 @@ public class WordFieldTool
     /// <param name="value">New value (for TextInput type, for edit_form).</param>
     /// <param name="selectedIndex">Selected option index (for DropDown type, for edit_form).</param>
     /// <param name="fieldNames">Array of form field names to delete (for delete_form).</param>
+    /// <param name="storyType">Story the paragraph index is relative to (Body by default).</param>
+    /// <param name="headerFooterType">Header/Footer discriminator (Primary by default).</param>
+    /// <param name="containerIndex">Instance selector for multi-instance stories.</param>
+    /// <param name="handle">Stable paragraph handle from a prior get/search result (session mode only).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(
@@ -95,7 +99,9 @@ Usage examples:
 - Update field: word_field(operation='update', path='doc.docx', fieldIndex=0)
 - Update all fields: word_field(operation='update_all', path='doc.docx')
 - Get fields: word_field(operation='list', path='doc.docx')
-- Add form field: word_field(operation='add_form', path='doc.docx', formFieldType='TextInput', fieldName='name')")]
+- Add form field: word_field(operation='add_form', path='doc.docx', formFieldType='TextInput', fieldName='name')
+
+Index notes: 'add' paragraphIndex is story-relative (0-based within its story), addressing the Body by default; pass storyType (Body/Header/Footer/TextBox/Comment/Footnote/Endnote) with sectionIndex/headerFooterType/containerIndex to target other stories. 'edit'/'delete'/'update' use fieldIndex, a FIELD ordinal over document fields (from 'list'), NOT a paragraph index.")]
     public object Execute(
         [Description(
             "Operation: add, edit, delete, update, update_all, list, get, add_form, edit_form, delete_form, list_forms")]
@@ -147,7 +153,15 @@ Usage examples:
         [Description("Selected option index (for DropDown type, for edit_form)")]
         int? selectedIndex = null,
         [Description("Array of form field names to delete (for delete_form)")]
-        string[]? fieldNames = null)
+        string[]? fieldNames = null,
+        [Description(WordAddressing.StoryTypeDesc)]
+        string? storyType = null,
+        [Description(WordAddressing.HeaderFooterTypeDesc)]
+        string? headerFooterType = null,
+        [Description(WordAddressing.ContainerIndexDesc)]
+        int? containerIndex = null,
+        [Description(WordAddressing.HandleDesc)]
+        string? handle = null)
     {
         using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
@@ -160,7 +174,8 @@ Usage examples:
 
         var parameters = BuildParameters(op, fieldType, fieldArgument, paragraphIndex, insertAtStart, fieldIndex,
             fieldCode, lockField, unlockField, updateField, keepResult, updateAll, includeCode, includeResult,
-            formFieldType, fieldName, defaultValue, options, checkedValue, value, selectedIndex, fieldNames);
+            formFieldType, fieldName, defaultValue, options, checkedValue, value, selectedIndex, fieldNames,
+            storyType, headerFooterType, containerIndex, handle);
 
         var handler = _handlerRegistry.GetHandler(op);
 
@@ -213,9 +228,14 @@ Usage examples:
         bool? checkedValue,
         string? value,
         int? selectedIndex,
-        string[]? fieldNames)
+        string[]? fieldNames,
+        string? storyType,
+        string? headerFooterType,
+        int? containerIndex,
+        string? handle)
     {
         var parameters = new OperationParameters();
+        WordAddressing.Apply(parameters, storyType, headerFooterType, containerIndex, handle);
 
         return operation switch
         {

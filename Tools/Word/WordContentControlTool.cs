@@ -67,6 +67,10 @@ public class WordContentControlTool
     /// <param name="lockDeletion">Lock content control from deletion (for add, edit).</param>
     /// <param name="keepContent">Keep content when deleting (default: true).</param>
     /// <param name="paragraphIndex">Paragraph index for insertion (0-based, for add).</param>
+    /// <param name="storyType">Story the paragraph index is relative to (Body/Header/Footer/TextBox/Comment/Footnote/Endnote).</param>
+    /// <param name="headerFooterType">Header/Footer discriminator: Primary, First, or Even.</param>
+    /// <param name="containerIndex">Instance selector for multi-instance stories (TextBox/Comment/Footnote/Endnote).</param>
+    /// <param name="handle">Stable paragraph handle from a prior 'get'/'search' result (session mode only).</param>
     /// <returns>A message or data indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(
@@ -126,10 +130,19 @@ Usage examples:
         [Description("Keep content when deleting (default: true)")]
         bool keepContent = true,
         [Description("Paragraph index for insertion (0-based, for add)")]
-        int? paragraphIndex = null)
+        int? paragraphIndex = null,
+        [Description(WordAddressing.StoryTypeDesc)]
+        string? storyType = null,
+        [Description(WordAddressing.HeaderFooterTypeDesc)]
+        string? headerFooterType = null,
+        [Description(WordAddressing.ContainerIndexDesc)]
+        int? containerIndex = null,
+        [Description(WordAddressing.HandleDesc)]
+        string? handle = null)
     {
         var parameters = BuildParameters(operation, type, tag, title, value, items, index,
-            newTag, newTitle, lockContents, lockDeletion, keepContent, paragraphIndex);
+            newTag, newTitle, lockContents, lockDeletion, keepContent, paragraphIndex,
+            storyType, headerFooterType, containerIndex, handle);
 
         var handler = _handlerRegistry.GetHandler(operation);
 
@@ -173,22 +186,31 @@ Usage examples:
         bool? lockContents,
         bool? lockDeletion,
         bool keepContent,
-        int? paragraphIndex)
+        int? paragraphIndex,
+        string? storyType,
+        string? headerFooterType,
+        int? containerIndex,
+        string? handle)
     {
+        var parameters = new OperationParameters();
+        WordAddressing.Apply(parameters, storyType, headerFooterType, containerIndex, handle);
+
         return operation.ToLowerInvariant() switch
         {
-            "add" => BuildAddParameters(type, tag, title, value, items, lockContents, lockDeletion, paragraphIndex),
-            "edit" => BuildEditParameters(index, tag, newTag, newTitle, lockContents, lockDeletion),
-            "delete" => BuildDeleteParameters(index, tag, keepContent),
-            "get" => BuildGetParameters(tag, type),
-            "set_value" => BuildSetValueParameters(index, tag, value),
-            _ => new OperationParameters()
+            "add" => BuildAddParameters(parameters, type, tag, title, value, items, lockContents, lockDeletion,
+                paragraphIndex),
+            "edit" => BuildEditParameters(parameters, index, tag, newTag, newTitle, lockContents, lockDeletion),
+            "delete" => BuildDeleteParameters(parameters, index, tag, keepContent),
+            "get" => BuildGetParameters(parameters, tag, type),
+            "set_value" => BuildSetValueParameters(parameters, index, tag, value),
+            _ => parameters
         };
     }
 
     /// <summary>
     ///     Builds parameters for the add operation.
     /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
     /// <param name="type">The content control type.</param>
     /// <param name="tag">The tag identifier.</param>
     /// <param name="title">The display title.</param>
@@ -198,10 +220,9 @@ Usage examples:
     /// <param name="lockDeletion">Whether to lock deletion.</param>
     /// <param name="paragraphIndex">The paragraph index to insert at.</param>
     /// <returns>OperationParameters configured for adding a content control.</returns>
-    private static OperationParameters BuildAddParameters(string? type, string? tag, string? title,
-        string? value, string? items, bool? lockContents, bool? lockDeletion, int? paragraphIndex)
+    private static OperationParameters BuildAddParameters(OperationParameters parameters, string? type, string? tag,
+        string? title, string? value, string? items, bool? lockContents, bool? lockDeletion, int? paragraphIndex)
     {
-        var parameters = new OperationParameters();
         if (type != null) parameters.Set("type", type);
         if (tag != null) parameters.Set("tag", tag);
         if (title != null) parameters.Set("title", title);
@@ -216,6 +237,7 @@ Usage examples:
     /// <summary>
     ///     Builds parameters for the edit operation.
     /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
     /// <param name="index">The content control index.</param>
     /// <param name="tag">The tag to identify the content control.</param>
     /// <param name="newTag">The new tag value.</param>
@@ -223,10 +245,9 @@ Usage examples:
     /// <param name="lockContents">Whether to lock contents.</param>
     /// <param name="lockDeletion">Whether to lock deletion.</param>
     /// <returns>OperationParameters configured for editing a content control.</returns>
-    private static OperationParameters BuildEditParameters(int? index, string? tag, string? newTag,
-        string? newTitle, bool? lockContents, bool? lockDeletion)
+    private static OperationParameters BuildEditParameters(OperationParameters parameters, int? index, string? tag,
+        string? newTag, string? newTitle, bool? lockContents, bool? lockDeletion)
     {
-        var parameters = new OperationParameters();
         if (index.HasValue) parameters.Set("index", index.Value);
         if (tag != null) parameters.Set("tag", tag);
         if (newTag != null) parameters.Set("newTag", newTag);
@@ -239,13 +260,14 @@ Usage examples:
     /// <summary>
     ///     Builds parameters for the delete operation.
     /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
     /// <param name="index">The content control index.</param>
     /// <param name="tag">The tag to identify the content control.</param>
     /// <param name="keepContent">Whether to keep content after deletion.</param>
     /// <returns>OperationParameters configured for deleting a content control.</returns>
-    private static OperationParameters BuildDeleteParameters(int? index, string? tag, bool keepContent)
+    private static OperationParameters BuildDeleteParameters(OperationParameters parameters, int? index, string? tag,
+        bool keepContent)
     {
-        var parameters = new OperationParameters();
         if (index.HasValue) parameters.Set("index", index.Value);
         if (tag != null) parameters.Set("tag", tag);
         parameters.Set("keepContent", keepContent);
@@ -255,12 +277,12 @@ Usage examples:
     /// <summary>
     ///     Builds parameters for the get operation.
     /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
     /// <param name="tag">Optional tag filter.</param>
     /// <param name="type">Optional type filter.</param>
     /// <returns>OperationParameters configured for getting content controls.</returns>
-    private static OperationParameters BuildGetParameters(string? tag, string? type)
+    private static OperationParameters BuildGetParameters(OperationParameters parameters, string? tag, string? type)
     {
-        var parameters = new OperationParameters();
         if (tag != null) parameters.Set("tag", tag);
         if (type != null) parameters.Set("type", type);
         return parameters;
@@ -269,13 +291,14 @@ Usage examples:
     /// <summary>
     ///     Builds parameters for the set_value operation.
     /// </summary>
+    /// <param name="parameters">The base operation parameters.</param>
     /// <param name="index">The content control index.</param>
     /// <param name="tag">The tag to identify the content control.</param>
     /// <param name="value">The value to set.</param>
     /// <returns>OperationParameters configured for setting the value of a content control.</returns>
-    private static OperationParameters BuildSetValueParameters(int? index, string? tag, string? value)
+    private static OperationParameters BuildSetValueParameters(OperationParameters parameters, int? index, string? tag,
+        string? value)
     {
-        var parameters = new OperationParameters();
         if (index.HasValue) parameters.Set("index", index.Value);
         if (tag != null) parameters.Set("tag", tag);
         if (value != null) parameters.Set("value", value);

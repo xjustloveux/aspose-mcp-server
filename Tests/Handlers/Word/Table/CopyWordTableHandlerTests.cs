@@ -139,7 +139,7 @@ public class CopyWordTableHandlerTests : WordHandlerTestBase
         });
 
         var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
-        Assert.Contains("targetParagraphIndex", ex.Message);
+        Assert.Contains("paragraphIndex", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

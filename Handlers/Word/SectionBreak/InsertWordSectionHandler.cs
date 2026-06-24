@@ -3,7 +3,6 @@ using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
-using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.SectionBreak;
 
@@ -39,22 +38,9 @@ public class InsertWordSectionHandler : OperationHandlerBase<Document>
 
         if (p.InsertAtParagraphIndex.HasValue && p.InsertAtParagraphIndex.Value != -1)
         {
-            var actualSectionIndex = p.SectionIndex ?? 0;
-            if (actualSectionIndex < 0 || actualSectionIndex >= doc.Sections.Count)
-                throw new ArgumentException(
-                    $"sectionIndex must be between 0 and {doc.Sections.Count - 1}, got: {actualSectionIndex}");
-
-            var section = doc.Sections[actualSectionIndex];
-            var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
-
-            if (paragraphs.Count == 0)
-                throw new ArgumentException("Section has no paragraphs to insert section break after");
-
-            if (p.InsertAtParagraphIndex.Value < 0 || p.InsertAtParagraphIndex.Value >= paragraphs.Count)
-                throw new ArgumentException(
-                    $"insertAtParagraphIndex must be between 0 and {paragraphs.Count - 1}, got: {p.InsertAtParagraphIndex.Value}");
-
-            builder.MoveTo(paragraphs[p.InsertAtParagraphIndex.Value]);
+            var para = ParagraphResolver
+                .Resolve(doc, ParagraphAddress.From(parameters, p.InsertAtParagraphIndex.Value)).Paragraph;
+            builder.MoveTo(para);
         }
         else
         {
@@ -73,12 +59,10 @@ public class InsertWordSectionHandler : OperationHandlerBase<Document>
     {
         return new InsertWordSectionParameters(
             parameters.GetRequired<string>("sectionBreakType"),
-            parameters.GetOptional<int?>("insertAtParagraphIndex"),
-            parameters.GetOptional<int?>("sectionIndex"));
+            parameters.GetOptional<int?>("insertAtParagraphIndex"));
     }
 
     private sealed record InsertWordSectionParameters(
         string SectionBreakType,
-        int? InsertAtParagraphIndex,
-        int? SectionIndex);
+        int? InsertAtParagraphIndex);
 }

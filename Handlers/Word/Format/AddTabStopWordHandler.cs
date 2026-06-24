@@ -29,7 +29,7 @@ public class AddTabStopWordHandler : OperationHandlerBase<Document>
         var p = ExtractAddTabStopParameters(parameters);
 
         var doc = context.Document;
-        var para = WordFormatHelper.GetTargetParagraph(doc, p.ParagraphIndex);
+        var para = ParagraphResolver.Resolve(doc, ParagraphAddress.From(parameters, p.ParagraphIndex)).Paragraph;
 
         var tabAlignment = p.TabAlignment.ToLower() switch
         {

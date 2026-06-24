@@ -132,6 +132,31 @@ public class GetWordHyperlinksHandlerTests : WordHandlerTestBase
         Assert.Equal("https://test.example.com", firstHyperlink.Address);
     }
 
+    [Fact]
+    public void Execute_HyperlinkInHeader_ReportsHeaderStoryAddress()
+    {
+        // A hyperlink living in the page header must be reported in the header story's own index
+        // space (paragraphIndex 0, storyType Header), not as a flat global paragraph index, so the
+        // address round-trips back to header-aware operations.
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        builder.Writeln("Body line one");
+        builder.Writeln("Body line two");
+        builder.MoveToHeaderFooter(HeaderFooterType.HeaderPrimary);
+        builder.InsertHyperlink("Header link", "https://hdr.example.com", false);
+        var context = CreateContext(doc);
+        var parameters = CreateEmptyParameters();
+
+        var res = _handler.Execute(context, parameters);
+
+        var result = Assert.IsType<GetHyperlinksResult>(res);
+        var link = Assert.Single(result.Hyperlinks);
+        Assert.Equal("Header", link.StoryType);
+        Assert.Equal("Primary", link.HeaderFooterType);
+        Assert.Equal(0, link.ParagraphIndex);
+        Assert.Equal(0, link.SectionIndex);
+    }
+
     #endregion
 
     #region Helper Methods

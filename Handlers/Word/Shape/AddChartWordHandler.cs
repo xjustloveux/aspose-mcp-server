@@ -4,7 +4,6 @@ using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
-using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.Shape;
 
@@ -34,7 +33,7 @@ public class AddChartWordHandler : OperationHandlerBase<Document>
         var doc = context.Document;
         var builder = new DocumentBuilder(doc);
 
-        MoveToInsertPosition(builder, doc, chartParams.ParagraphIndex);
+        MoveToInsertPosition(builder, doc, parameters, chartParams.ParagraphIndex);
         builder.ParagraphFormat.Alignment = WordShapeHelper.ParseAlignment(chartParams.Alignment);
 
         var chartType = ParseChartType(chartParams.ChartType);
@@ -166,9 +165,11 @@ public class AddChartWordHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="builder">The document builder.</param>
     /// <param name="doc">The Word document.</param>
+    /// <param name="parameters">The operation parameters supplying optional story coordinates.</param>
     /// <param name="paragraphIndex">The paragraph index.</param>
     /// <exception cref="ArgumentException">Thrown when paragraph index is out of range.</exception>
-    private static void MoveToInsertPosition(DocumentBuilder builder, Document doc, int? paragraphIndex)
+    private static void MoveToInsertPosition(DocumentBuilder builder, Document doc, OperationParameters parameters,
+        int? paragraphIndex)
     {
         if (!paragraphIndex.HasValue)
         {
@@ -176,22 +177,8 @@ public class AddChartWordHandler : OperationHandlerBase<Document>
             return;
         }
 
-        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
-        if (paragraphIndex.Value == -1)
-        {
-            if (paragraphs.Count > 0 && paragraphs[0] is WordParagraph firstPara)
-                builder.MoveTo(firstPara);
-            return;
-        }
-
-        if (paragraphIndex.Value < 0 || paragraphIndex.Value >= paragraphs.Count)
-            throw new ArgumentException(
-                $"Paragraph index {paragraphIndex.Value} out of range (total paragraphs: {paragraphs.Count})");
-
-        if (paragraphs[paragraphIndex.Value] is WordParagraph targetPara)
-            builder.MoveTo(targetPara);
-        else
-            throw new ArgumentException($"Cannot find paragraph at index {paragraphIndex.Value}");
+        var para = ParagraphResolver.Resolve(doc, ParagraphAddress.From(parameters, paragraphIndex.Value)).Paragraph;
+        builder.MoveTo(para);
     }
 
     /// <summary>

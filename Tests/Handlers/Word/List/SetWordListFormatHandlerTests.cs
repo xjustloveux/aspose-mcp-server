@@ -282,17 +282,23 @@ public class SetWordListFormatHandlerTests : WordHandlerTestBase
     }
 
     [Fact]
-    public void Execute_WithNegativeParagraphIndex_ThrowsArgumentException()
+    public void Execute_WithParagraphIndexMinusOne_TargetsLastParagraph()
     {
-        var doc = CreateDocumentWithParagraphs("Item 1");
+        var doc = CreateDocumentWithParagraphs("Item 1", "Item 2", "Item 3");
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
-            { "paragraphIndex", -1 }
+            { "paragraphIndex", -1 },
+            { "leftIndent", 36.0 }
         });
 
-        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
-        Assert.Contains("out of range", ex.Message);
+        var res = _handler.Execute(context, parameters);
+
+        Assert.IsType<SuccessResult>(res);
+
+        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+        Assert.Equal(36.0, paragraphs[^1].ParagraphFormat.LeftIndent);
+        AssertModified(context);
     }
 
     #endregion

@@ -2,8 +2,8 @@
 using Aspose.Words.Lists;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
-using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.List;
 
@@ -32,7 +32,7 @@ public class ConvertToWordListHandler : OperationHandlerBase<Document>
         var p = ExtractConvertToListParameters(parameters);
 
         var doc = context.Document;
-        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+        var paragraphs = ParagraphResolver.GetStoryParagraphs(doc, ParagraphAddress.From(parameters, p.StartIndex));
 
         if (p.StartIndex < 0 || p.StartIndex >= paragraphs.Count)
             throw new ArgumentException(

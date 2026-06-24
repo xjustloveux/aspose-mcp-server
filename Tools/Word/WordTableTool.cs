@@ -117,6 +117,10 @@ public class WordTableTool
     /// <param name="columnWidth">Column width in points (for set_column_width).</param>
     /// <param name="rowHeight">Row height in points (for set_row_height).</param>
     /// <param name="heightRule">Height rule (for set_row_height).</param>
+    /// <param name="storyType">Story the paragraph index is relative to (Body default) for move_table/create.</param>
+    /// <param name="headerFooterType">Header/Footer discriminator (Primary default) when addressing Header/Footer stories.</param>
+    /// <param name="containerIndex">Instance selector for multi-instance stories (TextBox/Comment/Footnote/Endnote).</param>
+    /// <param name="handle">Stable paragraph handle from a prior get/search result (session mode only).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(
@@ -273,7 +277,15 @@ Notes:
         [Description("Row height in points (for set_row_height)")]
         double? rowHeight = null,
         [Description("Height rule: auto, atLeast, exactly (for set_row_height, default: atLeast)")]
-        string heightRule = "atLeast")
+        string heightRule = "atLeast",
+        [Description(WordAddressing.StoryTypeDesc)]
+        string? storyType = null,
+        [Description(WordAddressing.HeaderFooterTypeDesc)]
+        string? headerFooterType = null,
+        [Description(WordAddressing.ContainerIndexDesc)]
+        int? containerIndex = null,
+        [Description(WordAddressing.HandleDesc)]
+        string? handle = null)
     {
         var effectiveOutputPath = outputPath ?? path;
         if (!string.IsNullOrEmpty(effectiveOutputPath))
@@ -287,7 +299,7 @@ Notes:
             paddingTop, paddingBottom, paddingLeft, paddingRight, fontNameAscii, fontNameFarEast, cellFontSize,
             bold, italic, color, targetParagraphIndex, sourceSectionIndex, targetSectionIndex, includeContent,
             includeCellFormatting, borderTop, borderBottom, borderLeft, borderRight, lineStyle, lineWidth,
-            lineColor, columnWidth, rowHeight, heightRule);
+            lineColor, columnWidth, rowHeight, heightRule, storyType, headerFooterType, containerIndex, handle);
 
         var handler = _handlerRegistry.GetHandler(operation);
 
@@ -329,9 +341,10 @@ Notes:
         int targetParagraphIndex, int? sourceSectionIndex, int? targetSectionIndex, bool includeContent,
         bool includeCellFormatting, bool borderTop, bool borderBottom, bool borderLeft, bool borderRight,
         string lineStyle, double lineWidth, string lineColor, double? columnWidth, double? rowHeight,
-        string heightRule)
+        string heightRule, string? storyType, string? headerFooterType, int? containerIndex, string? handle)
     {
         var parameters = new OperationParameters();
+        WordAddressing.Apply(parameters, storyType, headerFooterType, containerIndex, handle);
 
         parameters.Set("tableIndex", tableIndex);
         parameters.Set("sectionIndex", sectionIndex);

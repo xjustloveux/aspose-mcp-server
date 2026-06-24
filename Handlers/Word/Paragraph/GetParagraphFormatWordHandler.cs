@@ -2,6 +2,7 @@ using System.Drawing;
 using Aspose.Words;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Word.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.Paragraph;
@@ -31,34 +32,29 @@ public class GetParagraphFormatWordHandler : OperationHandlerBase<Document>
         if (!getParams.ParagraphIndex.HasValue)
             throw new ArgumentException("paragraphIndex parameter is required for get_format operation");
 
-        var para = GetParagraph(context.Document, getParams.ParagraphIndex.Value);
+        var paragraphRef = ParagraphResolver.Resolve(context.Document,
+            ParagraphAddress.From(parameters, getParams.ParagraphIndex.Value));
 
-        return BuildResult(para, getParams.ParagraphIndex.Value, getParams.IncludeRunDetails);
+        return BuildResult(paragraphRef, getParams.IncludeRunDetails);
     }
 
-    private static Aspose.Words.Paragraph GetParagraph(Document doc, int paragraphIndex)
+    private static GetParagraphFormatWordResult BuildResult(ParagraphRef paragraphRef, bool includeRunDetails)
     {
-        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
-
-        if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
-            throw new ArgumentException(
-                $"Paragraph index {paragraphIndex} is out of range. The document has {paragraphs.Count} paragraphs (valid indices: 0-{paragraphs.Count - 1}).");
-
-        if (paragraphs[paragraphIndex] is not Aspose.Words.Paragraph para)
-            throw new InvalidOperationException($"Unable to find paragraph at index {paragraphIndex}");
-
-        return para;
-    }
-
-    private static GetParagraphFormatWordResult BuildResult(Aspose.Words.Paragraph para, int paragraphIndex,
-        bool includeRunDetails)
-    {
+        var para = paragraphRef.Paragraph;
+        var address = paragraphRef.Address;
         var format = para.ParagraphFormat;
         var text = para.GetText().Trim();
 
         return new GetParagraphFormatWordResult
         {
-            ParagraphIndex = paragraphIndex,
+            ParagraphIndex = address.Index,
+            StoryType = address.StoryType,
+            SectionIndex = address.SectionIndex,
+            HeaderFooterType = address.StoryType is StoryTypes.Header or StoryTypes.Footer
+                ? address.HeaderFooterType
+                : null,
+            ContainerIndex = address.ContainerIndex,
+            DocumentOrderIndex = paragraphRef.DocumentOrderIndex,
             Text = text,
             TextLength = text.Length,
             RunCount = para.Runs.Count,
