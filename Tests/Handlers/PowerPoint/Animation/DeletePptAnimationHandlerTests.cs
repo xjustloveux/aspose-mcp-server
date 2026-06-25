@@ -3,6 +3,7 @@ using Aspose.Slides;
 using Aspose.Slides.Animation;
 using AsposeMcpServer.Handlers.PowerPoint.Animation;
 using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.PowerPoint.Animation;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Animation;
@@ -108,6 +109,37 @@ public class DeletePptAnimationHandlerTests : PptHandlerTestBase
         var result = Assert.IsType<SuccessResult>(res);
 
         Assert.Contains("slide 0", result.Message);
+    }
+
+    [SkippableFact]
+    public void Execute_RoundTrip_MultiShape_GetReportedIndexDeletesThatAnimation()
+    {
+        SkipIfNotWindows();
+        // Adversarial: shape A has 1 animation, shape B has 2 (Fly then Fade). 'get' must report each
+        // animation with an index that, paired with its shapeIndex, deletes THAT animation via delete.
+        var pres = new Presentation();
+        var slide = pres.Slides[0];
+        slide.Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
+        var shapeB = slide.Shapes.AddAutoShape(ShapeType.Rectangle, 100, 300, 200, 100);
+        var seq = slide.Timeline.MainSequence;
+        seq.AddEffect(slide.Shapes[0], EffectType.Fade, EffectSubtype.None, EffectTriggerType.OnClick);
+        seq.AddEffect(shapeB, EffectType.Fly, EffectSubtype.Bottom, EffectTriggerType.OnClick);
+        seq.AddEffect(shapeB, EffectType.Fade, EffectSubtype.None, EffectTriggerType.OnClick);
+
+        var getRes = (GetAnimationsResult)new GetPptAnimationsHandler()
+            .Execute(CreateContext(pres), CreateParameters(new Dictionary<string, object?> { { "slideIndex", 0 } }));
+        var flyOnB = getRes.Animations.Single(a => a is { ShapeIndex: 1, EffectType: "Fly" });
+
+        _handler.Execute(CreateContext(pres), CreateParameters(new Dictionary<string, object?>
+        {
+            { "slideIndex", 0 },
+            { "shapeIndex", flyOnB.ShapeIndex },
+            { "animationIndex", flyOnB.Index }
+        }));
+
+        var remainingOnB = slide.Timeline.MainSequence.Where(e => e.TargetShape == shapeB).ToList();
+        Assert.Single(remainingOnB);
+        Assert.Equal(EffectType.Fade, remainingOnB[0].Type);
     }
 
     #endregion

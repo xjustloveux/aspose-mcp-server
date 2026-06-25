@@ -8,13 +8,14 @@ namespace AsposeMcpServer.Results.PowerPoint.Animation;
 public record AnimationInfo
 {
     /// <summary>
-    ///     Zero-based index of the animation.
+    ///     Animation index relative to its target shape (0-based within that shape) — pass together with
+    ///     shapeIndex to ppt_animation edit/delete to address this exact animation.
     /// </summary>
     [JsonPropertyName("index")]
     public required int Index { get; init; }
 
     /// <summary>
-    ///     Shape index.
+    ///     Index of the shape this animation targets. Pass with index to ppt_animation edit/delete.
     /// </summary>
     [JsonPropertyName("shapeIndex")]
     public required int ShapeIndex { get; init; }

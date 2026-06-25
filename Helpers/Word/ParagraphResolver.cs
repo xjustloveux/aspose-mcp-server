@@ -13,15 +13,15 @@ namespace AsposeMcpServer.Helpers.Word;
 /// </summary>
 public static class ParagraphResolver
 {
+    private const string Primary = "Primary";
+    private const string First = "First";
+    private const string Even = "Even";
+
     /// <summary>
     ///     Per-document registry of stable paragraph handles. Keyed by document instance so the
     ///     handles live exactly as long as the in-memory document and are garbage-collected with it.
     /// </summary>
     private static readonly ConditionalWeakTable<Document, HandleRegistry> HandleTables = new();
-
-    private const string Primary = "Primary";
-    private const string First = "First";
-    private const string Even = "Even";
 
     /// <summary>
     ///     Resolves an address to a live paragraph node within the document.

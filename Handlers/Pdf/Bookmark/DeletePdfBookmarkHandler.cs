@@ -34,18 +34,15 @@ public class DeletePdfBookmarkHandler : OperationHandlerBase<Document>
         var bookmark = document.Outlines[deleteParams.BookmarkIndex];
         var title = bookmark.Title;
 
-        var countBefore = document.Outlines.Count;
-        document.Outlines.Delete(title);
-        var countAfter = document.Outlines.Count;
-        var deletedCount = countBefore - countAfter;
+        // Remove the specific outline at this index, not every outline that shares its title
+        // (document.Outlines.Delete(title) would delete all same-titled top-level bookmarks).
+        document.Outlines.Remove(bookmark);
 
         MarkModified(context);
 
         return new SuccessResult
         {
-            Message = deletedCount > 1
-                ? $"Deleted {deletedCount} bookmark(s) with title '{title}' (requested index {deleteParams.BookmarkIndex})."
-                : $"Deleted bookmark '{title}' (index {deleteParams.BookmarkIndex})."
+            Message = $"Deleted bookmark '{title}' (index {deleteParams.BookmarkIndex})."
         };
     }
 

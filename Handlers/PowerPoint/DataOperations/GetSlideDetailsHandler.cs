@@ -44,14 +44,28 @@ public class GetSlideDetailsHandler : OperationHandlerBase<Presentation>
 
         var animations = slide.Timeline.MainSequence;
         List<GetSlideDetailsAnimationInfo> animationsList = [];
-        for (var i = 0; i < animations.Count; i++)
+        var perShapeIndex = new Dictionary<IShape, int>(ReferenceEqualityComparer.Instance);
+        foreach (var anim in animations)
         {
-            var anim = animations[i];
+            var targetShape = anim.TargetShape;
+            var shapeIdx = targetShape != null ? slide.Shapes.IndexOf(targetShape) : -1;
+
+            // Index is the animation's position WITHIN its target shape (matching the per-shape
+            // animationIndex that ppt_animation edit/delete consume), paired with shapeIndex so the
+            // animation is actually addressable from slide_details.
+            var animIndex = 0;
+            if (targetShape != null)
+            {
+                perShapeIndex.TryGetValue(targetShape, out animIndex);
+                perShapeIndex[targetShape] = animIndex + 1;
+            }
+
             animationsList.Add(new GetSlideDetailsAnimationInfo
             {
-                Index = i,
+                Index = animIndex,
+                ShapeIndex = shapeIdx,
                 Type = anim.Type.ToString(),
-                TargetShape = anim.TargetShape?.GetType().Name
+                TargetShape = targetShape?.GetType().Name
             });
         }
 

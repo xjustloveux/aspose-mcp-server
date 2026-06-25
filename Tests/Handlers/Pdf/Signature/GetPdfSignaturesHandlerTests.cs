@@ -67,6 +67,21 @@ public class GetPdfSignaturesHandlerTests : PdfHandlerTestBase
 
     #region Basic Get Signatures Operations
 
+    [SkippableFact]
+    public void Execute_DoesNotDisposeTheDocument()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Pdf);
+        // get_signatures must leave the caller's document usable — session mode reuses the same Document
+        // across operations, so binding a PdfFileSignature to it must not dispose it.
+        var document = CreatePdfWithSignatureField();
+        var context = CreateContext(document);
+
+        _handler.Execute(context, CreateEmptyParameters());
+
+        var ex = Record.Exception(() => _ = document.Form.Fields.OfType<SignatureField>().Count());
+        Assert.Null(ex);
+    }
+
     [Fact]
     public void Execute_ReturnsEmptyWhenNoSignatures()
     {

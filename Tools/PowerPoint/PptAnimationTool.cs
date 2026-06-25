@@ -53,7 +53,10 @@ public class PptAnimationTool
     /// <param name="sessionId">Session ID for in-memory editing.</param>
     /// <param name="outputPath">Output file path (file mode only).</param>
     /// <param name="shapeIndex">Shape index (0-based, required for add/edit, optional for delete).</param>
-    /// <param name="animationIndex">Animation index (0-based, optional for edit/delete, targets specific animation).</param>
+    /// <param name="animationIndex">
+    ///     Animation index within the target shape (0-based, relative to shapeIndex; optional for
+    ///     edit/delete, targets specific animation).
+    /// </param>
     /// <param name="effectType">Animation effect type (e.g., Fade, Fly, Appear, Bounce, Zoom, Wipe, Split, etc.).</param>
     /// <param name="effectSubtype">Animation effect subtype for direction/style.</param>
     /// <param name="triggerType">Trigger type (OnClick, AfterPrevious, WithPrevious).</param>
@@ -88,7 +91,8 @@ Usage examples:
         string? outputPath = null,
         [Description("Shape index (0-based, required for add/edit, optional for delete)")]
         int? shapeIndex = null,
-        [Description("Animation index (0-based, optional for edit/delete, targets specific animation)")]
+        [Description(
+            "Animation index within the target shape (0-based, relative to shapeIndex; optional for edit/delete, targets specific animation)")]
         int? animationIndex = null,
         [Description("Animation effect type (e.g., Fade, Fly, Appear, Bounce, Zoom, Wipe, Split, etc.)")]
         string? effectType = null,
@@ -190,7 +194,7 @@ Usage examples:
     /// </summary>
     /// <param name="parameters">The base operation parameters with slide index.</param>
     /// <param name="shapeIndex">The shape index (0-based).</param>
-    /// <param name="animationIndex">The animation index (0-based).</param>
+    /// <param name="animationIndex">The animation index within the target shape (0-based, relative to shapeIndex).</param>
     /// <param name="effectType">The animation effect type.</param>
     /// <param name="effectSubtype">The animation effect subtype.</param>
     /// <param name="triggerType">The trigger type.</param>
@@ -216,7 +220,7 @@ Usage examples:
     /// </summary>
     /// <param name="parameters">The base operation parameters with slide index.</param>
     /// <param name="shapeIndex">The shape index (0-based).</param>
-    /// <param name="animationIndex">The animation index (0-based).</param>
+    /// <param name="animationIndex">The animation index within the target shape (0-based, relative to shapeIndex).</param>
     /// <returns>OperationParameters configured for deleting an animation.</returns>
     private static OperationParameters BuildDeleteParameters(OperationParameters parameters, int? shapeIndex,
         int? animationIndex)

@@ -33,33 +33,37 @@ public class GetPptAnimationsHandler : OperationHandlerBase<Presentation>
         var sequence = slide.Timeline.MainSequence;
 
         List<AnimationInfo> animations = [];
-        var index = 0;
+        var perShapeIndex = new Dictionary<IShape, int>(ReferenceEqualityComparer.Instance);
 
         foreach (var effect in sequence)
         {
-            if (p.ShapeIndex.HasValue)
+            var targetShape = effect.TargetShape;
+            var shapeIdx = targetShape != null ? slide.Shapes.IndexOf(targetShape) : -1;
+
+            // Index is the animation's position WITHIN its own shape — the same per-shape ordinal that
+            // edit/delete consume as animationIndex (sequence.Where(e => e.TargetShape == shape)). It is
+            // computed before the shape filter so it stays correct whether or not shapeIndex is given.
+            var animIndex = 0;
+            if (targetShape != null)
             {
-                var targetShapeIndex = slide.Shapes.IndexOf(effect.TargetShape);
-                if (targetShapeIndex != p.ShapeIndex.Value)
-                    continue;
+                perShapeIndex.TryGetValue(targetShape, out animIndex);
+                perShapeIndex[targetShape] = animIndex + 1;
             }
 
-            var shapeName = effect.TargetShape?.Name ?? "(unknown)";
-            var shapeIdx = effect.TargetShape != null ? slide.Shapes.IndexOf(effect.TargetShape) : -1;
+            if (p.ShapeIndex.HasValue && shapeIdx != p.ShapeIndex.Value)
+                continue;
 
             animations.Add(new AnimationInfo
             {
-                Index = index,
+                Index = animIndex,
                 ShapeIndex = shapeIdx,
-                ShapeName = shapeName,
+                ShapeName = targetShape?.Name ?? "(unknown)",
                 EffectType = effect.Type.ToString(),
                 EffectSubtype = effect.Subtype.ToString(),
                 TriggerType = effect.Timing.TriggerType.ToString(),
                 Duration = SanitizeFloat(effect.Timing.Duration),
                 Delay = SanitizeFloat(effect.Timing.TriggerDelayTime)
             });
-
-            index++;
         }
 
         var result = new GetAnimationsResult

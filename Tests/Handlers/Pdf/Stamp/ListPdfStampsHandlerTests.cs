@@ -59,6 +59,30 @@ public class ListPdfStampsHandlerTests : PdfHandlerTestBase
         Assert.Equal("stamp", stamp.Type);
     }
 
+    [Fact]
+    public void Execute_WithNonStampAnnotationBeforeStamp_ReportsStampRelativeIndex()
+    {
+        // Adversarial: a non-stamp annotation precedes the stamp in page.Annotations. The reported Index
+        // must be stamp-relative (1 = first stamp) so it can be fed straight into remove's stampIndex,
+        // not the absolute page.Annotations position (which would be 2 here).
+        var doc = new Document();
+        var page = doc.Pages.Add();
+        page.Annotations.Add(new TextAnnotation(page, new Rectangle(10, 10, 60, 60))
+        {
+            Title = "note", Contents = "a note"
+        });
+        page.Annotations.Add(new StampAnnotation(page, new Rectangle(100, 100, 200, 200))
+        {
+            Contents = "Stamp 1"
+        });
+
+        var res = _handler.Execute(CreateContext(doc), CreateEmptyParameters());
+
+        var result = Assert.IsType<GetStampsPdfResult>(res);
+        var stamp = Assert.Single(result.Stamps);
+        Assert.Equal(1, stamp.Index);
+    }
+
     #endregion
 
     #region Basic List Operations

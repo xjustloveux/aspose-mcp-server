@@ -82,7 +82,8 @@ Usage examples:
 - Get data: ppt_chart(operation='get', path='presentation.pptx', slideIndex=0, shapeIndex=0)
 - Update data: ppt_chart(operation='update_data', path='presentation.pptx', slideIndex=0, shapeIndex=0, data={categories:['A','B'],series:[{name:'Sales',values:[1,2]}]})
 
-Note: shapeIndex refers to the chart index (0-based) among all charts on the slide, not the absolute shape index.")]
+Note: shapeIndex refers to the chart index (0-based) among all charts on the slide, not the absolute shape index.
+Warning: update_data REPLACES the chart's entire data. Providing 'data' clears ALL existing series and categories before adding the supplied ones, so any series you omit are lost. To keep other series, include them all in the same call.")]
     public object Execute(
         [Description("Operation: add, edit, delete, get, update_data")]
         string operation,
@@ -107,7 +108,8 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
         float width = 500,
         [Description("Chart height in points (optional for add, default: 400)")]
         float height = 400,
-        [Description("Chart data object with categories and series (optional, for edit/update_data)")]
+        [Description(
+            "Chart data object with categories and series (optional, for edit/update_data). For update_data this REPLACES all existing series/categories — include every series you want to keep.")]
         JsonObject? data = null,
         [Description("Clear existing data before adding new (optional, for update_data, default: false)")]
         bool clearExisting = false)

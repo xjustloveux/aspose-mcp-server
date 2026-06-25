@@ -82,6 +82,33 @@ public class RemovePdfStampHandlerTests : PdfHandlerTestBase
     }
 
     [Fact]
+    public void Execute_RemoveByStampIndex_WithNonStampAnnotationFirst_RemovesTheStampNotTheOtherAnnotation()
+    {
+        // Adversarial: a non-stamp annotation precedes the stamp in page.Annotations. stampIndex 1 must
+        // address the first STAMP (stamp-relative) and remove must only ever delete a stamp — never the
+        // unrelated annotation that merely sits at the same absolute position.
+        var doc = new Document();
+        var page = doc.Pages.Add();
+        page.Annotations.Add(new TextAnnotation(page, new Rectangle(10, 10, 60, 60))
+        {
+            Title = "note", Contents = "a note"
+        });
+        page.Annotations.Add(new StampAnnotation(page, new Rectangle(100, 100, 200, 200))
+        {
+            Contents = "Stamp 1"
+        });
+
+        _handler.Execute(CreateContext(doc), CreateParameters(new Dictionary<string, object?>
+        {
+            { "pageIndex", 1 },
+            { "stampIndex", 1 }
+        }));
+
+        Assert.Empty(page.Annotations.OfType<StampAnnotation>());
+        Assert.Single(page.Annotations.OfType<TextAnnotation>());
+    }
+
+    [Fact]
     public void Execute_OnPageWithNoStamps_ReturnsAppropriateMessage()
     {
         var doc = CreateEmptyDocument();

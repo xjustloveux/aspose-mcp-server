@@ -39,20 +39,20 @@ public class ListPdfStampsHandler : OperationHandlerBase<Document>
         {
             if (pIdx < 1 || pIdx > document.Pages.Count) continue;
             var page = document.Pages[pIdx];
-            var annotIdx = 0;
+            var stampIdx = 0;
             foreach (var annotation in page.Annotations)
-            {
-                annotIdx++;
                 if (annotation is StampAnnotation stampAnnotation)
+                {
+                    stampIdx++;
                     stamps.Add(new PdfStampInfo
                     {
                         PageIndex = pIdx,
-                        Index = annotIdx,
+                        Index = stampIdx,
                         Type = "stamp",
                         Contents = stampAnnotation.Contents,
                         Opacity = stampAnnotation.Opacity
                     });
-            }
+                }
         }
 
         var pageDesc = p.PageIndex == 0 ? "all pages" : $"page {p.PageIndex}";

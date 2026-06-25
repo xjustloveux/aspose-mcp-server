@@ -2,6 +2,7 @@ using Aspose.Pdf;
 using Aspose.Pdf.Forms;
 using AsposeMcpServer.Handlers.Pdf.Signature;
 using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Pdf.Signature;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.Signature;
@@ -90,6 +91,32 @@ public class DeletePdfSignatureHandlerTests : PdfHandlerTestBase
         }
 
         AssertModified(context);
+    }
+
+    [SkippableFact]
+    public void Execute_GetThenDeleteByReportedIndex_DeletesThatSignatureField()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Pdf);
+        // True single-document round-trip: a field reported by 'get' at index N must be the one
+        // delete(signatureIndex=N) removes — both enumerate all signature fields in document order. Running
+        // get then delete on the SAME document also confirms get leaves it usable (does not dispose it).
+        var doc = new Document();
+        var page = doc.Pages.Add();
+        doc.Form.Add(new SignatureField(page, new Rectangle(100, 600, 300, 700)) { PartialName = "SigA" });
+        doc.Form.Add(new SignatureField(page, new Rectangle(100, 400, 300, 500)) { PartialName = "SigB" });
+
+        var getRes = (GetSignaturesResult)new GetPdfSignaturesHandler()
+            .Execute(CreateContext(doc), CreateEmptyParameters());
+        var sigBIndex = getRes.Items.Single(s => s.Name == "SigB").Index;
+
+        _handler.Execute(CreateContext(doc), CreateParameters(new Dictionary<string, object?>
+        {
+            { "signatureIndex", sigBIndex }
+        }));
+
+        var remaining = doc.Form.Fields.OfType<SignatureField>().ToList();
+        Assert.Single(remaining);
+        Assert.Equal("SigA", remaining[0].PartialName);
     }
 
     [Fact]

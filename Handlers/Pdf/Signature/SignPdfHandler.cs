@@ -51,7 +51,12 @@ public class SignPdfHandler : OperationHandlerBase<Document>
 
         var rect = new Rectangle((int)p.X, (int)p.Y, (int)p.Width, (int)p.Height);
 
-        using var pdfSign = new PdfFileSignature(document);
+        // PdfFileSignature is intentionally NOT wrapped in 'using': disposing it disposes the bound document,
+        // which is owned by the caller (the session in session mode, the pipeline in file mode), not by this
+        // handler. In session mode the document is reused across operations, so disposing it here would make
+        // every later operation throw ObjectDisposedException. (Same rationale as GetPdfSignaturesHandler.)
+        // The signed bytes are persisted by pdfSign.Save below in file mode, and by the session on its own save.
+        var pdfSign = new PdfFileSignature(document);
         pdfSign.Sign(p.PageIndex, p.Reason, "", p.Location, true, rect, pkcs);
 
         var savePath = context.OutputPath ?? context.SourcePath;

@@ -1,7 +1,9 @@
+using System.Text;
 using Aspose.Pdf;
 using Aspose.Pdf.Forms;
 using AsposeMcpServer.Handlers.Pdf.FormField;
 using AsposeMcpServer.Results.Common;
+using AsposeMcpServer.Results.Pdf.FormField;
 using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Handlers.Pdf.FormField;
@@ -108,6 +110,100 @@ public class DeletePdfFormFieldHandlerTests : PdfHandlerTestBase
 
         Assert.Throws<ArgumentException>(() => doc.Form["field0"]);
         Assert.NotNull(doc.Form["field1"]);
+    }
+
+    [Fact]
+    public void Execute_GetThenDeleteByReportedName_RemovesThatField()
+    {
+        // Round-trip: the name 'get' reports for a field must be the one delete(fieldName) removes.
+        // The theorized nested-field divergence (PartialName != FullName) was investigated with hand-built
+        // nested AcroForm PDFs and is NOT reachable here: document.Form (what get enumerates) yields only
+        // top-level fields, where PartialName == FullName, so delete's Form.Delete(reportedName) round-trips.
+        // Nested leaves are never surfaced by get and are safely rejected by delete (no wrong-element delete).
+        var doc = new Document();
+        var page = doc.Pages.Add();
+        var child = new TextBoxField(page, new Rectangle(100, 700, 300, 720));
+        doc.Form.Add(child, "address.first", 1);
+
+        var getRes = (GetFormFieldsResult)new GetPdfFormFieldsHandler()
+            .Execute(CreateContext(doc), CreateEmptyParameters());
+        var reportedName = getRes.Items.Single().Name;
+
+        new DeletePdfFormFieldHandler().Execute(CreateContext(doc), CreateParameters(new Dictionary<string, object?>
+        {
+            { "fieldName", reportedName }
+        }));
+
+        Assert.Empty(doc.Form);
+    }
+
+    [Fact]
+    public void Execute_NestedAcroForm_GetReportsTopLevelAndDeleteRoundTrips()
+    {
+        // Adversarial fixture for the audited get->mutate addressing class: a TRUE nested AcroForm field
+        // (parent "address" -> terminal child "first"; child FullName "address.first", PartialName "first").
+        // Proves the round-trip is SAFE: get enumerates document.Form = top-level fields only, so it reports
+        // "address" (never the leaf "first"); deleting that reported name round-trips; and a delete targeting
+        // the leaf PartialName is safely rejected (no wrong-element deletion). Guards against a future change
+        // to get that surfaces nested leaves, which would reintroduce the PartialName-vs-FullName divergence.
+        var bytes = BuildNestedAcroFormPdf();
+
+        using (var stream = new MemoryStream(bytes))
+        using (var getDoc = new Document(stream))
+        {
+            var getRes = (GetFormFieldsResult)new GetPdfFormFieldsHandler()
+                .Execute(CreateContext(getDoc), CreateEmptyParameters());
+            var reportedName = Assert.Single(getRes.Items).Name;
+            Assert.Equal("address", reportedName);
+        }
+
+        using (var stream = new MemoryStream(bytes))
+        using (var leafDoc = new Document(stream))
+        {
+            var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(CreateContext(leafDoc),
+                CreateParameters(new Dictionary<string, object?> { { "fieldName", "first" } })));
+            Assert.Contains("not found", ex.Message);
+        }
+
+        using (var stream = new MemoryStream(bytes))
+        using (var delDoc = new Document(stream))
+        {
+            _handler.Execute(CreateContext(delDoc),
+                CreateParameters(new Dictionary<string, object?> { { "fieldName", "address" } }));
+            Assert.Empty(delDoc.Form);
+        }
+    }
+
+    private static byte[] BuildNestedAcroFormPdf()
+    {
+        // Minimal PDF with a 2-level AcroForm hierarchy: field "address" (non-terminal) -> field "first"
+        // (terminal text field merged with its widget). Child FullName = "address.first", PartialName = "first".
+        var enc = Encoding.Latin1;
+        string[] objects =
+        [
+            "<< /Type /Catalog /Pages 2 0 R /AcroForm << /Fields [4 0 R] >> >>",
+            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Annots [5 0 R] >>",
+            "<< /T (address) /Kids [5 0 R] >>",
+            "<< /Type /Annot /Subtype /Widget /FT /Tx /T (first) /Parent 4 0 R /Rect [100 700 300 720] >>"
+        ];
+        var sb = new StringBuilder();
+        sb.Append("%PDF-1.7\n");
+        var offsets = new int[objects.Length];
+        for (var i = 0; i < objects.Length; i++)
+        {
+            offsets[i] = enc.GetByteCount(sb.ToString());
+            sb.Append($"{i + 1} 0 obj\n{objects[i]}\nendobj\n");
+        }
+
+        var xrefOffset = enc.GetByteCount(sb.ToString());
+        sb.Append("xref\n");
+        sb.Append($"0 {objects.Length + 1}\n");
+        sb.Append("0000000000 65535 f \n");
+        foreach (var off in offsets)
+            sb.Append($"{off:D10} 00000 n \n");
+        sb.Append($"trailer\n<< /Size {objects.Length + 1} /Root 1 0 R >>\nstartxref\n{xrefOffset}\n%%EOF");
+        return enc.GetBytes(sb.ToString());
     }
 
     #endregion

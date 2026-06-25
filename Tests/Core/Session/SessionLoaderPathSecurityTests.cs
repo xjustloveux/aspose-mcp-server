@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Text.Json;
 using AsposeMcpServer.Core;
@@ -29,6 +30,9 @@ public class SessionLoaderPathSecurityTests : WordTestBase
     //   - absolute paths outside the allowlist when one is configured.
     // =====================================================================
 
+    [SuppressMessage("Performance", "CA1825",
+        Justification =
+            "False positive: CA1825 mis-fires on the C# 12 collection expression for TheoryData<T> — the collection is non-empty, so Array.Empty<T>() does not apply")]
     public static TheoryData<string> TraversalPayloads =>
     [
         // Relative traversal payload — shape-rejected by ValidateFilePath.

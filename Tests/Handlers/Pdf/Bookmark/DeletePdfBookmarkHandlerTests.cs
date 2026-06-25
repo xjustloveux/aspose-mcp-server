@@ -105,6 +105,32 @@ public class DeletePdfBookmarkHandlerTests : PdfHandlerTestBase
         AssertModified(context);
     }
 
+    [Fact]
+    public void Execute_DeleteByIndex_WithDuplicateTitles_DeletesTheIndexedOneNotTheFirstTitleMatch()
+    {
+        // Adversarial round-trip: two top-level bookmarks share a title (distinguished here by Italic).
+        // 'get' reports them at distinct indices (1, 2). Deleting bookmarkIndex 2 must remove THAT one,
+        // not the first bookmark that merely shares the title.
+        var doc = CreateDocumentWithPages(1);
+        doc.Outlines.Add(new OutlineItemCollection(doc.Outlines)
+        {
+            Title = "Chapter", Italic = true, Action = new GoToAction(doc.Pages[1])
+        });
+        doc.Outlines.Add(new OutlineItemCollection(doc.Outlines)
+        {
+            Title = "Chapter", Italic = false, Action = new GoToAction(doc.Pages[1])
+        });
+
+        _handler.Execute(CreateContext(doc), CreateParameters(new Dictionary<string, object?>
+        {
+            { "bookmarkIndex", 2 }
+        }));
+
+        Assert.Equal(1, doc.Outlines.Count);
+        Assert.True(doc.Outlines[1].Italic,
+            "deleting index 2 must keep the first 'Chapter' (Italic=true), not delete it by title");
+    }
+
     [Theory]
     [InlineData(1)]
     [InlineData(2)]

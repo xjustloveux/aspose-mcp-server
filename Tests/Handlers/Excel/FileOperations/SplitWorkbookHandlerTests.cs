@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
@@ -225,6 +226,9 @@ public class SplitWorkbookHandlerTests : ExcelHandlerTestBase
 
     #region Path Traversal / Validation (bug 20260415-excel-split-path-traversal)
 
+    [SuppressMessage("Performance", "CA1825",
+        Justification =
+            "False positive: CA1825 mis-fires on the C# 12 collection expression for TheoryData<T> — the collection is non-empty, so Array.Empty<T>() does not apply")]
     public static TheoryData<string> MaliciousSourcePaths()
     {
         return

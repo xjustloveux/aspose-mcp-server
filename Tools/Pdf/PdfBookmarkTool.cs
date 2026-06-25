@@ -67,8 +67,8 @@ public class PdfBookmarkTool
 
 Usage examples:
 - Add bookmark: pdf_bookmark(operation='add', path='doc.pdf', title='Chapter 1', pageIndex=1)
-- Delete bookmark: pdf_bookmark(operation='delete', path='doc.pdf', bookmarkIndex=0)
-- Edit bookmark: pdf_bookmark(operation='edit', path='doc.pdf', bookmarkIndex=0, title='Updated Title', pageIndex=2)
+- Delete bookmark: pdf_bookmark(operation='delete', path='doc.pdf', bookmarkIndex=1)
+- Edit bookmark: pdf_bookmark(operation='edit', path='doc.pdf', bookmarkIndex=1, title='Updated Title', pageIndex=2)
 - Get bookmarks: pdf_bookmark(operation='get', path='doc.pdf')")]
     public object Execute(
         [Description(@"Operation to perform.

@@ -63,7 +63,10 @@ public class PdfStampTool
     /// <param name="opacity">Stamp opacity from 0.0 (transparent) to 1.0 (opaque).</param>
     /// <param name="rotation">Rotation angle in degrees.</param>
     /// <param name="color">Text color name or hex value (for add_text).</param>
-    /// <param name="stampIndex">Stamp annotation index (1-based, for remove; omit to remove all stamps on page).</param>
+    /// <param name="stampIndex">
+    ///     Stamp index, 1-based among the stamp annotations on the page (matches 'list' output; for
+    ///     remove; omit to remove all stamps on page).
+    /// </param>
     /// <returns>A message indicating the result of the operation, or JSON data for list operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(
@@ -82,7 +85,9 @@ Usage examples:
 - Add image stamp: pdf_stamp(operation='add_image', path='doc.pdf', outputPath='out.pdf', imagePath='logo.png', x=100, y=100)
 - Add PDF stamp: pdf_stamp(operation='add_pdf', path='doc.pdf', outputPath='out.pdf', pdfPath='stamp.pdf', stampPageIndex=1)
 - List stamps: pdf_stamp(operation='list', path='doc.pdf')
-- Remove stamp: pdf_stamp(operation='remove', path='doc.pdf', outputPath='out.pdf', pageIndex=1, stampIndex=1)")]
+- Remove stamp: pdf_stamp(operation='remove', path='doc.pdf', outputPath='out.pdf', pageIndex=1, stampIndex=1)
+
+Note: 'list' and 'remove' operate on stamp ANNOTATIONS (e.g. rubber-stamp annotations already present in the PDF). add_text/add_image/add_pdf render stamps into the page content; those are permanent and are NOT shown by 'list' nor removable by 'remove'.")]
     public object Execute(
         [Description(@"Operation to perform.
 - 'add_text': Add a text stamp (required params: path, text)
@@ -123,7 +128,8 @@ Usage examples:
         double rotation = 0.0,
         [Description("Text color name or hex value (default: 'black', for add_text)")]
         string color = "black",
-        [Description("Stamp annotation index (1-based, for remove; omit to remove all stamps on page)")]
+        [Description(
+            "Stamp index, 1-based among the stamp annotations on the page (matches 'list' output; for remove; omit to remove all stamps on page)")]
         int? stampIndex = null)
     {
         using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);

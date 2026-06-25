@@ -38,10 +38,13 @@ public class RemovePdfStampHandler : OperationHandlerBase<Document>
 
         if (p.StampIndex.HasValue)
         {
-            if (p.StampIndex.Value < 1 || p.StampIndex.Value > page.Annotations.Count)
-                throw new ArgumentException($"stampIndex must be between 1 and {page.Annotations.Count}");
+            var stamps = page.Annotations.OfType<StampAnnotation>().ToList();
+            if (p.StampIndex.Value < 1 || p.StampIndex.Value > stamps.Count)
+                throw new ArgumentException($"stampIndex must be between 1 and {stamps.Count}");
 
-            page.Annotations.Delete(p.StampIndex.Value);
+            // Index into the stamp-relative list (matching 'list'), so remove can only ever delete a
+            // stamp — never an unrelated annotation that shares the same absolute page.Annotations index.
+            page.Annotations.Delete(stamps[p.StampIndex.Value - 1]);
 
             MarkModified(context);
 

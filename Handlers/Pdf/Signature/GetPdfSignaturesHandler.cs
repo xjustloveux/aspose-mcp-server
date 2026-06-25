@@ -1,5 +1,6 @@
 using Aspose.Pdf;
 using Aspose.Pdf.Facades;
+using Aspose.Pdf.Forms;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Results.Pdf.Signature;
@@ -24,10 +25,19 @@ public class GetPdfSignaturesHandler : OperationHandlerBase<Document>
     public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var document = context.Document;
-        using var pdfSign = new PdfFileSignature(document);
-        var signatureNames = pdfSign.GetSignNames();
 
-        if (signatureNames.Count == 0)
+        // PdfFileSignature is intentionally NOT wrapped in 'using': disposing it disposes the bound
+        // document, which is owned by the caller/session and reused across operations. get must be
+        // read-only and leave the document usable.
+        var pdfSign = new PdfFileSignature(document);
+
+        // Enumerate the signature FIELDS (signed or not) in the same order delete indexes them
+        // (document.Form.Fields.OfType<SignatureField>()), so a get-reported index round-trips into
+        // delete's signatureIndex. GetSignNames() lists only SIGNED signatures, which diverged from
+        // delete's all-fields index space and made the get-reported index unusable for delete.
+        var signatureFields = document.Form.Fields.OfType<SignatureField>().ToList();
+
+        if (signatureFields.Count == 0)
             return new GetSignaturesResult
             {
                 Count = 0,
@@ -36,15 +46,15 @@ public class GetPdfSignaturesHandler : OperationHandlerBase<Document>
             };
 
         List<SignatureInfo> signatureList = [];
-        for (var i = 0; i < signatureNames.Count; i++)
+        for (var i = 0; i < signatureFields.Count; i++)
         {
-            var signatureName = signatureNames[i];
+            var field = signatureFields[i];
             bool isValid;
             bool hasCertificate;
 
             try
             {
-                isValid = pdfSign.VerifySignature(signatureName);
+                isValid = pdfSign.VerifySignature(field.FullName);
             }
             catch
             {
@@ -53,7 +63,7 @@ public class GetPdfSignaturesHandler : OperationHandlerBase<Document>
 
             try
             {
-                _ = pdfSign.ExtractCertificate(signatureName);
+                _ = pdfSign.ExtractCertificate(field.FullName);
                 hasCertificate = true;
             }
             catch
@@ -64,7 +74,7 @@ public class GetPdfSignaturesHandler : OperationHandlerBase<Document>
             signatureList.Add(new SignatureInfo
             {
                 Index = i,
-                Name = signatureName,
+                Name = field.PartialName,
                 IsValid = isValid,
                 HasCertificate = hasCertificate
             });
