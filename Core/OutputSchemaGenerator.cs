@@ -45,7 +45,7 @@ public static class OutputSchemaGenerator
     /// <summary>
     ///     Generates JSON Schema from all Handlers in the specified namespace.
     ///     Returns schema for FinalizedResult with data field containing handler result types,
-    ///     wrapped in a top-level <c>result</c> property so the schema matches the MCP SDK 1.2.0
+    ///     wrapped in a top-level <c>result</c> property so the schema matches the MCP SDK
     ///     wire format for tools whose method return type is <c>object</c> (the SDK auto-wraps
     ///     the tool's return value as <c>structuredContent.result</c>).
     /// </summary>
@@ -162,7 +162,7 @@ public static class OutputSchemaGenerator
     /// <summary>
     ///     Wraps a JSON Schema element in a top-level <c>result</c> property, producing
     ///     <c>{"type":"object","properties":{"result":&lt;inner&gt;},"required":["result"]}</c>.
-    ///     This aligns the declared outputSchema with the MCP SDK 1.2.0 wire format for
+    ///     This aligns the declared outputSchema with the MCP SDK wire format for
     ///     tools whose method return type is <c>object</c>: the SDK auto-wraps the tool's
     ///     return value as <c>structuredContent.result</c>, and Claude Desktop strictly
     ///     validates <c>structuredContent</c> against the declared schema. Without this

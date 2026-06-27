@@ -9,7 +9,7 @@
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=xjustloveux_aspose-mcp-server&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=xjustloveux_aspose-mcp-server)
 [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=xjustloveux_aspose-mcp-server&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=xjustloveux_aspose-mcp-server)
 [![MCP Version](https://img.shields.io/badge/MCP-2025--11--25-blue)](https://modelcontextprotocol.io/)
-[![MCP SDK](https://img.shields.io/badge/MCP%20SDK-1.2.0-purple)](https://github.com/modelcontextprotocol/csharp-sdk)
+[![MCP SDK](https://img.shields.io/badge/MCP%20SDK-1.4.0-purple)](https://github.com/modelcontextprotocol/csharp-sdk)
 [![Desktop Extension](https://img.shields.io/badge/Desktop%20Extension-.mcpb-blue)](https://xjustloveux.github.io/aspose-mcp-server/getting-started.html#mcpb)
 [![Aspose Version](https://img.shields.io/badge/Aspose-23.10.0-orange)](https://products.aspose.com/total/net/)
 [![xUnit](https://img.shields.io/badge/xUnit-2.9.3-blue?logo=xunit)](https://xunit.net/)
@@ -40,7 +40,7 @@
 - **Origin 驗證** - 防止 DNS 重綁定攻擊（HTTP/WebSocket 模式）
 
 ### 技術特性
-- **MCP SDK 1.2.0** - 使用官方 ModelContextProtocol NuGet 套件，支援 Tool Annotations 和 outputSchema
+- **MCP SDK 1.4.0** - 使用官方 ModelContextProtocol NuGet 套件，支援 Tool Annotations 和 outputSchema
 - **Tool Annotations** - 所有工具標註 ReadOnly、Destructive、Idempotent、OpenWorld 行為特性
 - **結構化輸出** - Handler 返回強型別結果，SDK 自動生成 outputSchema（oneOf JSON Schema）
 - **統一字型設定** - 多個工具支援中英文字型分別設定（`fontNameAscii` 和 `fontNameFarEast` 參數）
