@@ -251,21 +251,28 @@ Usage examples:
 
         var result = handler.Execute(operationContext, parameters);
 
+        // Capture the source size BEFORE saving: an in-place compress/linearize
+        // (outputPath == path) would otherwise measure the already-rewritten file and
+        // report a 0% reduction.
+        long? sourceSizeBeforeSave = null;
+        if (operation is "compress" or "linearize" && !ctx.IsSession && path != null && File.Exists(path))
+            sourceSizeBeforeSave = new FileInfo(path).Length;
+
         if (operationContext.IsModified)
             ctx.Save(outputPath);
 
         // For compress/linearize file operations, return detailed size info
-        if (operation == "compress" && !ctx.IsSession && path != null && outputPath != null)
+        if (operation == "compress" && sourceSizeBeforeSave.HasValue && outputPath != null)
         {
-            var originalSize = new FileInfo(path).Length;
+            var originalSize = sourceSizeBeforeSave.Value;
             var compressedSize = new FileInfo(outputPath).Length;
             var reduction = (double)(originalSize - compressedSize) / originalSize * 100;
             return $"PDF compressed ({reduction:F2}% reduction, {originalSize} -> {compressedSize} bytes)";
         }
 
-        if (operation == "linearize" && !ctx.IsSession && path != null && outputPath != null)
+        if (operation == "linearize" && sourceSizeBeforeSave.HasValue && outputPath != null)
         {
-            var originalSize = new FileInfo(path).Length;
+            var originalSize = sourceSizeBeforeSave.Value;
             var optimizedSize = new FileInfo(outputPath).Length;
             return
                 $"PDF linearized for fast web view. Original: {originalSize} bytes, Optimized: {optimizedSize} bytes";

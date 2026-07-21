@@ -171,46 +171,24 @@ public class AddPdfImageHandlerTests : PdfHandlerTestBase
         Assert.Contains("pageIndex must be between", ex.Message);
     }
 
-    [Fact]
-    public void Execute_WithPageIndexZero_AddsToFirstPage()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void Execute_WithNonPositivePageIndex_ThrowsArgumentException(int pageIndex)
     {
+        // 'get' treats pageIndex 0 as "all pages"; a mutate call must reject non-positive
+        // indices instead of silently operating on page 1.
         var imagePath = CreateTestPngImage();
         var doc = CreateDocumentWithPages(2);
-        var initialImageCount = doc.Pages[1].Resources.Images.Count;
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "imagePath", imagePath },
-            { "pageIndex", 0 }
+            { "pageIndex", pageIndex }
         });
 
-        var res = _handler.Execute(context, parameters);
-
-        Assert.IsType<SuccessResult>(res);
-        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
-            Assert.Equal(initialImageCount + 1, doc.Pages[1].Resources.Images.Count);
-        AssertModified(context);
-    }
-
-    [Fact]
-    public void Execute_WithNegativePageIndex_AddsToFirstPage()
-    {
-        var imagePath = CreateTestPngImage();
-        var doc = CreateDocumentWithPages(2);
-        var initialImageCount = doc.Pages[1].Resources.Images.Count;
-        var context = CreateContext(doc);
-        var parameters = CreateParameters(new Dictionary<string, object?>
-        {
-            { "imagePath", imagePath },
-            { "pageIndex", -1 }
-        });
-
-        var res = _handler.Execute(context, parameters);
-
-        Assert.IsType<SuccessResult>(res);
-        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
-            Assert.Equal(initialImageCount + 1, doc.Pages[1].Resources.Images.Count);
-        AssertModified(context);
+        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+        Assert.Contains("pageIndex must be between", ex.Message);
     }
 
     #endregion

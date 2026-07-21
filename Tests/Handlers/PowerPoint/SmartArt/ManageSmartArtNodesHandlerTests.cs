@@ -35,6 +35,57 @@ public class ManageSmartArtNodesHandlerTests : PptHandlerTestBase
 
     #endregion
 
+    #region Nested Node Root Addressing
+
+    [SkippableFact]
+    public void Execute_Edit_RootIndexBeyondRootCount_Throws()
+    {
+        SkipIfNotWindows();
+        var pres = CreatePresentationWithSmartArt();
+        var smartArt = (ISmartArt)pres.Slides[0].Shapes[0];
+        // Nest a child under root 0 so the flattened AllNodes list is longer than the root list.
+        smartArt.Nodes[0].ChildNodes.AddNode().TextFrame.Text = "nested child";
+        var rootCount = smartArt.Nodes.Count;
+        var context = CreateContext(pres);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "slideIndex", 0 },
+            { "shapeIndex", 0 },
+            { "action", "edit" },
+            { "targetPath", $"[{rootCount}]" },
+            { "text", "should not land" }
+        });
+
+        Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+    }
+
+    [SkippableFact]
+    public void Execute_Edit_SecondRootPath_EditsSecondRoot()
+    {
+        SkipIfNotWindows();
+        var pres = CreatePresentationWithSmartArt();
+        var smartArt = (ISmartArt)pres.Slides[0].Shapes[0];
+        smartArt.Nodes[0].ChildNodes.AddNode().TextFrame.Text = "nested child";
+        Skip.If(smartArt.Nodes.Count < 2, "Layout does not provide a second root node");
+        var context = CreateContext(pres);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "slideIndex", 0 },
+            { "shapeIndex", 0 },
+            { "action", "edit" },
+            { "targetPath", "[1]" },
+            { "text", "EDITED-ROOT-1" }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        Assert.IsType<SuccessResult>(res);
+        if (!IsEvaluationMode())
+            Assert.Equal("EDITED-ROOT-1", smartArt.Nodes[1].TextFrame.Text);
+    }
+
+    #endregion
+
     #region Basic Operations
 
     [SkippableFact]

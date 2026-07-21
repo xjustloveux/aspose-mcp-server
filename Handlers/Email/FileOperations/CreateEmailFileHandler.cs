@@ -30,11 +30,9 @@ public class CreateEmailFileHandler : OperationHandlerBase<object>
         var p = ExtractParameters(parameters);
         SecurityHelper.ValidateFilePath(p.OutputPath, "outputPath", true);
 
-        var message = new MailMessage
-        {
-            From = p.From ?? "noreply@example.com",
-            Subject = p.Subject ?? ""
-        };
+        using var message = new MailMessage();
+        message.From = p.From ?? "noreply@example.com";
+        message.Subject = p.Subject ?? "";
 
         if (p.IsHtml)
             message.HtmlBody = p.Body ?? "";

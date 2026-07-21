@@ -35,18 +35,19 @@ public class AddPdfImageHandler : OperationHandlerBase<Document>
 
         var document = context.Document;
 
-        var actualPageIndex = p.PageIndex < 1 ? 1 : p.PageIndex;
-        if (actualPageIndex > document.Pages.Count)
+        // Reject non-positive indices instead of clamping to page 1: 'get' treats pageIndex 0
+        // as "all pages", so a silent clamp would mutate a page the caller never named.
+        if (p.PageIndex < 1 || p.PageIndex > document.Pages.Count)
             throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
 
-        var page = document.Pages[actualPageIndex];
+        var page = document.Pages[p.PageIndex];
         page.AddImage(p.ImagePath,
             new Rectangle(p.X, p.Y, p.Width.HasValue ? p.X + p.Width.Value : p.X + 200,
                 p.Height.HasValue ? p.Y + p.Height.Value : p.Y + 200));
 
         MarkModified(context);
 
-        return new SuccessResult { Message = $"Added image to page {actualPageIndex}." };
+        return new SuccessResult { Message = $"Added image to page {p.PageIndex}." };
     }
 
     /// <summary>

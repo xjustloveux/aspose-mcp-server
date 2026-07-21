@@ -36,11 +36,11 @@ public class OcrRecognitionTool
     }
 
     /// <summary>
-    ///     Executes an OCR recognition operation (recognize, recognize_pdf, recognize_receipt, recognize_id_card,
+    ///     Executes an OCR recognition operation (recognize, recognize_pdf, recognize_receipt, recognize_id,
     ///     recognize_passport).
     /// </summary>
     /// <param name="operation">
-    ///     The operation to perform: recognize, recognize_pdf, recognize_receipt, recognize_id_card,
+    ///     The operation to perform: recognize, recognize_pdf, recognize_receipt, recognize_id,
     ///     recognize_passport.
     /// </param>
     /// <param name="path">Input file path (image or PDF).</param>
@@ -67,7 +67,7 @@ public class OcrRecognitionTool
         ReadOnly = true,
         UseStructuredContent = true)]
     [Description(
-        @"Perform OCR text recognition on images and PDFs. Supports 5 operations: recognize, recognize_pdf, recognize_receipt, recognize_id_card, recognize_passport.
+        @"Perform OCR text recognition on images and PDFs. Supports 5 operations: recognize, recognize_pdf, recognize_receipt, recognize_id, recognize_passport.
 
 Usage examples:
 - Recognize text: ocr_recognition(operation='recognize', path='image.png')

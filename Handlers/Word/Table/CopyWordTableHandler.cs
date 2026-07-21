@@ -32,20 +32,13 @@ public class CopyWordTableHandler : OperationHandlerBase<Document>
         var p = ExtractCopyWordTableParameters(parameters);
 
         var doc = context.Document;
-        var sourceSectionIdx = p.SourceSectionIndex ?? 0;
+        // Omitted sourceSectionIndex means the document-wide flat table index, matching 'get'.
+        // targetSectionIndex stays a placement parameter with section 0 as its default.
         var targetSectionIdx = p.TargetSectionIndex ?? 0;
-
-        if (sourceSectionIdx < 0 || sourceSectionIdx >= doc.Sections.Count)
-            throw new ArgumentException($"sourceSectionIndex must be between 0 and {doc.Sections.Count - 1}");
         if (targetSectionIdx < 0 || targetSectionIdx >= doc.Sections.Count)
             throw new ArgumentException($"targetSectionIndex must be between 0 and {doc.Sections.Count - 1}");
 
-        var sourceSection = doc.Sections[sourceSectionIdx];
-        var sourceTables = sourceSection.Body.GetChildNodes(NodeType.Table, true).Cast<WordTable>().ToList();
-        if (p.TableIndex < 0 || p.TableIndex >= sourceTables.Count)
-            throw new ArgumentException($"sourceTableIndex must be between 0 and {sourceTables.Count - 1}");
-
-        var sourceTable = sourceTables[p.TableIndex];
+        var sourceTable = WordTableHelper.GetTable(doc, p.TableIndex, p.SourceSectionIndex);
         var targetSection = doc.Sections[targetSectionIdx];
 
         var targetPara = ParagraphResolver

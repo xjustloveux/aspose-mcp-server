@@ -38,10 +38,12 @@ public class GetWordTablesHandler : OperationHandlerBase<Document>
             var rowCount = table.Rows.Count;
             var colCount = rowCount > 0 ? table.Rows[0].Cells.Count : 0;
             var precedingText = WordTableHelper.GetPrecedingText(table, 50);
+            var tableSection = table.GetAncestor(NodeType.Section) as Section;
 
             tableList.Add(new WordTableInfo
             {
                 Index = i,
+                SectionIndex = tableSection == null ? 0 : doc.Sections.IndexOf(tableSection),
                 Rows = rowCount,
                 Columns = colCount,
                 PrecedingText = !string.IsNullOrEmpty(precedingText) ? precedingText : null

@@ -33,7 +33,7 @@ public class ListEmailAttachmentHandler : OperationHandlerBase<object>
         if (!File.Exists(path))
             throw new FileNotFoundException("The specified file was not found.");
 
-        var message = MailMessage.Load(path);
+        using var message = MailMessage.Load(path);
 
         var attachments = new List<AttachmentEmailInfo>();
         for (var i = 0; i < message.Attachments.Count; i++)

@@ -46,29 +46,10 @@ public class DeleteExcelSparklineHandler : OperationHandlerBase<Workbook>
             var group = worksheet.SparklineGroups[groupIndex.Value];
             var sparklineCount = group.Sparklines.Count;
 
-            var cellArea = new CellArea();
-            if (sparklineCount > 0)
-            {
-                var minRow = int.MaxValue;
-                var maxRow = int.MinValue;
-                var minCol = int.MaxValue;
-                var maxCol = int.MinValue;
-                for (var i = 0; i < sparklineCount; i++)
-                {
-                    var s = group.Sparklines[i];
-                    if (s.Row < minRow) minRow = s.Row;
-                    if (s.Row > maxRow) maxRow = s.Row;
-                    if (s.Column < minCol) minCol = s.Column;
-                    if (s.Column > maxCol) maxCol = s.Column;
-                }
-
-                cellArea.StartRow = minRow;
-                cellArea.EndRow = maxRow;
-                cellArea.StartColumn = minCol;
-                cellArea.EndColumn = maxCol;
-            }
-
-            worksheet.SparklineGroups.ClearSparklineGroups(cellArea);
+            // Remove exactly the indexed group. An area-based ClearSparklineGroups would also
+            // wipe any other group overlapping this group's bounding box (and an empty group's
+            // default area would target A1).
+            worksheet.SparklineGroups.RemoveAt(groupIndex.Value);
 
             MarkModified(context);
 

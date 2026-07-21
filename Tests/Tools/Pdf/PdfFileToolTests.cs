@@ -97,6 +97,22 @@ public class PdfFileToolTests : PdfTestBase
         Assert.True(doc.Pages.Count > 0);
     }
 
+    [SkippableFact]
+    public void Compress_InPlace_ReportsOriginalSizeFromBeforeCompression()
+    {
+        var pdfPath = CreateTestPdf("test_compress_inplace.pdf");
+        var preSize = new FileInfo(pdfPath).Length;
+
+        var result = _tool.Execute("compress", pdfPath, outputPath: pdfPath,
+            compressImages: true, compressFonts: true, removeUnusedObjects: true);
+
+        Skip.If(new FileInfo(pdfPath).Length == preSize,
+            "compression produced an identical size; the report cannot be distinguished");
+        var message = GetResultData<string>(result);
+        // In-place compression must report the size the file had BEFORE it was overwritten.
+        Assert.Contains($"{preSize} ->", message);
+    }
+
     [Fact]
     public void Encrypt_ShouldEncryptPdf()
     {

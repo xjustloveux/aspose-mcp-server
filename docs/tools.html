@@ -255,7 +255,7 @@
     <h3>檔案操作 (1)</h3>
     <ul class="tool-list">
         <li>
-            <span class="tool-name">excel_file_operations</span><span class="tool-desc">- 創建、轉換、合併工作簿、拆分工作簿</span><span class="tool-ops">（4個操作：create, convert, merge, split）</span>
+            <span class="tool-name">excel_file_operations</span><span class="tool-desc">- 創建、合併工作簿、拆分工作簿（格式轉換請用 convert_document）</span><span class="tool-ops">（3個操作：create, merge, split）</span>
         </li>
     </ul>
 
@@ -349,10 +349,10 @@
             <span class="tool-name">excel_protect</span><span class="tool-desc">- 保護、解除保護工作簿/工作表，獲取保護資訊，設定單元格鎖定</span><span class="tool-ops">（4個操作：protect, unprotect, get, set_cell_locked）</span>
         </li>
         <li>
-            <span class="tool-name">excel_filter</span><span class="tool-desc">- 應用、移除自動篩選，篩選資料，獲取篩選狀態</span><span class="tool-ops">（4個操作：apply, remove, filter, get_status）</span>
+            <span class="tool-name">excel_filter</span><span class="tool-desc">- 應用、移除自動篩選，篩選資料，獲取篩選狀態</span><span class="tool-ops">（4個操作：apply, remove, filter, status）</span>
         </li>
         <li>
-            <span class="tool-name">excel_freeze</span><span class="tool-desc">- 凍結、解凍窗格，獲取凍結狀態</span><span class="tool-ops">（3個操作：freeze, unfreeze, get）</span>
+            <span class="tool-name">excel_freeze_panes</span><span class="tool-desc">- 凍結、解凍窗格，獲取凍結狀態</span><span class="tool-ops">（3個操作：freeze, unfreeze, get）</span>
         </li>
         <li>
             <span class="tool-name">excel_merge_cells</span><span class="tool-desc">- 合併、取消合併單元格，獲取合併單元格資訊</span><span class="tool-ops">（3個操作：merge, unmerge, get）</span>
@@ -371,7 +371,7 @@
             <span class="tool-name">excel_view_settings</span><span class="tool-desc">- 設定工作表視圖（縮放、網格線、標題、零值、背景、標籤顏色、凍結窗格、視窗分割、自動調整欄寬列高、顯示公式）</span><span class="tool-ops">（14個操作：set_zoom, set_gridlines, set_headers, set_zero_values, set_column_width, set_row_height, set_background, set_tab, set, freeze, split, autofit_col, autofit_row, show_formulas）</span>
         </li>
         <li>
-            <span class="tool-name">excel_print_settings</span><span class="tool-desc">- 設定列印區域、標題行、頁面設定</span><span class="tool-ops">（4個操作：set_area, set_titles, set_page, set_all）</span>
+            <span class="tool-name">excel_print_settings</span><span class="tool-desc">- 設定列印區域、標題行、頁面設定</span><span class="tool-ops">（4個操作：set_area, set_titles, set_page, set）</span>
         </li>
         <li>
             <span class="tool-name">excel_group</span><span class="tool-desc">- 分組/取消分組行/列</span><span class="tool-ops">（4個操作：group_rows, ungroup_rows, group_columns, ungroup_columns）</span>
@@ -402,7 +402,7 @@
     <h3>投影片管理 (1)</h3>
     <ul class="tool-list">
         <li>
-            <span class="tool-name">ppt_slide</span><span class="tool-desc">- 添加、刪除、獲取投影片資訊、移動、複製、隱藏投影片</span><span class="tool-ops">（8個操作：add, delete, get_info, move, duplicate, hide, clear, edit）</span>
+            <span class="tool-name">ppt_slide</span><span class="tool-desc">- 添加、刪除、獲取投影片資訊、移動、複製、隱藏投影片</span><span class="tool-ops">（8個操作：add, delete, get, move, duplicate, hide, clear, edit）</span>
         </li>
     </ul>
 
@@ -444,13 +444,13 @@
             <span class="tool-name">ppt_comment</span><span class="tool-desc">- 管理投影片註解</span><span class="tool-ops">（4個操作：add, get, delete, reply）</span>
         </li>
         <li>
-            <span class="tool-name">ppt_security</span><span class="tool-desc">- 加密、解密、寫入保護、標記為完稿</span><span class="tool-ops">（6個操作：encrypt, decrypt, set_write_protect, remove_write_protect, mark_final, get_status）</span>
+            <span class="tool-name">ppt_security</span><span class="tool-desc">- 加密、解密、寫入保護、標記為完稿</span><span class="tool-ops">（6個操作：encrypt, decrypt, set_write_protect, remove_write_protect, mark_final, status）</span>
         </li>
         <li>
             <span class="tool-name">ppt_watermark</span><span class="tool-desc">- 添加/移除文字或圖片浮水印</span><span class="tool-ops">（4個操作：add_text, add_image, remove, get）</span>
         </li>
         <li>
-            <span class="tool-name">ppt_font</span><span class="tool-desc">- 字型管理（替換、嵌入、取得、設定備援）</span><span class="tool-ops">（5個操作：replace, embed, remove_embedded, get_used, set_fallback）</span>
+            <span class="tool-name">ppt_font</span><span class="tool-desc">- 字型管理（替換、嵌入、取得、設定備援）</span><span class="tool-ops">（5個操作：replace, embed, remove, list, set_fallback）</span>
         </li>
         <li>
             <span class="tool-name">ppt_animation</span><span class="tool-desc">- 添加、編輯、刪除、獲取動畫</span><span class="tool-ops">（4個操作：add, edit, delete, get）</span>
@@ -521,7 +521,7 @@
             <span class="tool-name">pdf_watermark</span><span class="tool-desc">- 添加水印</span><span class="tool-ops">（1個操作：add）</span>
         </li>
         <li>
-            <span class="tool-name">pdf_page</span><span class="tool-desc">- 添加、刪除、旋轉、裁切、調整大小頁面</span><span class="tool-ops">（7個操作：add, delete, rotate, crop, resize, get_details, get_info）</span>
+            <span class="tool-name">pdf_page</span><span class="tool-desc">- 添加、刪除、旋轉、裁切、調整大小頁面</span><span class="tool-ops">（7個操作：add, delete, rotate, crop, resize, details, info）</span>
         </li>
     </ul>
 
@@ -622,7 +622,7 @@
     <h3>郵件操作 (3)</h3>
     <ul class="tool-list">
         <li>
-            <span class="tool-name">email_file</span><span class="tool-desc">- 建立、讀取、儲存、轉換、偵測格式</span><span class="tool-ops">（5個操作：create, get_info, save, convert, detect）</span>
+            <span class="tool-name">email_file</span><span class="tool-desc">- 建立、讀取、儲存、轉換、偵測格式</span><span class="tool-ops">（5個操作：create, get, save, convert, detect）</span>
         </li>
         <li>
             <span class="tool-name">email_content</span><span class="tool-desc">- 取得/設定郵件內容（主旨、內文、標頭、收件人）</span><span class="tool-ops">（8個操作：get_body, set_body, get_headers, set_headers, get_subject, set_subject, get_recipients, set_recipients）</span>
@@ -635,10 +635,10 @@
     <h3>日曆與聯絡人 (2)</h3>
     <ul class="tool-list">
         <li>
-            <span class="tool-name">email_calendar</span><span class="tool-desc">- 行事曆事件管理（ICS 格式）</span><span class="tool-ops">（5個操作：create, get_info, save, set_recurrence, set_attendees）</span>
+            <span class="tool-name">email_calendar</span><span class="tool-desc">- 行事曆事件管理（ICS 格式）</span><span class="tool-ops">（5個操作：create, get, save, set_recurrence, set_attendees）</span>
         </li>
         <li>
-            <span class="tool-name">email_contact</span><span class="tool-desc">- 聯絡人管理（VCF/MSG 格式）</span><span class="tool-ops">（4個操作：create, get_info, save, set_photo）</span>
+            <span class="tool-name">email_contact</span><span class="tool-desc">- 聯絡人管理（VCF/MSG 格式）</span><span class="tool-ops">（4個操作：create, get, save, set_photo）</span>
         </li>
     </ul>
 

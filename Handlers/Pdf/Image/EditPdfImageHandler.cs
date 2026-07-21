@@ -30,11 +30,12 @@ public class EditPdfImageHandler : OperationHandlerBase<Document>
 
         var document = context.Document;
 
-        var actualPageIndex = p.PageIndex < 1 ? 1 : p.PageIndex;
-        if (actualPageIndex > document.Pages.Count)
+        // Reject non-positive indices instead of clamping to page 1: 'get' treats pageIndex 0
+        // as "all pages", so a silent clamp would mutate a page the caller never named.
+        if (p.PageIndex < 1 || p.PageIndex > document.Pages.Count)
             throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
 
-        var page = document.Pages[actualPageIndex];
+        var page = document.Pages[p.PageIndex];
         var images = page.Resources?.Images;
         if (images == null)
             throw new ArgumentException("No images found on the page");

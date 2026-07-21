@@ -38,7 +38,7 @@ public class ExtractEmailAttachmentHandler : OperationHandlerBase<object>
         if (!File.Exists(path))
             throw new FileNotFoundException("The specified file was not found.");
 
-        var message = MailMessage.Load(path);
+        using var message = MailMessage.Load(path);
 
         if (idx < 0 || idx >= message.Attachments.Count)
             // CA2208, S3928, NotResolvedInText - 'index' is a dynamic parameter from the parameters dictionary, not a method parameter

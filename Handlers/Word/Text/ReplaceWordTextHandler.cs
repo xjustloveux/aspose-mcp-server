@@ -3,6 +3,7 @@ using Aspose.Words;
 using Aspose.Words.Replacing;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Text;
@@ -25,10 +26,14 @@ public class ReplaceWordTextHandler : OperationHandlerBase<Document>
     ///     Optional: useRegex, replaceInFields.
     /// </param>
     /// <returns>Success message.</returns>
-    /// <exception cref="ArgumentException">Thrown when find or replace parameters are missing.</exception>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when find or replace parameters are missing or a regex pattern exceeds the length limit.
+    /// </exception>
     public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractReplaceParameters(parameters);
+        if (p.UseRegex)
+            SecurityHelper.ValidateStringLength(p.Find, "find", SearchWordTextHandler.MaxRegexPatternLength);
 
         var doc = context.Document;
 

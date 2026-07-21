@@ -47,7 +47,7 @@ public class SetPhotoEmailContactHandler : OperationHandlerBase<object>
             SecurityHelper.ResolveAndEnsureWithinAllowlist(photoPath, context.ServerConfig?.AllowedBasePaths ?? [],
                 "photoPath");
         var photoBytes = File.ReadAllBytes(resolvedPhotoPath);
-        contact.Photo = new MapiContactPhoto(photoBytes, MapiContactPhotoImageFormat.Jpeg);
+        contact.Photo = new MapiContactPhoto(photoBytes, DetectPhotoImageFormat(photoBytes));
 
         var ext = Path.GetExtension(outputPath).ToLowerInvariant();
         var resolvedOutputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(outputPath,
@@ -57,6 +57,27 @@ public class SetPhotoEmailContactHandler : OperationHandlerBase<object>
         return new SuccessResult
         {
             Message = $"Photo set on contact: {contact.NameInfo?.DisplayName ?? "Unknown"} -> {outputPath}"
+        };
+    }
+
+    /// <summary>
+    ///     Detects the photo image format from the image content signature.
+    ///     <see cref="MapiContactPhotoImageFormat" /> has no PNG member, so PNG (and any other
+    ///     unrecognized signature) maps to <see cref="MapiContactPhotoImageFormat.Undefined" />
+    ///     instead of being falsely declared JPEG.
+    /// </summary>
+    /// <param name="photoBytes">The photo file content.</param>
+    /// <returns>The detected image format, or Undefined when the signature is not recognized.</returns>
+    internal static MapiContactPhotoImageFormat DetectPhotoImageFormat(byte[] photoBytes)
+    {
+        return photoBytes switch
+        {
+            [0xFF, 0xD8, 0xFF, ..] => MapiContactPhotoImageFormat.Jpeg,
+            [0x47, 0x49, 0x46, ..] => MapiContactPhotoImageFormat.Gif,
+            [0x42, 0x4D, ..] => MapiContactPhotoImageFormat.Bmp,
+            [0x49, 0x49, 0x2A, 0x00, ..] or [0x4D, 0x4D, 0x00, 0x2A, ..] => MapiContactPhotoImageFormat.Tiff,
+            [0xD7, 0xCD, 0xC6, 0x9A, ..] => MapiContactPhotoImageFormat.Wmf,
+            _ => MapiContactPhotoImageFormat.Undefined
         };
     }
 }

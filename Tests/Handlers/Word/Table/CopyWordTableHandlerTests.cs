@@ -86,7 +86,7 @@ public class CopyWordTableHandlerTests : WordHandlerTestBase
         });
 
         var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
-        Assert.Contains("sourceTableIndex", ex.Message);
+        Assert.Contains("Table index", ex.Message);
     }
 
     [Fact]
@@ -100,7 +100,7 @@ public class CopyWordTableHandlerTests : WordHandlerTestBase
         });
 
         var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
-        Assert.Contains("sourceTableIndex", ex.Message);
+        Assert.Contains("Table index", ex.Message);
     }
 
     #endregion
@@ -175,7 +175,7 @@ public class CopyWordTableHandlerTests : WordHandlerTestBase
         });
 
         var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
-        Assert.Contains("sourceSectionIndex", ex.Message);
+        Assert.Contains("Section index", ex.Message);
     }
 
     [Fact]
@@ -203,7 +203,7 @@ public class CopyWordTableHandlerTests : WordHandlerTestBase
         });
 
         var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
-        Assert.Contains("sourceSectionIndex", ex.Message);
+        Assert.Contains("Section index", ex.Message);
     }
 
     #endregion

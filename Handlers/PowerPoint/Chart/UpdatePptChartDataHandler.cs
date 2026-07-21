@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Slides;
@@ -28,6 +29,10 @@ public class UpdatePptChartDataHandler : OperationHandlerBase<Presentation>
     ///     Optional: data, clearExisting
     /// </param>
     /// <returns>Success message with update details.</returns>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when the slide/shape index is out of range or when 'series' contains no usable entry
+    ///     (every entry lacks a 'values' array). Validation happens before any data is cleared.
+    /// </exception>
     public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
         var p = ExtractUpdateChartDataParameters(parameters);
@@ -64,6 +69,10 @@ public class UpdatePptChartDataHandler : OperationHandlerBase<Presentation>
     /// </summary>
     /// <param name="dataObject">The JSON object containing chart data.</param>
     /// <returns>A tuple containing categories and series list.</returns>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when 'series' is non-empty but no entry contains a 'values' array. Rejecting the input
+    ///     here keeps the existing chart data intact instead of clearing it and then adding nothing.
+    /// </exception>
     private static (string[]? categories, List<(string name, double[] values)>? seriesList) ParseChartData(
         JsonObject? dataObject)
     {
@@ -80,7 +89,12 @@ public class UpdatePptChartDataHandler : OperationHandlerBase<Presentation>
             categories = categoriesArray.Select(c => c?.GetValue<string>() ?? "").ToArray();
 
         if (seriesArray is { Count: > 0 })
+        {
             seriesList = ParseSeriesArray(seriesArray);
+            if (seriesList.Count == 0)
+                throw new ArgumentException(
+                    "Each entry in 'series' must be an object containing a 'values' array.");
+        }
 
         return (categories, seriesList);
     }
@@ -306,7 +320,7 @@ public class UpdatePptChartDataHandler : OperationHandlerBase<Presentation>
     {
         var maxRow = Math.Max(
             categories?.Length ?? 0,
-            seriesList?.Max(s => s.values.Length) ?? 0
+            seriesList is { Count: > 0 } ? seriesList.Max(s => s.values.Length) : 0
         );
 
         var seriesCount = seriesList?.Count ?? 0;
@@ -316,10 +330,29 @@ public class UpdatePptChartDataHandler : OperationHandlerBase<Presentation>
 
         if (maxRow > 0)
         {
-            var lastCol = (char)('A' + maxCol - 1);
+            var lastCol = GetExcelColumnName(maxCol);
             var range = $"Sheet1!$A$1:${lastCol}${maxRow + 1}";
             chartData.SetRange(range);
         }
+    }
+
+    /// <summary>
+    ///     Converts a 1-based column number to an Excel column name (1 = A, 26 = Z, 27 = AA).
+    ///     A single (char)('A' + n) cast would produce garbage beyond 26 columns (25+ series).
+    /// </summary>
+    /// <param name="columnNumber">The 1-based column number.</param>
+    /// <returns>The Excel column name.</returns>
+    private static string GetExcelColumnName(int columnNumber)
+    {
+        var name = new StringBuilder();
+        while (columnNumber > 0)
+        {
+            var remainder = (columnNumber - 1) % 26;
+            name.Insert(0, (char)('A' + remainder));
+            columnNumber = (columnNumber - 1) / 26;
+        }
+
+        return name.ToString();
     }
 
     /// <summary>

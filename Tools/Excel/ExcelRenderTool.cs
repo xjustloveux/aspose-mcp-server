@@ -9,7 +9,7 @@ using ModelContextProtocol.Server;
 namespace AsposeMcpServer.Tools.Excel;
 
 /// <summary>
-///     Tool for rendering Excel worksheets and charts to images (render_sheet, render_chart).
+///     Tool for rendering Excel worksheets and charts to images (render, render_chart).
 /// </summary>
 [ToolHandlerMapping("AsposeMcpServer.Handlers.Excel.Render")]
 [McpServerToolType]
@@ -45,7 +45,7 @@ public class ExcelRenderTool
     }
 
     /// <summary>
-    ///     Executes an Excel render operation (render_sheet, render_chart).
+    ///     Executes an Excel render operation (render, render_chart).
     /// </summary>
     /// <param name="operation">The operation to perform.</param>
     /// <param name="path">Excel file path (required if no sessionId).</param>
@@ -54,7 +54,7 @@ public class ExcelRenderTool
     /// <param name="sheetIndex">Sheet index (0-based).</param>
     /// <param name="chartIndex">Chart index (0-based, for render_chart).</param>
     /// <param name="format">Image format: png, jpeg, bmp, tiff, svg (default: png).</param>
-    /// <param name="dpi">Rendering DPI (for render_sheet, default: 150).</param>
+    /// <param name="dpi">Rendering DPI (for render, default: 150).</param>
     /// <returns>Render result with output file paths.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(
@@ -65,7 +65,7 @@ public class ExcelRenderTool
         OpenWorld = false,
         ReadOnly = true,
         UseStructuredContent = true)]
-    [Description(@"Render Excel worksheets and charts to images. Supports 2 operations: render_sheet, render_chart.
+    [Description(@"Render Excel worksheets and charts to images. Supports 2 operations: render, render_chart.
 
 Usage examples:
 - Render sheet: excel_render(operation='render', path='book.xlsx', outputPath='sheet.png')
@@ -88,7 +88,7 @@ Usage examples:
         int? chartIndex = null,
         [Description("Image format: png, jpeg, bmp, tiff, svg (default: png)")]
         string format = "png",
-        [Description("Rendering DPI (for render_sheet, default: 150)")]
+        [Description("Rendering DPI (for render, default: 150)")]
         int dpi = 150)
     {
         using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
@@ -133,7 +133,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds parameters for the render_sheet operation.
+    ///     Builds parameters for the render operation.
     /// </summary>
     private static OperationParameters BuildRenderSheetParameters(OperationParameters parameters, int dpi)
     {

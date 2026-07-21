@@ -195,6 +195,100 @@ public class ParagraphResolverTests
         Assert.Same(ePara, back);
     }
 
+    /// <summary>
+    ///     Body: [body0, body1(with inline text box of tb0/tb1), body2, table(cell0), body3].
+    ///     The Body story must be body0..body3 + cell0 (tables belong to the body story) and must
+    ///     NOT count tb0/tb1 (they belong to the TextBox story).
+    /// </summary>
+    private static Document BodyWithTextBoxAndTable()
+    {
+        var doc = new Document();
+        var b = new DocumentBuilder(doc);
+        b.Writeln("body0");
+        b.Write("body1");
+        var shape = b.InsertShape(ShapeType.TextBox, 100, 50);
+        var tb0 = new WordParagraph(doc);
+        tb0.AppendChild(new Run(doc, "tb0"));
+        shape.AppendChild(tb0);
+        var tb1 = new WordParagraph(doc);
+        tb1.AppendChild(new Run(doc, "tb1"));
+        shape.AppendChild(tb1);
+        b.Writeln();
+        b.Writeln("body2");
+        b.StartTable();
+        b.InsertCell();
+        b.Write("cell0");
+        b.EndRow();
+        b.EndTable();
+        b.Write("body3");
+        return doc;
+    }
+
+    [Fact]
+    public void GetStoryParagraphs_Body_ExcludesNestedStoryParagraphs_IncludesTableCells()
+    {
+        var doc = BodyWithTextBoxAndTable();
+
+        var list = ParagraphResolver.GetStoryParagraphs(doc, new ParagraphAddress(0));
+
+        Assert.Equal(5, list.Count);
+        Assert.StartsWith("body0", list[0].GetText());
+        Assert.StartsWith("body1", list[1].GetText());
+        Assert.StartsWith("body2", list[2].GetText());
+        Assert.StartsWith("cell0", list[3].GetText());
+        Assert.StartsWith("body3", list[4].GetText());
+    }
+
+    [Fact]
+    public void Resolve_Body_AfterInlineTextBox_ReturnsBodyParagraphNotTextBoxContent()
+    {
+        var doc = BodyWithTextBoxAndTable();
+
+        var r = ParagraphResolver.Resolve(doc, new ParagraphAddress(2));
+
+        Assert.StartsWith("body2", r.Paragraph.GetText());
+    }
+
+    [Fact]
+    public void AddressOf_BodyParagraphAfterTextBox_IndexSkipsTextBoxParagraphs()
+    {
+        var doc = BodyWithTextBoxAndTable();
+        var body2 = doc.FirstSection.Body.Paragraphs[2];
+
+        var r = ParagraphResolver.AddressOf(doc, body2);
+
+        Assert.Equal(StoryTypes.Body, r.Address.StoryType);
+        Assert.Equal(2, r.Address.Index);
+        Assert.Same(body2, ParagraphResolver.Resolve(doc, r.Address).Paragraph);
+    }
+
+    [Fact]
+    public void AddressOf_TableCellParagraph_IsBodyStoryAndRoundTrips()
+    {
+        var doc = BodyWithTextBoxAndTable();
+        var cell0 = doc.FirstSection.Body.Tables[0].FirstRow.FirstCell.FirstParagraph;
+
+        var r = ParagraphResolver.AddressOf(doc, cell0);
+
+        Assert.Equal(StoryTypes.Body, r.Address.StoryType);
+        Assert.Equal(3, r.Address.Index);
+        Assert.Same(cell0, ParagraphResolver.Resolve(doc, r.Address).Paragraph);
+    }
+
+    [Fact]
+    public void TextBoxStory_InBodyWithTable_StillRoundTrips()
+    {
+        var doc = BodyWithTextBoxAndTable();
+        var shape = (Shape)doc.GetChildNodes(NodeType.Shape, true)[0];
+        var tb1 = (WordParagraph)shape.GetChildNodes(NodeType.Paragraph, true)[1];
+
+        var r = ParagraphResolver.AddressOf(doc, tb1);
+
+        Assert.Equal(StoryTypes.TextBox, r.Address.StoryType);
+        Assert.Equal(1, r.Address.Index);
+        Assert.Same(tb1, ParagraphResolver.Resolve(doc, r.Address).Paragraph);
+    }
+
     [Fact]
     public void Handle_MintThenResolve_ReturnsSameNode()
     {

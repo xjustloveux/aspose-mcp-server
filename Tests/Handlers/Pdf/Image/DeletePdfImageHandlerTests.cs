@@ -116,8 +116,10 @@ public class DeletePdfImageHandlerTests : PdfHandlerTestBase
     }
 
     [Fact]
-    public void Execute_WithPageIndexZero_UsesFirstPage()
+    public void Execute_WithPageIndexZero_ThrowsArgumentException()
     {
+        // 'get' treats pageIndex 0 as "all pages"; a mutate call must reject it instead of
+        // silently operating on page 1.
         var doc = CreateEmptyDocument();
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -127,7 +129,7 @@ public class DeletePdfImageHandlerTests : PdfHandlerTestBase
         });
 
         var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
-        Assert.Contains("imageIndex must be between", ex.Message);
+        Assert.Contains("pageIndex must be between", ex.Message);
     }
 
     #endregion

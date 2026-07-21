@@ -635,4 +635,36 @@ public static class SecurityHelper
 
         if (value.Length > limit) throw new ArgumentException($"{paramName} exceeds maximum allowed length of {limit}");
     }
+
+    /// <summary>
+    ///     Creates a directory only the current user can access. On Unix the directory is created
+    ///     with mode 700 so files inside a shared location (e.g. /tmp) are not world-readable;
+    ///     on Windows the default ACLs of the profile temp directory already scope access.
+    ///     The mode applies only when this call creates the directory.
+    /// </summary>
+    /// <param name="path">The directory path to create.</param>
+    public static void CreatePrivateDirectory(string path)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            Directory.CreateDirectory(path);
+            return;
+        }
+
+        Directory.CreateDirectory(path,
+            UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+    }
+
+    /// <summary>
+    ///     Restricts a file to owner read/write (mode 600) so session/snapshot data written into a
+    ///     shared temp location is not world-readable. No-op on Windows and for missing files.
+    /// </summary>
+    /// <param name="path">The file path to harden.</param>
+    public static void HardenPrivateFile(string path)
+    {
+        if (OperatingSystem.IsWindows() || !File.Exists(path))
+            return;
+
+        File.SetUnixFileMode(path, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+    }
 }

@@ -47,6 +47,7 @@ public class ConvertPresentationHandler : OperationHandlerBase<Presentation>
 
         Presentation presentation;
         Presentation? ownedPresentation = null;
+        IDisposable? usageScope = null;
         string sourceDescription;
 
         if (!string.IsNullOrEmpty(p.SessionId))
@@ -55,13 +56,20 @@ public class ConvertPresentationHandler : OperationHandlerBase<Presentation>
                 throw new InvalidOperationException("Session management is not enabled");
 
             var identity = context.IdentityAccessor?.GetCurrentIdentity() ?? SessionIdentity.GetAnonymous();
-            presentation = context.SessionManager.GetDocument<Presentation>(p.SessionId, identity);
+            // Hold a usage scope for the whole conversion so a concurrent close/cleanup cannot
+            // dispose the session document mid-operation (same contract as DocumentContext.Create).
+            var session = context.SessionManager.GetSession(p.SessionId, identity);
+            usageScope = session.AcquireUsage();
+            presentation = session.GetDocument<Presentation>();
             sourceDescription = $"session {p.SessionId}";
         }
         else
         {
             SecurityHelper.ValidateFilePath(sourcePath!, "inputPath", true);
-            ownedPresentation = new Presentation(sourcePath);
+            // The input is a read sink: resolve symlinks and enforce the allowlist like the output path.
+            var resolvedSourcePath = SecurityHelper.ResolveAndEnsureWithinAllowlist(sourcePath!,
+                context.ServerConfig?.AllowedBasePaths ?? [], "inputPath");
+            ownedPresentation = new Presentation(resolvedSourcePath);
             presentation = ownedPresentation;
             sourceDescription = sourcePath!;
         }
@@ -121,6 +129,7 @@ public class ConvertPresentationHandler : OperationHandlerBase<Presentation>
         finally
         {
             ownedPresentation?.Dispose();
+            usageScope?.Dispose();
         }
     }
 

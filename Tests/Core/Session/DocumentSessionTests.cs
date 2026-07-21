@@ -315,5 +315,42 @@ public class DocumentSessionTests : IDisposable
         Assert.Throws<ObjectDisposedException>(() => session.AcquireUsage());
     }
 
+    [Fact]
+    public async Task Dispose_WithActiveUsage_WaitsUntilReleasedBeforeDisposingDocument()
+    {
+        var mockDocument = new MockDocument();
+        var session = new DocumentSession("sess_drain", "test.docx", DocumentType.Word, mockDocument,
+            "readwrite");
+        var scope = session.AcquireUsage();
+
+        var disposeTask = Task.Run(() => session.Dispose());
+
+        // Dispose must not complete (nor dispose the document) while an operation is in flight.
+        await Assert.ThrowsAsync<TimeoutException>(() => disposeTask.WaitAsync(TimeSpan.FromMilliseconds(300)));
+        Assert.False(mockDocument.IsDisposed);
+
+        scope.Dispose();
+
+        await disposeTask.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.True(mockDocument.IsDisposed);
+    }
+
+    [Fact]
+    public void WaitForActiveUsersToDrain_WithActiveUsage_ReturnsFalseOnTimeout()
+    {
+        var session = CreateSession();
+        using var scope = session.AcquireUsage();
+
+        Assert.False(session.WaitForActiveUsersToDrain(50));
+    }
+
+    [Fact]
+    public void WaitForActiveUsersToDrain_WithoutActiveUsage_ReturnsTrue()
+    {
+        var session = CreateSession();
+
+        Assert.True(session.WaitForActiveUsersToDrain(50));
+    }
+
     #endregion
 }

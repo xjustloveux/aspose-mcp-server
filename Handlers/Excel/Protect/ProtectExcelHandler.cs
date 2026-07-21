@@ -24,13 +24,20 @@ public class ProtectExcelHandler : OperationHandlerBase<Workbook>
     ///     Optional: sheetIndex, protectWorkbook, protectStructure, protectWindows
     /// </param>
     /// <returns>Success message with protection details.</returns>
-    /// <exception cref="ArgumentException">Thrown when password is empty or null.</exception>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when password is empty or null, or when protectWorkbook and sheetIndex are both supplied.
+    /// </exception>
     public override object Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
         var p = ExtractProtectExcelParameters(parameters);
 
         if (string.IsNullOrEmpty(p.Password))
             throw new ArgumentException("password is required for protect operation");
+
+        if (p is { ProtectWorkbook: true, SheetIndex: not null })
+            throw new ArgumentException(
+                "protectWorkbook and sheetIndex are mutually exclusive: protect the workbook or one " +
+                "worksheet per call.");
 
         var workbook = context.Document;
 

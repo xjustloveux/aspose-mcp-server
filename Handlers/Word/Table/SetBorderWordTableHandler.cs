@@ -34,16 +34,8 @@ public class SetBorderWordTableHandler : OperationHandlerBase<Document>
         var p = ExtractSetBorderParameters(parameters);
 
         var doc = context.Document;
-        var actualSectionIndex = p.SectionIndex ?? 0;
-        if (actualSectionIndex >= doc.Sections.Count)
-            throw new ArgumentException($"Section index {actualSectionIndex} out of range");
-
-        var section = doc.Sections[actualSectionIndex];
-        var tables = section.Body.GetChildNodes(NodeType.Table, true).Cast<WordTable>().ToList();
-        if (p.TableIndex >= tables.Count)
-            throw new ArgumentException($"Table index {p.TableIndex} out of range");
-
-        var table = tables[p.TableIndex];
+        // Omitted sectionIndex means the document-wide flat table index, matching 'get'.
+        var table = WordTableHelper.GetTable(doc, p.TableIndex, p.SectionIndex);
         var lineStyleEnum = WordTableHelper.GetLineStyle(p.LineStyle);
         var lineColorParsed = ColorHelper.ParseColor(p.LineColor);
 

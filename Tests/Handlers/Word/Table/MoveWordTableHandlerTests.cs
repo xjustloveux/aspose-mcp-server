@@ -142,7 +142,7 @@ public class MoveWordTableHandlerTests : WordHandlerTestBase
         });
 
         var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
-        Assert.Contains("tableIndex", ex.Message);
+        Assert.Contains("Table index", ex.Message);
     }
 
     [Fact]

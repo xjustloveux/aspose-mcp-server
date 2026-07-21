@@ -20,6 +20,25 @@ public class SearchWordTextHandlerTests : WordHandlerTestBase
 
     #endregion
 
+    #region Regex Pattern Length Limit
+
+    [Fact]
+    public void Execute_RegexPatternOverLengthLimit_ThrowsArgumentException()
+    {
+        var doc = CreateDocumentWithText("some text");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "searchText", new string('a', 2001) },
+            { "useRegex", true }
+        });
+
+        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+        Assert.Contains("maximum allowed length", ex.Message);
+    }
+
+    #endregion
+
     #region Story Type (Issue #1 self-describing index)
 
     [Fact]

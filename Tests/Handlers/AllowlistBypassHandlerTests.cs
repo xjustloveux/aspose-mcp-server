@@ -1,10 +1,14 @@
 using System.Reflection;
 using Aspose.Pdf;
+using Aspose.Slides;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Handlers.Email.Attachment;
 using AsposeMcpServer.Handlers.Pdf.Image;
+using AsposeMcpServer.Handlers.PowerPoint.FileOperations;
+using AsposeMcpServer.Handlers.Word.DigitalSignature;
 using AsposeMcpServer.Tests.Infrastructure;
+using SlidesSaveFormat = Aspose.Slides.Export.SaveFormat;
 
 namespace AsposeMcpServer.Tests.Handlers;
 
@@ -337,5 +341,211 @@ public class AllowlistBypassHandlerTests : TestBase
         Assert.NotNull(result);
         Assert.True(File.Exists(outputPath),
             "Handler must write the output email when all paths are inside the allowlist");
+    }
+
+    // =====================================================================
+    // PPT file-operation input read sinks (bug: input paths validated for
+    // shape only, never resolved against the allowlist)
+    // =====================================================================
+
+    /// <summary>
+    ///     Creates a minimal one-slide presentation file at <paramref name="path" />.
+    /// </summary>
+    /// <param name="path">Destination path for the PPTX file.</param>
+    private static void WriteMinimalPptx(string path)
+    {
+        using var pres = new Presentation();
+        pres.Save(path, SlidesSaveFormat.Pptx);
+    }
+
+    /// <summary>
+    ///     Creates an <see cref="OperationContext{TContext}" /> for PPT file-operation handlers.
+    ///     The document is unused by these handlers (they open their own inputs).
+    /// </summary>
+    /// <param name="serverConfig">The server configuration to attach.</param>
+    /// <returns>A minimal operation context.</returns>
+    private static OperationContext<Presentation> BuildPresentationContext(ServerConfig serverConfig)
+    {
+        return new OperationContext<Presentation>
+        {
+            Document = null!,
+            ServerConfig = serverConfig
+        };
+    }
+
+    /// <summary>
+    ///     <c>ConvertPresentationHandler</c> must reject an input path outside the configured
+    ///     allowlist before opening it (the input is a read sink like the output).
+    /// </summary>
+    [Fact]
+    public void ConvertPresentationHandler_InputPathOutsideAllowlist_ThrowsBeforeRead()
+    {
+        using var inside = SymlinkFixture.AllowlistedTempRoot();
+        using var outside = SymlinkFixture.AllowlistedTempRoot();
+
+        var secretPptx = Path.Combine(outside.Root, "secret.pptx");
+        WriteMinimalPptx(secretPptx);
+        var outputPath = Path.Combine(inside.Root, "converted.pdf");
+
+        var context = BuildPresentationContext(BuildServerConfig(inside.Root));
+        var parameters = new OperationParameters();
+        parameters.Set("inputPath", secretPptx);
+        parameters.Set("outputPath", outputPath);
+        parameters.Set("format", "pdf");
+
+        var handler = new ConvertPresentationHandler();
+
+        Assert.Throws<ArgumentException>(() => handler.Execute(context, parameters));
+        Assert.False(File.Exists(outputPath),
+            "Handler must not write output when the input path is outside the allowlist");
+    }
+
+    /// <summary>
+    ///     <c>SplitPresentationHandler</c> must reject an input path outside the configured
+    ///     allowlist before opening it.
+    /// </summary>
+    [Fact]
+    public void SplitPresentationHandler_InputPathOutsideAllowlist_ThrowsBeforeRead()
+    {
+        using var inside = SymlinkFixture.AllowlistedTempRoot();
+        using var outside = SymlinkFixture.AllowlistedTempRoot();
+
+        var secretPptx = Path.Combine(outside.Root, "secret.pptx");
+        WriteMinimalPptx(secretPptx);
+        var outputDir = Path.Combine(inside.Root, "split_out");
+
+        var context = BuildPresentationContext(BuildServerConfig(inside.Root));
+        var parameters = new OperationParameters();
+        parameters.Set("inputPath", secretPptx);
+        parameters.Set("outputDirectory", outputDir);
+
+        var handler = new SplitPresentationHandler();
+
+        Assert.Throws<ArgumentException>(() => handler.Execute(context, parameters));
+    }
+
+    /// <summary>
+    ///     <c>MergePresentationsHandler</c> must reject input paths outside the configured
+    ///     allowlist before opening any of them.
+    /// </summary>
+    [Fact]
+    public void MergePresentationsHandler_InputPathOutsideAllowlist_ThrowsBeforeRead()
+    {
+        using var inside = SymlinkFixture.AllowlistedTempRoot();
+        using var outside = SymlinkFixture.AllowlistedTempRoot();
+
+        var insidePptx = Path.Combine(inside.Root, "a.pptx");
+        WriteMinimalPptx(insidePptx);
+        var secretPptx = Path.Combine(outside.Root, "secret.pptx");
+        WriteMinimalPptx(secretPptx);
+        var outputPath = Path.Combine(inside.Root, "merged.pptx");
+
+        var context = BuildPresentationContext(BuildServerConfig(inside.Root));
+        var parameters = new OperationParameters();
+        parameters.Set("inputPaths", new[] { insidePptx, secretPptx });
+        parameters.Set("outputPath", outputPath);
+
+        var handler = new MergePresentationsHandler();
+
+        Assert.Throws<ArgumentException>(() => handler.Execute(context, parameters));
+        Assert.False(File.Exists(outputPath),
+            "Handler must not write output when an input path is outside the allowlist");
+    }
+
+    // =====================================================================
+    // Word digital-signature file sinks (bug: path/outputPath/certificatePath
+    // validated for shape only, never resolved against the allowlist)
+    // =====================================================================
+
+    /// <summary>
+    ///     <c>SignWordDigitalSignatureHandler</c> must reject a certificate path outside the
+    ///     configured allowlist before touching the certificate file.
+    /// </summary>
+    [Fact]
+    public void SignWordDigitalSignatureHandler_CertificatePathOutsideAllowlist_Throws()
+    {
+        using var inside = SymlinkFixture.AllowlistedTempRoot();
+        using var outside = SymlinkFixture.AllowlistedTempRoot();
+
+        var docPath = Path.Combine(inside.Root, "doc.docx");
+        new Aspose.Words.Document().Save(docPath);
+        var outputPath = Path.Combine(inside.Root, "signed.docx");
+        var certPath = Path.Combine(outside.Root, "secret_cert.pfx");
+        File.WriteAllBytes(certPath, [0x01, 0x02]);
+
+        var context = new OperationContext<Aspose.Words.Document>
+        {
+            Document = null!,
+            ServerConfig = BuildServerConfig(inside.Root)
+        };
+        var parameters = new OperationParameters();
+        parameters.Set("path", docPath);
+        parameters.Set("outputPath", outputPath);
+        parameters.Set("certificatePath", certPath);
+        parameters.Set("certificatePassword", "pw");
+
+        var handler = new SignWordDigitalSignatureHandler();
+
+        Assert.Throws<ArgumentException>(() => handler.Execute(context, parameters));
+        Assert.False(File.Exists(outputPath),
+            "Handler must not write output when the certificate path is outside the allowlist");
+    }
+
+    /// <summary>
+    ///     <c>RemoveWordDigitalSignatureHandler</c> must reject a source path outside the
+    ///     configured allowlist before reading it.
+    /// </summary>
+    [Fact]
+    public void RemoveWordDigitalSignatureHandler_SourcePathOutsideAllowlist_Throws()
+    {
+        using var inside = SymlinkFixture.AllowlistedTempRoot();
+        using var outside = SymlinkFixture.AllowlistedTempRoot();
+
+        var docPath = Path.Combine(outside.Root, "secret.docx");
+        new Aspose.Words.Document().Save(docPath);
+        var outputPath = Path.Combine(inside.Root, "unsigned.docx");
+
+        var context = new OperationContext<Aspose.Words.Document>
+        {
+            Document = null!,
+            ServerConfig = BuildServerConfig(inside.Root)
+        };
+        var parameters = new OperationParameters();
+        parameters.Set("path", docPath);
+        parameters.Set("outputPath", outputPath);
+
+        var handler = new RemoveWordDigitalSignatureHandler();
+
+        Assert.Throws<ArgumentException>(() => handler.Execute(context, parameters));
+        Assert.False(File.Exists(outputPath),
+            "Handler must not write output when the source path is outside the allowlist");
+    }
+
+    /// <summary>
+    ///     Regression guard: <c>ConvertPresentationHandler</c> must still convert normally when
+    ///     input and output are both inside the allowlist.
+    /// </summary>
+    [Fact]
+    public void ConvertPresentationHandler_LegitimatePathsInsideAllowlist_Succeeds()
+    {
+        using var inside = SymlinkFixture.AllowlistedTempRoot();
+
+        var inputPptx = Path.Combine(inside.Root, "input.pptx");
+        WriteMinimalPptx(inputPptx);
+        var outputPath = Path.Combine(inside.Root, "converted.pptx");
+
+        var context = BuildPresentationContext(BuildServerConfig(inside.Root));
+        var parameters = new OperationParameters();
+        parameters.Set("inputPath", inputPptx);
+        parameters.Set("outputPath", outputPath);
+        parameters.Set("format", "pptx");
+
+        var handler = new ConvertPresentationHandler();
+
+        var result = handler.Execute(context, parameters);
+
+        Assert.NotNull(result);
+        Assert.True(File.Exists(outputPath),
+            "Handler must write the output when all paths are inside the allowlist");
     }
 }

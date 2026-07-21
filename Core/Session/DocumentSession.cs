@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace AsposeMcpServer.Core.Session;
 
 /// <summary>
@@ -5,6 +7,12 @@ namespace AsposeMcpServer.Core.Session;
 /// </summary>
 public sealed class DocumentSession : IDisposable
 {
+    /// <summary>
+    ///     How long close/dispose paths wait for in-flight operations to drain before resources are
+    ///     released. Bounded so a stuck operation cannot hang a close forever.
+    /// </summary>
+    internal const int DrainTimeoutMs = 30_000;
+
     /// <summary>
     ///     Semaphore for thread-safe document access
     /// </summary>
@@ -124,8 +132,17 @@ public sealed class DocumentSession : IDisposable
 
     /// <summary>
     ///     Disposes the session and releases all resources including the document.
-    ///     Thread-safe: uses Interlocked to prevent double-dispose.
+    ///     Thread-safe: uses Interlocked to prevent double-dispose. Waits (bounded) for in-flight
+    ///     operations — usage scopes and lock holders — to finish first, so the document is never
+    ///     disposed out from under an operation that is still using it.
     /// </summary>
+    [SuppressMessage("Major Code Smell",
+        "S2952:Classes should \"Dispose\" of members from the classes' own \"Dispose\" methods",
+        Justification = "The SemaphoreSlim is deliberately not disposed: disposing it would leave any " +
+                        "concurrently blocked waiter asleep forever (SemaphoreSlim.Dispose does not wake " +
+                        "waiters), and an undisposed SemaphoreSlim holds no unmanaged resources when " +
+                        "AvailableWaitHandle is never touched. Waiters woken by the Release below observe " +
+                        "the disposed flag and throw ObjectDisposedException.")]
     public void Dispose()
     {
         // Atomically set _disposed to 1, return previous value
@@ -133,9 +150,49 @@ public sealed class DocumentSession : IDisposable
         if (Interlocked.Exchange(ref _disposed, 1) == 1)
             return;
 
-        _lock.Dispose();
+        // New work is already rejected (AcquireUsage / ThrowIfDisposed observe _disposed == 1),
+        // so this only waits for operations that entered before the close.
+        WaitForActiveUsersToDrain();
 
-        if (Document is IDisposable disposable) disposable.Dispose();
+        // Serialize with Execute/GetDocument lock holders before the document goes away.
+        var lockTaken = false;
+        try
+        {
+            lockTaken = _lock.Wait(DrainTimeoutMs);
+        }
+        catch (ObjectDisposedException)
+        {
+            // Unreachable in practice (_lock is never disposed), kept because Wait is documented to throw.
+        }
+
+        try
+        {
+            if (Document is IDisposable disposable) disposable.Dispose();
+        }
+        finally
+        {
+            if (lockTaken) _lock.Release();
+        }
+    }
+
+    /// <summary>
+    ///     Waits until no usage scopes remain active, up to the given timeout. Close paths call this
+    ///     before saving/disposing so they cannot observe (or destroy) a document mid-operation.
+    /// </summary>
+    /// <param name="timeoutMs">Maximum time to wait in milliseconds.</param>
+    /// <returns><c>true</c> when the session drained; <c>false</c> on timeout.</returns>
+    internal bool WaitForActiveUsersToDrain(int timeoutMs = DrainTimeoutMs)
+    {
+        var spin = new SpinWait();
+        var deadline = Environment.TickCount64 + timeoutMs;
+        while (Volatile.Read(ref _activeUsers) > 0)
+        {
+            if (Environment.TickCount64 >= deadline) return false;
+            if (spin.NextSpinWillYield) Thread.Sleep(5);
+            else spin.SpinOnce();
+        }
+
+        return true;
     }
 
     /// <summary>

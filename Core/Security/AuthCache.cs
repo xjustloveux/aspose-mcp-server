@@ -12,6 +12,11 @@ namespace AsposeMcpServer.Core.Security;
 public class AuthCache<TResult> where TResult : class
 {
     /// <summary>
+    ///     Number of stripe locks in <see cref="_keyLocks" />.
+    /// </summary>
+    private const int KeyLockStripes = 64;
+
+    /// <summary>
     ///     Internal cache storage using concurrent dictionary for thread safety
     /// </summary>
     private readonly ConcurrentDictionary<string, CacheEntry> _cache = new();
@@ -22,9 +27,12 @@ public class AuthCache<TResult> where TResult : class
     private readonly object _cleanupLock = new();
 
     /// <summary>
-    ///     Per-key semaphores to prevent thundering herd on cache miss
+    ///     Fixed pool of stripe locks used to prevent thundering herd on cache miss.
+    ///     A fixed pool (instead of one semaphore per key) keeps memory bounded no matter how many
+    ///     distinct — e.g. attacker-supplied — tokens are seen; two keys sharing a stripe merely
+    ///     serialize their validation calls.
     /// </summary>
-    private readonly ConcurrentDictionary<string, SemaphoreSlim> _keyLocks = new();
+    private readonly SemaphoreSlim[] _keyLocks;
 
     /// <summary>
     ///     Maximum number of entries allowed in the cache
@@ -51,6 +59,9 @@ public class AuthCache<TResult> where TResult : class
 
         _ttlSeconds = ttlSeconds;
         _maxSize = maxSize;
+        _keyLocks = new SemaphoreSlim[KeyLockStripes];
+        for (var i = 0; i < _keyLocks.Length; i++)
+            _keyLocks[i] = new SemaphoreSlim(1, 1);
     }
 
     /// <summary>
@@ -83,7 +94,7 @@ public class AuthCache<TResult> where TResult : class
             return entry.Result;
         }
 
-        var keyLock = _keyLocks.GetOrAdd(cacheKey, _ => new SemaphoreSlim(1, 1));
+        var keyLock = _keyLocks[GetStripeIndex(cacheKey)];
         await keyLock.WaitAsync();
         try
         {
@@ -153,6 +164,16 @@ public class AuthCache<TResult> where TResult : class
     {
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(token));
         return Convert.ToBase64String(bytes);
+    }
+
+    /// <summary>
+    ///     Maps a cache key to its stripe lock index.
+    /// </summary>
+    /// <param name="cacheKey">The cache key to map</param>
+    /// <returns>The stripe index in <see cref="_keyLocks" /></returns>
+    private static int GetStripeIndex(string cacheKey)
+    {
+        return (int)((uint)cacheKey.GetHashCode() % KeyLockStripes);
     }
 
     /// <summary>

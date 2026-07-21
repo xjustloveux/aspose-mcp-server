@@ -65,27 +65,24 @@ public class GetParagraphsWordHandler : OperationHandlerBase<Document>
     private static List<Aspose.Words.Paragraph> GetBaseParagraphs(Document doc, int? sectionIndex,
         bool includeCommentParagraphs)
     {
-        if (sectionIndex.HasValue)
-        {
-            if (sectionIndex.Value < 0 || sectionIndex.Value >= doc.Sections.Count)
-                throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
-            return doc.Sections[sectionIndex.Value].Body
-                .GetChildNodes(NodeType.Paragraph, includeCommentParagraphs).Cast<Aspose.Words.Paragraph>().ToList();
-        }
+        // Always enumerate deep so table-cell (and other nested) paragraphs are listed; the
+        // includeCommentParagraphs flag filters comment content instead of switching enumeration
+        // depth (a shallow walk would also silently drop table-cell paragraphs).
+        var paragraphs = sectionIndex.HasValue
+            ? GetSectionParagraphs(doc, sectionIndex.Value)
+            : doc.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().ToList();
 
-        if (includeCommentParagraphs)
-            return doc.GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().ToList();
+        return includeCommentParagraphs
+            ? paragraphs
+            : paragraphs.Where(p => p.GetAncestor(NodeType.Comment) == null).ToList();
+    }
 
-        List<Aspose.Words.Paragraph> paragraphs = [];
-        foreach (var section in doc.Sections.Cast<Section>())
-        {
-            var bodyParagraphs = section.Body.GetChildNodes(NodeType.Paragraph, false)
-                .Cast<Aspose.Words.Paragraph>()
-                .ToList();
-            paragraphs.AddRange(bodyParagraphs);
-        }
-
-        return paragraphs;
+    private static List<Aspose.Words.Paragraph> GetSectionParagraphs(Document doc, int sectionIndex)
+    {
+        if (sectionIndex < 0 || sectionIndex >= doc.Sections.Count)
+            throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
+        return doc.Sections[sectionIndex].Body
+            .GetChildNodes(NodeType.Paragraph, true).Cast<Aspose.Words.Paragraph>().ToList();
     }
 
     private static List<Aspose.Words.Paragraph> ApplyFilters(List<Aspose.Words.Paragraph> paragraphs,

@@ -62,6 +62,52 @@ public class DeleteRowWordTableHandlerTests : WordHandlerTestBase
 
     #endregion
 
+    #region Cross-Section Flat Index (get→mutate consistency)
+
+    [Fact]
+    public void Execute_WithoutSectionIndex_UsesDocumentFlatTableIndexLikeGet()
+    {
+        var doc = CreateDocumentWithTablesInTwoSections();
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "tableIndex", 1 },
+            { "rowIndex", 0 }
+        });
+
+        _handler.Execute(context, parameters);
+
+        var tables = doc.GetChildNodes(NodeType.Table, true).Cast<Aspose.Words.Tables.Table>().ToList();
+        Assert.Equal(2, tables[0].Rows.Count);
+        Assert.Equal(1, tables[1].Rows.Count);
+    }
+
+    private static Document CreateDocumentWithTablesInTwoSections()
+    {
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        builder.StartTable();
+        builder.InsertCell();
+        builder.Write("s0r0");
+        builder.EndRow();
+        builder.InsertCell();
+        builder.Write("s0r1");
+        builder.EndRow();
+        builder.EndTable();
+        builder.InsertBreak(BreakType.SectionBreakNewPage);
+        builder.StartTable();
+        builder.InsertCell();
+        builder.Write("s1r0");
+        builder.EndRow();
+        builder.InsertCell();
+        builder.Write("s1r1");
+        builder.EndRow();
+        builder.EndTable();
+        return doc;
+    }
+
+    #endregion
+
     #region Error Handling
 
     [Fact]

@@ -47,7 +47,7 @@ public class AddEmailAttachmentHandler : OperationHandlerBase<object>
         if (!File.Exists(attachmentPath))
             throw new FileNotFoundException("The specified file was not found.");
 
-        var message = MailMessage.Load(path);
+        using var message = MailMessage.Load(path);
         var attachment = new Aspose.Email.Attachment(attachmentPath);
         message.Attachments.Add(attachment);
         // H41: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).

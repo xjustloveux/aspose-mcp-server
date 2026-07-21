@@ -1,3 +1,4 @@
+using Aspose.Cells;
 using AsposeMcpServer.Core.Session;
 using AsposeMcpServer.Tests.Infrastructure;
 using AsposeMcpServer.Tools.Session;
@@ -44,7 +45,7 @@ public class DocumentErrorTests : TestBase
         var unsupportedPath = CreateTestFilePath("unsupported.xyz");
         File.WriteAllText(unsupportedPath, "Content");
 
-        Assert.ThrowsAny<Exception>(() => _sessionTool.Execute("open", unsupportedPath));
+        Assert.Throws<NotSupportedException>(() => _sessionTool.Execute("open", unsupportedPath));
     }
 
     #endregion
@@ -59,7 +60,7 @@ public class DocumentErrorTests : TestBase
     {
         var nonExistentPath = Path.Combine(TestDir, "non_existent_file.docx");
 
-        Assert.ThrowsAny<Exception>(() => _sessionTool.Execute("open", nonExistentPath));
+        Assert.Throws<FileNotFoundException>(() => _sessionTool.Execute("open", nonExistentPath));
     }
 
     /// <summary>
@@ -70,7 +71,7 @@ public class DocumentErrorTests : TestBase
     {
         var nonExistentPath = Path.Combine(TestDir, "non_existent_file.xlsx");
 
-        Assert.ThrowsAny<Exception>(() => _sessionTool.Execute("open", nonExistentPath));
+        Assert.Throws<FileNotFoundException>(() => _sessionTool.Execute("open", nonExistentPath));
     }
 
     /// <summary>
@@ -81,7 +82,7 @@ public class DocumentErrorTests : TestBase
     {
         var nonExistentPath = Path.Combine(TestDir, "non_existent_file.pptx");
 
-        Assert.ThrowsAny<Exception>(() => _sessionTool.Execute("open", nonExistentPath));
+        Assert.Throws<FileNotFoundException>(() => _sessionTool.Execute("open", nonExistentPath));
     }
 
     /// <summary>
@@ -92,7 +93,7 @@ public class DocumentErrorTests : TestBase
     {
         var nonExistentPath = Path.Combine(TestDir, "non_existent_file.pdf");
 
-        Assert.ThrowsAny<Exception>(() => _sessionTool.Execute("open", nonExistentPath));
+        Assert.Throws<FileNotFoundException>(() => _sessionTool.Execute("open", nonExistentPath));
     }
 
     #endregion
@@ -108,7 +109,10 @@ public class DocumentErrorTests : TestBase
         var corruptedPath = CreateTestFilePath("corrupted.xlsx");
         File.WriteAllText(corruptedPath, "This is not a valid Excel file");
 
-        Assert.ThrowsAny<Exception>(() => _sessionTool.Execute("open", corruptedPath));
+        var ex = Record.Exception(() => _sessionTool.Execute("open", corruptedPath));
+
+        Assert.NotNull(ex);
+        Assert.IsType<CellsException>(ex);
     }
 
     /// <summary>
@@ -120,7 +124,10 @@ public class DocumentErrorTests : TestBase
         var corruptedPath = CreateTestFilePath("corrupted.pptx");
         File.WriteAllText(corruptedPath, "This is not a valid PowerPoint file");
 
-        Assert.ThrowsAny<Exception>(() => _sessionTool.Execute("open", corruptedPath));
+        var ex = Record.Exception(() => _sessionTool.Execute("open", corruptedPath));
+
+        Assert.NotNull(ex);
+        Assert.StartsWith("Aspose.Slides", ex.GetType().FullName);
     }
 
     /// <summary>
@@ -132,7 +139,10 @@ public class DocumentErrorTests : TestBase
         var corruptedPath = CreateTestFilePath("corrupted.pdf");
         File.WriteAllText(corruptedPath, "This is not a valid PDF file");
 
-        Assert.ThrowsAny<Exception>(() => _sessionTool.Execute("open", corruptedPath));
+        var ex = Record.Exception(() => _sessionTool.Execute("open", corruptedPath));
+
+        Assert.NotNull(ex);
+        Assert.StartsWith("Aspose.Pdf", ex.GetType().FullName);
     }
 
     #endregion

@@ -13,6 +13,8 @@ namespace AsposeMcpServer.Handlers.PowerPoint.FileOperations;
 [ResultType(typeof(SuccessResult))]
 public class MergePresentationsHandler : OperationHandlerBase<Presentation>
 {
+    private const string InputPathsParamName = "inputPaths";
+
     /// <inheritdoc />
     public override string Operation => "merge";
 
@@ -44,14 +46,19 @@ public class MergePresentationsHandler : OperationHandlerBase<Presentation>
             throw new ArgumentException("No valid input paths provided");
 
         foreach (var inputPath in validPaths)
-            SecurityHelper.ValidateFilePath(inputPath, "inputPaths", true);
+            SecurityHelper.ValidateFilePath(inputPath, InputPathsParamName, true);
 
-        using var masterPresentation = new Presentation(validPaths[0]);
+        // Inputs are read sinks: resolve symlinks and enforce the allowlist immediately before each open.
+        var allowedBasePaths = context.ServerConfig?.AllowedBasePaths ?? [];
+        var resolvedMasterPath =
+            SecurityHelper.ResolveAndEnsureWithinAllowlist(validPaths[0], allowedBasePaths, InputPathsParamName);
+        using var masterPresentation = new Presentation(resolvedMasterPath);
 
         for (var i = 1; i < validPaths.Count; i++)
         {
-            var inputPath = validPaths[i];
-            if (string.IsNullOrEmpty(inputPath) || !File.Exists(inputPath)) continue;
+            var inputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(validPaths[i], allowedBasePaths,
+                InputPathsParamName);
+            if (!File.Exists(inputPath)) continue;
 
             using var sourcePresentation = new Presentation(inputPath);
             foreach (var slide in sourcePresentation.Slides)
@@ -90,7 +97,7 @@ public class MergePresentationsHandler : OperationHandlerBase<Presentation>
             parameters.GetOptional<string?>("path"),
             parameters.GetOptional<string?>("outputPath"),
             parameters.GetOptional<string?>("inputPath"),
-            parameters.GetRequired<string[]>("inputPaths"),
+            parameters.GetRequired<string[]>(InputPathsParamName),
             parameters.GetOptional("keepSourceFormatting", true));
     }
 

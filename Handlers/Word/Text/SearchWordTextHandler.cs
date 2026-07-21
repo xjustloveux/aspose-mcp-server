@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using Aspose.Words;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Word.Text;
 using WordParagraph = Aspose.Words.Paragraph;
@@ -14,6 +15,12 @@ namespace AsposeMcpServer.Handlers.Word.Text;
 [ResultType(typeof(TextSearchResult))]
 public class SearchWordTextHandler : OperationHandlerBase<Document>
 {
+    /// <summary>
+    ///     Maximum length accepted for a user-supplied regex pattern. Together with the per-match
+    ///     timeout this bounds ReDoS-style patterns; legitimate search patterns stay far below it.
+    /// </summary>
+    internal const int MaxRegexPatternLength = 1000;
+
     private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(5);
 
     /// <inheritdoc />
@@ -28,10 +35,14 @@ public class SearchWordTextHandler : OperationHandlerBase<Document>
     ///     Optional: useRegex, caseSensitive, maxResults, contextLength.
     /// </param>
     /// <returns>Search results with match details.</returns>
-    /// <exception cref="ArgumentException">Thrown when searchText is missing.</exception>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when searchText is missing or a regex pattern exceeds the length limit.
+    /// </exception>
     public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var searchParams = ExtractSearchParameters(parameters);
+        if (searchParams.UseRegex)
+            SecurityHelper.ValidateStringLength(searchParams.SearchText, "searchText", MaxRegexPatternLength);
         var doc = context.Document;
         var matches = FindAllMatches(doc, searchParams);
         var emitHandles = context.SessionId != null;

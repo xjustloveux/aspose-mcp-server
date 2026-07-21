@@ -52,24 +52,35 @@ public class SplitWorkbookHandler : OperationHandlerBase<Workbook>
         EnforcePathAllowlist(context, p.InputPath ?? p.Path, p.OutputDirectory);
         EnsureOutputDirectoryExists(p.OutputDirectory!);
 
+        // File mode opens its own workbook (owned, disposed below); session mode borrows the
+        // session-owned workbook and must not dispose it.
+        var ownsSourceWorkbook = string.IsNullOrEmpty(p.SessionId);
         var sourceWorkbook = GetSourceWorkbook(context, p.SessionId, p.InputPath ?? p.Path);
-        var indicesToSplit = GetIndicesToSplit(p.SheetIndices, sourceWorkbook.Worksheets.Count);
+        try
+        {
+            var indicesToSplit = GetIndicesToSplit(p.SheetIndices, sourceWorkbook.Worksheets.Count);
 
-        // Orthogonal DoS guard: each selected sheet produces exactly one output file, so
-        // work units = sheetCount × sheetCount = sheetCount².  Adversarially crafted workbooks
-        // with hundreds of sheets are blocked here even though no user-controlled multiplier exists.
-        var outputSheetCount = indicesToSplit.Count;
-        var totalWorkUnits = (long)outputSheetCount * outputSheetCount;
-        if (totalWorkUnits > MaxTotalWorkUnits)
-            throw new ArgumentException(
-                $"Split would require {totalWorkUnits} work units (outputSheets² = {outputSheetCount}²). " +
-                $"Maximum allowed is {MaxTotalWorkUnits}. Use sheetIndices to select a smaller subset.");
+            // Orthogonal DoS guard: each selected sheet produces exactly one output file, so
+            // work units = sheetCount × sheetCount = sheetCount².  Adversarially crafted workbooks
+            // with hundreds of sheets are blocked here even though no user-controlled multiplier exists.
+            var outputSheetCount = indicesToSplit.Count;
+            var totalWorkUnits = (long)outputSheetCount * outputSheetCount;
+            if (totalWorkUnits > MaxTotalWorkUnits)
+                throw new ArgumentException(
+                    $"Split would require {totalWorkUnits} work units (outputSheets² = {outputSheetCount}²). " +
+                    $"Maximum allowed is {MaxTotalWorkUnits}. Use sheetIndices to select a smaller subset.");
 
-        var splitFiles = SplitWorksheets(sourceWorkbook, indicesToSplit, p.OutputDirectory!, p.OutputFileNamePattern,
-            context.ServerConfig?.AllowedBasePaths ?? []);
+            var splitFiles = SplitWorksheets(sourceWorkbook, indicesToSplit, p.OutputDirectory!,
+                p.OutputFileNamePattern, context.ServerConfig?.AllowedBasePaths ?? []);
 
-        return new SuccessResult
-            { Message = $"Split workbook into {splitFiles.Count} files. Output: {p.OutputDirectory}" };
+            return new SuccessResult
+                { Message = $"Split workbook into {splitFiles.Count} files. Output: {p.OutputDirectory}" };
+        }
+        finally
+        {
+            if (ownsSourceWorkbook)
+                sourceWorkbook.Dispose();
+        }
     }
 
     /// <summary>

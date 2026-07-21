@@ -79,7 +79,8 @@ public class FileTransport : IExtensionTransport, IDisposable
         _maxSnapshotSize = maxSnapshotSize;
         _minFreeDiskSpace = minFreeDiskSpace;
         CleanupOrphanedFiles();
-        Directory.CreateDirectory(_tempDirectory);
+        // Transport frames may land in a shared temp location on Unix: create owner-only (700).
+        SecurityHelper.CreatePrivateDirectory(_tempDirectory);
     }
 
     /// <inheritdoc />
@@ -313,7 +314,7 @@ public class FileTransport : IExtensionTransport, IDisposable
             if (Directory.Exists(_tempDirectory))
                 return true;
 
-            Directory.CreateDirectory(_tempDirectory);
+            SecurityHelper.CreatePrivateDirectory(_tempDirectory);
             _logger?.LogInformation(
                 "Recreated temp directory that was deleted: {TempDirectory}",
                 _tempDirectory);

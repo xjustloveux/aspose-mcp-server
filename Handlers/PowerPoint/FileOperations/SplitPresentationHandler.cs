@@ -80,6 +80,7 @@ public class SplitPresentationHandler : OperationHandlerBase<Presentation>
 
         Presentation presentation;
         Presentation? ownedPresentation = null;
+        IDisposable? usageScope = null;
 
         if (!string.IsNullOrEmpty(p.SessionId))
         {
@@ -87,11 +88,18 @@ public class SplitPresentationHandler : OperationHandlerBase<Presentation>
                 throw new InvalidOperationException("Session management is not enabled");
 
             var identity = context.IdentityAccessor?.GetCurrentIdentity() ?? SessionIdentity.GetAnonymous();
-            presentation = context.SessionManager.GetDocument<Presentation>(p.SessionId, identity);
+            // Hold a usage scope for the whole split so a concurrent close/cleanup cannot
+            // dispose the session document mid-operation (same contract as DocumentContext.Create).
+            var session = context.SessionManager.GetSession(p.SessionId, identity);
+            usageScope = session.AcquireUsage();
+            presentation = session.GetDocument<Presentation>();
         }
         else
         {
-            ownedPresentation = new Presentation(sourcePath);
+            // The input is a read sink: resolve symlinks and enforce the allowlist like the output paths.
+            var resolvedSourcePath = SecurityHelper.ResolveAndEnsureWithinAllowlist(sourcePath!,
+                context.ServerConfig?.AllowedBasePaths ?? [], "inputPath");
+            ownedPresentation = new Presentation(resolvedSourcePath);
             presentation = ownedPresentation;
         }
 
@@ -161,6 +169,7 @@ public class SplitPresentationHandler : OperationHandlerBase<Presentation>
         finally
         {
             ownedPresentation?.Dispose();
+            usageScope?.Dispose();
         }
     }
 

@@ -32,6 +32,35 @@ public class SortDataHandlerTests : ExcelHandlerTestBase
 
     #endregion
 
+    #region Mixed-Type Sorting
+
+    [Fact]
+    public void Execute_MixedNumericAndTextColumn_SortsWithoutCrashing()
+    {
+        var workbook = CreateEmptyWorkbook();
+        workbook.Worksheets[0].Cells["A1"].PutValue("banana");
+        workbook.Worksheets[0].Cells["A2"].PutValue(10);
+        workbook.Worksheets[0].Cells["A3"].PutValue("apple");
+        workbook.Worksheets[0].Cells["A4"].PutValue(2);
+        var context = CreateContext(workbook);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "range", "A1:A4" }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        Assert.IsType<SuccessResult>(res);
+        // Numbers sort before text; each group is ordered internally.
+        Assert.Equal(2, workbook.Worksheets[0].Cells["A1"].IntValue);
+        Assert.Equal(10, workbook.Worksheets[0].Cells["A2"].IntValue);
+        Assert.Equal("apple", workbook.Worksheets[0].Cells["A3"].StringValue);
+        Assert.Equal("banana", workbook.Worksheets[0].Cells["A4"].StringValue);
+        AssertModified(context);
+    }
+
+    #endregion
+
     #region Basic Sort Operations
 
     [Fact]

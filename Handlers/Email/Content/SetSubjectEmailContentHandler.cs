@@ -38,7 +38,7 @@ public class SetSubjectEmailContentHandler : OperationHandlerBase<object>
         if (!File.Exists(path))
             throw new FileNotFoundException("The specified file was not found.");
 
-        var message = MailMessage.Load(path);
+        using var message = MailMessage.Load(path);
         message.Subject = subject;
 
         var saveOptions = CreateEmailFileHandler.DetectSaveOptions(outputPath);

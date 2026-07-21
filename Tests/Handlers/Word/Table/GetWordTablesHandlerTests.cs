@@ -41,6 +41,24 @@ public class GetWordTablesHandlerTests : WordHandlerTestBase
 
     #endregion
 
+    #region Read-Only Verification
+
+    [Fact]
+    public void Execute_DoesNotModifyDocument()
+    {
+        var doc = CreateDocumentWithTable(3, 3);
+        var initialCount = doc.GetChildNodes(NodeType.Table, true).Count;
+        var context = CreateContext(doc);
+        var parameters = CreateEmptyParameters();
+
+        _handler.Execute(context, parameters);
+
+        Assert.Equal(initialCount, doc.GetChildNodes(NodeType.Table, true).Count);
+        AssertNotModified(context);
+    }
+
+    #endregion
+
     #region Section Index
 
     [Fact]
@@ -61,22 +79,21 @@ public class GetWordTablesHandlerTests : WordHandlerTestBase
         Assert.Equal(1, result.Count);
     }
 
-    #endregion
-
-    #region Read-Only Verification
-
     [Fact]
-    public void Execute_DoesNotModifyDocument()
+    public void Execute_WithoutSectionIndex_ReportsEachTablesSectionIndex()
     {
-        var doc = CreateDocumentWithTable(3, 3);
-        var initialCount = doc.GetChildNodes(NodeType.Table, true).Count;
+        var doc = CreateDocumentWithSections(2);
+        AddTableToSection(doc, 0, 2, 2);
+        AddTableToSection(doc, 1, 2, 2);
         var context = CreateContext(doc);
         var parameters = CreateEmptyParameters();
 
-        _handler.Execute(context, parameters);
+        var res = _handler.Execute(context, parameters);
 
-        Assert.Equal(initialCount, doc.GetChildNodes(NodeType.Table, true).Count);
-        AssertNotModified(context);
+        var result = Assert.IsType<GetTablesWordResult>(res);
+        Assert.Equal(2, result.Count);
+        Assert.Equal(0, result.Tables[0].SectionIndex);
+        Assert.Equal(1, result.Tables[1].SectionIndex);
     }
 
     #endregion

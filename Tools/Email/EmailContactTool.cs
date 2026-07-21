@@ -28,12 +28,12 @@ public class EmailContactTool
     }
 
     /// <summary>
-    ///     Executes an email contact operation (create, get_info, save, set_photo).
+    ///     Executes an email contact operation (create, get, save, set_photo).
     /// </summary>
     /// <param name="operation">
-    ///     The operation to perform: create, get_info, save, set_photo.
+    ///     The operation to perform: create, get, save, set_photo.
     /// </param>
-    /// <param name="path">Input contact file path (VCF or MSG, required for get_info, save, set_photo).</param>
+    /// <param name="path">Input contact file path (VCF or MSG, required for get, save, set_photo).</param>
     /// <param name="outputPath">Output file path (required for create, save, set_photo).</param>
     /// <param name="displayName">Display name of the contact (for create).</param>
     /// <param name="email">Email address of the contact (for create).</param>
@@ -52,7 +52,7 @@ public class EmailContactTool
         OpenWorld = false,
         ReadOnly = false,
         UseStructuredContent = true)]
-    [Description(@"Create and manage email contacts (VCF/MSG). Supports 4 operations: create, get_info, save, set_photo.
+    [Description(@"Create and manage email contacts (VCF/MSG). Supports 4 operations: create, get, save, set_photo.
 
 Usage examples:
 - Create contact: email_contact(operation='create', outputPath='contact.vcf', displayName='John Doe', email='john@example.com')

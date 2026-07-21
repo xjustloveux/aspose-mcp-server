@@ -26,7 +26,9 @@ public class SignWordDigitalSignatureHandler : OperationHandlerBase<Document>
     ///     Optional: comments (signature comments)
     /// </param>
     /// <returns>Success message.</returns>
-    /// <exception cref="ArgumentException">Thrown when required parameters are missing.</exception>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when required parameters are missing or a path resolves outside the configured allowlist.
+    /// </exception>
     /// <exception cref="FileNotFoundException">Thrown when the certificate file is not found.</exception>
     public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
@@ -36,14 +38,22 @@ public class SignWordDigitalSignatureHandler : OperationHandlerBase<Document>
         SecurityHelper.ValidateFilePath(p.OutputPath, "outputPath", true);
         SecurityHelper.ValidateFilePath(p.CertificatePath, "certificatePath", true);
 
-        if (!System.IO.File.Exists(p.CertificatePath))
+        // All three paths are filesystem sinks (two reads, one write): resolve symlinks and
+        // enforce the allowlist before any of them is touched.
+        var allowedBasePaths = context.ServerConfig?.AllowedBasePaths ?? [];
+        var sourcePath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.Path, allowedBasePaths, "path");
+        var outputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.OutputPath, allowedBasePaths, "outputPath");
+        var certificatePath =
+            SecurityHelper.ResolveAndEnsureWithinAllowlist(p.CertificatePath, allowedBasePaths, "certificatePath");
+
+        if (!System.IO.File.Exists(certificatePath))
             throw new FileNotFoundException("The specified file was not found.");
 
-        var outputDir = Path.GetDirectoryName(p.OutputPath);
+        var outputDir = Path.GetDirectoryName(outputPath);
         if (!string.IsNullOrEmpty(outputDir))
             Directory.CreateDirectory(outputDir);
 
-        var certificateHolder = CertificateHolder.Create(p.CertificatePath, p.CertificatePassword);
+        var certificateHolder = CertificateHolder.Create(certificatePath, p.CertificatePassword);
 
         var signOptions = new SignOptions
         {
@@ -51,7 +61,7 @@ public class SignWordDigitalSignatureHandler : OperationHandlerBase<Document>
             SignTime = DateTime.Now
         };
 
-        DigitalSignatureUtil.Sign(p.Path, p.OutputPath, certificateHolder, signOptions);
+        DigitalSignatureUtil.Sign(sourcePath, outputPath, certificateHolder, signOptions);
 
         return new SuccessResult
         {

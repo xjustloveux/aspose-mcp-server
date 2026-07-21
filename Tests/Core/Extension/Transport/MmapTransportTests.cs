@@ -28,7 +28,6 @@ public class MmapTransportTests : IDisposable
 
     public void Dispose()
     {
-        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
         _transport.Dispose();
         try
         {
@@ -142,9 +141,9 @@ public class MmapTransportTests : IDisposable
     [SkippableFact]
     public async Task SendAsync_MacOS_SetsFilePath()
     {
-        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
-        if (!OperatingSystem.IsMacOS())
-            return;
+        // Exercises the macOS file-backed fallback; on other platforms the test is SKIPPED
+        // (visible), never a vacuous pass.
+        Skip.IfNot(OperatingSystem.IsMacOS(), "Exercises the macOS file-backed fallback");
 
         using var process = CreateTestProcess();
         var metadata = CreateTestMetadata();
@@ -255,9 +254,7 @@ public class MmapTransportTests : IDisposable
     [SkippableFact]
     public async Task Dispose_MacOS_CleansUpAllFiles()
     {
-        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
-        if (!OperatingSystem.IsMacOS())
-            return;
+        Skip.IfNot(OperatingSystem.IsMacOS(), "Exercises the macOS file-backed fallback");
 
         var transport = new MmapTransport(tempDirectory: _tempDirectory);
         using var process = CreateTestProcess();
@@ -323,9 +320,7 @@ public class MmapTransportTests : IDisposable
     [SkippableFact]
     public async Task ForceCleanup_MacOS_ImmediatelyDeletesFile()
     {
-        Skip.IfNot(OperatingSystem.IsWindows(), "Only supported on Windows");
-        if (!OperatingSystem.IsMacOS())
-            return;
+        Skip.IfNot(OperatingSystem.IsMacOS(), "Exercises the macOS file-backed fallback");
 
         using var process = CreateTestProcess();
         var metadata = CreateTestMetadata();

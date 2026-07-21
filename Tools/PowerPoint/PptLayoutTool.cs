@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Slides;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
@@ -10,7 +10,7 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 
 /// <summary>
 ///     Unified tool for managing PowerPoint layouts.
-///     Supports: set, get_layouts, get_masters, apply_master, apply_layout_range, apply_theme
+///     Supports: set, list, list_masters, apply_master, apply_range, apply_theme
 /// </summary>
 [ToolHandlerMapping("AsposeMcpServer.Handlers.PowerPoint.Layout")]
 [McpServerToolType]
@@ -46,11 +46,11 @@ public class PptLayoutTool
     }
 
     /// <summary>
-    ///     Executes a PowerPoint layout operation (set, get_layouts, get_masters, apply_master, apply_layout_range,
+    ///     Executes a PowerPoint layout operation (set, list, list_masters, apply_master, apply_range,
     ///     apply_theme).
     /// </summary>
     /// <param name="operation">
-    ///     The operation to perform: set, get_layouts, get_masters, apply_master, apply_layout_range,
+    ///     The operation to perform: set, list, list_masters, apply_master, apply_range,
     ///     apply_theme.
     /// </param>
     /// <param name="path">Presentation file path (required if no sessionId).</param>
@@ -61,9 +61,9 @@ public class PptLayoutTool
     ///     Layout type: Title, TitleOnly, Blank, TwoColumn, SectionHeader, TitleAndContent, ObjectAndText,
     ///     PictureAndCaption.
     /// </param>
-    /// <param name="masterIndex">Master index (0-based, optional for get_layouts, required for apply_master).</param>
+    /// <param name="masterIndex">Master index (0-based, optional for list, required for apply_master).</param>
     /// <param name="layoutIndex">Layout index under master (0-based, required for apply_master).</param>
-    /// <param name="slideIndices">Slide indices array as JSON (required for apply_layout_range, optional for apply_master).</param>
+    /// <param name="slideIndices">Slide indices array as JSON (required for apply_range, optional for apply_master).</param>
     /// <param name="themePath">Theme template file path (.potx/.pptx, required for apply_theme).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
@@ -76,7 +76,7 @@ public class PptLayoutTool
         ReadOnly = false,
         UseStructuredContent = true)]
     [Description(
-        @"Manage PowerPoint layouts. Supports 6 operations: set, get_layouts, get_masters, apply_master, apply_layout_range, apply_theme.
+        @"Manage PowerPoint layouts. Supports 6 operations: set, list, list_masters, apply_master, apply_range, apply_theme.
 
 Usage examples:
 - Set layout: ppt_layout(operation='set', path='presentation.pptx', slideIndex=0, layout='Title')
@@ -99,11 +99,11 @@ Usage examples:
         [Description(
             "Layout type: Title, TitleOnly, Blank, TwoColumn, SectionHeader, TitleAndContent, ObjectAndText, PictureAndCaption")]
         string? layout = null,
-        [Description("Master index (0-based, optional for get_layouts, required for apply_master)")]
+        [Description("Master index (0-based, optional for list, required for apply_master)")]
         int? masterIndex = null,
         [Description("Layout index under master (0-based, required for apply_master)")]
         int? layoutIndex = null,
-        [Description("Slide indices array as JSON (required for apply_layout_range, optional for apply_master)")]
+        [Description("Slide indices array as JSON (required for apply_range, optional for apply_master)")]
         string? slideIndices = null,
         [Description("Theme template file path (.potx/.pptx, required for apply_theme)")]
         string? themePath = null)

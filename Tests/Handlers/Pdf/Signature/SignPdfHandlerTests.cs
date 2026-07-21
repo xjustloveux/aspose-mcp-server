@@ -23,6 +23,38 @@ public class SignPdfHandlerTests : PdfHandlerTestBase
 
     #region Helper Methods
 
+    /// <summary>
+    ///     Creates a 100×100 BMP filled with deterministic incompressible noise (~30 KB), so an
+    ///     embedded signature appearance measurably grows the signed file.
+    /// </summary>
+    private string CreateAppearanceBmp()
+    {
+        const int width = 100;
+        const int height = 100;
+        const int rowSize = (width * 24 + 31) / 32 * 4;
+        const int fileSize = 54 + rowSize * height;
+        var bmp = new byte[fileSize];
+        bmp[0] = 0x42;
+        bmp[1] = 0x4D;
+        BitConverter.GetBytes(fileSize).CopyTo(bmp, 2);
+        bmp[10] = 54;
+        bmp[14] = 40;
+        BitConverter.GetBytes(width).CopyTo(bmp, 18);
+        BitConverter.GetBytes(height).CopyTo(bmp, 22);
+        bmp[26] = 1;
+        bmp[28] = 24;
+        var state = 123456789u;
+        for (var i = 54; i < bmp.Length; i++)
+        {
+            state ^= state << 13;
+            state ^= state >> 17;
+            state ^= state << 5;
+            bmp[i] = (byte)state;
+        }
+
+        return CreateTempFile(".bmp", bmp);
+    }
+
     private string CreateSelfSignedPfx(string password)
     {
         using var rsa = RSA.Create(2048);
@@ -149,6 +181,43 @@ public class SignPdfHandlerTests : PdfHandlerTestBase
         Assert.True(File.Exists(outputPath));
         using var signed = new Document(outputPath);
         Assert.True(signed.Pages.Count >= 1);
+    }
+
+    [SkippableFact]
+    public void Execute_WithImagePath_EmbedsAppearanceImage()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Pdf);
+        const string password = "test-password";
+        var certPath = CreateSelfSignedPfx(password);
+        var imagePath = CreateAppearanceBmp();
+        var sourcePath = Path.Combine(TestDir, $"appearance_source_{Guid.NewGuid()}.pdf");
+        using (var seed = CreateEmptyDocument())
+        {
+            seed.Save(sourcePath);
+        }
+
+        long SignAndMeasure(string? appearanceImage)
+        {
+            using var document = new Document(sourcePath);
+            var outputPath = Path.Combine(TestDir, $"appearance_{Guid.NewGuid()}.pdf");
+            var context = CreateContext(document, outputPath);
+            var values = new Dictionary<string, object?>
+            {
+                { "certificatePath", certPath },
+                { "password", password }
+            };
+            if (appearanceImage != null) values["imagePath"] = appearanceImage;
+            _handler.Execute(context, CreateParameters(values));
+            return new FileInfo(outputPath).Length;
+        }
+
+        var withoutImage = SignAndMeasure(null);
+        var withImage = SignAndMeasure(imagePath);
+
+        // The ~30 KB incompressible appearance image must actually be embedded in the output.
+        Assert.True(withImage > withoutImage + 10_000,
+            $"Signed size with appearance image ({withImage}) must exceed the size without it ({withoutImage}) " +
+            "by roughly the image payload — the imagePath parameter must not be ignored");
     }
 
     #endregion

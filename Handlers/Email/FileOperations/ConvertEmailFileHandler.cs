@@ -35,10 +35,12 @@ public class ConvertEmailFileHandler : OperationHandlerBase<object>
         if (!File.Exists(path))
             throw new FileNotFoundException("The specified file was not found.");
 
-        var sourceFormat = DetectFormatFromExtension(path);
+        // Source format comes from the file content (the extension may be wrong); the target
+        // format is legitimately chosen by the output extension.
+        var sourceFormat = EmailFormatHelper.DetectFormatName(path);
         var targetFormat = DetectFormatFromExtension(outputPath);
 
-        var message = MailMessage.Load(path);
+        using var message = MailMessage.Load(path);
         var saveOptions = CreateEmailFileHandler.DetectSaveOptions(outputPath);
         // H36: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
         outputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(outputPath,

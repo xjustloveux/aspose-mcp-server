@@ -55,7 +55,7 @@ public class RecognizePdfHandler : OperationHandlerBase<AsposeOcr>
         ValidateSaveFormat(p.TargetFormat);
 
         var ocr = context.Document;
-        var input = new OcrInput(InputType.PDF);
+        using var input = new OcrInput(InputType.PDF);
         input.Add(p.Path);
 
         var settings = new RecognitionSettings

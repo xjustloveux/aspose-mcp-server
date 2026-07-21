@@ -29,12 +29,12 @@ public class EmailFileTool
     }
 
     /// <summary>
-    ///     Executes an email file operation (create, get_info, save, convert, detect_format).
+    ///     Executes an email file operation (create, get, save, convert, detect).
     /// </summary>
     /// <param name="operation">
-    ///     The operation to perform: create, get_info, save, convert, detect_format.
+    ///     The operation to perform: create, get, save, convert, detect.
     /// </param>
-    /// <param name="path">Input email file path (required for get_info, save, convert, detect_format).</param>
+    /// <param name="path">Input email file path (required for get, save, convert, detect).</param>
     /// <param name="outputPath">Output file path (required for create, save, convert).</param>
     /// <param name="subject">Email subject (for create).</param>
     /// <param name="body">Email body content (for create).</param>
@@ -51,7 +51,7 @@ public class EmailFileTool
         OpenWorld = false,
         ReadOnly = false,
         UseStructuredContent = true)]
-    [Description(@"Perform email file operations. Supports 5 operations: create, get_info, save, convert, detect_format.
+    [Description(@"Perform email file operations. Supports 5 operations: create, get, save, convert, detect.
 
 Usage examples:
 - Create email: email_file(operation='create', outputPath='email.eml', subject='Hello', body='World', from='a@b.com', to='c@d.com')
@@ -69,7 +69,7 @@ Supported email formats: EML, MSG, MHTML/MHT, HTML")]
 - 'convert': Convert email to another format (required params: path, outputPath)
 - 'detect': Detect the format of an email file (required params: path)")]
         string operation,
-        [Description("Input email file path (required for get_info, save, convert, detect_format)")]
+        [Description("Input email file path (required for get, save, convert, detect)")]
         string? path = null,
         [Description("Output file path (required for create, save, convert)")]
         string? outputPath = null,

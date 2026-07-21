@@ -118,14 +118,20 @@ public static class ExcelPivotTableHelper
     }
 
     /// <summary>
-    ///     Parses the data source to get the source worksheet and range.
+    ///     Parses the data source to get the source worksheet and range. A sheet-qualified source
+    ///     (e.g. <c>Data!A1:D10</c> or <c>'My Data'!A1:D10</c>) selects that sheet; only an
+    ///     unqualified source falls back to the sheet at <paramref name="sheetIndex" />.
     /// </summary>
     /// <param name="workbook">The workbook containing the pivot table.</param>
     /// <param name="pivotTable">The pivot table.</param>
-    /// <param name="sheetIndex">The sheet index for resolving the source range.</param>
+    /// <param name="sheetIndex">The fallback sheet index when the source has no sheet qualifier.</param>
     /// <param name="pivotTableIndex">The pivot table index for error messages.</param>
     /// <param name="worksheetName">The worksheet name for error messages.</param>
     /// <returns>A <see cref="PivotTableDataSource" /> with the source worksheet and range.</returns>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when the data source is missing, references a sheet that does not exist,
+    ///     or its range cannot be parsed.
+    /// </exception>
     public static PivotTableDataSource ParseDataSource(
         Workbook workbook,
         PivotTable pivotTable,
@@ -146,10 +152,23 @@ public static class ExcelPivotTableHelper
             throw new ArgumentException(
                 $"Pivot table data source is not available. Pivot table index: {pivotTableIndex}, Worksheet: '{worksheetName}'");
 
-        var sourceSheet = workbook.Worksheets[sheetIndex];
         var cleanSourceRange = sourceRangeStr.Replace("=", "").Trim();
         var sourceParts = cleanSourceRange.Split(['!'], StringSplitOptions.RemoveEmptyEntries);
         var rangeStr = sourceParts.Length > 1 ? sourceParts[1].Trim() : sourceParts[0].Trim();
+
+        Worksheet sourceSheet;
+        if (sourceParts.Length > 1)
+        {
+            var sourceSheetName = sourceParts[0].Trim().Trim('\'');
+            sourceSheet = workbook.Worksheets[sourceSheetName]
+                          ?? throw new ArgumentException(
+                              $"Pivot table data source references sheet '{sourceSheetName}' which does not exist " +
+                              $"in the workbook. Pivot table index: {pivotTableIndex}, Worksheet: '{worksheetName}'");
+        }
+        else
+        {
+            sourceSheet = workbook.Worksheets[sheetIndex];
+        }
 
         if (string.IsNullOrEmpty(rangeStr))
             throw new ArgumentException(

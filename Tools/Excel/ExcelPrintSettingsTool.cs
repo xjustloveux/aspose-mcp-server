@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
@@ -45,18 +45,18 @@ public class ExcelPrintSettingsTool
     }
 
     /// <summary>
-    ///     Executes an Excel print settings operation (set_print_area, set_print_titles, set_page_setup, set_all).
+    ///     Executes an Excel print settings operation (set_area, set_titles, set_page, set).
     /// </summary>
-    /// <param name="operation">The operation to perform: set_print_area, set_print_titles, set_page_setup, set_all.</param>
+    /// <param name="operation">The operation to perform: set_area, set_titles, set_page, set.</param>
     /// <param name="path">Excel file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID for in-memory editing.</param>
     /// <param name="outputPath">Output file path (file mode only).</param>
     /// <param name="sheetIndex">Sheet index (0-based, default: 0).</param>
     /// <param name="range">Print area range (e.g., 'A1:D10').</param>
-    /// <param name="clearPrintArea">Clear print area (optional, for set_print_area, default: false).</param>
+    /// <param name="clearPrintArea">Clear print area (optional, for set_area, default: false).</param>
     /// <param name="rows">Rows to repeat on each printed page (e.g., '1:1').</param>
     /// <param name="columns">Columns to repeat on each printed page (e.g., 'A:A').</param>
-    /// <param name="clearTitles">Clear print titles (optional, for set_print_titles, default: false).</param>
+    /// <param name="clearTitles">Clear print titles (optional, for set_titles, default: false).</param>
     /// <param name="orientation">Page orientation (optional, default: Portrait).</param>
     /// <param name="paperSize">Paper size (e.g., 'A4', 'Letter').</param>
     /// <param name="leftMargin">Left margin in inches.</param>
@@ -79,7 +79,7 @@ public class ExcelPrintSettingsTool
         ReadOnly = false,
         UseStructuredContent = true)]
     [Description(
-        @"Manage Excel print settings. Supports 4 operations: set_print_area, set_print_titles, set_page_setup, set_all.
+        @"Manage Excel print settings. Supports 4 operations: set_area, set_titles, set_page, set.
 
 Usage examples:
 - Set print area: excel_print_settings(operation='set_area', path='book.xlsx', range='A1:D10')
@@ -107,14 +107,14 @@ Usage examples:
         [Description(
             "Print area range. Supports single range (e.g., 'A1:D10') or multiple ranges separated by comma (e.g., 'A1:D10,F1:H10')")]
         string? range = null,
-        [Description("Clear print area (optional, for set_print_area, default: false)")]
+        [Description("Clear print area (optional, for set_area, default: false)")]
         bool clearPrintArea = false,
         [Description("Rows to repeat on each printed page (e.g., '1:1' for first row, '1:2' for first two rows)")]
         string? rows = null,
         [Description(
             "Columns to repeat on each printed page (e.g., 'A:A' for first column, 'A:B' for first two columns)")]
         string? columns = null,
-        [Description("Clear print titles (optional, for set_print_titles, default: false)")]
+        [Description("Clear print titles (optional, for set_titles, default: false)")]
         bool clearTitles = false,
         [Description("Page orientation (optional, default: Portrait)")]
         string? orientation = null,

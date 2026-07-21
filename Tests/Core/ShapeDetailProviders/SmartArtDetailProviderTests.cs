@@ -57,6 +57,24 @@ public class SmartArtDetailProviderTests : TestBase
     }
 
     [Fact]
+    public void GetDetails_WithNestedNodes_ListsOnlyRootsAtTopLevel()
+    {
+        using var presentation = new Presentation();
+        var slide = presentation.Slides[0];
+        var smartArt = slide.Shapes.AddSmartArt(10, 10, 400, 300, SmartArtLayoutType.BasicBlockList);
+        smartArt.Nodes[0].ChildNodes.AddNode().TextFrame.Text = "nested child";
+        var rootCount = smartArt.Nodes.Count;
+
+        var details = Assert.IsType<SmartArtDetails>(_provider.GetDetails(smartArt, presentation));
+
+        // The nested child must appear under its parent only — walking the flattened AllNodes
+        // collection would list it a second time at top level.
+        Assert.NotNull(details.Nodes);
+        Assert.Equal(rootCount, details.Nodes!.Count);
+        Assert.True(details.Nodes[0].ChildCount >= 1);
+    }
+
+    [Fact]
     public void GetDetails_WithNonSmartArt_ShouldReturnNull()
     {
         using var presentation = new Presentation();

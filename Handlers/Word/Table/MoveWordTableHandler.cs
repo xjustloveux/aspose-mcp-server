@@ -29,20 +29,14 @@ public class MoveWordTableHandler : OperationHandlerBase<Document>
         var p = ExtractMoveWordTableParameters(parameters);
 
         var doc = context.Document;
-        var sectionIdx = p.SectionIndex ?? 0;
-        if (sectionIdx < 0 || sectionIdx >= doc.Sections.Count)
-            throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
-
-        var section = doc.Sections[sectionIdx];
-        var tables = section.Body.GetChildNodes(NodeType.Table, true).Cast<Aspose.Words.Tables.Table>().ToList();
-
-        if (p.TableIndex < 0 || p.TableIndex >= tables.Count)
-            throw new ArgumentException($"tableIndex must be between 0 and {tables.Count - 1}");
-
-        var table = tables[p.TableIndex];
+        // Omitted sectionIndex means the document-wide flat table index, matching 'get'. The move
+        // then happens within the table's own section, so the target paragraph is addressed there.
+        var table = WordTableHelper.GetTable(doc, p.TableIndex, p.SectionIndex);
+        var section = (Section)table.GetAncestor(NodeType.Section)!;
+        var sectionIdx = doc.Sections.IndexOf(section);
 
         var targetPara = ParagraphResolver
-            .Resolve(doc, ParagraphAddress.From(parameters, p.TargetParagraphIndex)).Paragraph;
+            .Resolve(doc, new ParagraphAddress(p.TargetParagraphIndex, StoryTypes.Body, sectionIdx)).Paragraph;
 
         // The resolver can address paragraphs nested in table cells, but a table is inserted relative
         // to a body-level block. Walk up to the direct child of the section body so the structural

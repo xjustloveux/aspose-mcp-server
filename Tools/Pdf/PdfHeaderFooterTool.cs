@@ -79,7 +79,9 @@ Usage examples:
 - Add text header: pdf_header_footer(operation='add_text', path='doc.pdf', outputPath='out.pdf', text='Confidential', position='header')
 - Add footer image: pdf_header_footer(operation='add_image', path='doc.pdf', outputPath='out.pdf', imagePath='logo.png', position='footer')
 - Add page numbers: pdf_header_footer(operation='add_number', path='doc.pdf', outputPath='out.pdf', position='footer', alignment='right')
-- Remove stamps: pdf_header_footer(operation='remove', path='doc.pdf', outputPath='out.pdf')")]
+- Remove stamp annotations: pdf_header_footer(operation='remove', path='doc.pdf', outputPath='out.pdf')
+
+Note: 'remove' operates on stamp ANNOTATIONS (e.g. rubber-stamp annotations already present in the PDF). add_text/add_image/add_number render headers/footers into the page content; those are permanent and are NOT removable by 'remove'.")]
     public object Execute(
         [Description("Operation: add_text, add_image, add_number, remove")]
         string operation,

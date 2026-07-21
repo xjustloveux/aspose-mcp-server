@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
@@ -48,13 +48,13 @@ public class ExcelViewSettingsTool
 
     /// <summary>
     ///     Executes an Excel view settings operation (set_zoom, set_gridlines, set_headers, set_zero_values, set_column_width,
-    ///     set_row_height, set_background, set_tab_color, set_all, freeze_panes, split_window, auto_fit_column, auto_fit_row,
+    ///     set_row_height, set_background, set_tab, set, freeze, split, autofit_col, autofit_row,
     ///     show_formulas).
     /// </summary>
     /// <param name="operation">
     ///     The operation to perform: set_zoom, set_gridlines, set_headers, set_zero_values,
-    ///     set_column_width, set_row_height, set_background, set_tab_color, set_all, freeze_panes, split_window,
-    ///     auto_fit_column, auto_fit_row, show_formulas.
+    ///     set_column_width, set_row_height, set_background, set_tab, set, freeze, split,
+    ///     autofit_col, autofit_row, show_formulas.
     /// </param>
     /// <param name="path">Excel file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID for in-memory editing.</param>
@@ -62,27 +62,27 @@ public class ExcelViewSettingsTool
     /// <param name="sheetIndex">Sheet index (0-based, default: 0).</param>
     /// <param name="zoom">Zoom percentage (10-400, required for set_zoom).</param>
     /// <param name="visible">Visibility (required for set_gridlines/set_headers/set_zero_values/show_formulas).</param>
-    /// <param name="columnIndex">Column index (0-based, required for set_column_width/auto_fit_column).</param>
+    /// <param name="columnIndex">Column index (0-based, required for set_column_width/autofit_col).</param>
     /// <param name="width">Column width in characters (required for set_column_width).</param>
-    /// <param name="rowIndex">Row index (0-based, required for set_row_height/auto_fit_row).</param>
+    /// <param name="rowIndex">Row index (0-based, required for set_row_height/autofit_row).</param>
     /// <param name="height">Row height in points (required for set_row_height).</param>
     /// <param name="imagePath">Background image file path (required for set_background).</param>
     /// <param name="removeBackground">Remove background image (for set_background).</param>
-    /// <param name="color">Color in hex format (e.g., '#FF0000', required for set_tab_color).</param>
-    /// <param name="showGridlines">Show gridlines (for set_all).</param>
-    /// <param name="showRowColumnHeaders">Show row/column headers (for set_all).</param>
-    /// <param name="showZeroValues">Show zero values (for set_all).</param>
-    /// <param name="displayRightToLeft">Display right to left (for set_all).</param>
-    /// <param name="freezeRow">Row index to freeze at (0-based, for freeze_panes).</param>
-    /// <param name="freezeColumn">Column index to freeze at (0-based, for freeze_panes).</param>
-    /// <param name="unfreeze">Remove frozen panes (for freeze_panes).</param>
-    /// <param name="splitRow">Row position to split at in pixels (for split_window).</param>
-    /// <param name="splitColumn">Column position to split at in pixels (for split_window).</param>
-    /// <param name="removeSplit">Remove window split (for split_window).</param>
-    /// <param name="startRow">Start row index for auto fit range (0-based, for auto_fit_column).</param>
-    /// <param name="endRow">End row index for auto fit range (0-based, for auto_fit_column).</param>
-    /// <param name="startColumn">Start column index for auto fit range (0-based, for auto_fit_row).</param>
-    /// <param name="endColumn">End column index for auto fit range (0-based, for auto_fit_row).</param>
+    /// <param name="color">Color in hex format (e.g., '#FF0000', required for set_tab).</param>
+    /// <param name="showGridlines">Show gridlines (for set).</param>
+    /// <param name="showRowColumnHeaders">Show row/column headers (for set).</param>
+    /// <param name="showZeroValues">Show zero values (for set).</param>
+    /// <param name="displayRightToLeft">Display right to left (for set).</param>
+    /// <param name="freezeRow">Row index to freeze at (0-based, for freeze).</param>
+    /// <param name="freezeColumn">Column index to freeze at (0-based, for freeze).</param>
+    /// <param name="unfreeze">Remove frozen panes (for freeze).</param>
+    /// <param name="splitRow">Row position to split at in pixels (for split).</param>
+    /// <param name="splitColumn">Column position to split at in pixels (for split).</param>
+    /// <param name="removeSplit">Remove window split (for split).</param>
+    /// <param name="startRow">Start row index for auto fit range (0-based, for autofit_col).</param>
+    /// <param name="endRow">End row index for auto fit range (0-based, for autofit_col).</param>
+    /// <param name="startColumn">Start column index for auto fit range (0-based, for autofit_row).</param>
+    /// <param name="endColumn">End column index for auto fit range (0-based, for autofit_row).</param>
     /// <returns>A message indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(
@@ -94,7 +94,7 @@ public class ExcelViewSettingsTool
         ReadOnly = false,
         UseStructuredContent = true)]
     [Description(
-        @"Manage Excel view settings. Supports 14 operations: set_zoom, set_gridlines, set_headers, set_zero_values, set_column_width, set_row_height, set_background, set_tab_color, set_all, freeze_panes, split_window, auto_fit_column, auto_fit_row, show_formulas.
+        @"Manage Excel view settings. Supports 14 operations: set_zoom, set_gridlines, set_headers, set_zero_values, set_column_width, set_row_height, set_background, set_tab, set, freeze, split, autofit_col, autofit_row, show_formulas.
 
 Usage examples:
 - Set zoom: excel_view_settings(operation='set_zoom', path='book.xlsx', zoom=150)
@@ -122,11 +122,11 @@ Usage examples:
         int zoom = 100,
         [Description("Visibility (required for set_gridlines/set_headers/set_zero_values/show_formulas)")]
         bool visible = true,
-        [Description("Column index (0-based, required for set_column_width/auto_fit_column)")]
+        [Description("Column index (0-based, required for set_column_width/autofit_col)")]
         int columnIndex = 0,
         [Description("Column width in characters (required for set_column_width)")]
         double width = 8.43,
-        [Description("Row index (0-based, required for set_row_height/auto_fit_row)")]
+        [Description("Row index (0-based, required for set_row_height/autofit_row)")]
         int rowIndex = 0,
         [Description("Row height in points (required for set_row_height)")]
         double height = 15,
@@ -134,35 +134,35 @@ Usage examples:
         string? imagePath = null,
         [Description("Remove background image (for set_background)")]
         bool removeBackground = false,
-        [Description("Color in hex format (e.g., '#FF0000', required for set_tab_color)")]
+        [Description("Color in hex format (e.g., '#FF0000', required for set_tab)")]
         string? color = null,
-        [Description("Show gridlines (for set_all)")]
+        [Description("Show gridlines (for set)")]
         bool? showGridlines = null,
-        [Description("Show row/column headers (for set_all)")]
+        [Description("Show row/column headers (for set)")]
         bool? showRowColumnHeaders = null,
-        [Description("Show zero values (for set_all)")]
+        [Description("Show zero values (for set)")]
         bool? showZeroValues = null,
-        [Description("Display right to left (for set_all)")]
+        [Description("Display right to left (for set)")]
         bool? displayRightToLeft = null,
-        [Description("Row index to freeze at (0-based, for freeze_panes)")]
+        [Description("Row index to freeze at (0-based, for freeze)")]
         int? freezeRow = null,
-        [Description("Column index to freeze at (0-based, for freeze_panes)")]
+        [Description("Column index to freeze at (0-based, for freeze)")]
         int? freezeColumn = null,
-        [Description("Remove frozen panes (for freeze_panes)")]
+        [Description("Remove frozen panes (for freeze)")]
         bool unfreeze = false,
-        [Description("Row position to split at in pixels (for split_window)")]
+        [Description("Row position to split at in pixels (for split)")]
         int? splitRow = null,
-        [Description("Column position to split at in pixels (for split_window)")]
+        [Description("Column position to split at in pixels (for split)")]
         int? splitColumn = null,
-        [Description("Remove window split (for split_window)")]
+        [Description("Remove window split (for split)")]
         bool removeSplit = false,
-        [Description("Start row index for auto fit range (0-based, for auto_fit_column)")]
+        [Description("Start row index for auto fit range (0-based, for autofit_col)")]
         int? startRow = null,
-        [Description("End row index for auto fit range (0-based, for auto_fit_column)")]
+        [Description("End row index for auto fit range (0-based, for autofit_col)")]
         int? endRow = null,
-        [Description("Start column index for auto fit range (0-based, for auto_fit_row)")]
+        [Description("Start column index for auto fit range (0-based, for autofit_row)")]
         int? startColumn = null,
-        [Description("End column index for auto fit range (0-based, for auto_fit_row)")]
+        [Description("End column index for auto fit range (0-based, for autofit_row)")]
         int? endColumn = null)
     {
         using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);

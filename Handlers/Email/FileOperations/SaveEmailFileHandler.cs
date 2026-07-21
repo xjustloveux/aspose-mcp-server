@@ -36,7 +36,7 @@ public class SaveEmailFileHandler : OperationHandlerBase<object>
         if (!File.Exists(path))
             throw new FileNotFoundException("The specified file was not found.");
 
-        var message = MailMessage.Load(path);
+        using var message = MailMessage.Load(path);
         var saveOptions = CreateEmailFileHandler.DetectSaveOptions(outputPath);
         // H34: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
         outputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(outputPath,

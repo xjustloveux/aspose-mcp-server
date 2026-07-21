@@ -55,6 +55,62 @@ public class ExcelPivotTableHelperTests : ExcelTestBase
 
     #endregion
 
+    #region ParseDataSource Tests
+
+    [Fact]
+    public void ParseDataSource_SourceOnDifferentSheet_ReturnsThatSheet()
+    {
+        var workbook = new Workbook();
+        var pivotSheet = workbook.Worksheets[0];
+        var dataSheet = workbook.Worksheets.Add("Data");
+        dataSheet.Cells["A1"].Value = "Name";
+        dataSheet.Cells["B1"].Value = "Value";
+        dataSheet.Cells["A2"].Value = "Item1";
+        dataSheet.Cells["B2"].Value = 100;
+        var pivotIndex = pivotSheet.PivotTables.Add("=Data!A1:B2", "D5", "TestPivot");
+        var pivotTable = pivotSheet.PivotTables[pivotIndex];
+
+        var result = ExcelPivotTableHelper.ParseDataSource(workbook, pivotTable, 0, 0, pivotSheet.Name);
+
+        Assert.Equal("Data", result.SourceSheet.Name);
+        Assert.Equal("Name", result.SourceSheet.Cells[result.SourceRange.FirstRow, result.SourceRange.FirstColumn]
+            .StringValue);
+    }
+
+    [Fact]
+    public void ParseDataSource_QuotedSheetName_ReturnsThatSheet()
+    {
+        var workbook = new Workbook();
+        var pivotSheet = workbook.Worksheets[0];
+        var dataSheet = workbook.Worksheets.Add("My Data");
+        dataSheet.Cells["A1"].Value = "Name";
+        dataSheet.Cells["A2"].Value = "Item1";
+        var pivotIndex = pivotSheet.PivotTables.Add("='My Data'!A1:A2", "D5", "TestPivot");
+        var pivotTable = pivotSheet.PivotTables[pivotIndex];
+
+        var result = ExcelPivotTableHelper.ParseDataSource(workbook, pivotTable, 0, 0, pivotSheet.Name);
+
+        Assert.Equal("My Data", result.SourceSheet.Name);
+    }
+
+    [Fact]
+    public void ParseDataSource_UnknownSheetName_ThrowsArgumentException()
+    {
+        var workbook = new Workbook();
+        var pivotSheet = workbook.Worksheets[0];
+        var dataSheet = workbook.Worksheets.Add("Data");
+        dataSheet.Cells["A1"].Value = "Name";
+        dataSheet.Cells["A2"].Value = "Item1";
+        var pivotIndex = pivotSheet.PivotTables.Add("=Data!A1:A2", "D5", "TestPivot");
+        var pivotTable = pivotSheet.PivotTables[pivotIndex];
+        workbook.Worksheets.RemoveAt("Data");
+
+        Assert.Throws<ArgumentException>(() =>
+            ExcelPivotTableHelper.ParseDataSource(workbook, pivotTable, 0, 0, pivotSheet.Name));
+    }
+
+    #endregion
+
     #region FindFieldIndex Tests
 
     [Fact]

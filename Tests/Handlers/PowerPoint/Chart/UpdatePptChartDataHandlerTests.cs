@@ -118,6 +118,68 @@ public class UpdatePptChartDataHandlerTests : PptHandlerTestBase
         AssertNotModified(context);
     }
 
+    [SkippableFact]
+    public void Execute_WithSeriesMissingValues_ThrowsAndPreservesData()
+    {
+        SkipIfNotWindows();
+        var pres = CreatePresentationWithChart();
+        var context = CreateContext(pres);
+        var chart = pres.Slides[0].Shapes.OfType<IChart>().First();
+        var originalSeriesCount = chart.ChartData.Series.Count;
+        var originalCategoriesCount = chart.ChartData.Categories.Count;
+        var data = new JsonObject
+        {
+            ["series"] = new JsonArray(new JsonObject { ["name"] = "Broken" })
+        };
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "slideIndex", 0 },
+            { "shapeIndex", 0 },
+            { "data", data }
+        });
+
+        Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+
+        Assert.Equal(originalSeriesCount, chart.ChartData.Series.Count);
+        Assert.Equal(originalCategoriesCount, chart.ChartData.Categories.Count);
+        AssertNotModified(context);
+    }
+
+    [SkippableFact]
+    public void Execute_WithMoreThan25Series_SetsValidRange()
+    {
+        SkipIfNotWindows();
+        var pres = CreatePresentationWithChart();
+        var context = CreateContext(pres);
+        var seriesArray = new JsonArray();
+        for (var i = 0; i < 30; i++)
+            seriesArray.Add(new JsonObject
+            {
+                ["name"] = $"S{i + 1}",
+                ["values"] = new JsonArray(1.0, 2.0)
+            });
+        var data = new JsonObject
+        {
+            ["categories"] = new JsonArray("C1", "C2"),
+            ["series"] = seriesArray
+        };
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "slideIndex", 0 },
+            { "shapeIndex", 0 },
+            { "data", data }
+        });
+
+        var res = _handler.Execute(context, parameters);
+
+        Assert.IsType<SuccessResult>(res);
+        var chart = pres.Slides[0].Shapes.OfType<IChart>().First();
+        Assert.Equal(30, chart.ChartData.Series.Count);
+        // 31 data columns (1 category + 30 series) must map to AE, not garbage from (char)('A' + 30).
+        Assert.EndsWith("$AE$3", chart.ChartData.GetRange());
+        AssertModified(context);
+    }
+
     #endregion
 
     #region Error Handling

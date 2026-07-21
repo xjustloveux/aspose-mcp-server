@@ -96,6 +96,24 @@ public class ExportPdfFormDataHandlerTests : PdfHandlerTestBase
     }
 
     [Fact]
+    public void Execute_DocumentRemainsUsableAfterExport()
+    {
+        var doc = CreateDocumentWithFormFields();
+        var context = CreateContext(doc);
+        var exportPath = Path.Combine(TestDir, "export_usable.xfdf");
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "dataPath", exportPath }
+        });
+
+        _handler.Execute(context, parameters);
+
+        // Session mode reuses the same document across operations; exporting must not dispose it.
+        Assert.Single(doc.Pages);
+        Assert.Equal("John Doe", (doc.Form["name"] as TextBoxField)!.Value);
+    }
+
+    [Fact]
     public void Execute_DoesNotModifyDocument()
     {
         var doc = CreateDocumentWithFormFields();

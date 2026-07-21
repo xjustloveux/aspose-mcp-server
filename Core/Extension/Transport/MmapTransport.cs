@@ -135,7 +135,8 @@ public class MmapTransport : IExtensionTransport, IDisposable
         {
             var baseDir = tempDirectory ?? Path.GetTempPath();
             _backingFileDirectory = Path.Combine(baseDir, $"aspose_mmap_{Environment.ProcessId}");
-            Directory.CreateDirectory(_backingFileDirectory);
+            // Backing files may land in a shared temp location on Unix: create owner-only (700).
+            SecurityHelper.CreatePrivateDirectory(_backingFileDirectory);
             CleanupOrphanedDirectories(baseDir);
         }
 

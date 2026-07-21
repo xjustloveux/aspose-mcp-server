@@ -10,7 +10,7 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 
 /// <summary>
 ///     Unified tool for managing PowerPoint security operations
-///     (encrypt, decrypt, set_write_protection, remove_write_protection, mark_final, get_status).
+///     (encrypt, decrypt, set_write_protect, remove_write_protect, mark_final, status).
 /// </summary>
 [ToolHandlerMapping("AsposeMcpServer.Handlers.PowerPoint.Security")]
 [McpServerToolType]
@@ -46,16 +46,16 @@ public class PptSecurityTool
     }
 
     /// <summary>
-    ///     Executes a PowerPoint security operation (encrypt, decrypt, set_write_protection,
-    ///     remove_write_protection, mark_final, get_status).
+    ///     Executes a PowerPoint security operation (encrypt, decrypt, set_write_protect,
+    ///     remove_write_protect, mark_final, status).
     /// </summary>
     /// <param name="operation">The operation to perform.</param>
     /// <param name="path">Presentation file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID for in-memory editing.</param>
     /// <param name="outputPath">Output file path (optional).</param>
-    /// <param name="password">Password (required for encrypt, set_write_protection).</param>
+    /// <param name="password">Password (required for encrypt, set_write_protect).</param>
     /// <param name="markAsFinal">Mark as final flag (for mark_final, default: true).</param>
-    /// <returns>A message indicating the result of the operation, or security status data for get_status.</returns>
+    /// <returns>A message indicating the result of the operation, or security status data for status.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(
         Name = "ppt_security",
@@ -66,7 +66,7 @@ public class PptSecurityTool
         ReadOnly = false,
         UseStructuredContent = true)]
     [Description(
-        @"Manage PowerPoint security. Supports 6 operations: encrypt, decrypt, set_write_protection, remove_write_protection, mark_final, get_status.
+        @"Manage PowerPoint security. Supports 6 operations: encrypt, decrypt, set_write_protect, remove_write_protect, mark_final, status.
 
 Warning: If outputPath is not provided for write operations, the original file will be overwritten.
 
@@ -92,7 +92,7 @@ Usage examples:
         string? sessionId = null,
         [Description("Output file path (optional)")]
         string? outputPath = null,
-        [Description("Password (required for encrypt, set_write_protection)")]
+        [Description("Password (required for encrypt, set_write_protect)")]
         string? password = null,
         [Description("Mark as final flag (for mark_final, default: true)")]
         bool markAsFinal = true)
@@ -127,7 +127,7 @@ Usage examples:
     ///     Builds OperationParameters from method parameters based on the operation type.
     /// </summary>
     /// <param name="operation">The operation to perform.</param>
-    /// <param name="password">The password for encrypt or set_write_protection operations.</param>
+    /// <param name="password">The password for encrypt or set_write_protect operations.</param>
     /// <param name="markAsFinal">The mark-as-final flag for the mark_final operation.</param>
     /// <returns>OperationParameters configured for the specified operation.</returns>
     private static OperationParameters BuildParameters(string operation, string? password, bool markAsFinal)

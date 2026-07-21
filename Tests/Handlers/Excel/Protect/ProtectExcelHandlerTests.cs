@@ -16,6 +16,22 @@ public class ProtectExcelHandlerTests : ExcelHandlerTestBase
         Assert.Equal("protect", _handler.Operation);
     }
 
+    [Fact]
+    public void Execute_ProtectWorkbookWithSheetIndex_ThrowsInsteadOfSilentlyIgnoringSheetIndex()
+    {
+        var workbook = CreateEmptyWorkbook();
+        var context = CreateContext(workbook);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "password", "pw" },
+            { "protectWorkbook", true },
+            { "sheetIndex", 0 }
+        });
+
+        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+        Assert.Contains("mutually exclusive", ex.Message);
+    }
+
     #endregion
 
     #region Workbook Protection

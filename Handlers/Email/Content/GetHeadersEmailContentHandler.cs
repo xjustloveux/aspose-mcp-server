@@ -33,7 +33,7 @@ public class GetHeadersEmailContentHandler : OperationHandlerBase<object>
         if (!File.Exists(path))
             throw new FileNotFoundException("The specified file was not found.");
 
-        var message = MailMessage.Load(path);
+        using var message = MailMessage.Load(path);
         var headers = new List<EmailHeaderInfo>();
 
         for (var i = 0; i < message.Headers.Count; i++)

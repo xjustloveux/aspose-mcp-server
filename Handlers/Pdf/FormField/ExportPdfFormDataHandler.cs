@@ -36,7 +36,11 @@ public class ExportPdfFormDataHandler : OperationHandlerBase<Document>
             SecurityHelper.ResolveAndEnsureWithinAllowlist(p.DataPath, context.ServerConfig?.AllowedBasePaths ?? [],
                 "dataPath");
 
-        using var form = new Form(context.Document);
+        // Form is intentionally NOT wrapped in 'using': disposing the facade disposes the bound document,
+        // which is owned by the caller (the session in session mode, the pipeline in file mode), not by this
+        // handler. In session mode the document is reused across operations, so disposing it here would make
+        // every later operation throw ObjectDisposedException. (Same rationale as SignPdfHandler.)
+        var form = new Form(context.Document);
 
         using var stream = new FileStream(dataPath, FileMode.Create);
         switch (p.Format.ToLowerInvariant())

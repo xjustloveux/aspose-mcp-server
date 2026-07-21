@@ -24,7 +24,9 @@ public class SmartArtDetailProvider : IShapeDetailProvider
         if (shape is not ISmartArt smartArt)
             return null;
 
-        var nodeInfos = GetNodeInfos(smartArt.AllNodes);
+        // Nodes is the root collection; walking the flattened AllNodes would list every nested
+        // child a second time at top level. NodeCount intentionally stays the flattened total.
+        var nodeInfos = GetNodeInfos(smartArt.Nodes);
 
         return new SmartArtDetails
         {

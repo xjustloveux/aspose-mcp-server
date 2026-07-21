@@ -32,7 +32,9 @@ public record OcrConversionResult
     public int PageCount { get; init; }
 
     /// <summary>
-    ///     Average recognition confidence score across all pages (0.0 to 1.0).
+    ///     Average recognition confidence score across all pages. The bundled Aspose.OCR engine
+    ///     does not report confidence values, so this is always 0; it is kept for wire-format
+    ///     stability.
     /// </summary>
     [JsonPropertyName("averageConfidence")]
     public double AverageConfidence { get; init; }

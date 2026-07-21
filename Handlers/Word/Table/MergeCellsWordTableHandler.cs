@@ -2,6 +2,7 @@
 using Aspose.Words.Tables;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Table;
@@ -30,16 +31,8 @@ public class MergeCellsWordTableHandler : OperationHandlerBase<Document>
         var p = ExtractMergeCellsParameters(parameters);
 
         var doc = context.Document;
-        var actualSectionIndex = p.SectionIndex ?? 0;
-        if (actualSectionIndex >= doc.Sections.Count)
-            throw new ArgumentException($"Section index {actualSectionIndex} out of range");
-
-        var section = doc.Sections[actualSectionIndex];
-        var tables = section.Body.GetChildNodes(NodeType.Table, true).Cast<Aspose.Words.Tables.Table>().ToList();
-        if (p.TableIndex < 0 || p.TableIndex >= tables.Count)
-            throw new ArgumentException($"Table index {p.TableIndex} out of range");
-
-        var table = tables[p.TableIndex];
+        // Omitted sectionIndex means the document-wide flat table index, matching 'get'.
+        var table = WordTableHelper.GetTable(doc, p.TableIndex, p.SectionIndex);
 
         ValidateMergeRange(table, p.StartRow, p.EndRow, p.StartCol, p.EndCol);
 

@@ -141,37 +141,79 @@ public static class ParagraphResolver
     private static (ParagraphAddress Address, CompositeNode Container) ClassifyStory(Document doc,
         WordParagraph paragraph, AddressingContext context)
     {
-        if (paragraph.GetAncestor(NodeType.Comment) is Comment comment)
-            return (new ParagraphAddress(0, StoryTypes.Comment, ContainerIndex: comment.Id), comment);
-
-        if (paragraph.GetAncestor(NodeType.Shape) is Shape shape)
+        switch (StoryContainerOf(paragraph))
         {
-            var shapeIndex = context.TextBoxShapes().IndexOf(shape);
-            if (shapeIndex < 0)
-                throw new ArgumentException(
-                    "The paragraph's text-box shape does not belong to this document.", nameof(paragraph));
-            return (new ParagraphAddress(0, StoryTypes.TextBox, ContainerIndex: shapeIndex), shape);
-        }
+            case Comment comment:
+                return (new ParagraphAddress(0, StoryTypes.Comment, ContainerIndex: comment.Id), comment);
 
-        if (paragraph.GetAncestor(NodeType.Footnote) is Footnote footnote)
-        {
-            var isEndnote = footnote.FootnoteType == FootnoteType.Endnote;
-            var noteStory = isEndnote ? StoryTypes.Endnote : StoryTypes.Footnote;
-            var noteIndex = context.Notes(isEndnote).IndexOf(footnote);
-            if (noteIndex < 0)
-                throw new ArgumentException(
-                    "The paragraph's footnote/endnote does not belong to this document.", nameof(paragraph));
-            return (new ParagraphAddress(0, noteStory, ContainerIndex: noteIndex), footnote);
-        }
+            case Shape shape:
+            {
+                var shapeIndex = context.TextBoxShapes().IndexOf(shape);
+                if (shapeIndex < 0)
+                    throw new ArgumentException(
+                        "The paragraph's text-box shape does not belong to this document.", nameof(paragraph));
+                return (new ParagraphAddress(0, StoryTypes.TextBox, ContainerIndex: shapeIndex), shape);
+            }
 
-        if (paragraph.GetAncestor(NodeType.HeaderFooter) is HeaderFooter headerFooter)
-        {
-            var (storyType, hfType) = MapHeaderFooter(headerFooter.HeaderFooterType);
-            return (new ParagraphAddress(0, storyType, SectionIndexOf(doc, headerFooter), hfType), headerFooter);
-        }
+            case Footnote footnote:
+            {
+                var isEndnote = footnote.FootnoteType == FootnoteType.Endnote;
+                var noteStory = isEndnote ? StoryTypes.Endnote : StoryTypes.Footnote;
+                var noteIndex = context.Notes(isEndnote).IndexOf(footnote);
+                if (noteIndex < 0)
+                    throw new ArgumentException(
+                        "The paragraph's footnote/endnote does not belong to this document.", nameof(paragraph));
+                return (new ParagraphAddress(0, noteStory, ContainerIndex: noteIndex), footnote);
+            }
 
-        var section = paragraph.GetAncestor(NodeType.Section) as Section ?? doc.FirstSection;
-        return (new ParagraphAddress(0, StoryTypes.Body, SectionIndexOf(doc, section)), section.Body);
+            case HeaderFooter headerFooter:
+            {
+                var (storyType, hfType) = MapHeaderFooter(headerFooter.HeaderFooterType);
+                return (new ParagraphAddress(0, storyType, SectionIndexOf(doc, headerFooter), hfType), headerFooter);
+            }
+
+            case Body body:
+                return (new ParagraphAddress(0, StoryTypes.Body, SectionIndexOf(doc, body)), body);
+
+            default:
+                return (new ParagraphAddress(0), doc.FirstSection.Body);
+        }
+    }
+
+    /// <summary>
+    ///     Returns the container that owns the paragraph's story, with the same priority
+    ///     <see cref="ClassifyStory" /> uses (Comment, then Shape, then Footnote, then Header/Footer,
+    ///     then the section Body). This single membership rule is shared by story enumeration
+    ///     (<see cref="GetStoryParagraphs" />) and story indexing (<see cref="AddressingContext" />),
+    ///     so an address computed by <see cref="AddressOf(Document, WordParagraph)" /> always resolves back to the same node.
+    /// </summary>
+    /// <param name="paragraph">The paragraph to classify.</param>
+    /// <returns>The story container, or <c>null</c> when the paragraph has no recognized container.</returns>
+    private static CompositeNode? StoryContainerOf(WordParagraph paragraph)
+    {
+        if (paragraph.GetAncestor(NodeType.Comment) is Comment comment) return comment;
+        if (paragraph.GetAncestor(NodeType.Shape) is Shape shape) return shape;
+        if (paragraph.GetAncestor(NodeType.Footnote) is Footnote footnote) return footnote;
+        if (paragraph.GetAncestor(NodeType.HeaderFooter) is HeaderFooter headerFooter) return headerFooter;
+        return (paragraph.GetAncestor(NodeType.Section) as Section)?.Body;
+    }
+
+    /// <summary>
+    ///     Returns the paragraphs that belong directly to the given story container: descendants whose
+    ///     story container (per <see cref="StoryContainerOf" />) is the container itself. Nested-story
+    ///     paragraphs (e.g. a text box anchored in a body paragraph) are excluded — they belong to their
+    ///     own story, and counting them here would shift this story's indices away from the addresses
+    ///     <see cref="AddressOf(Document, WordParagraph)" /> reports. Table cell paragraphs have no intervening story
+    ///     boundary,
+    ///     so they remain part of the surrounding story.
+    /// </summary>
+    /// <param name="container">The story container to enumerate.</param>
+    /// <returns>The container's own paragraphs, in story order.</returns>
+    private static List<WordParagraph> DirectStoryParagraphs(CompositeNode container)
+    {
+        return container.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>()
+            .Where(p => ReferenceEquals(StoryContainerOf(p), container))
+            .ToList();
     }
 
     /// <summary>
@@ -210,6 +252,8 @@ public static class ParagraphResolver
     ///     Returns the paragraphs of the story named by the address (Body of a section, or a
     ///     Header/Footer), in story order. Range operations that need the whole story list resolve
     ///     through this so they share the resolver's index space. The address's Index is ignored.
+    ///     Only paragraphs belonging directly to the story are returned (see
+    ///     <see cref="DirectStoryParagraphs" />); nested-story content is addressed via its own story.
     /// </summary>
     /// <param name="doc">The document.</param>
     /// <param name="address">The address whose story selects the paragraph collection.</param>
@@ -219,8 +263,7 @@ public static class ParagraphResolver
         switch (address.StoryType)
         {
             case StoryTypes.Body:
-                return GetSection(doc, address.SectionIndex).Body
-                    .GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+                return DirectStoryParagraphs(GetSection(doc, address.SectionIndex).Body);
             case StoryTypes.Header:
             case StoryTypes.Footer:
                 var headerFooter = GetSection(doc, address.SectionIndex)
@@ -228,7 +271,7 @@ public static class ParagraphResolver
                 if (headerFooter == null)
                     throw new ArgumentException(
                         $"Section {address.SectionIndex} has no {address.StoryType} '{address.HeaderFooterType}'.");
-                return headerFooter.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+                return DirectStoryParagraphs(headerFooter);
             case StoryTypes.TextBox:
                 return GetContainerParagraphs(GetTextBoxShapes(doc).Cast<CompositeNode>().ToList(),
                     address.ContainerIndex ?? 0, "text boxes");
@@ -266,7 +309,7 @@ public static class ParagraphResolver
     }
 
     /// <summary>
-    ///     Selects a container by ordinal index and returns its paragraphs.
+    ///     Selects a container by ordinal index and returns its own story paragraphs.
     /// </summary>
     private static List<WordParagraph> GetContainerParagraphs(IReadOnlyList<CompositeNode> containers,
         int containerIndex, string label)
@@ -276,7 +319,7 @@ public static class ParagraphResolver
         if (containerIndex < 0 || containerIndex >= containers.Count)
             throw new ArgumentException(
                 $"containerIndex {containerIndex} is out of range (document has {containers.Count} {label}).");
-        return containers[containerIndex].GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+        return DirectStoryParagraphs(containers[containerIndex]);
     }
 
     /// <summary>
@@ -296,7 +339,7 @@ public static class ParagraphResolver
                   "(for Comment stories, containerIndex is the comment id).")
             : comments[0];
 
-        return comment.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
+        return DirectStoryParagraphs(comment);
     }
 
     /// <summary>
@@ -371,7 +414,7 @@ public static class ParagraphResolver
         internal int StoryIndexOf(CompositeNode container, Node paragraph)
         {
             if (!_containerOrder.TryGetValue(container, out var map))
-                _containerOrder[container] = map = BuildIndexMap(container.GetChildNodes(NodeType.Paragraph, true));
+                _containerOrder[container] = map = BuildIndexMap(DirectStoryParagraphs(container));
             return map.GetValueOrDefault(paragraph, -1);
         }
 
@@ -385,7 +428,7 @@ public static class ParagraphResolver
             return endnotes ? _endnotes ??= GetNotes(Document, true) : _footnotes ??= GetNotes(Document, false);
         }
 
-        private static Dictionary<Node, int> BuildIndexMap(NodeCollection nodes)
+        private static Dictionary<Node, int> BuildIndexMap(IEnumerable<Node> nodes)
         {
             var map = new Dictionary<Node, int>(ReferenceEqualityComparer.Instance);
             var i = 0;

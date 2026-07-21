@@ -111,8 +111,10 @@ public class ExtractPdfImageHandlerTests : PdfHandlerTestBase
     }
 
     [Fact]
-    public void Execute_WithPageIndexZero_ReturnsNoImagesMessage()
+    public void Execute_WithPageIndexZero_ThrowsArgumentException()
     {
+        // 'get' treats pageIndex 0 as "all pages"; a mutate call must reject it instead of
+        // silently operating on page 1.
         var doc = CreateDocumentWithPages(3);
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
@@ -120,11 +122,8 @@ public class ExtractPdfImageHandlerTests : PdfHandlerTestBase
             { "pageIndex", 0 }
         });
 
-        var res = _handler.Execute(context, parameters);
-
-        var result = Assert.IsType<SuccessResult>(res);
-
-        Assert.Contains("No images found", result.Message);
+        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+        Assert.Contains("pageIndex must be between", ex.Message);
     }
 
     #endregion

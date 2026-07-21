@@ -1,3 +1,4 @@
+using System.Text;
 using Aspose.Cells;
 using Aspose.Pdf.Text;
 using Aspose.Slides;
@@ -143,6 +144,7 @@ public class DocumentConverterTests : TestBase
     [InlineData(DocumentType.Pdf, "svg", true)]
     [InlineData(DocumentType.Pdf, "xps", true)]
     [InlineData(DocumentType.Pdf, "xml", true)]
+    [InlineData(DocumentType.Pdf, "txt", true)]
     [InlineData(DocumentType.Pdf, "pdf", false)]
     [InlineData(DocumentType.Pdf, "odt", false)]
     public void IsFormatSupported_Pdf_ReturnsCorrectResult(DocumentType docType, string format, bool expected)
@@ -273,6 +275,7 @@ public class DocumentConverterTests : TestBase
         Assert.Contains("svg", formats);
         Assert.Contains("xps", formats);
         Assert.Contains("xml", formats);
+        Assert.Contains("txt", formats);
     }
 
     #endregion
@@ -588,7 +591,6 @@ public class DocumentConverterTests : TestBase
     [InlineData("html", Aspose.Pdf.SaveFormat.Html)]
     [InlineData("xlsx", Aspose.Pdf.SaveFormat.Excel)]
     [InlineData("pptx", Aspose.Pdf.SaveFormat.Pptx)]
-    [InlineData("txt", Aspose.Pdf.SaveFormat.TeX)]
     [InlineData("epub", Aspose.Pdf.SaveFormat.Epub)]
     [InlineData("svg", Aspose.Pdf.SaveFormat.Svg)]
     [InlineData("xps", Aspose.Pdf.SaveFormat.Xps)]
@@ -606,6 +608,7 @@ public class DocumentConverterTests : TestBase
     [InlineData("pdf")]
     [InlineData("png")]
     [InlineData("jpg")]
+    [InlineData("txt")]
     [InlineData("unknown")]
     public void GetPdfSaveFormat_UnsupportedFormats_ThrowsArgumentException(string format)
     {
@@ -1030,6 +1033,38 @@ public class DocumentConverterTests : TestBase
 
         Assert.True(File.Exists(outputPath));
         Assert.True(new FileInfo(outputPath).Length > 0);
+    }
+
+    [SkippableFact]
+    public void ConvertPdfDocument_ToTxt_ExtractsPlainText()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Pdf);
+
+        var pdfDoc = new Aspose.Pdf.Document();
+        var page = pdfDoc.Pages.Add();
+        page.Paragraphs.Add(new TextFragment("Hello plain text extraction"));
+        var outputPath = CreateTestFilePath("output.txt");
+
+        DocumentConverter.ConvertPdfDocument(pdfDoc, outputPath, ".txt", new ConversionOptions());
+
+        Assert.True(File.Exists(outputPath));
+        var content = File.ReadAllText(outputPath);
+        Assert.StartsWith("Hello plain text extraction", content.Trim());
+    }
+
+    [SkippableFact]
+    public void ConvertToBytes_PdfToTxt_ReturnsPlainText()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Pdf);
+
+        var pdfDoc = new Aspose.Pdf.Document();
+        var page = pdfDoc.Pages.Add();
+        page.Paragraphs.Add(new TextFragment("Stream text extraction"));
+
+        var bytes = DocumentConverter.ConvertToBytes(pdfDoc, DocumentType.Pdf, "txt");
+
+        var content = Encoding.UTF8.GetString(bytes);
+        Assert.StartsWith("Stream text extraction", content.Trim());
     }
 
     [SkippableFact]

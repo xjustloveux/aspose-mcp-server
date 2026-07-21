@@ -26,7 +26,7 @@ public abstract class OcrPreprocessingHandlerBase : OperationHandlerBase<AsposeO
     protected static void SavePreprocessedImage(string inputPath, string outputPath,
         PreprocessingFilter filters, IReadOnlyList<string> allowedBasePaths)
     {
-        var input = new OcrInput(InputType.SingleImage, filters);
+        using var input = new OcrInput(InputType.SingleImage, filters);
         input.Add(inputPath);
 
         var tempDir = Path.Combine(Path.GetTempPath(), $"ocr_preprocess_{Guid.NewGuid()}");

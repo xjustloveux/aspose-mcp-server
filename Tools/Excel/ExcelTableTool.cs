@@ -9,8 +9,8 @@ using ModelContextProtocol.Server;
 namespace AsposeMcpServer.Tools.Excel;
 
 /// <summary>
-///     Unified tool for managing Excel tables/ListObjects (create, get, delete, set_style, add_total_row,
-///     convert_to_range).
+///     Unified tool for managing Excel tables/ListObjects (create, get, delete, set_style, add_total,
+///     to_range).
 /// </summary>
 [ToolHandlerMapping("AsposeMcpServer.Handlers.Excel.Table")]
 [McpServerToolType]
@@ -45,7 +45,7 @@ public class ExcelTableTool
     }
 
     /// <summary>
-    ///     Executes an Excel table operation (create, get, delete, set_style, add_total_row, convert_to_range).
+    ///     Executes an Excel table operation (create, get, delete, set_style, add_total, to_range).
     /// </summary>
     /// <param name="operation">The operation to perform.</param>
     /// <param name="path">Excel file path (required if no sessionId).</param>
@@ -55,11 +55,11 @@ public class ExcelTableTool
     /// <param name="range">Cell range for table creation (e.g., 'A1:D10').</param>
     /// <param name="hasHeaders">Whether the range has headers (default: true, for create).</param>
     /// <param name="name">Table name (optional, for create).</param>
-    /// <param name="tableIndex">Table index (0-based, for delete/set_style/add_total_row/convert_to_range).</param>
+    /// <param name="tableIndex">Table index (0-based, for delete/set_style/add_total/to_range).</param>
     /// <param name="styleName">Table style name (for set_style, e.g., 'TableStyleMedium9').</param>
     /// <param name="keepData">Whether to keep data when deleting (default: true).</param>
-    /// <param name="columnIndex">Column index for total function (for add_total_row).</param>
-    /// <param name="totalFunction">Total function: sum, count, average, max, min, none (for add_total_row).</param>
+    /// <param name="columnIndex">Column index for total function (for add_total).</param>
+    /// <param name="totalFunction">Total function: sum, count, average, max, min, none (for add_total).</param>
     /// <returns>A message or data indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(
@@ -71,7 +71,7 @@ public class ExcelTableTool
         ReadOnly = false,
         UseStructuredContent = true)]
     [Description(
-        @"Manage Excel tables (ListObjects). Supports 6 operations: create, get, delete, set_style, add_total_row, convert_to_range.
+        @"Manage Excel tables (ListObjects). Supports 6 operations: create, get, delete, set_style, add_total, to_range.
 
 Usage examples:
 - Create table: excel_table(operation='create', path='book.xlsx', range='A1:D10')
@@ -104,15 +104,15 @@ Usage examples:
         bool hasHeaders = true,
         [Description("Table name (optional, for create)")]
         string? name = null,
-        [Description("Table index (0-based, for delete/set_style/add_total_row/convert_to_range)")]
+        [Description("Table index (0-based, for delete/set_style/add_total/to_range)")]
         int? tableIndex = null,
         [Description("Table style name (for set_style, e.g., 'TableStyleMedium9')")]
         string? styleName = null,
         [Description("Whether to keep data when deleting (default: true)")]
         bool keepData = true,
-        [Description("Column index for total function (for add_total_row)")]
+        [Description("Column index for total function (for add_total)")]
         int? columnIndex = null,
-        [Description("Total function: sum, count, average, max, min, none (for add_total_row)")]
+        [Description("Total function: sum, count, average, max, min, none (for add_total)")]
         string? totalFunction = null)
     {
         using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
@@ -235,7 +235,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds parameters for the add_total_row operation.
+    ///     Builds parameters for the add_total operation.
     /// </summary>
     /// <param name="parameters">Base parameters with sheet index.</param>
     /// <param name="tableIndex">The table index.</param>

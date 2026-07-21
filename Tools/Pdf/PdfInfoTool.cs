@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Pdf;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
@@ -43,13 +43,13 @@ public class PdfInfoTool
     }
 
     /// <summary>
-    ///     Executes a PDF info operation (get_content, get_statistics).
+    ///     Executes a PDF info operation (get, statistics).
     /// </summary>
-    /// <param name="operation">The operation to perform: get_content, get_statistics.</param>
+    /// <param name="operation">The operation to perform: get, statistics.</param>
     /// <param name="path">PDF file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID for in-memory editing.</param>
-    /// <param name="pageIndex">Page index (1-based, optional for get_content).</param>
-    /// <param name="maxPages">Maximum pages to extract (for get_content without pageIndex, default: 100).</param>
+    /// <param name="pageIndex">Page index (1-based, optional for get).</param>
+    /// <param name="maxPages">Maximum pages to extract (for get without pageIndex, default: 100).</param>
     /// <returns>A JSON string containing content or statistics data.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(
@@ -60,7 +60,7 @@ public class PdfInfoTool
         OpenWorld = false,
         ReadOnly = true,
         UseStructuredContent = true)]
-    [Description(@"Get content and statistics from PDF documents. Supports 2 operations: get_content, get_statistics.
+    [Description(@"Get content and statistics from PDF documents. Supports 2 operations: get, statistics.
 
 Usage examples:
 - Get content from page: pdf_info(operation='get', path='doc.pdf', pageIndex=1)
@@ -76,9 +76,9 @@ Usage examples:
         string? path = null,
         [Description("Session ID for in-memory editing")]
         string? sessionId = null,
-        [Description("Page index (1-based, optional for get_content, extracts all if not specified)")]
+        [Description("Page index (1-based, optional for get, extracts all if not specified)")]
         int? pageIndex = null,
-        [Description("Maximum pages to extract (for get_content without pageIndex, default: 100)")]
+        [Description("Maximum pages to extract (for get without pageIndex, default: 100)")]
         int maxPages = 100)
     {
         using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);

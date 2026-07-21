@@ -94,6 +94,7 @@ Usage examples:
 - Convert Excel to HTML (single file): convert_document(inputPath='book.xlsx', outputPath='book.html')
 - Convert PowerPoint to PDF: convert_document(inputPath='slides.pptx', outputPath='slides.pdf')
 - Convert PDF to Word: convert_document(inputPath='document.pdf', outputPath='document.docx')
+- Extract PDF plain text: convert_document(inputPath='doc.pdf', outputPath='doc.txt')
 - Convert PDF to images: convert_document(inputPath='doc.pdf', outputPath='page.png')
 - Convert PDF to PNG (specific page): convert_document(inputPath='doc.pdf', outputPath='page.png', pageIndex=2)
 - Convert HTML to PDF: convert_document(inputPath='page.html', outputPath='page.pdf')

@@ -9,7 +9,7 @@ using ModelContextProtocol.Server;
 namespace AsposeMcpServer.Tools.PowerPoint;
 
 /// <summary>
-///     Unified tool for managing PowerPoint fonts (replace, embed, remove_embedded, get_used, set_fallback).
+///     Unified tool for managing PowerPoint fonts (replace, embed, remove, list, set_fallback).
 /// </summary>
 [ToolHandlerMapping("AsposeMcpServer.Handlers.PowerPoint.Font")]
 [McpServerToolType]
@@ -45,15 +45,15 @@ public class PptFontTool
     }
 
     /// <summary>
-    ///     Executes a PowerPoint font operation (replace, embed, remove_embedded, get_used, set_fallback).
+    ///     Executes a PowerPoint font operation (replace, embed, remove, list, set_fallback).
     /// </summary>
-    /// <param name="operation">The operation to perform: replace, embed, remove_embedded, get_used, set_fallback.</param>
+    /// <param name="operation">The operation to perform: replace, embed, remove, list, set_fallback.</param>
     /// <param name="path">Presentation file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID for in-memory editing.</param>
     /// <param name="outputPath">Output file path (file mode only).</param>
     /// <param name="sourceFont">Source font name (for replace).</param>
     /// <param name="targetFont">Target font name (for replace).</param>
-    /// <param name="fontName">Font name (for embed, remove_embedded).</param>
+    /// <param name="fontName">Font name (for embed, remove).</param>
     /// <param name="fallbackFont">Fallback font name (for set_fallback).</param>
     /// <param name="embedMode">Embed mode: 'all' or 'subset' (for embed, default: all).</param>
     /// <param name="unicodeStart">Unicode range start (for set_fallback, default: 0x0000).</param>
@@ -69,7 +69,7 @@ public class PptFontTool
         ReadOnly = false,
         UseStructuredContent = true)]
     [Description(
-        @"Manage PowerPoint fonts. Supports 5 operations: replace, embed, remove_embedded, get_used, set_fallback.
+        @"Manage PowerPoint fonts. Supports 5 operations: replace, embed, remove, list, set_fallback.
 
 Usage examples:
 - Replace font: ppt_font(operation='replace', path='file.pptx', sourceFont='Arial', targetFont='Calibri')
@@ -95,7 +95,7 @@ Usage examples:
         string? sourceFont = null,
         [Description("Target font name (for replace)")]
         string? targetFont = null,
-        [Description("Font name (for embed, remove_embedded)")]
+        [Description("Font name (for embed, remove)")]
         string? fontName = null,
         [Description("Fallback font name (for set_fallback)")]
         string? fallbackFont = null,

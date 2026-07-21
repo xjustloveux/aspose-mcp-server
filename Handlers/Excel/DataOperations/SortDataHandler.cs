@@ -1,3 +1,4 @@
+using System.Globalization;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
@@ -131,7 +132,10 @@ public class SortDataHandler : OperationHandlerBase<Workbook>
     }
 
     /// <summary>
-    ///     Compares two rows by the specified column.
+    ///     Compares two rows by the specified column. Cells in a column can hold mixed types
+    ///     (numbers, text, booleans), which <c>Comparer&lt;object&gt;.Default</c> cannot compare
+    ///     across; values are compared numerically when both are numeric, otherwise numbers sort
+    ///     before text and remaining values compare as ordinal strings (Excel's own sort order).
     /// </summary>
     /// <param name="a">The first row.</param>
     /// <param name="b">The second row.</param>
@@ -147,8 +151,48 @@ public class SortDataHandler : OperationHandlerBase<Workbook>
         if (aVal == null) return ascending ? -1 : 1;
         if (bVal == null) return ascending ? 1 : -1;
 
-        var comparison = Comparer<object>.Default.Compare(aVal, bVal);
+        var comparison = CompareCellValues(aVal, bVal);
         return ascending ? comparison : -comparison;
+    }
+
+    /// <summary>
+    ///     Compares two non-null cell values across types.
+    /// </summary>
+    /// <param name="aVal">The first value.</param>
+    /// <param name="bVal">The second value.</param>
+    /// <returns>A comparison result for sorting.</returns>
+    private static int CompareCellValues(object aVal, object bVal)
+    {
+        var aIsNumeric = TryToDouble(aVal, out var aNumber);
+        var bIsNumeric = TryToDouble(bVal, out var bNumber);
+
+        if (aIsNumeric && bIsNumeric) return aNumber.CompareTo(bNumber);
+        if (aIsNumeric) return -1;
+        if (bIsNumeric) return 1;
+
+        return string.CompareOrdinal(aVal.ToString(), bVal.ToString());
+    }
+
+    /// <summary>
+    ///     Attempts to interpret a cell value as a number.
+    /// </summary>
+    /// <param name="value">The cell value.</param>
+    /// <param name="number">The numeric value when convertible.</param>
+    /// <returns><c>true</c> when the value is numeric; otherwise <c>false</c>.</returns>
+    private static bool TryToDouble(object value, out double number)
+    {
+        switch (value)
+        {
+            case sbyte or byte or short or ushort or int or uint or long or ulong or float or double or decimal:
+                number = Convert.ToDouble(value, CultureInfo.InvariantCulture);
+                return true;
+            case DateTime dateTime:
+                number = dateTime.ToOADate();
+                return true;
+            default:
+                number = 0;
+                return false;
+        }
     }
 
     /// <summary>

@@ -1,8 +1,8 @@
 using Aspose.Words;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
-using WordTable = Aspose.Words.Tables.Table;
 
 namespace AsposeMcpServer.Handlers.Word.Table;
 
@@ -30,16 +30,8 @@ public class SetRowHeightWordTableHandler : OperationHandlerBase<Document>
         var p = ExtractSetRowHeightParameters(parameters);
 
         var doc = context.Document;
-        var actualSectionIndex = p.SectionIndex ?? 0;
-        if (actualSectionIndex >= doc.Sections.Count)
-            throw new ArgumentException($"Section index {actualSectionIndex} out of range");
-
-        var section = doc.Sections[actualSectionIndex];
-        var tables = section.Body.GetChildNodes(NodeType.Table, true).Cast<WordTable>().ToList();
-        if (p.TableIndex < 0 || p.TableIndex >= tables.Count)
-            throw new ArgumentException($"Table index {p.TableIndex} out of range");
-
-        var table = tables[p.TableIndex];
+        // Omitted sectionIndex means the document-wide flat table index, matching 'get'.
+        var table = WordTableHelper.GetTable(doc, p.TableIndex, p.SectionIndex);
         if (p.RowIndex < 0 || p.RowIndex >= table.Rows.Count)
             throw new ArgumentException($"Row index {p.RowIndex} out of range");
 

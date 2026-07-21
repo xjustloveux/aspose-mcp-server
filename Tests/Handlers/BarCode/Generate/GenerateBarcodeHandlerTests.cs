@@ -45,6 +45,54 @@ public class GenerateBarcodeHandlerTests : HandlerTestBase<object>
 
     #endregion
 
+    #region Numeric Symbology Validation
+
+    [Theory]
+    [InlineData("EAN13")]
+    [InlineData("EAN8")]
+    [InlineData("UPCA")]
+    [InlineData("UPCE")]
+    [InlineData("ITF14")]
+    [InlineData("INTERLEAVED2OF5")]
+    public void Execute_NumericSymbologyWithNonNumericText_ThrowsArgumentException(string type)
+    {
+        var outputPath = Path.Combine(TestDir, $"invalid_{type}.png");
+        var context = CreateContext(new object());
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "text", "HELLO" },
+            { "type", type },
+            { "outputPath", outputPath }
+        });
+
+        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+
+        Assert.Contains("digits", ex.Message);
+        Assert.False(File.Exists(outputPath),
+            "No barcode image may be produced for input the symbology cannot encode");
+    }
+
+    [Fact]
+    public void Execute_Ean13WithNumericText_GeneratesSuccessfully()
+    {
+        var outputPath = Path.Combine(TestDir, "ean13_valid.png");
+        var context = CreateContext(new object());
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "text", "590123412345" },
+            { "type", "EAN13" },
+            { "outputPath", outputPath }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        var generateResult = Assert.IsType<GenerateBarcodeResult>(result);
+        Assert.True(File.Exists(outputPath));
+        Assert.StartsWith("590123412345", generateResult.EncodedText);
+    }
+
+    #endregion
+
     #region Basic Generation
 
     [Fact]

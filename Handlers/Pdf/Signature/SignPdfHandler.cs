@@ -25,9 +25,15 @@ public class SignPdfHandler : OperationHandlerBase<Document>
     /// <param name="context">The document context.</param>
     /// <param name="parameters">
     ///     Required: certificatePath, password.
-    ///     Optional: pageIndex (default: 1), reason, location, x, y, width, height.
+    ///     Optional: pageIndex (default: 1), reason, location, x, y, width, height, imagePath.
     /// </param>
     /// <returns>Success message with signature details.</returns>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when pageIndex is out of range or a path resolves outside the configured allowlist.
+    /// </exception>
+    /// <exception cref="FileNotFoundException">
+    ///     Thrown when the certificate or appearance image file does not exist.
+    /// </exception>
     public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractSignParameters(parameters);
@@ -57,6 +63,18 @@ public class SignPdfHandler : OperationHandlerBase<Document>
         // every later operation throw ObjectDisposedException. (Same rationale as GetPdfSignaturesHandler.)
         // The signed bytes are persisted by pdfSign.Save below in file mode, and by the session on its own save.
         var pdfSign = new PdfFileSignature(document);
+
+        if (!string.IsNullOrEmpty(p.ImagePath))
+        {
+            SecurityHelper.ValidateFilePath(p.ImagePath, "imagePath", true);
+            // The image is a read sink: resolve symlinks and enforce the allowlist before it is read.
+            var resolvedImagePath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.ImagePath,
+                context.ServerConfig?.AllowedBasePaths ?? [], "imagePath");
+            if (!File.Exists(resolvedImagePath))
+                throw new FileNotFoundException("The specified file was not found.");
+            pdfSign.SignatureAppearance = resolvedImagePath;
+        }
+
         pdfSign.Sign(p.PageIndex, p.Reason, "", p.Location, true, rect, pkcs);
 
         var savePath = context.OutputPath ?? context.SourcePath;
@@ -91,7 +109,8 @@ public class SignPdfHandler : OperationHandlerBase<Document>
             parameters.GetOptional("x", 100.0),
             parameters.GetOptional("y", 100.0),
             parameters.GetOptional("width", 200.0),
-            parameters.GetOptional("height", 100.0)
+            parameters.GetOptional("height", 100.0),
+            parameters.GetOptional<string?>("imagePath")
         );
     }
 
@@ -107,6 +126,7 @@ public class SignPdfHandler : OperationHandlerBase<Document>
     /// <param name="Y">The Y coordinate of the signature.</param>
     /// <param name="Width">The width of the signature.</param>
     /// <param name="Height">The height of the signature.</param>
+    /// <param name="ImagePath">The optional signature appearance image path.</param>
     private sealed record SignParameters(
         string CertificatePath,
         string Password,
@@ -116,5 +136,6 @@ public class SignPdfHandler : OperationHandlerBase<Document>
         double X,
         double Y,
         double Width,
-        double Height);
+        double Height,
+        string? ImagePath);
 }

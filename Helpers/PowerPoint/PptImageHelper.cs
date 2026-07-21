@@ -115,22 +115,28 @@ public static class PptImageHelper
             }
 
             using var ms = new MemoryStream();
-            if (jpegQuality.HasValue)
+            try
             {
-                var quality = Math.Clamp(jpegQuality.Value, 10, 100);
-                var encoder = ImageCodecInfo.GetImageEncoders().First(c => c.FormatID == ImageFormat.Jpeg.Guid);
-                var encParams = new EncoderParameters(1);
-                encParams.Param[0] = new EncoderParameter(Encoder.Quality, quality);
-                processedImage.Save(ms, encoder, encParams);
-                processingDetails.Add($"quality={quality}");
+                if (jpegQuality.HasValue)
+                {
+                    var quality = Math.Clamp(jpegQuality.Value, 10, 100);
+                    var encoder = ImageCodecInfo.GetImageEncoders().First(c => c.FormatID == ImageFormat.Jpeg.Guid);
+                    var encParams = new EncoderParameters(1);
+                    encParams.Param[0] = new EncoderParameter(Encoder.Quality, quality);
+                    processedImage.Save(ms, encoder, encParams);
+                    processingDetails.Add($"quality={quality}");
+                }
+                else
+                {
+                    processedImage.Save(ms, ImageFormat.Png);
+                }
             }
-            else
+            finally
             {
-                processedImage.Save(ms, ImageFormat.Png);
+                // Dispose the resized bitmap even when Save throws, or its GDI handle leaks.
+                if (needsDispose)
+                    processedImage.Dispose();
             }
-
-            if (needsDispose)
-                processedImage.Dispose();
 
             ms.Position = 0;
             processingDetails.Insert(0, "image replaced");

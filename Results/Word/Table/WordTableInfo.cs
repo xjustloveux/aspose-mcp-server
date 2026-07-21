@@ -14,6 +14,13 @@ public record WordTableInfo
     public required int Index { get; init; }
 
     /// <summary>
+    ///     Zero-based index of the section containing the table. Lets callers disambiguate tables
+    ///     when the list spans the whole document (no sectionIndex filter).
+    /// </summary>
+    [JsonPropertyName("sectionIndex")]
+    public required int SectionIndex { get; init; }
+
+    /// <summary>
     ///     Number of rows.
     /// </summary>
     [JsonPropertyName("rows")]

@@ -130,7 +130,7 @@ public class PdfHeaderFooterToolTests : PdfTestBase
         var result = _tool.Execute("remove", pdfPath, outputPath: outputPath);
 
         var data = GetResultData<SuccessResult>(result);
-        Assert.Contains("stamp(s)", data.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("stamp annotation(s)", data.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -237,7 +237,7 @@ public class PdfHeaderFooterToolTests : PdfTestBase
         var result = _tool.Execute("remove", sessionId: sessionId);
 
         var data = GetResultData<SuccessResult>(result);
-        Assert.Contains("stamp(s)", data.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("stamp annotation(s)", data.Message, StringComparison.OrdinalIgnoreCase);
         var output = GetResultOutput<SuccessResult>(result);
         Assert.True(output.IsSession);
     }

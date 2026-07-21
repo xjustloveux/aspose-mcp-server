@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 
 namespace AsposeMcpServer.Core.Extension;
 
@@ -626,7 +627,8 @@ public class ExtensionConfig
 
         try
         {
-            Directory.CreateDirectory(fullPath);
+            // Extension temp data may land in a shared location on Unix: create owner-only (700).
+            SecurityHelper.CreatePrivateDirectory(fullPath);
 
             var testFile = Path.Combine(fullPath, $".write_test_{Guid.NewGuid():N}");
             File.WriteAllText(testFile, "test");

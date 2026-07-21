@@ -36,7 +36,7 @@ public class ConvertEmailHandler : OperationHandlerBase<object>
         if (!File.Exists(path))
             throw new FileNotFoundException("The specified file was not found.");
 
-        var message = MailMessage.Load(path);
+        using var message = MailMessage.Load(path);
 
         var outputExt = Path.GetExtension(outputPath).ToLowerInvariant();
         var saveOptions = GetSaveOptions(outputExt);
@@ -46,16 +46,19 @@ public class ConvertEmailHandler : OperationHandlerBase<object>
             context.ServerConfig?.AllowedBasePaths ?? [], nameof(outputPath));
         message.Save(outputPath, saveOptions);
 
-        var inputExt = Path.GetExtension(path).ToLowerInvariant();
+        // Source format comes from the file content (the extension may be wrong); the target
+        // format is legitimately chosen by the output extension.
+        var sourceFormat = EmailFormatHelper.DetectFormatName(path);
+        var targetFormat = outputExt.TrimStart('.').ToUpperInvariant();
 
         return new EmailConversionResult
         {
             SourcePath = path,
             OutputPath = outputPath,
-            SourceFormat = inputExt.TrimStart('.').ToUpperInvariant(),
-            TargetFormat = outputExt.TrimStart('.').ToUpperInvariant(),
+            SourceFormat = sourceFormat,
+            TargetFormat = targetFormat,
             FileSize = File.Exists(outputPath) ? new FileInfo(outputPath).Length : null,
-            Message = $"Email converted from {inputExt} to {outputExt}"
+            Message = $"Email converted from {sourceFormat} to {targetFormat}"
         };
     }
 

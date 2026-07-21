@@ -65,7 +65,7 @@ public class RemovePdfHeaderFooterHandlerTests : PdfHandlerTestBase
         var result = _handler.Execute(context, parameters);
 
         var successResult = Assert.IsType<SuccessResult>(result);
-        Assert.Contains("1 stamp(s)", successResult.Message);
+        Assert.Contains("1 stamp annotation(s)", successResult.Message);
         Assert.Single(page.Annotations);
         Assert.IsType<TextAnnotation>(page.Annotations[1]);
         AssertModified(context);
@@ -85,7 +85,7 @@ public class RemovePdfHeaderFooterHandlerTests : PdfHandlerTestBase
         var result = _handler.Execute(context, parameters);
 
         var successResult = Assert.IsType<SuccessResult>(result);
-        Assert.Contains("2 stamp(s)", successResult.Message);
+        Assert.Contains("2 stamp annotation(s)", successResult.Message);
         Assert.Contains("2 page(s)", successResult.Message);
         AssertModified(context);
     }
@@ -100,7 +100,7 @@ public class RemovePdfHeaderFooterHandlerTests : PdfHandlerTestBase
         var result = _handler.Execute(context, parameters);
 
         var successResult = Assert.IsType<SuccessResult>(result);
-        Assert.Contains("3 stamp(s)", successResult.Message);
+        Assert.Contains("3 stamp annotation(s)", successResult.Message);
         AssertModified(context);
     }
 
@@ -114,7 +114,7 @@ public class RemovePdfHeaderFooterHandlerTests : PdfHandlerTestBase
         var result = _handler.Execute(context, parameters);
 
         var successResult = Assert.IsType<SuccessResult>(result);
-        Assert.Contains("0 stamp(s)", successResult.Message);
+        Assert.Contains("0 stamp annotation(s)", successResult.Message);
         AssertNotModified(context);
     }
 
@@ -135,7 +135,7 @@ public class RemovePdfHeaderFooterHandlerTests : PdfHandlerTestBase
         var result = _handler.Execute(context, parameters);
 
         var successResult = Assert.IsType<SuccessResult>(result);
-        Assert.Contains("2 stamp(s)", successResult.Message);
+        Assert.Contains("2 stamp annotation(s)", successResult.Message);
         Assert.Contains("2 page(s)", successResult.Message);
         AssertModified(context);
     }
@@ -153,7 +153,7 @@ public class RemovePdfHeaderFooterHandlerTests : PdfHandlerTestBase
         var result = _handler.Execute(context, parameters);
 
         var successResult = Assert.IsType<SuccessResult>(result);
-        Assert.Contains("2 stamp(s)", successResult.Message);
+        Assert.Contains("2 stamp annotation(s)", successResult.Message);
         Assert.Contains("1 page(s)", successResult.Message);
         AssertModified(context);
     }

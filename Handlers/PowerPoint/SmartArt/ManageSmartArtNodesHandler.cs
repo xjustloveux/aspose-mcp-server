@@ -91,12 +91,14 @@ public class ManageSmartArtNodesHandler : OperationHandlerBase<Presentation>
     /// <exception cref="ArgumentException">Thrown when a path index is out of range.</exception>
     private static SmartArtNodeTarget NavigateToTargetNode(ISmartArt smartArt, int[] targetPath)
     {
+        // Nodes is the root collection; AllNodes is the flattened hierarchy and would shift the
+        // root index by every nested child that precedes it.
         var rootIndex = targetPath[0];
-        if (rootIndex < 0 || rootIndex >= smartArt.AllNodes.Count)
+        if (rootIndex < 0 || rootIndex >= smartArt.Nodes.Count)
             throw new ArgumentException(
-                $"Root index {rootIndex} is out of range (SmartArt has {smartArt.AllNodes.Count} root nodes).");
+                $"Root index {rootIndex} is out of range (SmartArt has {smartArt.Nodes.Count} root nodes).");
 
-        var currentNode = smartArt.AllNodes[rootIndex];
+        var currentNode = smartArt.Nodes[rootIndex];
         for (var i = 1; i < targetPath.Length; i++)
         {
             var childIndex = targetPath[i];
@@ -202,7 +204,7 @@ public class ManageSmartArtNodesHandler : OperationHandlerBase<Presentation>
         var nodeText = targetNode.TextFrame?.Text ?? "(empty)";
 
         if (targetPath.Length == 1)
-            smartArt.AllNodes.RemoveNode(rootIndex);
+            smartArt.Nodes.RemoveNode(rootIndex);
         else
             targetNode.Remove();
 

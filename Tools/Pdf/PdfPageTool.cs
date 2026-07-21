@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Pdf;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
@@ -43,9 +43,9 @@ public class PdfPageTool
     }
 
     /// <summary>
-    ///     Executes a PDF page operation (add, delete, rotate, crop, resize, get_details, get_info).
+    ///     Executes a PDF page operation (add, delete, rotate, crop, resize, details, info).
     /// </summary>
-    /// <param name="operation">The operation to perform: add, delete, rotate, crop, resize, get_details, get_info.</param>
+    /// <param name="operation">The operation to perform: add, delete, rotate, crop, resize, details, info.</param>
     /// <param name="path">PDF file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID for in-memory editing.</param>
     /// <param name="outputPath">Output file path (optional, defaults to overwrite input).</param>
@@ -55,7 +55,7 @@ public class PdfPageTool
     /// <param name="height">Page height in points (for add, optional).</param>
     /// <param name="x">X position in points (for crop, lower-left corner).</param>
     /// <param name="y">Y position in points (for crop, lower-left corner).</param>
-    /// <param name="pageIndex">Page index (1-based, required for delete, rotate, get_details).</param>
+    /// <param name="pageIndex">Page index (1-based, required for delete, rotate, details).</param>
     /// <param name="rotation">Rotation angle in degrees: 0, 90, 180, 270 (for rotate, required).</param>
     /// <param name="pageIndices">Array of page indices to rotate (1-based, for rotate, optional).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
@@ -69,7 +69,7 @@ public class PdfPageTool
         ReadOnly = false,
         UseStructuredContent = true)]
     [Description(
-        @"Manage pages in PDF documents. Supports 7 operations: add, delete, rotate, crop, resize, get_details, get_info.
+        @"Manage pages in PDF documents. Supports 7 operations: add, delete, rotate, crop, resize, details, info.
 
 Usage examples:
 - Add page: pdf_page(operation='add', path='doc.pdf', count=1)
@@ -107,7 +107,7 @@ Usage examples:
         double? x = null,
         [Description("Y position in points (for crop, lower-left corner)")]
         double? y = null,
-        [Description("Page index (1-based, required for delete, rotate, crop, resize, get_details)")]
+        [Description("Page index (1-based, required for delete, rotate, crop, resize, details)")]
         int pageIndex = 0,
         [Description("Rotation angle in degrees: 0, 90, 180, 270 (for rotate, required)")]
         int rotation = 0,

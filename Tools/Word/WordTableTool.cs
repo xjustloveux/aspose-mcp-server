@@ -145,7 +145,7 @@ Usage examples:
 Notes:
 - All indices are 0-based
 - Use rowData/columnData as arrays to provide data when inserting rows/columns
-- Use sectionIndex to specify which section's tables to work with
+- Omit sectionIndex to address tables by document-wide flat index (same numbering 'get' reports); pass sectionIndex to index within one section only
 - cellColors format: [[row, col, '#RRGGBB'], ...] for per-cell coloring
 - mergeCells format: [{startRow, endRow, startCol, endCol}, ...] for batch merging")]
     public object Execute(
@@ -159,7 +159,7 @@ Notes:
         [Description("Output file path (file mode only)")]
         string? outputPath = null,
         [Description("Table index (0-based)")] int tableIndex = 0,
-        [Description("Section index (0-based)")]
+        [Description("Section index (0-based; omit for document-wide flat table indexing, matching 'get')")]
         int? sectionIndex = null,
         [Description("Number of rows (for create)")]
         int? rows = null,

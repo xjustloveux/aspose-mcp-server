@@ -1,3 +1,5 @@
+using System.Collections;
+using System.Reflection;
 using AsposeMcpServer.Core.Security;
 
 namespace AsposeMcpServer.Tests.Core.Security;
@@ -7,6 +9,30 @@ namespace AsposeMcpServer.Tests.Core.Security;
 /// </summary>
 public class AuthCacheTests
 {
+    #region Lock Pool Bound Tests
+
+    [Fact]
+    public async Task GetOrValidateAsync_ManyDistinctTokens_DoesNotGrowLockPoolUnbounded()
+    {
+        var cache = new AuthCache<TestResult>(300, 10);
+
+        // Uncacheable (invalid) results: every distinct token is a cache miss that takes a key lock.
+        for (var i = 0; i < 1000; i++)
+            await cache.GetOrValidateAsync(
+                $"attacker-token-{i}",
+                () => Task.FromResult(new TestResult { IsValid = false, Value = "invalid" }),
+                r => r.IsValid);
+
+        var field = typeof(AuthCache<TestResult>).GetField("_keyLocks",
+            BindingFlags.NonPublic | BindingFlags.Instance)!;
+        var lockPool = (ICollection)field.GetValue(cache)!;
+
+        Assert.True(lockPool.Count <= 64,
+            $"Per-key lock pool must stay bounded; it grew to {lockPool.Count} entries for 1000 distinct tokens");
+    }
+
+    #endregion
+
     #region Clear Tests
 
     [Fact]

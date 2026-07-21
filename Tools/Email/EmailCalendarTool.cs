@@ -7,7 +7,7 @@ using ModelContextProtocol.Server;
 namespace AsposeMcpServer.Tools.Email;
 
 /// <summary>
-///     Tool for managing calendar appointments (create, get_info, save, set_recurrence, set_attendees).
+///     Tool for managing calendar appointments (create, get, save, set_recurrence, set_attendees).
 /// </summary>
 [ToolHandlerMapping("AsposeMcpServer.Handlers.Email.Calendar")]
 [McpServerToolType]
@@ -28,10 +28,10 @@ public class EmailCalendarTool
     }
 
     /// <summary>
-    ///     Executes a calendar operation (create, get_info, save, set_recurrence, set_attendees).
+    ///     Executes a calendar operation (create, get, save, set_recurrence, set_attendees).
     /// </summary>
-    /// <param name="operation">The operation to perform: create, get_info, save, set_recurrence, set_attendees.</param>
-    /// <param name="path">Input calendar file path (.ics) (required for get_info, save, set_recurrence, set_attendees).</param>
+    /// <param name="operation">The operation to perform: create, get, save, set_recurrence, set_attendees.</param>
+    /// <param name="path">Input calendar file path (.ics) (required for get, save, set_recurrence, set_attendees).</param>
     /// <param name="outputPath">Output file path (required for create, save, set_recurrence, set_attendees).</param>
     /// <param name="summary">Appointment summary/title (optional for create).</param>
     /// <param name="description">Appointment description (optional for create).</param>
@@ -54,7 +54,7 @@ public class EmailCalendarTool
         ReadOnly = false,
         UseStructuredContent = true)]
     [Description(
-        @"Manage calendar appointments (ICS files). Supports 5 operations: create, get_info, save, set_recurrence, set_attendees.
+        @"Manage calendar appointments (ICS files). Supports 5 operations: create, get, save, set_recurrence, set_attendees.
 
 Usage examples:
 - Create appointment: email_calendar(operation='create', outputPath='meeting.ics', summary='Team Meeting', startDate='2024-01-15T10:00:00', endDate='2024-01-15T11:00:00')
@@ -72,7 +72,7 @@ Supported formats: ICS (iCalendar), MSG (Outlook)")]
 - 'set_recurrence': Set recurrence pattern (required params: path, outputPath, pattern; optional: interval, count)
 - 'set_attendees': Set attendees (required params: path, outputPath, attendees)")]
         string operation,
-        [Description("Input calendar file path (.ics) (required for get_info, save, set_recurrence, set_attendees)")]
+        [Description("Input calendar file path (.ics) (required for get, save, set_recurrence, set_attendees)")]
         string? path = null,
         [Description("Output file path (required for create, save, set_recurrence, set_attendees)")]
         string? outputPath = null,

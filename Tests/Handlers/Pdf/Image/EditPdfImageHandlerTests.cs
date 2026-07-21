@@ -74,39 +74,23 @@ public class EditPdfImageHandlerTests : PdfHandlerTestBase
         Assert.Contains("pageIndex must be between", ex.Message);
     }
 
-    [Fact]
-    public void Execute_WithPageIndexZero_UsesPageOne()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void Execute_WithNonPositivePageIndex_ThrowsArgumentException(int pageIndex)
     {
-        var doc = CreateEmptyDocument();
+        // 'get' treats pageIndex 0 as "all pages"; a mutate call must reject non-positive
+        // indices instead of silently operating on page 1.
+        var doc = CreateDocumentWithImage();
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
-            { "pageIndex", 0 },
+            { "pageIndex", pageIndex },
             { "imageIndex", 1 }
         });
 
         var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
-        Assert.Contains("imageIndex must be between", ex.Message);
-    }
-
-    [Fact]
-    public void Execute_WithNegativePageIndex_UsesPageOne()
-    {
-        var doc = CreateDocumentWithImage();
-        var initialImageCount = doc.Pages[1].Resources.Images.Count;
-        var context = CreateContext(doc);
-        var parameters = CreateParameters(new Dictionary<string, object?>
-        {
-            { "pageIndex", -1 },
-            { "imageIndex", 1 }
-        });
-
-        var res = _handler.Execute(context, parameters);
-
-        Assert.IsType<SuccessResult>(res);
-        if (!IsEvaluationMode(AsposeLibraryType.Pdf))
-            Assert.Equal(initialImageCount, doc.Pages[1].Resources.Images.Count);
-        AssertModified(context);
+        Assert.Contains("pageIndex must be between", ex.Message);
     }
 
     #endregion

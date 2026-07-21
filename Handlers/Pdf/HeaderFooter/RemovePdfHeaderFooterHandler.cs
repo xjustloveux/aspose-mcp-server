@@ -52,7 +52,7 @@ public class RemovePdfHeaderFooterHandler : OperationHandlerBase<Document>
 
         return new SuccessResult
         {
-            Message = $"Removed {removedCount} stamp(s) from {pages.Count} page(s)."
+            Message = $"Removed {removedCount} stamp annotation(s) from {pages.Count} page(s)."
         };
     }
 }

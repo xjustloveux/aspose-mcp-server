@@ -95,6 +95,7 @@ brew install xjustloveux/tap/aspose-mcp-server
 - `--extension-config 路徑` - 指定擴充功能配置檔案路徑（`extension` 工具）
 - `--license 路徑` - 指定授權檔案路徑（可選）
 - `--allowed-path 路徑` - 限制檔案存取於指定基礎目錄下（可重複指定；未指定則不限制，建議在 HTTP/WebSocket 部署時啟用）
+- `--max-extract-all-bytes 位元組` - OLE 工具單次 `extract_all` 累計寫出上限（預設 10 GiB；≤ 0 表示不設上限；環境變數 `MAX_EXTRACT_ALL_BYTES`）
 
 > **工具過濾**：指定工具參數時，只有啟用的工具類別會出現在 MCP 工具列表中。例如使用 `--word` 時，只會顯示 `word_*` 相關工具。
 

@@ -1,9 +1,11 @@
 using System.Drawing.Imaging;
+using System.Text;
 using Aspose.Cells;
 using Aspose.Cells.Drawing;
 using Aspose.Cells.Rendering;
 using Aspose.Pdf;
 using Aspose.Pdf.Devices;
+using Aspose.Pdf.Text;
 using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Core.Progress;
@@ -12,6 +14,7 @@ using AsposeMcpServer.Helpers;
 using ModelContextProtocol;
 using TxtSaveOptions = Aspose.Cells.TxtSaveOptions;
 using Document = Aspose.Words.Document;
+using Encoder = System.Drawing.Imaging.Encoder;
 using HtmlLoadOptions = Aspose.Pdf.HtmlLoadOptions;
 using HtmlSaveOptions = Aspose.Cells.HtmlSaveOptions;
 using WordHtmlSaveOptions = Aspose.Words.Saving.HtmlSaveOptions;
@@ -143,7 +146,7 @@ public static class DocumentConverter
                 new HashSet<string>(StringComparer.OrdinalIgnoreCase)
                 {
                     "docx", "doc", "html", "xlsx", "pptx", "png", "jpg", "jpeg", "tiff", "tif", "epub", "svg", "xps",
-                    "xml"
+                    "xml", "txt"
                 }
             }
         };
@@ -333,6 +336,8 @@ public static class DocumentConverter
 
     /// <summary>
     ///     Gets the PDF save format for the specified format string.
+    ///     Plain text ("txt") has no <see cref="Aspose.Pdf.SaveFormat" /> member and is handled
+    ///     separately via <see cref="Aspose.Pdf.Text.TextAbsorber" /> in the PDF conversion paths.
     /// </summary>
     /// <param name="format">The target format (with or without leading dot).</param>
     /// <returns>The corresponding PDF save format.</returns>
@@ -347,7 +352,6 @@ public static class DocumentConverter
             "html" => Aspose.Pdf.SaveFormat.Html,
             "xlsx" => Aspose.Pdf.SaveFormat.Excel,
             "pptx" => Aspose.Pdf.SaveFormat.Pptx,
-            "txt" => Aspose.Pdf.SaveFormat.TeX,
             "epub" => Aspose.Pdf.SaveFormat.Epub,
             "svg" => Aspose.Pdf.SaveFormat.Svg,
             "xps" => Aspose.Pdf.SaveFormat.Xps,
@@ -682,6 +686,10 @@ public static class DocumentConverter
                     CompressOutputToZipArchive = false
                 };
                 pdfDocument.Save(resolvedOutput, svgOptions);
+            }
+            else if (format == "txt")
+            {
+                File.WriteAllText(resolvedOutput, ExtractPdfPlainText(pdfDocument));
             }
             else
             {
@@ -1356,11 +1364,32 @@ public static class DocumentConverter
             };
             pdfDocument.Save(outputStream, svgOptions);
         }
+        else if (format == "txt")
+        {
+            var textBytes = Encoding.UTF8.GetBytes(ExtractPdfPlainText(pdfDocument));
+            outputStream.Write(textBytes, 0, textBytes.Length);
+        }
         else
         {
             var saveFormat = GetPdfSaveFormat(format);
             pdfDocument.Save(outputStream, saveFormat);
         }
+    }
+
+    /// <summary>
+    ///     Extracts the plain text of all pages of a PDF document.
+    ///     Plain text has no <see cref="Aspose.Pdf.SaveFormat" /> member, so "txt" output is produced
+    ///     via <see cref="Aspose.Pdf.Text.TextAbsorber" /> instead of <c>Document.Save</c>.
+    ///     Pending paragraphs are laid out first so unsaved edits are included, matching Save-based paths.
+    /// </summary>
+    /// <param name="pdfDocument">The PDF document to extract text from.</param>
+    /// <returns>The extracted plain text of all pages.</returns>
+    private static string ExtractPdfPlainText(Aspose.Pdf.Document pdfDocument)
+    {
+        pdfDocument.ProcessParagraphs();
+        var absorber = new TextAbsorber();
+        pdfDocument.Pages.Accept(absorber);
+        return absorber.Text;
     }
 
     /// <summary>

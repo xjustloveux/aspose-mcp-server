@@ -44,6 +44,28 @@ public class ConvertEmailHandlerTests : HandlerTestBase<object>
 
     #endregion
 
+    #region Content-Based Source Format
+
+    [Fact]
+    public void Execute_EmlContentWithMsgExtension_ReportsEmlSourceFormat()
+    {
+        var sourcePath = CreateTestEmlFile("mislabeled_conv.msg");
+        var outputPath = CreateTestFilePath("mislabeled_conv_out.html");
+        var context = CreateContext(new object());
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "path", sourcePath },
+            { "outputPath", outputPath }
+        });
+
+        var result = Assert.IsType<EmailConversionResult>(_handler.Execute(context, parameters));
+
+        Assert.Equal("EML", result.SourceFormat);
+        Assert.True(File.Exists(outputPath));
+    }
+
+    #endregion
+
     #region Basic Operations
 
     [Fact]
@@ -226,8 +248,8 @@ public class ConvertEmailHandlerTests : HandlerTestBase<object>
 
         var conversionResult = Assert.IsType<EmailConversionResult>(result);
         Assert.Contains("converted", conversionResult.Message);
-        Assert.Contains(".eml", conversionResult.Message);
-        Assert.Contains(".html", conversionResult.Message);
+        Assert.Contains("EML", conversionResult.Message);
+        Assert.Contains("HTML", conversionResult.Message);
     }
 
     [Fact]

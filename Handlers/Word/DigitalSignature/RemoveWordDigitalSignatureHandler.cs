@@ -24,7 +24,9 @@ public class RemoveWordDigitalSignatureHandler : OperationHandlerBase<Document>
     ///     Required: path (source file path), outputPath (destination file path)
     /// </param>
     /// <returns>Success message.</returns>
-    /// <exception cref="ArgumentException">Thrown when required parameters are missing.</exception>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when required parameters are missing or a path resolves outside the configured allowlist.
+    /// </exception>
     public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var path = parameters.GetRequired<string>("path");
@@ -33,11 +35,18 @@ public class RemoveWordDigitalSignatureHandler : OperationHandlerBase<Document>
         SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
-        var outputDir = Path.GetDirectoryName(outputPath);
+        // Both paths are filesystem sinks (read + write): resolve symlinks and enforce the
+        // allowlist before either is touched.
+        var allowedBasePaths = context.ServerConfig?.AllowedBasePaths ?? [];
+        var resolvedPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(path, allowedBasePaths, "path");
+        var resolvedOutputPath =
+            SecurityHelper.ResolveAndEnsureWithinAllowlist(outputPath, allowedBasePaths, "outputPath");
+
+        var outputDir = Path.GetDirectoryName(resolvedOutputPath);
         if (!string.IsNullOrEmpty(outputDir))
             Directory.CreateDirectory(outputDir);
 
-        DigitalSignatureUtil.RemoveAllSignatures(path, outputPath);
+        DigitalSignatureUtil.RemoveAllSignatures(resolvedPath, resolvedOutputPath);
 
         return new SuccessResult
         {

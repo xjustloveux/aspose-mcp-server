@@ -5,7 +5,9 @@ using AsposeMcpServer.Core.Security;
 using AsposeMcpServer.Core.Session;
 using AsposeMcpServer.Core.Tracking;
 using AsposeMcpServer.Core.Transport;
+using AsposeMcpServer.Errors;
 using AsposeMcpServer.Helpers;
+using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -176,11 +178,13 @@ internal static class HostFactory
     }
 
     /// <summary>
-    ///     Creates a filter that preserves original exception messages in tool error responses.
-    ///     Without this filter, the MCP SDK replaces exception details with a generic error message.
+    ///     Creates a filter that preserves designed, user-facing exception messages in tool error
+    ///     responses (the MCP SDK would otherwise replace them with a generic message) while keeping
+    ///     unexpected exception text off the wire: raw BCL/Aspose messages can carry absolute
+    ///     file-system paths and internals, so they are replaced by fixed sentinels.
     /// </summary>
-    /// <returns>A filter that catches exceptions and returns them as detailed error results.</returns>
-    private static McpRequestFilter<CallToolRequestParams, CallToolResult> CreateErrorDetailFilter()
+    /// <returns>A filter that catches exceptions and returns them as sanitized error results.</returns>
+    internal static McpRequestFilter<CallToolRequestParams, CallToolResult> CreateErrorDetailFilter()
     {
         return next => async (request, cancellationToken) =>
         {
@@ -193,10 +197,52 @@ internal static class HostFactory
                 return new CallToolResult
                 {
                     IsError = true,
-                    Content = [new TextContentBlock { Text = ex.Message }]
+                    Content = [new TextContentBlock { Text = GetUserFacingErrorText(ex) }]
                 };
             }
         };
+    }
+
+    /// <summary>
+    ///     Maps an exception escaping a tool call to the text returned to the MCP caller.
+    ///     Exception types the codebase throws deliberately (parameter validation, addressing,
+    ///     session lookup, translator sentinels) keep their in-repo authored message; anything else
+    ///     is replaced by a fixed sentinel so raw paths / internals never reach the wire, with the
+    ///     original exception written to stderr for server-side diagnosis.
+    /// </summary>
+    /// <param name="ex">The exception thrown by the tool call.</param>
+    /// <returns>The sanitized user-facing error text.</returns>
+    private static string GetUserFacingErrorText(Exception ex)
+    {
+        switch (ex)
+        {
+            // Designed user-facing channels whose messages are authored in this repository.
+            // ObjectDisposedException (session closed) derives from InvalidOperationException.
+            case ArgumentException:
+            case KeyNotFoundException:
+            case NotSupportedException:
+            case InvalidOperationException:
+            case InvalidCastException:
+            case McpException:
+                return ex.Message;
+
+            // BCL file errors embed absolute paths ("Could not find file 'C:\...'"); handlers that
+            // check existence themselves already throw this exact fixed sentinel.
+            case FileNotFoundException:
+            case DirectoryNotFoundException:
+                return "The specified file was not found.";
+
+            case UnauthorizedAccessException:
+                // The password sentinel from the error translators passes through; raw BCL
+                // access-denied text carries the full path.
+                return ex.Message == ErrorMessageBuilder.InvalidPassword()
+                    ? ex.Message
+                    : "Access to the file was denied.";
+
+            default:
+                Console.Error.WriteLine($"[WARN] Unhandled tool exception replaced by sentinel: {ex}");
+                return ErrorMessageBuilder.ProcessingFailed();
+        }
     }
 
     /// <summary>

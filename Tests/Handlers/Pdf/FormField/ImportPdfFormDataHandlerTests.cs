@@ -140,6 +140,26 @@ public class ImportPdfFormDataHandlerTests : PdfHandlerTestBase
         AssertModified(context);
     }
 
+    [Fact]
+    public void Execute_DocumentRemainsUsableAfterImport()
+    {
+        var sourceDoc = CreateDocumentWithFormFields();
+        var dataPath = CreateExportedDataFile(sourceDoc, "xfdf");
+
+        var targetDoc = CreateDocumentWithFormFields();
+        var context = CreateContext(targetDoc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "dataPath", dataPath }
+        });
+
+        _handler.Execute(context, parameters);
+
+        // Session mode reuses the same document across operations; importing must not dispose it.
+        Assert.Single(targetDoc.Pages);
+        Assert.Equal("John Doe", (targetDoc.Form["name"] as TextBoxField)!.Value);
+    }
+
     #endregion
 
     #region Error Handling

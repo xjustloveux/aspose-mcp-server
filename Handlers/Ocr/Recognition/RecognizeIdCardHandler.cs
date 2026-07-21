@@ -45,7 +45,7 @@ public class RecognizeIdCardHandler : OperationHandlerBase<AsposeOcr>
             Language = RecognizeHandler.ParseLanguage(language)
         };
 
-        var input = new OcrInput(InputType.SingleImage);
+        using var input = new OcrInput(InputType.SingleImage);
         input.Add(path);
 
         var results = engine.RecognizeIDCard(input, settings);

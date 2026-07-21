@@ -50,9 +50,12 @@ public class SaveEmailCalendarHandler : OperationHandlerBase<object>
                 appointment.Save(resolvedOutputPath, AppointmentSaveFormat.Ics);
                 break;
             case "msg":
-                var message = new MailMessage();
-                message.AlternateViews.Add(appointment.RequestApointment());
-                message.Save(resolvedOutputPath, SaveOptions.DefaultMsgUnicode);
+                using (var message = new MailMessage())
+                {
+                    message.AlternateViews.Add(appointment.RequestApointment());
+                    message.Save(resolvedOutputPath, SaveOptions.DefaultMsgUnicode);
+                }
+
                 break;
             default:
                 throw new ArgumentException(

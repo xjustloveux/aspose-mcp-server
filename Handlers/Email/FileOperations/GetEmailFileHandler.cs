@@ -33,17 +33,10 @@ public class GetEmailFileHandler : OperationHandlerBase<object>
         if (!File.Exists(path))
             throw new FileNotFoundException("The specified file was not found.");
 
-        var message = MailMessage.Load(path);
+        using var message = MailMessage.Load(path);
 
-        var ext = Path.GetExtension(path).ToLowerInvariant();
-        var format = ext switch
-        {
-            ".eml" => "EML",
-            ".msg" => "MSG",
-            ".mhtml" or ".mht" => "MHTML",
-            ".html" or ".htm" => "HTML",
-            _ => "Unknown"
-        };
+        // Detect from content — the extension may be wrong (Load itself ignores it too).
+        var format = EmailFormatHelper.DetectFormatName(path);
 
         return new EmailFileInfo
         {

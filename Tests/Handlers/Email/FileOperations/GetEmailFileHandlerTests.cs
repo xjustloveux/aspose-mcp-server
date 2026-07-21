@@ -39,6 +39,30 @@ public class GetEmailFileHandlerTests : HandlerTestBase<object>
 
     #endregion
 
+    #region Content-Based Format Detection
+
+    [Fact]
+    public void Execute_EmlContentWithMsgExtension_ReportsEml()
+    {
+        var filePath = CreateTestFilePath("mislabeled.msg");
+        var message = new MailMessage { From = "sender@example.com", Subject = "Mislabelled" };
+        message.To.Add("recipient@example.com");
+        message.Save(filePath, SaveOptions.DefaultEml);
+
+        var context = CreateContext(new object());
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "path", filePath }
+        });
+
+        var result = Assert.IsType<EmailFileInfo>(_handler.Execute(context, parameters));
+
+        // Format must reflect the file content, not the (wrong) extension.
+        Assert.Equal("EML", result.Format);
+    }
+
+    #endregion
+
     #region Parameter Validation
 
     [Fact]
@@ -241,7 +265,7 @@ public class GetEmailFileHandlerTests : HandlerTestBase<object>
     }
 
     [Fact]
-    public void Execute_UnknownExtension_DetectsFormatAsUnknown()
+    public void Execute_UnknownExtension_DetectsFormatFromContent()
     {
         var emlPath = CreateEmlFile("source_unknown.eml");
         var unknownPath = CreateTestFilePath("test_load.xyz");
@@ -259,7 +283,8 @@ public class GetEmailFileHandlerTests : HandlerTestBase<object>
 
         Assert.IsType<EmailFileInfo>(result);
         var info = (EmailFileInfo)result;
-        Assert.Equal("Unknown", info.Format);
+        // The extension is meaningless here; the EML content decides the reported format.
+        Assert.Equal("EML", info.Format);
     }
 
     #endregion

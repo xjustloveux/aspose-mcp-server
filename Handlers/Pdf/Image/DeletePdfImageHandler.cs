@@ -28,23 +28,24 @@ public class DeletePdfImageHandler : OperationHandlerBase<Document>
 
         var document = context.Document;
 
-        var actualPageIndex = p.PageIndex < 1 ? 1 : p.PageIndex;
-        var actualImageIndex = p.ImageIndex < 1 ? 1 : p.ImageIndex;
-        if (actualPageIndex > document.Pages.Count)
+        // Reject non-positive indices instead of clamping to the first page/image: 'get' treats
+        // pageIndex 0 as "all pages", so a silent clamp would delete from a page the caller
+        // never named.
+        if (p.PageIndex < 1 || p.PageIndex > document.Pages.Count)
             throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
 
-        var page = document.Pages[actualPageIndex];
+        var page = document.Pages[p.PageIndex];
         var images = page.Resources?.Images;
         if (images == null)
             throw new ArgumentException("No images found on the page");
-        if (actualImageIndex > images.Count)
+        if (p.ImageIndex < 1 || p.ImageIndex > images.Count)
             throw new ArgumentException($"imageIndex must be between 1 and {images.Count}");
 
-        images.Delete(actualImageIndex);
+        images.Delete(p.ImageIndex);
 
         MarkModified(context);
 
-        return new SuccessResult { Message = $"Deleted image {actualImageIndex} from page {actualPageIndex}." };
+        return new SuccessResult { Message = $"Deleted image {p.ImageIndex} from page {p.PageIndex}." };
     }
 
     /// <summary>

@@ -254,6 +254,15 @@ jobs:
         .\.sonar\scanner\dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
       continue-on-error: true
 
+    # The test step runs with continue-on-error so coverage/artifacts still upload on failure;
+    # this final gate makes the job itself fail when any test failed.
+    - name: Fail job if tests failed
+      if: always() && steps.test.outcome == 'failure'
+      shell: pwsh
+      run: |
+        Write-Host "Tests failed — failing the job (see test-results artifact)." -ForegroundColor Red
+        exit 1
+
   # Evaluation mode test - manual trigger only
   test-evaluation-mode:
     runs-on: windows-latest
@@ -277,7 +286,6 @@ jobs:
     - name: Test in Evaluation Mode
       run: |
         .\test.ps1 -SkipLicense -NoBuild
-      continue-on-error: true
     
     - name: Upload evaluation mode test results
       uses: actions/upload-artifact@v7

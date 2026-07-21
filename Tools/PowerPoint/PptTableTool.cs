@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Slides;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
@@ -45,11 +45,11 @@ public class PptTableTool
     }
 
     /// <summary>
-    ///     Executes a PowerPoint table operation (add, edit, delete, get_content, insert_row, insert_column, delete_row,
+    ///     Executes a PowerPoint table operation (add, edit, delete, get, insert_row, insert_column, delete_row,
     ///     delete_column, edit_cell).
     /// </summary>
     /// <param name="operation">
-    ///     The operation to perform: add, edit, delete, get_content, insert_row, insert_column,
+    ///     The operation to perform: add, edit, delete, get, insert_row, insert_column,
     ///     delete_row, delete_column, edit_cell.
     /// </param>
     /// <param name="path">Presentation file path (required if no sessionId).</param>
@@ -76,7 +76,7 @@ public class PptTableTool
         ReadOnly = false,
         UseStructuredContent = true)]
     [Description(
-        @"Manage PowerPoint tables. Supports 9 operations: add, edit, delete, get_content, insert_row, insert_column, delete_row, delete_column, edit_cell.
+        @"Manage PowerPoint tables. Supports 9 operations: add, edit, delete, get, insert_row, insert_column, delete_row, delete_column, edit_cell.
 
 Coordinate unit: 1 inch = 72 points.
 
@@ -225,7 +225,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds parameters for shape index-based operations (delete, get_content).
+    ///     Builds parameters for shape index-based operations (delete, get).
     /// </summary>
     /// <param name="parameters">The base operation parameters.</param>
     /// <param name="shapeIndex">The shape index of the table (0-based).</param>

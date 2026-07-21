@@ -46,6 +46,16 @@ public class DocumentSessionManager : IDisposable
         new();
 
     /// <summary>
+    ///     Re-entrancy guard for <see cref="AutoSaveDirtySessions" /> (1 = a callback is running)
+    /// </summary>
+    private int _autoSaveRunning;
+
+    /// <summary>
+    ///     Re-entrancy guard for <see cref="CleanupIdleSessions" /> (1 = a callback is running)
+    /// </summary>
+    private int _cleanupRunning;
+
+    /// <summary>
     ///     Tracks whether this manager has been disposed (0 = not disposed, 1 = disposed)
     /// </summary>
     private int _disposed;
@@ -428,6 +438,10 @@ public class DocumentSessionManager : IDisposable
 
         SessionClosed?.Invoke(sessionId, session.Owner);
 
+        // The session is already unregistered, so no new operation can start; wait for in-flight
+        // operations to finish so the save below cannot capture a document mid-mutation.
+        session.WaitForActiveUsersToDrain();
+
         var sessionType = session.Type;
         var sessionPath = session.Path;
         try
@@ -574,8 +588,10 @@ public class DocumentSessionManager : IDisposable
         foreach (var session in clientSessions)
             try
             {
-                RemoveSessionById(session.SessionId);
-                HandleDisconnect(session);
+                // Only the caller that actually removed the session may disconnect it, so a
+                // concurrent close/cleanup cannot double-handle the same session.
+                if (RemoveSessionById(session.SessionId))
+                    HandleDisconnect(session);
             }
             catch (Exception ex)
             {
@@ -587,7 +603,8 @@ public class DocumentSessionManager : IDisposable
     ///     Removes a session by ID from storage (no authorization check)
     /// </summary>
     /// <param name="sessionId">Session ID to remove</param>
-    private void RemoveSessionById(string sessionId)
+    /// <returns><c>true</c> when this call removed the session; <c>false</c> when it was already gone.</returns>
+    private bool RemoveSessionById(string sessionId)
     {
         foreach (var kvp in _sessionsByOwner)
             if (kvp.Value.TryRemove(sessionId, out _))
@@ -596,8 +613,10 @@ public class DocumentSessionManager : IDisposable
                     ((ICollection<KeyValuePair<string, ConcurrentDictionary<string, DocumentSession>>>)_sessionsByOwner)
                         .Remove(new KeyValuePair<string, ConcurrentDictionary<string, DocumentSession>>(kvp.Key,
                             kvp.Value));
-                return;
+                return true;
             }
+
+        return false;
     }
 
     /// <summary>
@@ -634,6 +653,10 @@ public class DocumentSessionManager : IDisposable
     private void HandleDisconnect(DocumentSession session)
     {
         SessionClosed?.Invoke(session.SessionId, session.Owner);
+
+        // Wait for in-flight operations to finish so a save below cannot capture a document
+        // mid-mutation and the Dispose in the finally cannot destroy a document still in use.
+        session.WaitForActiveUsersToDrain();
 
         var sessionType = session.Type;
         var sessionPath = session.Path;
@@ -686,42 +709,55 @@ public class DocumentSessionManager : IDisposable
     }
 
     /// <summary>
-    ///     Timer callback to cleanup idle sessions
+    ///     Timer callback to cleanup idle sessions.
+    ///     Non-reentrant: a slow save in one tick must not overlap the next tick's callback.
     /// </summary>
     /// <param name="state">Timer state (not used)</param>
     private void CleanupIdleSessions(object? state)
     {
-        var timeout = TimeSpan.FromMinutes(Config.IdleTimeoutMinutes);
-        var now = DateTime.UtcNow;
+        if (Interlocked.Exchange(ref _cleanupRunning, 1) == 1)
+            return;
 
-        var allSessions = _sessionsByOwner.Values
-            .SelectMany(s => s.Values)
-            .ToList();
+        try
+        {
+            var timeout = TimeSpan.FromMinutes(Config.IdleTimeoutMinutes);
+            var now = DateTime.UtcNow;
 
-        foreach (var session in allSessions)
-            if (now - session.LastAccessedAt > timeout)
-            {
-                if (session.HasActiveUsers)
+            var allSessions = _sessionsByOwner.Values
+                .SelectMany(s => s.Values)
+                .ToList();
+
+            foreach (var session in allSessions)
+                if (now - session.LastAccessedAt > timeout)
                 {
-                    _logger?.LogDebug(
-                        "Skipping cleanup of idle session {SessionId} because it has active users",
-                        session.SessionId);
-                    continue;
-                }
+                    if (session.HasActiveUsers)
+                    {
+                        _logger?.LogDebug(
+                            "Skipping cleanup of idle session {SessionId} because it has active users",
+                            session.SessionId);
+                        continue;
+                    }
 
-                _logger?.LogInformation("Session {SessionId} timed out after {Minutes} minutes of inactivity",
-                    session.SessionId, Config.IdleTimeoutMinutes);
+                    _logger?.LogInformation("Session {SessionId} timed out after {Minutes} minutes of inactivity",
+                        session.SessionId, Config.IdleTimeoutMinutes);
 
-                try
-                {
-                    RemoveSessionById(session.SessionId);
-                    HandleDisconnect(session);
+                    try
+                    {
+                        // Only the caller that actually removed the session may disconnect it,
+                        // so a concurrent close cannot double-handle the same session.
+                        if (RemoveSessionById(session.SessionId))
+                            HandleDisconnect(session);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger?.LogError(ex, "Error cleaning up idle session {SessionId}", session.SessionId);
+                    }
                 }
-                catch (Exception ex)
-                {
-                    _logger?.LogError(ex, "Error cleaning up idle session {SessionId}", session.SessionId);
-                }
-            }
+        }
+        finally
+        {
+            Volatile.Write(ref _cleanupRunning, 0);
+        }
     }
 
     /// <summary>
@@ -732,30 +768,41 @@ public class DocumentSessionManager : IDisposable
     /// <param name="state">Timer state (not used)</param>
     private void AutoSaveDirtySessions(object? state)
     {
-        var dirtySessions = _sessionsByOwner.Values
-            .SelectMany(s => s.Values)
-            .Where(s => s is { IsDirty: true, IsDisposed: false })
-            .ToList();
-
-        if (dirtySessions.Count == 0)
+        // Non-reentrant: a slow save in one tick must not overlap the next tick's callback.
+        if (Interlocked.Exchange(ref _autoSaveRunning, 1) == 1)
             return;
 
-        _logger?.LogDebug("Auto-saving {Count} dirty sessions", dirtySessions.Count);
+        try
+        {
+            var dirtySessions = _sessionsByOwner.Values
+                .SelectMany(s => s.Values)
+                .Where(s => s is { IsDirty: true, IsDisposed: false })
+                .ToList();
 
-        foreach (var session in dirtySessions)
-            try
-            {
-                var tempPath = GetTempPath(session);
-                ReassertAllowlistForResolvedPath(tempPath, nameof(tempPath));
-                session.Execute(doc => SaveDocumentToFile(doc, session.Type, tempPath));
-                SaveSessionMetadata(session, tempPath);
-                _logger?.LogInformation("Auto-saved dirty session {SessionId} to temp: {TempPath}",
-                    session.SessionId, tempPath);
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Error auto-saving session {SessionId}", session.SessionId);
-            }
+            if (dirtySessions.Count == 0)
+                return;
+
+            _logger?.LogDebug("Auto-saving {Count} dirty sessions", dirtySessions.Count);
+
+            foreach (var session in dirtySessions)
+                try
+                {
+                    var tempPath = GetTempPath(session);
+                    ReassertAllowlistForResolvedPath(tempPath, nameof(tempPath));
+                    session.Execute(doc => SaveDocumentToFile(doc, session.Type, tempPath));
+                    SaveSessionMetadata(session, tempPath);
+                    _logger?.LogInformation("Auto-saved dirty session {SessionId} to temp: {TempPath}",
+                        session.SessionId, tempPath);
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogError(ex, "Error auto-saving session {SessionId}", session.SessionId);
+                }
+        }
+        finally
+        {
+            Volatile.Write(ref _autoSaveRunning, 0);
+        }
     }
 
     /// <summary>
@@ -941,5 +988,10 @@ public class DocumentSessionManager : IDisposable
             [metaAllowedBase],
             "metadataPath");
         File.WriteAllText(metadataPath, JsonSerializer.Serialize(metadata, JsonDefaults.Indented));
+
+        // Both files land in a potentially shared temp directory (default: /tmp on Unix):
+        // restrict them to the owner so other local users cannot read document contents.
+        SecurityHelper.HardenPrivateFile(tempPath);
+        SecurityHelper.HardenPrivateFile(metadataPath);
     }
 }

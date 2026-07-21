@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Slides;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
@@ -46,13 +46,13 @@ public class PptDataOperationsTool
     }
 
     /// <summary>
-    ///     Executes a PowerPoint data operation (get_statistics, get_content, get_slide_details).
+    ///     Executes a PowerPoint data operation (statistics, get, slide_details).
     /// </summary>
-    /// <param name="operation">The operation to perform: get_statistics, get_content, get_slide_details.</param>
+    /// <param name="operation">The operation to perform: statistics, get, slide_details.</param>
     /// <param name="path">Presentation file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID for in-memory editing.</param>
-    /// <param name="slideIndex">Slide index (0-based, required for get_slide_details).</param>
-    /// <param name="includeThumbnail">Include Base64 encoded thumbnail image (optional for get_slide_details, default false).</param>
+    /// <param name="slideIndex">Slide index (0-based, required for slide_details).</param>
+    /// <param name="includeThumbnail">Include Base64 encoded thumbnail image (optional for slide_details, default false).</param>
     /// <returns>A JSON string containing the requested data (statistics, content, or slide details).</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(
@@ -63,7 +63,7 @@ public class PptDataOperationsTool
         OpenWorld = false,
         ReadOnly = true,
         UseStructuredContent = true)]
-    [Description(@"PowerPoint data operations. Supports 3 operations: get_statistics, get_content, get_slide_details.
+    [Description(@"PowerPoint data operations. Supports 3 operations: statistics, get, slide_details.
 
 Usage examples:
 - Get statistics: ppt_data_operations(operation='statistics', path='presentation.pptx')
@@ -77,9 +77,9 @@ Usage examples:
         string? path = null,
         [Description("Session ID for in-memory editing")]
         string? sessionId = null,
-        [Description("Slide index (0-based, required for get_slide_details)")]
+        [Description("Slide index (0-based, required for slide_details)")]
         int? slideIndex = null,
-        [Description("Include Base64 encoded thumbnail image (optional for get_slide_details, default false)")]
+        [Description("Include Base64 encoded thumbnail image (optional for slide_details, default false)")]
         bool includeThumbnail = false)
     {
         using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
@@ -119,7 +119,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds parameters for the get_slide_details operation.
+    ///     Builds parameters for the slide_details operation.
     /// </summary>
     /// <param name="slideIndex">The slide index (0-based).</param>
     /// <param name="includeThumbnail">Whether to include a Base64 encoded thumbnail.</param>

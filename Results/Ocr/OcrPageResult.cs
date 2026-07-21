@@ -20,7 +20,8 @@ public record OcrPageResult
     public required string Text { get; init; }
 
     /// <summary>
-    ///     Overall recognition confidence score for the page (0.0 to 1.0).
+    ///     Recognition confidence score for the page. The bundled Aspose.OCR engine does not
+    ///     report confidence values, so this is always 0; it is kept for wire-format stability.
     /// </summary>
     [JsonPropertyName("confidence")]
     public double Confidence { get; init; }

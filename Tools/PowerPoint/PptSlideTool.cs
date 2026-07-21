@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Slides;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
@@ -45,9 +45,9 @@ public class PptSlideTool
     }
 
     /// <summary>
-    ///     Executes a PowerPoint slide operation (add, delete, get_info, move, duplicate, hide, clear, edit).
+    ///     Executes a PowerPoint slide operation (add, delete, get, move, duplicate, hide, clear, edit).
     /// </summary>
-    /// <param name="operation">The operation to perform: add, delete, get_info, move, duplicate, hide, clear, edit.</param>
+    /// <param name="operation">The operation to perform: add, delete, get, move, duplicate, hide, clear, edit.</param>
     /// <param name="path">Presentation file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID for in-memory editing.</param>
     /// <param name="outputPath">Output file path (optional, defaults to input path).</param>
@@ -73,7 +73,7 @@ public class PptSlideTool
         ReadOnly = false,
         UseStructuredContent = true)]
     [Description(
-        @"Manage PowerPoint slides. Supports 8 operations: add, delete, get_info, move, duplicate, hide, clear, edit.
+        @"Manage PowerPoint slides. Supports 8 operations: add, delete, get, move, duplicate, hide, clear, edit.
 
 Usage examples:
 - Add slide: ppt_slide(operation='add', path='presentation.pptx', layoutType='Blank')

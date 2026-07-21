@@ -1173,31 +1173,11 @@ public class Extension : IAsyncDisposable
                 {
                     _logger.LogWarning(ex, "Extension {ExtensionId} did not exit gracefully, killing process",
                         _definition.Id);
-                    if (stdinLockAcquired)
-                        try
-                        {
-                            _stdinLock.Release();
-                        }
-                        catch
-                        {
-                            // Ignore semaphore release errors during shutdown
-                        }
-
                     _process.Kill(true);
                 }
                 catch (Exception ex)
                 {
                     _logger.LogWarning(ex, "Error during graceful shutdown of extension {ExtensionId}", _definition.Id);
-                    if (stdinLockAcquired)
-                        try
-                        {
-                            _stdinLock.Release();
-                        }
-                        catch
-                        {
-                            // Ignore semaphore release errors during shutdown
-                        }
-
                     try
                     {
                         _process.Kill(true);

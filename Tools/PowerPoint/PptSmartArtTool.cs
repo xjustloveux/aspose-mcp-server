@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Aspose.Slides;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
@@ -10,7 +10,7 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 
 /// <summary>
 ///     Unified tool for managing PowerPoint SmartArt (add, manage nodes)
-///     Supports: add, manage_nodes
+///     Supports: add, manage
 /// </summary>
 [ToolHandlerMapping("AsposeMcpServer.Handlers.PowerPoint.SmartArt")]
 [McpServerToolType]
@@ -46,14 +46,14 @@ public class PptSmartArtTool
     }
 
     /// <summary>
-    ///     Executes a PowerPoint SmartArt operation (add, manage_nodes).
+    ///     Executes a PowerPoint SmartArt operation (add, manage).
     /// </summary>
-    /// <param name="operation">The operation to perform: add, manage_nodes.</param>
+    /// <param name="operation">The operation to perform: add, manage.</param>
     /// <param name="path">Presentation file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID for in-memory editing.</param>
     /// <param name="outputPath">Output file path (optional, defaults to input path).</param>
     /// <param name="slideIndex">Slide index (0-based, required for all operations).</param>
-    /// <param name="shapeIndex">Shape index (0-based, required for manage_nodes).</param>
+    /// <param name="shapeIndex">Shape index (0-based, required for manage).</param>
     /// <param name="layout">
     ///     SmartArt layout type: BasicProcess, BasicCycle, BasicPyramid, BasicRadial, Hierarchy,
     ///     OrganizationChart, etc.
@@ -62,12 +62,12 @@ public class PptSmartArtTool
     /// <param name="y">Y position (optional, for add operation, defaults to 100).</param>
     /// <param name="width">Width (optional, for add operation, defaults to 400).</param>
     /// <param name="height">Height (optional, for add operation, defaults to 300).</param>
-    /// <param name="action">Node action: add, edit, delete (required for manage_nodes operation).</param>
+    /// <param name="action">Node action: add, edit, delete (required for manage operation).</param>
     /// <param name="targetPath">
     ///     Array of indices to target node as JSON (e.g., '[0]' for first node, '[0,1]' for second child
     ///     of first node).
     /// </param>
-    /// <param name="text">Node text content (required for add/edit operations in manage_nodes).</param>
+    /// <param name="text">Node text content (required for add/edit operations in manage).</param>
     /// <param name="position">Insert position for new node (0-based, optional for add action, defaults to append at end).</param>
     /// <returns>A message indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
@@ -79,7 +79,7 @@ public class PptSmartArtTool
         OpenWorld = false,
         ReadOnly = false,
         UseStructuredContent = true)]
-    [Description(@"Manage PowerPoint SmartArt. Supports 2 operations: add, manage_nodes.
+    [Description(@"Manage PowerPoint SmartArt. Supports 2 operations: add, manage.
 
 Usage examples:
 - Add SmartArt: ppt_smart_art(operation='add', path='presentation.pptx', slideIndex=0, layout='BasicProcess', x=100, y=100, width=400, height=300)
@@ -97,7 +97,7 @@ Usage examples:
         string? outputPath = null,
         [Description("Slide index (0-based, required for all operations)")]
         int slideIndex = 0,
-        [Description("Shape index (0-based, required for manage_nodes)")]
+        [Description("Shape index (0-based, required for manage)")]
         int? shapeIndex = null,
         [Description(
             "SmartArt layout type: BasicProcess, BasicCycle, BasicPyramid, BasicRadial, Hierarchy, OrganizationChart, HorizontalHierarchy, CircleArrowProcess, ClosedChevronProcess, StepDownProcess")]
@@ -110,12 +110,12 @@ Usage examples:
         float width = 400,
         [Description("Height (optional, for add operation, defaults to 300)")]
         float height = 300,
-        [Description("Node action: 'add', 'edit', 'delete' (required for manage_nodes operation)")]
+        [Description("Node action: 'add', 'edit', 'delete' (required for manage operation)")]
         string? action = null,
         [Description(
             "Array of indices to target node as JSON (e.g., '[0]' for first node, '[0,1]' for second child of first node)")]
         string? targetPath = null,
-        [Description("Node text content (required for add/edit operations in manage_nodes)")]
+        [Description("Node text content (required for add/edit operations in manage)")]
         string? text = null,
         [Description("Insert position for new node (0-based, optional for add action, defaults to append at end)")]
         int? position = null)
@@ -196,7 +196,7 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Builds parameters for the manage_nodes operation.
+    ///     Builds parameters for the manage operation.
     /// </summary>
     /// <param name="slideIndex">The slide index (0-based).</param>
     /// <param name="shapeIndex">The shape index (0-based).</param>

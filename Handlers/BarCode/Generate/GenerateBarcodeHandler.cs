@@ -26,7 +26,10 @@ public class GenerateBarcodeHandler : OperationHandlerBase<object>
     ///     Optional: type (barcode type), width, height, foreColor, backColor.
     /// </param>
     /// <returns>A <see cref="GenerateBarcodeResult" /> containing generation details.</returns>
-    /// <exception cref="ArgumentException">Thrown when required parameters are missing or barcode type is unsupported.</exception>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when required parameters are missing, the barcode type is unsupported, or the text
+    ///     contains characters a numeric-only symbology cannot encode.
+    /// </exception>
     public override object Execute(OperationContext<object> context, OperationParameters parameters)
     {
         var text = parameters.GetRequired<string>("text");
@@ -36,8 +39,9 @@ public class GenerateBarcodeHandler : OperationHandlerBase<object>
 
         var typeStr = parameters.GetOptional("type", "QR");
         var encodeType = GetEncodeType(typeStr);
+        ValidateTextForSymbology(typeStr, text);
 
-        var generator = new BarcodeGenerator(encodeType, text);
+        using var generator = new BarcodeGenerator(encodeType, text);
 
         var width = parameters.GetOptional<int?>("width");
         var height = parameters.GetOptional<int?>("height");
@@ -70,11 +74,30 @@ public class GenerateBarcodeHandler : OperationHandlerBase<object>
         {
             OutputPath = outputPath,
             BarcodeType = typeStr.ToUpperInvariant(),
-            EncodedText = text,
+            // Report what the generator actually encoded (it may normalize, e.g. append checksums)
+            // instead of echoing the raw input back.
+            EncodedText = generator.CodeText,
             ImageFormat = formatName,
             FileSize = File.Exists(outputPath) ? new FileInfo(outputPath).Length : null,
             Message = $"Barcode ({typeStr.ToUpperInvariant()}) generated successfully: {outputPath}"
         };
+    }
+
+    /// <summary>
+    ///     Validates that the text is encodable by the chosen symbology. Numeric-only symbologies
+    ///     silently render an all-zero barcode for non-digit input, so they are rejected up front.
+    /// </summary>
+    /// <param name="type">The barcode type name (case-insensitive).</param>
+    /// <param name="text">The text to encode.</param>
+    /// <exception cref="ArgumentException">Thrown when the text is not encodable by the symbology.</exception>
+    private static void ValidateTextForSymbology(string type, string text)
+    {
+        var isNumericOnly = type.ToUpperInvariant() is "EAN13" or "EAN8" or "UPCA" or "UPCE" or "ITF14"
+            or "INTERLEAVED2OF5";
+        if (isNumericOnly && !text.All(char.IsAsciiDigit))
+            throw new ArgumentException(
+                $"Barcode type {type.ToUpperInvariant()} only encodes digits; " +
+                "the supplied text contains non-digit characters.");
     }
 
     /// <summary>

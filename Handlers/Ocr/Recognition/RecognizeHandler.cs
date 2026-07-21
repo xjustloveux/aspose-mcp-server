@@ -80,7 +80,7 @@ public class RecognizeHandler : OperationHandlerBase<AsposeOcr>
 
         var ocr = context.Document;
         var inputType = DetectInputType(p.Path);
-        var input = new OcrInput(inputType);
+        using var input = new OcrInput(inputType);
         input.Add(p.Path);
 
         var settings = new RecognitionSettings

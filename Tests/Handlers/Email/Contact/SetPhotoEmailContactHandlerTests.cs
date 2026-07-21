@@ -134,6 +134,51 @@ public class SetPhotoEmailContactHandlerTests : HandlerTestBase<object>
 
     #endregion
 
+    #region Photo Image Format Detection
+
+    // MSG round-trip cannot verify the set-side format (Outlook stores contact photos as a
+    // "ContactPicture.jpg" attachment, so loading always reports Jpeg); the detection itself is
+    // verified directly instead.
+    [Theory]
+    [InlineData(new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A },
+        MapiContactPhotoImageFormat.Undefined)]
+    [InlineData(new byte[] { 0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10 }, MapiContactPhotoImageFormat.Jpeg)]
+    [InlineData(new byte[] { 0x47, 0x49, 0x46, 0x38, 0x39, 0x61 }, MapiContactPhotoImageFormat.Gif)]
+    [InlineData(new byte[] { 0x42, 0x4D, 0x36, 0x00 }, MapiContactPhotoImageFormat.Bmp)]
+    [InlineData(new byte[] { 0x49, 0x49, 0x2A, 0x00 }, MapiContactPhotoImageFormat.Tiff)]
+    [InlineData(new byte[] { 0x4D, 0x4D, 0x00, 0x2A }, MapiContactPhotoImageFormat.Tiff)]
+    [InlineData(new byte[] { 0xD7, 0xCD, 0xC6, 0x9A }, MapiContactPhotoImageFormat.Wmf)]
+    [InlineData(new byte[] { 0x00, 0x01, 0x02, 0x03 }, MapiContactPhotoImageFormat.Undefined)]
+    public void DetectPhotoImageFormat_MapsContentSignatureToFormat(byte[] photoBytes,
+        MapiContactPhotoImageFormat expected)
+    {
+        Assert.Equal(expected, SetPhotoEmailContactHandler.DetectPhotoImageFormat(photoBytes));
+    }
+
+    [Fact]
+    public void Execute_WithJpegPhoto_ReportsJpegFormat()
+    {
+        var inputPath = CreateTestVcfFile("jpeg_photo_input.vcf", "JPEG User");
+        var outputPath = Path.Combine(TestDir, "jpeg_photo_output.msg");
+        var photoPath = Path.Combine(TestDir, "photo_content.jpg");
+        File.WriteAllBytes(photoPath, [0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46]);
+        var context = CreateContext(new object());
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "path", inputPath },
+            { "outputPath", outputPath },
+            { "photoPath", photoPath }
+        });
+
+        _handler.Execute(context, parameters);
+
+        var saved = GetEmailContactHandler.LoadContact(outputPath);
+        Assert.NotNull(saved.Photo);
+        Assert.Equal(MapiContactPhotoImageFormat.Jpeg, saved.Photo.PhotoImageFormat);
+    }
+
+    #endregion
+
     #region Error Handling
 
     [Fact]
