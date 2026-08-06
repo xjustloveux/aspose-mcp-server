@@ -88,8 +88,10 @@ public class DeleteWordTextHandler : OperationHandlerBase<Document>
                 ParagraphResolver.Resolve(doc, ParagraphAddress.From(parameters, endParagraphIndex.Value)).Paragraph);
         }
 
-        // ReSharper disable once RedundantSuppressNullableWarningExpression - Complex control flow guarantees non-null
-        ValidateIndices(paragraphs, startParagraphIndex!.Value, endParagraphIndex!.Value);
+        // ReSharper disable once RedundantSuppressNullableWarningExpression - on the searchText path the
+        // compiler cannot see that FindTextLocation guarantees EndParagraphIndex alongside ParagraphIndex,
+        // so the suppression is required to avoid CS8629
+        ValidateIndices(paragraphs, startParagraphIndex.Value, endParagraphIndex!.Value);
 
         var startPara = (WordParagraph)paragraphs[startParagraphIndex.Value];
         var endPara = (WordParagraph)paragraphs[endParagraphIndex.Value];

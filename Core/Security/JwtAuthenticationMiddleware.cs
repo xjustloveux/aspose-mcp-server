@@ -136,7 +136,7 @@ public sealed class JwtAuthenticationMiddleware : IMiddleware, IDisposable
             {
                 error = "Unauthorized",
                 message = result.ErrorMessage ?? "Invalid or missing JWT token"
-            }));
+            }), context.RequestAborted);
             return;
         }
 

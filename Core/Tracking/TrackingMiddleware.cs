@@ -270,6 +270,6 @@ public class TrackingMiddleware
     private async Task HandleMetricsRequest(HttpContext context)
     {
         context.Response.ContentType = "text/plain; version=0.0.4; charset=utf-8";
-        await context.Response.WriteAsync(_metrics.GetPrometheusMetrics());
+        await context.Response.WriteAsync(_metrics.GetPrometheusMetrics(), context.RequestAborted);
     }
 }

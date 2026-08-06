@@ -116,7 +116,7 @@ public sealed class ApiKeyAuthenticationMiddleware : IMiddleware, IDisposable
             {
                 error = "Unauthorized",
                 message = result.ErrorMessage ?? "Invalid or missing API key"
-            }));
+            }), context.RequestAborted);
             return;
         }
 

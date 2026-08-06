@@ -61,7 +61,7 @@ public class OriginValidationMiddleware
 
             context.Response.StatusCode = StatusCodes.Status403Forbidden;
             context.Response.ContentType = "text/plain";
-            await context.Response.WriteAsync("Origin header required");
+            await context.Response.WriteAsync("Origin header required", context.RequestAborted);
             return;
         }
 
@@ -78,7 +78,7 @@ public class OriginValidationMiddleware
 
         context.Response.StatusCode = StatusCodes.Status403Forbidden;
         context.Response.ContentType = "text/plain";
-        await context.Response.WriteAsync("Origin not allowed");
+        await context.Response.WriteAsync("Origin not allowed", context.RequestAborted);
     }
 
     /// <summary>

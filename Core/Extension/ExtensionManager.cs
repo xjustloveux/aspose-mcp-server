@@ -195,7 +195,7 @@ public class ExtensionManager : IHostedService, IAsyncDisposable
         if (_healthCheckTask != null)
             try
             {
-                await _healthCheckTask.WaitAsync(TimeSpan.FromSeconds(5));
+                await _healthCheckTask.WaitAsync(TimeSpan.FromSeconds(5), CancellationToken.None);
             }
             catch (OperationCanceledException)
             {
@@ -209,7 +209,7 @@ public class ExtensionManager : IHostedService, IAsyncDisposable
         if (_initializationTask != null)
             try
             {
-                await _initializationTask.WaitAsync(TimeSpan.FromSeconds(5));
+                await _initializationTask.WaitAsync(TimeSpan.FromSeconds(5), CancellationToken.None);
             }
             catch (OperationCanceledException)
             {
@@ -228,7 +228,7 @@ public class ExtensionManager : IHostedService, IAsyncDisposable
             _logger.LogDebug("Waiting for {Count} pending restart task(s) to complete", restartTasks.Length);
             try
             {
-                await Task.WhenAll(restartTasks).WaitAsync(TimeSpan.FromSeconds(10));
+                await Task.WhenAll(restartTasks).WaitAsync(TimeSpan.FromSeconds(10), CancellationToken.None);
             }
             catch (TimeoutException ex)
             {
@@ -979,7 +979,7 @@ public class ExtensionManager : IHostedService, IAsyncDisposable
             {
                 _restartTasks.TryRemove(extensionId, out _);
             }
-        });
+        }, CancellationToken.None);
 
         _restartTasks[extensionId] = task;
     }

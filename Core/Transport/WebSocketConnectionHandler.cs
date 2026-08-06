@@ -104,8 +104,7 @@ public class WebSocketConnectionHandler
                 readTask.ContinueWith(_ => { }, TaskContinuationOptions.OnlyOnFaulted),
                 writeTask.ContinueWith(_ => { }, TaskContinuationOptions.OnlyOnFaulted),
                 stderrTask.ContinueWith(_ => { }, TaskContinuationOptions.OnlyOnFaulted)
-                // ReSharper disable once MethodSupportsCancellation - Timeout-only wait during cleanup, no cancellation needed
-            ).WaitAsync(TimeSpan.FromSeconds(2));
+            ).WaitAsync(TimeSpan.FromSeconds(2), CancellationToken.None);
         }
         catch (WebSocketException ex) when (ex.WebSocketErrorCode == WebSocketError.ConnectionClosedPrematurely)
         {

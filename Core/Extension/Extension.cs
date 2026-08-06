@@ -371,7 +371,7 @@ public class Extension : IAsyncDisposable
 
         try
         {
-            await _processLock.WaitAsync();
+            await _processLock.WaitAsync(CancellationToken.None);
         }
         catch (ObjectDisposedException)
         {
@@ -505,7 +505,7 @@ public class Extension : IAsyncDisposable
                 currentState == ExtensionState.Unloaded)
                 return false;
 
-            await Task.Delay(100);
+            await Task.Delay(100, CancellationToken.None);
         }
 
         _logger.LogWarning(
@@ -906,7 +906,7 @@ public class Extension : IAsyncDisposable
         {
             try
             {
-                await _processLock.WaitAsync();
+                await _processLock.WaitAsync(CancellationToken.None);
             }
             catch (ObjectDisposedException)
             {
@@ -965,7 +965,7 @@ public class Extension : IAsyncDisposable
                 _processLock.Release();
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(_config.RestartCooldownSeconds));
+            await Task.Delay(TimeSpan.FromSeconds(_config.RestartCooldownSeconds), CancellationToken.None);
 
             if (_disposed)
             {
@@ -977,7 +977,7 @@ public class Extension : IAsyncDisposable
 
             try
             {
-                await _processLock.WaitAsync();
+                await _processLock.WaitAsync(CancellationToken.None);
             }
             catch (ObjectDisposedException)
             {
@@ -1004,7 +1004,7 @@ public class Extension : IAsyncDisposable
 
             try
             {
-                await PerformHandshakeAsync();
+                await PerformHandshakeAsync(CancellationToken.None);
 
                 _logger.LogInformation(
                     "Extension {ExtensionId} restarted and handshake completed successfully",
@@ -1042,7 +1042,7 @@ public class Extension : IAsyncDisposable
 
         try
         {
-            await _processLock.WaitAsync();
+            await _processLock.WaitAsync(CancellationToken.None);
         }
         catch (ObjectDisposedException)
         {
@@ -1076,7 +1076,7 @@ public class Extension : IAsyncDisposable
 
         try
         {
-            await PerformHandshakeAsync();
+            await PerformHandshakeAsync(CancellationToken.None);
 
             _logger.LogInformation(
                 "Extension {ExtensionId} recovered from Error state and handshake completed",
@@ -1108,7 +1108,7 @@ public class Extension : IAsyncDisposable
 
         try
         {
-            await _processLock.WaitAsync();
+            await _processLock.WaitAsync(CancellationToken.None);
         }
         catch (ObjectDisposedException)
         {
@@ -1138,7 +1138,7 @@ public class Extension : IAsyncDisposable
                 {
                     try
                     {
-                        await _stdinLock.WaitAsync();
+                        await _stdinLock.WaitAsync(CancellationToken.None);
                         stdinLockAcquired = true;
                     }
                     catch (ObjectDisposedException)
@@ -1937,7 +1937,7 @@ public class Extension : IAsyncDisposable
         {
             try
             {
-                await _stdoutReaderTask.WaitAsync(readerTaskTimeout);
+                await _stdoutReaderTask.WaitAsync(readerTaskTimeout, CancellationToken.None);
             }
             catch (TimeoutException ex)
             {
@@ -1958,7 +1958,7 @@ public class Extension : IAsyncDisposable
         {
             try
             {
-                await _stderrReaderTask.WaitAsync(readerTaskTimeout);
+                await _stderrReaderTask.WaitAsync(readerTaskTimeout, CancellationToken.None);
             }
             catch (TimeoutException ex)
             {
