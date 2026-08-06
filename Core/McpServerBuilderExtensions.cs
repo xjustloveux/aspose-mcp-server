@@ -167,12 +167,13 @@ public static class McpServerBuilderExtensions
                     }
                 else
                     // For explicit [OutputSchema(...)]-attributed tools (e.g. convert_document,
-                    // document_session, extension) the wire format varies per tool — some return
-                    // concrete types directly (SDK does not wrap, wire is flat), others return
-                    // `object` with polymorphic results (SDK wraps, wire is {result: <oneOf>}).
-                    // The static FinalizedResult-shaped schema produced by GenerateForType does
-                    // not match either wire, so we intentionally skip outputSchema for these
-                    // tools — Claude Desktop falls back to rendering the content[] text (plain
+                    // document_session, extension) the structuredContent wire would be the flat
+                    // serialized return value, and their return shapes are not
+                    // FinalizedResult-shaped (some return concrete result types, others
+                    // polymorphic `object` results) — the static FinalizedResult schema produced
+                    // by GenerateForType would not match that wire. We intentionally skip
+                    // outputSchema for these tools; with no declared outputSchema the SDK emits
+                    // no structuredContent and Claude Desktop renders the content[] text (plain
                     // JSON of the return value), which is sufficient for the current UX.
                     // Re-enable once per-tool-accurate schema generation is available.
                     tool.ProtocolTool.OutputSchema = null;

@@ -121,3 +121,4 @@ Tests/TestResults/
 coverage-reports/
 sonar-reports/
 .sonarqube/
+AGENTS.md

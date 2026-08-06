@@ -25,13 +25,15 @@ RUN VERSION_NUM=$(echo "${VERSION}" | sed 's/^v//') && \
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 
-# Install locale, required libraries and fonts:
+# Install security updates, locale, required libraries and fonts:
+# - apt-get upgrade: apply pending Debian security updates (OS-level CVEs in the base image)
 # - locales: UTF-8 locale for proper CJK character handling
 # - Microsoft core fonts (Arial, Times New Roman, etc.): required by Aspose.PDF.Drawing
 # - fonts-wqy-zenhei: basic CJK (Chinese/Japanese/Korean) font support
 RUN sed -i 's/main/main contrib/g' /etc/apt/sources.list.d/debian.sources || \
     echo "deb http://deb.debian.org/debian bookworm contrib" >> /etc/apt/sources.list && \
     apt-get update && \
+    apt-get upgrade -y && \
     apt-get install -y --no-install-recommends \
         locales \
         libgdiplus \

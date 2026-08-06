@@ -152,6 +152,29 @@ public class OutputSchemaGeneratorTests
     }
 
     /// <summary>
+    ///     Verifies that GenerateFromNamespace emits the FinalizedResult shape directly at the
+    ///     top level with no <c>{"result": ...}</c> wrapper. The MCP SDK decides the
+    ///     structuredContent wire shape from the declared outputSchema: object-typed schemas
+    ///     are emitted as the raw return value for every negotiated protocol version, so a
+    ///     wrapper layer in the schema would mismatch the wire value for all clients.
+    /// </summary>
+    [Fact]
+    public void GenerateFromNamespace_ShouldEmitFlatSchemaWithoutResultWrapper()
+    {
+        var schema = OutputSchemaGenerator.GenerateFromNamespace(
+            "AsposeMcpServer.Handlers.Word.Text");
+
+        Assert.NotNull(schema);
+
+        var schemaNode = JsonNode.Parse(schema.Value.GetRawText())!.AsObject();
+        var properties = schemaNode["properties"]!.AsObject();
+
+        Assert.False(properties.ContainsKey("result"));
+        Assert.True(properties.ContainsKey("data"));
+        Assert.True(properties.ContainsKey("output"));
+    }
+
+    /// <summary>
     ///     Verifies that GenerateForType handles types with AllTypes static field.
     /// </summary>
     [Fact]
