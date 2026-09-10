@@ -64,7 +64,6 @@ public class ExtensionManager : IHostedService, IAsyncDisposable
     /// </summary>
     private readonly ConcurrentDictionary<string, bool> _initializingExtensions = new();
 
-
     /// <summary>
     ///     Logger instance for diagnostic output.
     /// </summary>
@@ -155,7 +154,8 @@ public class ExtensionManager : IHostedService, IAsyncDisposable
                 config.MinFreeDiskSpaceBytes);
             var stdinTransport = new StdinTransport(
                 loggerFactory.CreateLogger<StdinTransport>(),
-                maxDataSize: config.MaxSnapshotSizeBytes);
+                config.StdinWriteTimeoutMs,
+                config.MaxSnapshotSizeBytes);
             mmapTransport = new MmapTransport(
                 loggerFactory.CreateLogger<MmapTransport>(),
                 config.MaxSnapshotSizeBytes,
@@ -177,6 +177,19 @@ public class ExtensionManager : IHostedService, IAsyncDisposable
             throw;
         }
     }
+
+    /// <summary>
+    ///     The background initialisation started by <see cref="StartAsync" />, or a completed task
+    ///     when there was nothing to initialise.
+    ///     <para>
+    ///         Exposed so a test can await the work rather than poll a clock for it. Polling made
+    ///         the outcome depend on how busy the thread pool was: under a full suite the
+    ///         initialisation sometimes did not run inside a thirty-second window, and the test
+    ///         reported a product defect that was not there. A failure that appears once per round
+    ///         and never in isolation is a test waiting on the wrong thing.
+    ///     </para>
+    /// </summary>
+    internal Task InitializationCompleted => _initializationTask ?? Task.CompletedTask;
 
     /// <summary>
     ///     Gets the process cleanup manager for registering extension processes.

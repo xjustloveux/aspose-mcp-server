@@ -46,7 +46,7 @@ public class PdfFileToolTests : PdfTestBase
         Assert.True(File.Exists(outputPath));
 
         using var doc = new Document(outputPath);
-        Assert.True(doc.Pages.Count >= 0);
+        Assert.Single(doc.Pages);
     }
 
     [Fact]

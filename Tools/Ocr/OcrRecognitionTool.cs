@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.OCR;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
@@ -47,7 +47,8 @@ public class OcrRecognitionTool
     /// <param name="outputPath">Output file path (required for recognize_pdf).</param>
     /// <param name="language">
     ///     Recognition language (default: English).
-    ///     Common values: English, Chinese, Japanese, Korean, German, French, Spanish.
+    ///     Common values: English, Chinese, German, French, Spanish, Italian, Portuguese, Russian.
+    ///     Japanese and Korean are not available in this Aspose.OCR build.
     /// </param>
     /// <param name="targetFormat">
     ///     Target format for recognize_pdf (docx, xlsx, pdf, txt, xml, json, html, epub, rtf,
@@ -64,7 +65,10 @@ public class OcrRecognitionTool
         Destructive = false,
         Idempotent = true,
         OpenWorld = false,
-        ReadOnly = true,
+        // Writes images or a converted document to a caller-supplied path, so it is not
+        // read-only; a client must be able to confirm the call (R2-S10). Destructive stays false
+        // to match convert_document: the source is never modified, only new output is written.
+        ReadOnly = false,
         UseStructuredContent = true)]
     [Description(
         @"Perform OCR text recognition on images and PDFs. Supports 5 operations: recognize, recognize_pdf, recognize_receipt, recognize_id, recognize_passport.
@@ -114,7 +118,8 @@ Note: OCR requires ONNX Runtime and is not supported on Linux ARM64.")]
         {
             Document = ocr,
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);

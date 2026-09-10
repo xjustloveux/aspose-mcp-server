@@ -69,7 +69,7 @@ public class ListWordFootnotesHandlerTests : WordHandlerTestBase
         Assert.True(result.Count >= 2);
         Assert.NotNull(result.Notes);
         Assert.NotEmpty(result.Notes);
-        Assert.True(result.Notes[0].NoteIndex >= 0);
+        Assert.Equal(0, result.Notes[0].NoteIndex);
     }
 
     [Fact]

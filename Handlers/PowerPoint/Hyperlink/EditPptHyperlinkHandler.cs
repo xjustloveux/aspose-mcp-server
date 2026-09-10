@@ -75,12 +75,18 @@ public class EditPptHyperlinkHandler : OperationHandlerBase<Presentation>
     /// <param name="shape">The shape to remove hyperlinks from.</param>
     private static void RemoveHyperlink(IShape shape)
     {
+        // Both trigger slots are cleared, matching what the get operation reports.
         if (shape is IAutoShape { TextFrame: not null } autoShape)
-            foreach (var paragraph in autoShape.TextFrame.Paragraphs)
-            foreach (var portion in paragraph.Portions)
-                portion.PortionFormat.HyperlinkClick = null;
+            foreach (var portionFormat in autoShape.TextFrame.Paragraphs
+                         .SelectMany(paragraph => paragraph.Portions)
+                         .Select(portion => portion.PortionFormat))
+            {
+                portionFormat.HyperlinkClick = null;
+                portionFormat.HyperlinkMouseOver = null;
+            }
 
         shape.HyperlinkClick = null;
+        shape.HyperlinkMouseOver = null;
     }
 
     /// <summary>

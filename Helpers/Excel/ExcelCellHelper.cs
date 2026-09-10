@@ -41,6 +41,11 @@ public static partial class ExcelCellHelper
         return worksheet.Cells[cell];
     }
 
+    /// <summary>
+    ///     The compiled pattern behind <see cref="CellAddressRegex" />, generated at build
+    ///     time from the attribute above.
+    /// </summary>
+    /// <returns>The generated matcher for cell addresses such as A1, B2 or AA100.</returns>
     [GeneratedRegex(@"^[A-Za-z]{1,3}\d+$", RegexOptions.Compiled)]
     private static partial Regex CellAddressRegexGenerated();
 }

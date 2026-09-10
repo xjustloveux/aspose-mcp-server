@@ -39,11 +39,14 @@ public class SetAttendeesEmailCalendarHandler : OperationHandlerBase<object>
         if (!File.Exists(path))
             throw new FileNotFoundException("The specified file was not found.");
 
+        // The loader must see the resolved path, not the caller's string: the allowlist
+        // governs reads as well as writes.
+        path = SecurityHelper.ResolveAndEnsureWithinAllowlist(path,
+            context.ServerConfig?.AllowedBasePaths ?? [], "path");
         var appointment = Appointment.Load(path);
 
         appointment.Attendees.Clear();
-        var attendeeList = attendees.Split(',',
-            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var attendeeList = EmailAddressListHelper.Split(attendees);
 
         foreach (var attendee in attendeeList)
             appointment.Attendees.Add(new MailAddress(attendee));
@@ -55,7 +58,7 @@ public class SetAttendeesEmailCalendarHandler : OperationHandlerBase<object>
 
         return new SuccessResult
         {
-            Message = $"Set {attendeeList.Length} attendee(s) on appointment '{appointment.Summary}'. " +
+            Message = $"Set {attendeeList.Count} attendee(s) on appointment '{appointment.Summary}'. " +
                       $"Saved to '{outputPath}'."
         };
     }

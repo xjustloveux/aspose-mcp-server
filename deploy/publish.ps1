@@ -96,7 +96,11 @@ function Build-Platform {
         $size = (Get-ChildItem -Path $outputPath -Recurse | Measure-Object -Property Length -Sum).Sum / 1MB
         Write-Host "  Size: $([math]::Round($size, 2)) MB" -ForegroundColor Gray
     } else {
+        # A silent failure here let CI continue and upload nothing, so the release job
+        # found no files and warned instead of failing.
         Write-Host "  ✗ Build failed" -ForegroundColor Red
+        Write-Host ""
+        exit 1
     }
     Write-Host ""
 }
@@ -186,7 +190,11 @@ if ($IIS) {
         $size = (Get-ChildItem -Path $outputPath -Recurse | Measure-Object -Property Length -Sum).Sum / 1MB
         Write-Host "  Size: $([math]::Round($size, 2)) MB" -ForegroundColor Gray
     } else {
+        # A silent failure here let CI continue and upload nothing, so the release job
+        # found no files and warned instead of failing.
         Write-Host "  ✗ Build failed" -ForegroundColor Red
+        Write-Host ""
+        exit 1
     }
     Write-Host ""
 }

@@ -35,13 +35,15 @@ public class AddPdfStampHandler : OperationHandlerBase<Document>
             throw new ArgumentException("pdfPath is required for add_pdf operation");
 
         SecurityHelper.ValidateFilePath(p.PdfPath, "pdfPath", true);
+        var resolvedPdfPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.PdfPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], "pdfPath");
 
-        if (!File.Exists(p.PdfPath))
+        if (!File.Exists(resolvedPdfPath))
             throw new FileNotFoundException("The specified file was not found.");
 
         var document = context.Document;
 
-        var stamp = new PdfPageStamp(p.PdfPath, p.StampPageIndex)
+        var stamp = new PdfPageStamp(resolvedPdfPath, p.StampPageIndex)
         {
             Opacity = p.Opacity,
             RotateAngle = p.Rotation
@@ -68,7 +70,7 @@ public class AddPdfStampHandler : OperationHandlerBase<Document>
         return new SuccessResult
         {
             Message =
-                $"PDF page stamp added to {pageDesc}. Source: {Path.GetFileName(p.PdfPath)}, stamp page: {p.StampPageIndex}"
+                $"PDF page stamp added to {pageDesc}. Source: {Path.GetFileName(resolvedPdfPath)}, stamp page: {p.StampPageIndex}"
         };
     }
 

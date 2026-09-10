@@ -27,6 +27,11 @@ public class PdfFileTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     The document session manager for managing in-memory document sessions.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -36,10 +41,13 @@ public class PdfFileTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
     /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
-    public PdfFileTool(DocumentSessionManager? sessionManager = null, ISessionIdentityAccessor? identityAccessor = null)
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
+    public PdfFileTool(DocumentSessionManager? sessionManager = null, ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry = HandlerRegistry<Document>.CreateFromNamespace("AsposeMcpServer.Handlers.Pdf.FileOperations");
     }
 
@@ -154,6 +162,9 @@ Usage examples:
         string? password = null,
         IProgress<ProgressNotificationValue>? progress = null)
     {
+        SecurityHelper.ValidateArraySize(inputPaths, nameof(inputPaths));
+        SecurityHelper.ValidateArraySize(permissions, nameof(permissions));
+
         var lowerOperation = operation.ToLowerInvariant();
 
         if (lowerOperation is "create" or "merge")
@@ -171,6 +182,7 @@ Usage examples:
     /// <summary>
     ///     Executes operations that don't require an existing document context.
     /// </summary>
+    /// <returns>The object.</returns>
     private object ExecuteWithoutContext(string operation, string? outputPath, string[]? inputPaths,
         IProgress<ProgressNotificationValue>? progress)
     {
@@ -189,7 +201,8 @@ Usage examples:
             SessionManager = _sessionManager,
             IdentityAccessor = _identityAccessor,
             OutputPath = outputPath,
-            Progress = progress
+            Progress = progress,
+            ServerConfig = _serverConfig
         };
 
         return handler.Execute(operationContext, parameters);
@@ -224,13 +237,15 @@ Usage examples:
     /// <summary>
     ///     Executes operations that require an existing document context.
     /// </summary>
+    /// <returns>The object.</returns>
     private object ExecuteWithContext(string operation, string? path, string? sessionId, string? outputPath,
         string? outputDir, int pagesPerFile, int? startPage, int? endPage, bool compressImages, bool compressFonts,
         bool removeUnusedObjects, string? userPassword, string? ownerPassword, string? algorithm,
         string[]? permissions, bool usePdf20, string? password,
         IProgress<ProgressNotificationValue>? progress)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor, password);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor, password,
+            _serverConfig);
 
         var parameters = BuildParameters(operation, outputDir, pagesPerFile, startPage, endPage,
             compressImages, compressFonts, removeUnusedObjects, userPassword, ownerPassword, algorithm,
@@ -246,7 +261,8 @@ Usage examples:
             SessionId = sessionId,
             SourcePath = path,
             OutputPath = outputPath,
-            Progress = progress
+            Progress = progress,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);

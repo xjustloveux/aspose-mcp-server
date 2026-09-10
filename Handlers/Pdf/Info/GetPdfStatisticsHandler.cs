@@ -51,8 +51,10 @@ public class GetPdfStatisticsHandler : OperationHandlerBase<Document>
             throw new ArgumentException("path is required for get_statistics operation");
 
         SecurityHelper.ValidateFilePath(context.SourcePath, "path", true);
+        var resolvedSourcePath = SecurityHelper.ResolveAndEnsureWithinAllowlist(context.SourcePath,
+            context.ServerConfig?.AllowedBasePaths ?? [], "path");
 
-        var fileInfo = new FileInfo(context.SourcePath);
+        var fileInfo = new FileInfo(resolvedSourcePath);
 
         return new GetPdfStatisticsResult
         {

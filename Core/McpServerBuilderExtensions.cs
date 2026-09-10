@@ -144,9 +144,18 @@ public static class McpServerBuilderExtensions
                     continue;
 
                 var capturedToolType = toolType;
+                var capturedToolName = toolAttr.Name;
                 var tool = McpServerTool.Create(
                     method,
-                    context => ActivatorUtilities.CreateInstance(context.Services!, capturedToolType));
+                    context =>
+                    {
+                        // The tool instance is created per invocation, which is the one point where
+                        // both the request and the tool's identity are known. Recording the name
+                        // here is what gives the metrics endpoint a real per-tool label; without it
+                        // every request was counted as the generic "mcp_request".
+                        RecordInvokedTool(context.Services, capturedToolName);
+                        return ActivatorUtilities.CreateInstance(context.Services!, capturedToolType);
+                    });
 
                 if (!string.IsNullOrEmpty(tool.ProtocolTool.Description))
                     tool.ProtocolTool.Description =
@@ -183,5 +192,20 @@ public static class McpServerBuilderExtensions
         }
 
         return builder;
+    }
+
+    /// <summary>
+    ///     Writes the invoked tool's name onto the current request so the tracking middleware can
+    ///     label the event with it. Silently does nothing outside an HTTP request (stdio transport)
+    ///     or when no accessor is registered, because tracking is optional.
+    /// </summary>
+    /// <param name="services">The per-invocation service provider.</param>
+    /// <param name="toolName">The canonical MCP tool name.</param>
+    private static void RecordInvokedTool(IServiceProvider? services, string toolName)
+    {
+        var httpContext = services?.GetService<IHttpContextAccessor>()?.HttpContext;
+        if (httpContext == null) return;
+
+        httpContext.Items["ToolName"] = toolName;
     }
 }

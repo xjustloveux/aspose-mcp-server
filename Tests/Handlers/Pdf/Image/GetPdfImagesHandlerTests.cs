@@ -34,7 +34,7 @@ public class GetPdfImagesHandlerTests : PdfHandlerTestBase
         var res = _handler.Execute(context, parameters);
 
         var result = Assert.IsType<GetImagesPdfResult>(res);
-        Assert.True(result.Count >= 0);
+        Assert.Equal(0, result.Count);
     }
 
     #endregion
@@ -130,7 +130,7 @@ public class GetPdfImagesHandlerTests : PdfHandlerTestBase
         var res = _handler.Execute(context, parameters);
 
         var result = Assert.IsType<GetImagesPdfResult>(res);
-        Assert.True(result.Count >= 0);
+        Assert.Equal(0, result.Count);
     }
 
     #endregion
@@ -164,7 +164,7 @@ public class GetPdfImagesHandlerTests : PdfHandlerTestBase
         var res = _handler.Execute(context, parameters);
 
         var result = Assert.IsType<GetImagesPdfResult>(res);
-        Assert.True(result.Count >= 0);
+        Assert.Equal(0, result.Count);
     }
 
     #endregion

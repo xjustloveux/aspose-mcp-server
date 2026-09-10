@@ -294,17 +294,14 @@ public class ExtensionManagerTests : IAsyncDisposable
 
         await manager.StartAsync(CancellationToken.None);
 
-        await Task.Delay(500);
+        // Awaited, not polled. A thirty-second poll made this test's outcome depend on how busy
+        // the thread pool was: under a full suite the background initialisation did not always run
+        // inside the window, and the assertion below then reported a product defect that was not
+        // there. It failed once per round from the seventh onwards and never in isolation, which
+        // is the signature of a test waiting on a clock instead of on the work.
+        await manager.InitializationCompleted.WaitAsync(TimeSpan.FromSeconds(60));
 
-        var timeout = DateTime.UtcNow.AddSeconds(30);
-        ExtensionDefinition? extension = null;
-        while (DateTime.UtcNow < timeout)
-        {
-            extension = manager.ListExtensions().FirstOrDefault();
-            if (extension is { IsAvailable: false })
-                break;
-            await Task.Delay(200);
-        }
+        var extension = manager.ListExtensions().FirstOrDefault();
 
         Assert.NotNull(extension);
         Assert.False(extension.IsAvailable,

@@ -13,6 +13,8 @@ namespace AsposeMcpServer.Handlers.Excel.Sheet;
 [ResultType(typeof(SuccessResult))]
 public class CopyExcelSheetHandler : OperationHandlerBase<Workbook>
 {
+    private const string CopyToPathParameter = "copyToPath";
+
     /// <inheritdoc />
     public override string Operation => "copy";
 
@@ -30,7 +32,12 @@ public class CopyExcelSheetHandler : OperationHandlerBase<Workbook>
         var p = ExtractCopyExcelSheetParameters(parameters);
 
         if (!string.IsNullOrEmpty(p.CopyToPath))
-            SecurityHelper.ValidateFilePath(p.CopyToPath, "copyToPath", true);
+        {
+            SecurityHelper.ValidateFilePath(p.CopyToPath, CopyToPathParameter, true);
+            // Refused early; the sink below resolves again immediately before it writes.
+            SecurityHelper.ResolveAndEnsureWithinAllowlist(p.CopyToPath,
+                context.ServerConfig?.AllowedBasePaths ?? [], CopyToPathParameter);
+        }
 
         var newName = p.NewName?.Trim();
         if (!string.IsNullOrEmpty(newName))
@@ -52,7 +59,7 @@ public class CopyExcelSheetHandler : OperationHandlerBase<Workbook>
             targetWorkbook.Worksheets[0].Name = newName ?? sheetName;
             // H15: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
             var copyToPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.CopyToPath,
-                context.ServerConfig?.AllowedBasePaths ?? [], "copyToPath");
+                context.ServerConfig?.AllowedBasePaths ?? [], CopyToPathParameter);
             targetWorkbook.Save(copyToPath);
             return new SuccessResult
                 { Message = $"Worksheet '{sheetName}' copied to external file. Output: {p.CopyToPath}" };
@@ -86,7 +93,7 @@ public class CopyExcelSheetHandler : OperationHandlerBase<Workbook>
     {
         var sheetIndex = parameters.GetRequired<int>("sheetIndex");
         var targetIndex = parameters.GetOptional<int?>("targetIndex");
-        var copyToPath = parameters.GetOptional<string?>("copyToPath");
+        var copyToPath = parameters.GetOptional<string?>(CopyToPathParameter);
         var newName = parameters.GetOptional<string?>("newName");
 
         return new CopyExcelSheetParameters(sheetIndex, targetIndex, copyToPath, newName);

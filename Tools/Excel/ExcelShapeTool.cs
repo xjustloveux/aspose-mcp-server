@@ -26,6 +26,11 @@ public class ExcelShapeTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -35,11 +40,14 @@ public class ExcelShapeTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
     /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public ExcelShapeTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry = HandlerRegistry<Workbook>.CreateFromNamespace("AsposeMcpServer.Handlers.Excel.Shape");
     }
 
@@ -109,7 +117,8 @@ Usage examples:
         [Description("Height in pixels (for add/add_textbox/edit)")]
         int? height = null)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor,
+            serverConfig: _serverConfig);
 
         var parameters = BuildParameters(operation, sheetIndex, shapeIndex, shapeType, text, name,
             upperLeftRow, upperLeftColumn, width, height);
@@ -123,7 +132,8 @@ Usage examples:
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);
@@ -172,6 +182,7 @@ Usage examples:
     /// <summary>
     ///     Builds parameters for the add operation.
     /// </summary>
+    /// <returns>The parameters, configured for this operation.</returns>
     private static OperationParameters BuildAddParameters(OperationParameters parameters, string? shapeType,
         string? text, int? upperLeftRow, int? upperLeftColumn, int? width, int? height)
     {
@@ -187,6 +198,7 @@ Usage examples:
     /// <summary>
     ///     Builds parameters for the add_textbox operation.
     /// </summary>
+    /// <returns>The parameters, configured for this operation.</returns>
     private static OperationParameters BuildAddTextBoxParameters(OperationParameters parameters, string? text,
         int? upperLeftRow, int? upperLeftColumn, int? width, int? height)
     {
@@ -201,6 +213,7 @@ Usage examples:
     /// <summary>
     ///     Builds parameters for operations that only require shapeIndex.
     /// </summary>
+    /// <returns>The parameters, configured for this operation.</returns>
     private static OperationParameters BuildShapeIndexParameters(OperationParameters parameters, int? shapeIndex)
     {
         if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
@@ -210,6 +223,7 @@ Usage examples:
     /// <summary>
     ///     Builds parameters for the edit operation.
     /// </summary>
+    /// <returns>The parameters, configured for this operation.</returns>
     private static OperationParameters BuildEditParameters(OperationParameters parameters, int? shapeIndex,
         string? text, string? name, int? width, int? height, int? upperLeftRow, int? upperLeftColumn)
     {

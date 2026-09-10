@@ -304,11 +304,19 @@ public class DocumentContextTests : TestBase
         doc.Save(docPath);
 
         var context = DocumentContext<Document>.Create(null, null, docPath);
-        _ = context.Document;
+        var document = context.Document;
 
         context.Dispose();
 
-        Assert.True(true);
+        // Aspose.Words.Document is not IDisposable, so disposal cannot be observed on the document
+        // itself. What the context owns is the file handle taken while loading, and releasing that
+        // is what makes the file writable again; a leaked handle fails this move.
+        var movedPath = docPath + ".moved";
+        File.Move(docPath, movedPath);
+
+        Assert.True(File.Exists(movedPath));
+        Assert.NotNull(document);
+        TestFiles.Add(movedPath);
     }
 
     [Fact]

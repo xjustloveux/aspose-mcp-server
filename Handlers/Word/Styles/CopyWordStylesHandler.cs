@@ -33,12 +33,15 @@ public class CopyWordStylesHandler : OperationHandlerBase<Document>
             throw new ArgumentException("sourceDocument is required for copy operation");
 
         SecurityHelper.ValidateFilePath(p.SourceDocument, "sourceDocument", true);
+        var resolvedSourceDocument = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.SourceDocument,
+            context.ServerConfig?.AllowedBasePaths ?? [], "sourceDocument");
 
-        if (!System.IO.File.Exists(p.SourceDocument))
+        if (!System.IO.File.Exists(resolvedSourceDocument))
             throw new FileNotFoundException("The specified file was not found.");
 
         var targetDoc = context.Document;
-        var sourceDoc = new Document(p.SourceDocument);
+        var sourceDoc = GuardedWordLoader.Load(resolvedSourceDocument,
+            context.ServerConfig?.AllowedBasePaths ?? []);
 
         var styleNamesList = p.StyleNames?.ToList() ?? [];
         var copyAll = styleNamesList.Count == 0;
@@ -84,7 +87,7 @@ public class CopyWordStylesHandler : OperationHandlerBase<Document>
         return new SuccessResult
         {
             Message =
-                $"Copied {copiedCount} style(s) from {Path.GetFileName(p.SourceDocument)}. Skipped: {skippedCount}."
+                $"Copied {copiedCount} style(s) from {Path.GetFileName(resolvedSourceDocument)}. Skipped: {skippedCount}."
         };
     }
 

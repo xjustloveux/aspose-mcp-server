@@ -37,13 +37,26 @@ public class MoveExcelRangeHandler : OperationHandlerBase<Workbook>
         var sourceRangeObj = ExcelHelper.CreateRange(sourceSheet.Cells, p.SourceRange, "source range");
         var destRangeObj = ExcelHelper.CreateRange(destSheet.Cells, p.DestCell, "destination cell");
 
-        destRangeObj.Copy(sourceRangeObj, new PasteOptions { PasteType = PasteType.All });
+        if (destSheetIdx == srcSheetIdx)
+        {
+            // Within one sheet the source and destination can overlap, and copy-then-clear erased
+            // the part of the destination that fell inside the source: moving A1:A5 to A2 left only
+            // A6. Range.MoveTo performs the relocation as one operation, so an overlap keeps the
+            // data instead of destroying it.
+            sourceRangeObj.MoveTo(destRangeObj.FirstRow, destRangeObj.FirstColumn);
+        }
+        else
+        {
+            // Different sheets cannot overlap, so copy-then-clear is safe and preserves the
+            // paste semantics callers already rely on.
+            destRangeObj.Copy(sourceRangeObj, new PasteOptions { PasteType = PasteType.All });
 
-        for (var i = sourceRangeObj.FirstRow; i <= sourceRangeObj.FirstRow + sourceRangeObj.RowCount - 1; i++)
-        for (var j = sourceRangeObj.FirstColumn;
-             j <= sourceRangeObj.FirstColumn + sourceRangeObj.ColumnCount - 1;
-             j++)
-            sourceSheet.Cells[i, j].PutValue("");
+            for (var i = sourceRangeObj.FirstRow; i <= sourceRangeObj.FirstRow + sourceRangeObj.RowCount - 1; i++)
+            for (var j = sourceRangeObj.FirstColumn;
+                 j <= sourceRangeObj.FirstColumn + sourceRangeObj.ColumnCount - 1;
+                 j++)
+                sourceSheet.Cells[i, j].PutValue("");
+        }
 
         MarkModified(context);
 

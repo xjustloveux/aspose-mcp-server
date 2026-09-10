@@ -26,6 +26,11 @@ public class PdfPropertiesTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     The document session manager for managing in-memory document sessions.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -35,11 +40,14 @@ public class PdfPropertiesTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
     /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public PdfPropertiesTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry = HandlerRegistry<Document>.CreateFromNamespace("AsposeMcpServer.Handlers.Pdf.Properties");
     }
 
@@ -89,7 +97,8 @@ Usage examples:
         [Description("Creator (for set)")] string? creator = null,
         [Description("Producer (for set)")] string? producer = null)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor,
+            serverConfig: _serverConfig);
 
         var parameters = BuildParameters(operation, title, author, subject, keywords, creator, producer);
 
@@ -102,7 +111,8 @@ Usage examples:
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);

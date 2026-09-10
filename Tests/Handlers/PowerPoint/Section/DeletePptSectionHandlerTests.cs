@@ -7,6 +7,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Section;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class DeletePptSectionHandlerTests : PptHandlerTestBase
 {
     private readonly DeletePptSectionHandler _handler = new();

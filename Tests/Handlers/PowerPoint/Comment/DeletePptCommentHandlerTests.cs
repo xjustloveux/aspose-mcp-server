@@ -8,6 +8,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Comment;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class DeletePptCommentHandlerTests : PptHandlerTestBase
 {
     private readonly DeletePptCommentHandler _handler = new();

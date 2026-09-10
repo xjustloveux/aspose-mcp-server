@@ -121,9 +121,55 @@ public class SessionIdentityTests
         Assert.True(requestor.CanAccess(owner, SessionIsolationMode.Group));
     }
 
+    /// <summary>
+    ///     An identity that authenticated but carries no group claim is not anonymous, yet the
+    ///     authorisation check compared raw group ids, so two such principals matched on
+    ///     <c>null == null</c> and could reach each other's sessions (R2-S03). Several auth modes
+    ///     produce exactly that shape: a JWT whose configured group claim is absent, or a gateway
+    ///     request without the group header.
+    /// </summary>
+    [Fact]
+    public void CanAccess_GroupMode_DifferentUsersWithNoGroup_ShouldDenyAccess()
+    {
+        var requestor = new SessionIdentity { UserId = "alice" };
+        var owner = new SessionIdentity { UserId = "bob" };
+
+        Assert.False(requestor.CanAccess(owner, SessionIsolationMode.Group));
+    }
+
+    [Fact]
+    public void CanAccess_GroupMode_SameUserWithNoGroup_ShouldAllowAccess()
+    {
+        // Falling back to the subject must not lock a principal out of its own sessions.
+        var requestor = new SessionIdentity { UserId = "alice" };
+        var owner = new SessionIdentity { UserId = "alice" };
+
+        Assert.True(requestor.CanAccess(owner, SessionIsolationMode.Group));
+    }
+
+    [Fact]
+    public void CanAccess_GroupMode_GrouplessUserAndAnonymous_ShouldDenyAccess()
+    {
+        var requestor = new SessionIdentity { UserId = "alice" };
+
+        Assert.False(requestor.CanAccess(SessionIdentity.GetAnonymous(), SessionIsolationMode.Group));
+        Assert.False(SessionIdentity.GetAnonymous().CanAccess(requestor, SessionIsolationMode.Group));
+    }
+
     #endregion
 
     #region GetStorageKey Tests
+
+    [Fact]
+    public void GetStorageKey_GroupMode_DifferentUsersWithNoGroup_ShouldNotCollide()
+    {
+        var alice = new SessionIdentity { UserId = "alice" };
+        var bob = new SessionIdentity { UserId = "bob" };
+
+        Assert.NotEqual(alice.GetStorageKey(SessionIsolationMode.Group),
+            bob.GetStorageKey(SessionIsolationMode.Group));
+        Assert.NotEqual("__anonymous__", alice.GetStorageKey(SessionIsolationMode.Group));
+    }
 
     [Fact]
     public void GetStorageKey_NoneMode_ShouldReturnAnonymous()
@@ -147,11 +193,21 @@ public class SessionIdentityTests
         Assert.Equal("group:Z3JvdXAx", identity.GetStorageKey(SessionIsolationMode.Group));
     }
 
+    /// <summary>
+    ///     A group-less authenticated identity is stored under its own subject, not under the
+    ///     empty group.
+    ///     <para>
+    ///         This case previously asserted <c>"group:"</c> under the name "ShouldHandleGracefully",
+    ///         which made the shared empty-group bucket look deliberate: every principal that
+    ///         authenticated without a group claim landed in it together (R2-S03).
+    ///     </para>
+    /// </summary>
     [Fact]
-    public void GetStorageKey_GroupModeWithNullGroup_ShouldHandleGracefully()
+    public void GetStorageKey_GroupModeWithNullGroup_ShouldUseTheSubject()
     {
         var identity = new SessionIdentity { UserId = "user1" };
-        Assert.Equal("group:", identity.GetStorageKey(SessionIsolationMode.Group));
+        // Base64("user1") = "dXNlcjE="
+        Assert.Equal("user:dXNlcjE=", identity.GetStorageKey(SessionIsolationMode.Group));
     }
 
     [Fact]

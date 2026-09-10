@@ -14,6 +14,7 @@ namespace AsposeMcpServer.Tests.Tools.PowerPoint;
 ///     Detailed parameter validation and business logic tests are in Handler tests.
 /// </summary>
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class PptShapeToolTests : PptTestBase
 {
     private readonly PptShapeTool _tool;
@@ -61,7 +62,8 @@ public class PptShapeToolTests : PptTestBase
         var pptPath = CreatePresentationWithShape("test_get.pptx");
         var result = _tool.Execute("get_shapes", pptPath, slideIndex: 0);
         var data = GetResultData<GetShapesResult>(result);
-        Assert.True(data.Count >= 0);
+        // Licensed reports 1, evaluation mode 2; the floor is what holds in both.
+        Assert.True(data.Count >= 1, $"expected at least 1, got {data.Count}");
         Assert.NotNull(data.Shapes);
     }
 
@@ -74,7 +76,7 @@ public class PptShapeToolTests : PptTestBase
         var result = _tool.Execute("get_shape_details", pptPath, slideIndex: 0, shapeIndex: shapeIndex);
         var data = GetResultData<GetShapeDetailsResult>(result);
         Assert.Equal(shapeIndex, data.Index);
-        Assert.True(data.X >= 0);
+        Assert.Equal(100, data.X);
     }
 
     [SkippableFact]
@@ -181,7 +183,8 @@ public class PptShapeToolTests : PptTestBase
         var pptPath = CreatePresentationWithShape($"test_case_{operation}.pptx");
         var result = _tool.Execute(operation, pptPath, slideIndex: 0);
         var data = GetResultData<GetShapesResult>(result);
-        Assert.True(data.Count >= 0);
+        // Licensed reports 1, evaluation mode 2; the floor is what holds in both.
+        Assert.True(data.Count >= 1, $"expected at least 1, got {data.Count}");
     }
 
     [SkippableFact]
@@ -212,7 +215,8 @@ public class PptShapeToolTests : PptTestBase
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("get_shapes", sessionId: sessionId, slideIndex: 0);
         var data = GetResultData<GetShapesResult>(result);
-        Assert.True(data.Count >= 0);
+        // Licensed reports 1, evaluation mode 2; the floor is what holds in both.
+        Assert.True(data.Count >= 1, $"expected at least 1, got {data.Count}");
         Assert.NotNull(data.Shapes);
     }
 
@@ -227,7 +231,7 @@ public class PptShapeToolTests : PptTestBase
         var result = _tool.Execute("get_shape_details", sessionId: sessionId, slideIndex: 0, shapeIndex: shapeIndex);
         var data = GetResultData<GetShapeDetailsResult>(result);
         Assert.Equal(shapeIndex, data.Index);
-        Assert.True(data.X >= 0);
+        Assert.Equal(100, data.X);
     }
 
     [SkippableFact]
@@ -273,6 +277,24 @@ public class PptShapeToolTests : PptTestBase
     }
 
     [SkippableFact]
+    public void SetFormat_ShouldKeepLineWidthAndTransparencyInTheirNamedParameters()
+    {
+        SkipIfNotWindows();
+        var pptPath = CreatePresentationWithShape("test_format_parameter_order.pptx");
+        var sessionId = OpenSession(pptPath);
+        var ppt = SessionManager.GetDocument<Presentation>(sessionId);
+        var shapeIndex = FindNonPlaceholderShapeIndex(ppt.Slides[0]);
+
+        _tool.Execute("set_format", sessionId: sessionId, slideIndex: 0,
+            shapeIndex: shapeIndex, fillColor: "#336699", lineWidth: 6.0f,
+            transparency: 0.25f);
+
+        var shape = ppt.Slides[0].Shapes[shapeIndex];
+        Assert.Equal(6.0, shape.LineFormat.Width);
+        Assert.Equal(191, shape.FillFormat.SolidFillColor.Color.A);
+    }
+
+    [SkippableFact]
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
         SkipIfNotWindows();
@@ -290,7 +312,7 @@ public class PptShapeToolTests : PptTestBase
         var sessionId = OpenSession(pptPath2);
         var result = _tool.Execute("get_shapes", pptPath1, sessionId, slideIndex: 0);
         var data = GetResultData<GetShapesResult>(result);
-        Assert.True(data.Count >= 0);
+        Assert.Equal(2, data.Count);
         Assert.NotNull(data.Shapes);
     }
 

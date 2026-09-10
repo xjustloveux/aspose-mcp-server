@@ -26,6 +26,11 @@ public class ExcelHyperlinkTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -35,11 +40,14 @@ public class ExcelHyperlinkTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
     /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public ExcelHyperlinkTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry = HandlerRegistry<Workbook>.CreateFromNamespace("AsposeMcpServer.Handlers.Excel.Hyperlink");
     }
 
@@ -92,7 +100,8 @@ Usage examples:
         [Description("Hyperlink index (0-based, alternative to cell for edit/delete)")]
         int? hyperlinkIndex = null)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor,
+            serverConfig: _serverConfig);
 
         var parameters = BuildParameters(operation, sheetIndex, cell, url, displayText, hyperlinkIndex);
 
@@ -105,7 +114,8 @@ Usage examples:
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);

@@ -191,6 +191,9 @@ public static class ExcelPivotTableHelper
     /// <summary>
     ///     Parses field type string to PivotFieldType enum.
     /// </summary>
+    /// <param name="fieldType">Field type as the caller wrote it: Row, Column, Data or Page.</param>
+    /// <returns>The matching field type.</returns>
+    /// <exception cref="ArgumentException">Thrown when the value names no known field type.</exception>
     public static PivotFieldType ParseFieldType(string fieldType)
     {
         return fieldType.ToLower() switch
@@ -207,6 +210,8 @@ public static class ExcelPivotTableHelper
     /// <summary>
     ///     Parses function string to ConsolidationFunction enum.
     /// </summary>
+    /// <param name="function">Consolidation function name as the caller wrote it.</param>
+    /// <returns>The matching consolidation function.</returns>
     public static ConsolidationFunction ParseFunction(string function)
     {
         return function switch

@@ -3,7 +3,6 @@ using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Results.Common;
-using IOFile = System.IO.File;
 using WordShape = Aspose.Words.Drawing.Shape;
 
 namespace AsposeMcpServer.Handlers.Word.Image;
@@ -31,8 +30,10 @@ public class ExtractImagesWordHandler : OperationHandlerBase<Document>
         var p = ExtractExtractImagesParameters(parameters);
 
         SecurityHelper.ValidateFilePath(p.OutputDir, "outputDir", true);
+        var resolvedOutputDir = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.OutputDir,
+            context.ServerConfig?.AllowedBasePaths ?? [], "outputDir");
 
-        Directory.CreateDirectory(p.OutputDir);
+        Directory.CreateDirectory(resolvedOutputDir);
 
         var doc = context.Document;
         var shapes = doc.GetChildNodes(NodeType.Shape, true).Cast<WordShape>().Where(s => s.HasImage).ToList();
@@ -49,6 +50,14 @@ public class ExtractImagesWordHandler : OperationHandlerBase<Document>
         var startIndex = p.ExtractImageIndex ?? 0;
         var endIndex = p.ExtractImageIndex.HasValue ? p.ExtractImageIndex.Value + 1 : shapes.Count;
 
+        // A document can hold one image per shape, and each becomes a file (R2-R02).
+        RenderBudget.EnsureOutputCount(endIndex - startIndex, "image files");
+
+        // Staged as a batch and published once: an extraction refused part-way used to leave
+        // whichever images it had already produced on top of the caller's files (R5-R01).
+        using var batch = new BoundedFileBatch(RenderBudget.MaxOutputBytes, "extracted images",
+            context.Recovery, context.ServerConfig?.AllowedBasePaths ?? []);
+
         for (var i = startIndex; i < endIndex; i++)
         {
             var shape = shapes[i];
@@ -62,29 +71,30 @@ public class ExtractImagesWordHandler : OperationHandlerBase<Document>
 
             var safePrefix = SecurityHelper.SanitizeFileName(p.Prefix);
             var filename = $"{safePrefix}_{i + 1:D3}.{extension}";
-            var outputFilePath = Path.Combine(p.OutputDir, filename);
+            var outputFilePath = Path.Combine(resolvedOutputDir, filename);
             // H11: resolve symlinks immediately before the File.Create sink (bug 20260415-symlink-toctou-sweep).
             outputFilePath = SecurityHelper.ResolveAndEnsureWithinAllowlist(outputFilePath,
                 context.ServerConfig?.AllowedBasePaths ?? [], nameof(outputFilePath));
 
-            using (var stream = IOFile.Create(outputFilePath))
-            {
-                imageData.Save(stream);
-            }
+            // Measured after the write, an image above the limit was already on disk when the
+            // request was refused (R3-R07).
+            batch.Stage(outputFilePath, imageData.Save);
 
             extractedFiles.Add(outputFilePath);
         }
 
+        batch.Publish();
+
         if (p.ExtractImageIndex.HasValue)
             return new SuccessResult
             {
-                Message = $"Successfully extracted image #{p.ExtractImageIndex.Value} to: {p.OutputDir}\n" +
+                Message = $"Successfully extracted image #{p.ExtractImageIndex.Value} to: {resolvedOutputDir}\n" +
                           $"File: {Path.GetFileName(extractedFiles[0])}"
             };
 
         return new SuccessResult
         {
-            Message = $"Successfully extracted {shapes.Count} images to: {p.OutputDir}\n" +
+            Message = $"Successfully extracted {shapes.Count} images to: {resolvedOutputDir}\n" +
                       $"File list:\n" + string.Join("\n",
                           extractedFiles.Select(f => $"  - {Path.GetFileName(f)}"))
         };

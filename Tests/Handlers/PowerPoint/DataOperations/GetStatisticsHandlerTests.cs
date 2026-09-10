@@ -6,6 +6,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.DataOperations;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class GetStatisticsHandlerTests : PptHandlerTestBase
 {
     private readonly GetStatisticsHandler _handler = new();
@@ -50,7 +51,7 @@ public class GetStatisticsHandlerTests : PptHandlerTestBase
 
         var result = Assert.IsType<GetStatisticsResult>(res);
 
-        Assert.True(result.TotalShapes >= 0);
+        Assert.Equal(0, result.TotalShapes);
     }
 
     [SkippableFact]
@@ -82,9 +83,9 @@ public class GetStatisticsHandlerTests : PptHandlerTestBase
 
         var result = Assert.IsType<GetStatisticsResult>(res);
 
-        Assert.True(result.TotalImages >= 0);
-        Assert.True(result.TotalAudio >= 0);
-        Assert.True(result.TotalVideo >= 0);
+        Assert.Equal(0, result.TotalImages);
+        Assert.Equal(0, result.TotalAudio);
+        Assert.Equal(0, result.TotalVideo);
     }
 
     [SkippableFact]
@@ -99,8 +100,8 @@ public class GetStatisticsHandlerTests : PptHandlerTestBase
 
         var result = Assert.IsType<GetStatisticsResult>(res);
 
-        Assert.True(result.TotalLayouts >= 0);
-        Assert.True(result.TotalMasters >= 0);
+        Assert.Equal(11, result.TotalLayouts);
+        Assert.Equal(1, result.TotalMasters);
     }
 
     #endregion

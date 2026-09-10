@@ -71,7 +71,7 @@ public class GetWordBookmarksHandlerTests : WordHandlerTestBase
 
         var result = Assert.IsType<GetBookmarksResult>(res);
 
-        Assert.True(result.Count >= 0);
+        Assert.Equal(2, result.Count);
     }
 
     [Fact]

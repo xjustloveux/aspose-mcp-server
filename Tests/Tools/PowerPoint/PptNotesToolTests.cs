@@ -15,6 +15,7 @@ namespace AsposeMcpServer.Tests.Tools.PowerPoint;
 ///     Detailed parameter validation and business logic tests are in Handler tests.
 /// </summary>
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class PptNotesToolTests : PptTestBase
 {
     private readonly PptNotesTool _tool;

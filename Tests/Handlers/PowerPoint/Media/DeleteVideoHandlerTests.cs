@@ -5,6 +5,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Media;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class DeleteVideoHandlerTests : PptHandlerTestBase
 {
     private readonly DeleteVideoHandler _handler = new();

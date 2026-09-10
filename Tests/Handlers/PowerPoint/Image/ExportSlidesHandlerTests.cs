@@ -1,6 +1,8 @@
 using System.Runtime.Versioning;
 using Aspose.Slides;
 using Aspose.Slides.Export;
+using AsposeMcpServer.Core;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Handlers.PowerPoint.Image;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
@@ -8,6 +10,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Image;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class ExportSlidesHandlerTests : PptHandlerTestBase
 {
     private readonly ExportSlidesHandler _handler = new();
@@ -37,6 +40,38 @@ public class ExportSlidesHandlerTests : PptHandlerTestBase
     }
 
     #endregion
+
+    /// <summary>
+    ///     §18.4.3: the output directory was created before it was validated, so a request for a
+    ///     path outside the allowlist left a directory behind even though it was refused.
+    /// </summary>
+    [Fact]
+    public void Execute_WithAnOutputDirOutsideTheAllowlist_ShouldNotCreateIt()
+    {
+        var outside = Path.Combine(Path.GetTempPath(), "ExportSlidesOutside_" + Guid.NewGuid().ToString("N"));
+        var presentation = CreatePresentationWithSlides(2);
+
+        // AllowedBasePaths has a private setter, so the config is built the way the other
+        // security-focused suites build one, and the context is created around it.
+        var config = new ServerConfig();
+        typeof(ServerConfig)
+            .GetProperty(nameof(ServerConfig.AllowedBasePaths))!
+            .SetValue(config, new List<string> { Path.GetFullPath(TestDir) }.AsReadOnly());
+
+        var context = new OperationContext<Presentation>
+        {
+            Document = presentation,
+            ServerConfig = config
+        };
+
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "outputDir", outside }
+        });
+
+        Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+        Assert.False(Directory.Exists(outside), "the refused request created its output directory");
+    }
 
     #region Basic Export Operations
 

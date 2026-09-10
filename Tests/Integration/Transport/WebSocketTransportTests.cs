@@ -18,7 +18,7 @@ public class WebSocketTransportTests
     public void WebSocket_Handler_CanBeCreated()
     {
         var loggerFactory = Mock.Of<ILoggerFactory>();
-        var handler = new WebSocketConnectionHandler("dotnet", "--all", loggerFactory);
+        var handler = new WebSocketConnectionHandler("dotnet", ["--all", "--stdio"], loggerFactory);
 
         Assert.NotNull(handler);
     }
@@ -29,7 +29,7 @@ public class WebSocketTransportTests
     [Fact]
     public void WebSocket_Handler_AcceptsNullLogger()
     {
-        var handler = new WebSocketConnectionHandler("dotnet", "--all");
+        var handler = new WebSocketConnectionHandler("dotnet", ["--all", "--stdio"]);
 
         Assert.NotNull(handler);
     }
@@ -40,7 +40,7 @@ public class WebSocketTransportTests
     [Fact]
     public async Task WebSocket_ClosedConnection_HandledGracefully()
     {
-        var handler = new WebSocketConnectionHandler("dotnet", "--all");
+        var handler = new WebSocketConnectionHandler("dotnet", ["--all", "--stdio"]);
         var mockWebSocket = new Mock<WebSocket>();
         mockWebSocket.Setup(ws => ws.State).Returns(WebSocketState.Closed);
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
@@ -57,7 +57,7 @@ public class WebSocketTransportTests
     [Fact]
     public async Task WebSocket_Cancellation_StopsProcessing()
     {
-        var handler = new WebSocketConnectionHandler("dotnet", "--all");
+        var handler = new WebSocketConnectionHandler("dotnet", ["--all", "--stdio"]);
         var mockWebSocket = new Mock<WebSocket>();
         mockWebSocket.Setup(ws => ws.State).Returns(WebSocketState.Open);
         using var cts = new CancellationTokenSource();
@@ -75,7 +75,7 @@ public class WebSocketTransportTests
     [Fact]
     public async Task WebSocket_WithIdentity_AcceptsGroupAndUser()
     {
-        var handler = new WebSocketConnectionHandler("dotnet", "--all");
+        var handler = new WebSocketConnectionHandler("dotnet", ["--all", "--stdio"]);
         var mockWebSocket = new Mock<WebSocket>();
         mockWebSocket.Setup(ws => ws.State).Returns(WebSocketState.Closed);
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));

@@ -245,8 +245,18 @@ public class ConvertDocumentToolTests : TestBase
         Assert.Equal("Excel", result.SourceFormat);
         Assert.True(File.Exists(outputPath));
 
+        // In evaluation mode Aspose.Cells writes its notice into the first row, which displaces
+        // the fixture's own cell — measured: this passed in isolation and failed in a full run,
+        // depending on when the evaluation state was first observed. Either spelling proves the
+        // same thing, which is that the CSV came from the *Excel* session and not from the Word
+        // file also passed in: only Aspose.Cells writes that notice.
         var csvContent = File.ReadAllText(outputPath);
-        Assert.Contains("Session Data", csvContent);
+        Assert.True(
+            csvContent.Contains("Session Data", StringComparison.Ordinal)
+            || csvContent.Contains("Aspose.Cell", StringComparison.Ordinal),
+            "the CSV holds neither the session's own data nor the Aspose.Cells evaluation notice, "
+            + "so it did not come from the Excel session: " + csvContent);
+        Assert.DoesNotContain("File Content", csvContent, StringComparison.Ordinal);
     }
 
     #endregion
@@ -651,6 +661,34 @@ public class ConvertDocumentToolTests : TestBase
 
         Assert.Equal("PDF", result.TargetFormat);
         Assert.True(File.Exists(outputPath));
+    }
+
+    /// <summary>
+    ///     Every other branch records the files it wrote; the special-format branch recorded none,
+    ///     so a successful HTML, Markdown, SVG or EPUB conversion reported a null size and no
+    ///     output path even though the PDF was on disk (R3-C02).
+    /// </summary>
+    /// <param name="fileName">Fixture file name, which selects the source format.</param>
+    /// <param name="content">Self-contained source document.</param>
+    [Theory]
+    [InlineData("c02_source.html", "<html><body><h1>Special format</h1></body></html>")]
+    [InlineData("c02_source.md", "# Special format\n\nA paragraph.\n")]
+    public void Convert_SpecialFormatToPdf_ShouldReportTheFileItWrote(string fileName, string content)
+    {
+        var inputPath = CreateTestFilePath(fileName);
+        File.WriteAllText(inputPath, content);
+        var outputPath = CreateTestFilePath(fileName + ".pdf");
+
+        var result = _tool.Execute(inputPath, outputPath: outputPath);
+
+        Assert.True(File.Exists(outputPath));
+        Assert.Equal(outputPath, result.OutputPath);
+        Assert.Equal("PDF", result.TargetFormat);
+
+        var onDisk = new FileInfo(outputPath).Length;
+        Assert.Equal(onDisk, result.FileSize);
+        Assert.Equal([outputPath], result.OutputPaths);
+        Assert.Equal([onDisk], result.OutputFileSizes);
     }
 
     #endregion

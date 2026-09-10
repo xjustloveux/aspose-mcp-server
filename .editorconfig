@@ -13,6 +13,7 @@ insert_final_newline = true
 # C# files
 [*.cs]
 indent_size = 4
+end_of_line = lf
 
 # ===== Roslyn Analyzer Rule Exclusions (Global) =====
 # CA1816: Dispose methods should call SuppressFinalize
@@ -60,6 +61,11 @@ resharper_convert_to_primary_constructor_highlighting = none
 resharper_access_to_disposed_closure_highlighting = none
 # Tests don't need cancellation support
 resharper_method_supports_cancellation_highlighting = none
+# Synchronous fixture setup keeps test ordering explicit; asynchronous behavior is tested only
+# where the production contract itself is asynchronous.
+resharper_method_has_async_overload_highlighting = none
+# Assertion lambdas intentionally use their parameter only to validate it.
+resharper_parameter_only_used_for_precondition_check_local_highlighting = none
 
 # ===== Roslyn Analyzer Rule Exclusions (Tests Only) =====
 # CA1826: Don't use Enumerable methods on indexable collections
@@ -77,6 +83,11 @@ dotnet_diagnostic.S2925.severity = none
 dotnet_diagnostic.S107.severity = none
 # S2368: Make this method private or simplify its parameters to not use multidimensional/jagged arrays
 dotnet_diagnostic.S2368.severity = none
+
+# BoundedFilePublisher invokes writer callbacks synchronously before returning; the captured
+# Aspose document therefore cannot outlive its using scope.
+[Core/Conversion/DocumentConverter.cs]
+resharper_access_to_disposed_closure_highlighting = none
 
 # ===== Helpers File-Specific Rules =====
 # FontHelper.cs - Many parameters for font configuration

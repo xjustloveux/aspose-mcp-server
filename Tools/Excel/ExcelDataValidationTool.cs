@@ -26,6 +26,11 @@ public class ExcelDataValidationTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -35,11 +40,14 @@ public class ExcelDataValidationTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
     /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public ExcelDataValidationTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry =
             HandlerRegistry<Workbook>.CreateFromNamespace("AsposeMcpServer.Handlers.Excel.DataValidation");
     }
@@ -95,7 +103,7 @@ Usage examples:
         [Description("Cell range to apply validation (e.g., 'A1:A10', required for add)")]
         string? range = null,
         [Description("Data validation index (0-based, required for edit/delete/set_messages)")]
-        int validationIndex = 0,
+        int? validationIndex = null,
         [Description("Validation type: WholeNumber, Decimal, List, Date, Time, TextLength, Custom")]
         string? validationType = null,
         [Description("Operator type: Between, Equal, NotEqual, GreaterThan, LessThan, GreaterOrEqual, LessOrEqual")]
@@ -111,7 +119,8 @@ Usage examples:
         [Description("Input message to show when cell is selected (optional)")]
         string? inputMessage = null)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor,
+            serverConfig: _serverConfig);
 
         var parameters = BuildParameters(operation, sheetIndex, range, validationIndex, validationType,
             operatorType, formula1, formula2, inCellDropDown, errorMessage, inputMessage);
@@ -125,7 +134,8 @@ Usage examples:
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);
@@ -148,7 +158,7 @@ Usage examples:
         string operation,
         int sheetIndex,
         string? range,
-        int validationIndex,
+        int? validationIndex,
         string? validationType,
         string? operatorType,
         string? formula1,
@@ -214,11 +224,11 @@ Usage examples:
     /// <param name="errorMessage">The error message to display.</param>
     /// <param name="inputMessage">The input message to display.</param>
     /// <returns>OperationParameters configured for editing validation.</returns>
-    private static OperationParameters BuildEditParameters(OperationParameters parameters, int validationIndex,
+    private static OperationParameters BuildEditParameters(OperationParameters parameters, int? validationIndex,
         string? validationType, string? operatorType, string? formula1, string? formula2, bool inCellDropDown,
         string? errorMessage, string? inputMessage)
     {
-        parameters.Set("validationIndex", validationIndex);
+        if (validationIndex.HasValue) parameters.Set("validationIndex", validationIndex.Value);
         if (validationType != null) parameters.Set("validationType", validationType);
         if (formula1 != null) parameters.Set("formula1", formula1);
         if (formula2 != null) parameters.Set("formula2", formula2);
@@ -235,9 +245,9 @@ Usage examples:
     /// <param name="parameters">Base parameters with sheet index.</param>
     /// <param name="validationIndex">The index of validation to delete.</param>
     /// <returns>OperationParameters configured for deleting validation.</returns>
-    private static OperationParameters BuildDeleteParameters(OperationParameters parameters, int validationIndex)
+    private static OperationParameters BuildDeleteParameters(OperationParameters parameters, int? validationIndex)
     {
-        parameters.Set("validationIndex", validationIndex);
+        if (validationIndex.HasValue) parameters.Set("validationIndex", validationIndex.Value);
         return parameters;
     }
 
@@ -249,10 +259,10 @@ Usage examples:
     /// <param name="errorMessage">The error message to display.</param>
     /// <param name="inputMessage">The input message to display.</param>
     /// <returns>OperationParameters configured for setting validation messages.</returns>
-    private static OperationParameters BuildSetMessagesParameters(OperationParameters parameters, int validationIndex,
+    private static OperationParameters BuildSetMessagesParameters(OperationParameters parameters, int? validationIndex,
         string? errorMessage, string? inputMessage)
     {
-        parameters.Set("validationIndex", validationIndex);
+        if (validationIndex.HasValue) parameters.Set("validationIndex", validationIndex.Value);
         if (errorMessage != null) parameters.Set("errorMessage", errorMessage);
         if (inputMessage != null) parameters.Set("inputMessage", inputMessage);
         return parameters;

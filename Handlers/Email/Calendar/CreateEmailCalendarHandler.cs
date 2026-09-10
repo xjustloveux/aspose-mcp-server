@@ -1,4 +1,3 @@
-using System.Globalization;
 using Aspose.Email;
 using Aspose.Email.Calendar;
 using AsposeMcpServer.Core;
@@ -14,6 +13,8 @@ namespace AsposeMcpServer.Handlers.Email.Calendar;
 [ResultType(typeof(SuccessResult))]
 public class CreateEmailCalendarHandler : OperationHandlerBase<object>
 {
+    private const string OutputPathParameter = "outputPath";
+
     /// <inheritdoc />
     public override string Operation => "create";
 
@@ -30,7 +31,7 @@ public class CreateEmailCalendarHandler : OperationHandlerBase<object>
     /// <exception cref="FormatException">Thrown when startDate or endDate cannot be parsed.</exception>
     public override object Execute(OperationContext<object> context, OperationParameters parameters)
     {
-        var outputPath = parameters.GetRequired<string>("outputPath");
+        var outputPath = parameters.GetRequired<string>(OutputPathParameter);
         var summary = parameters.GetOptional<string?>("summary");
         var description = parameters.GetOptional<string?>("description");
         var startDate = parameters.GetOptional<string?>("startDate");
@@ -38,14 +39,16 @@ public class CreateEmailCalendarHandler : OperationHandlerBase<object>
         var location = parameters.GetOptional<string?>("location");
         var attendees = parameters.GetOptional<string?>("attendees");
 
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+        SecurityHelper.ValidateFilePath(outputPath, OutputPathParameter, true);
+        outputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(outputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], OutputPathParameter);
 
         var start = string.IsNullOrEmpty(startDate)
             ? DateTime.Now
-            : DateTime.Parse(startDate, CultureInfo.InvariantCulture);
+            : IsoDateTimeHelper.Parse(startDate, "startDate");
         var end = string.IsNullOrEmpty(endDate)
             ? start.AddHours(1)
-            : DateTime.Parse(endDate, CultureInfo.InvariantCulture);
+            : IsoDateTimeHelper.Parse(endDate, "endDate");
 
         var appointment = new Appointment(
             location ?? "",
@@ -57,13 +60,12 @@ public class CreateEmailCalendarHandler : OperationHandlerBase<object>
             new MailAddressCollection());
 
         if (!string.IsNullOrEmpty(attendees))
-            foreach (var attendee in attendees.Split(',',
-                         StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            foreach (var attendee in EmailAddressListHelper.Split(attendees))
                 appointment.Attendees.Add(new MailAddress(attendee));
 
         // H40: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
         var resolvedOutputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(outputPath,
-            context.ServerConfig?.AllowedBasePaths ?? [], "outputPath");
+            context.ServerConfig?.AllowedBasePaths ?? [], OutputPathParameter);
         appointment.Save(resolvedOutputPath, AppointmentSaveFormat.Ics);
 
         return new SuccessResult

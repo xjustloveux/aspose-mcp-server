@@ -30,6 +30,11 @@ public class WordHeaderFooterTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Session manager for document session operations
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -39,11 +44,14 @@ public class WordHeaderFooterTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document operations</param>
     /// <param name="identityAccessor">Optional identity accessor for session isolation</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public WordHeaderFooterTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry = HandlerRegistry<Document>.CreateFromNamespace("AsposeMcpServer.Handlers.Word.HeaderFooter");
     }
 
@@ -59,7 +67,10 @@ public class WordHeaderFooterTool
     /// <param name="sessionId">Session ID for in-memory editing.</param>
     /// <param name="outputPath">Output file path (file mode only).</param>
     /// <param name="headerLeft">Header left section text (for set_header).</param>
-    /// <param name="headerCenter">Header center section text (for set_header).</param>
+    /// <param name="headerCenter">
+    ///     Header center section text (for set_header). May contain field codes in braces;
+    ///     only PAGE, NUMPAGES, DATE, TIME, FILENAME, AUTHOR and TITLE are accepted.
+    /// </param>
     /// <param name="headerRight">Header right section text (for set_header).</param>
     /// <param name="footerLeft">Footer left section text (for set_footer).</param>
     /// <param name="footerCenter">Footer center section text (for set_footer).</param>
@@ -70,7 +81,12 @@ public class WordHeaderFooterTool
     /// <param name="imageHeight">Image height in points (for image operations).</param>
     /// <param name="lineStyle">Line style: single, double, thick (for line operations).</param>
     /// <param name="lineWidth">Line width in points (for line operations).</param>
-    /// <param name="tabStops">Tab stops array (for tab operations).</param>
+    /// <param name="tabStops">
+    ///     Tab stops, as an array of {position, alignment, leader}. position is required, in points from
+    ///     the left margin, between -1584 and 1584. alignment: left, center, right, decimal, bar, clear (default left).
+    ///     leader: none, dots, dashes, line, heavy, middledot (default none). Names are case-insensitive and an unrecognised
+    ///     one is an error, not a default. At most 1500 stops. For tab operations.
+    /// </param>
     /// <param name="fontName">Font name.</param>
     /// <param name="fontNameAscii">Font name for ASCII characters.</param>
     /// <param name="fontNameFarEast">Font name for Far East characters.</param>
@@ -179,7 +195,8 @@ Usage examples:
 
         var handler = _handlerRegistry.GetHandler(operation);
 
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor,
+            serverConfig: _serverConfig);
 
         var effectiveOutputPath = outputPath ?? path;
 
@@ -190,7 +207,8 @@ Usage examples:
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = effectiveOutputPath
+            OutputPath = effectiveOutputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);

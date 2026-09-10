@@ -94,10 +94,12 @@ public class GetStatisticsHandlerTests : ExcelHandlerTestBase
         var result = Assert.IsType<GetStatisticsResult>(res);
 
         var worksheet = result.Worksheets[0];
-        Assert.True(worksheet.ChartsCount >= 0);
-        Assert.True(worksheet.PicturesCount >= 0);
-        Assert.True(worksheet.HyperlinksCount >= 0);
-        Assert.True(worksheet.CommentsCount >= 0);
+        // The fixture adds no chart, picture, hyperlink or comment, so every count is zero. The
+        // previous ">= 0" form would have passed even if the handler counted the wrong things.
+        Assert.Equal(0, worksheet.ChartsCount);
+        Assert.Equal(0, worksheet.PicturesCount);
+        Assert.Equal(0, worksheet.HyperlinksCount);
+        Assert.Equal(0, worksheet.CommentsCount);
     }
 
     [Fact]
@@ -119,9 +121,11 @@ public class GetStatisticsHandlerTests : ExcelHandlerTestBase
 
         var rangeStats = result.Worksheets[0].RangeStatistics;
         Assert.NotNull(rangeStats);
-        Assert.True(rangeStats.NumericCells >= 0);
-        Assert.True(rangeStats.NonNumericCells >= 0);
-        Assert.True(rangeStats.EmptyCells >= 0);
+        // The fixture writes 10, "Text" and 30 into A1:A3 and asks about A1:A4, so the counts are
+        // known exactly. Asserting ">= 0" passed for any result, including a broken one.
+        Assert.Equal(2, rangeStats.NumericCells);
+        Assert.Equal(1, rangeStats.NonNumericCells);
+        Assert.Equal(1, rangeStats.EmptyCells);
     }
 
     #endregion

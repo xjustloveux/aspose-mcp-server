@@ -393,6 +393,7 @@ public class ExtensionConfig
     /// <summary>
     ///     Tries to parse an integer argument with space, colon, and equals separators.
     /// </summary>
+    /// <returns><c>true</c> when it does; otherwise <c>false</c>.</returns>
     private static bool TryParseIntArg(string arg, string prefix, string[] args, ref int index, out int value)
     {
         value = 0;
@@ -418,6 +419,7 @@ public class ExtensionConfig
     /// <summary>
     ///     Tries to parse a long integer argument with space, colon, and equals separators.
     /// </summary>
+    /// <returns><c>true</c> when it does; otherwise <c>false</c>.</returns>
     private static bool TryParseLongArg(string arg, string prefix, string[] args, ref int index, out long value)
     {
         value = 0;
@@ -443,6 +445,7 @@ public class ExtensionConfig
     /// <summary>
     ///     Tries to parse a string argument with space, colon, and equals separators.
     /// </summary>
+    /// <returns><c>true</c> when it does; otherwise <c>false</c>.</returns>
     private static bool TryParseStringArg(string arg, string prefix, string[] args, ref int index, out string value)
     {
         value = string.Empty;
@@ -650,6 +653,9 @@ public class ExtensionConfig
     /// <summary>
     ///     Gets a list of forbidden system paths that should not be used as temp directories.
     /// </summary>
+    /// <returns>
+    ///     The absolute paths a temp directory may be neither placed at nor placed under.
+    /// </returns>
     private static List<string> GetForbiddenPaths()
     {
         var forbidden = new List<string>();

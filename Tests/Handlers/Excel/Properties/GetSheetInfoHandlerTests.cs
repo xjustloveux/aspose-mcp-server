@@ -67,8 +67,8 @@ public class GetSheetInfoHandlerTests : ExcelHandlerTestBase
 
         var result = Assert.IsType<GetSheetInfoResult>(res);
         var sheetDetail = Assert.Single(result.Items);
-        Assert.True(sheetDetail.DataRowCount >= 0);
-        Assert.True(sheetDetail.DataColumnCount >= 0);
+        Assert.Equal(1, sheetDetail.DataRowCount);
+        Assert.Equal(1, sheetDetail.DataColumnCount);
         Assert.NotNull(sheetDetail.UsedRange);
     }
 

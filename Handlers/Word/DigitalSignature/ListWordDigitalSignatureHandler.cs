@@ -30,6 +30,8 @@ public class ListWordDigitalSignatureHandler : OperationHandlerBase<Document>
     {
         var path = parameters.GetRequired<string>("path");
         SecurityHelper.ValidateFilePath(path, "path", true);
+        path = SecurityHelper.ResolveAndEnsureWithinAllowlist(path,
+            context.ServerConfig?.AllowedBasePaths ?? [], "path");
         var signatures = DigitalSignatureUtil.LoadSignatures(path);
 
         var signatureInfos = signatures.Select(sig => new SignatureInfo

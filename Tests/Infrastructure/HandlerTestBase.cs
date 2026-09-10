@@ -41,7 +41,14 @@ public abstract class HandlerTestBase<TContext> : TestBase where TContext : clas
     ///     The file is automatically cleaned up when the test completes.
     /// </summary>
     /// <returns>The full path to the created image file.</returns>
-    protected string CreateTempImageFile()
+    /// <summary>
+    ///     Creates a small bitmap whose pixel colour is derived from <paramref name="blue" />, so a
+    ///     test that inserts several images can tell them apart afterwards. Three identical images
+    ///     could not show whether an index-based delete removed the right one.
+    /// </summary>
+    /// <param name="blue">Blue channel value distinguishing this image from others.</param>
+    /// <returns>Path to the created bitmap.</returns>
+    protected string CreateTempImageFile(byte blue = 0)
     {
         var width = 10;
         var height = 10;
@@ -63,9 +70,9 @@ public abstract class HandlerTestBase<TContext> : TestBase where TContext : clas
         bmp[28] = 24;
         for (var i = 54; i < bmp.Length; i += 3)
         {
-            bmp[i] = 255;
+            bmp[i] = blue;
             bmp[i + 1] = 0;
-            bmp[i + 2] = 0;
+            bmp[i + 2] = 255;
         }
 
         return CreateTempFile(".bmp", bmp);

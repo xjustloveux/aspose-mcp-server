@@ -6,6 +6,7 @@ using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Conversion;
 using AsposeMcpServer.Core.Session;
 using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Conversion;
 using ModelContextProtocol;
 using ModelContextProtocol.Server;
@@ -48,6 +49,17 @@ public class ConvertDocumentTool
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
         _serverConfig = serverConfig;
+    }
+
+    /// <summary>Where this host keeps its publish records.</summary>
+    /// <returns>The session temp directory, or the system one when no session manager is wired.</returns>
+    /// <remarks>
+    ///     Read from the same place <c>CleanupDebtService</c> reads it, so a conversion's records
+    ///     and the service that recovers them are always in one directory.
+    /// </remarks>
+    private string RecoveryRoot()
+    {
+        return _sessionManager?.Config.TempDirectory ?? Path.GetTempPath();
     }
 
     /// <summary>
@@ -129,6 +141,10 @@ Usage examples:
             throw new ArgumentException("outputPath is required");
 
         SecurityHelper.ValidateFilePath(outputPath, nameof(outputPath), true);
+        // Output pixels scale with the square of the DPI, so an unbounded value turns a
+        // one-page conversion into an arbitrarily large allocation. The range matches the
+        // render and export-image tools capped under RB-29.
+        SecurityHelper.ValidateNumericRange(dpi, nameof(dpi), 10, 1200);
 
         if (string.IsNullOrEmpty(inputPath) && string.IsNullOrEmpty(sessionId))
             throw new ArgumentException("Either inputPath or sessionId must be provided");
@@ -144,7 +160,14 @@ Usage examples:
             JpegQuality = Math.Clamp(jpegQuality, 1, 100),
             CsvSeparator = csvSeparator,
             PdfCompliance = pdfCompliance,
-            AllowedBasePaths = _serverConfig?.AllowedBasePaths ?? []
+            AllowedBasePaths = _serverConfig?.AllowedBasePaths ?? [],
+            // The same root the cleanup service recovers from. Left unset it fell back to the
+            // system temp, so a crash mid-conversion left a record nothing would read
+            // (R19-REC07).
+            RecoveryDirectory = RecoveryRoot(),
+            // An operator setting, not a request parameter: a caller must not be able to turn
+            // off the policy that stops this server making outbound requests for them.
+            AllowExternalResources = _serverConfig?.AllowExternalResources ?? false
         };
 
         if (!string.IsNullOrEmpty(sessionId))
@@ -152,7 +175,12 @@ Usage examples:
                 progress);
 
         SecurityHelper.ValidateFilePath(inputPath!, nameof(inputPath), true);
-        return ConvertFromFile(inputPath!, outputPath, outputExtension, options, progress);
+        // The allowlist governs reads as well as writes. Resolving here, and handing the
+        // resolved path downstream, is what stops the parsers below from opening the caller's
+        // original string after the check has passed.
+        var resolvedInputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(
+            inputPath!, _serverConfig?.AllowedBasePaths ?? [], nameof(inputPath));
+        return ConvertFromFile(resolvedInputPath, outputPath, outputExtension, options, progress);
     }
 
     /// <summary>
@@ -165,7 +193,10 @@ Usage examples:
     /// <param name="options">Conversion options including page index, DPI, and format-specific settings.</param>
     /// <param name="progress">Optional progress reporter for long-running operations.</param>
     /// <returns>A ConversionResult indicating the conversion result.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when session management is not enabled.</exception>
+    /// <exception cref="InvalidOperationException">
+    ///     Thrown when session management is not enabled, or when the session is being saved or
+    ///     closed and is not accepting new operations.
+    /// </exception>
     /// <exception cref="KeyNotFoundException">Thrown when the session is not found or access is denied.</exception>
     /// <exception cref="ArgumentException">Thrown when the document type or output format is unsupported.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when pageIndex is out of valid range for the document.</exception>
@@ -179,32 +210,39 @@ Usage examples:
         var session = _sessionManager.TryGetSession(sessionId, identity)
                       ?? throw new KeyNotFoundException($"Session '{sessionId}' not found or access denied");
 
+        // Conversion reads the live document for as long as it runs. Without a usage scope the
+        // session's own drain counted zero in-flight operations and a concurrent save or close
+        // could dispose the document mid-conversion (R2-S09).
+        using var usage = session.AcquireUsage();
+
         string sourceType;
+        IReadOnlyList<string> written;
         switch (session.Type)
         {
             case DocumentType.Word:
                 var wordDoc = _sessionManager.GetDocument<Document>(sessionId, identity);
-                DocumentConverter.ConvertWordDocument(wordDoc, outputPath, outputExtension, progress, options);
+                written = DocumentConverter.ConvertWordDocument(wordDoc, outputPath, outputExtension, progress,
+                    options);
                 sourceType = "Word";
                 break;
 
             case DocumentType.Excel:
                 var workbook = _sessionManager.GetDocument<Workbook>(sessionId, identity);
-                DocumentConverter.ConvertExcelDocument(workbook, outputPath, outputExtension, progress,
+                written = DocumentConverter.ConvertExcelDocument(workbook, outputPath, outputExtension, progress,
                     options);
                 sourceType = "Excel";
                 break;
 
             case DocumentType.PowerPoint:
                 var presentation = _sessionManager.GetDocument<Presentation>(sessionId, identity);
-                DocumentConverter.ConvertPowerPointDocument(presentation, outputPath, outputExtension,
+                written = DocumentConverter.ConvertPowerPointDocument(presentation, outputPath, outputExtension,
                     progress, options);
                 sourceType = "PowerPoint";
                 break;
 
             case DocumentType.Pdf:
                 var pdfDoc = _sessionManager.GetDocument<Aspose.Pdf.Document>(sessionId, identity);
-                DocumentConverter.ConvertPdfDocument(pdfDoc, outputPath, outputExtension, options);
+                written = DocumentConverter.ConvertPdfDocument(pdfDoc, outputPath, outputExtension, options);
                 sourceType = "PDF";
                 break;
 
@@ -212,13 +250,17 @@ Usage examples:
                 throw new ArgumentException($"Unsupported document type: {session.Type}");
         }
 
+        var existing = written.Where(File.Exists).ToList();
+
         return new ConversionResult
         {
             SourcePath = sourcePath,
             OutputPath = outputPath,
             SourceFormat = sourceType,
             TargetFormat = outputExtension.TrimStart('.').ToUpperInvariant(),
-            FileSize = File.Exists(outputPath) ? new FileInfo(outputPath).Length : null,
+            FileSize = existing.Count > 0 ? existing.Sum(p => new FileInfo(p).Length) : null,
+            OutputPaths = existing.Count > 0 ? existing : null,
+            OutputFileSizes = existing.Count > 0 ? existing.Select(p => new FileInfo(p).Length).ToList() : null,
             Message = $"Document from session {sessionId} ({sourceType}) converted to {outputExtension} format"
         };
     }
@@ -239,23 +281,43 @@ Usage examples:
     {
         var inputExtension = Path.GetExtension(inputPath).ToLower();
         string sourceFormat;
+        IReadOnlyList<string> written;
+
+        // Before any loader opens it. Where the file states its own size, the refusal costs a
+        // directory read rather than a full parse — the load-time peak the later check could
+        // never bound (§23.13.1). A presentation is measured on its snapshot, below: measuring
+        // the path and then loading the path read two files (R23-PPT01).
+        if (!DocumentConverter.IsPowerPointDocument(inputExtension))
+            DocumentConverter.EnsureFileWithinLimit(inputPath,
+                DocumentConverter.GetDocumentType(inputExtension), options.ModelLimits);
 
         if (DocumentConverter.IsWordDocument(inputExtension))
         {
-            var doc = new Document(inputPath);
-            DocumentConverter.ConvertWordDocument(doc, outputPath, outputExtension, progress, options);
+            var doc = GuardedWordLoader.Load(inputPath, options.AllowedBasePaths);
+            written = DocumentConverter.ConvertWordDocument(doc, outputPath, outputExtension, progress, options);
             sourceFormat = "Word";
         }
         else if (DocumentConverter.IsExcelDocument(inputExtension))
         {
             using var workbook = new Workbook(inputPath);
-            DocumentConverter.ConvertExcelDocument(workbook, outputPath, outputExtension, progress, options);
+            written = DocumentConverter.ConvertExcelDocument(workbook, outputPath, outputExtension, progress, options);
             sourceFormat = "Excel";
         }
         else if (DocumentConverter.IsPowerPointDocument(inputExtension))
         {
-            using var presentation = new Presentation(inputPath);
-            DocumentConverter.ConvertPowerPointDocument(presentation, outputPath, outputExtension, progress,
+            // One snapshot, taken from one handle, that the preflight and the vendor loader both
+            // read: the trailer, the entry inventory and the loader used to open the caller's
+            // path in turn, and a path can be swapped between opens (R23-PPT01). Fails closed
+            // without a recovery capability, as the special-format path does.
+            using var authorised = ImmutableInputCopy.Of(inputPath,
+                RecoveryContext.For(options.RecoveryDirectory), options.AllowedBasePaths,
+                RenderBudget.MaxOutputBytes);
+            DocumentConverter.EnsureFileWithinLimit(authorised.Path, DocumentType.PowerPoint,
+                options.ModelLimits);
+
+            using var slidesGate = SlidesGate.Enter();
+            using var presentation = new Presentation(authorised.Path);
+            written = DocumentConverter.ConvertPowerPointDocument(presentation, outputPath, outputExtension, progress,
                 options);
             sourceFormat = "PowerPoint";
         }
@@ -263,13 +325,14 @@ Usage examples:
         {
             if (DocumentConverter.IsImageFormat(outputExtension))
             {
-                DocumentConverter.ConvertPdfToImages(inputPath, outputPath, outputExtension, options.PageIndex,
+                written = DocumentConverter.ConvertPdfToImages(inputPath, outputPath, outputExtension,
+                    options.PageIndex,
                     options);
             }
             else
             {
                 using var pdfDoc = new Aspose.Pdf.Document(inputPath);
-                DocumentConverter.ConvertPdfDocument(pdfDoc, outputPath, outputExtension, options);
+                written = DocumentConverter.ConvertPdfDocument(pdfDoc, outputPath, outputExtension, options);
             }
 
             sourceFormat = "PDF";
@@ -282,12 +345,21 @@ Usage examples:
                     $"Format '{inputExtension}' can only be converted to PDF, not '{outputExtension}'");
 
             sourceFormat =
-                DocumentConverter.ConvertToPdfFromSpecialFormat(inputPath, outputPath, options.AllowedBasePaths);
+                DocumentConverter.ConvertToPdfFromSpecialFormat(inputPath, outputPath,
+                    options.AllowedBasePaths, options.AllowExternalResources,
+                    options.RecoveryDirectory);
+
+            // This branch writes exactly one PDF at the requested path, but it was the only one
+            // that left `written` empty, so a successful conversion reported no size and no output
+            // path at all (R3-C02).
+            written = [outputPath];
         }
         else
         {
             throw new ArgumentException($"Unsupported input format: {inputExtension}");
         }
+
+        var existing = written.Where(File.Exists).ToList();
 
         return new ConversionResult
         {
@@ -295,7 +367,12 @@ Usage examples:
             OutputPath = outputPath,
             SourceFormat = sourceFormat,
             TargetFormat = outputExtension.TrimStart('.').ToUpperInvariant(),
-            FileSize = File.Exists(outputPath) ? new FileInfo(outputPath).Length : null,
+            // A single-file conversion keeps the familiar size; a multi-page or multi-sheet image
+            // conversion reports the total, because no single file represents the result and the
+            // path the caller supplied does not exist on disk.
+            FileSize = existing.Count > 0 ? existing.Sum(p => new FileInfo(p).Length) : null,
+            OutputPaths = existing.Count > 0 ? existing : null,
+            OutputFileSizes = existing.Count > 0 ? existing.Select(p => new FileInfo(p).Length).ToList() : null,
             Message = $"Document converted from {inputExtension} to {outputExtension} format"
         };
     }

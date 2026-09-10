@@ -20,10 +20,17 @@ public class OcrPreprocessingTool
     private readonly HandlerRegistry<AsposeOcr> _handlerRegistry;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Initializes a new instance of the <see cref="OcrPreprocessingTool" /> class.
     /// </summary>
-    public OcrPreprocessingTool()
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
+    public OcrPreprocessingTool(ServerConfig? serverConfig = null)
     {
+        _serverConfig = serverConfig;
         _handlerRegistry =
             HandlerRegistry<AsposeOcr>.CreateFromNamespace("AsposeMcpServer.Handlers.Ocr.Preprocessing");
     }
@@ -85,7 +92,8 @@ Note: OCR requires ONNX Runtime and is not supported on Linux ARM64.")]
         {
             Document = ocr,
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);

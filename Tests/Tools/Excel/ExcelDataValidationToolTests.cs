@@ -55,7 +55,7 @@ public class ExcelDataValidationToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithValidation("test_get.xlsx");
         var result = _tool.Execute("get", workbookPath);
         var data = GetResultData<GetDataValidationsResult>(result);
-        Assert.True(data.Count >= 0);
+        Assert.Equal(1, data.Count);
     }
 
     [Fact]
@@ -149,7 +149,7 @@ public class ExcelDataValidationToolTests : ExcelTestBase
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("get", sessionId: sessionId);
         var data = GetResultData<GetDataValidationsResult>(result);
-        Assert.True(data.Count >= 0);
+        Assert.Equal(1, data.Count);
         var output = GetResultOutput<GetDataValidationsResult>(result);
         Assert.True(output.IsSession);
     }

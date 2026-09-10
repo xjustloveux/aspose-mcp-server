@@ -113,7 +113,7 @@ public class MoveWordTableHandlerTests : WordHandlerTestBase
         var deep = doc.FirstSection.Body.GetChildNodes(NodeType.Paragraph, true)
             .Cast<Aspose.Words.Paragraph>().ToList();
         var cellParaIndex = deep.FindIndex(par => par.GetText().Contains("T0 cell"));
-        Assert.True(cellParaIndex >= 0);
+        Assert.Equal(0, cellParaIndex);
 
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>

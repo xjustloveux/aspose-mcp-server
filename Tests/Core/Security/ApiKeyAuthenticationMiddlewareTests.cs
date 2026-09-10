@@ -1,5 +1,6 @@
 using System.Net;
 using AsposeMcpServer.Core.Security;
+using AsposeMcpServer.Core.Tracking;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -15,6 +16,94 @@ public class ApiKeyAuthenticationMiddlewareTests
 {
     private readonly ILogger<ApiKeyAuthenticationMiddleware> _logger =
         NullLogger<ApiKeyAuthenticationMiddleware>.Instance;
+
+    #region Credential Ownership
+
+    /// <summary>
+    ///     Runs one request through the middleware and reports the owner it was given.
+    /// </summary>
+    /// <param name="config">The configuration to run under.</param>
+    /// <param name="key">The API key to present.</param>
+    /// <returns>The group and user the session layer would see.</returns>
+    private async Task<(string? GroupId, string? UserId)> OwnerFor(ApiKeyConfig config, string key)
+    {
+        var context = CreateHttpContext();
+        context.Request.Headers[config.HeaderName] = key;
+
+        string? groupId = null;
+        string? userId = null;
+        var middleware = new ApiKeyAuthenticationMiddleware(config, _logger);
+        await middleware.InvokeAsync(context, ctx =>
+        {
+            groupId = ctx.Items["GroupId"]?.ToString();
+            userId = ctx.Items["UserId"]?.ToString();
+            return Task.CompletedTask;
+        });
+
+        return (groupId, userId);
+    }
+
+    /// <summary>
+    ///     R4-S04 / R5-T02: two authenticated keys with no group of their own used to reach the
+    ///     session layer looking exactly like unauthenticated requests, so they shared the anonymous
+    ///     bucket and each could open the other's documents. An API key is stable for its whole life
+    ///     — unlike a bearer token, which is reissued (R5-S02) — so a fingerprint of it is a bucket
+    ///     that holds still across requests and across sessions.
+    /// </summary>
+    [Fact]
+    public async Task LocalMode_AKeyWithNoGroup_ShouldGetTheSameOwnerOnEveryRequest()
+    {
+        var config = new ApiKeyConfig
+        {
+            Enabled = true,
+            Mode = ApiKeyMode.Local,
+            HeaderName = "X-API-Key",
+            Keys = new Dictionary<string, string>
+            {
+                ["first-key"] = "",
+                ["second-key"] = ""
+            }
+        };
+
+        var first = await OwnerFor(config, "first-key");
+        var again = await OwnerFor(config, "first-key");
+        var other = await OwnerFor(config, "second-key");
+
+        Assert.NotNull(first.UserId);
+        Assert.StartsWith(CredentialOwnership.Prefix, first.UserId!, StringComparison.Ordinal);
+
+        // The same key is the same owner: a caller's sessions stay reachable, and their per-owner
+        // quota is not reset by asking again.
+        Assert.Equal(first.UserId, again.UserId);
+
+        // Different keys are different owners, which is what the shared anonymous bucket was not.
+        Assert.NotEqual(first.UserId, other.UserId);
+
+        // And the fingerprint is not the key.
+        Assert.DoesNotContain("first-key", first.UserId!, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task LocalMode_AKeyWithAGroup_ShouldKeepTheGroupAsItsOwner()
+    {
+        var config = new ApiKeyConfig
+        {
+            Enabled = true,
+            Mode = ApiKeyMode.Local,
+            HeaderName = "X-API-Key",
+            Keys = new Dictionary<string, string>
+            {
+                ["grouped-key"] = "group-123"
+            }
+        };
+
+        var owner = await OwnerFor(config, "grouped-key");
+
+        Assert.Equal("group-123", owner.GroupId);
+        Assert.Null(owner.UserId);
+    }
+
+    #endregion
 
     #region Local Mode Tests
 
@@ -145,6 +234,9 @@ public class ApiKeyAuthenticationMiddlewareTests
         {
             Enabled = true,
             Mode = ApiKeyMode.Gateway,
+            // A-04: gateway mode trusts nobody until a proxy is named; these cases are about
+            // header handling, so they declare the boundary as enforced elsewhere.
+            TrustedProxies = [TrustedProxyEvaluator.TrustAnyEntry],
             HeaderName = "X-API-Key",
             GroupIdentifierHeader = "X-Group-Id"
         };
@@ -165,12 +257,15 @@ public class ApiKeyAuthenticationMiddlewareTests
     }
 
     [Fact]
-    public async Task GatewayMode_MissingGroupIdHeader_ShouldAllowAsAnonymous()
+    public async Task GatewayMode_MissingGroupIdHeader_ShouldBeRejected()
     {
         var config = new ApiKeyConfig
         {
             Enabled = true,
             Mode = ApiKeyMode.Gateway,
+            // A-04: gateway mode trusts nobody until a proxy is named; these cases are about
+            // header handling, so they declare the boundary as enforced elsewhere.
+            TrustedProxies = [TrustedProxyEvaluator.TrustAnyEntry],
             HeaderName = "X-API-Key",
             GroupIdentifierHeader = "X-Group-Id"
         };
@@ -178,15 +273,18 @@ public class ApiKeyAuthenticationMiddlewareTests
         var context = CreateHttpContext();
         context.Request.Headers["X-API-Key"] = "any-key";
 
-        var capturedGroupId = "not-null";
+        var reachedTheServer = false;
         var middleware = new ApiKeyAuthenticationMiddleware(config, _logger);
-        await middleware.InvokeAsync(context, ctx =>
+        await middleware.InvokeAsync(context, _ =>
         {
-            capturedGroupId = ctx.Items["GroupId"]?.ToString();
+            reachedTheServer = true;
             return Task.CompletedTask;
         });
-        Assert.Null(capturedGroupId);
-        Assert.Equal(200, context.Response.StatusCode);
+
+        // The group header is the whole identity on this path, so accepting a request without it
+        // made every such request the same owner (R3-S02).
+        Assert.False(reachedTheServer);
+        Assert.Equal(401, context.Response.StatusCode);
     }
 
     #endregion
@@ -502,7 +600,7 @@ public class ApiKeyAuthenticationMiddlewareTests
     }
 
     [Fact]
-    public async Task MetricsEndpoint_ShouldSkipAuthentication()
+    public async Task MetricsEndpoint_ShouldRequireAuthenticationByDefault()
     {
         var config = new ApiKeyConfig
         {
@@ -520,6 +618,32 @@ public class ApiKeyAuthenticationMiddlewareTests
             nextCalled = true;
             return Task.CompletedTask;
         });
+
+        Assert.False(nextCalled);
+        Assert.Equal(401, context.Response.StatusCode);
+    }
+
+    [Fact]
+    public async Task MetricsEndpoint_ShouldSkipAuthentication_WhenAnonymousAccessConfigured()
+    {
+        var config = new ApiKeyConfig
+        {
+            Enabled = true,
+            Mode = ApiKeyMode.Local,
+            Keys = new Dictionary<string, string>()
+        };
+        var tracking = new TrackingConfig { MetricsEnabled = true, MetricsRequireAuth = false };
+
+        var context = CreateHttpContext("/metrics");
+
+        var nextCalled = false;
+        var middleware = new ApiKeyAuthenticationMiddleware(config, _logger, null, tracking);
+        await middleware.InvokeAsync(context, _ =>
+        {
+            nextCalled = true;
+            return Task.CompletedTask;
+        });
+
         Assert.True(nextCalled);
     }
 

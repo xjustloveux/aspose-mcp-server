@@ -106,7 +106,7 @@ public class GetExcelSheetsHandlerTests : ExcelHandlerTestBase
 
         var result = Assert.IsType<GetSheetsResult>(res);
 
-        Assert.True(result.Count >= 0);
+        Assert.Equal(1, result.Count);
         Assert.NotNull(result.Items);
         AssertNotModified(context);
     }

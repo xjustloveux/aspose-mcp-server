@@ -22,15 +22,21 @@ public class SetHeaderLineHandlerTests : WordHandlerTestBase
 
     #region Basic Operations
 
+    /// <summary>
+    ///     The operation always appends a bordered paragraph; there is no toggle for it.
+    ///     <para>
+    ///         These cases used to pass a <c>showLine</c> key, but no handler or tool declares
+    ///         one, so it was dropped and changed nothing. <c>lineStyle</c> only selects between
+    ///         single, double and thick, with single as the fallback, so the line cannot be
+    ///         switched off through this operation at all.
+    ///     </para>
+    /// </summary>
     [Fact]
     public void Execute_SetsHeaderLine()
     {
         var doc = CreateEmptyDocument();
         var context = CreateContext(doc);
-        var parameters = CreateParameters(new Dictionary<string, object?>
-        {
-            { "showLine", true }
-        });
+        var parameters = CreateParameters(new Dictionary<string, object?>());
 
         var res = _handler.Execute(context, parameters);
 
@@ -55,7 +61,6 @@ public class SetHeaderLineHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
-            { "showLine", true },
             { "lineWidth", 2.0 }
         });
 
@@ -80,7 +85,6 @@ public class SetHeaderLineHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
-            { "showLine", true },
             { "lineColor", "Blue" }
         });
 

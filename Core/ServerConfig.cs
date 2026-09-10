@@ -62,6 +62,14 @@ public class ServerConfig
     public IReadOnlyList<string> AllowedBasePaths { get; private set; } = [];
 
     /// <summary>
+    ///     Gets directories containing publish journals created by releases that stored recovery
+    ///     records beside outputs. Empty by default: an allowed output root is not recovery
+    ///     authority. Operators may opt in one directory at a time with
+    ///     <c>--legacy-publish-journal-root</c> during migration.
+    /// </summary>
+    public IReadOnlyList<string> LegacyPublishJournalRoots { get; private set; } = [];
+
+    /// <summary>
     ///     Maximum cumulative bytes written by a single <c>extract_all</c> call on the
     ///     OLE tools (<c>word_ole_object</c> / <c>excel_ole_object</c> / <c>ppt_ole_object</c>)
     ///     before the operation halts and returns a truncated result (security amendment
@@ -69,6 +77,20 @@ public class ServerConfig
     ///     raise or lower via configuration; values ≤ 0 are treated as "no cap".
     /// </summary>
     public long MaxExtractAllBytes { get; private set; } = 10L * 1024L * 1024L * 1024L;
+
+    /// <summary>
+    ///     Whether a conversion may follow references an MHT archive does not carry, which
+    ///     makes the server issue outbound requests on the caller's behalf. Off by default.
+    ///     <para>
+    ///         This used to be a per-request tool parameter, which let any caller switch off a
+    ///         security policy for their own request — the opposite of what an opt-in means, and
+    ///         at odds with the tool being annotated <c>OpenWorld = false</c>. Whether this
+    ///         server may reach the network is a property of where it is deployed, so it is an
+    ///         operator setting: <c>--allow-external-resources</c> or
+    ///         <c>ASPOSE_ALLOW_EXTERNAL_RESOURCES</c>.
+    ///     </para>
+    /// </summary>
+    public bool AllowExternalResources { get; private set; }
 
     /// <summary>
     ///     Loads configuration from environment variables and command line arguments.
@@ -99,6 +121,10 @@ public class ServerConfig
         var maxExtractAllBytes = Environment.GetEnvironmentVariable("MAX_EXTRACT_ALL_BYTES");
         if (!string.IsNullOrEmpty(maxExtractAllBytes) && long.TryParse(maxExtractAllBytes, out var envBytes))
             MaxExtractAllBytes = envBytes;
+
+        var allowExternal = Environment.GetEnvironmentVariable("ASPOSE_ALLOW_EXTERNAL_RESOURCES");
+        if (!string.IsNullOrEmpty(allowExternal) && bool.TryParse(allowExternal, out var envAllowExternal))
+            AllowExternalResources = envAllowExternal;
     }
 
     /// <summary>
@@ -253,6 +279,33 @@ public class ServerConfig
                         paths.Add(Path.GetFullPath(originalArg["--allowed-path=".Length..]));
                         AllowedBasePaths = paths.AsReadOnly();
                     }
+                    else if (arg == "--legacy-publish-journal-root")
+                    {
+                        if (i + 1 >= args.Length ||
+                            args[i + 1].StartsWith("--", StringComparison.Ordinal))
+                            throw new ArgumentException(
+                                "The legacy publish-journal root option requires a directory path.",
+                                nameof(args));
+
+                        AddLegacyPublishJournalRoot(args[i + 1]);
+                        i++;
+                    }
+                    else if (originalArg.StartsWith("--legacy-publish-journal-root:",
+                                 StringComparison.OrdinalIgnoreCase))
+                    {
+                        AddLegacyPublishJournalRoot(
+                            originalArg["--legacy-publish-journal-root:".Length..]);
+                    }
+                    else if (originalArg.StartsWith("--legacy-publish-journal-root=",
+                                 StringComparison.OrdinalIgnoreCase))
+                    {
+                        AddLegacyPublishJournalRoot(
+                            originalArg["--legacy-publish-journal-root=".Length..]);
+                    }
+                    else if (arg == "--allow-external-resources")
+                    {
+                        AllowExternalResources = true;
+                    }
                     else if (arg == "--max-extract-all-bytes" && i + 1 < args.Length)
                     {
                         if (long.TryParse(args[i + 1], out var cliBytes))
@@ -273,6 +326,20 @@ public class ServerConfig
                     break;
             }
         }
+    }
+
+    /// <summary>Adds one explicit legacy journal directory in command-line order.</summary>
+    /// <param name="path">The operator-supplied directory.</param>
+    private void AddLegacyPublishJournalRoot(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            throw new ArgumentException(
+                "The legacy publish-journal root must be a non-empty directory path.",
+                nameof(path));
+
+        var roots = LegacyPublishJournalRoots.ToList();
+        roots.Add(Path.GetFullPath(path));
+        LegacyPublishJournalRoots = roots.AsReadOnly();
     }
 
     /// <summary>

@@ -25,15 +25,22 @@ public class ApplyThemeHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with operation details.</returns>
     public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
+        // Held for the whole operation: this handler builds or reads presentations of
+        // its own, outside any session, so nothing else stands between it and a library
+        // that fails when two threads are inside it (SlidesGate).
+        using var slidesGate = SlidesGate.Enter();
+
         var p = ExtractApplyThemeParameters(parameters);
 
         SecurityHelper.ValidateFilePath(p.ThemePath, "themePath", true);
+        var resolvedThemePath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.ThemePath,
+            context.ServerConfig?.AllowedBasePaths ?? [], "themePath");
 
-        if (!File.Exists(p.ThemePath))
+        if (!File.Exists(resolvedThemePath))
             throw new FileNotFoundException("The specified file was not found.");
 
         var presentation = context.Document;
-        using var themePresentation = new Presentation(p.ThemePath);
+        using var themePresentation = new Presentation(resolvedThemePath);
 
         if (themePresentation.Masters.Count == 0)
             throw new InvalidOperationException("Theme presentation does not contain any master slides.");

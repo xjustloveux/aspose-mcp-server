@@ -31,7 +31,12 @@ public class FreezeExcelPanesHandler : OperationHandlerBase<Workbook>
         var workbook = context.Document;
         var worksheet = ExcelHelper.GetWorksheet(workbook, p.SheetIndex);
 
-        worksheet.FreezePanes(p.Row + 1, p.Column + 1, p.Row, p.Column);
+        // FreezePanes(row, column, freezedRows, freezedColumns): the first pair is the split cell,
+        // the second is how many rows and columns the frozen pane holds. Freezing N rows means the
+        // split sits at row N and the pane holds N rows, so both are the same number. Passing N+1
+        // as the split put it one row too far, which opened the sheet scrolled a row down and made
+        // the value read back differ from the one excel_view_settings writes for the same request.
+        worksheet.FreezePanes(p.Row, p.Column, p.Row, p.Column);
 
         MarkModified(context);
 

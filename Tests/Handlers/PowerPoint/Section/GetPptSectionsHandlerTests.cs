@@ -7,6 +7,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Section;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class GetPptSectionsHandlerTests : PptHandlerTestBase
 {
     private readonly GetPptSectionsHandler _handler = new();
@@ -151,7 +152,7 @@ public class GetPptSectionsHandlerTests : PptHandlerTestBase
         var result = Assert.IsType<GetSectionsResult>(res);
 
         Assert.NotNull(result.Sections);
-        Assert.True(result.Sections[0].StartSlideIndex >= 0);
+        Assert.Equal(0, result.Sections[0].StartSlideIndex);
     }
 
     [SkippableFact]
@@ -167,7 +168,7 @@ public class GetPptSectionsHandlerTests : PptHandlerTestBase
         var result = Assert.IsType<GetSectionsResult>(res);
 
         Assert.NotNull(result.Sections);
-        Assert.True(result.Sections[0].SlideCount >= 0);
+        Assert.Equal(2, result.Sections[0].SlideCount);
     }
 
     #endregion

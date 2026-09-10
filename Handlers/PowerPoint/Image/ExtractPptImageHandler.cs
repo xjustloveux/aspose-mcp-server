@@ -38,9 +38,14 @@ public class ExtractPptImageHandler : OperationHandlerBase<Presentation>
         var path = ValidateSourcePath(context.SourcePath);
         var extractParams = ExtractImageParameters(parameters, path);
 
-        Directory.CreateDirectory(extractParams.OutputDir);
+        var allowedBasePaths = context.ServerConfig?.AllowedBasePaths ?? [];
+        // Resolve before creating: a refused destination must not be brought into existence.
+        var resolvedOutputDir = SecurityHelper.ResolveAndEnsureWithinAllowlist(
+            extractParams.OutputDir, allowedBasePaths, "outputDir");
+        Directory.CreateDirectory(resolvedOutputDir);
 
-        var stats = ExtractAllImages(context.Document, extractParams, context.ServerConfig?.AllowedBasePaths ?? []);
+        var stats = ExtractAllImages(context.Document, extractParams, allowedBasePaths,
+            context.Recovery);
 
         return new SuccessResult { Message = BuildResultMessage(stats.Count, stats.SkippedCount, extractParams) };
     }
@@ -83,13 +88,35 @@ public class ExtractPptImageHandler : OperationHandlerBase<Presentation>
     /// <param name="presentation">The presentation to extract images from.</param>
     /// <param name="p">The extraction parameters.</param>
     /// <param name="allowedBasePaths">Allowlist of permitted base paths forwarded to the per-image save step.</param>
+    /// <param name="recovery">
+    ///     Where this host's publish records live and the key they are signed with (R18-ARCH01).
+    /// </param>
     /// <returns>An <see cref="ExtractionStats" /> with extraction counts.</returns>
     private static ExtractionStats ExtractAllImages(Presentation presentation, ExtractionParameters p,
-        IReadOnlyList<string> allowedBasePaths)
+        IReadOnlyList<string> allowedBasePaths, RecoveryContext recovery)
     {
         var count = 0;
         var skippedCount = 0;
         var exportedHashes = new HashSet<string>();
+
+        // Only a picture frame that carries an image becomes a file. Counting every shape refused
+        // a deck of a thousand text boxes and no pictures at all (R3-C05). Counting stops one past
+        // the cap: beyond that the answer is the same refusal, and a very large deck need not be
+        // walked in full to reach it.
+        //
+        // When duplicates are being skipped, the count is of the files that would actually be
+        // written: a deck of five thousand frames sharing one image produces one file, and
+        // refusing it for the frame count refused a request that was never going to be large
+        // (R4-R06).
+        RenderBudget.EnsureOutputCount(
+            CountExtractableImages(presentation, p.SkipDuplicates), "image files");
+
+        // A file count says nothing about what lands on disk, so the running total is checked as
+        // it grows and each file is written through what is left of it (R4-R07). The batch is
+        // published once, at the end: an extraction refused part-way used to leave whichever
+        // images it had already produced on top of the caller's files (R5-R01).
+        using var batch = new BoundedFileBatch(RenderBudget.MaxOutputBytes, "extracted images",
+            recovery, allowedBasePaths);
 
         var slideNum = 0;
         foreach (var slide in presentation.Slides)
@@ -98,12 +125,51 @@ public class ExtractPptImageHandler : OperationHandlerBase<Presentation>
             foreach (var shape in slide.Shapes)
                 if (shape is PictureFrame { PictureFormat.Picture.Image: not null } pic)
                 {
-                    var extracted = TryExtractImage(pic, slideNum, ref count, p, exportedHashes, allowedBasePaths);
+                    var extracted = TryExtractImage(pic, slideNum, ref count, p, exportedHashes,
+                        allowedBasePaths, batch);
                     if (!extracted) skippedCount++;
+                    RenderBudget.EnsureOutputCount(count, "image files");
                 }
         }
 
+        batch.Publish();
+
         return new ExtractionStats(count, skippedCount);
+    }
+
+    /// <summary>
+    ///     Counts the picture frames that would produce a file, stopping one past the cap.
+    /// </summary>
+    /// <param name="presentation">The presentation to inspect.</param>
+    /// <param name="skipDuplicates">
+    ///     Whether frames sharing an image will produce one file between them, in which case they
+    ///     count once.
+    /// </param>
+    /// <returns>
+    ///     The number of files the extraction would write, or
+    ///     <see cref="RenderBudget.MaxOutputFiles" /> + 1 once the cap is known to be exceeded.
+    /// </returns>
+    private static int CountExtractableImages(Presentation presentation, bool skipDuplicates)
+    {
+        var extractable = 0;
+        var seen = skipDuplicates ? new HashSet<string>() : null;
+
+        foreach (var slide in presentation.Slides)
+        foreach (var shape in slide.Shapes)
+        {
+            if (shape is not PictureFrame { PictureFormat.Picture.Image: not null } picture) continue;
+
+            // Frames sharing an image produce one file between them when duplicates are skipped,
+            // so counting frames refused requests that would have written a handful of files
+            // (R4-R06). Hashing here costs the same work the extraction would do anyway.
+            if (seen != null && !seen.Add(PptImageHelper.ComputeImageHash(
+                    picture.PictureFormat.Picture.Image.BinaryData)))
+                continue;
+
+            if (++extractable > RenderBudget.MaxOutputFiles) return extractable;
+        }
+
+        return extractable;
     }
 
     /// <summary>
@@ -115,9 +181,12 @@ public class ExtractPptImageHandler : OperationHandlerBase<Presentation>
     /// <param name="p">The extraction parameters.</param>
     /// <param name="exportedHashes">The set of exported image hashes.</param>
     /// <param name="allowedBasePaths">Allowlist of permitted base paths used to validate the resolved output path.</param>
+    /// <param name="batch">The request's staged output, published only once all of it succeeds.</param>
     /// <returns>True if the image was extracted, false if skipped.</returns>
+    /// <exception cref="ArgumentException">Thrown when the request has written all it may.</exception>
     private static bool TryExtractImage(PictureFrame pic, int slideNum, ref int count,
-        ExtractionParameters p, HashSet<string> exportedHashes, IReadOnlyList<string> allowedBasePaths)
+        ExtractionParameters p, HashSet<string> exportedHashes, IReadOnlyList<string> allowedBasePaths,
+        BoundedFileBatch batch)
     {
         var image = pic.PictureFormat.Picture.Image;
 
@@ -131,9 +200,12 @@ public class ExtractPptImageHandler : OperationHandlerBase<Presentation>
         var fileName = Path.Combine(p.OutputDir, $"slide{slideNum}_img{++count}.{p.Extension}");
         // H25: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
         fileName = SecurityHelper.ResolveAndEnsureWithinAllowlist(fileName, allowedBasePaths, nameof(fileName));
-        image.SystemImage.Save(fileName, p.IsJpeg
-            ? ImageFormat.Jpeg
-            : ImageFormat.Png);
+
+        // Written through what is left of the budget: saving straight to the destination meant
+        // this path had a file count and no byte limit at all, so one deck of very large images
+        // was unbounded (R4-R07).
+        batch.Stage(fileName,
+            stream => image.SystemImage.Save(stream, p.IsJpeg ? ImageFormat.Jpeg : ImageFormat.Png));
         return true;
     }
 

@@ -71,7 +71,7 @@ public class GetPdfStatisticsHandlerTests : PdfHandlerTestBase
         var res = _handler.Execute(context, parameters);
 
         var result = Assert.IsType<GetPdfStatisticsResult>(res);
-        Assert.True(result.TotalAnnotations >= 0);
+        Assert.Equal(0, result.TotalAnnotations);
     }
 
     [Fact]
@@ -84,7 +84,7 @@ public class GetPdfStatisticsHandlerTests : PdfHandlerTestBase
         var res = _handler.Execute(context, parameters);
 
         var result = Assert.IsType<GetPdfStatisticsResult>(res);
-        Assert.True(result.TotalParagraphs >= 0);
+        Assert.Equal(0, result.TotalParagraphs);
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public class GetPdfStatisticsHandlerTests : PdfHandlerTestBase
         var res = _handler.Execute(context, parameters);
 
         var result = Assert.IsType<GetPdfStatisticsResult>(res);
-        Assert.True(result.Bookmarks >= 0);
+        Assert.Equal(0, result.Bookmarks);
     }
 
     [Fact]
@@ -110,7 +110,7 @@ public class GetPdfStatisticsHandlerTests : PdfHandlerTestBase
         var res = _handler.Execute(context, parameters);
 
         var result = Assert.IsType<GetPdfStatisticsResult>(res);
-        Assert.True(result.FormFields >= 0);
+        Assert.Equal(0, result.FormFields);
     }
 
     #endregion

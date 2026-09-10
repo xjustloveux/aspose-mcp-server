@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Aspose.Words;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
@@ -31,26 +32,16 @@ public class AddTabStopWordHandler : OperationHandlerBase<Document>
         var doc = context.Document;
         var para = ParagraphResolver.Resolve(doc, ParagraphAddress.From(parameters, p.ParagraphIndex)).Paragraph;
 
-        var tabAlignment = p.TabAlignment.ToLower() switch
+        // The same names, read the same way, as the array form. Spelling one wrong used to give
+        // a left stop with no leader and a success message quoting the spelling back (R13-W01).
+        var stop = WordTabStopHelper.Resolve(new JsonArray(new JsonObject
         {
-            "center" => TabAlignment.Center,
-            "right" => TabAlignment.Right,
-            "decimal" => TabAlignment.Decimal,
-            "bar" => TabAlignment.Bar,
-            _ => TabAlignment.Left
-        };
+            ["position"] = p.TabPosition,
+            ["alignment"] = p.TabAlignment,
+            ["leader"] = p.TabLeader
+        }))[0];
 
-        var tabLeader = p.TabLeader.ToLower() switch
-        {
-            "dots" => TabLeader.Dots,
-            "dashes" => TabLeader.Dashes,
-            "line" => TabLeader.Line,
-            "heavy" => TabLeader.Heavy,
-            "middledot" => TabLeader.MiddleDot,
-            _ => TabLeader.None
-        };
-
-        para.ParagraphFormat.TabStops.Add(new TabStop(p.TabPosition, tabAlignment, tabLeader));
+        para.ParagraphFormat.TabStops.Add(stop);
 
         MarkModified(context);
         return new SuccessResult { Message = $"Tab stop added at {p.TabPosition}pt ({p.TabAlignment}, {p.TabLeader})" };

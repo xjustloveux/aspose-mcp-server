@@ -26,6 +26,11 @@ public class PdfPageTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     The document session manager for managing in-memory document sessions.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -35,10 +40,13 @@ public class PdfPageTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
     /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
-    public PdfPageTool(DocumentSessionManager? sessionManager = null, ISessionIdentityAccessor? identityAccessor = null)
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
+    public PdfPageTool(DocumentSessionManager? sessionManager = null, ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry = HandlerRegistry<Document>.CreateFromNamespace("AsposeMcpServer.Handlers.Pdf.Page");
     }
 
@@ -56,7 +64,10 @@ public class PdfPageTool
     /// <param name="x">X position in points (for crop, lower-left corner).</param>
     /// <param name="y">Y position in points (for crop, lower-left corner).</param>
     /// <param name="pageIndex">Page index (1-based, required for delete, rotate, details).</param>
-    /// <param name="rotation">Rotation angle in degrees: 0, 90, 180, 270 (for rotate, required).</param>
+    /// <param name="rotation">
+    ///     Rotation angle in degrees: 0, 90, 180, 270 (optional for rotate, default: 0, which leaves the
+    ///     page unrotated).
+    /// </param>
     /// <param name="pageIndices">Array of page indices to rotate (1-based, for rotate, optional).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
@@ -109,12 +120,16 @@ Usage examples:
         double? y = null,
         [Description("Page index (1-based, required for delete, rotate, crop, resize, details)")]
         int pageIndex = 0,
-        [Description("Rotation angle in degrees: 0, 90, 180, 270 (for rotate, required)")]
+        [Description(
+            "Rotation angle in degrees: 0, 90, 180, 270 (optional for rotate, default: 0, which leaves the page unrotated)")]
         int rotation = 0,
         [Description("Array of page indices to rotate (1-based, for rotate, optional)")]
         int[]? pageIndices = null)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        SecurityHelper.ValidateArraySize(pageIndices, nameof(pageIndices));
+
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor,
+            serverConfig: _serverConfig);
 
         var parameters = BuildParameters(operation, count, insertAt, width, height, x, y, pageIndex, rotation,
             pageIndices);
@@ -128,7 +143,8 @@ Usage examples:
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);

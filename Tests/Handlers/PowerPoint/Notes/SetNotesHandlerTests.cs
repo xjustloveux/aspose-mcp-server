@@ -6,6 +6,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Notes;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class SetNotesHandlerTests : PptHandlerTestBase
 {
     private readonly SetNotesHandler _handler = new();

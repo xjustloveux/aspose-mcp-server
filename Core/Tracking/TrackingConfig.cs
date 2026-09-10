@@ -6,6 +6,16 @@ namespace AsposeMcpServer.Core.Tracking;
 public class TrackingConfig
 {
     /// <summary>
+    ///     Routes the metrics path must not equal or contain.
+    ///     <para>
+    ///         Serving metrics anonymously is an opt-in for one endpoint. If that endpoint is
+    ///         also a real route, or a parent of one, the exemption stops being about metrics:
+    ///         a metrics path of <c>/</c> or <c>/mcp</c> would describe the tool endpoint too.
+    ///     </para>
+    /// </summary>
+    private static readonly string[] ReservedRoutes = ["/mcp", "/health", "/ready"];
+
+    /// <summary>
     ///     Enable structured logging
     /// </summary>
     public bool LogEnabled { get; set; } = true;
@@ -46,6 +56,15 @@ public class TrackingConfig
     public string MetricsPath { get; set; } = "/metrics";
 
     /// <summary>
+    ///     Whether the metrics endpoint is subject to the configured authentication.
+    ///     Metrics expose request volume, success and failure counts, average latency, per-tool
+    ///     usage and process memory, so the endpoint is authenticated like any other by default.
+    ///     Set to <c>false</c> only when the endpoint is reachable exclusively from a trusted
+    ///     scrape network, since liveness probes use <c>/health</c> and <c>/ready</c> instead.
+    /// </summary>
+    public bool MetricsRequireAuth { get; set; } = true;
+
+    /// <summary>
     ///     Loads configuration from environment variables and command line arguments.
     ///     Command line arguments take precedence over environment variables.
     /// </summary>
@@ -72,6 +91,36 @@ public class TrackingConfig
 
         if (!string.IsNullOrEmpty(MetricsPath) && !MetricsPath.StartsWith('/'))
             MetricsPath = "/" + MetricsPath;
+
+        ValidateMetricsPathDoesNotCollide();
+    }
+
+    /// <summary>
+    ///     Refuses a metrics path that would also describe another route.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when the path collides.</exception>
+    private void ValidateMetricsPathDoesNotCollide()
+    {
+        if (string.IsNullOrEmpty(MetricsPath)) return;
+
+        var normalized = MetricsPath.TrimEnd('/');
+        if (normalized.Length == 0)
+            throw new InvalidOperationException(
+                "The metrics path cannot be the site root: every request would match it. "
+                + "Use a dedicated path such as /metrics.");
+
+        foreach (var reserved in ReservedRoutes)
+        {
+            var collides = normalized.Equals(reserved, StringComparison.OrdinalIgnoreCase)
+                           || reserved.StartsWith(normalized + "/", StringComparison.OrdinalIgnoreCase)
+                           || normalized.StartsWith(reserved + "/", StringComparison.OrdinalIgnoreCase);
+
+            if (collides)
+                throw new InvalidOperationException(
+                    $"The metrics path '{MetricsPath}' collides with the reserved route "
+                    + $"'{reserved}'. Anonymous metrics access would then cover that route as "
+                    + "well. Use a dedicated path such as /metrics.");
+        }
     }
 
     /// <summary>
@@ -104,6 +153,9 @@ public class TrackingConfig
         var metricsPath = Environment.GetEnvironmentVariable("ASPOSE_METRICS_PATH");
         if (!string.IsNullOrEmpty(metricsPath))
             MetricsPath = metricsPath;
+
+        if (bool.TryParse(Environment.GetEnvironmentVariable("ASPOSE_METRICS_REQUIRE_AUTH"), out var requireAuth))
+            MetricsRequireAuth = requireAuth;
     }
 
     /// <summary>
@@ -161,6 +213,14 @@ public class TrackingConfig
             else if (TryGetStringValue(arg, "--metrics-path", args, ref i, out var metricsPath))
             {
                 MetricsPath = metricsPath;
+            }
+            else if (arg.Equals("--metrics-allow-anonymous", StringComparison.OrdinalIgnoreCase))
+            {
+                MetricsRequireAuth = false;
+            }
+            else if (arg.Equals("--metrics-require-auth", StringComparison.OrdinalIgnoreCase))
+            {
+                MetricsRequireAuth = true;
             }
         }
     }

@@ -32,7 +32,9 @@ public class ReplaceImageWordHandler : OperationHandlerBase<Document>
     public override object Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractReplaceImageParameters(parameters);
-        ValidateParameters(p);
+        // A secondary input is still an input: the replacement image is read from disk, so it
+        // has to come from inside the allowlist, and the reader must see the resolved path.
+        var resolvedImagePath = ValidateParameters(p, context.ServerConfig?.AllowedBasePaths ?? []);
 
         var doc = context.Document;
         var allImages = WordImageHelper.GetAllImages(doc, p.SectionIndex);
@@ -41,25 +43,33 @@ public class ReplaceImageWordHandler : OperationHandlerBase<Document>
         var shapeToReplace = allImages[p.ImageIndex];
         var originalProps = CaptureOriginalProperties(shapeToReplace, p.PreservePosition);
 
-        ReplaceImage(shapeToReplace, p, originalProps);
+        ReplaceImage(shapeToReplace, p, originalProps, resolvedImagePath);
 
         MarkModified(context);
 
-        return BuildResultMessage(p, originalProps.Width, shapeToReplace.Height);
+        return BuildResultMessage(p, originalProps.Width, originalProps.Height, shapeToReplace.Height);
     }
 
     /// <summary>
-    ///     Validates required parameters.
+    ///     Validates required parameters and returns the allowlist-resolved image path.
     /// </summary>
-    private static void ValidateParameters(ReplaceImageParameters p)
+    /// <param name="p">Extracted parameters.</param>
+    /// <param name="allowedBasePaths">Roots the caller may read from.</param>
+    /// <returns>The resolved path the image must be read from.</returns>
+    private static string ValidateParameters(ReplaceImageParameters p,
+        IReadOnlyList<string> allowedBasePaths)
     {
         if (string.IsNullOrEmpty(p.NewImagePath))
             throw new ArgumentException("newImagePath or imagePath is required for replace operation");
 
         SecurityHelper.ValidateFilePath(p.NewImagePath, "newImagePath", true);
+        var resolvedImagePath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.NewImagePath,
+            allowedBasePaths, "newImagePath");
 
-        if (!IOFile.Exists(p.NewImagePath))
+        if (!IOFile.Exists(resolvedImagePath))
             throw new FileNotFoundException("The specified file was not found.");
+
+        return resolvedImagePath;
     }
 
     /// <summary>
@@ -75,6 +85,7 @@ public class ReplaceImageWordHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Captures original properties from the shape.
     /// </summary>
+    /// <returns>The original shape properties.</returns>
     private static OriginalShapeProperties CaptureOriginalProperties(WordShape shape, bool capturePosition)
     {
         return new OriginalShapeProperties(
@@ -92,11 +103,12 @@ public class ReplaceImageWordHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Replaces the image and applies size/position settings.
     /// </summary>
-    private static void ReplaceImage(WordShape shape, ReplaceImageParameters p, OriginalShapeProperties originalProps)
+    private static void ReplaceImage(WordShape shape, ReplaceImageParameters p,
+        OriginalShapeProperties originalProps, string resolvedImagePath)
     {
         try
         {
-            shape.ImageData.SetImage(p.NewImagePath);
+            shape.ImageData.SetImage(resolvedImagePath);
             ApplySizeSettings(shape, p, originalProps);
             ApplyPositionSettings(shape, p, originalProps);
         }
@@ -174,7 +186,9 @@ public class ReplaceImageWordHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Builds the result message.
     /// </summary>
-    private static SuccessResult BuildResultMessage(ReplaceImageParameters p, double originalWidth, double newHeight)
+    /// <returns>The success result.</returns>
+    private static SuccessResult BuildResultMessage(ReplaceImageParameters p, double originalWidth,
+        double originalHeight, double newHeight)
     {
         var result = $"Image #{p.ImageIndex} replaced successfully\n";
         result += $"New image: {Path.GetFileName(p.NewImagePath)}\n";
@@ -182,7 +196,7 @@ public class ReplaceImageWordHandler : OperationHandlerBase<Document>
         if (p.PreserveSize)
             result += p.SmartFit
                 ? $"Smart fit: width preserved ({originalWidth:F1} pt), height calculated proportionally ({newHeight:F1} pt)\n"
-                : $"Preserved size: {originalWidth:F1} pt x {originalWidth:F1} pt\n";
+                : $"Preserved size: {originalWidth:F1} pt x {originalHeight:F1} pt\n";
 
         if (p.PreservePosition)
             result += "Preserved position and wrapping";

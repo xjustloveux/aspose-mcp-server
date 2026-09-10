@@ -25,6 +25,37 @@ public class HostFactoryErrorFilterTests
     }
 
     [Fact]
+    public async Task Filter_OutputDirectoryMessage_SurvivesTheAccessDeniedFlattening()
+    {
+        // Before this passed through, a caller whose output directory was unusable was told
+        // "Access to the file was denied.", which points at the input file rather than the
+        // directory they chose.
+        var text = await RunFilterWithException(
+            new UnauthorizedAccessException(ErrorMessageBuilder.OutputDirectoryNotWritable("invoice.pdf")));
+
+        Assert.Equal(ErrorMessageBuilder.OutputDirectoryNotWritable("invoice.pdf"), text);
+    }
+
+    [Fact]
+    public async Task Filter_OutputDirectoryMessage_SurvivesTheIoSentinel()
+    {
+        var text = await RunFilterWithException(
+            new IOException(ErrorMessageBuilder.OutputDirectoryNotWritable()));
+
+        Assert.Equal(ErrorMessageBuilder.OutputDirectoryNotWritable(), text);
+    }
+
+    [Fact]
+    public async Task Filter_RawAccessDeniedText_IsStillReplaced()
+    {
+        var text = await RunFilterWithException(
+            new UnauthorizedAccessException(@"Access to the path 'C:\server\internal\out' is denied."));
+
+        Assert.DoesNotContain(@"C:\server", text);
+        Assert.Equal("Access to the file was denied.", text);
+    }
+
+    [Fact]
     public async Task Filter_ArgumentException_PassesDesignedMessageThrough()
     {
         var text = await RunFilterWithException(

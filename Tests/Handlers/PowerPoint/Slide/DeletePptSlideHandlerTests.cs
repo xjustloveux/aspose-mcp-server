@@ -7,6 +7,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Slide;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class DeletePptSlideHandlerTests : PptHandlerTestBase
 {
     private readonly DeletePptSlideHandler _handler = new();

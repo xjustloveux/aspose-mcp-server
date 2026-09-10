@@ -29,6 +29,8 @@ public class VerifyWordDigitalSignatureHandler : OperationHandlerBase<Document>
     {
         var path = parameters.GetRequired<string>("path");
         SecurityHelper.ValidateFilePath(path, "path", true);
+        path = SecurityHelper.ResolveAndEnsureWithinAllowlist(path,
+            context.ServerConfig?.AllowedBasePaths ?? [], "path");
         var signatures = DigitalSignatureUtil.LoadSignatures(path);
 
         var totalCount = signatures.Count;

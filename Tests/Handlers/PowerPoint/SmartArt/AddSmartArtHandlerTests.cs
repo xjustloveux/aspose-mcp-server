@@ -7,6 +7,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.SmartArt;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class AddSmartArtHandlerTests : PptHandlerTestBase
 {
     private readonly AddSmartArtHandler _handler = new();

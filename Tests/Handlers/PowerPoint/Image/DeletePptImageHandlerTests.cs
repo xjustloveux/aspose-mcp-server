@@ -12,6 +12,7 @@ using System.Runtime.Versioning;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Image;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class DeletePptImageHandlerTests : PptHandlerTestBase
 {
     private readonly DeletePptImageHandler _handler = new();

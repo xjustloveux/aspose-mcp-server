@@ -5,6 +5,7 @@ using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
 using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.File;
@@ -15,6 +16,8 @@ namespace AsposeMcpServer.Handlers.Word.File;
 [ResultType(typeof(SuccessResult))]
 public class CreateFromTemplateWordHandler : OperationHandlerBase<Document>
 {
+    private const string OutputPathParameter = "outputPath";
+
     /// <inheritdoc />
     public override string Operation => "create_from_template";
 
@@ -39,9 +42,11 @@ public class CreateFromTemplateWordHandler : OperationHandlerBase<Document>
         if (string.IsNullOrEmpty(p.OutputPath))
             throw new ArgumentException("outputPath is required for create_from_template operation");
 
-        SecurityHelper.ValidateFilePath(p.OutputPath, "outputPath", true);
+        SecurityHelper.ValidateFilePath(p.OutputPath, OutputPathParameter, true);
+        var outputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.OutputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], OutputPathParameter);
 
-        var outputDir = Path.GetDirectoryName(p.OutputPath);
+        var outputDir = Path.GetDirectoryName(outputPath);
         if (!string.IsNullOrEmpty(outputDir))
             Directory.CreateDirectory(outputDir);
 
@@ -64,10 +69,13 @@ public class CreateFromTemplateWordHandler : OperationHandlerBase<Document>
         else
         {
             SecurityHelper.ValidateFilePath(p.TemplatePath!, "templatePath", true);
-            if (!System.IO.File.Exists(p.TemplatePath))
+            var resolvedTemplatePath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.TemplatePath!,
+                context.ServerConfig?.AllowedBasePaths ?? [], "templatePath");
+            if (!System.IO.File.Exists(resolvedTemplatePath))
                 throw new FileNotFoundException("The specified file was not found.");
-            doc = new Document(p.TemplatePath);
-            templateSource = Path.GetFileName(p.TemplatePath);
+            doc = GuardedWordLoader.Load(resolvedTemplatePath,
+                context.ServerConfig?.AllowedBasePaths ?? []);
+            templateSource = Path.GetFileName(resolvedTemplatePath);
         }
 
         var engine = new ReportingEngine
@@ -88,7 +96,7 @@ public class CreateFromTemplateWordHandler : OperationHandlerBase<Document>
 
         // H8: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
         var resolvedOutputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.OutputPath,
-            context.ServerConfig?.AllowedBasePaths ?? [], "outputPath");
+            context.ServerConfig?.AllowedBasePaths ?? [], OutputPathParameter);
         doc.Save(resolvedOutputPath);
         return new SuccessResult
         {
@@ -102,7 +110,7 @@ public class CreateFromTemplateWordHandler : OperationHandlerBase<Document>
         return new CreateFromTemplateParameters(
             parameters.GetOptional<string?>("templatePath"),
             parameters.GetOptional<string?>("sessionId"),
-            parameters.GetOptional<string?>("outputPath"),
+            parameters.GetOptional<string?>(OutputPathParameter),
             parameters.GetOptional<string?>("dataJson"));
     }
 

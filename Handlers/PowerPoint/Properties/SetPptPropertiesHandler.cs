@@ -1,8 +1,8 @@
-using System.Globalization;
 using System.Text.Json;
 using Aspose.Slides;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.Properties;
@@ -31,49 +31,51 @@ public class SetPptPropertiesHandler : OperationHandlerBase<Presentation>
         var props = presentation.DocumentProperties;
         List<string> changes = [];
 
-        if (!string.IsNullOrEmpty(p.Title))
+        // null means the caller did not supply the field; an empty string means clear it.
+        // Testing IsNullOrEmpty collapsed the two, so a field could never be cleared.
+        if (p.Title != null)
         {
             props.Title = p.Title;
             changes.Add("Title");
         }
 
-        if (!string.IsNullOrEmpty(p.Subject))
+        if (p.Subject != null)
         {
             props.Subject = p.Subject;
             changes.Add("Subject");
         }
 
-        if (!string.IsNullOrEmpty(p.Author))
+        if (p.Author != null)
         {
             props.Author = p.Author;
             changes.Add("Author");
         }
 
-        if (!string.IsNullOrEmpty(p.Keywords))
+        if (p.Keywords != null)
         {
             props.Keywords = p.Keywords;
             changes.Add("Keywords");
         }
 
-        if (!string.IsNullOrEmpty(p.Comments))
+        if (p.Comments != null)
         {
             props.Comments = p.Comments;
             changes.Add("Comments");
         }
 
-        if (!string.IsNullOrEmpty(p.Category))
+        if (p.Category != null)
         {
             props.Category = p.Category;
             changes.Add("Category");
         }
 
-        if (!string.IsNullOrEmpty(p.Company))
+        if (p.Company != null)
         {
             props.Company = p.Company;
             changes.Add("Company");
         }
 
-        if (!string.IsNullOrEmpty(p.Manager))
+        if (p.Manager != null)
         {
             props.Manager = p.Manager;
             changes.Add("Manager");
@@ -119,7 +121,7 @@ public class SetPptPropertiesHandler : OperationHandlerBase<Presentation>
     /// <returns>True if parsing succeeded; otherwise, false.</returns>
     private static bool TryParseDateTime(string value, out DateTime result)
     {
-        return DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out result);
+        return IsoDateTimeHelper.TryParse(value, out result);
     }
 
     private static SetPptPropertiesParameters ExtractSetPptPropertiesParameters(OperationParameters parameters)

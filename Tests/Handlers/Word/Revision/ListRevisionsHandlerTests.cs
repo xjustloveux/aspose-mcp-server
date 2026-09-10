@@ -48,7 +48,7 @@ public class ListRevisionsHandlerTests : WordHandlerTestBase
         var result = Assert.IsType<GetRevisionsWordResult>(res);
 
         Assert.NotNull(result);
-        Assert.True(result.Count >= 0);
+        Assert.Equal(1, result.Count);
         Assert.NotNull(result.Revisions);
     }
 

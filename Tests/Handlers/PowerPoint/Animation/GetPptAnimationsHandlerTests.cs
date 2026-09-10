@@ -8,6 +8,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Animation;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class GetPptAnimationsHandlerTests : PptHandlerTestBase
 {
     private readonly GetPptAnimationsHandler _handler = new();
@@ -142,7 +143,7 @@ public class GetPptAnimationsHandlerTests : PptHandlerTestBase
         var result = Assert.IsType<GetAnimationsResult>(res);
 
         Assert.NotNull(result.Animations);
-        Assert.True(result.Animations.Count >= 0);
+        Assert.Single(result.Animations);
     }
 
     #endregion
@@ -184,7 +185,9 @@ public class GetPptAnimationsHandlerTests : PptHandlerTestBase
         var result = Assert.IsType<GetAnimationsResult>(res);
 
         var firstAnimation = result.Animations[0];
-        Assert.True(firstAnimation.ShapeIndex >= 0 || firstAnimation.ShapeIndex == -1);
+        // The fixture animates the one shape on the slide, so the reported index is that
+        // shape. The previous form also accepted -1, which is the "no shape" marker.
+        Assert.Equal(0, firstAnimation.ShapeIndex);
     }
 
     [SkippableFact]

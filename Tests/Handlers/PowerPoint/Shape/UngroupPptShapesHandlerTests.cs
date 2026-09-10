@@ -7,6 +7,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Shape;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class UngroupPptShapesHandlerTests : PptHandlerTestBase
 {
     private readonly UngroupPptShapesHandler _handler = new();

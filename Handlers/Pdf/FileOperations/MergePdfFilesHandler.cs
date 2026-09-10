@@ -13,6 +13,9 @@ namespace AsposeMcpServer.Handlers.Pdf.FileOperations;
 [ResultType(typeof(SuccessResult))]
 public class MergePdfFilesHandler : OperationHandlerBase<Document>
 {
+    private const string InputPathsParameter = "inputPaths";
+    private const string OutputPathParameter = "outputPath";
+
     /// <inheritdoc />
     public override string Operation => "merge";
 
@@ -31,15 +34,25 @@ public class MergePdfFilesHandler : OperationHandlerBase<Document>
         if (mergeParams.InputPaths.Length == 0)
             throw new ArgumentException("inputPaths is required for merge operation");
 
-        SecurityHelper.ValidateArraySize(mergeParams.InputPaths, "inputPaths");
+        SecurityHelper.ValidateArraySize(mergeParams.InputPaths, InputPathsParameter);
 
         var validPaths = mergeParams.InputPaths.Where(p => !string.IsNullOrEmpty(p)).ToList();
         if (validPaths.Count == 0)
             throw new ArgumentException("At least one input path is required");
 
-        foreach (var inputPath in validPaths)
-            SecurityHelper.ValidateFilePath(inputPath, "inputPaths", true);
-        SecurityHelper.ValidateFilePath(mergeParams.OutputPath, "outputPath", true);
+        // The canonical paths are kept, not thrown away: validating one path and then
+        // opening a different, still-mutable one is the check-to-use gap the resolver
+        // exists to close (R7-F03).
+        for (var i = 0; i < validPaths.Count; i++)
+        {
+            SecurityHelper.ValidateFilePath(validPaths[i], InputPathsParameter, true);
+            validPaths[i] = SecurityHelper.ResolveAndEnsureWithinAllowlist(validPaths[i],
+                context.ServerConfig?.AllowedBasePaths ?? [], InputPathsParameter);
+        }
+
+        SecurityHelper.ValidateFilePath(mergeParams.OutputPath, OutputPathParameter, true);
+        _ = SecurityHelper.ResolveAndEnsureWithinAllowlist(mergeParams.OutputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], OutputPathParameter);
 
         using var mergedDocument = new Document(validPaths[0]);
         var totalFiles = validPaths.Count;
@@ -64,7 +77,7 @@ public class MergePdfFilesHandler : OperationHandlerBase<Document>
 
         // H28: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
         var resolvedOutputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(mergeParams.OutputPath,
-            context.ServerConfig?.AllowedBasePaths ?? [], "outputPath");
+            context.ServerConfig?.AllowedBasePaths ?? [], OutputPathParameter);
         mergedDocument.Save(resolvedOutputPath);
         context.Progress?.Report(new ProgressNotificationValue
             { Progress = 100, Total = 100, Message = "Merge completed" });
@@ -81,8 +94,8 @@ public class MergePdfFilesHandler : OperationHandlerBase<Document>
     private static MergeParameters ExtractMergeParameters(OperationParameters parameters)
     {
         return new MergeParameters(
-            parameters.GetRequired<string>("outputPath"),
-            parameters.GetRequired<string[]>("inputPaths")
+            parameters.GetRequired<string>(OutputPathParameter),
+            parameters.GetRequired<string[]>(InputPathsParameter)
         );
     }
 

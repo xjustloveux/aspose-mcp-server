@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using AsposeMcpServer.Core.Conversion;
 using AsposeMcpServer.Core.Session;
 using AsposeMcpServer.Results.Extension;
@@ -42,6 +43,26 @@ public sealed class ExtensionSessionBridge : IDisposable
     ///     When the limit is reached, new events are dropped with a warning log.
     /// </remarks>
     private const int MaxActiveTasks = 1000;
+
+    /// <summary>
+    ///     Ensures the conversion cache has capacity for a new entry by removing
+    ///     expired entries and evicting oldest entries if at size limit.
+    ///     Called before adding to prevent cache from exceeding size limit.
+    ///     Uses fresh cache count after each operation to handle concurrent modifications.
+    /// </summary>
+    /// <summary>
+    ///     Largest single conversion this cache will hold.
+    ///     <para>
+    ///         The cache bounded how many results it kept and not how large any of them was, while
+    ///         a conversion may be as big as <c>RenderBudget.MaxOutputBytes</c>: a full set
+    ///         of entries could therefore hold tens of gigabytes (R4-R01). A result over this size
+    ///         is still returned to the caller — it is a valid conversion — but it is not kept.
+    ///     </para>
+    /// </summary>
+    private const long MaxCachedConversionBytes = 32L * 1024 * 1024;
+
+    /// <summary>Total bytes this cache will hold across all of its entries.</summary>
+    private const long MaxTotalCachedBytes = 256L * 1024 * 1024;
 
     /// <summary>
     ///     Collection of active event handling tasks for graceful shutdown.
@@ -175,6 +196,13 @@ public sealed class ExtensionSessionBridge : IDisposable
             TimeSpan.FromSeconds(5),
             TimeSpan.FromSeconds(5));
     }
+
+    /// <summary>Where this host keeps its temporary files, and so its recovery records.</summary>
+    /// <remarks>
+    ///     Exposed so a tool publishing through this bridge journals into the same root the
+    ///     cleanup service recovers from, rather than the system temp (R19-REC07).
+    /// </remarks>
+    public string TemporaryDirectory => _sessionManager.Config.TempDirectory;
 
     /// <summary>
     ///     Disposes all resources and performs graceful shutdown.
@@ -645,14 +673,29 @@ public sealed class ExtensionSessionBridge : IDisposable
     /// <param name="sessionId">Session identifier.</param>
     /// <param name="extensionId">Extension identifier.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <param name="requestor">
+    ///     Caller identity used to enforce session ownership. Pass null only for internal
+    ///     lifecycle callers that act on the server's behalf rather than on a request.
+    /// </param>
     /// <returns>True if the binding was removed.</returns>
+    [SuppressMessage("Design", "CA1068:CancellationToken parameters must come last",
+        Justification =
+            "Parameter order is part of the public extension-bridge API and changing it would break callers.")]
     public async Task<bool> UnbindAndNotifyAsync(
         string sessionId,
         string extensionId,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        SessionIdentity? requestor = null)
     {
         if (_disposed)
             return false;
+
+        if (!CanAccessBindings(sessionId, requestor))
+        {
+            _logger.LogWarning("Access denied: {Requestor} attempted to unbind session {SessionId}",
+                requestor, sessionId);
+            return false;
+        }
 
         var bindingKey = GetBindingKey(sessionId, extensionId);
         var removed = _bindings.TryRemove(bindingKey, out var binding);
@@ -711,11 +754,26 @@ public sealed class ExtensionSessionBridge : IDisposable
     /// </summary>
     /// <param name="sessionId">Session identifier.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <param name="requestor">
+    ///     Caller identity used to enforce session ownership. Pass null only for internal
+    ///     lifecycle callers that act on the server's behalf rather than on a request.
+    /// </param>
     /// <returns>Number of bindings removed.</returns>
-    public async Task<int> UnbindAllAndNotifyAsync(string sessionId, CancellationToken cancellationToken = default)
+    [SuppressMessage("Design", "CA1068:CancellationToken parameters must come last",
+        Justification =
+            "Parameter order is part of the public extension-bridge API and changing it would break callers.")]
+    public async Task<int> UnbindAllAndNotifyAsync(string sessionId, CancellationToken cancellationToken = default,
+        SessionIdentity? requestor = null)
     {
         if (_disposed)
             return 0;
+
+        if (!CanAccessBindings(sessionId, requestor))
+        {
+            _logger.LogWarning("Access denied: {Requestor} attempted to unbind all of session {SessionId}",
+                requestor, sessionId);
+            return 0;
+        }
 
         var keysToRemove = _bindings.Keys
             .Where(k => k.StartsWith($"{sessionId}{BindingKeySeparator}", StringComparison.Ordinal))
@@ -825,11 +883,21 @@ public sealed class ExtensionSessionBridge : IDisposable
     ///     Returns a snapshot copy to prevent external modification.
     /// </summary>
     /// <param name="sessionId">Session identifier.</param>
-    /// <returns>List of bindings.</returns>
-    public IReadOnlyList<SessionBindingInfo> GetBindings(string sessionId)
+    /// <param name="requestor">
+    ///     Caller identity used to enforce session ownership. Pass null only for internal callers.
+    /// </param>
+    /// <returns>List of bindings, empty when the caller may not see them.</returns>
+    public IReadOnlyList<SessionBindingInfo> GetBindings(string sessionId, SessionIdentity? requestor = null)
     {
         if (_disposed)
             return [];
+
+        if (!CanAccessBindings(sessionId, requestor))
+        {
+            _logger.LogWarning("Access denied: {Requestor} attempted to list bindings of session {SessionId}",
+                requestor, sessionId);
+            return [];
+        }
 
         return _bindings.Values.Where(b => b.SessionId == sessionId).ToList();
     }
@@ -886,6 +954,7 @@ public sealed class ExtensionSessionBridge : IDisposable
     /// <param name="sessionId">Session identifier.</param>
     /// <param name="requestor">Requestor identity.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A task that completes when the work is done.</returns>
     public async Task OnSessionModifiedAsync(
         string sessionId,
         SessionIdentity requestor,
@@ -934,6 +1003,7 @@ public sealed class ExtensionSessionBridge : IDisposable
     /// <param name="session">The document session.</param>
     /// <param name="binding">The binding information.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A task that completes when the work is done.</returns>
     private async Task TrySendPendingSnapshotAsync(
         DocumentSession session,
         SessionBindingInfo binding,
@@ -971,6 +1041,7 @@ public sealed class ExtensionSessionBridge : IDisposable
     ///     Uses a timeout to prevent unbounded processing when many bindings are pending.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A task that completes when the work is done.</returns>
     public async Task ProcessPendingSnapshotsAsync(CancellationToken cancellationToken = default)
     {
         if (_disposed)
@@ -1031,6 +1102,7 @@ public sealed class ExtensionSessionBridge : IDisposable
     /// <param name="sessionId">Session identifier.</param>
     /// <param name="owner">Session owner identity.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A task that completes when the work is done.</returns>
     public async Task OnSessionClosedAsync(
         string sessionId,
         SessionIdentity owner,
@@ -1278,8 +1350,19 @@ public sealed class ExtensionSessionBridge : IDisposable
 
             if (!_closedSessions.ContainsKey(session.SessionId))
             {
-                EnsureCacheCapacity();
-                _conversionCache[cacheKey] = (data, now);
+                if (MayBeCached(data))
+                {
+                    EnsureCacheCapacity();
+                    _conversionCache[cacheKey] = (data, now);
+                    EnsureCacheBytes();
+                }
+                else
+                {
+                    _logger.LogDebug(
+                        "Not caching the {Format} conversion: {Bytes:N0} bytes is above the " +
+                        "{Limit:N0} byte per-entry cache limit",
+                        outputFormat, data.LongLength, MaxCachedConversionBytes);
+                }
             }
 
             return data;
@@ -1308,11 +1391,38 @@ public sealed class ExtensionSessionBridge : IDisposable
     }
 
     /// <summary>
-    ///     Ensures the conversion cache has capacity for a new entry by removing
-    ///     expired entries and evicting oldest entries if at size limit.
-    ///     Called before adding to prevent cache from exceeding size limit.
-    ///     Uses fresh cache count after each operation to handle concurrent modifications.
+    ///     Says whether a conversion is small enough to be worth keeping.
     /// </summary>
+    /// <param name="data">The converted bytes.</param>
+    /// <returns><c>true</c> when the result may be cached.</returns>
+    private static bool MayBeCached(byte[] data)
+    {
+        return data.LongLength <= MaxCachedConversionBytes;
+    }
+
+    /// <summary>
+    ///     Evicts oldest-first until the cache holds no more than <see cref="MaxTotalCachedBytes" />.
+    ///     <para>
+    ///         An entry count alone does not bound memory when the entries differ in size by orders
+    ///         of magnitude, which conversions do (R4-R01).
+    ///     </para>
+    /// </summary>
+    private void EnsureCacheBytes()
+    {
+        var snapshot = _conversionCache.ToList();
+        var total = snapshot.Sum(kvp => kvp.Value.Data.LongLength);
+        if (total <= MaxTotalCachedBytes) return;
+
+        foreach (var entry in snapshot.OrderBy(kvp => kvp.Value.Timestamp))
+        {
+            if (total <= MaxTotalCachedBytes) break;
+            if (!_conversionCache.TryRemove(entry.Key, out var removed)) continue;
+
+            total -= removed.Data.LongLength;
+            _logger.LogDebug("Evicted a cached conversion to stay within the cache byte limit");
+        }
+    }
+
     private void EnsureCacheCapacity()
     {
         var now = DateTime.UtcNow;
@@ -1416,5 +1526,25 @@ public sealed class ExtensionSessionBridge : IDisposable
     private static string GetBindingKey(string sessionId, string extensionId)
     {
         return $"{sessionId}{BindingKeySeparator}{extensionId}";
+    }
+
+    /// <summary>
+    ///     Decides whether <paramref name="requestor" /> may see or change the bindings of
+    ///     <paramref name="sessionId" />. The binding carries the identity that created it, so the
+    ///     check still holds after the underlying session has been closed. A session with no
+    ///     bindings is treated as accessible: there is nothing to disclose and the caller receives
+    ///     an empty result either way.
+    /// </summary>
+    /// <param name="sessionId">Session whose bindings are addressed.</param>
+    /// <param name="requestor">Caller identity, or null when the caller did not supply one.</param>
+    /// <returns><c>true</c> when the caller may proceed.</returns>
+    private bool CanAccessBindings(string sessionId, SessionIdentity? requestor)
+    {
+        if (requestor == null) return true;
+
+        var owned = _bindings.Values.Where(b => b.SessionId == sessionId).ToList();
+        if (owned.Count == 0) return true;
+
+        return owned.All(b => requestor.CanAccess(b.Owner, _sessionManager.Config.IsolationMode));
     }
 }

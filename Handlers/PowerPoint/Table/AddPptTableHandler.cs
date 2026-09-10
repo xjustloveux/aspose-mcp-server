@@ -1,6 +1,7 @@
 using Aspose.Slides;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Helpers.PowerPoint;
 using AsposeMcpServer.Results.Common;
 
@@ -68,10 +69,15 @@ public class AddPptTableHandler : OperationHandlerBase<Presentation>
     ///     Validates the table parameters.
     /// </summary>
     /// <param name="p">The table parameters to validate.</param>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when a dimension is outside its bounds, or the table would hold more cells than
+    ///     one call may build.
+    /// </exception>
     private static void ValidateTableParameters(TableParameters p)
     {
-        if (p.Rows < 1) throw new ArgumentException("rows must be at least 1");
-        if (p.Columns < 1) throw new ArgumentException("columns must be at least 1");
+        // Each dimension was checked for being at least one and nothing more, so the product —
+        // which is one cell object each — was unbounded (R3-R04).
+        TableBudget.EnsureWithinBudget(p.Rows, p.Columns, what: "slide table");
     }
 
     /// <summary>

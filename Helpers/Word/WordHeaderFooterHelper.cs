@@ -58,6 +58,29 @@ public static class WordHeaderFooterHelper
     }
 
     /// <summary>
+    ///     Clears a header or footer according to the caller's request.
+    ///     The three set-text handlers each carried a copy of this logic in which the unconditional
+    ///     <c>RemoveAllChildren</c> sat outside the <c>clearExisting</c> test, so the default
+    ///     <c>clearTextOnly = false</c> wiped the header even when the caller had asked to keep it.
+    /// </summary>
+    /// <param name="headerFooter">The header or footer to clear.</param>
+    /// <param name="clearExisting">Whether the caller asked for existing content to be removed.</param>
+    /// <param name="clearTextOnly">
+    ///     When <c>true</c>, run text is emptied but structure, fields and shapes stay in place;
+    ///     when <c>false</c>, the whole content is removed. Only consulted when
+    ///     <paramref name="clearExisting" /> is <c>true</c>.
+    /// </param>
+    public static void Clear(HeaderFooter headerFooter, bool clearExisting, bool clearTextOnly)
+    {
+        if (!clearExisting) return;
+
+        if (clearTextOnly)
+            ClearTextOnly(headerFooter);
+        else
+            headerFooter.RemoveAllChildren();
+    }
+
+    /// <summary>
     ///     Clears only the text content from a header/footer, preserving other elements.
     /// </summary>
     /// <param name="headerFooter">The header/footer to clear text from.</param>
@@ -72,8 +95,13 @@ public static class WordHeaderFooterHelper
     }
 
     /// <summary>
-    ///     Inserts text or a field code (like PAGE, DATE) into the document.
+    ///     Inserts text or a field code into the document.
     ///     Supports mixed content like "Page {PAGE} of {NUMPAGES}".
+    ///     <para>
+    ///         Only the documented fields are accepted: PAGE, NUMPAGES, DATE, TIME, FILENAME,
+    ///         AUTHOR and TITLE. Any other code is refused rather than inserted verbatim, because
+    ///         a live field can reach the filesystem or the network on the next UpdateFields().
+    ///     </para>
     /// </summary>
     /// <param name="builder">The document builder.</param>
     /// <param name="text">
@@ -171,14 +199,27 @@ public static class WordHeaderFooterHelper
     /// </summary>
     /// <param name="builder">The document builder.</param>
     /// <param name="fieldCode">The field code (e.g., PAGE, DATE).</param>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when the code is not one of the supported fields.
+    /// </exception>
     private static void InsertFieldByCode(DocumentBuilder builder, string fieldCode)
     {
         var code = fieldCode.ToUpper();
 
-        if (FieldCodeMap.TryGetValue(code, out var fieldType))
-            builder.InsertField(fieldType, true);
-        else
-            builder.InsertField($" {code} ", null);
+        // Anything not in the map used to be inserted verbatim as a live field, which made header
+        // text a way to run field codes the caller was never offered. Measured against the pinned
+        // Aspose.Words: an INCLUDETEXT field does not resolve on save or PDF render, but it does
+        // resolve on Document.UpdateFields(), which this server calls in several handlers -
+        // including the one that reads headers back. That turned "set a header, then read the
+        // headers" into an arbitrary local file read, with the path inside a field code where the
+        // allowlist never sees it. Only the documented fields are accepted now.
+        if (!FieldCodeMap.TryGetValue(code, out var fieldType))
+            throw new ArgumentException(
+                $"Unsupported field code '{fieldCode}'. Supported: "
+                + string.Join(", ", FieldCodeMap.Keys.Order())
+                + ". Use '{{' and '}}' for a literal brace.");
+
+        builder.InsertField(fieldType, true);
     }
 
     /// <summary>

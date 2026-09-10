@@ -13,6 +13,8 @@ namespace AsposeMcpServer.Handlers.Pdf.Attachment;
 [ResultType(typeof(SuccessResult))]
 public class AddPdfAttachmentHandler : OperationHandlerBase<Document>
 {
+    private const string AttachmentPathParameter = "attachmentPath";
+
     /// <inheritdoc />
     public override string Operation => "add";
 
@@ -29,12 +31,14 @@ public class AddPdfAttachmentHandler : OperationHandlerBase<Document>
     {
         var addParams = ExtractAddParameters(parameters);
 
-        SecurityHelper.ValidateFilePath(addParams.AttachmentPath, "attachmentPath", true);
+        SecurityHelper.ValidateFilePath(addParams.AttachmentPath, AttachmentPathParameter, true);
+        var attachmentPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(addParams.AttachmentPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], AttachmentPathParameter);
         SecurityHelper.ValidateStringLength(addParams.AttachmentName, "attachmentName", 255);
         if (addParams.Description != null)
             SecurityHelper.ValidateStringLength(addParams.Description, "description", 1000);
 
-        if (!File.Exists(addParams.AttachmentPath))
+        if (!File.Exists(attachmentPath))
             throw new FileNotFoundException("The specified file was not found.");
 
         var document = context.Document;
@@ -45,8 +49,8 @@ public class AddPdfAttachmentHandler : OperationHandlerBase<Document>
             throw new ArgumentException($"Attachment with name '{addParams.AttachmentName}' already exists");
 
         // B-1: resolve symlinks immediately before the read sink (bug 20260415-symlink-toctou-sweep).
-        var resolvedAttachmentPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(addParams.AttachmentPath,
-            context.ServerConfig?.AllowedBasePaths ?? [], "attachmentPath");
+        var resolvedAttachmentPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(attachmentPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], AttachmentPathParameter);
         var fileBytes = File.ReadAllBytes(resolvedAttachmentPath);
         var fileSpecification = new FileSpecification(new MemoryStream(fileBytes), addParams.AttachmentName)
         {
@@ -68,7 +72,7 @@ public class AddPdfAttachmentHandler : OperationHandlerBase<Document>
     private static AddParameters ExtractAddParameters(OperationParameters parameters)
     {
         return new AddParameters(
-            parameters.GetRequired<string>("attachmentPath"),
+            parameters.GetRequired<string>(AttachmentPathParameter),
             parameters.GetRequired<string>("attachmentName"),
             parameters.GetOptional<string?>("description")
         );

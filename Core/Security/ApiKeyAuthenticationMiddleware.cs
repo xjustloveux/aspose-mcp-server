@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using AsposeMcpServer.Core.Tracking;
 using AsposeMcpServer.Helpers;
 
 namespace AsposeMcpServer.Core.Security;
@@ -39,6 +40,11 @@ public sealed class ApiKeyAuthenticationMiddleware : IMiddleware, IDisposable
     private readonly bool _ownsHttpClient;
 
     /// <summary>
+    ///     Tracking configuration used to decide whether the metrics endpoint requires authentication.
+    /// </summary>
+    private readonly TrackingConfig? _trackingConfig;
+
+    /// <summary>
     ///     Tracks whether this middleware has been disposed (0 = not disposed, 1 = disposed)
     /// </summary>
     private int _disposed;
@@ -49,13 +55,16 @@ public sealed class ApiKeyAuthenticationMiddleware : IMiddleware, IDisposable
     /// <param name="config">API key configuration</param>
     /// <param name="logger">Logger instance</param>
     /// <param name="httpClientFactory">Optional HTTP client factory</param>
+    /// <param name="trackingConfig">Optional tracking config deciding whether metrics require auth</param>
     public ApiKeyAuthenticationMiddleware(
         ApiKeyConfig config,
         ILogger<ApiKeyAuthenticationMiddleware> logger,
-        IHttpClientFactory? httpClientFactory = null)
+        IHttpClientFactory? httpClientFactory = null,
+        TrackingConfig? trackingConfig = null)
     {
         _config = config;
         _logger = logger;
+        _trackingConfig = trackingConfig;
         if (httpClientFactory != null)
         {
             _httpClient = httpClientFactory.CreateClient("ApiKeyAuth");
@@ -97,6 +106,7 @@ public sealed class ApiKeyAuthenticationMiddleware : IMiddleware, IDisposable
     /// </summary>
     /// <param name="context">HTTP context for the current request</param>
     /// <param name="next">Next middleware delegate</param>
+    /// <returns>A task that completes when the work is done.</returns>
     public async Task InvokeAsync(HttpContext context, RequestDelegate next)
     {
         if (ShouldSkipAuthentication(context.Request.Path))
@@ -122,19 +132,37 @@ public sealed class ApiKeyAuthenticationMiddleware : IMiddleware, IDisposable
 
         if (!string.IsNullOrEmpty(result.GroupId)) context.Items["GroupId"] = result.GroupId;
 
+        // An authenticated request with no group of its own used to reach the session layer
+        // looking exactly like an unauthenticated one, so two unrelated keys shared the anonymous
+        // bucket and each could open the other's documents (R4-S04). Deriving an owner from the
+        // key keeps such a deployment working while still separating them.
+        if (string.IsNullOrEmpty(result.GroupId))
+        {
+            var derived = CredentialOwnership.Fingerprint(
+                context.Request.Headers[_config.HeaderName].FirstOrDefault());
+            if (derived != null) context.Items["UserId"] = derived;
+        }
+
         await next(context);
     }
 
     /// <summary>
-    ///     Determines if authentication should be skipped for health/metrics endpoints
+    ///     Determines if authentication should be skipped for the liveness endpoints.
+    ///     Only <c>/health</c> and <c>/ready</c> are unconditionally anonymous, because an
+    ///     orchestrator probes them before any credential is available. The metrics endpoint
+    ///     carries operational data and is skipped only when an operator opted out explicitly
+    ///     (<c>--metrics-allow-anonymous</c> / <c>ASPOSE_METRICS_REQUIRE_AUTH=false</c>).
     /// </summary>
     /// <param name="path">Request path to check</param>
     /// <returns>True if authentication should be skipped</returns>
-    private static bool ShouldSkipAuthentication(PathString path)
+    private bool ShouldSkipAuthentication(PathString path)
     {
-        return path.StartsWithSegments("/health") ||
-               path.StartsWithSegments("/metrics") ||
-               path.StartsWithSegments("/ready");
+        if (path.StartsWithSegments("/health") || path.StartsWithSegments("/ready"))
+            return true;
+
+        // One predicate shared with the middleware that actually serves metrics, so the
+        // request that skips authentication is exactly the request that gets metrics.
+        return MetricsRequest.AllowsAnonymousAccess(path, _trackingConfig);
     }
 
     /// <summary>
@@ -232,9 +260,35 @@ public sealed class ApiKeyAuthenticationMiddleware : IMiddleware, IDisposable
     /// <returns>Authentication result</returns>
     private ApiKeyAuthResult ValidateGateway(HttpContext context, string _)
     {
+        if (!TrustedProxyEvaluator.IsTrusted(context.Connection.RemoteIpAddress, _config.TrustedProxies))
+        {
+            _logger.LogWarning("Gateway mode: rejected identity headers from an untrusted peer");
+            return new ApiKeyAuthResult
+            {
+                IsValid = false,
+                ErrorMessage = "Authentication failed"
+            };
+        }
+
         var groupId = context.Request.Headers[_config.GroupIdentifierHeader].FirstOrDefault();
 
-        _logger.LogDebug("Gateway mode: Trusted request for group {GroupId}", groupId ?? "(anonymous)");
+        // The group header is the whole identity on this path - API-key gateway mode carries no
+        // user concept. Accepting a request without it produced an identity indistinguishable from
+        // every other such request, so two unrelated principals shared the anonymous session bucket
+        // and could reach each other's documents (R3-S02). Failing is the only answer that does not
+        // invent an owner.
+        if (string.IsNullOrEmpty(groupId))
+        {
+            _logger.LogWarning("Gateway mode: trusted peer supplied no {GroupHeader}",
+                _config.GroupIdentifierHeader);
+            return new ApiKeyAuthResult
+            {
+                IsValid = false,
+                ErrorMessage = "Authentication failed"
+            };
+        }
+
+        _logger.LogDebug("Gateway mode: Trusted request for group {GroupId}", groupId);
         return new ApiKeyAuthResult
         {
             IsValid = true,

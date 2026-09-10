@@ -27,6 +27,11 @@ public class WordFileTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     The document session manager for managing in-memory document sessions.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -36,11 +41,14 @@ public class WordFileTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document operations.</param>
     /// <param name="identityAccessor">Optional identity accessor for session isolation.</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public WordFileTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry = HandlerRegistry<Document>.CreateFromNamespace("AsposeMcpServer.Handlers.Word.File");
     }
 
@@ -89,6 +97,8 @@ public class WordFileTool
     [Description(
         @"Perform file operations on Word documents. Supports 4 operations: create, create_from_template, merge, split.
 For document format conversion, use convert_document tool instead.
+
+The 'split' operation writes its files as one request: a refusal or a handled failure publishes none of them, so no output file is replaced unless all of them are. An output directory the request had to create may remain, and power loss or a killed process is not covered.
 
 Usage examples:
 - Create document: word_file(operation='create', outputPath='new.docx')
@@ -152,6 +162,8 @@ Template syntax (LINQ Reporting Engine, use 'ds' as data source prefix):
         double footerDistance = 35.4,
         IProgress<ProgressNotificationValue>? progress = null)
     {
+        SecurityHelper.ValidateArraySize(inputPaths, nameof(inputPaths));
+
         var parameters = BuildParameters(operation, sessionId, path, outputPath, templatePath, dataJson,
             inputPaths, importFormatMode, unlinkHeadersFooters, outputDir, splitBy, content, skipInitialContent,
             marginTop, marginBottom, marginLeft, marginRight, compatibilityMode, paperSize, pageWidth, pageHeight,
@@ -168,7 +180,8 @@ Template syntax (LINQ Reporting Engine, use 'ds' as data source prefix):
             SessionId = sessionId,
             SourcePath = path,
             OutputPath = outputPath,
-            Progress = progress
+            Progress = progress,
+            ServerConfig = _serverConfig
         };
 
         var message = handler.Execute(operationContext, parameters);

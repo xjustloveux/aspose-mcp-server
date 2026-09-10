@@ -111,8 +111,8 @@ public class ExtractPdfTextHandlerTests : PdfHandlerTestBase
 
         var result = Assert.IsType<ExtractPdfTextResult>(res);
 
-        Assert.True(result.PageIndex >= 0);
-        Assert.True(result.TotalPages >= 0);
+        Assert.Equal(1, result.PageIndex);
+        Assert.Equal(1, result.TotalPages);
         AssertNotModified(context);
     }
 

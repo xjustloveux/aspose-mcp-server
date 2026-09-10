@@ -1,4 +1,5 @@
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using ModelContextProtocol;
 
 namespace AsposeMcpServer.Core.Handlers;
@@ -95,4 +96,17 @@ public class OperationContext<TContext> where TContext : class
     ///     or when the tool does not receive the config via DI.
     /// </summary>
     public ServerConfig? ServerConfig { get; init; }
+
+    /// <summary>
+    ///     Where this host's publish records live and the key they are signed with.
+    /// </summary>
+    /// <remarks>
+    ///     Taken from the session manager's temp directory, so each host has its own. It used to be
+    ///     a process-wide property that whichever host started last rewrote, which left two hosts
+    ///     in one process writing into each other's directory and signing with each other's key
+    ///     (R18-ARCH01). A handler running without a session manager falls back to the process temp
+    ///     directory, which is the same place a conversion outside a host uses.
+    /// </remarks>
+    public RecoveryContext Recovery =>
+        RecoveryContext.For(SessionManager?.Config.TempDirectory ?? Path.GetTempPath());
 }

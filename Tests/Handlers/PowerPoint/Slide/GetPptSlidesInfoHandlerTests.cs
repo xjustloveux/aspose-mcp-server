@@ -7,6 +7,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Slide;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class GetPptSlidesInfoHandlerTests : PptHandlerTestBase
 {
     private readonly GetPptSlidesInfoHandler _handler = new();
@@ -197,7 +198,7 @@ public class GetPptSlidesInfoHandlerTests : PptHandlerTestBase
         var result = Assert.IsType<GetSlidesInfoResult>(res);
 
         var firstLayout = result.AvailableLayouts[0];
-        Assert.True(firstLayout.Index >= 0);
+        Assert.Equal(0, firstLayout.Index);
         Assert.NotNull(firstLayout.Type);
     }
 

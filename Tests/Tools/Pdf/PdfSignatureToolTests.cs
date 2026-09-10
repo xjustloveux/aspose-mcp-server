@@ -57,7 +57,7 @@ public class PdfSignatureToolTests : PdfTestBase
         var pdfPath = CreateTestPdf("test_get_json.pdf");
         var result = _tool.Execute("get", pdfPath);
         var data = GetResultData<GetSignaturesResult>(result);
-        Assert.True(data.Count >= 0);
+        Assert.Equal(0, data.Count);
         Assert.NotNull(data.Items);
     }
 

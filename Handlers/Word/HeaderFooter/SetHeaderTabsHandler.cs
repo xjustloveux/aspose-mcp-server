@@ -34,11 +34,14 @@ public class SetHeaderTabsHandler : OperationHandlerBase<Document>
         var hfType = WordHeaderFooterHelper.GetHeaderFooterType(p.HeaderFooterType, true);
         var sections = p.SectionIndex == -1 ? doc.Sections.Cast<Section>() : [doc.Sections[p.SectionIndex]];
 
+        // Read once, before any section is touched: resolving per section would let a malformed
+        // entry throw after earlier sections had already had their stops replaced.
+        var resolved = WordTabStopHelper.Resolve(p.TabStops);
+
         foreach (var section in sections)
         {
             var header = WordHeaderFooterHelper.GetOrCreateHeaderFooter(section, doc, hfType);
-            if (p.TabStops is { Count: > 0 })
-                ApplyTabStops(doc, header, p.TabStops);
+            if (resolved.Count > 0) ApplyTabStops(doc, header, resolved);
         }
 
         MarkModified(context);
@@ -46,73 +49,24 @@ public class SetHeaderTabsHandler : OperationHandlerBase<Document>
     }
 
     /// <summary>
-    ///     Applies tab stops to the header paragraph.
+    ///     Applies already-resolved tab stops to the header paragraph.
     /// </summary>
     /// <param name="doc">The Word document.</param>
     /// <param name="header">The header.</param>
-    /// <param name="tabStops">The tab stops array.</param>
-    private static void ApplyTabStops(Document doc, Aspose.Words.HeaderFooter header, JsonArray tabStops)
+    /// <param name="resolved">
+    ///     The stops to apply, read by <see cref="WordTabStopHelper" /> before this was called.
+    ///     Reading each entry as it was applied meant a malformed one threw after Clear(), leaving
+    ///     the paragraph with no stops at all — the defect fixed for `edit` in §23.4 and left
+    ///     standing here (R13-W01).
+    /// </param>
+    private static void ApplyTabStops(
+        Document doc, Aspose.Words.HeaderFooter header, List<TabStop> resolved)
     {
         var para = header.FirstParagraph ?? new WordParagraph(doc);
         para.ParagraphFormat.TabStops.Clear();
-
-        foreach (var tabStopJson in tabStops)
-        {
-            var tabStop = ParseTabStop(tabStopJson);
-            para.ParagraphFormat.TabStops.Add(tabStop);
-        }
+        foreach (var stop in resolved) para.ParagraphFormat.TabStops.Add(stop);
 
         if (header.FirstParagraph == null) header.AppendChild(para);
-    }
-
-    /// <summary>
-    ///     Parses a tab stop from JSON.
-    /// </summary>
-    /// <param name="tabStopJson">The tab stop JSON node.</param>
-    /// <returns>The parsed tab stop.</returns>
-    private static TabStop ParseTabStop(JsonNode? tabStopJson)
-    {
-        var position = tabStopJson?["position"]?.GetValue<double>() ?? 0;
-        var alignmentStr = tabStopJson?["alignment"]?.GetValue<string>() ?? "left";
-        var leaderStr = tabStopJson?["leader"]?.GetValue<string>() ?? "none";
-
-        var tabAlignment = GetTabAlignment(alignmentStr);
-        var tabLeader = GetTabLeader(leaderStr);
-
-        return new TabStop(position, tabAlignment, tabLeader);
-    }
-
-    /// <summary>
-    ///     Gets the tab alignment from alignment string.
-    /// </summary>
-    /// <param name="alignment">The alignment string.</param>
-    /// <returns>The tab alignment.</returns>
-    private static TabAlignment GetTabAlignment(string alignment)
-    {
-        return alignment.ToLower() switch
-        {
-            "center" => TabAlignment.Center,
-            "right" => TabAlignment.Right,
-            "decimal" => TabAlignment.Decimal,
-            "bar" => TabAlignment.Bar,
-            _ => TabAlignment.Left
-        };
-    }
-
-    /// <summary>
-    ///     Gets the tab leader from leader string.
-    /// </summary>
-    /// <param name="leader">The leader string.</param>
-    /// <returns>The tab leader.</returns>
-    private static TabLeader GetTabLeader(string leader)
-    {
-        return leader.ToLower() switch
-        {
-            "dots" => TabLeader.Dots,
-            "dashes" => TabLeader.Dashes,
-            "line" => TabLeader.Line,
-            _ => TabLeader.None
-        };
     }
 
     /// <summary>

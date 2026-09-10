@@ -133,6 +133,9 @@ public class JwtAuthenticationMiddlewareTests
         {
             Enabled = true,
             Mode = JwtMode.Gateway,
+            // A-04: gateway mode trusts nobody until a proxy is named; these cases are about
+            // header handling, so they declare the boundary as enforced elsewhere.
+            TrustedProxies = [TrustedProxyEvaluator.TrustAnyEntry],
             GroupIdentifierHeader = "X-Group-Id",
             UserIdHeader = "X-User-Id"
         };
@@ -156,12 +159,15 @@ public class JwtAuthenticationMiddlewareTests
     }
 
     [Fact]
-    public async Task GatewayMode_MissingHeaders_ShouldAllowAsAnonymous()
+    public async Task GatewayMode_MissingHeaders_ShouldBeRejected()
     {
         var config = new JwtConfig
         {
             Enabled = true,
             Mode = JwtMode.Gateway,
+            // A-04: gateway mode trusts nobody until a proxy is named; these cases are about
+            // header handling, so they declare the boundary as enforced elsewhere.
+            TrustedProxies = [TrustedProxyEvaluator.TrustAnyEntry],
             GroupIdentifierHeader = "X-Group-Id",
             UserIdHeader = "X-User-Id"
         };
@@ -169,18 +175,20 @@ public class JwtAuthenticationMiddlewareTests
         var context = CreateHttpContext();
         context.Request.Headers.Authorization = "Bearer any-token";
 
-        var capturedGroupId = "not-null";
-        var capturedUserId = "not-null";
+        var reachedTheServer = false;
         var middleware = new JwtAuthenticationMiddleware(config, _logger);
-        await middleware.InvokeAsync(context, ctx =>
+        await middleware.InvokeAsync(context, _ =>
         {
-            capturedGroupId = ctx.Items["GroupId"]?.ToString();
-            capturedUserId = ctx.Items["UserId"]?.ToString();
+            reachedTheServer = true;
             return Task.CompletedTask;
         });
-        Assert.Null(capturedGroupId);
-        Assert.Null(capturedUserId);
-        Assert.Equal(200, context.Response.StatusCode);
+
+        // This case used to be named "ShouldAllowAsAnonymous" and asserted exactly that: an
+        // authenticated gateway request naming neither group nor user became an anonymous
+        // identity. Every such request became the *same* anonymous identity, so two unrelated
+        // principals shared one session bucket (R3-S02).
+        Assert.False(reachedTheServer);
+        Assert.Equal(401, context.Response.StatusCode);
     }
 
     [Fact]
@@ -273,6 +281,119 @@ public class JwtAuthenticationMiddlewareTests
         var middleware = new JwtAuthenticationMiddleware(config, _logger);
         await middleware.InvokeAsync(context, _ => Task.CompletedTask);
         Assert.Equal(401, context.Response.StatusCode);
+    }
+
+    /// <summary>
+    ///     Runs one request through the middleware and reports the owner it was given.
+    /// </summary>
+    /// <param name="config">The JWT configuration to run under.</param>
+    /// <param name="token">The bearer token to present.</param>
+    /// <returns>The group and user the session layer would see, and the response status.</returns>
+    private async Task<(string? GroupId, string? UserId, int Status)> OwnerFor(JwtConfig config, string token)
+    {
+        var context = CreateHttpContext();
+        context.Request.Headers.Authorization = $"Bearer {token}";
+
+        string? groupId = null;
+        string? userId = null;
+        var middleware = new JwtAuthenticationMiddleware(config, _logger);
+        await middleware.InvokeAsync(context, ctx =>
+        {
+            groupId = ctx.Items["GroupId"]?.ToString();
+            userId = ctx.Items["UserId"]?.ToString();
+            return Task.CompletedTask;
+        });
+
+        return (groupId, userId, context.Response.StatusCode);
+    }
+
+    /// <summary>
+    ///     R5-S02: a token carrying no configured claim used to be bucketed by a fingerprint of its
+    ///     own bytes. Those change on every reissue, so the same principal landed somewhere new
+    ///     each time — their earlier sessions became unreachable, and the per-owner session quota
+    ///     reset as often as they asked for a fresh token. The subject is what names them, and it
+    ///     survives the reissue.
+    /// </summary>
+    [Fact]
+    public async Task LocalMode_TwoTokensForOnePrincipal_ShouldLandOnOneOwner()
+    {
+        var config = new JwtConfig
+        {
+            Enabled = true,
+            Mode = JwtMode.Local,
+            Secret = TestSecret,
+            GroupIdentifierClaim = "tenant_id",
+            UserIdClaim = "preferred_username"
+        };
+
+        var first = await OwnerFor(config, GenerateTestToken(new Dictionary<string, string>
+        {
+            ["sub"] = "principal-1",
+            ["jti"] = "token-one"
+        }, DateTime.UtcNow.AddHours(1)));
+
+        var reissued = await OwnerFor(config, GenerateTestToken(new Dictionary<string, string>
+        {
+            ["sub"] = "principal-1",
+            ["jti"] = "token-two"
+        }, DateTime.UtcNow.AddHours(2)));
+
+        Assert.Equal(200, first.Status);
+        Assert.Equal(200, reissued.Status);
+        Assert.Equal("principal-1", first.UserId);
+        Assert.Equal(first.UserId, reissued.UserId);
+    }
+
+    [Fact]
+    public async Task LocalMode_TokensForDifferentPrincipals_ShouldStayApart()
+    {
+        var config = new JwtConfig
+        {
+            Enabled = true,
+            Mode = JwtMode.Local,
+            Secret = TestSecret,
+            GroupIdentifierClaim = "tenant_id",
+            UserIdClaim = "preferred_username"
+        };
+
+        var one = await OwnerFor(config, GenerateTestToken(new Dictionary<string, string>
+        {
+            ["sub"] = "principal-1"
+        }));
+        var other = await OwnerFor(config, GenerateTestToken(new Dictionary<string, string>
+        {
+            ["client_id"] = "principal-2"
+        }));
+
+        Assert.Equal("principal-1", one.UserId);
+        Assert.Equal("principal-2", other.UserId);
+        Assert.NotEqual(one.UserId, other.UserId);
+    }
+
+    /// <summary>
+    ///     A token naming nobody cannot be isolated from any other, so it is refused rather than
+    ///     given a bucket that moves under it or one it shares with strangers.
+    /// </summary>
+    [Fact]
+    public async Task LocalMode_TokenThatNamesNobody_ShouldBeRefused()
+    {
+        var config = new JwtConfig
+        {
+            Enabled = true,
+            Mode = JwtMode.Local,
+            Secret = TestSecret,
+            GroupIdentifierClaim = "tenant_id",
+            UserIdClaim = "preferred_username"
+        };
+
+        var refused = await OwnerFor(config, GenerateTestToken(new Dictionary<string, string>
+        {
+            ["scope"] = "documents:write"
+        }));
+
+        Assert.Equal(401, refused.Status);
+        Assert.Null(refused.UserId);
+        Assert.Null(refused.GroupId);
     }
 
     private static string GenerateTestToken(

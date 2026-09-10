@@ -8,6 +8,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Chart;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class DeletePptChartHandlerTests : PptHandlerTestBase
 {
     private readonly DeletePptChartHandler _handler = new();

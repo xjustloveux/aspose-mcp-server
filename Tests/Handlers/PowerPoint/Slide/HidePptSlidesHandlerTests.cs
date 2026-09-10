@@ -7,6 +7,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Slide;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class HidePptSlidesHandlerTests : PptHandlerTestBase
 {
     private static readonly int[] IndicesZeroTwo = [0, 2];

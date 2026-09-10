@@ -71,7 +71,7 @@ public class GetPdfAnnotationsHandlerTests : PdfHandlerTestBase
 
         var result = Assert.IsType<GetAnnotationsResult>(res);
 
-        Assert.True(result.Count >= 0);
+        Assert.Equal(1, result.Count);
         Assert.NotNull(result.Annotations);
         AssertNotModified(context);
     }
@@ -177,7 +177,7 @@ public class GetPdfAnnotationsHandlerTests : PdfHandlerTestBase
         Assert.True(result.Annotations.Count > 0);
         var firstItem = result.Annotations[0];
         Assert.True(firstItem.PageIndex > 0);
-        Assert.True(firstItem.Index >= 0);
+        Assert.Equal(1, firstItem.Index);
         Assert.NotNull(firstItem.Type);
         Assert.Equal("Test note", firstItem.Contents);
     }
@@ -195,10 +195,10 @@ public class GetPdfAnnotationsHandlerTests : PdfHandlerTestBase
 
         var firstAnnotation = result.Annotations[0];
         var rect = firstAnnotation.Rect;
-        Assert.True(rect.X >= 0);
-        Assert.True(rect.Y >= 0);
-        Assert.True(rect.Width >= 0);
-        Assert.True(rect.Height >= 0);
+        Assert.Equal(100, rect.X);
+        Assert.Equal(700, rect.Y);
+        Assert.Equal(200, rect.Width);
+        Assert.Equal(50, rect.Height);
     }
 
     #endregion

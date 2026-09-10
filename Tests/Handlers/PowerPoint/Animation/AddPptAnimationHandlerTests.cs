@@ -8,6 +8,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Animation;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class AddPptAnimationHandlerTests : PptHandlerTestBase
 {
     private readonly AddPptAnimationHandler _handler = new();

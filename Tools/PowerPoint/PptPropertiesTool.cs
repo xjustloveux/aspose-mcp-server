@@ -28,6 +28,11 @@ public class PptPropertiesTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Session manager for document session handling.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -37,11 +42,14 @@ public class PptPropertiesTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory editing.</param>
     /// <param name="identityAccessor">Optional identity accessor for session isolation.</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public PptPropertiesTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry =
             HandlerRegistry<Presentation>.CreateFromNamespace("AsposeMcpServer.Handlers.PowerPoint.Properties");
     }
@@ -115,7 +123,8 @@ Usage examples:
         if (operation.Equals("get", StringComparison.OrdinalIgnoreCase) && string.IsNullOrEmpty(sessionId))
             return ResultHelper.FinalizeResult((dynamic)GetPropertiesEfficient(path), outputPath, sessionId);
 
-        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor,
+            serverConfig: _serverConfig);
 
         var parameters = BuildParameters(title, subject, author, keywords, comments,
             category, company, manager, customProperties);
@@ -129,7 +138,8 @@ Usage examples:
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);

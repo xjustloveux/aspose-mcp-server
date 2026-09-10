@@ -6,6 +6,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Security;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class SetWriteProtectionPptSecurityHandlerTests : PptHandlerTestBase
 {
     private readonly SetWriteProtectionPptSecurityHandler _handler = new();

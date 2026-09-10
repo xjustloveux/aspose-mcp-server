@@ -6,6 +6,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Watermark;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class AddTextPptWatermarkHandlerTests : PptHandlerTestBase
 {
     private readonly AddTextPptWatermarkHandler _handler = new();

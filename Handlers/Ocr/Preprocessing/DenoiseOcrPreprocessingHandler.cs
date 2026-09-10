@@ -29,11 +29,12 @@ public class DenoiseOcrPreprocessingHandler : OcrPreprocessingHandlerBase
     /// <exception cref="InvalidOperationException">Thrown when preprocessing produces no output.</exception>
     public override object Execute(OperationContext<AsposeOcr> context, OperationParameters parameters)
     {
-        var p = ExtractCommonParameters(parameters);
+        var allowedBasePaths = context.ServerConfig?.AllowedBasePaths ?? [];
+        var p = ExtractCommonParameters(parameters, allowedBasePaths);
 
         var filters = new PreprocessingFilter { PreprocessingFilter.AutoDenoising() };
 
-        SavePreprocessedImage(p.Path, p.OutputPath, filters, context.ServerConfig?.AllowedBasePaths ?? []);
+        SavePreprocessedImage(p.Path, p.OutputPath, filters, allowedBasePaths);
 
         return CreatePreprocessingResult(p, Operation, "Automatic denoising applied");
     }

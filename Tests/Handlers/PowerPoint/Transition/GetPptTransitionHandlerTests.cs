@@ -8,6 +8,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Transition;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class GetPptTransitionHandlerTests : PptHandlerTestBase
 {
     private readonly GetPptTransitionHandler _handler = new();

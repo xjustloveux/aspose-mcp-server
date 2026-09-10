@@ -22,6 +22,7 @@ internal record SmartArtTestInfo(string Path, int ShapeIndex);
 ///     Detailed parameter validation and business logic tests are in Handler tests.
 /// </summary>
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class PptSmartArtToolTests : PptTestBase
 {
     private readonly PptSmartArtTool _tool;

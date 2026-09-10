@@ -116,7 +116,7 @@ public class GetExcelImagesHandlerTests : ExcelHandlerTestBase
 
         var result = Assert.IsType<GetImagesExcelResult>(res);
 
-        Assert.True(result.Count >= 0);
+        Assert.Equal(0, result.Count);
         Assert.NotNull(result.WorksheetName);
         Assert.NotNull(result.Items);
     }

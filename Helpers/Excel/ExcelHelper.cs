@@ -136,8 +136,11 @@ public static class ExcelHelper
     /// </summary>
     /// <param name="cell">Cell to set value on.</param>
     /// <param name="value">String value to parse and set.</param>
-    public static void SetCellValue(Cell cell, string value)
+    /// <param name="asText">
+    ///     When <c>true</c> the value is stored exactly as written, with no type detection.
+    /// </param>
+    public static void SetCellValue(Cell cell, string value, bool asText = false)
     {
-        cell.PutValue(ValueHelper.ParseValue(value));
+        cell.PutValue(ValueHelper.ParseValue(value, asText));
     }
 }

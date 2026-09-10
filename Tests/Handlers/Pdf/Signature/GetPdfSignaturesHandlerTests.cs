@@ -107,7 +107,7 @@ public class GetPdfSignaturesHandlerTests : PdfHandlerTestBase
         var res = _handler.Execute(context, parameters);
 
         var result = Assert.IsType<GetSignaturesResult>(res);
-        Assert.True(result.Count >= 0);
+        Assert.Equal(1, result.Count);
         Assert.NotNull(result.Items);
     }
 

@@ -52,9 +52,9 @@ public class GetWordPropertiesHandlerTests : WordHandlerTestBase
 
         Assert.NotNull(result);
         Assert.NotNull(result.Statistics);
-        Assert.True(result.Statistics.WordCount >= 0);
-        Assert.True(result.Statistics.CharacterCount >= 0);
-        Assert.True(result.Statistics.PageCount >= 0);
+        Assert.Equal(2, result.Statistics.WordCount);
+        Assert.Equal(10, result.Statistics.CharacterCount);
+        Assert.Equal(1, result.Statistics.PageCount);
     }
 
     [Fact]

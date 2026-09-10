@@ -211,7 +211,7 @@ public class RecognizePdfHandlerTests : HandlerTestBase<AsposeOcr>
         Assert.Equal(pdfPath, convResult.SourcePath);
         Assert.Equal(outputPath, convResult.OutputPath);
         Assert.Equal("docx", convResult.TargetFormat);
-        Assert.True(convResult.PageCount >= 0);
+        Assert.Equal(0, convResult.PageCount);
         Assert.NotNull(convResult.Message);
         AssertNotModified(context);
     }

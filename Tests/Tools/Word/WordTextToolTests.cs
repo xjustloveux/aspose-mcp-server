@@ -95,22 +95,54 @@ public class WordTextToolTests : WordTestBase
         Assert.Equal("test", data.SearchText);
     }
 
+    /// <summary>
+    ///     The index of the body paragraph carrying <paramref name="text" />.
+    ///     <para>
+    ///         An unlicensed build puts its own notice in paragraph 0 and that notice is already
+    ///         bold, so addressing paragraph 0 formatted the notice and then asserted on the
+    ///         notice — an outcome the tool could not have failed. Measured in evaluation mode:
+    ///         paragraph 0 is <c>Evaluation Only. Created with Aspose.Words…</c> with
+    ///         <c>Bold=True</c>, and the fixture text is paragraph 1 (R7-T01).
+    ///     </para>
+    /// </summary>
+    /// <param name="document">The document to look in.</param>
+    /// <param name="text">The fixture text.</param>
+    /// <returns>The paragraph index carrying that text.</returns>
+    private static int ParagraphIndexOf(Document document, string text)
+    {
+        var paragraphs = document.FirstSection.Body.Paragraphs.Cast<Paragraph>().ToList();
+        var paragraph = paragraphs.FirstOrDefault(p => p.GetText().Contains(text, StringComparison.Ordinal));
+
+        Assert.NotNull(paragraph);
+        return paragraphs.IndexOf(paragraph);
+    }
+
+    /// <summary>The run carrying <paramref name="text" />, wherever the watermark put it.</summary>
+    /// <param name="document">The document to look in.</param>
+    /// <param name="text">The fixture text.</param>
+    /// <returns>That run.</returns>
+    private static Run RunWith(Document document, string text)
+    {
+        var run = document.GetChildNodes(NodeType.Run, true).Cast<Run>()
+            .FirstOrDefault(r => r.GetText().Contains(text, StringComparison.Ordinal));
+
+        Assert.NotNull(run);
+        return run;
+    }
+
     [Fact]
     public void FormatText_ShouldApplyFormattingAndPersistToFile()
     {
         var docPath = CreateWordDocumentWithContent("test_format_text.docx", "Format this text");
         var outputPath = CreateTestFilePath("test_format_text_output.docx");
+        var paragraphIndex = ParagraphIndexOf(new Document(docPath), "Format this text");
 
         _tool.Execute("format", docPath, outputPath: outputPath,
-            paragraphIndex: 0, runIndex: 0, bold: true, italic: true);
+            paragraphIndex: paragraphIndex, runIndex: 0, bold: true, italic: true);
 
-        var doc = new Document(outputPath);
-        var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
-        if (runs.Count > 0)
-        {
-            Assert.True(runs[0].Font.Bold);
-            Assert.True(runs[0].Font.Italic);
-        }
+        var run = RunWith(new Document(outputPath), "Format this text");
+        Assert.True(run.Font.Bold);
+        Assert.True(run.Font.Italic);
     }
 
     [Fact]
@@ -259,13 +291,14 @@ public class WordTextToolTests : WordTestBase
     {
         var docPath = CreateWordDocumentWithContent("test_session_format.docx", "Format this text");
         var sessionId = OpenSession(docPath);
+        var paragraphIndex = ParagraphIndexOf(
+            SessionManager.GetDocument<Document>(sessionId), "Format this text");
 
-        _tool.Execute("format", sessionId: sessionId, paragraphIndex: 0, runIndex: 0, bold: true);
+        _tool.Execute("format", sessionId: sessionId,
+            paragraphIndex: paragraphIndex, runIndex: 0, bold: true);
 
-        var doc = SessionManager.GetDocument<Document>(sessionId);
-        var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
-        Assert.True(runs.Count > 0);
-        Assert.True(runs[0].Font.Bold);
+        var run = RunWith(SessionManager.GetDocument<Document>(sessionId), "Format this text");
+        Assert.True(run.Font.Bold);
     }
 
     [Fact]

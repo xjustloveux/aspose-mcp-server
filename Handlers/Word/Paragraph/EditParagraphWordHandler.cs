@@ -14,6 +14,8 @@ namespace AsposeMcpServer.Handlers.Word.Paragraph;
 [ResultType(typeof(SuccessResult))]
 public class EditParagraphWordHandler : OperationHandlerBase<Document>
 {
+    private const string SingleLineSpacingRule = "single";
+
     /// <inheritdoc />
     public override string Operation => "edit";
 
@@ -42,6 +44,13 @@ public class EditParagraphWordHandler : OperationHandlerBase<Document>
         var para = paragraphRef.Paragraph;
         var resolvedIndex = paragraphRef.Address.Index;
 
+        // Everything that can refuse this request is decided before anything is changed. The
+        // applies below run in sequence — font, formatting, line spacing, style, tab stops, text —
+        // so a refusal from a later one used to leave the earlier ones applied: measured, an edit
+        // refused for a field left the paragraph's alignment changed from Left to Center, and
+        // `IsModified` was still false because MarkModified runs last (R10-W01).
+        ValidateBeforeMutating(doc, para, editParams);
+
         var builder = new DocumentBuilder(doc);
         builder.MoveTo(para.FirstChild ?? para);
 
@@ -66,6 +75,52 @@ public class EditParagraphWordHandler : OperationHandlerBase<Document>
         var resultMsg = $"Paragraph {resolvedIndex} format edited successfully";
         if (!string.IsNullOrEmpty(editParams.Text)) resultMsg += ", text content updated";
         return new SuccessResult { Message = resultMsg };
+    }
+
+    /// <summary>
+    ///     Resolves every value this edit depends on, and refuses the whole request if any of them
+    ///     cannot be resolved — before a single property is written.
+    /// </summary>
+    /// <param name="doc">The document being edited.</param>
+    /// <param name="para">The paragraph being edited.</param>
+    /// <param name="editParams">The requested edit.</param>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when a style, alignment, spacing rule, tab stop or the text replacement itself
+    ///     cannot be applied. Every one of these used to be discovered partway through, leaving
+    ///     the paragraph half-edited by an operation that reported failure (R10-W01).
+    /// </exception>
+    private static void ValidateBeforeMutating(Document doc, Aspose.Words.Paragraph para,
+        EditParagraphParameters editParams)
+    {
+        if (!string.IsNullOrEmpty(editParams.Alignment))
+            WordParagraphHelper.GetAlignment(editParams.Alignment);
+
+        if (editParams.LineSpacing.HasValue || !string.IsNullOrEmpty(editParams.LineSpacingRule))
+            WordParagraphHelper.GetLineSpacingRule(editParams.LineSpacingRule ?? SingleLineSpacingRule);
+
+        if (!string.IsNullOrEmpty(editParams.StyleName) && doc.Styles[editParams.StyleName] == null)
+            throw new ArgumentException(
+                $"Style '{editParams.StyleName}' not found. Use word_get_styles tool to view "
+                + "available styles");
+
+        // The whole array, every field. Checking only alignment and leader left `position` to be
+        // read inside ApplyTabStops — which clears the paragraph's existing stops first, so a
+        // malformed position threw after the old stops were already gone (§23.4).
+        WordTabStopHelper.Resolve(editParams.TabStops);
+
+        if (string.IsNullOrEmpty(editParams.Text)) return;
+
+        // The same question ReplaceParagraphText asks, asked before anything is written.
+        var extents = FieldBoundaryHelper.FieldExtents.Of(doc);
+        var textRuns = WordRunHelper.GetDirectRuns(para)
+            .Where(run => extents.EnclosingField(run) == null).ToList();
+
+        if (textRuns.Count == 0
+            && (extents.EnclosingField(para) != null || extents.WouldSplitAField(para)))
+            throw new ArgumentException(
+                "This paragraph lies inside a field, so replacing its text would write into the "
+                + "field's code or result rather than into the document. Edit the field with "
+                + "word_field, or choose a paragraph outside it.");
     }
 
     /// <summary>
@@ -103,7 +158,7 @@ public class EditParagraphWordHandler : OperationHandlerBase<Document>
     {
         if (!lineSpacing.HasValue && string.IsNullOrEmpty(lineSpacingRule)) return;
 
-        var effectiveRule = lineSpacingRule ?? "single";
+        var effectiveRule = lineSpacingRule ?? SingleLineSpacingRule;
         var rule = WordParagraphHelper.GetLineSpacingRule(effectiveRule);
         paraFormat.LineSpacingRule = rule;
 
@@ -119,7 +174,7 @@ public class EditParagraphWordHandler : OperationHandlerBase<Document>
     {
         return rule.ToLower() switch
         {
-            "single" => 1.0,
+            SingleLineSpacingRule => 1.0,
             "oneandhalf" => 1.5,
             "double" => 2.0,
             _ => 1.0
@@ -157,19 +212,15 @@ public class EditParagraphWordHandler : OperationHandlerBase<Document>
     {
         if (tabStops is not { Count: > 0 }) return;
 
-        paraFormat.TabStops.Clear();
-        foreach (var ts in tabStops)
-        {
-            var tsObj = ts?.AsObject();
-            if (tsObj == null) continue;
+        // Resolved in full before the existing stops are cleared. Reading the values inside this
+        // loop meant a malformed one threw after Clear(), leaving the paragraph with no stops at
+        // all and the request reporting failure (§23.4). The reading itself lives in
+        // WordTabStopHelper, because three other handlers were reading the same array by their own
+        // rules (R13-W01).
+        var resolved = WordTabStopHelper.Resolve(tabStops);
 
-            var position = tsObj["position"]?.GetValue<double>() ?? 0;
-            var tabAlignment = tsObj["alignment"]?.GetValue<string>() ?? "left";
-            var leader = tsObj["leader"]?.GetValue<string>() ?? "none";
-            paraFormat.TabStops.Add(new TabStop(position,
-                WordParagraphHelper.GetTabAlignment(tabAlignment),
-                WordParagraphHelper.GetTabLeader(leader)));
-        }
+        paraFormat.TabStops.Clear();
+        foreach (var stop in resolved) paraFormat.TabStops.Add(stop);
     }
 
     /// <summary>
@@ -187,7 +238,7 @@ public class EditParagraphWordHandler : OperationHandlerBase<Document>
             return;
         }
 
-        var runs = para.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+        var runs = WordRunHelper.GetDirectRuns(para);
         if (runs.Count == 0)
         {
             if (fontParams.HasAnySettings())
@@ -226,13 +277,31 @@ public class EditParagraphWordHandler : OperationHandlerBase<Document>
             fontParams.FontNameFarEast, fontParams.FontSize, fontParams.Bold, fontParams.Italic,
             fontParams.UnderlineStr, fontParams.Color);
 
-        var textRuns = para.GetChildNodes(NodeType.Run, true).Cast<Run>()
-            .Where(run => FieldBoundaryHelper.GetEnclosingField(run) == null).ToList();
+        // Indexed once: asking per run would number the whole document per run.
+        var extents = FieldBoundaryHelper.FieldExtents.Of(para.Document as Document
+                                                          ?? throw new InvalidOperationException(
+                                                              "The paragraph is not part of a document."));
+        var textRuns = WordRunHelper.GetDirectRuns(para)
+            .Where(run => extents.EnclosingField(run) == null).ToList();
 
         if (textRuns.Count == 0)
+        {
+            // Every run in this paragraph is inside a field, so there is nowhere in it that is
+            // ordinary text. Appending anyway put the caller's text inside the field's result or
+            // its code — for a field spanning several paragraphs, a whole paragraph can be in
+            // that position (§21.3).
+            if (extents.EnclosingField(para) != null || extents.WouldSplitAField(para))
+                throw new ArgumentException(
+                    "This paragraph lies inside a field, so replacing its text would write into "
+                    + "the field's code or result rather than into the document. Edit the field "
+                    + "with word_field, or choose a paragraph outside it.");
+
             para.AppendChild(newRun);
+        }
         else
+        {
             textRuns[0].ParentNode.InsertBefore(newRun, textRuns[0]);
+        }
 
         foreach (var run in textRuns)
             run.Remove();

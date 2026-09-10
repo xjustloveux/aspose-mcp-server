@@ -85,6 +85,49 @@ public class ExtractImagesWordHandlerTests : WordHandlerTestBase
         Assert.Contains("3 images", result.Message);
     }
 
+    /// <summary>
+    ///     R5-R01: extraction published each image as it was produced, so a request that failed on a
+    ///     later image had already replaced the destinations of the earlier ones. The publish for the
+    ///     second image is made to fail by putting a directory where its file has to go.
+    /// </summary>
+    [Fact]
+    public void Execute_WhenALaterImageCannotBePublished_ShouldWriteNoneOfThem()
+    {
+        var tempImageFile = CreateTempImageFile();
+        var outputDir = Path.Combine(TestDir, "atomic_images");
+        Directory.CreateDirectory(outputDir);
+
+        var doc = CreateDocumentWithMultipleImages(tempImageFile, 3);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "outputDir", outputDir },
+            { "prefix", "img" }
+        });
+
+        // The handler names each file from the image's own type, not from the fixture file's
+        // extension, so the names are learned from a successful run rather than guessed.
+        var probeDir = Path.Combine(TestDir, "atomic_images_probe");
+        _handler.Execute(CreateContext(CreateDocumentWithMultipleImages(tempImageFile, 3)),
+            CreateParameters(new Dictionary<string, object?>
+            {
+                { "outputDir", probeDir },
+                { "prefix", "img" }
+            }));
+        var produced = Directory.GetFiles(probeDir).Select(Path.GetFileName).Order(StringComparer.Ordinal).ToList();
+        Assert.Equal(3, produced.Count);
+
+        var first = Path.Combine(outputDir, produced[0]!);
+        Directory.CreateDirectory(Path.Combine(outputDir, produced[1]!));
+
+        Assert.ThrowsAny<Exception>(() => _handler.Execute(context, parameters));
+
+        Assert.False(System.IO.File.Exists(first),
+            "the first image was published before the second was known to fail");
+        Assert.DoesNotContain(Directory.GetFiles(outputDir),
+            f => Path.GetFileName(f).Contains(".partial-", StringComparison.Ordinal));
+    }
+
     #endregion
 
     #region Optional Parameters

@@ -41,6 +41,15 @@ public class EditPdfAnnotationHandler : OperationHandlerBase<Document>
 
         var annotation = page.Annotations[editParams.AnnotationIndex];
 
+        if (string.IsNullOrEmpty(editParams.Text) && string.IsNullOrEmpty(editParams.Title)
+                                                  && string.IsNullOrEmpty(editParams.Subject))
+            throw new ArgumentException("Provide 'text', 'title' or 'subject' to edit an annotation");
+
+        if ((!string.IsNullOrEmpty(editParams.Title) || !string.IsNullOrEmpty(editParams.Subject))
+            && annotation is not MarkupAnnotation)
+            throw new ArgumentException(
+                $"Annotation {editParams.AnnotationIndex} has no title or subject to set");
+
         if (!string.IsNullOrEmpty(editParams.Text))
             annotation.Contents = editParams.Text;
 

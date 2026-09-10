@@ -94,9 +94,18 @@ public class CreateWordTableHandler : OperationHandlerBase<Document>
     private static TableDimensions CalculateTableDimensions(string[][]? tableData, int? rows,
         int? columns)
     {
-        if (tableData is { Length: > 0 })
-            return new TableDimensions(tableData.Length, tableData.Max(r => r.Length));
-        return new TableDimensions(rows ?? 3, columns ?? 3);
+        var dimensions = tableData is { Length: > 0 }
+            ? new TableDimensions(tableData.Length, tableData.Max(r => r.Length))
+            : new TableDimensions(rows ?? 3, columns ?? 3);
+
+        // A Word table allocates one cell object per row-column pair, so both dimensions and
+        // their product are bounded before the builder starts creating cells. The numbers live in
+        // TableBudget so the PDF, PowerPoint and split-cell paths cannot disagree with them
+        // (R3-R04); 63 columns is a limit of the Word format itself.
+        TableBudget.EnsureWithinBudget(dimensions.NumRows, dimensions.NumColumns,
+            TableBudget.MaxWordColumns, "Word table");
+
+        return dimensions;
     }
 
     /// <summary>

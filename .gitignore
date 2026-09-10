@@ -122,3 +122,13 @@ coverage-reports/
 sonar-reports/
 .sonarqube/
 AGENTS.md
+
+# Graphify local working data (public exports belong under docs/architecture-map/)
+graphify-out/
+
+
+# Python bytecode from the graphify tooling scripts. The scripts themselves are tracked -
+# build-public-map.py imports corpus_allowlist and verify-public-map.ps1 runs corpus-digest.py,
+# so a clean checkout needs them for the publish gate to work at all.
+__pycache__/
+*.pyc

@@ -9,6 +9,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Animation;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class DeletePptAnimationHandlerTests : PptHandlerTestBase
 {
     private readonly DeletePptAnimationHandler _handler = new();

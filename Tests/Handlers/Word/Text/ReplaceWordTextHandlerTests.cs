@@ -41,19 +41,36 @@ public class ReplaceWordTextHandlerTests : WordHandlerTestBase
 
     #region Case Sensitivity
 
+    /// <summary>
+    ///     The tool declares <c>caseSensitive</c> for both search and replace, so replace has to
+    ///     honour it on the literal and the regex path alike.
+    ///     <para>
+    ///         The previous version of this case passed <c>caseSensitive</c> and only asserted that
+    ///         the document contained the replacement, so it passed while the handler dropped the
+    ///         parameter entirely: <c>Range.Replace</c> defaults to <c>MatchCase = false</c> and
+    ///         replaced all three casings whatever the caller asked for, while the regex path did
+    ///         the opposite because it used <c>RegexOptions.None</c> unconditionally. Asserting
+    ///         which casings survive is what makes the parameter observable.
+    ///     </para>
+    /// </summary>
+    /// <param name="caseSensitive">Whether the caller asked for a case-sensitive replace.</param>
+    /// <param name="useRegex">Which matching path to exercise; both must behave the same.</param>
     [Theory]
-    [InlineData("Hello", true, true, false)]
-    [InlineData("hello", false, true, true)]
-    public void Execute_WithCaseSensitivity_ReplacesAccordingly(string find, bool caseSensitive,
-        bool shouldContainReplaced, bool shouldRemoveAll)
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    public void Execute_WithCaseSensitivity_ReplacesOnlyTheRequestedCasings(bool caseSensitive,
+        bool useRegex)
     {
         var doc = CreateDocumentWithText("Hello HELLO hello");
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
-            { "find", find },
-            { "replace", "Replaced" },
-            { "caseSensitive", caseSensitive }
+            { "find", "Hello" },
+            { "replace", "X" },
+            { "caseSensitive", caseSensitive },
+            { "useRegex", useRegex }
         });
 
         var res = _handler.Execute(context, parameters);
@@ -61,10 +78,20 @@ public class ReplaceWordTextHandlerTests : WordHandlerTestBase
         var result = Assert.IsType<SuccessResult>(res);
 
         Assert.Contains("replaced", result.Message, StringComparison.OrdinalIgnoreCase);
-        if (shouldContainReplaced)
-            AssertContainsText(doc, "Replaced");
-        if (shouldRemoveAll)
-            AssertDoesNotContainText(doc, "Hello");
+        AssertContainsText(doc, "X");
+        AssertDoesNotContainText(doc, "Hello");
+
+        if (caseSensitive)
+        {
+            AssertContainsText(doc, "HELLO");
+            AssertContainsText(doc, "hello");
+        }
+        else
+        {
+            AssertDoesNotContainText(doc, "HELLO");
+            AssertDoesNotContainText(doc, "hello");
+        }
+
         AssertModified(context);
     }
 

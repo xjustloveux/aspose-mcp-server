@@ -1,9 +1,9 @@
 using Aspose.Slides;
-using Aspose.Slides.Export;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
 using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
 using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.FileOperations;
@@ -14,6 +14,8 @@ namespace AsposeMcpServer.Handlers.PowerPoint.FileOperations;
 [ResultType(typeof(SuccessResult))]
 public class SplitPresentationHandler : OperationHandlerBase<Presentation>
 {
+    private const string InputPathParameter = "inputPath";
+
     /// <summary>
     ///     Maximum allowed total work units (slideCount × outputFileCount) per split call.
     ///     This is orthogonal to the 1000-file output cap: a caller requesting 999 files
@@ -54,6 +56,11 @@ public class SplitPresentationHandler : OperationHandlerBase<Presentation>
     /// </exception>
     public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
+        // Held for the whole operation: this handler builds or reads presentations of
+        // its own, outside any session, so nothing else stands between it and a library
+        // that fails when two threads are inside it (SlidesGate).
+        using var slidesGate = SlidesGate.Enter();
+
         var p = ExtractSplitParameters(parameters);
 
         if (p.SlidesPerFile < 1 || p.SlidesPerFile > 1000)
@@ -72,11 +79,18 @@ public class SplitPresentationHandler : OperationHandlerBase<Presentation>
             throw new ArgumentException("Either inputPath, path, or sessionId is required for split operation");
 
         if (!string.IsNullOrEmpty(sourcePath))
-            SecurityHelper.ValidateFilePath(sourcePath, "inputPath", true);
-        SecurityHelper.ValidateFilePath(p.OutputDirectory, "outputDirectory", true);
+        {
+            SecurityHelper.ValidateFilePath(sourcePath, InputPathParameter, true);
+            sourcePath = SecurityHelper.ResolveAndEnsureWithinAllowlist(sourcePath,
+                context.ServerConfig?.AllowedBasePaths ?? [], InputPathParameter);
+        }
 
-        if (!Directory.Exists(p.OutputDirectory))
-            Directory.CreateDirectory(p.OutputDirectory);
+        SecurityHelper.ValidateFilePath(p.OutputDirectory, "outputDirectory", true);
+        var resolvedOutputDirectory = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.OutputDirectory,
+            context.ServerConfig?.AllowedBasePaths ?? [], "outputDirectory");
+
+        if (!Directory.Exists(resolvedOutputDirectory))
+            Directory.CreateDirectory(resolvedOutputDirectory);
 
         Presentation presentation;
         Presentation? ownedPresentation = null;
@@ -98,7 +112,7 @@ public class SplitPresentationHandler : OperationHandlerBase<Presentation>
         {
             // The input is a read sink: resolve symlinks and enforce the allowlist like the output paths.
             var resolvedSourcePath = SecurityHelper.ResolveAndEnsureWithinAllowlist(sourcePath!,
-                context.ServerConfig?.AllowedBasePaths ?? [], "inputPath");
+                context.ServerConfig?.AllowedBasePaths ?? [], InputPathParameter);
             ownedPresentation = new Presentation(resolvedSourcePath);
             presentation = ownedPresentation;
         }
@@ -132,7 +146,7 @@ public class SplitPresentationHandler : OperationHandlerBase<Presentation>
             var safePattern = SecurityHelper.SanitizeFileNamePattern(p.OutputFileNamePattern);
             // Normalize for prefix comparison (trailing sep avoids "/out2" matching "/out").
             var normalizedOutputDir =
-                Path.GetFullPath(p.OutputDirectory)
+                Path.GetFullPath(resolvedOutputDirectory)
                     .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
                 + Path.DirectorySeparatorChar;
 
@@ -151,7 +165,7 @@ public class SplitPresentationHandler : OperationHandlerBase<Presentation>
                 }
 
                 var outputFileName = safePattern.Replace("{index}", fileCount.ToString());
-                var outPath = Path.Combine(p.OutputDirectory, outputFileName);
+                var outPath = Path.Combine(resolvedOutputDirectory, outputFileName);
                 if (!Path.GetFullPath(outPath)
                         .StartsWith(normalizedOutputDir, StringComparison.OrdinalIgnoreCase))
                     throw new ArgumentException(
@@ -159,12 +173,12 @@ public class SplitPresentationHandler : OperationHandlerBase<Presentation>
                 // H19: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
                 outPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(outPath,
                     context.ServerConfig?.AllowedBasePaths ?? [], nameof(outPath));
-                newPresentation.Save(outPath, SaveFormat.Pptx);
+                newPresentation.Save(outPath, PptSaveFormatResolver.Resolve(outPath));
                 fileCount++;
             }
 
             return new SuccessResult
-                { Message = $"Split presentation into {fileCount} file(s). Output: {p.OutputDirectory}" };
+                { Message = $"Split presentation into {fileCount} file(s). Output: {resolvedOutputDirectory}" };
         }
         finally
         {
@@ -181,7 +195,7 @@ public class SplitPresentationHandler : OperationHandlerBase<Presentation>
     private static SplitParameters ExtractSplitParameters(OperationParameters parameters)
     {
         return new SplitParameters(
-            parameters.GetOptional<string?>("inputPath"),
+            parameters.GetOptional<string?>(InputPathParameter),
             parameters.GetOptional<string?>("path"),
             parameters.GetOptional<string?>("sessionId"),
             parameters.GetRequired<string>("outputDirectory"),

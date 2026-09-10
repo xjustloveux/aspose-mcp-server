@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using AsposeMcpServer.Core.Cleanup;
 using AsposeMcpServer.Core.Extension;
 using AsposeMcpServer.Core.Security;
 using AsposeMcpServer.Core.Session;
@@ -96,6 +97,7 @@ internal static class HostFactory
 
         LogServerStartup(
             $"HTTP server listening on http://{bundle.TransportConfig.Host}:{bundle.TransportConfig.Port}/mcp");
+        WarnIfReachableWithoutAuthentication(bundle);
         ConfigureMiddleware(app, bundle.AuthConfig, bundle.TrackingConfig, bundle.OriginConfig);
         MapHealthEndpoints(app);
         app.MapMcp("/mcp");
@@ -120,6 +122,7 @@ internal static class HostFactory
 
         LogServerStartup(
             $"WebSocket server listening on ws://{bundle.TransportConfig.Host}:{bundle.TransportConfig.Port}/mcp");
+        WarnIfReachableWithoutAuthentication(bundle);
         ConfigureMiddleware(app, bundle.AuthConfig, bundle.TrackingConfig, bundle.OriginConfig);
 
         app.UseWebSockets();
@@ -233,11 +236,18 @@ internal static class HostFactory
                 return "The specified file was not found.";
 
             case UnauthorizedAccessException:
-                // The password sentinel from the error translators passes through; raw BCL
-                // access-denied text carries the full path.
+                // Sentinels authored by the error translators pass through; raw BCL access-denied
+                // text carries the full path. The output-directory message is recognised by shape
+                // because it embeds a caller-supplied basename.
                 return ex.Message == ErrorMessageBuilder.InvalidPassword()
+                       || ErrorMessageBuilder.IsOutputDirectoryNotWritable(ex.Message)
                     ? ex.Message
                     : "Access to the file was denied.";
+
+            // A write that failed on the caller's output directory, reported by a translator. Raw
+            // IO text is still replaced below, so only the authored form survives.
+            case IOException when ErrorMessageBuilder.IsOutputDirectoryNotWritable(ex.Message):
+                return ex.Message;
 
             default:
                 Console.Error.WriteLine($"[WARN] Unhandled tool exception replaced by sentinel: {ex}");
@@ -283,6 +293,7 @@ internal static class HostFactory
         services.AddSingleton<TempFileManager>();
         services.AddHostedService(sp => sp.GetRequiredService<TempFileManager>());
         services.AddHostedService<SessionLifetimeService>();
+        services.AddHostedService<CleanupDebtService>();
 
         services.AddSingleton<SnapshotManager>();
         services.AddSingleton<ExtensionManager>();
@@ -302,6 +313,35 @@ internal static class HostFactory
             services.AddSingleton<ApiKeyAuthenticationMiddleware>();
         if (authConfig.Jwt.Enabled)
             services.AddSingleton<JwtAuthenticationMiddleware>();
+    }
+
+    /// <summary>
+    ///     Says, loudly, when a network transport is bound to every interface with no
+    ///     authentication enabled.
+    /// </summary>
+    /// <param name="bundle">The host's configuration.</param>
+    /// <remarks>
+    ///     The container image sets <c>ASPOSE_HOST=0.0.0.0</c> and exposes the port, and both
+    ///     authentication schemes are opt-in, so the combination is one an operator reaches by
+    ///     following the deployment guide (R21-DEP01). Only an operator who also chooses a network
+    ///     transport and publishes the port makes it reachable, which is why this is a warning
+    ///     and not a refusal: behind a reverse proxy or inside a private network it is a
+    ///     supported shape. The decision is the warning; a stricter policy would replace this
+    ///     method with a refusal and an explicit override flag.
+    /// </remarks>
+    private static void WarnIfReachableWithoutAuthentication(HostConfigBundle bundle)
+    {
+        var host = bundle.TransportConfig.Host;
+        var everyInterface = host is "0.0.0.0" or "::" or "*" or "+" or "[::]";
+        var authenticated = bundle.AuthConfig.ApiKey.Enabled || bundle.AuthConfig.Jwt.Enabled;
+
+        if (!everyInterface || authenticated) return;
+
+        Console.Error.WriteLine(
+            "[WARN] This server is listening on every network interface with no authentication "
+            + "enabled. Anyone who can reach the port can use every tool. Enable API key or JWT "
+            + "authentication, bind to localhost, or place the server behind an authenticating "
+            + "proxy before exposing it.");
     }
 
     /// <summary>
@@ -329,6 +369,10 @@ internal static class HostFactory
         ConfigureOriginMiddleware(app, originConfig);
         ConfigureAuthMiddleware(app, authConfig);
         ConfigureTrackingMiddleware(app, trackingConfig);
+
+        // After authentication, so an unauthenticated peer is told 401 rather than 400, and before
+        // the MCP endpoint, so the SDK never binds a body this server would not (R20-RES02).
+        app.UseMiddleware<PayloadShapeMiddleware>();
     }
 
     /// <summary>
@@ -396,18 +440,10 @@ internal static class HostFactory
     /// <param name="args">Command line arguments for tool configuration passthrough.</param>
     private static void ConfigureWebSocketEndpoint(WebApplication app, string[] args)
     {
-        var executablePath = Environment.ProcessPath ?? "dotnet";
-        var toolArgs = string.Join(" ", args.Where(a =>
-            a.StartsWith("--word", StringComparison.OrdinalIgnoreCase) ||
-            a.StartsWith("--excel", StringComparison.OrdinalIgnoreCase) ||
-            a.StartsWith("--powerpoint", StringComparison.OrdinalIgnoreCase) ||
-            a.StartsWith("--ppt", StringComparison.OrdinalIgnoreCase) ||
-            a.StartsWith("--pdf", StringComparison.OrdinalIgnoreCase) ||
-            a.StartsWith("--all", StringComparison.OrdinalIgnoreCase) ||
-            a.StartsWith("--license", StringComparison.OrdinalIgnoreCase) ||
-            a.StartsWith("--session", StringComparison.OrdinalIgnoreCase)));
+        var (executablePath, prefixArguments) = ChildProcessArguments.ResolveHostCommand();
+        var childArguments = prefixArguments.Concat(ChildProcessArguments.BuildChildArguments(args)).ToList();
 
-        var handler = new WebSocketConnectionHandler(executablePath, toolArgs,
+        var handler = new WebSocketConnectionHandler(executablePath, childArguments,
             app.Services.GetService<ILoggerFactory>());
 
         app.Map("/mcp", async context =>

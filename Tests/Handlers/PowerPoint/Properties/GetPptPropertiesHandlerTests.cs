@@ -6,6 +6,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Properties;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class GetPptPropertiesHandlerTests : PptHandlerTestBase
 {
     private readonly GetPptPropertiesHandler _handler = new();

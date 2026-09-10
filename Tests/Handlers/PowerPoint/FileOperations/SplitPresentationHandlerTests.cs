@@ -8,6 +8,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.FileOperations;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class SplitPresentationHandlerTests : PptHandlerTestBase
 {
     private readonly SplitPresentationHandler _handler = new();

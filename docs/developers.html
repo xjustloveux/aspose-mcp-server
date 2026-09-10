@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>開發者指南 - Aspose MCP Server</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <link rel="alternate icon" href="favicon.ico">
     <meta name="description" content="Aspose MCP Server 開發者指南：倉庫結構、本地開發、多平台構建。">
     <meta name="keywords" content="Aspose, MCP, 開發者指南, 本地開發, 多平台構建, GitHub Actions">
     <link rel="canonical" href="https://xjustloveux.github.io/aspose-mcp-server/developers.html">
@@ -87,6 +86,9 @@
                 <li>
                     <a href="faq.html">常見問答</a>
                 </li>
+                <li>
+                    <a href="architecture-map/index.html">架構關係圖</a>
+                </li>
             </ul>
             <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme" title="切換亮/暗色主題">🌙</button>
             <button class="menu-toggle" aria-label="Toggle menu">☰</button>
@@ -107,14 +109,14 @@
     <div class="structure-tree">
         aspose-mcp-server/
         ├── Tools/ 📁 工具原始碼（MCP Tool 入口點）
-        │ ├── Word/ 27 個工具
-        │ ├── Excel/ 31 個工具
-        │ ├── PowerPoint/ 25 個工具
+        │ ├── Word/ 28 個工具
+        │ ├── Excel/ 32 個工具
+        │ ├── PowerPoint/ 26 個工具
         │ ├── PDF/ 19 個工具
         │ ├── OCR/ 2 個工具
         │ ├── Email/ 6 個工具
         │ ├── BarCode/ 2 個工具
-        │ ├── Conversion/ 2 個工具
+        │ ├── Conversion/ 1 個工具
         │ ├── Session/ 1 個工具
         │ └── Extension/ 1 個工具
         ├── Handlers/ 📁 操作處理器（業務邏輯實作）
@@ -222,7 +224,7 @@ cd aspose-mcp-server">
 
     <h3>2. 編譯 Release 版本</h3>
     <div class="code-wrapper">
-        <div class="code-block" data-code="pwsh deploy/build.ps1 --configuration Release">pwsh deploy/build.ps1 --configuration Release</div>
+        <div class="code-block" data-code="pwsh deploy/build.ps1">pwsh deploy/build.ps1</div>
         <button class="copy-button" onclick="copyCode(this)" title="複製指令">
             <span>📋</span>
             <span>複製</span>
@@ -324,8 +326,8 @@ cd aspose-mcp-server">
 
     <h3>測試統計</h3>
     <ul style="margin-top: 15px; padding-left: 25px;">
-        <li><strong>測試類</strong>: 780+ 個測試類（含 Core、Security、Session、OLE 測試）</li>
-        <li><strong>測試用例</strong>: 10,000+ 個測試用例</li>
+        <li><strong>測試類</strong>: 854 個測試類（含 Core、Security、Session、OLE 測試）</li>
+        <li><strong>測試用例</strong>: 10,800+ 個測試用例</li>
         <li><strong>測試框架</strong>: xUnit 2.9.3</li>
     </ul>
 
@@ -379,7 +381,7 @@ cd aspose-mcp-server">
     <ul style="margin-top: 15px; padding-left: 25px;">
         <li><code>Tests/Core/</code> - 核心功能測試（Handlers、Helpers、Security、Session、Tracking、Extension）</li>
         <li>
-            <code>Tests/Handlers/</code> - Handler 測試（531 個測試類）
+            <code>Tests/Handlers/</code> - Handler 測試（548 個測試類）
             <ul style="margin-top: 5px; padding-left: 20px;">
                 <li><code>Word/</code> - Word Handler 測試</li>
                 <li><code>Excel/</code> - Excel Handler 測試</li>
@@ -390,10 +392,10 @@ cd aspose-mcp-server">
                 <li><code>BarCode/</code> - BarCode Handler 測試</li>
             </ul>
         </li>
-        <li><code>Tests/Tools/Word/</code> - Word 工具測試（27 個測試類）</li>
-        <li><code>Tests/Tools/Excel/</code> - Excel 工具測試（31 個測試類）</li>
-        <li><code>Tests/Tools/PowerPoint/</code> - PowerPoint 工具測試（25 個測試類）</li>
-        <li><code>Tests/Tools/Pdf/</code> - PDF 工具測試（19 個測試類）</li>
+        <li><code>Tests/Tools/Word/</code> - Word 工具測試（30 個測試類）</li>
+        <li><code>Tests/Tools/Excel/</code> - Excel 工具測試（33 個測試類）</li>
+        <li><code>Tests/Tools/PowerPoint/</code> - PowerPoint 工具測試（29 個測試類）</li>
+        <li><code>Tests/Tools/Pdf/</code> - PDF 工具測試（20 個測試類）</li>
         <li><code>Tests/Tools/Ocr/</code> - OCR 工具測試（2 個測試類）</li>
         <li><code>Tests/Tools/Email/</code> - Email 工具測試（6 個測試類）</li>
         <li><code>Tests/Tools/BarCode/</code> - BarCode 工具測試（2 個測試類）</li>
@@ -465,7 +467,7 @@ cd aspose-mcp-server">
     <p>Handler 基礎架構：IOperationHandler（介面）、OperationHandlerBase（基類）、OperationContext（上下文）、OperationParameters（參數）、HandlerRegistry（註冊器）。實現 Tool 與業務邏輯的分離。</p>
 
     <h3>Handlers/</h3>
-    <p>操作處理器：531 個 Handler 實作業務邏輯。每個 Handler 對應一個操作（如 AddWordBookmarkHandler），並透過 HandlerRegistry 註冊。100% 單元測試覆蓋（531 個測試類）。</p>
+    <p>操作處理器：532 個 Handler 實作業務邏輯。每個 Handler 對應一個操作（如 AddWordBookmarkHandler），並透過 HandlerRegistry 註冊。<code>Tests/Handlers/</code> 下有 548 個測試類：520 個 Handler 有同名的 <code>&lt;Handler&gt;Tests</code>（其餘為額外情境測試類），12 個 OLE Handler 沒有同名測試類，由 <code>word_ole</code>／<code>excel_ole</code>／<code>ppt_ole</code> 的工具層測試涵蓋。</p>
 
     <h3>Helpers/</h3>
     <p>通用輔助工具：SecurityHelper（安全驗證）、ColorHelper（顏色處理）、FontHelper（字型設定）、ValueHelper（值轉換）等。包含各文檔類型的專用 Helper（Excel/、Word/、PowerPoint/、Pdf/）。</p>
@@ -515,7 +517,7 @@ cd aspose-mcp-server">
         function copyCode(button) {
             const codeBlock = button.previousElementSibling;
             const text = codeBlock.dataset.code || codeBlock.textContent.trim();
-            
+
             navigator.clipboard.writeText(text).then(function() {
                 const spans = button.querySelectorAll('span');
                 button.classList.add('copied');
@@ -523,7 +525,7 @@ cd aspose-mcp-server">
                     spans[0].textContent = '✓';
                     spans[1].textContent = '已複製！';
                 }
-                
+
                 setTimeout(function() {
                     button.classList.remove('copied');
                     if (spans.length > 1) {

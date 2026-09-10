@@ -19,10 +19,17 @@ public class BarcodeRecognizeTool
     private readonly HandlerRegistry<object> _handlerRegistry;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Initializes a new instance of the <see cref="BarcodeRecognizeTool" /> class.
     /// </summary>
-    public BarcodeRecognizeTool()
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
+    public BarcodeRecognizeTool(ServerConfig? serverConfig = null)
     {
+        _serverConfig = serverConfig;
         _handlerRegistry =
             HandlerRegistry<object>.CreateFromNamespace("AsposeMcpServer.Handlers.BarCode.Recognize");
     }
@@ -72,7 +79,8 @@ Supported image formats: PNG, JPEG, BMP, GIF, TIFF")]
         {
             Document = new object(),
             SourcePath = path,
-            OutputPath = null
+            OutputPath = null,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);

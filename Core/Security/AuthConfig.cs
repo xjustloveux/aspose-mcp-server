@@ -62,6 +62,10 @@ public class AuthConfig
         if (!string.IsNullOrEmpty(apiKeyGroupHeader))
             ApiKey.GroupIdentifierHeader = apiKeyGroupHeader;
 
+        var apiKeyTrustedProxies = Environment.GetEnvironmentVariable("ASPOSE_AUTH_APIKEY_TRUSTED_PROXIES");
+        if (!string.IsNullOrEmpty(apiKeyTrustedProxies))
+            ApiKey.TrustedProxies = ParseTrustedProxies(apiKeyTrustedProxies);
+
         ApiKey.IntrospectionEndpoint =
             Environment.GetEnvironmentVariable("ASPOSE_AUTH_APIKEY_INTROSPECTION_URL");
         ApiKey.IntrospectionAuthHeader =
@@ -117,6 +121,10 @@ public class AuthConfig
         var jwtGroupHeader = Environment.GetEnvironmentVariable("ASPOSE_AUTH_JWT_GROUP_HEADER");
         if (!string.IsNullOrEmpty(jwtGroupHeader))
             Jwt.GroupIdentifierHeader = jwtGroupHeader;
+
+        var jwtTrustedProxies = Environment.GetEnvironmentVariable("ASPOSE_AUTH_JWT_TRUSTED_PROXIES");
+        if (!string.IsNullOrEmpty(jwtTrustedProxies))
+            Jwt.TrustedProxies = ParseTrustedProxies(jwtTrustedProxies);
 
         var jwtUserHeader = Environment.GetEnvironmentVariable("ASPOSE_AUTH_JWT_USER_HEADER");
         if (!string.IsNullOrEmpty(jwtUserHeader))
@@ -221,6 +229,7 @@ public class AuthConfig
             ["--auth-apikey-keys"] = ParseApiKeys,
             ["--auth-apikey-header"] = v => ApiKey.HeaderName = v,
             ["--auth-apikey-group-header"] = v => ApiKey.GroupIdentifierHeader = v,
+            ["--auth-apikey-trusted-proxies"] = v => ApiKey.TrustedProxies = ParseTrustedProxies(v),
             ["--auth-apikey-introspection-auth"] = v => ApiKey.IntrospectionAuthHeader = v,
             ["--auth-apikey-introspection-url"] = v => ApiKey.IntrospectionEndpoint = v,
             ["--auth-apikey-custom-url"] = v => ApiKey.CustomEndpoint = v,
@@ -331,6 +340,7 @@ public class AuthConfig
             ["--auth-jwt-group-claim"] = v => Jwt.GroupIdentifierClaim = v,
             ["--auth-jwt-user-claim"] = v => Jwt.UserIdClaim = v,
             ["--auth-jwt-group-header"] = v => Jwt.GroupIdentifierHeader = v,
+            ["--auth-jwt-trusted-proxies"] = v => Jwt.TrustedProxies = ParseTrustedProxies(v),
             ["--auth-jwt-user-header"] = v => Jwt.UserIdHeader = v,
             ["--auth-jwt-public-key-path"] = v => Jwt.PublicKeyPath = v,
             ["--auth-jwt-introspection-url"] = v => Jwt.IntrospectionEndpoint = v,
@@ -446,6 +456,13 @@ public class AuthConfig
             ValidateExternalCallConfig("API Key", ApiKey.ExternalTimeoutSeconds, ApiKey.CacheEnabled,
                 ApiKey.CacheTtlSeconds, ApiKey.CacheMaxSize,
                 ApiKey.Mode == ApiKeyMode.Introspection || ApiKey.Mode == ApiKeyMode.Custom);
+
+            if (ApiKey is { Mode: ApiKeyMode.Gateway, TrustedProxies.Count: 0 })
+                throw new InvalidOperationException(
+                    "API Key Gateway mode trusts the group header, so it has to know which callers "
+                    + "may set it. Set --auth-apikey-trusted-proxies or ASPOSE_AUTH_APIKEY_TRUSTED_PROXIES "
+                    + "to the gateway address or CIDR range, or to 'any' if the network boundary is "
+                    + "enforced outside this process.");
         }
 
         if (Jwt.Enabled)
@@ -469,6 +486,13 @@ public class AuthConfig
             ValidateExternalCallConfig("JWT", Jwt.ExternalTimeoutSeconds, Jwt.CacheEnabled,
                 Jwt.CacheTtlSeconds, Jwt.CacheMaxSize,
                 Jwt.Mode == JwtMode.Introspection || Jwt.Mode == JwtMode.Custom);
+
+            if (Jwt is { Mode: JwtMode.Gateway, TrustedProxies.Count: 0 })
+                throw new InvalidOperationException(
+                    "JWT Gateway mode trusts the group and user headers, so it has to know which "
+                    + "callers may set them. Set --auth-jwt-trusted-proxies or "
+                    + "ASPOSE_AUTH_JWT_TRUSTED_PROXIES to the gateway address or CIDR range, or to "
+                    + "'any' if the network boundary is enforced outside this process.");
         }
     }
 
@@ -492,5 +516,15 @@ public class AuthConfig
                 throw new InvalidOperationException(
                     $"{authType} cache max size must be at least 1");
         }
+    }
+
+    /// <summary>
+    ///     Splits a comma-separated list of trusted proxy addresses or CIDR ranges.
+    /// </summary>
+    /// <param name="value">Raw configuration value.</param>
+    /// <returns>The parsed entries with blanks removed.</returns>
+    private static List<string> ParseTrustedProxies(string value)
+    {
+        return value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
     }
 }

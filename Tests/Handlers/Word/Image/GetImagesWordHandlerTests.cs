@@ -99,7 +99,7 @@ public class GetImagesWordHandlerTests : WordHandlerTestBase
         var result = Assert.IsType<GetImagesWordResult>(res);
 
         Assert.NotNull(result.Images);
-        Assert.True(result.Count >= 0);
+        Assert.Equal(0, result.Count);
     }
 
     [Fact]

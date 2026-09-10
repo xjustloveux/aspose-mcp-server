@@ -123,7 +123,8 @@ public class ExcelOleObjectTool
             OleExtensionGuard.EnsureExcelExtension(path);
         }
 
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor, password);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor, password,
+            _serverConfig);
         var passwordIgnored = !string.IsNullOrEmpty(sessionId) && !string.IsNullOrEmpty(password);
 
         var parameters = BuildParameters(outputDirectory, oleIndex, outputFileName, outputPath);

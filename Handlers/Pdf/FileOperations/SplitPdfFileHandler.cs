@@ -14,9 +14,12 @@ namespace AsposeMcpServer.Handlers.Pdf.FileOperations;
 public class SplitPdfFileHandler : OperationHandlerBase<Document>
 {
     /// <summary>
-    ///     Maximum allowed total work units (totalPages × outputFileCount) per split call.
-    ///     Applies only to full-document split mode (no explicit startPage/endPage), where the
-    ///     caller controls <c>pagesPerFile</c> and therefore the number of output files.
+    ///     Maximum allowed total work units (pages copied × output file count) per split call.
+    ///     Both split modes are priced against it. The explicit-range branch used to create its
+    ///     output with no accounting at all (R2-R03); its cost is bounded by the input document's
+    ///     own page count rather than by a caller-chosen multiplier, so the check is a consistency
+    ///     guarantee rather than a fix for unbounded amplification — but "this branch has no
+    ///     budget" is exactly the shape that stops being true when someone adds a multiplier.
     ///     A 100-page PDF split into 1 page per file = 100 × 100 = 10,000 units (well within
     ///     the cap); a 10,000-page PDF split into 1 page per file = 100M units (rejected).
     ///     The bound ensures that the total I/O load stays proportional to document size even
@@ -47,11 +50,11 @@ public class SplitPdfFileHandler : OperationHandlerBase<Document>
         var splitParams = ExtractSplitParameters(parameters);
 
         SecurityHelper.ValidateFilePath(splitParams.OutputDir, "outputDir", true);
+        var resolvedOutputDir = SecurityHelper.ResolveAndEnsureWithinAllowlist(splitParams.OutputDir,
+            context.ServerConfig?.AllowedBasePaths ?? [], "outputDir");
 
         if (splitParams.PagesPerFile < 1 || splitParams.PagesPerFile > 1000)
             throw new ArgumentException("pagesPerFile must be between 1 and 1000");
-
-        Directory.CreateDirectory(splitParams.OutputDir);
 
         var document = context.Document;
         var totalPages = document.Pages.Count;
@@ -70,13 +73,19 @@ public class SplitPdfFileHandler : OperationHandlerBase<Document>
 
         if (splitParams.StartPage.HasValue || splitParams.EndPage.HasValue)
         {
+            EnsureWithinWorkBudget(actualEndPage - actualStartPage + 1, 1);
+
+            // Created only once every validation and budget check has passed: a refused request
+            // used to leave the destination directory behind (R3-C07).
+            Directory.CreateDirectory(resolvedOutputDir);
+
             using var newDocument = new Document();
             for (var pageNum = actualStartPage; pageNum <= actualEndPage; pageNum++)
                 newDocument.Pages.Add(document.Pages[pageNum]);
 
             var safeFileName =
                 SecurityHelper.SanitizeFileName($"{baseName}_pages_{actualStartPage}-{actualEndPage}.pdf");
-            var splitOutputPath = Path.Combine(splitParams.OutputDir, safeFileName);
+            var splitOutputPath = Path.Combine(resolvedOutputDir, safeFileName);
             // H27: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
             splitOutputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(splitOutputPath,
                 context.ServerConfig?.AllowedBasePaths ?? [], nameof(splitOutputPath));
@@ -94,11 +103,10 @@ public class SplitPdfFileHandler : OperationHandlerBase<Document>
 
         // Orthogonal DoS guard: even with pagesPerFile ≥ 1, a very large document combined
         // with a small pagesPerFile creates excessive I/O (e.g., 10,000 pages × 10,000 files).
-        var totalWorkUnits = (long)totalPages * totalSplits;
-        if (totalWorkUnits > MaxTotalWorkUnits)
-            throw new ArgumentException(
-                $"Split would require {totalWorkUnits} work units (totalPages × outputFiles = {totalPages} × {totalSplits}). " +
-                $"Maximum allowed is {MaxTotalWorkUnits}. Increase pagesPerFile to reduce the number of output files.");
+        EnsureWithinWorkBudget(totalPages, totalSplits);
+        RenderBudget.EnsureOutputCount(totalSplits, "PDF files");
+
+        Directory.CreateDirectory(resolvedOutputDir);
 
         for (var i = 0; i < totalPages; i += splitParams.PagesPerFile)
         {
@@ -107,7 +115,7 @@ public class SplitPdfFileHandler : OperationHandlerBase<Document>
                 newDocument.Pages.Add(document.Pages[i + j + 1]);
 
             var safeFileName = SecurityHelper.SanitizeFileName($"{baseName}_part_{++fileCount}.pdf");
-            var splitOutputPath = Path.Combine(splitParams.OutputDir, safeFileName);
+            var splitOutputPath = Path.Combine(resolvedOutputDir, safeFileName);
             // H27: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
             splitOutputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(splitOutputPath,
                 context.ServerConfig?.AllowedBasePaths ?? [], nameof(splitOutputPath));
@@ -125,7 +133,23 @@ public class SplitPdfFileHandler : OperationHandlerBase<Document>
         context.Progress?.Report(new ProgressNotificationValue
             { Progress = 100, Total = 100, Message = "Split completed" });
 
-        return new SuccessResult { Message = $"PDF split into {fileCount} files. Output: {splitParams.OutputDir}" };
+        return new SuccessResult { Message = $"PDF split into {fileCount} files. Output: {resolvedOutputDir}" };
+    }
+
+    /// <summary>
+    ///     Refuses a split whose page-copy cost exceeds the budget, before any output is created.
+    /// </summary>
+    /// <param name="pagesCopied">Pages the operation would copy.</param>
+    /// <param name="outputFiles">Files the operation would write.</param>
+    /// <exception cref="ArgumentException">Thrown when the product exceeds the budget.</exception>
+    private static void EnsureWithinWorkBudget(int pagesCopied, int outputFiles)
+    {
+        var totalWorkUnits = (long)pagesCopied * outputFiles;
+        if (totalWorkUnits > MaxTotalWorkUnits)
+            throw new ArgumentException(
+                $"Split would require {totalWorkUnits} work units (pages × outputFiles = "
+                + $"{pagesCopied} × {outputFiles}). Maximum allowed is {MaxTotalWorkUnits}. "
+                + "Narrow the page range, or increase pagesPerFile to reduce the number of output files.");
     }
 
     /// <summary>

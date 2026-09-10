@@ -45,9 +45,11 @@ public class WordContentToolTests : WordTestBase
         var docPath = CreateWordDocumentWithContent("test_statistics.docx", "Test document for statistics");
         var result = _tool.Execute("statistics", docPath);
         var data = GetResultData<GetWordStatisticsResult>(result);
-        Assert.True(data.Pages >= 0);
-        Assert.True(data.Words >= 0);
-        Assert.True(data.Paragraphs >= 0);
+        Assert.Equal(1, data.Pages);
+        // Licensed reports 4, evaluation mode 14; the floor is what holds in both.
+        Assert.True(data.Words >= 4, $"expected at least 4, got {data.Words}");
+        // Licensed reports 1, evaluation mode 2; the floor is what holds in both.
+        Assert.True(data.Paragraphs >= 1, $"expected at least 1, got {data.Paragraphs}");
     }
 
     [Fact]
@@ -58,7 +60,7 @@ public class WordContentToolTests : WordTestBase
         var data = GetResultData<GetWordDocumentInfoResult>(result);
         Assert.NotNull(data.Created);
         Assert.NotNull(data.Modified);
-        Assert.True(data.Sections >= 0);
+        Assert.Equal(1, data.Sections);
     }
 
     #endregion
@@ -107,8 +109,9 @@ public class WordContentToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("statistics", sessionId: sessionId);
         var data = GetResultData<GetWordStatisticsResult>(result);
-        Assert.True(data.Pages >= 0);
-        Assert.True(data.Words >= 0);
+        Assert.Equal(1, data.Pages);
+        // Licensed reports 4, evaluation mode 14; the floor is what holds in both.
+        Assert.True(data.Words >= 4, $"expected at least 4, got {data.Words}");
     }
 
     [Fact]

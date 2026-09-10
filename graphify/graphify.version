@@ -1,0 +1,8 @@
+# Pinned Graphify toolchain for the public architecture map (G-07).
+# Regenerating the map with a different version changes node ids, community
+# assignment and diagnostics, so the generator refuses to run on a mismatch.
+# Raising these values is a deliberate change: do it in its own commit and
+# compare node/edge/diagnostic counts before accepting the new output.
+package=graphifyy==0.9.56
+skill_version=0.9.56
+extraction_spec_sha256=f72a6d2dfa67446f06f27a8f0053af1adc8d53b02e393c8472045f6740c6183e

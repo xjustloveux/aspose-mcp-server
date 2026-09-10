@@ -3,8 +3,13 @@
 本文件記錄 JetBrains InspectCode 報告中被排除修復的問題及其原因。
 這些問題經過評估後決定保留，未來進行代碼品質檢查時可參考本文件跳過這些項目。
 
-**最後更新日期**: 2026-01-24
-**分析工具**: JetBrains InspectCode 2025.3.0.4
+**最後更新日期**: 2026-09-10
+**分析工具**: JetBrains InspectCode 2025.3.3、SonarCloud、.NET analyzers
+
+> 本文件不記錄行號。行號在重構後會失效而不會被任何檢查發現，
+> 因此例外一律以「檔案 + 符號」定位。
+> `Tests/Infrastructure/CodeQualityExceptionsDocTests` 會驗證本文件引用的每一個
+> 檔案都存在，並禁止重新加入行號欄位。
 
 ---
 
@@ -25,6 +30,9 @@
 13. [UnusedType.Global](#13-unusedtypeglobal)
 14. [UseObjectOrCollectionInitializer](#14-useobjectorollectioninitializer)
 15. [UseUtf8StringLiteral](#15-useutf8stringliteral)
+16. [MethodHasAsyncOverload](#16-methodhasasyncoverload)
+17. [ClassNeverInstantiated.Local](#17-classneverinstantiatedlocal)
+18. [SonarCloud 與 .NET analyzer 精確例外](#18-sonarcloud-與-net-analyzer-精確例外)
 
 ---
 
@@ -33,19 +41,20 @@
 | 項目 | 內容 |
 |------|------|
 | **級別** | Warning |
-| **數量** | 6 |
+| **範圍** | 測試專案，以及 8 個同步 writer callback |
 | **訊息** | Captured variable is disposed in the outer scope |
+| **處理方式** | 測試由 `.editorconfig` 排除；production 僅限精確檔案或單行排除 |
 
 ### 受影響檔案
 
-| 檔案 | 行號 | 變量 |
-|------|------|------|
-| `Tests/Helpers/AsposeHelperTests.cs` | 19 | `workbook` |
-| `Tests/Helpers/AsposeHelperTests.cs` | 249 | `presentation` |
-| `Tests/Core/Session/DocumentContextTests.cs` | 272 | `context` |
-| `Tests/Core/Session/DocumentSessionManagerTests.cs` | 169 | `manager` |
-| `Tests/Core/Session/DocumentSessionManagerTests.cs` | 408 | `manager` |
-| `Tests/Core/Session/DocumentSessionManagerTests.cs` | 423 | `manager` |
+| 檔案 | 變量 |
+|------|------|
+| `Tests/Core/Session/DocumentContextTests.cs` | `context` |
+| `Tests/Core/Session/DocumentSessionManagerTests.cs` | `manager` |
+| `Tests/Core/Session/DocumentSessionManagerTests.cs` | `manager` |
+| `Tests/Core/Session/DocumentSessionManagerTests.cs` | `manager` |
+| `Core/Conversion/DocumentConverter.cs` | 7 個 `pdfDoc` writer callback |
+| `Handlers/PowerPoint/Image/ExportSlidesHandler.cs` | `bmp` writer callback |
 
 ### 問題描述
 
@@ -57,6 +66,10 @@
 - 這些是故意設計的測試場景，用於驗證對象 dispose 後的行為
 - 修改可能導致測試無法正確驗證預期行為
 - 測試需要驗證「已釋放對象被存取時應拋出異常」的行為
+- `BoundedFilePublisher.Publish` 與 `BoundedFileBatch.Stage` 都會在方法返回前同步執行 writer；
+  delegate 不會被保存或逸出，因此 production 的 8 個位置不會在資源釋放後才執行
+- WebSocket 原有的 callback 確實可能在 deadline 被釋放後執行，並未套用例外；該處已改為
+  `RefreshableCancellationDeadline`，以同步方式協調 refresh 與 dispose
 
 ### 範例代碼
 
@@ -80,11 +93,11 @@ Assert.Throws<ObjectDisposedException>(() => document.SomeMethod());
 
 ### 受影響檔案
 
-| 檔案 | 行號 | 屬性 |
-|------|------|------|
-| `Core/Security/JwtConfig.cs` | 73 | `ClientSecret` (JWT 配置屬性) |
-| `Core/Security/JwtConfig.cs` | 79 | `CustomEndpoint` (JWT 配置屬性) |
-| `Core/Security/ApiKeyConfig.cs` | 47 | `CustomEndpoint` (API Key 配置屬性) |
+| 檔案 | 屬性 |
+|------|------|
+| `Core/Security/JwtConfig.cs` | `ClientSecret` (JWT 配置屬性) |
+| `Core/Security/JwtConfig.cs` | `CustomEndpoint` (JWT 配置屬性) |
+| `Core/Security/ApiKeyConfig.cs` | `CustomEndpoint` (API Key 配置屬性) |
 
 ### 問題描述
 
@@ -122,9 +135,9 @@ var config = JsonSerializer.Deserialize<AuthConfig>(json);
 
 ### 受影響檔案
 
-| 檔案 | 行號 | 類別 |
-|------|------|------|
-| `Tests/Core/Handlers/HandlerRegistryAutoDiscoveryTests.cs` | 116 | `DifferentContextDocument` |
+| 檔案 | 類別 |
+|------|------|
+| `Tests/Core/Handlers/HandlerRegistryAutoDiscoveryTests.cs` | `DifferentContextDocument` |
 
 ### 問題描述
 
@@ -165,9 +178,9 @@ public class DifferentContextHandler : OperationHandlerBase<DifferentContextDocu
 
 ### 受影響檔案
 
-| 檔案 | 行號 | 說明 |
-|------|------|------|
-| `Tests/Handlers/Excel/DataOperations/GetContentHandlerTests.cs` | 43 | 整數值 100 的浮點比較 |
+| 檔案 | 說明 |
+|------|------|
+| `Tests/Handlers/Excel/DataOperations/GetContentHandlerTests.cs` | 整數值 100 的浮點比較 |
 
 ### 問題描述
 
@@ -202,9 +215,9 @@ Assert.Contains(result.Rows[1].Values,
 
 ### 受影響檔案
 
-| 檔案 | 行號 | 類別 |
-|------|------|------|
-| `Tests/Core/Handlers/HandlerRegistryAutoDiscoveryTests.cs` | 160 | `NoParameterlessCtorHandler` |
+| 檔案 | 類別 |
+|------|------|
+| `Tests/Core/Handlers/HandlerRegistryAutoDiscoveryTests.cs` | `NoParameterlessCtorHandler` |
 
 ### 問題描述
 
@@ -249,14 +262,14 @@ public class NoParameterlessCtorHandler(string requiredValue) : OperationHandler
 
 ### 受影響檔案
 
-| 檔案 | 行號 | 成員 |
-|------|------|------|
-| `Core/Transport/TransportConfig.cs` | 13 | `Mode.set` |
-| `Core/Transport/TransportConfig.cs` | 18 | `Port.set` |
-| `Core/Transport/TransportConfig.cs` | 23 | `Host.set` |
-| `Core/Session/DocumentSession.cs` | 75 | `LastAccessedAt.set` |
-| `Core/Tracking/TrackingConfig.cs` | 31 | `WebhookAuthHeader.set` |
-| `Core/Tracking/TrackingConfig.cs` | 36 | `WebhookTimeoutSeconds.set` |
+| 檔案 | 成員 |
+|------|------|
+| `Core/Transport/TransportConfig.cs` | `Mode.set` |
+| `Core/Transport/TransportConfig.cs` | `Port.set` |
+| `Core/Transport/TransportConfig.cs` | `Host.set` |
+| `Core/Session/DocumentSession.cs` | `LastAccessedAt.set` |
+| `Core/Tracking/TrackingConfig.cs` | `WebhookAuthHeader.set` |
+| `Core/Tracking/TrackingConfig.cs` | `WebhookTimeoutSeconds.set` |
 
 ### 問題描述
 
@@ -280,9 +293,9 @@ public class NoParameterlessCtorHandler(string requiredValue) : OperationHandler
 
 ### 受影響檔案
 
-| 檔案 | 行號 | 成員 |
-|------|------|------|
-| `Tests/Infrastructure/TestBase.cs` | 574 | `AsposeLibraryType` enum |
+| 檔案 | 成員 |
+|------|------|
+| `Tests/Infrastructure/TestBase.cs` | `AsposeLibraryType` enum |
 
 ### 問題描述
 
@@ -307,9 +320,9 @@ Enum 可以改為 protected 可見性。
 
 ### 受影響檔案
 
-| 檔案 | 行號 | 方法 | 備註 |
-|------|------|------|------|
-| `Core/Transport/WebSocketConnectionHandler.cs` | 108 | `WaitAsync` | 生產代碼 |
+| 檔案 | 方法 | 備註 |
+|------|------|------|
+| `Core/Transport/WebSocketConnectionHandler.cs` | `WaitAsync` | 生產代碼 |
 
 ### 問題描述
 
@@ -338,10 +351,10 @@ Enum 可以改為 protected 可見性。
 
 ### 受影響檔案
 
-| 檔案 | 行號 | 參數 |
-|------|------|------|
-| `Tests/Helpers/PowerPoint/PptLayoutHelperTests.cs` | 21 | `item` (Assert.All lambda 參數) |
-| `Tests/Handlers/Word/Text/SearchWordTextHandlerTests.cs` | 345 | `m` (Assert.All lambda 參數) |
+| 檔案 | 參數 |
+|------|------|
+| `Tests/Helpers/PowerPoint/PptLayoutHelperTests.cs` | `item` (Assert.All lambda 參數) |
+| `Tests/Handlers/Word/Text/SearchWordTextHandlerTests.cs` | `m` (Assert.All lambda 參數) |
 
 ### 問題描述
 
@@ -423,15 +436,15 @@ public string Host { get; init; } = "localhost";  // 會導致反序列化失敗
 
 ### 受影響檔案
 
-| 檔案 | 行號 | 成員 |
-|------|------|------|
-| `Tests/Infrastructure/ExcelTestBase.cs` | 41 | `AssertCellValue()` |
-| `Tests/Infrastructure/WordTestBase.cs` | 52 | `AssertParagraphExists()` |
-| `Tests/Infrastructure/WordTestBase.cs` | 62 | `AssertParagraphStyle()` |
-| `Tests/Infrastructure/PdfTestBase.cs` | 11 | `IsEvaluationMode()` |
-| `Core/Session/DocumentSession.cs` | 226 | `GetDocumentAsync()` |
-| `Core/Session/DocumentSessionManager.cs` | 480 | `OnServerShutdown()` |
-| `Core/Tracking/TrackingExtensions.cs` | 14 | `UseTracking()` |
+| 檔案 | 成員 |
+|------|------|
+| `Tests/Infrastructure/ExcelTestBase.cs` | `AssertCellValue()` |
+| `Tests/Infrastructure/WordTestBase.cs` | `AssertParagraphExists()` |
+| `Tests/Infrastructure/WordTestBase.cs` | `AssertParagraphStyle()` |
+| `Tests/Infrastructure/PdfTestBase.cs` | `IsEvaluationMode()` |
+| `Core/Session/DocumentSession.cs` | `GetDocumentAsync()` |
+| `Core/Session/DocumentSessionManager.cs` | `OnServerShutdown()` |
+| `Core/Tracking/TrackingExtensions.cs` | `UseTracking()` |
 
 ### 問題描述
 
@@ -457,9 +470,9 @@ public string Host { get; init; } = "localhost";  // 會導致反序列化失敗
 
 ### 受影響檔案
 
-| 檔案 | 行號 | 方法 |
-|------|------|------|
-| `Core/McpServerBuilderExtensions.cs` | 20 | `WithFilteredTools()` |
+| 檔案 | 方法 |
+|------|------|
+| `Core/McpServerBuilderExtensions.cs` | `WithFilteredTools()` |
 
 ### 問題描述
 
@@ -495,9 +508,9 @@ builder.WithFilteredTools(filter);
 
 ### 受影響檔案
 
-| 檔案 | 行號 | 類型 |
-|------|------|------|
-| `Core/Tracking/TrackingExtensions.cs` | 6 | `TrackingExtensions` |
+| 檔案 | 類型 |
+|------|------|
+| `Core/Tracking/TrackingExtensions.cs` | `TrackingExtensions` |
 
 ### 問題描述
 
@@ -533,21 +546,21 @@ app.UseTracking();
 
 這些是測試程式碼中對 `AuthConfig` 嵌套屬性的設定：
 
-| 檔案 | 行號 |
-|------|------|
-| `Tests/Core/Security/AuthConfigTests.cs` | 629, 640, 652, 664, 676, 688, 739, 751, 763, 775, 787, 836, 844, 870 |
+| 檔案 |
+|------|
+| `Tests/Core/Security/AuthConfigTests.cs` |
 
 #### 測試檔案 - GetParagraphFormatWordHandlerTests.cs (5 個)
 
-| 檔案 | 行號 | 說明 |
-|------|------|------|
-| `Tests/Handlers/Word/Paragraph/GetParagraphFormatWordHandlerTests.cs` | 216, 345, 347-348, 438-440, 466, 489 | 誤判 |
+| 檔案 | 說明 |
+|------|------|
+| `Tests/Handlers/Word/Paragraph/GetParagraphFormatWordHandlerTests.cs` | 誤判 |
 
 #### 測試檔案 - AddTableOfContentsWordHandlerTests.cs (1 個)
 
-| 檔案 | 行號 | 說明 |
-|------|------|------|
-| `Tests/Handlers/Word/Reference/AddTableOfContentsWordHandlerTests.cs` | 29, 31, 33 | 誤判 |
+| 檔案 | 說明 |
+|------|------|
+| `Tests/Handlers/Word/Reference/AddTableOfContentsWordHandlerTests.cs` | 誤判 |
 
 ### 問題描述
 
@@ -606,9 +619,9 @@ var builder = new DocumentBuilder(doc)
 
 ### 受影響檔案
 
-| 檔案 | 行號 | 說明 |
-|------|------|------|
-| `Tests/Core/ShapeDetailProviders/PictureFrameDetailProviderTests.cs` | 103-113 | 誤判 (PNG 二進制數據) |
+| 檔案 | 說明 |
+|------|------|
+| `Tests/Core/ShapeDetailProviders/PictureFrameDetailProviderTests.cs` | 誤判 (PNG 二進制數據) |
 
 ### 問題描述
 
@@ -631,11 +644,73 @@ PNG 檔案的 signature 包含 `0x89` 等非 ASCII 字元，這些是二進制�
 
 ---
 
+## 16. MethodHasAsyncOverload
+
+| 項目 | 內容 |
+|------|------|
+| **級別** | Suggestion |
+| **範圍** | `Tests/**/*.cs` |
+| **訊息** | Method has an async overload |
+| **處理方式** | 由 `.editorconfig` 排除 |
+
+### 不修復原因
+
+InspectCode 會在同步測試配置與 fixture helper 呼叫具有 async overload 的 API 時提出建議。
+這些呼叫刻意保持同步，以確保配置、資源建立與 assertion 的順序明確；真正的非同步
+production contract 仍由 async 測試覆蓋。將每個 fixture 機械式改成 async 只會增加狀態機與
+測試噪音，不會改善受測行為。
+
+---
+
+## 17. ClassNeverInstantiated.Local
+
+| 項目 | 內容 |
+|------|------|
+| **級別** | Suggestion |
+| **數量** | 1 |
+| **訊息** | Record is never instantiated |
+| **處理方式** | 精確單行 `ReSharper disable once` |
+
+### 受影響檔案
+
+| 檔案 | 類別 |
+|------|------|
+| `Tests/Infrastructure/PublishedDocsInventoryTests.cs` | `PendingEntry` |
+
+### 不修復原因
+
+`PendingEntry` 是 `System.Text.Json` 反序列化 manifest 時以反射建立的 DTO。測試程式碼不應為了
+讓靜態分析器看見 `new PendingEntry(...)` 而加入不會參與 assertion 的假實例。
+
+---
+
+## 18. SonarCloud 與 .NET analyzer 精確例外
+
+這些項目不是以「清掉數字」為目的跳過，而是經過行為與安全邊界確認後，保留既有契約或
+必要的不變量。可縮小到符號的例外均使用 `SuppressMessage`；只有橫跨整個專案、且每個位置
+理由一致的 analyzer 建議才放在專案檔的 `NoWarn`。
+
+| 規則 | 檔案 / 符號 | 保留原因 | 處理方式 |
+|------|-------------|----------|----------|
+| MCP002 | `AsposeMcpServer.csproj`、所有 MCP tool 類別 | 118 個 tool 已有人工維護的公開 `[Description]` 契約；改成 source-generated XML description 會重寫對外工具文案，而不是改善執行行為 | production 專案 `NoWarn` |
+| SYSLIB1045 | `Tests/AsposeMcpServer.Tests.csproj`、測試用 Regex | 13 個短小、具 timeout 的測試解析器不在 production runtime；為它們拆成 partial 測試類別不會改善產品效能 | test 專案 `NoWarn` |
+| S107 | `Core/Session/DocumentContext.cs` 的私有建構式 | 這是 file/session context 的單一組合點；參數分別表達所有權、身分、session 與 allowlist，包成參數物件只會把必要不變量藏起來 | 符號級 `SuppressMessage` |
+| S3264 | `Core/Session/DocumentSessionManager.cs` 的 `SessionClosed` | 事件不是透過 `?.Invoke` 一次呼叫，而是由 `NotifySessionClosed` 逐一執行 invocation list，避免一個失敗的 subscriber 阻斷其他 subscriber | 符號級 `SuppressMessage` |
+| S2696 / S3877 | `Helpers/SlidesGate.cs` 的 scope `Dispose` | scope 必須更新 process-wide gate 的 thread-static 深度；跨執行緒 dispose 會破壞計數，因此必須在釋放錯誤執行緒的 hold 前明確失敗 | 符號級 `SuppressMessage` |
+| S5443 | `Core/Conversion/DocumentConverter.cs` 的 `ConversionOptions.WithoutAHost` | system temp 只是根目錄；`RecoveryContext.For` 會建立私有 `.aspose-recovery` 子目錄、強制 owner-only 保護，且保護失敗時 fail closed | 符號級 `SuppressMessage` |
+| S1075 / S5332 | `Helpers/MhtExternalReferenceScanner.cs` 的 evaluation notice 常數 | URI 是辨識 pinned Aspose evaluation 注入片段的資料，不是連線目標；掃描器只在同程序探測證明 library 會注入，且 decoded active MIME part 的 provenance inspection 證明 caller 未提供完整 notice 時，移除一份完整、精確片段。provenance 僅採用已宣告 boundary（含 RFC transport padding），嚴格處理 transfer encoding / charset，解析不明時 fail closed；caller 的實際 `src`／`href` 仍由 resource scanner 判定，Subject 或附件中的裸 URI 不會被虛構為資源 | 常數範圍 pragma；另有一般與無授權安全回歸測試 |
+| CA1068 | `Core/Extension/ExtensionSessionBridge.cs` 的兩個 public unbind API | 重新排列既有公開參數會造成 binary/source compatibility break；內部 WebSocket 方法已改成 cancellation token 最後 | 符號級 `SuppressMessage` |
+
+上述例外若相關契約改變，必須重新評估；尤其是升級 Aspose 版本後，evaluation notice 的來源證明與
+精確片段測試都要重跑，不能只因 URI 看起來相同就擴大白名單。
+
+---
+
 ## 統計摘要
 
 | 問題類型 | 數量 | 級別 | 主要原因 | 處理方式 |
 |----------|------|------|----------|----------|
-| AccessToDisposedClosure | 6 | Warning | 測試邏輯需要 | 文件記錄 |
+| AccessToDisposedClosure | 範圍性例外 | Warning | 測試語意與同步 writer contract | .editorconfig / 精確排除 |
 | AutoPropertyCanBeMadeGetOnly.Global | 3 | Note | JSON 序列化 | 文件記錄 |
 | ClassNeverInstantiated.Global | 1 | Note | 測試類別 | ReSharper disable once |
 | CompareOfFloatsByEqualityOperator | 1 | Warning | 整數值比較安全 | ReSharper disable once |
@@ -643,14 +718,19 @@ PNG 檔案的 signature 包含 `0x89` 等非 ASCII 字元，這些是二進制�
 | MemberCanBePrivate.Global | 6 | Note | 公開 API | 文件記錄 |
 | MemberCanBeProtected.Global | 1 | Note | 測試彈性 | 文件記錄 |
 | MethodSupportsCancellation | 1 | Note | 複雜度考量 | ReSharper disable once |
-| ParameterOnlyUsedForPreconditionCheck.Local | 2 | Warning | Assert.All 用法 | ReSharper disable once |
+| ParameterOnlyUsedForPreconditionCheck.Local | 範圍性例外 | Warning | Assert.All 用法 | .editorconfig 排除 |
 | PropertyCanBeMadeInitOnly.Global | 38 | Note | JSON 序列化 | 文件記錄 |
 | UnusedMember.Global | 7 | Note | 公開 API | 文件記錄 |
 | UnusedMethodReturnValue.Global | 1 | Note | 公開 API | ReSharper disable once |
 | UnusedType.Global | 1 | Note | 公開 API | 文件記錄 |
 | UseObjectOrCollectionInitializer | 20 | Note | 測試可讀性/誤判 | 文件記錄 |
 | UseUtf8StringLiteral | 2 | Note | 誤判 | ReSharper disable/restore |
-| **總計** | **91** | - | - | - |
+| MethodHasAsyncOverload | 範圍性例外 | Suggestion | 同步 fixture 順序 | .editorconfig 排除 |
+| ClassNeverInstantiated.Local | 1 | Suggestion | JSON 反射建立 DTO | ReSharper disable once |
+| SonarCloud / .NET analyzer | 8 類精確例外 | Code smell / Warning | 公開契約、安全不變量、test-only 建議 | NoWarn / 符號級排除 |
+
+> 範圍性規則會隨測試數量變動，因此不再提供容易過期的總數。2026-09-10 重產的
+> `report.xml` 在套用上述精確例外後為 0 個 finding。
 
 ---
 

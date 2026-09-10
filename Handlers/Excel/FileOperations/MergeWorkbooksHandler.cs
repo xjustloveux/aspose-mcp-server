@@ -13,6 +13,8 @@ namespace AsposeMcpServer.Handlers.Excel.FileOperations;
 [ResultType(typeof(SuccessResult))]
 public class MergeWorkbooksHandler : OperationHandlerBase<Workbook>
 {
+    private const string InputPathsParameter = "inputPaths";
+
     /// <inheritdoc />
     public override string Operation => "merge";
 
@@ -34,14 +36,27 @@ public class MergeWorkbooksHandler : OperationHandlerBase<Workbook>
         if (p.InputPaths == null || p.InputPaths.Length == 0)
             throw new ArgumentException("At least one input path is required");
 
+        // One request should not be able to pull in an unbounded number of documents; PDF
+        // merge has capped this since RB-29 and the other three families had not.
+        SecurityHelper.ValidateArraySize(p.InputPaths, InputPathsParameter);
+
         var validPaths = p.InputPaths.Where(path => !string.IsNullOrEmpty(path)).ToList();
         if (validPaths.Count == 0)
             throw new ArgumentException("No valid input paths provided");
 
-        foreach (var inputPath in validPaths)
-            SecurityHelper.ValidateFilePath(inputPath, "inputPaths", true);
+        // The canonical path is kept, not thrown away: validating one path and then opening a
+        // different, still-mutable one is the check-to-use gap the resolver exists to close
+        // (R7-F03).
+        for (var i = 0; i < validPaths.Count; i++)
+        {
+            SecurityHelper.ValidateFilePath(validPaths[i], InputPathsParameter, true);
+            validPaths[i] = SecurityHelper.ResolveAndEnsureWithinAllowlist(validPaths[i],
+                context.ServerConfig?.AllowedBasePaths ?? [], InputPathsParameter);
+        }
 
         SecurityHelper.ValidateFilePath(targetPath, "outputPath", true);
+        targetPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(targetPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], "outputPath");
 
         using var targetWorkbook = new Workbook(validPaths[0]);
         var totalFiles = validPaths.Count;
@@ -130,7 +145,7 @@ public class MergeWorkbooksHandler : OperationHandlerBase<Workbook>
         return new MergeParameters(
             parameters.GetOptional<string?>("path"),
             parameters.GetOptional<string?>("outputPath"),
-            parameters.GetOptional<string[]?>("inputPaths"),
+            parameters.GetOptional<string[]?>(InputPathsParameter),
             parameters.GetOptional("mergeSheets", false));
     }
 

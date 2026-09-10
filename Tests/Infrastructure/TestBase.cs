@@ -1,7 +1,9 @@
+using System.Collections.Concurrent;
 using System.Text.Json.Nodes;
 using Aspose.Cells;
 using Aspose.Pdf;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Results;
 using AsposeMcpServer.Results.Session;
 using AsposeMcpServer.Tools.Session;
@@ -19,6 +21,12 @@ public abstract class TestBase : IDisposable
     ///     Used by IsEvaluationMode() to determine if a specific library is licensed.
     /// </summary>
     private static readonly HashSet<AsposeLibraryType> LoadedLicenses = new();
+
+    /// <summary>
+    ///     What each library answered the first time it was asked. Licence state is fixed for the
+    ///     life of the process, so one answer per library is all there is.
+    /// </summary>
+    private static readonly ConcurrentDictionary<AsposeLibraryType, bool> EvaluationModeByLibrary = new();
 
     protected readonly string TestDir;
     protected readonly List<string> TestFiles = new();
@@ -71,6 +79,16 @@ public abstract class TestBase : IDisposable
     /// </summary>
     protected DocumentSessionTool SessionTool =>
         _sessionTool ??= new DocumentSessionTool(SessionManager, TempFileManager, new StdioSessionIdentityAccessor());
+
+    /// <summary>
+    ///     This test's recovery context: its own directory, and the key kept there.
+    /// </summary>
+    /// <remarks>
+    ///     Per test class rather than per process, which is the isolation the production change is
+    ///     about (R18-ARCH01). Two classes sharing one context would share a journal directory and
+    ///     a signing key, and the failures that produces look exactly like the defect.
+    /// </remarks>
+    protected RecoveryContext Recovery => RecoveryContext.For(TestDir);
 
     public virtual void Dispose()
     {
@@ -498,6 +516,22 @@ public abstract class TestBase : IDisposable
             string.Equals(skipLicense, "1", StringComparison.OrdinalIgnoreCase))
             return true;
 
+        // Asked once per library and remembered. The licence is applied once at start-up and does
+        // not change during a run, while each of these probes constructs a licence object or a
+        // workbook and enters the vendor's own licence and metering code — from every test thread
+        // at once. That code is where a full licensed run once died with
+        // "Nullable object must have a value", inside Aspose's obfuscated licence path reached
+        // from an ordinary shape-creation call (§19.10.1). The probes are not the defect, but
+        // asking once instead of thousands of times removes this suite's contribution to the
+        // concurrency around it.
+        return EvaluationModeByLibrary.GetOrAdd(libraryType, ProbeEvaluationMode);
+    }
+
+    /// <summary>Answers, once per library, whether Aspose is running unlicensed.</summary>
+    /// <param name="libraryType">The Aspose library to ask about.</param>
+    /// <returns><c>true</c> when that library has no valid licence.</returns>
+    private static bool ProbeEvaluationMode(AsposeLibraryType libraryType)
+    {
         // Use direct API checks for libraries that support it
         // This correctly handles expired licenses (SetLicense succeeded but license expired)
         try

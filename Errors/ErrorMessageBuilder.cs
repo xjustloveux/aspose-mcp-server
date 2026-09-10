@@ -11,6 +11,12 @@ namespace AsposeMcpServer.Errors;
 /// </summary>
 public static class ErrorMessageBuilder
 {
+    /// <summary>Opening words shared by both forms of the output-directory message.</summary>
+    private const string OutputDirectoryPrefix = "The output directory";
+
+    /// <summary>Closing words shared by both forms of the output-directory message.</summary>
+    private const string OutputDirectorySuffix = "cannot be created or is not writable.";
+
     /// <summary>
     ///     Returns the fixed sentinel for password failures: either the file requires a
     ///     password that was not supplied, or the supplied password is wrong.
@@ -81,8 +87,72 @@ public static class ErrorMessageBuilder
     public static string OutputDirectoryNotWritable(string? contextBasename = null)
     {
         return string.IsNullOrWhiteSpace(contextBasename)
-            ? "The output directory cannot be created or is not writable."
-            : $"The output directory for '{contextBasename}' cannot be created or is not writable.";
+            ? OutputDirectoryPrefix + " " + OutputDirectorySuffix
+            : $"{OutputDirectoryPrefix} for '{contextBasename}' {OutputDirectorySuffix}";
+    }
+
+    /// <summary>
+    ///     Whether a message is one this class produced for an output-directory failure.
+    ///     <para>
+    ///         The tool-call error filter replaces exception text it does not recognise, because raw
+    ///         BCL text carries absolute paths. That also discarded the authored output-directory
+    ///         message, so a caller whose output directory was unusable was told the input file could
+    ///         not be found, or given the generic processing sentinel. This lets the filter tell the
+    ///         two apart. Only text built here matches: the fixed opening and closing words must both
+    ///         be present, and the only variable part is a basename the caller already supplied.
+    ///     </para>
+    /// </summary>
+    /// <param name="message">The exception message to classify.</param>
+    /// <returns><c>true</c> when the message was produced by <see cref="OutputDirectoryNotWritable" />.</returns>
+    public static bool IsOutputDirectoryNotWritable(string? message)
+    {
+        if (message == null) return false;
+        if (string.Equals(message, OutputDirectoryNotWritable(), StringComparison.Ordinal)) return true;
+
+        // Matching only the opening and closing words let anything sit between them, and whatever
+        // sat there was forwarded to the caller verbatim — an exception raised deep inside a
+        // library, carrying a full path, needed only to begin and end the right way to be treated
+        // as authored text (R3-C09). The message is now rebuilt from a basename that has to look
+        // like a basename, and only an exact match is accepted.
+        const string opening = OutputDirectoryPrefix + " for '";
+        if (!message.StartsWith(opening, StringComparison.Ordinal)) return false;
+
+        var closing = message.IndexOf("' " + OutputDirectorySuffix, opening.Length, StringComparison.Ordinal);
+        if (closing < 0) return false;
+
+        var candidate = message[opening.Length..closing];
+        return IsSafeBasename(candidate)
+               && string.Equals(message, OutputDirectoryNotWritable(candidate), StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    ///     Whether a string is a bare file name, and so safe to repeat back to the caller.
+    /// </summary>
+    /// <param name="value">The candidate basename.</param>
+    /// <returns><c>true</c> when it names a file without disclosing where the file is.</returns>
+    private static bool IsSafeBasename(string value)
+    {
+        return value.Length is > 0 and <= 128
+               && value.IndexOfAny(['/', '\\', ':', '\'', '\r', '\n']) < 0
+               && value != "."
+               && value != "..";
+    }
+
+    /// <summary>
+    ///     Returns a sentinel for a cell range the caller supplied that could not be read.
+    /// </summary>
+    /// <param name="range">
+    ///     The range as the caller wrote it. Only the caller's own input is repeated back, and it
+    ///     is truncated so a long value cannot be used to pad the response.
+    /// </param>
+    /// <returns>A sanitized string naming the range that could not be used.</returns>
+    public static string InvalidRange(string? range)
+    {
+        if (string.IsNullOrWhiteSpace(range))
+            return "The supplied cell range could not be read.";
+
+        var shown = range.Length > 64 ? range[..64] + "..." : range;
+        return $"The cell range '{shown}' could not be read. Use a range such as A1:C10.";
     }
 
     /// <summary>

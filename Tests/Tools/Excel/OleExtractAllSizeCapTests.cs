@@ -94,6 +94,8 @@ public class OleExtractAllSizeCapTests : IDisposable
         Assert.True(data.Truncated);
         Assert.Contains(data.Skipped, s => s.Reason == "cumulative-size-cap-exceeded");
         Assert.True(data.Extracted <= 2);
+        OleExtractAllDiskAssertions.AssertDiskAgreesWithReport(
+            _outputDir, _workbookPath, data, 4096);
     }
 
     /// <summary>
@@ -116,6 +118,8 @@ public class OleExtractAllSizeCapTests : IDisposable
         Assert.False(data.Truncated);
         Assert.DoesNotContain(data.Skipped, s => s.Reason == "cumulative-size-cap-exceeded");
         Assert.Equal(3, data.Extracted);
+        OleExtractAllDiskAssertions.AssertDiskAgreesWithReport(
+            _outputDir, _workbookPath, data, 10L * 1024 * 1024 * 1024);
     }
 
     /// <summary>

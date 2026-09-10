@@ -41,6 +41,9 @@ public class EditPdfLinkHandler : OperationHandlerBase<Document>
 
         var link = links[p.LinkIndex];
 
+        if (string.IsNullOrEmpty(p.Url) && !p.TargetPage.HasValue)
+            throw new ArgumentException("Provide 'url' or 'targetPage' to edit a link");
+
         if (!string.IsNullOrEmpty(p.Url))
         {
             link.Action = new GoToURIAction(p.Url);

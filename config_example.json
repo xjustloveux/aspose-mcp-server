@@ -56,7 +56,7 @@
 
   "_範例5": "========================================",
   "_範例5說明": "macOS ARM (Apple Silicon) 配置",
-  "_範例5適用": "M1/M2/M3 Mac 用戶（從 Releases 下載 macos-arm64.zip）",
+  "_範例5適用": "M1/M2/M3 Mac 用戶（從 Releases 下載 macos-arm64.tar.gz）",
   "mcpServers_example5_macos_arm": {
     "aspose-word": {
       "command": "/Users/username/tools/aspose-mcp-server/AsposeMcpServer",
@@ -70,7 +70,7 @@
 
   "_範例6": "========================================",
   "_範例6說明": "macOS Intel 配置",
-  "_範例6適用": "Intel Mac 用戶（從 Releases 下載 macos-x64.zip）",
+  "_範例6適用": "Intel Mac 用戶（從 Releases 下載 macos-x64.tar.gz）",
   "mcpServers_example6_macos_intel": {
     "aspose-word": {
       "command": "/Users/username/tools/aspose-mcp-server/AsposeMcpServer",
@@ -84,7 +84,7 @@
 
   "_範例7": "========================================",
   "_範例7說明": "Linux 配置",
-  "_範例7適用": "Linux 用戶（從 Releases 下載 linux-x64.zip）",
+  "_範例7適用": "Linux 用戶（從 Releases 下載 linux-x64.tar.gz）",
   "mcpServers_example7_linux": {
     "aspose-word": {
       "command": "/home/username/tools/aspose-mcp-server/AsposeMcpServer",
@@ -242,13 +242,14 @@
   "_範例18": "========================================",
   "_範例18說明": "啟用擴充功能系統（Extension）",
   "_範例18適用": "需要即時預覽、雲端同步等第三方擴充功能時",
-  "_範例18注意": "擴充功能需要 Session 支援，會自動啟用 Session",
+  "_範例18注意": "擴充功能需要 Session 支援，但不會自動啟用；未同時指定 --session-enabled 時啟動會失敗並回報設定錯誤",
   "mcpServers_example18_extension": {
     "aspose-all": {
       "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",
       "args": [
         "--all",
         "--session-enabled",
+        "--extension-enabled",
         "--extension-config", "C:/Tools/aspose-mcp-server/extensions.json"
       ]
     }
@@ -265,6 +266,7 @@
         "--http",
         "--port", "3000",
         "--session-enabled",
+        "--extension-enabled",
         "--extension-config", "C:/Tools/aspose-mcp-server/extensions.json"
       ]
     }
@@ -288,6 +290,72 @@
     }
   },
 
+  "_範例21": "========================================",
+  "_範例21說明": "Gateway 驗證 + 受信任 proxy",
+  "_範例21適用": "由 API gateway 或反向代理注入 X-Group-Id／X-User-Id 的部署",
+  "_範例21注意": "Gateway 模式未設定 trusted proxies 會拒絕啟動；已由外層網路隔離時才填 any",
+  "mcpServers_example21_gateway_trusted_proxies": {
+    "aspose-all": {
+      "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",
+      "args": [
+        "--all",
+        "--http",
+        "--port", "3000",
+        "--auth-apikey-enabled",
+        "--auth-apikey-mode", "gateway",
+        "--auth-apikey-trusted-proxies", "10.0.0.0/8,192.168.1.10",
+        "--auth-jwt-enabled",
+        "--auth-jwt-mode", "gateway",
+        "--auth-jwt-trusted-proxies", "10.0.0.0/8"
+      ]
+    }
+  },
+
+  "_範例22": "========================================",
+  "_範例22說明": "外部資源政策 + 受保護的 metrics 端點",
+  "_範例22適用": "需要轉換會引用外部資源的文件，且要以驗證保護 /metrics 的部署",
+  "_範例22注意": "--allow-external-resources 會讓伺服器代替呼叫端對外發出請求，預設關閉；--metrics-require-auth 是預設值，列出僅為明示",
+  "mcpServers_example22_external_and_metrics": {
+    "aspose-all": {
+      "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",
+      "args": [
+        "--all",
+        "--http",
+        "--port", "3000",
+        "--allow-external-resources",
+        "--metrics-enabled",
+        "--metrics-path", "/internal/metrics",
+        "--metrics-require-auth",
+        "--auth-apikey-enabled",
+        "--auth-apikey-keys", "mykey1:group1"
+      ]
+    }
+  },
+
+  "_範例23": "========================================",
+  "_範例23說明": "擴充功能韌性設定",
+  "_範例23適用": "長時間執行擴充功能，需要控制重啟、心跳與快照生命週期的部署",
+  "mcpServers_example23_extension_resilience": {
+    "aspose-all": {
+      "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",
+      "args": [
+        "--all",
+        "--extension-enabled",
+        "--extension-config", "C:/Tools/aspose-mcp-server/extensions.json",
+        "--extension-max-restarts", "5",
+        "--extension-restart-cooldown", "30",
+        "--extension-failure-backoff", "10",
+        "--extension-health-interval", "15",
+        "--extension-max-missed-heartbeats", "3",
+        "--extension-idle-timeout", "600",
+        "--extension-snapshot-ttl", "300",
+        "--extension-max-snapshot-size", "104857600",
+        "--extension-graceful-shutdown-timeout", "10",
+        "--extension-min-free-disk-space", "536870912"
+      ]
+    }
+  },
+
   "_參數說明": "========================================",
   "_參數列表_工具": {
     "--word": "啟用 Word 工具（自動包含轉換功能）",
@@ -299,7 +367,8 @@
     "--barcode": "啟用 BarCode 工具（條碼產生與辨識）",
     "--all": "啟用所有工具（Word、Excel、PowerPoint、PDF、OCR、Email、BarCode）",
     "--license 路徑": "指定授權文件路徑（可選）",
-    "--allowed-path 路徑": "限制檔案存取於指定基礎目錄下（可重複指定；未指定則不限制，建議 HTTP/WebSocket 部署時啟用）"
+    "--allowed-path 路徑": "限制檔案存取於指定基礎目錄下（可重複指定；未指定則不限制，建議 HTTP/WebSocket 部署時啟用）",
+    "--legacy-publish-journal-root 路徑": "升級後一次性復原舊版中斷發布 journal 的目錄（可重複指定；不會從 --allowed-path 自動推測；確認已排空後應移除）"
   },
   "_參數列表_傳輸": {
     "--stdio": "標準輸入輸出模式（預設）",

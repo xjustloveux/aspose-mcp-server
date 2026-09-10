@@ -13,6 +13,7 @@ namespace AsposeMcpServer.Tests.Tools.PowerPoint;
 ///     Detailed parameter validation and business logic tests are in Handler tests.
 /// </summary>
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class PptLayoutToolTests : PptTestBase
 {
     private readonly PptLayoutTool _tool;
@@ -87,7 +88,7 @@ public class PptLayoutToolTests : PptTestBase
         var pptPath = CreatePresentation($"test_case_masters_{operation.Replace("_", "")}.pptx");
         var result = _tool.Execute(operation, pptPath);
         var data = GetResultData<GetMastersResult>(result);
-        Assert.True(data.Count >= 0);
+        Assert.Equal(1, data.Count);
     }
 
     [SkippableFact]

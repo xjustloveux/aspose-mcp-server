@@ -26,6 +26,11 @@ public class ExcelFreezePanesTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -35,11 +40,14 @@ public class ExcelFreezePanesTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
     /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public ExcelFreezePanesTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry = HandlerRegistry<Workbook>.CreateFromNamespace("AsposeMcpServer.Handlers.Excel.FreezePanes");
     }
 
@@ -51,8 +59,8 @@ public class ExcelFreezePanesTool
     /// <param name="sessionId">Session ID for in-memory editing.</param>
     /// <param name="outputPath">Output file path (file mode only).</param>
     /// <param name="sheetIndex">Sheet index (0-based, default: 0).</param>
-    /// <param name="row">Number of rows to freeze from top (0-based, required for freeze).</param>
-    /// <param name="column">Number of columns to freeze from left (0-based, required for freeze).</param>
+    /// <param name="row">Number of rows to freeze from the top; 0 freezes no rows.</param>
+    /// <param name="column">Number of columns to freeze from the left; 0 freezes no columns.</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(
@@ -83,12 +91,13 @@ Usage examples:
         string? outputPath = null,
         [Description("Sheet index (0-based, default: 0)")]
         int sheetIndex = 0,
-        [Description("Number of rows to freeze from top (0-based, required for freeze)")]
+        [Description("Number of rows to freeze from the top (a count, not an index; 0 freezes no rows)")]
         int row = 0,
-        [Description("Number of columns to freeze from left (0-based, required for freeze)")]
+        [Description("Number of columns to freeze from the left (a count, not an index; 0 freezes no columns)")]
         int column = 0)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor,
+            serverConfig: _serverConfig);
 
         var parameters = BuildParameters(operation, sheetIndex, row, column);
 
@@ -101,7 +110,8 @@ Usage examples:
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);

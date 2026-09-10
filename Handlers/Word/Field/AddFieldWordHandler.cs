@@ -1,4 +1,4 @@
-using Aspose.Words;
+﻿using Aspose.Words;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Helpers.Word;
@@ -32,9 +32,14 @@ public class AddFieldWordHandler : OperationHandlerBase<Document>
 
         MoveToInsertPosition(builder, document, parameters, fieldParams.ParagraphIndex, fieldParams.InsertAtStart);
 
+        // Deny-by-default before anything is inserted: the code below is updated immediately,
+        // and an INCLUDETEXT field resolves on that update (R3-S01).
+
+        WordFieldPolicy.EnsureAllowedName(fieldParams.FieldType);
+
         var code = BuildFieldCode(fieldParams.FieldType, fieldParams.FieldArgument);
         var field = builder.InsertField(code);
-        field.Update();
+        WordFieldPolicy.UpdateField(field);
 
         MarkModified(context);
 

@@ -27,6 +27,11 @@ public class ExcelFilterTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -36,11 +41,14 @@ public class ExcelFilterTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
     /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public ExcelFilterTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry = HandlerRegistry<Workbook>.CreateFromNamespace("AsposeMcpServer.Handlers.Excel.Filter");
     }
 
@@ -53,7 +61,10 @@ public class ExcelFilterTool
     /// <param name="outputPath">Output file path (file mode only).</param>
     /// <param name="sheetIndex">Sheet index (0-based).</param>
     /// <param name="range">Cell range to apply filter (e.g., 'A1:C10', required for apply/filter).</param>
-    /// <param name="columnIndex">Column index within filter range to apply criteria (0-based, required for filter).</param>
+    /// <param name="columnIndex">
+    ///     Column index within filter range to apply criteria (0-based, optional for filter, default:
+    ///     0).
+    /// </param>
     /// <param name="criteria">Filter criteria value (required for filter operation).</param>
     /// <param name="filterOperator">Filter operator for custom filter.</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get_status operation.</returns>
@@ -91,14 +102,15 @@ Usage examples:
         int sheetIndex = 0,
         [Description("Cell range to apply filter (e.g., 'A1:C10', required for apply/filter)")]
         string? range = null,
-        [Description("Column index within filter range to apply criteria (0-based, required for filter)")]
+        [Description("Column index within filter range to apply criteria (0-based, optional for filter, default: 0)")]
         int columnIndex = 0,
         [Description("Filter criteria value (required for filter operation)")]
         string? criteria = null,
         [Description("Filter operator for custom filter (optional, default: 'Equal')")]
         string filterOperator = "Equal")
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor,
+            serverConfig: _serverConfig);
 
         var parameters = BuildParameters(operation, sheetIndex, range, columnIndex, criteria, filterOperator);
 
@@ -111,7 +123,8 @@ Usage examples:
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);

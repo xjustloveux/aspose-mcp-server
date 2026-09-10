@@ -7,6 +7,12 @@ namespace AsposeMcpServer.Tests.Core;
 /// <summary>
 ///     Unit tests for ToolFilterService class
 /// </summary>
+/// <summary>
+///     Runs apart from any other test that reads process-wide configuration: this class mutates
+///     the ASPOSE_TOOLS environment variable, which xUnit's default parallelism would otherwise
+///     expose to a concurrently running ServerConfig test.
+/// </summary>
+[Collection("EnvironmentConfiguration")]
 public class ToolFilterServiceTests
 {
     #region Helper Methods
@@ -30,15 +36,22 @@ public class ToolFilterServiceTests
         if (enableEmail) args.Add("--email");
         if (enableBarCode) args.Add("--barcode");
 
-        // If nothing enabled, we need to enable something to avoid validation error
-        // But for testing, we want to test with nothing enabled
+        // Nothing enabled cannot be expressed on the command line, so an unrecognised
+        // ASPOSE_TOOLS value is used to reach that state. The variable is process-wide: restoring
+        // it in a finally keeps a thrown assertion from leaking it into the next test, and the
+        // collection attribute below stops a config test from running beside this one.
         if (args.Count == 0)
         {
-            // Use environment variable to set tools to empty
-            Environment.SetEnvironmentVariable("ASPOSE_TOOLS", "invalid");
-            var config = ServerConfig.LoadFromArgs([]);
-            Environment.SetEnvironmentVariable("ASPOSE_TOOLS", null);
-            return config;
+            var previous = Environment.GetEnvironmentVariable("ASPOSE_TOOLS");
+            try
+            {
+                Environment.SetEnvironmentVariable("ASPOSE_TOOLS", "invalid");
+                return ServerConfig.LoadFromArgs([]);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("ASPOSE_TOOLS", previous);
+            }
         }
 
         return ServerConfig.LoadFromArgs(args.ToArray());

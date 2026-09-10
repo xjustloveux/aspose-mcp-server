@@ -3,8 +3,10 @@ using AsposeMcpServer.Core.Session;
 namespace AsposeMcpServer.Tests.Core.Session;
 
 /// <summary>
-///     Unit tests for StdioSessionIdentityAccessor class
+///     Unit tests for <see cref="StdioSessionIdentityAccessor" />. The class joins the
+///     environment-configuration collection because it mutates process-wide environment variables.
 /// </summary>
+[Collection("EnvironmentConfiguration")]
 public class StdioSessionIdentityAccessorTests
 {
     /// <summary>

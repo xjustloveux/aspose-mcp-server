@@ -3,8 +3,10 @@ using AsposeMcpServer.Core.Session;
 namespace AsposeMcpServer.Tests.Core.Session;
 
 /// <summary>
-///     Unit tests for SessionConfig class
+///     Unit tests for <see cref="SessionConfig" />. The class joins the
+///     environment-configuration collection because it mutates process-wide environment variables.
 /// </summary>
+[Collection("EnvironmentConfiguration")]
 public class SessionConfigTests
 {
     [Fact]

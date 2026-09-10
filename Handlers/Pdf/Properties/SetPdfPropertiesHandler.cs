@@ -80,7 +80,9 @@ public class SetPdfPropertiesHandler : OperationHandlerBase<Document>
     private static void SetPropertyWithFallback(Document document, string key, string? value,
         Action<string>? infoSetter)
     {
-        if (string.IsNullOrEmpty(value)) return;
+        // null means the caller did not supply the field; an empty string means clear it.
+        // Testing IsNullOrEmpty collapsed the two, so a field could never be cleared.
+        if (value == null) return;
 
         try
         {

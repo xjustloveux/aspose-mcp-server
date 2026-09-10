@@ -7,6 +7,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Table;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class AddPptTableHandlerTests : PptHandlerTestBase
 {
     private readonly AddPptTableHandler _handler = new();
@@ -18,6 +19,34 @@ public class AddPptTableHandlerTests : PptHandlerTestBase
     {
         SkipIfNotWindows();
         Assert.Equal("add", _handler.Operation);
+    }
+
+    #endregion
+
+    #region Table Budget
+
+    /// <param name="rows">Rows requested.</param>
+    /// <param name="columns">Columns requested.</param>
+    [Theory]
+    [InlineData(100_000, 2)]
+    [InlineData(2, 100_000)]
+    [InlineData(5_000, 1_000)]
+    public void Execute_WithATableAboveTheBudget_ShouldBeRefused(int rows, int columns)
+    {
+        // Both dimensions were only checked for being at least one, so a slide could be asked
+        // for millions of cell objects (R3-R04).
+        using var presentation = CreatePresentationWithSlides(1);
+        var context = CreateContext(presentation);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "slideIndex", 0 },
+            { "rows", rows },
+            { "columns", columns }
+        });
+
+        Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+
+        Assert.Empty(presentation.Slides[0].Shapes.OfType<ITable>());
     }
 
     #endregion

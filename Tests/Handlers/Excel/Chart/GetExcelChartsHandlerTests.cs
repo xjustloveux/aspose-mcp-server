@@ -91,7 +91,7 @@ public class GetExcelChartsHandlerTests : ExcelHandlerTestBase
 
         var result = Assert.IsType<GetChartsResult>(res);
 
-        Assert.True(result.Count >= 0);
+        Assert.Equal(1, result.Count);
     }
 
     [Fact]

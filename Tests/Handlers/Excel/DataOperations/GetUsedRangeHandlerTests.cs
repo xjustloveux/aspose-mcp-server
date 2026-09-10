@@ -34,10 +34,10 @@ public class GetUsedRangeHandlerTests : ExcelHandlerTestBase
         var result = Assert.IsType<GetUsedRangeResult>(res);
 
         Assert.NotNull(result.WorksheetName);
-        Assert.True(result.FirstRow >= 0);
-        Assert.True(result.LastRow >= 0);
-        Assert.True(result.FirstColumn >= 0);
-        Assert.True(result.LastColumn >= 0);
+        Assert.Equal(0, result.FirstRow);
+        Assert.Equal(2, result.LastRow);
+        Assert.Equal(0, result.FirstColumn);
+        Assert.Equal(2, result.LastColumn);
         Assert.NotNull(result.Range);
     }
 

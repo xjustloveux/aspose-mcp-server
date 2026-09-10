@@ -96,7 +96,7 @@ public class GetPdfFormFieldsHandlerTests : PdfHandlerTestBase
 
         var result = Assert.IsType<GetFormFieldsResult>(res);
 
-        Assert.True(result.Count >= 0);
+        Assert.Equal(2, result.Count);
     }
 
     [Fact]

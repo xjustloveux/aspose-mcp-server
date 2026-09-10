@@ -80,7 +80,7 @@ public class GetExcelCommentsHandlerTests : ExcelHandlerTestBase
 
         var result = Assert.IsType<GetCommentsExcelResult>(res);
 
-        Assert.True(result.Count >= 0);
+        Assert.Equal(1, result.Count);
         Assert.NotNull(result.Items);
         AssertNotModified(context);
     }

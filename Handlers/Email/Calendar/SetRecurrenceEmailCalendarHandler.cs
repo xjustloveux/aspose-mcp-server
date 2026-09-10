@@ -42,6 +42,10 @@ public class SetRecurrenceEmailCalendarHandler : OperationHandlerBase<object>
         if (!File.Exists(path))
             throw new FileNotFoundException("The specified file was not found.");
 
+        // The loader must see the resolved path, not the caller's string: the allowlist
+        // governs reads as well as writes.
+        path = SecurityHelper.ResolveAndEnsureWithinAllowlist(path,
+            context.ServerConfig?.AllowedBasePaths ?? [], "path");
         var appointment = Appointment.Load(path);
 
         var recurrence = CreateRecurrencePattern(pattern, interval, count);
@@ -72,7 +76,10 @@ public class SetRecurrenceEmailCalendarHandler : OperationHandlerBase<object>
         {
             "daily" => new DailyRecurrencePattern(count, interval),
             "weekly" => new WeeklyRecurrencePattern(count, interval),
-            "monthly" => new MonthlyRecurrencePattern(count, interval),
+            // MonthlyRecurrencePattern(int, int) is (startOffset, interval), not (occurs, interval)
+            // as the daily and weekly constructors are. Passing the occurrence count positionally
+            // set the day-of-month offset and left Occurs unset, so the count was silently ignored.
+            "monthly" => new MonthlyRecurrencePattern { Interval = interval, Occurs = count },
             "yearly" => new YearlyRecurrencePattern { Interval = interval, Occurs = count },
             _ => throw new ArgumentException(
                 $"Unknown recurrence pattern: {pattern}. Supported patterns: daily, weekly, monthly, yearly.")

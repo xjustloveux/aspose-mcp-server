@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>配置參考 - Aspose MCP Server</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <link rel="alternate icon" href="favicon.ico">
     <meta name="description" content="Aspose MCP Server 完整配置參考：所有環境變數與命令行參數的詳細說明。">
     <meta name="keywords" content="Aspose, MCP, 配置, 環境變數, 命令行參數, 設定">
     <link rel="canonical" href="https://xjustloveux.github.io/aspose-mcp-server/configuration.html">
@@ -148,6 +147,9 @@
                 </li>
                 <li>
                     <a href="faq.html">常見問答</a>
+                </li>
+                <li>
+                    <a href="architecture-map/index.html">架構關係圖</a>
                 </li>
             </ul>
             <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme" title="切換亮/暗色主題">🌙</button>
@@ -443,6 +445,14 @@
                 <td>-</td>
             </tr>
             <tr>
+                <td>-</td>
+                <td>
+                    <code>--legacy-publish-journal-root path</code>
+                </td>
+                <td>升級後一次性復原舊版中斷發布 journal 的目錄，可重複指定。服務只會掃描明確列出的目錄，不會從 <code>--allowed-path</code> 推測其他位置；journal 確認排空後應移除此參數。新的復原狀態、claim 與 ledger 仍只寫入目前的私有狀態目錄。</td>
+                <td>-</td>
+            </tr>
+            <tr>
                 <td>
                     <code>MAX_EXTRACT_ALL_BYTES</code>
                 </td>
@@ -452,6 +462,16 @@
                 <td>OLE 工具（<code>word_ole_object</code> / <code>excel_ole_object</code> / <code>ppt_ole_object</code>）單次 <code>extract_all</code> 允許寫出的累計位元組上限；達到上限時操作中止並回傳截斷結果。設定 ≤ 0 表示不設上限。</td>
                 <td>10 GiB</td>
             </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_ALLOW_EXTERNAL_RESOURCES</code>
+                </td>
+                <td>
+                    <code>--allow-external-resources</code>
+                </td>
+                <td>是否允許轉換時抓取文件未內含的資源。涵蓋全部會被 <code>convert_document</code> 開啟的特殊格式：<code>.mht</code>／<code>.mhtml</code>、<code>.html</code>／<code>.htm</code>、<code>.md</code>、<code>.svg</code>、<code>.epub</code>。<strong>預設一律拒絕</strong>：只要文件內文指名了遠端 URL （<code>src</code>／<code>href</code>／<code>url()</code>／<code>@import</code>／Markdown 連結）或 <code>file:</code> 位址，轉換會在檔案被開啟前就被拒絕。指向 allowlist 內的本機路徑不受影響。開啟後伺服器會代替呼叫端對外發出請求，因此預設關閉。<strong>這是部署層設定，不是工具參數</strong>——呼叫端無法為自己的請求關閉這道政策。</td>
+                <td>false</td>
+            </tr>
             </tbody>
         </table>
     </div>
@@ -459,6 +479,7 @@
     <div class="info-box" style="margin-top: 15px;">
         <strong>💡 說明</strong>
         <p style="margin-top: 8px; margin-bottom: 0;">未指定 <code>--allowed-path</code> 時不啟用白名單（預設允許所有絕對路徑，維持開箱即用行為）。對應的 <code>ServerConfig</code> 屬性為 <code>AllowedBasePaths</code>。目前僅支援 CLI 參數，無對應環境變數。</p>
+        <p style="margin-top: 8px; margin-bottom: 0;"><code>--legacy-publish-journal-root</code> 只用於遷移舊版遺留 journal，不是額外的檔案存取白名單，也沒有環境變數。不要長期保留或指定過大的共同目錄。</p>
     </div>
 </div>
 
@@ -571,6 +592,16 @@
                 </td>
                 <td>API Key 列表（Local 模式必填）。格式：<code>key1:group1,key2:group2</code>。</td>
                 <td>-</td>
+            </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_AUTH_APIKEY_TRUSTED_PROXIES</code>
+                </td>
+                <td>
+                    <code>--auth-apikey-trusted-proxies list</code>
+                </td>
+                <td>Gateway 模式下可設定 <code>X-Group-Id</code>／<code>X-User-Id</code> 的來源位址或 CIDR，以逗號分隔。<strong>空清單不信任任何來源</strong>；未設定即以 Gateway 模式啟動會被拒絕。填 <code>any</code> 為明確放行所有來源（僅限已由外層網路隔離的部署）。</td>
+                <td>-（空清單）</td>
             </tr>
             <tr>
                 <td>
@@ -689,198 +720,208 @@
 <p>JWT 認證配置。支援本地驗證（HMAC/RSA/ECDSA）、閘道模式、OAuth Introspection 和自訂驗證端點。</p>
 
 <div class="table-wrapper">
-    <table class="config-table">
-        <thead>
-        <tr>
-            <th style="width: 280px;">環境變數</th>
-            <th style="width: 200px;">命令行參數</th>
-            <th>說明</th>
-            <th style="width: 100px;">預設值</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr>
-            <td>
-                <code>ASPOSE_AUTH_JWT_ENABLED</code>
-            </td>
-            <td>
-                <code>--auth-jwt-enabled/--auth-jwt-disabled</code>
-            </td>
-            <td>是否啟用 JWT 認證。</td>
-            <td>false</td>
-        </tr>
-        <tr>
-            <td>
-                <code>ASPOSE_AUTH_JWT_MODE</code>
-            </td>
-            <td>
-                <code>--auth-jwt-mode mode</code>
-            </td>
-            <td>驗證模式。可用值：<code>local</code>（本地驗證）、<code>gateway</code>（信任閘道）、<code>introspection</code>（OAuth Introspection）、<code>custom</code>（自訂端點）。</td>
-            <td>local</td>
-        </tr>
-        <tr>
-            <td>
-                <code>ASPOSE_AUTH_JWT_SECRET</code>
-            </td>
-            <td>
-                <code>--auth-jwt-secret value</code>
-            </td>
-            <td>HMAC 對稱密鑰（Local 模式，與 PUBLIC_KEY_PATH 二選一）。</td>
-            <td>-</td>
-        </tr>
-        <tr>
-            <td>
-                <code>ASPOSE_AUTH_JWT_PUBLIC_KEY_PATH</code>
-            </td>
-            <td>
-                <code>--auth-jwt-public-key-path path</code>
-            </td>
-            <td>RSA/ECDSA 公鑰檔案路徑（Local 模式，與 SECRET 二選一）。</td>
-            <td>-</td>
-        </tr>
-        <tr>
-            <td>
-                <code>ASPOSE_AUTH_JWT_ISSUER</code>
-            </td>
-            <td>
-                <code>--auth-jwt-issuer value</code>
-            </td>
-            <td>JWT 發行者（iss claim 驗證）。</td>
-            <td>-</td>
-        </tr>
-        <tr>
-            <td>
-                <code>ASPOSE_AUTH_JWT_AUDIENCE</code>
-            </td>
-            <td>
-                <code>--auth-jwt-audience value</code>
-            </td>
-            <td>JWT 受眾（aud claim 驗證）。</td>
-            <td>-</td>
-        </tr>
-        <tr>
-            <td>
-                <code>ASPOSE_AUTH_JWT_GROUP_CLAIM</code>
-            </td>
-            <td>
-                <code>--auth-jwt-group-claim name</code>
-            </td>
-            <td>群組識別符的 Claim 名稱（如 tenant_id, team_id, org_id）。</td>
-            <td>tenant_id</td>
-        </tr>
-        <tr>
-            <td>
-                <code>ASPOSE_AUTH_JWT_USER_CLAIM</code>
-            </td>
-            <td>
-                <code>--auth-jwt-user-claim name</code>
-            </td>
-            <td>用戶識別符的 Claim 名稱。</td>
-            <td>sub</td>
-        </tr>
-        <tr>
-            <td>
-                <code>ASPOSE_AUTH_JWT_GROUP_HEADER</code>
-            </td>
-            <td>
-                <code>--auth-jwt-group-header name</code>
-            </td>
-            <td>群組識別符的 HTTP Header 名稱（Gateway 模式使用）。</td>
-            <td>X-Group-Id</td>
-        </tr>
-        <tr>
-            <td>
-                <code>ASPOSE_AUTH_JWT_USER_HEADER</code>
-            </td>
-            <td>
-                <code>--auth-jwt-user-header name</code>
-            </td>
-            <td>用戶識別符的 HTTP Header 名稱（Gateway 模式使用）。</td>
-            <td>X-User-Id</td>
-        </tr>
-        <tr>
-            <td>
-                <code>ASPOSE_AUTH_JWT_INTROSPECTION_URL</code>
-            </td>
-            <td>
-                <code>--auth-jwt-introspection-url url</code>
-            </td>
-            <td>OAuth Introspection 端點 URL（Introspection 模式必填）。</td>
-            <td>-</td>
-        </tr>
-        <tr>
-            <td>
-                <code>ASPOSE_AUTH_JWT_CLIENT_ID</code>
-            </td>
-            <td>
-                <code>--auth-jwt-client-id value</code>
-            </td>
-            <td>OAuth Client ID（Introspection 模式使用）。</td>
-            <td>-</td>
-        </tr>
-        <tr>
-            <td>
-                <code>ASPOSE_AUTH_JWT_CLIENT_SECRET</code>
-            </td>
-            <td>
-                <code>--auth-jwt-client-secret value</code>
-            </td>
-            <td>OAuth Client Secret（Introspection 模式使用）。</td>
-            <td>-</td>
-        </tr>
-        <tr>
-            <td>
-                <code>ASPOSE_AUTH_JWT_CUSTOM_URL</code>
-            </td>
-            <td>
-                <code>--auth-jwt-custom-url url</code>
-            </td>
-            <td>自訂驗證端點 URL（Custom 模式必填）。</td>
-            <td>-</td>
-        </tr>
-        <tr>
-            <td>
-                <code>ASPOSE_AUTH_JWT_TIMEOUT</code>
-            </td>
-            <td>
-                <code>--auth-jwt-timeout N</code>
-            </td>
-            <td>外部驗證請求超時時間（秒）。有效範圍：1-300。</td>
-            <td>5</td>
-        </tr>
-        <tr>
-            <td>
-                <code>ASPOSE_AUTH_JWT_CACHE_ENABLED</code>
-            </td>
-            <td>
-                <code>--auth-jwt-cache-enabled/--auth-jwt-cache-disabled</code>
-            </td>
-            <td>是否啟用認證結果快取。</td>
-            <td>true</td>
-        </tr>
-        <tr>
-            <td>
-                <code>ASPOSE_AUTH_JWT_CACHE_TTL</code>
-            </td>
-            <td>
-                <code>--auth-jwt-cache-ttl N</code>
-            </td>
-            <td>快取存活時間（秒）。</td>
-            <td>300</td>
-        </tr>
-        <tr>
-            <td>
-                <code>ASPOSE_AUTH_JWT_CACHE_MAX_SIZE</code>
-            </td>
-            <td>
-                <code>--auth-jwt-cache-max-size N</code>
-            </td>
-            <td>快取最大項目數。</td>
-            <td>10000</td>
-        </tr>
-        </tbody>
-    </table>
+<table class="config-table">
+<thead>
+<tr>
+    <th style="width: 280px;">環境變數</th>
+    <th style="width: 200px;">命令行參數</th>
+    <th>說明</th>
+    <th style="width: 100px;">預設值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+    <td>
+        <code>ASPOSE_AUTH_JWT_ENABLED</code>
+    </td>
+    <td>
+        <code>--auth-jwt-enabled/--auth-jwt-disabled</code>
+    </td>
+    <td>是否啟用 JWT 認證。</td>
+    <td>false</td>
+</tr>
+<tr>
+    <td>
+        <code>ASPOSE_AUTH_JWT_MODE</code>
+    </td>
+    <td>
+        <code>--auth-jwt-mode mode</code>
+    </td>
+    <td>驗證模式。可用值：<code>local</code>（本地驗證）、<code>gateway</code>（信任閘道）、<code>introspection</code>（OAuth Introspection）、<code>custom</code>（自訂端點）。</td>
+    <td>local</td>
+</tr>
+<tr>
+    <td>
+        <code>ASPOSE_AUTH_JWT_SECRET</code>
+    </td>
+    <td>
+        <code>--auth-jwt-secret value</code>
+    </td>
+    <td>HMAC 對稱密鑰（Local 模式，與 PUBLIC_KEY_PATH 二選一）。</td>
+    <td>-</td>
+</tr>
+<tr>
+    <td>
+        <code>ASPOSE_AUTH_JWT_TRUSTED_PROXIES</code>
+    </td>
+    <td>
+        <code>--auth-jwt-trusted-proxies list</code>
+    </td>
+    <td>Gateway 模式下可設定 <code>X-Group-Id</code>／<code>X-User-Id</code> 的來源位址或 CIDR，以逗號分隔。<strong>空清單不信任任何來源</strong>；未設定即以 Gateway 模式啟動會被拒絕。填 <code>any</code> 為明確放行所有來源（僅限已由外層網路隔離的部署）。</td>
+    <td>-（空清單）</td>
+</tr>
+<tr>
+    <td>
+        <code>ASPOSE_AUTH_JWT_PUBLIC_KEY_PATH</code>
+    </td>
+    <td>
+        <code>--auth-jwt-public-key-path path</code>
+    </td>
+    <td>RSA/ECDSA 公鑰檔案路徑（Local 模式，與 SECRET 二選一）。</td>
+    <td>-</td>
+</tr>
+<tr>
+    <td>
+        <code>ASPOSE_AUTH_JWT_ISSUER</code>
+    </td>
+    <td>
+        <code>--auth-jwt-issuer value</code>
+    </td>
+    <td>JWT 發行者（iss claim 驗證）。</td>
+    <td>-</td>
+</tr>
+<tr>
+    <td>
+        <code>ASPOSE_AUTH_JWT_AUDIENCE</code>
+    </td>
+    <td>
+        <code>--auth-jwt-audience value</code>
+    </td>
+    <td>JWT 受眾（aud claim 驗證）。</td>
+    <td>-</td>
+</tr>
+<tr>
+    <td>
+        <code>ASPOSE_AUTH_JWT_GROUP_CLAIM</code>
+    </td>
+    <td>
+        <code>--auth-jwt-group-claim name</code>
+    </td>
+    <td>群組識別符的 Claim 名稱（如 tenant_id, team_id, org_id）。</td>
+    <td>tenant_id</td>
+</tr>
+<tr>
+    <td>
+        <code>ASPOSE_AUTH_JWT_USER_CLAIM</code>
+    </td>
+    <td>
+        <code>--auth-jwt-user-claim name</code>
+    </td>
+    <td>用戶識別符的 Claim 名稱。</td>
+    <td>sub</td>
+</tr>
+<tr>
+    <td>
+        <code>ASPOSE_AUTH_JWT_GROUP_HEADER</code>
+    </td>
+    <td>
+        <code>--auth-jwt-group-header name</code>
+    </td>
+    <td>群組識別符的 HTTP Header 名稱（Gateway 模式使用）。</td>
+    <td>X-Group-Id</td>
+</tr>
+<tr>
+    <td>
+        <code>ASPOSE_AUTH_JWT_USER_HEADER</code>
+    </td>
+    <td>
+        <code>--auth-jwt-user-header name</code>
+    </td>
+    <td>用戶識別符的 HTTP Header 名稱（Gateway 模式使用）。</td>
+    <td>X-User-Id</td>
+</tr>
+<tr>
+    <td>
+        <code>ASPOSE_AUTH_JWT_INTROSPECTION_URL</code>
+    </td>
+    <td>
+        <code>--auth-jwt-introspection-url url</code>
+    </td>
+    <td>OAuth Introspection 端點 URL（Introspection 模式必填）。</td>
+    <td>-</td>
+</tr>
+<tr>
+    <td>
+        <code>ASPOSE_AUTH_JWT_CLIENT_ID</code>
+    </td>
+    <td>
+        <code>--auth-jwt-client-id value</code>
+    </td>
+    <td>OAuth Client ID（Introspection 模式使用）。</td>
+    <td>-</td>
+</tr>
+<tr>
+    <td>
+        <code>ASPOSE_AUTH_JWT_CLIENT_SECRET</code>
+    </td>
+    <td>
+        <code>--auth-jwt-client-secret value</code>
+    </td>
+    <td>OAuth Client Secret（Introspection 模式使用）。</td>
+    <td>-</td>
+</tr>
+<tr>
+    <td>
+        <code>ASPOSE_AUTH_JWT_CUSTOM_URL</code>
+    </td>
+    <td>
+        <code>--auth-jwt-custom-url url</code>
+    </td>
+    <td>自訂驗證端點 URL（Custom 模式必填）。</td>
+    <td>-</td>
+</tr>
+<tr>
+    <td>
+        <code>ASPOSE_AUTH_JWT_TIMEOUT</code>
+    </td>
+    <td>
+        <code>--auth-jwt-timeout N</code>
+    </td>
+    <td>外部驗證請求超時時間（秒）。有效範圍：1-300。</td>
+    <td>5</td>
+</tr>
+<tr>
+    <td>
+        <code>ASPOSE_AUTH_JWT_CACHE_ENABLED</code>
+    </td>
+    <td>
+        <code>--auth-jwt-cache-enabled/--auth-jwt-cache-disabled</code>
+    </td>
+    <td>是否啟用認證結果快取。</td>
+    <td>true</td>
+</tr>
+<tr>
+    <td>
+        <code>ASPOSE_AUTH_JWT_CACHE_TTL</code>
+    </td>
+    <td>
+        <code>--auth-jwt-cache-ttl N</code>
+    </td>
+    <td>快取存活時間（秒）。</td>
+    <td>300</td>
+</tr>
+<tr>
+    <td>
+        <code>ASPOSE_AUTH_JWT_CACHE_MAX_SIZE</code>
+    </td>
+    <td>
+        <code>--auth-jwt-cache-max-size N</code>
+    </td>
+    <td>快取最大項目數。</td>
+    <td>10000</td>
+</tr>
+</tbody>
+</table>
 </div>
 
 <div class="info-box" style="margin-top: 15px;">
@@ -984,6 +1025,16 @@
                 <td>Metrics 端點路徑。</td>
                 <td>/metrics</td>
             </tr>
+            <tr>
+                <td>
+                    <code>ASPOSE_METRICS_REQUIRE_AUTH</code>
+                </td>
+                <td>
+                    <code>--metrics-require-auth</code> / <code>--metrics-allow-anonymous</code>
+                </td>
+                <td><code>/metrics</code> 端點是否要求通過驗證。預設要求；<code>--metrics-allow-anonymous</code>（或將環境變數設為 <code>false</code>）會讓該端點在已啟用驗證的伺服器上仍可匿名讀取，等同公開運作統計。</td>
+                <td>true</td>
+            </tr>
             </tbody>
         </table>
     </div>
@@ -1007,6 +1058,56 @@
         </tr>
         </thead>
         <tbody>
+        <tr>
+            <td>
+                <code>ASPOSE_EXTENSION_RESTART_COOLDOWN</code>
+            </td>
+            <td>
+                <code>--extension-restart-cooldown seconds</code>
+            </td>
+            <td>擴充功能重啟之間的冷卻秒數。</td>
+            <td>5</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_EXTENSION_MAX_CONVERSION_FAILURES</code>
+            </td>
+            <td>
+                <code>--extension-max-conversion-failures n</code>
+            </td>
+            <td>連續轉換失敗幾次後暫停該擴充功能的轉換。</td>
+            <td>5</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_EXTENSION_FAILURE_BACKOFF</code>
+            </td>
+            <td>
+                <code>--extension-failure-backoff seconds</code>
+            </td>
+            <td>達到失敗上限後的退避秒數。</td>
+            <td>60</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_EXTENSION_CONVERSION_CACHE_TTL</code>
+            </td>
+            <td>
+                <code>--extension-conversion-cache-ttl seconds</code>
+            </td>
+            <td>轉換結果快取的存活秒數。</td>
+            <td>5</td>
+        </tr>
+        <tr>
+            <td>
+                <code>ASPOSE_EXTENSION_MAX_CACHE_SIZE</code>
+            </td>
+            <td>
+                <code>--extension-max-cache-size n</code>
+            </td>
+            <td>轉換結果快取的最大項目數。</td>
+            <td>100</td>
+        </tr>
         <tr>
             <td>
                 <code>ASPOSE_EXTENSION_ENABLED</code>
@@ -1215,33 +1316,13 @@
         </tr>
         <tr>
             <td>
-                <code>ASPOSE_EXTENSION_DEBOUNCE_DELAY_DEFAULT</code>
+                <code>ASPOSE_EXTENSION_DEBOUNCE_DELAY</code>
             </td>
             <td>
                 <code>--extension-debounce-delay N</code>
             </td>
             <td>Session 修改事件防抖延遲預設值（毫秒）。</td>
             <td>100</td>
-        </tr>
-        <tr>
-            <td>
-                <code>ASPOSE_EXTENSION_DEBOUNCE_DELAY_FLOOR</code>
-            </td>
-            <td>
-                <code>--extension-debounce-delay-floor N</code>
-            </td>
-            <td>Session 修改事件防抖延遲下限（毫秒）。</td>
-            <td>0</td>
-        </tr>
-        <tr>
-            <td>
-                <code>ASPOSE_EXTENSION_DEBOUNCE_DELAY_CEILING</code>
-            </td>
-            <td>
-                <code>--extension-debounce-delay-ceiling N</code>
-            </td>
-            <td>Session 修改事件防抖延遲上限（毫秒）。</td>
-            <td>1000</td>
         </tr>
         <tr>
             <td>

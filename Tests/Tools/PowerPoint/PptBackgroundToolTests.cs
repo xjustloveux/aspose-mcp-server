@@ -15,6 +15,7 @@ namespace AsposeMcpServer.Tests.Tools.PowerPoint;
 ///     Detailed parameter validation and business logic tests are in Handler tests.
 /// </summary>
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class PptBackgroundToolTests : PptTestBase
 {
     private readonly PptBackgroundTool _tool;
@@ -57,7 +58,7 @@ public class PptBackgroundToolTests : PptTestBase
         var pptPath = CreatePresentation("test_get.pptx");
         var result = _tool.Execute("get", pptPath, slideIndex: 0);
         var data = GetResultData<GetBackgroundResult>(result);
-        Assert.True(data.SlideIndex >= 0);
+        Assert.Equal(0, data.SlideIndex);
         Assert.NotNull(data.FillType);
     }
 
@@ -115,7 +116,7 @@ public class PptBackgroundToolTests : PptTestBase
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("get", sessionId: sessionId, slideIndex: 0);
         var data = GetResultData<GetBackgroundResult>(result);
-        Assert.True(data.SlideIndex >= 0);
+        Assert.Equal(0, data.SlideIndex);
         Assert.NotNull(data.FillType);
     }
 

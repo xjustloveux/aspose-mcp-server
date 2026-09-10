@@ -7,6 +7,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Section;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class RenamePptSectionHandlerTests : PptHandlerTestBase
 {
     private readonly RenamePptSectionHandler _handler = new();

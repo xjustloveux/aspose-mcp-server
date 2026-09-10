@@ -29,6 +29,11 @@ public class ExcelViewSettingsTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -38,11 +43,14 @@ public class ExcelViewSettingsTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
     /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public ExcelViewSettingsTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry = HandlerRegistry<Workbook>.CreateFromNamespace("AsposeMcpServer.Handlers.Excel.ViewSettings");
     }
 
@@ -60,12 +68,12 @@ public class ExcelViewSettingsTool
     /// <param name="sessionId">Session ID for in-memory editing.</param>
     /// <param name="outputPath">Output file path (file mode only).</param>
     /// <param name="sheetIndex">Sheet index (0-based, default: 0).</param>
-    /// <param name="zoom">Zoom percentage (10-400, required for set_zoom).</param>
-    /// <param name="visible">Visibility (required for set_gridlines/set_headers/set_zero_values/show_formulas).</param>
-    /// <param name="columnIndex">Column index (0-based, required for set_column_width/autofit_col).</param>
-    /// <param name="width">Column width in characters (required for set_column_width).</param>
-    /// <param name="rowIndex">Row index (0-based, required for set_row_height/autofit_row).</param>
-    /// <param name="height">Row height in points (required for set_row_height).</param>
+    /// <param name="zoom">Zoom percentage (10-400, optional for set_zoom, default: 100).</param>
+    /// <param name="visible">Visibility (optional for set_gridlines/set_headers/set_zero_values/show_formulas, default: true).</param>
+    /// <param name="columnIndex">Column index (0-based, optional for set_column_width/autofit_col, default: 0).</param>
+    /// <param name="width">Column width in characters (optional for set_column_width, default: 8.43, the Excel default width).</param>
+    /// <param name="rowIndex">Row index (0-based, optional for set_row_height/autofit_row, default: 0).</param>
+    /// <param name="height">Row height in points (optional for set_row_height, default: 15, the Excel default height).</param>
     /// <param name="imagePath">Background image file path (required for set_background).</param>
     /// <param name="removeBackground">Remove background image (for set_background).</param>
     /// <param name="color">Color in hex format (e.g., '#FF0000', required for set_tab).</param>
@@ -118,17 +126,19 @@ Usage examples:
         string? outputPath = null,
         [Description("Sheet index (0-based, default: 0)")]
         int sheetIndex = 0,
-        [Description("Zoom percentage (10-400, required for set_zoom)")]
+        [Description("Zoom percentage (10-400, optional for set_zoom, default: 100)")]
         int zoom = 100,
-        [Description("Visibility (required for set_gridlines/set_headers/set_zero_values/show_formulas)")]
+        [Description(
+            "Visibility (optional for set_gridlines/set_headers/set_zero_values/show_formulas, default: true)")]
         bool visible = true,
-        [Description("Column index (0-based, required for set_column_width/autofit_col)")]
+        [Description("Column index (0-based, optional for set_column_width/autofit_col, default: 0)")]
         int columnIndex = 0,
-        [Description("Column width in characters (required for set_column_width)")]
+        [Description(
+            "Column width in characters (optional for set_column_width, default: 8.43, the Excel default width)")]
         double width = 8.43,
-        [Description("Row index (0-based, required for set_row_height/autofit_row)")]
+        [Description("Row index (0-based, optional for set_row_height/autofit_row, default: 0)")]
         int rowIndex = 0,
-        [Description("Row height in points (required for set_row_height)")]
+        [Description("Row height in points (optional for set_row_height, default: 15, the Excel default height)")]
         double height = 15,
         [Description("Background image file path (required for set_background)")]
         string? imagePath = null,
@@ -165,7 +175,8 @@ Usage examples:
         [Description("End column index for auto fit range (0-based, for autofit_row)")]
         int? endColumn = null)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor,
+            serverConfig: _serverConfig);
 
         var parameters = BuildParameters(operation, sheetIndex, zoom, visible, columnIndex, width, rowIndex, height,
             imagePath, removeBackground, color, showGridlines, showRowColumnHeaders, showZeroValues, displayRightToLeft,
@@ -181,7 +192,8 @@ Usage examples:
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);

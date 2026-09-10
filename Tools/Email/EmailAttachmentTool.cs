@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Errors.Email;
 using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
@@ -19,10 +20,17 @@ public class EmailAttachmentTool
     private readonly HandlerRegistry<object> _handlerRegistry;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Initializes a new instance of the <see cref="EmailAttachmentTool" /> class.
     /// </summary>
-    public EmailAttachmentTool()
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
+    public EmailAttachmentTool(ServerConfig? serverConfig = null)
     {
+        _serverConfig = serverConfig;
         _handlerRegistry =
             HandlerRegistry<object>.CreateFromNamespace("AsposeMcpServer.Handlers.Email.Attachment");
     }
@@ -47,6 +55,8 @@ public class EmailAttachmentTool
         ReadOnly = false,
         UseStructuredContent = true)]
     [Description(@"Manage email attachments. Supports 5 operations: list, add, remove, extract, extract_all.
+
+The 'extract_all' operation writes its files as one request: a refusal or a handled failure publishes none of them, so no output file is replaced unless all of them are. An output directory the request had to create may remain, and power loss or a killed process is not covered.
 
 Usage examples:
 - List attachments: email_attachment(operation='list', path='email.eml')
@@ -83,10 +93,23 @@ Supported output formats: EML, MSG, MHT/MHTML, HTML")]
         {
             Document = new object(),
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
-        var result = handler.Execute(operationContext, parameters);
+        object result;
+        try
+        {
+            result = handler.Execute(operationContext, parameters);
+        }
+        catch (Exception ex) when (ex is not ArgumentException and not KeyNotFoundException
+                                       and not FileNotFoundException and not UnauthorizedAccessException)
+        {
+            // Aspose.Email failures reached the caller as the global sentinel, which said nothing
+            // about what went wrong. The family translator turns the ones it recognises into an
+            // actionable message and still sanitises everything else.
+            throw EmailErrorTranslator.Translate(ex, Path.GetFileName(path));
+        }
 
         var effectiveOutputPath = operation switch
         {

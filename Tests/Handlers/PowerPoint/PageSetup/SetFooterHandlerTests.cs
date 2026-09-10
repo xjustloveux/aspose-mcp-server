@@ -6,6 +6,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.PageSetup;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class SetFooterHandlerTests : PptHandlerTestBase
 {
     private static readonly int[] SlideIndicesZeroTwo = [0, 2];

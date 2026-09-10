@@ -33,13 +33,15 @@ public class AddImagePdfHeaderFooterHandler : OperationHandlerBase<Document>
         var p = ExtractParameters(parameters);
 
         SecurityHelper.ValidateFilePath(p.ImagePath, "imagePath", true);
+        var resolvedImagePath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.ImagePath,
+            context.ServerConfig?.AllowedBasePaths ?? [], "imagePath");
 
-        if (!File.Exists(p.ImagePath))
+        if (!File.Exists(resolvedImagePath))
             throw new FileNotFoundException("The specified file was not found.");
 
         var document = context.Document;
 
-        var stamp = new ImageStamp(p.ImagePath);
+        var stamp = new ImageStamp(resolvedImagePath);
 
         if (p.Position.Equals("header", StringComparison.OrdinalIgnoreCase))
         {

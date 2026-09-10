@@ -38,7 +38,7 @@ public class GetParagraphFormatWordHandlerTests : WordHandlerTestBase
 
         var result = Assert.IsType<GetParagraphFormatWordResult>(res);
 
-        Assert.True(result.RunCount >= 0);
+        Assert.Equal(1, result.RunCount);
     }
 
     #endregion
@@ -273,9 +273,9 @@ public class GetParagraphFormatWordHandlerTests : WordHandlerTestBase
 
         var format = result.ParagraphFormat;
         Assert.NotNull(format.Alignment);
-        Assert.True(format.LeftIndent >= 0);
-        Assert.True(format.SpaceBefore >= 0);
-        Assert.True(format.SpaceAfter >= 0);
+        Assert.Equal(0, format.LeftIndent);
+        Assert.Equal(0, format.SpaceBefore);
+        Assert.Equal(0, format.SpaceAfter);
     }
 
     #endregion
@@ -524,7 +524,7 @@ public class GetParagraphFormatWordHandlerTests : WordHandlerTestBase
         Assert.Equal("Body", result.StoryType);
         Assert.Equal(0, result.SectionIndex);
         Assert.Equal(1, result.ParagraphIndex);
-        Assert.True(result.DocumentOrderIndex >= 0);
+        Assert.Equal(1, result.DocumentOrderIndex);
         Assert.Null(result.HeaderFooterType);
         Assert.Null(result.ContainerIndex);
     }

@@ -88,8 +88,8 @@ public class GetExcelProtectionHandlerTests : ExcelHandlerTestBase
 
         var result = Assert.IsType<GetProtectionResult>(res);
 
-        Assert.True(result.Count >= 0);
-        Assert.True(result.TotalWorksheets >= 0);
+        Assert.Equal(1, result.Count);
+        Assert.Equal(1, result.TotalWorksheets);
         Assert.NotNull(result.Worksheets);
     }
 
@@ -122,7 +122,7 @@ public class GetExcelProtectionHandlerTests : ExcelHandlerTestBase
 
         var worksheet = result.Worksheets[0];
         Assert.NotNull(worksheet.Name);
-        Assert.True(worksheet.Index >= 0);
+        Assert.Equal(0, worksheet.Index);
     }
 
     [Fact]

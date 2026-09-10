@@ -7,6 +7,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Media;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class SetPlaybackHandlerTests : PptHandlerTestBase
 {
     private readonly SetPlaybackHandler _handler = new();

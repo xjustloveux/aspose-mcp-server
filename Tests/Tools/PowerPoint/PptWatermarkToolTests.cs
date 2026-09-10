@@ -15,6 +15,7 @@ namespace AsposeMcpServer.Tests.Tools.PowerPoint;
 ///     Detailed parameter validation and business logic tests are in Handler tests.
 /// </summary>
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class PptWatermarkToolTests : PptTestBase
 {
     private readonly PptWatermarkTool _tool;
@@ -138,7 +139,7 @@ public class PptWatermarkToolTests : PptTestBase
         var pptPath = CreatePresentationWithContent($"test_case_{operation.Replace(" ", "_")}.pptx", "Hello World");
         var result = _tool.Execute(operation, pptPath);
         var data = GetResultData<GetWatermarksPptResult>(result);
-        Assert.True(data.Count >= 0);
+        Assert.Equal(0, data.Count);
     }
 
     [SkippableFact]
@@ -162,7 +163,7 @@ public class PptWatermarkToolTests : PptTestBase
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("get", sessionId: sessionId);
         var data = GetResultData<GetWatermarksPptResult>(result);
-        Assert.True(data.Count >= 0);
+        Assert.Equal(0, data.Count);
         var output = GetResultOutput<GetWatermarksPptResult>(result);
         Assert.Equal(sessionId, output.SessionId);
     }

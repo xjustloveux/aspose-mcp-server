@@ -34,10 +34,15 @@ public class SetSubjectEmailContentHandler : OperationHandlerBase<object>
         var outputPath = parameters.GetOptional("outputPath", path);
         SecurityHelper.ValidateFilePath(path, "path", true);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+        EmailAddressListHelper.EnsureNoHeaderInjection(subject, "subject");
 
         if (!File.Exists(path))
             throw new FileNotFoundException("The specified file was not found.");
 
+        // The loader must see the resolved path, not the caller's string: the allowlist
+        // governs reads as well as writes.
+        path = SecurityHelper.ResolveAndEnsureWithinAllowlist(path,
+            context.ServerConfig?.AllowedBasePaths ?? [], "path");
         using var message = MailMessage.Load(path);
         message.Subject = subject;
 

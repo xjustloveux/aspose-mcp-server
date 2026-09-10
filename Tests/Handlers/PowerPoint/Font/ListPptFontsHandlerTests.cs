@@ -6,6 +6,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Font;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class ListPptFontsHandlerTests : PptHandlerTestBase
 {
     private readonly ListPptFontsHandler _handler = new();
@@ -149,7 +150,7 @@ public class ListPptFontsHandlerTests : PptHandlerTestBase
         var res = _handler.Execute(context, parameters);
 
         var result = Assert.IsType<GetFontsPptResult>(res);
-        Assert.True(result.EmbeddedCount >= 0);
+        Assert.Equal(0, result.EmbeddedCount);
     }
 
     #endregion

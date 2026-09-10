@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>功能特性 - Aspose MCP Server</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <link rel="alternate icon" href="favicon.ico">
     <meta name="description" content="Aspose MCP Server 的功能特性：安全加固、MCP 協議支援、跨平台、按需啟用等。">
     <meta name="keywords" content="Aspose, MCP, 功能特性, 安全特性, 跨平台, 文檔處理">
     <link rel="canonical" href="https://xjustloveux.github.io/aspose-mcp-server/features.html">
@@ -112,6 +111,9 @@
                 <li>
                     <a href="faq.html">常見問答</a>
                 </li>
+                <li>
+                    <a href="architecture-map/index.html">架構關係圖</a>
+                </li>
             </ul>
             <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme" title="切換亮/暗色主題">🌙</button>
             <button class="menu-toggle" aria-label="Toggle menu">☰</button>
@@ -142,10 +144,10 @@
 
     <h3>技術特性</h3>
     <ul class="feature-list">
-        <li><strong>MCP 2026-07-28 規範支援</strong> - 完全符合最新 MCP 協議規範，自動工具註解（readonly/destructive）基於命名約定，完整的 JSON-RPC 2.0 錯誤處理</li>
+        <li><strong>MCP 2026-07-28 規範支援</strong> - 完全符合最新 MCP 協議規範，工具註解（readonly/destructive/idempotent/openWorld）由每個工具的 <code>[McpServerTool]</code> 屬性明確宣告，完整的 JSON-RPC 2.0 錯誤處理</li>
         <li><strong>統一字型設定</strong> - 多個工具支援中英文字型分別設定（<code>fontNameAscii</code> 和 <code>fontNameFarEast</code> 參數）</li>
         <li><strong>靈活的授權配置</strong> - 支援總授權或單一組件授權，自動搜尋、環境變數或命令列參數配置，試用模式降級（找不到授權時）</li>
-        <li><strong>自動工具發現</strong> - 基於命名約定的自動工具註冊系統</li>
+        <li><strong>自動工具發現</strong> - 掃描組件中標記 <code>[McpServerToolType]</code> 的類別與 <code>[McpServerTool]</code> 的方法自動註冊，無需手動列舉</li>
         <li><strong>安全加固</strong> - 全面的路徑驗證、輸入驗證和錯誤處理</li>
     </ul>
 </div>
@@ -157,20 +159,21 @@
     <ul class="feature-list">
         <li>所有檔案路徑都經過 `SecurityHelper.ValidateFilePath()` 驗證</li>
         <li>防止路徑遍歷攻擊（`../`, `..\`）</li>
-        <li>限制路徑長度（最大260字元）和檔案名稱長度（最大255字元）</li>
+        <li>限制路徑長度（Windows 260 字元、其他平台 4096 字元）和檔案名稱長度（最大 255 字元）</li>
         <li>驗證路徑中的非法字元</li>
         <li>拒絕控制字元（`\x01`–`\x1F`）：Linux 平台的 `GetInvalidPathChars` 僅包含 `\0`，本項明確補充以保持跨平台一致性</li>
         <li>拒絕 NTFS Alternate Data Stream（路徑段中的冒號，例如 `file.txt:hidden`），防止資料隱藏與路徑驗證繞過</li>
         <li>拒絕路徑段末尾的點號或空白（Windows 靜默截斷，可繞過副檔名驗證，例如 `file.exe.` → `file.exe`）</li>
         <li>拒絕 Windows 保留裝置名稱（CON、NUL、AUX、PRN、COM1–9、LPT1–9），跨平台一律阻擋以防止 OS 副作用</li>
-        <li>可選路徑白名單：使用 `--allowed-path` 將檔案存取限制於指定基礎目錄下（可重複指定；未設定則不限制，建議 HTTP/WebSocket 部署時啟用）</li>
-        <li>符號連結解析（symbolic link resolution）：所有路徑在任何 I/O 前均透過 `SecurityHelper.ResolveAndEnsureWithinAllowlist()` 解析至最終目標，並再次比對白名單；白名單內部的符號連結若最終目標仍在白名單內則允許，目標位於白名單之外則拒絕；懸空符號連結（dangling symlink）的目標路徑亦須位於白名單內</li>
+        <li>可選路徑白名單：使用 `--allowed-path` 將檔案存取限制於指定基礎目錄下（可重複指定；未設定則不限制，建議 HTTP/WebSocket 部署時啟用）。白名單於所有工具的輸入路徑、輸出路徑與次要檔案參數（憑證、圖章圖片、佈景主題等）一致生效</li>
+        <li>符號連結解析（symbolic link resolution）：所有路徑在任何 I/O 前均透過 `SecurityHelper.ResolveAndEnsureWithinAllowlist()` 解析至最終目標，並再次比對白名單。解析方式與 `realpath` 相同——由路徑根部起逐段展開，因此位於路徑中段的符號連結或 NTFS junction 同樣會被跟隨（不只結尾或最近存在的祖先）；白名單內部的符號連結若最終目標仍在白名單內則允許，目標位於白名單之外則拒絕；懸空符號連結（dangling symlink）的目標路徑亦須位於白名單內</li>
     </ul>
 
     <h3>輸入驗證</h3>
     <ul class="feature-list">
-        <li>陣列大小驗證（`SecurityHelper.ValidateArraySize`，最大1000項）</li>
-        <li>字串長度驗證（`SecurityHelper.ValidateStringLength`，最大10000字元）</li>
+        <li>陣列大小驗證（`SecurityHelper.ValidateArraySize`，預設上限 1000 項）——這些驗證不是全域套用，而是由個別操作在入口呼叫；目前使用預設值的只有 PDF 合併的 `inputPaths`</li>
+        <li>字串長度驗證（`SecurityHelper.ValidateStringLength`，預設上限 10000 字元）——現有呼叫端均自行傳入更小的上限（附件名稱 255、附件說明與搜尋型樣 1000），因此 10000 實際上不會被觸發</li>
+        <li>數值範圍驗證（`SecurityHelper.ValidateNumericRange`）：列／欄／頁數、DPI、縮放、表格維度等參數依操作設定上下限</li>
     </ul>
 
     <h3>錯誤處理</h3>
@@ -199,19 +202,19 @@
     <div class="security-grid">
         <div class="security-item">
             <strong>最大路徑長度</strong>
-            260 字元
+            Windows 260 字元，其他平台 4096 字元
         </div>
         <div class="security-item">
             <strong>最大檔案名稱長度</strong>
             255 字元
         </div>
         <div class="security-item">
-            <strong>最大陣列大小</strong>
-            1000 項
+            <strong>陣列大小預設上限</strong>
+            1000 項（僅套用於呼叫驗證的入口）
         </div>
         <div class="security-item">
-            <strong>最大字串長度</strong>
-            10000 字元
+            <strong>字串長度預設上限</strong>
+            10000 字元（呼叫端可傳入更小值）
         </div>
     </div>
 </div>

@@ -1,10 +1,19 @@
 name: Deploy to GitHub Pages
 
+# Action pinning (R22-DEP01): a mutable major tag (`@v6`) resolves to whatever the action's
+# maintainers publish next, so every action here is pinned to the full commit SHA its tag
+# pointed at on 2026-09-08, with the readable version beside it. Move a pin by looking the
+# new tag up in the action's repository (or let Dependabot/Renovate do it); never by editing
+# the SHA to a value that was not read from there.
+
 on:
   push:
     branches: [ main, master ]
     paths:
       - 'docs/**'
+      # The map is generated and gated by these scripts, so a change to one of them changes
+      # what is published even when docs/ is untouched (R3-G06).
+      - 'graphify/**'
       - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
 
@@ -21,13 +30,40 @@ jobs:
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Setup Pages
-        uses: actions/configure-pages@v6
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
+
+      # The artifact is the whole docs/ tree, so anything under docs/architecture-map/ goes
+      # live. The gate refuses output carrying a source outside the approved corpus, an
+      # unreviewed finding, a local absolute path, a secret-shaped string, an internal
+      # hostname or an e-mail address. A failure here must stop the deploy, so no
+      # continue-on-error.
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+
+      # The gate below is only as good as its refusals, which these fixtures exercise.
+      - name: Run graphify self-test
+        shell: pwsh
+        run: python graphify/self-test.py
+
+      - name: Verify public architecture map
+        shell: pwsh
+        run: ./graphify/verify-public-map.ps1
+
+      # The step above gates docs/architecture-map/. This one gates the rest, which the upload
+      # below publishes just as completely. The rules existed as an xUnit test that this workflow
+      # never runs, so any file placed elsewhere under docs/ went live unlisted (R13-G01). A guard
+      # that is not on the path it guards is a guard in name.
+      - name: Verify published docs manifest
+        shell: pwsh
+        run: ./graphify/verify-published-docs.ps1
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v5
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
         with:
           path: './docs'
 
@@ -43,4 +79,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v5
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5

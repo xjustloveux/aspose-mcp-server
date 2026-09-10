@@ -33,6 +33,8 @@ public class AddEmailAttachmentHandler : OperationHandlerBase<object>
 
         SecurityHelper.ValidateFilePath(path, "path", true);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+        outputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(outputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], "outputPath");
         SecurityHelper.ValidateFilePath(attachmentPath, "attachmentPath", true);
 
         // Allowlist + symlink resolution for read sinks (bug 20260416-handler-allowlist-bypass).

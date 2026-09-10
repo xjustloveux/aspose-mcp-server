@@ -34,7 +34,11 @@ public class ConvertPdfComplianceHandler : OperationHandlerBase<Document>
         var pdfFormat = ValidatePdfComplianceHandler.ResolvePdfFormat(format);
 
         if (logPath != null)
+        {
             SecurityHelper.ValidateFilePath(logPath, "logPath", true);
+            logPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(logPath,
+                context.ServerConfig?.AllowedBasePaths ?? [], "logPath");
+        }
 
         var tempLog = logPath ?? Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         var success = document.Convert(tempLog, pdfFormat, ConvertErrorAction.Delete);

@@ -28,6 +28,11 @@ public class PptShapeTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Session manager for document session handling.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -37,11 +42,14 @@ public class PptShapeTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory editing.</param>
     /// <param name="identityAccessor">Optional identity accessor for session isolation.</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public PptShapeTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry =
             HandlerRegistry<Presentation>.CreateFromNamespace("AsposeMcpServer.Handlers.PowerPoint.Shape");
     }
@@ -69,6 +77,10 @@ public class PptShapeTool
     /// <param name="fillColor">Fill color hex, e.g. #FF0000 (for set_format).</param>
     /// <param name="lineColor">Line color hex (for set_format).</param>
     /// <param name="lineWidth">Line width in points (for set_format).</param>
+    /// <param name="transparency">
+    ///     Fill transparency from 0 (opaque) to 1 (invisible),
+    ///     optional for set_format.
+    /// </param>
     /// <param name="clearFill">Clear fill (for clear_format).</param>
     /// <param name="clearLine">Clear line (for clear_format).</param>
     /// <param name="fromSlide">Source slide index (for copy).</param>
@@ -145,6 +157,8 @@ Usage examples:
         string? lineColor = null,
         [Description("Line width in points (for set_format)")]
         float? lineWidth = null,
+        [Description("Fill transparency from 0 (opaque) to 1 (invisible), optional for set_format")]
+        float? transparency = null,
         [Description("Clear fill (for clear_format)")]
         bool clearFill = false,
         [Description("Clear line (for clear_format)")]
@@ -164,12 +178,15 @@ Usage examples:
         [Description("Flip vertically (for flip/edit)")]
         bool? flipVertical = null)
     {
-        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        SecurityHelper.ValidateArraySize(shapeIndices, nameof(shapeIndices));
+
+        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor,
+            serverConfig: _serverConfig);
 
         var handlerOperation = operation;
         var parameters = BuildParameters(operation, slideIndex, shapeIndex, shapeIndices, x, y, width, height,
-            rotation, text, fillColor, lineColor, lineWidth, clearFill, clearLine, fromSlide, toSlide, toIndex,
-            align, alignToSlide, flipHorizontal, flipVertical);
+            rotation, text, fillColor, lineColor, lineWidth, transparency, clearFill, clearLine, fromSlide, toSlide,
+            toIndex, align, alignToSlide, flipHorizontal, flipVertical);
 
         var handler = _handlerRegistry.GetHandler(handlerOperation);
 
@@ -180,7 +197,8 @@ Usage examples:
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);
@@ -214,6 +232,7 @@ Usage examples:
         string? fillColor,
         string? lineColor,
         float? lineWidth,
+        float? transparency,
         bool clearFill,
         bool clearLine,
         int? fromSlide,
@@ -231,8 +250,9 @@ Usage examples:
             "get_shapes" or "get_shape_details" or "delete" or "ungroup"
                 => BuildSlideShapeParameters(parameters, slideIndex, shapeIndex),
             "edit" => BuildEditParameters(parameters, slideIndex, shapeIndex, x, y, width, height, rotation, text),
-            "set_format" => BuildSetFormatParameters(parameters, slideIndex, shapeIndex, fillColor, lineColor,
-                lineWidth),
+            "set_format" => BuildSetFormatParameters(parameters, slideIndex, shapeIndex,
+                fillColor, lineColor, lineWidth,
+                transparency),
             "clear_format" => BuildClearFormatParameters(parameters, slideIndex, shapeIndex, clearFill, clearLine),
             "group" or "align" => BuildGroupAlignParameters(parameters, slideIndex, shapeIndices, align, alignToSlide),
             "copy" => BuildCopyParameters(parameters, fromSlide, toSlide, shapeIndex),
@@ -293,15 +313,17 @@ Usage examples:
     /// <param name="fillColor">The fill color in hex format (e.g., '#FF0000').</param>
     /// <param name="lineColor">The line color in hex format.</param>
     /// <param name="lineWidth">The line width in points.</param>
+    /// <param name="transparency">The fill transparency, from 0 (opaque) to 1 (invisible).</param>
     /// <returns>OperationParameters configured for the set format operation.</returns>
     private static OperationParameters BuildSetFormatParameters(OperationParameters parameters, int? slideIndex,
-        int? shapeIndex, string? fillColor, string? lineColor, float? lineWidth)
+        int? shapeIndex, string? fillColor, string? lineColor, float? lineWidth, float? transparency)
     {
         if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
         if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
         if (fillColor != null) parameters.Set("fillColor", fillColor);
         if (lineColor != null) parameters.Set("lineColor", lineColor);
         if (lineWidth.HasValue) parameters.Set("lineWidth", lineWidth.Value);
+        if (transparency.HasValue) parameters.Set("transparency", transparency.Value);
         return parameters;
     }
 

@@ -7,6 +7,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Hyperlink;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class AddPptHyperlinkHandlerTests : PptHandlerTestBase
 {
     private readonly AddPptHyperlinkHandler _handler = new();

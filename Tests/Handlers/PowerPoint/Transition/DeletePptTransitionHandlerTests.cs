@@ -8,6 +8,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Transition;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class DeletePptTransitionHandlerTests : PptHandlerTestBase
 {
     private readonly DeletePptTransitionHandler _handler = new();

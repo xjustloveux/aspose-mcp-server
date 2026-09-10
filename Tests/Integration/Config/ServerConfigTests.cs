@@ -3,9 +3,11 @@ using AsposeMcpServer.Core;
 namespace AsposeMcpServer.Tests.Integration.Config;
 
 /// <summary>
-///     Integration tests for server configuration validation.
+///     Integration tests for server configuration validation. The class joins the
+///     environment-configuration collection because it mutates process-wide environment variables.
 /// </summary>
 [Trait("Category", "Integration")]
+[Collection("EnvironmentConfiguration")]
 public class ServerConfigTests
 {
     #region Invalid Configuration Tests

@@ -28,13 +28,20 @@ public class GetWordStatisticsHandler : OperationHandlerBase<Document>
         var p = ExtractGetStatisticsParameters(parameters);
 
         var document = context.Document;
-        document.UpdateWordCount();
 
-        var stats = document.BuiltInDocumentProperties;
-
+        // Counted before the layout is built: building it can add nodes of its own (an unlicensed
+        // build inserts an evaluation watermark shape), which would be reported as content the
+        // caller's document does not contain.
         var tables = document.GetChildNodes(NodeType.Table, true);
         var shapes = document.GetChildNodes(NodeType.Shape, true).Cast<WordShape>().ToList();
         var images = shapes.Count(s => s.HasImage);
+
+        // The parameterless overload does not recompute Lines or Pages, yet both were reported and
+        // the result claimed the statistics had been updated. Passing true rebuilds the page layout
+        // so Pages and Lines describe the document as it stands.
+        document.UpdateWordCount(true);
+
+        var stats = document.BuiltInDocumentProperties;
 
         return new GetWordStatisticsResult
         {

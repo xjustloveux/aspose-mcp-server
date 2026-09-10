@@ -28,6 +28,11 @@ public class WordImageTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Session manager for document session operations
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -37,11 +42,14 @@ public class WordImageTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document operations</param>
     /// <param name="identityAccessor">Optional identity accessor for session isolation</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public WordImageTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry = HandlerRegistry<Document>.CreateFromNamespace("AsposeMcpServer.Handlers.Word.Image");
     }
 
@@ -85,6 +93,8 @@ public class WordImageTool
         ReadOnly = false,
         UseStructuredContent = true)]
     [Description(@"Manage Word document images. Supports 6 operations: add, edit, delete, get, replace, extract.
+
+The 'extract' operation writes its files as one request: a refusal or a handled failure publishes none of them, so no output file is replaced unless all of them are. An output directory the request had to create may remain, and power loss or a killed process is not covered.
 
 Usage examples:
 - Add image: word_image(operation='add', path='doc.docx', imagePath='image.png', width=200)
@@ -158,7 +168,8 @@ Usage examples:
             "Specific image index to extract (0-based, optional, for extract operation). If not provided, extracts all images.")]
         int? extractImageIndex = null)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor,
+            serverConfig: _serverConfig);
 
         var parameters = BuildParameters(operation, imagePath, imageIndex, sectionIndex, width, height,
             alignment, textWrapping, caption, captionPosition, aspectRatioLocked, horizontalAlignment,
@@ -174,7 +185,8 @@ Usage examples:
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);

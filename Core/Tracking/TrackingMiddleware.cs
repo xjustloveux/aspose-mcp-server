@@ -67,10 +67,10 @@ public class TrackingMiddleware
     ///     Processes an HTTP request to track tool invocations
     /// </summary>
     /// <param name="context">HTTP context for the current request</param>
+    /// <returns>A task that completes when the work is done.</returns>
     public async Task InvokeAsync(HttpContext context)
     {
-        if (_config.MetricsEnabled &&
-            context.Request.Path.Equals(_config.MetricsPath, StringComparison.OrdinalIgnoreCase))
+        if (MetricsRequest.Matches(context.Request.Path, _config))
         {
             await HandleMetricsRequest(context);
             return;
@@ -234,6 +234,7 @@ public class TrackingMiddleware
     ///     Sends an event to the configured webhook endpoint
     /// </summary>
     /// <param name="trackingEvent">Event to send</param>
+    /// <returns>A task that completes when the work is done.</returns>
     private async Task SendWebhookAsync(TrackingEvent trackingEvent)
     {
         try
@@ -267,6 +268,7 @@ public class TrackingMiddleware
     ///     Handles Prometheus metrics endpoint requests
     /// </summary>
     /// <param name="context">HTTP context</param>
+    /// <returns>A task that completes when the work is done.</returns>
     private async Task HandleMetricsRequest(HttpContext context)
     {
         context.Response.ContentType = "text/plain; version=0.0.4; charset=utf-8";

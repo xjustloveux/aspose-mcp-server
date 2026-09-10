@@ -9,12 +9,15 @@ on:
       - 'Handlers/**'
       - 'Helpers/**'
       - 'Results/**'
+      - 'Errors/**'
       - 'Tests/**'
       - 'Program.cs'
       - '*.csproj'
       - '*.sln'
       - '.editorconfig'
       - 'test.ps1'
+      - 'graphify/**'
+      - '.github/scripts/**'
       - '.github/workflows/test.yml'
   pull_request:
     branches: [ main, master ]
@@ -24,12 +27,15 @@ on:
       - 'Handlers/**'
       - 'Helpers/**'
       - 'Results/**'
+      - 'Errors/**'
       - 'Tests/**'
       - 'Program.cs'
       - '*.csproj'
       - '*.sln'
       - '.editorconfig'
       - 'test.ps1'
+      - 'graphify/**'
+      - '.github/scripts/**'
       - '.github/workflows/test.yml'
   workflow_dispatch:
     inputs:
@@ -40,6 +46,25 @@ on:
         type: boolean
 
 jobs:
+  # The publishing guards exist to refuse things, and a guard whose refusal is never
+  # exercised is indistinguishable from one that refuses nothing. These fixtures are the
+  # only place that drives them, so they run on every change (R3-G06).
+  graphify:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+    - name: Set up Python
+      uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+      with:
+        python-version: '3.12'
+
+    - name: Run graphify self-test
+      shell: pwsh
+      run: python graphify/self-test.py
+
   test:
     runs-on: windows-latest
 
@@ -49,23 +74,23 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v6
+      uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       with:
         fetch-depth: 0
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@v5
+      uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
       with:
         dotnet-version: '8.0.x'
 
     - name: Set up JDK 17
-      uses: actions/setup-java@v5
+      uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
       with:
         java-version: 17
         distribution: 'zulu'
 
     - name: Cache SonarCloud packages
-      uses: actions/cache@v5
+      uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
       with:
         path: ~\sonar\cache
         key: ${{ runner.os }}-sonar
@@ -73,7 +98,7 @@ jobs:
 
     - name: Cache SonarCloud scanner
       id: cache-sonar-scanner
-      uses: actions/cache@v5
+      uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
       with:
         path: .\.sonar\scanner
         key: ${{ runner.os }}-sonar-scanner
@@ -102,10 +127,15 @@ jobs:
           exit 0
         }
         [System.IO.File]::WriteAllText($licensePath, $licenseContent)
+        if (-not (Test-Path $licensePath) -or (Get-Item $licensePath).Length -eq 0) {
+          throw "License file was not written; refusing to fall back to evaluation mode silently."
+        }
         Write-Host "License file created at: $licensePath (content secured)"
         echo "ASPOSE_LICENSE_PATH=$licensePath" >> $env:GITHUB_ENV
       shell: pwsh
-      continue-on-error: true
+      # No continue-on-error: an empty secret (a fork PR) already exits 0 above, so any
+      # failure that reaches here is a real write failure. Swallowing it made the suite run
+      # in evaluation mode while still reporting green.
 
     - name: Begin SonarCloud Analysis
       if: env.SONAR_TOKEN != ''
@@ -186,7 +216,7 @@ jobs:
       continue-on-error: true
     
     - name: Upload test results
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
       if: always()
       with:
         name: test-results
@@ -228,7 +258,7 @@ jobs:
     
     - name: Upload Coverage Report to Codecov
       if: steps.coverage.outputs.has_coverage == 'true'
-      uses: codecov/codecov-action@v6
+      uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v6
       with:
         files: ${{ steps.coverage.outputs.coverage_file }}
         flags: unittests
@@ -240,7 +270,7 @@ jobs:
     
     - name: Upload Coverage Report Artifact
       if: always() && steps.coverage.outputs.has_coverage == 'true'
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
       with:
         name: coverage-report
         path: ${{ runner.temp }}/CoverageReport
@@ -263,6 +293,38 @@ jobs:
         Write-Host "Tests failed — failing the job (see test-results artifact)." -ForegroundColor Red
         exit 1
 
+  # CI-05: the suite as a whole needs Windows (Aspose rendering, NTFS junctions, reserved
+  # device names), but the security and configuration layers are exactly the ones whose
+  # behaviour is platform-dependent by design: path comparison is case-sensitive on Linux,
+  # the path length ceiling differs, and separator handling differs. Running those classes
+  # on Linux is what keeps that platform-specific code honest.
+  test-linux:
+    name: Platform-independent tests (Linux)
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore AsposeMcpServer.sln
+
+    - name: Build
+      run: dotnet build AsposeMcpServer.sln --configuration Release --no-restore
+
+    - name: Run security, path and configuration tests
+      run: |
+        dotnet test Tests/AsposeMcpServer.Tests.csproj \
+          --configuration Release \
+          --no-build \
+          --logger "console;verbosity=minimal" \
+          --filter "FullyQualifiedName~SecurityHelper|FullyQualifiedName~PathRuleCrossPlatform|FullyQualifiedName~PathValidationCoverage|FullyQualifiedName~MidChainSymlink|FullyQualifiedName~TrustedProxyEvaluator|FullyQualifiedName~ChildProcessArguments|FullyQualifiedName~CsvFormulaSanitizer|FullyQualifiedName~ExternalResourceGuard|FullyQualifiedName~AuthConfig|FullyQualifiedName~TrackingConfig|FullyQualifiedName~ServerConfig|FullyQualifiedName~ToolFilterService"
+
   # Evaluation mode test - manual trigger only
   test-evaluation-mode:
     runs-on: windows-latest
@@ -270,10 +332,10 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v6
+      uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
     
     - name: Setup .NET
-      uses: actions/setup-dotnet@v5
+      uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
       with:
         dotnet-version: '8.0.x'
 
@@ -288,7 +350,7 @@ jobs:
         .\test.ps1 -SkipLicense -NoBuild
     
     - name: Upload evaluation mode test results
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
       if: always()
       with:
         name: test-results-eval

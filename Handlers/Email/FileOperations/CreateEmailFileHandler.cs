@@ -29,6 +29,9 @@ public class CreateEmailFileHandler : OperationHandlerBase<object>
     {
         var p = ExtractParameters(parameters);
         SecurityHelper.ValidateFilePath(p.OutputPath, "outputPath", true);
+        EmailAddressListHelper.EnsureNoHeaderInjection(p.Subject, "subject");
+        EmailAddressListHelper.EnsureNoHeaderInjection(p.From, "from");
+        EmailAddressListHelper.EnsureNoHeaderInjection(p.To, "to");
 
         using var message = new MailMessage();
         message.From = p.From ?? "noreply@example.com";
@@ -39,8 +42,8 @@ public class CreateEmailFileHandler : OperationHandlerBase<object>
         else
             message.Body = p.Body ?? "";
 
-        if (!string.IsNullOrEmpty(p.To))
-            message.To.Add(p.To);
+        foreach (var address in EmailAddressListHelper.Split(p.To))
+            message.To.Add(address);
 
         var saveOptions = DetectSaveOptions(p.OutputPath);
         // H35: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).

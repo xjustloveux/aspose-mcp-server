@@ -34,6 +34,8 @@ public class RecognizeReceiptHandler : OperationHandlerBase<AsposeOcr>
         var language = parameters.GetOptional("language", "Eng");
 
         SecurityHelper.ValidateFilePath(path, "path", true);
+        path = SecurityHelper.ResolveAndEnsureWithinAllowlist(path,
+            context.ServerConfig?.AllowedBasePaths ?? [], "path");
 
         if (!File.Exists(path))
             throw new FileNotFoundException("The specified file was not found.");

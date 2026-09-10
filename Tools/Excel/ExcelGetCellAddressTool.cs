@@ -20,10 +20,17 @@ public class ExcelGetCellAddressTool
     private readonly HandlerRegistry<Workbook> _handlerRegistry;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Initializes a new instance of the <see cref="ExcelGetCellAddressTool" /> class.
     /// </summary>
-    public ExcelGetCellAddressTool()
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
+    public ExcelGetCellAddressTool(ServerConfig? serverConfig = null)
     {
+        _serverConfig = serverConfig;
         _handlerRegistry =
             HandlerRegistry<Workbook>.CreateFromNamespace("AsposeMcpServer.Handlers.Excel.GetCellAddress");
     }
@@ -65,7 +72,8 @@ Usage examples:
 
         var operationContext = new OperationContext<Workbook>
         {
-            Document = new Workbook()
+            Document = new Workbook(),
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);

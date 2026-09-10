@@ -26,6 +26,11 @@ public class ExcelSparklineTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -35,11 +40,14 @@ public class ExcelSparklineTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
     /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public ExcelSparklineTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry =
             HandlerRegistry<Workbook>.CreateFromNamespace("AsposeMcpServer.Handlers.Excel.Sparkline");
     }
@@ -123,7 +131,8 @@ Usage examples:
             "Whether data is arranged vertically/by column (for add, auto-detected from data range if not specified)")]
         bool? isVertical = null)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor,
+            serverConfig: _serverConfig);
 
         var parameters = BuildParameters(operation, sheetIndex, dataRange, locationRange, type, groupIndex,
             presetStyle, showHighPoint, showLowPoint, showFirstPoint, showLastPoint, showNegativePoints, showMarkers,
@@ -138,7 +147,8 @@ Usage examples:
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);
@@ -180,6 +190,7 @@ Usage examples:
     /// <summary>
     ///     Builds parameters for the add operation.
     /// </summary>
+    /// <returns>The parameters, configured for this operation.</returns>
     private static OperationParameters BuildAddParameters(OperationParameters parameters, string? dataRange,
         string? locationRange, string type, bool? isVertical)
     {
@@ -193,6 +204,7 @@ Usage examples:
     /// <summary>
     ///     Builds parameters for the delete operation.
     /// </summary>
+    /// <returns>The parameters, configured for this operation.</returns>
     private static OperationParameters BuildDeleteParameters(OperationParameters parameters, int? groupIndex)
     {
         if (groupIndex.HasValue) parameters.Set("groupIndex", groupIndex.Value);
@@ -202,6 +214,7 @@ Usage examples:
     /// <summary>
     ///     Builds parameters for the set_style operation.
     /// </summary>
+    /// <returns>The parameters, configured for this operation.</returns>
     private static OperationParameters BuildSetStyleParameters(OperationParameters parameters, int? groupIndex,
         string? presetStyle, bool? showHighPoint, bool? showLowPoint, bool? showFirstPoint, bool? showLastPoint,
         bool? showNegativePoints, bool? showMarkers)

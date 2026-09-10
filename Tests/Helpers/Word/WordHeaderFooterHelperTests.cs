@@ -191,17 +191,43 @@ public class WordHeaderFooterHelperTests : WordTestBase
         Assert.True(fields.Count > 0);
     }
 
+    /// <summary>
+    ///     A field code outside the documented set is refused rather than inserted.
+    ///     <para>
+    ///         This case previously asserted that an arbitrary code became a live field, which
+    ///         read as an intended feature. It was the mechanism behind an arbitrary local file
+    ///         read: <c>{INCLUDETEXT "..."}</c> in header text became a real field, and
+    ///         <c>Document.UpdateFields()</c> — called by several handlers, including the one that
+    ///         reads headers back — resolved it, with the path never passing the allowlist.
+    ///     </para>
+    /// </summary>
     [Fact]
-    public void InsertTextOrField_WithCustomFieldCode_InsertsCustomField()
+    public void InsertTextOrField_WithAnUndocumentedFieldCode_ShouldBeRefused()
     {
         var doc = new Document();
         var builder = new DocumentBuilder(doc);
         var fontSettings = new FontSettings(null, null, null, null);
 
-        WordHeaderFooterHelper.InsertTextOrField(builder, "{CUSTOMFIELD}", fontSettings);
+        var exception = Assert.Throws<ArgumentException>(() =>
+            WordHeaderFooterHelper.InsertTextOrField(builder, "{CUSTOMFIELD}", fontSettings));
 
-        var fields = doc.Range.Fields;
-        Assert.True(fields.Count > 0);
+        Assert.Contains("Unsupported field code", exception.Message);
+        Assert.Empty(doc.Range.Fields);
+    }
+
+    [Theory]
+    [InlineData("{INCLUDETEXT \"C:/Windows/win.ini\"}")]
+    [InlineData("{INCLUDEPICTURE \"http://evil.example/x.png\"}")]
+    [InlineData("{DDEAUTO c:/windows/system32/cmd.exe}")]
+    public void InsertTextOrField_WithAnActiveFieldCode_ShouldBeRefused(string text)
+    {
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        var fontSettings = new FontSettings(null, null, null, null);
+
+        Assert.Throws<ArgumentException>(() =>
+            WordHeaderFooterHelper.InsertTextOrField(builder, text, fontSettings));
+        Assert.Empty(doc.Range.Fields);
     }
 
     [Fact]

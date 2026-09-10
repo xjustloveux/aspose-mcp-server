@@ -23,6 +23,19 @@ internal record CellValueStats(List<double> NumericValues, int NonNumericCount, 
 [ResultType(typeof(GetStatisticsResult))]
 public class GetStatisticsHandler : OperationHandlerBase<Workbook>
 {
+    /// <summary>
+    ///     Largest number of coordinates a single statistics request may visit.
+    ///     <para>
+    ///         The scan is a nested row/column loop, and a whole worksheet is 1,048,576 ×
+    ///         16,384 — about 17 billion positions. <c>CheckCell</c> keeps those positions from
+    ///         becoming objects, but the iteration itself still costs a core for as long as it
+    ///         runs, which turns a read-only-looking request into an availability problem. Ten
+    ///         million is far above any range a person reads statistics for and far below the
+    ///         point where the loop stops returning promptly.
+    ///     </para>
+    /// </summary>
+    private const long MaxScannedCells = 10_000_000;
+
     /// <inheritdoc />
     public override string Operation => "statistics";
 
@@ -134,6 +147,19 @@ public class GetStatisticsHandler : OperationHandlerBase<Workbook>
             var rangeStats = CalculateRangeStatistics(worksheet, range);
             return baseStats with { RangeStatistics = rangeStats };
         }
+        catch (RangeNotUsableException ex)
+        {
+            // Written in this repository, and identified by type rather than by how its text
+            // happens to read, so it is safe to show and tells the caller what to change.
+            return baseStats with { RangeStatisticsError = ex.Message };
+        }
+        catch (ArgumentException)
+        {
+            // Any other ArgumentException came from somewhere this repository does not control.
+            // Its text can name a path, so the message is composed here instead of forwarded
+            // (R3-C09); the caller's own range is the only variable part.
+            return baseStats with { RangeStatisticsError = ErrorMessageBuilder.InvalidRange(range) };
+        }
         catch (Exception)
         {
             return baseStats with { RangeStatisticsError = ErrorMessageBuilder.ProcessingFailed() };
@@ -149,6 +175,7 @@ public class GetStatisticsHandler : OperationHandlerBase<Workbook>
     private static RangeStatistics CalculateRangeStatistics(Worksheet worksheet, string range)
     {
         var cellRange = ExcelHelper.CreateRange(worksheet.Cells, range);
+        EnsureRangeWithinScanBudget(cellRange, range);
         var cellStats = CollectCellValues(worksheet, cellRange);
 
         var rangeStats = new RangeStatistics
@@ -167,6 +194,23 @@ public class GetStatisticsHandler : OperationHandlerBase<Workbook>
     }
 
     /// <summary>
+    ///     Refuses a range whose size exceeds the scan budget, before any iteration begins.
+    /// </summary>
+    /// <param name="cellRange">The range about to be scanned.</param>
+    /// <param name="range">The range as the caller wrote it, for the message.</param>
+    /// <exception cref="RangeNotUsableException">Thrown when the range is larger than the budget.</exception>
+    private static void EnsureRangeWithinScanBudget(Aspose.Cells.Range cellRange, string range)
+    {
+        var cells = (long)cellRange.RowCount * cellRange.ColumnCount;
+        if (cells <= MaxScannedCells) return;
+
+        throw new RangeNotUsableException(
+            $"The range '{range}' covers {cells:N0} cells, which is too large to scan "
+            + $"(the limit is {MaxScannedCells:N0}). Ask for statistics on the range that holds "
+            + "your data rather than the whole sheet.");
+    }
+
+    /// <summary>
     ///     Collects and classifies cell values from a range.
     /// </summary>
     /// <param name="worksheet">The worksheet containing the range.</param>
@@ -181,7 +225,7 @@ public class GetStatisticsHandler : OperationHandlerBase<Workbook>
         for (var row = cellRange.FirstRow; row < cellRange.FirstRow + cellRange.RowCount; row++)
         for (var col = cellRange.FirstColumn; col < cellRange.FirstColumn + cellRange.ColumnCount; col++)
         {
-            var value = worksheet.Cells[row, col].Value;
+            var value = worksheet.Cells.CheckCell(row, col)?.Value;
             ClassifyCellValue(value, numericValues, ref nonNumericCount, ref emptyCount);
         }
 

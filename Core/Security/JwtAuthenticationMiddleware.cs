@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using AsposeMcpServer.Core.Tracking;
 using AsposeMcpServer.Helpers;
 using Microsoft.IdentityModel.Tokens;
 
@@ -46,6 +47,11 @@ public sealed class JwtAuthenticationMiddleware : IMiddleware, IDisposable
     private readonly bool _ownsHttpClient;
 
     /// <summary>
+    ///     Tracking configuration used to decide whether the metrics endpoint requires authentication.
+    /// </summary>
+    private readonly TrackingConfig? _trackingConfig;
+
+    /// <summary>
     ///     Token validation parameters for local mode
     /// </summary>
     private readonly TokenValidationParameters? _validationParameters;
@@ -61,13 +67,16 @@ public sealed class JwtAuthenticationMiddleware : IMiddleware, IDisposable
     /// <param name="config">JWT configuration</param>
     /// <param name="logger">Logger instance</param>
     /// <param name="httpClientFactory">Optional HTTP client factory</param>
+    /// <param name="trackingConfig">Optional tracking config deciding whether metrics require auth</param>
     public JwtAuthenticationMiddleware(
         JwtConfig config,
         ILogger<JwtAuthenticationMiddleware> logger,
-        IHttpClientFactory? httpClientFactory = null)
+        IHttpClientFactory? httpClientFactory = null,
+        TrackingConfig? trackingConfig = null)
     {
         _config = config;
         _logger = logger;
+        _trackingConfig = trackingConfig;
         if (httpClientFactory != null)
         {
             _httpClient = httpClientFactory.CreateClient("JwtAuth");
@@ -117,6 +126,7 @@ public sealed class JwtAuthenticationMiddleware : IMiddleware, IDisposable
     /// </summary>
     /// <param name="context">HTTP context for the current request</param>
     /// <param name="next">Next middleware delegate</param>
+    /// <returns>A task that completes when the work is done.</returns>
     public async Task InvokeAsync(HttpContext context, RequestDelegate next)
     {
         if (ShouldSkipAuthentication(context.Request.Path))
@@ -144,6 +154,29 @@ public sealed class JwtAuthenticationMiddleware : IMiddleware, IDisposable
             context.Items["GroupId"] = result.GroupId;
         if (!string.IsNullOrEmpty(result.UserId))
             context.Items["UserId"] = result.UserId;
+
+        // A token that validates but names nobody used to reach the session layer looking exactly
+        // like an unauthenticated request, so two unrelated tokens shared the anonymous bucket
+        // (R4-S04). Fingerprinting the token instead gave the same principal a new bucket on every
+        // reissue, which orphaned their sessions and reset their quota (R5-S02). Neither is an
+        // isolation this server can honour, so a token nothing names the holder in is refused.
+        if (string.IsNullOrEmpty(result.GroupId) && string.IsNullOrEmpty(result.UserId))
+        {
+            _logger.LogWarning(
+                "JWT authentication failed: the token carries no claim naming its principal, so " +
+                "this caller's sessions cannot be kept apart from anyone else's");
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(JsonSerializer.Serialize(new
+            {
+                error = "Unauthorized",
+                message = "The token carries no claim identifying who it was issued to (looked for "
+                          + $"{_config.GroupIdentifierClaim}, {_config.UserIdClaim}, "
+                          + $"{string.Join(", ", CredentialOwnership.StablePrincipalClaims)}), so "
+                          + "sessions could not be isolated per caller."
+            }), context.RequestAborted);
+            return;
+        }
 
         await next(context);
     }
@@ -200,15 +233,22 @@ public sealed class JwtAuthenticationMiddleware : IMiddleware, IDisposable
     }
 
     /// <summary>
-    ///     Determines if authentication should be skipped for health/metrics endpoints
+    ///     Determines if authentication should be skipped for the liveness endpoints.
+    ///     Only <c>/health</c> and <c>/ready</c> are unconditionally anonymous, because an
+    ///     orchestrator probes them before any credential is available. The metrics endpoint
+    ///     carries operational data and is skipped only when an operator opted out explicitly
+    ///     (<c>--metrics-allow-anonymous</c> / <c>ASPOSE_METRICS_REQUIRE_AUTH=false</c>).
     /// </summary>
     /// <param name="path">Request path to check</param>
     /// <returns>True if authentication should be skipped</returns>
-    private static bool ShouldSkipAuthentication(PathString path)
+    private bool ShouldSkipAuthentication(PathString path)
     {
-        return path.StartsWithSegments("/health") ||
-               path.StartsWithSegments("/metrics") ||
-               path.StartsWithSegments("/ready");
+        if (path.StartsWithSegments("/health") || path.StartsWithSegments("/ready"))
+            return true;
+
+        // One predicate shared with the middleware that actually serves metrics, so the
+        // request that skips authentication is exactly the request that gets metrics.
+        return MetricsRequest.AllowsAnonymousAccess(path, _trackingConfig);
     }
 
     /// <summary>
@@ -283,6 +323,12 @@ public sealed class JwtAuthenticationMiddleware : IMiddleware, IDisposable
             var groupId = principal.FindFirst(_config.GroupIdentifierClaim)?.Value;
             var userId = principal.FindFirst(_config.UserIdClaim)?.Value;
 
+            // The configured claim is what a deployment says names its users; when a token does not
+            // carry it, another claim naming the same principal will do. What will not do is the
+            // token's own bytes, which change every time it is reissued (R5-S02).
+            if (string.IsNullOrWhiteSpace(groupId) && string.IsNullOrWhiteSpace(userId))
+                userId = CredentialOwnership.StablePrincipal(principal);
+
             _logger.LogDebug("JWT validated for group: {GroupId}, user: {UserId}", groupId, userId);
 
             return new JwtAuthResult
@@ -321,18 +367,49 @@ public sealed class JwtAuthenticationMiddleware : IMiddleware, IDisposable
     }
 
     /// <summary>
-    ///     Gateway mode: Trust that the API Gateway has validated the token
+    ///     Gateway mode: Trust that the API Gateway has validated the token.
+    ///     Identity headers are honoured only when the request arrives from a configured trusted
+    ///     proxy. An empty trusted-proxy list trusts nothing, and starting in gateway mode without
+    ///     one is refused outright rather than warned about; <c>any</c> is the explicit opt-out.
+    ///     (The comment previously described the earlier warn-and-accept behaviour, R2-C07.)
     ///     Extract group/user ID from configured headers
     /// </summary>
     /// <param name="context">HTTP context containing the request</param>
     /// <returns>Authentication result</returns>
     private JwtAuthResult ValidateGateway(HttpContext context)
     {
+        if (!TrustedProxyEvaluator.IsTrusted(context.Connection.RemoteIpAddress, _config.TrustedProxies))
+        {
+            _logger.LogWarning("Gateway mode: rejected identity headers from an untrusted peer");
+            return new JwtAuthResult
+            {
+                IsValid = false,
+                ErrorMessage = "Authentication failed"
+            };
+        }
+
         var groupId = context.Request.Headers[_config.GroupIdentifierHeader].FirstOrDefault();
         var userId = context.Request.Headers[_config.UserIdHeader].FirstOrDefault();
 
+        // A gateway request that names neither a group nor a user has authenticated but says
+        // nothing about who it is. Letting it through produced an identity that is indistinguishable
+        // from every other such request, so two unrelated principals shared the anonymous session
+        // bucket and could reach each other's documents (R3-S02). Failing is the only answer that
+        // does not invent an owner.
+        if (string.IsNullOrEmpty(groupId) && string.IsNullOrEmpty(userId))
+        {
+            _logger.LogWarning(
+                "Gateway mode: trusted peer supplied neither {GroupHeader} nor {UserHeader}",
+                _config.GroupIdentifierHeader, _config.UserIdHeader);
+            return new JwtAuthResult
+            {
+                IsValid = false,
+                ErrorMessage = "Authentication failed"
+            };
+        }
+
         _logger.LogDebug("Gateway mode: Trusted request for group {GroupId}, user {UserId}",
-            groupId ?? "(anonymous)", userId ?? "(anonymous)");
+            groupId ?? "(none)", userId ?? "(none)");
 
         return new JwtAuthResult
         {

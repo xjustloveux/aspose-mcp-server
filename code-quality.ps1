@@ -5,7 +5,7 @@ param(
     [switch]$CleanupCode,
     [switch]$InspectCode,
     [string]$Profile = "Built-in: Full Cleanup",
-    [string[]]$Exclude = @("*.txt")
+    [string[]]$Exclude = @("*.txt", "report.xml", "Tests/TestResults/**")
 )
 
 # Set console encoding to UTF-8
@@ -47,7 +47,7 @@ if ($InspectCode) {
     Write-Host "Output: report.xml" -ForegroundColor Gray
     Write-Host ""
     
-    jb inspectcode AsposeMcpServer.sln -o="report.xml"
+    jb inspectcode AsposeMcpServer.sln -o="report.xml" --exclude="$excludeParam"
     if ($LASTEXITCODE -ne 0) {
         $exitCode = $LASTEXITCODE
     }

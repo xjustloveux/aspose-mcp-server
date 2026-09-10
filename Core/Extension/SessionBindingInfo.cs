@@ -37,7 +37,7 @@ public class SessionBindingInfo
     /// <summary>
     ///     Backing field for ConversionOptions.
     /// </summary>
-    private ConversionOptions _conversionOptions = new();
+    private ConversionOptions _conversionOptions = ConversionOptions.WithoutAHost();
 
     /// <summary>
     ///     Backing field for LastSentAt.

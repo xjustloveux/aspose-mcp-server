@@ -22,6 +22,11 @@ public abstract class PropertiesToolBase<TDocument> where TDocument : class
     protected readonly ISessionIdentityAccessor? IdentityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    protected readonly ServerConfig? ServerConfig;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     protected readonly DocumentSessionManager? SessionManager;
@@ -32,13 +37,16 @@ public abstract class PropertiesToolBase<TDocument> where TDocument : class
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
     /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
     /// <param name="handlerNamespace">The namespace containing the operation handlers.</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     protected PropertiesToolBase(
         DocumentSessionManager? sessionManager,
         ISessionIdentityAccessor? identityAccessor,
-        string handlerNamespace)
+        string handlerNamespace,
+        ServerConfig? serverConfig = null)
     {
         SessionManager = sessionManager;
         IdentityAccessor = identityAccessor;
+        ServerConfig = serverConfig;
         HandlerRegistry = HandlerRegistry<TDocument>.CreateFromNamespace(handlerNamespace);
     }
 
@@ -58,7 +66,8 @@ public abstract class PropertiesToolBase<TDocument> where TDocument : class
         string? outputPath,
         OperationParameters parameters)
     {
-        using var ctx = DocumentContext<TDocument>.Create(SessionManager, sessionId, path, IdentityAccessor);
+        using var ctx = DocumentContext<TDocument>.Create(SessionManager, sessionId, path, IdentityAccessor,
+            serverConfig: ServerConfig);
 
         var handler = HandlerRegistry.GetHandler(operation);
         var effectiveOutputPath = outputPath ?? path;
@@ -70,7 +79,8 @@ public abstract class PropertiesToolBase<TDocument> where TDocument : class
             IdentityAccessor = IdentityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = effectiveOutputPath
+            OutputPath = effectiveOutputPath,
+            ServerConfig = ServerConfig
         };
 
         var result = handler.Execute(operationContext, parameters);

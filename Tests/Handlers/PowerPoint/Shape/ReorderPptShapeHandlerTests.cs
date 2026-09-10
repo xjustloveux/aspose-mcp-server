@@ -7,6 +7,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Shape;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class ReorderPptShapeHandlerTests : PptHandlerTestBase
 {
     private readonly ReorderPptShapeHandler _handler = new();

@@ -47,8 +47,19 @@ public class EditPptImageHandler : OperationHandlerBase<Presentation>
             changes.AddRange(processingDetails);
         }
 
-        pictureFrame.X = p.X;
-        pictureFrame.Y = p.Y;
+        // Position is only touched when the caller supplied it; every other field already works
+        // this way, so compressing or resizing a picture no longer relocates it.
+        if (p.X.HasValue)
+        {
+            pictureFrame.X = p.X.Value;
+            changes.Add($"x={p.X.Value}");
+        }
+
+        if (p.Y.HasValue)
+        {
+            pictureFrame.Y = p.Y.Value;
+            changes.Add($"y={p.Y.Value}");
+        }
 
         if (p.Width.HasValue)
         {
@@ -79,8 +90,8 @@ public class EditPptImageHandler : OperationHandlerBase<Presentation>
             parameters.GetRequired<int>("slideIndex"),
             parameters.GetRequired<int>("imageIndex"),
             parameters.GetOptional<string?>("imagePath"),
-            parameters.GetOptional("x", 100f),
-            parameters.GetOptional("y", 100f),
+            parameters.GetOptional<float?>("x"),
+            parameters.GetOptional<float?>("y"),
             parameters.GetOptional<float?>("width"),
             parameters.GetOptional<float?>("height"),
             parameters.GetOptional<int?>("jpegQuality"),
@@ -106,8 +117,8 @@ public class EditPptImageHandler : OperationHandlerBase<Presentation>
         int SlideIndex,
         int ImageIndex,
         string? ImagePath,
-        float X,
-        float Y,
+        float? X,
+        float? Y,
         float? Width,
         float? Height,
         int? JpegQuality,

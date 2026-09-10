@@ -29,6 +29,11 @@ public class WordPageTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Session manager for document session operations
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -38,11 +43,14 @@ public class WordPageTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document operations</param>
     /// <param name="identityAccessor">Optional identity accessor for session isolation</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public WordPageTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry = HandlerRegistry<Document>.CreateFromNamespace("AsposeMcpServer.Handlers.Word.Page");
     }
 
@@ -146,7 +154,8 @@ Usage examples:
         [Description(WordAddressing.HandleDesc)]
         string? handle = null)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor,
+            serverConfig: _serverConfig);
 
         var parameters = BuildParameters(operation, top, bottom, left, right, orientation, width, height, paperSize,
             pageNumberFormat, startingPageNumber, sectionIndex, sectionIndices, pageIndex, insertAtPageIndex,
@@ -161,7 +170,8 @@ Usage examples:
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);

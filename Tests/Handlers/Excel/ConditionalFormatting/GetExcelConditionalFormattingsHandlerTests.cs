@@ -89,8 +89,8 @@ public class GetExcelConditionalFormattingsHandlerTests : ExcelHandlerTestBase
 
         var result = Assert.IsType<GetConditionalFormattingsResult>(res);
 
-        Assert.True(result.Count >= 0);
-        Assert.True(result.SheetIndex >= 0);
+        Assert.Equal(1, result.Count);
+        Assert.Equal(0, result.SheetIndex);
         Assert.NotNull(result.WorksheetName);
         Assert.NotNull(result.Items);
     }
@@ -138,9 +138,9 @@ public class GetExcelConditionalFormattingsHandlerTests : ExcelHandlerTestBase
         var result = Assert.IsType<GetConditionalFormattingsResult>(res);
 
         var item = result.Items[0];
-        Assert.True(item.Index >= 0);
+        Assert.Equal(0, item.Index);
         Assert.NotNull(item.Areas);
-        Assert.True(item.ConditionsCount >= 0);
+        Assert.Equal(1, item.ConditionsCount);
         Assert.NotNull(item.Conditions);
     }
 

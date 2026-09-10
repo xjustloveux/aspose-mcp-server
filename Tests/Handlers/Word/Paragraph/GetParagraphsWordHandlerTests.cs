@@ -130,7 +130,7 @@ public class GetParagraphsWordHandlerTests : WordHandlerTestBase
 
         var result = Assert.IsType<GetParagraphsWordResult>(res);
 
-        Assert.True(result.Count >= 0);
+        Assert.Equal(2, result.Count);
     }
 
     #endregion
@@ -227,7 +227,7 @@ public class GetParagraphsWordHandlerTests : WordHandlerTestBase
 
         var result = Assert.IsType<GetParagraphsWordResult>(res);
 
-        Assert.True(result.Count >= 0);
+        Assert.Equal(2, result.Count);
         Assert.NotNull(result.Paragraphs);
         AssertNotModified(context);
     }

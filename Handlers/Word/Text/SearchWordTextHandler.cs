@@ -32,7 +32,7 @@ public class SearchWordTextHandler : OperationHandlerBase<Document>
     /// <param name="context">The document context.</param>
     /// <param name="parameters">
     ///     Required: searchText.
-    ///     Optional: useRegex, caseSensitive, maxResults, contextLength.
+    ///     Optional: useRegex, caseSensitive, wholeWord, maxResults, contextLength.
     /// </param>
     /// <returns>Search results with match details.</returns>
     /// <exception cref="ArgumentException">
@@ -82,6 +82,7 @@ public class SearchWordTextHandler : OperationHandlerBase<Document>
             parameters.GetRequired<string>("searchText"),
             parameters.GetOptional("useRegex", false),
             parameters.GetOptional("caseSensitive", false),
+            parameters.GetOptional("wholeWord", false),
             parameters.GetOptional("maxResults", 50),
             parameters.GetOptional("contextLength", 50)
         );
@@ -131,6 +132,8 @@ public class SearchWordTextHandler : OperationHandlerBase<Document>
         foreach (Match match in regex.Matches(paraText))
         {
             if (matches.Count >= p.MaxResults) break;
+            if (p.WholeWord && !IsWholeWord(paraText, match.Index, match.Length)) continue;
+
             var ctx = GetContext(paraText, match.Index, match.Length, p.ContextLength);
             matches.Add((match.Value, pref, ctx));
         }
@@ -149,13 +152,60 @@ public class SearchWordTextHandler : OperationHandlerBase<Document>
         var comparison = p.CaseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
         var index = 0;
 
-        while ((index = paraText.IndexOf(p.SearchText, index, comparison)) != -1)
+        // An empty search text matches at every position, including one past the last character,
+        // so the index is bounded rather than left to `IndexOf` to reject.
+        while (index <= paraText.Length && matches.Count < p.MaxResults)
         {
-            if (matches.Count >= p.MaxResults) break;
-            var ctx = GetContext(paraText, index, p.SearchText.Length, p.ContextLength);
-            matches.Add((p.SearchText, pref, ctx));
-            index += p.SearchText.Length;
+            var found = paraText.IndexOf(p.SearchText, index, comparison);
+            if (found == -1) break;
+
+            if (!p.WholeWord || IsWholeWord(paraText, found, p.SearchText.Length))
+            {
+                var ctx = GetContext(paraText, found, p.SearchText.Length, p.ContextLength);
+                matches.Add((p.SearchText, pref, ctx));
+            }
+
+            // Past this occurrence whether it was kept or not, and at least one character either
+            // way: advancing only on a kept match would find the same rejected position for ever,
+            // and advancing by an empty search text's length would not move at all.
+            index = found + Math.Max(1, p.SearchText.Length);
         }
+    }
+
+    /// <summary>
+    ///     Whether a match occupies a whole word — nothing word-like touching either end.
+    /// </summary>
+    /// <param name="text">The paragraph text the match was found in.</param>
+    /// <param name="index">Where the match starts.</param>
+    /// <param name="length">How long the match is.</param>
+    /// <returns><c>true</c> when neither neighbouring character is part of a word.</returns>
+    /// <remarks>
+    ///     Decided from the match's position rather than by rewriting the pattern. Wrapping a
+    ///     caller's regex in <c>\b(?:…)\b</c> would silently change what its alternation, anchors
+    ///     and lookaround mean; asking where the match landed treats a literal search and a regex
+    ///     search as the same question.
+    ///     <para>
+    ///         "Word-like" is a letter, a digit or an underscore, which is what <c>\b</c> uses. In
+    ///         a script written without spaces — Chinese, Japanese — every character is a letter,
+    ///         so a substring of a longer run is not a whole word there. That follows the same rule
+    ///         as a regex boundary rather than inventing a different one for those scripts.
+    ///     </para>
+    /// </remarks>
+    private static bool IsWholeWord(string text, int index, int length)
+    {
+        // A zero-length match sits between two characters and is a boundary question about both.
+        var before = index > 0 ? text[index - 1] : (char?)null;
+        var after = index + length < text.Length ? text[index + length] : (char?)null;
+
+        return !IsWordCharacter(before) && !IsWordCharacter(after);
+    }
+
+    /// <summary>Whether a character would be part of a word.</summary>
+    /// <param name="character">The character, or null at the edge of the text.</param>
+    /// <returns><c>true</c> when it is a letter, a digit or an underscore.</returns>
+    private static bool IsWordCharacter(char? character)
+    {
+        return character is { } value && (char.IsLetterOrDigit(value) || value == '_');
     }
 
     /// <summary>
@@ -192,6 +242,7 @@ public class SearchWordTextHandler : OperationHandlerBase<Document>
         string SearchText,
         bool UseRegex,
         bool CaseSensitive,
+        bool WholeWord,
         int MaxResults,
         int ContextLength);
 }

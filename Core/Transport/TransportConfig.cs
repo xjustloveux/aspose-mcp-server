@@ -118,7 +118,9 @@ public class TransportConfig
                 Mode = TransportMode.WebSocket;
             }
             else if (arg.Equals("--port", StringComparison.OrdinalIgnoreCase) &&
-                     i + 1 < args.Length && int.TryParse(args[i + 1], out var port1))
+                     i + 1 < args.Length &&
+                     TransportOptionGrammar.IsValueFor(arg, args[i + 1]) &&
+                     int.TryParse(args[i + 1], out var port1))
             {
                 Port = port1;
                 i++;
@@ -133,7 +135,11 @@ public class TransportConfig
             {
                 Port = port3;
             }
-            else if (arg.Equals("--host", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+            // Only a real value is consumed: written as `--host --allowed-path C:\safe` the
+            // option used to take the next option as its host name and swallow it, so the
+            // allowlist flag was never parsed at all (R3-C01).
+            else if (arg.Equals("--host", StringComparison.OrdinalIgnoreCase) &&
+                     i + 1 < args.Length && TransportOptionGrammar.IsValueFor(arg, args[i + 1]))
             {
                 Host = args[i + 1];
                 i++;

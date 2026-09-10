@@ -30,12 +30,20 @@ public class DeletePptHyperlinkHandler : OperationHandlerBase<Presentation>
         var presentation = context.Document;
         var slide = PowerPointHelper.GetSlide(presentation, p.SlideIndex);
         var shape = PowerPointHelper.GetShape(slide, p.ShapeIndex);
+        // Both trigger slots are cleared. The get operation lists click and mouse-over links
+        // alike, so clearing only the click slot left a link that get still reported and delete
+        // claimed to have removed.
         shape.HyperlinkClick = null;
+        shape.HyperlinkMouseOver = null;
 
         if (shape is IAutoShape { TextFrame: not null } autoShape)
-            foreach (var paragraph in autoShape.TextFrame.Paragraphs)
-            foreach (var portion in paragraph.Portions)
-                portion.PortionFormat.HyperlinkClick = null;
+            foreach (var portionFormat in autoShape.TextFrame.Paragraphs
+                         .SelectMany(paragraph => paragraph.Portions)
+                         .Select(portion => portion.PortionFormat))
+            {
+                portionFormat.HyperlinkClick = null;
+                portionFormat.HyperlinkMouseOver = null;
+            }
 
         MarkModified(context);
 

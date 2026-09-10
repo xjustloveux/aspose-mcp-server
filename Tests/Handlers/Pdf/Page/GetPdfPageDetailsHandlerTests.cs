@@ -113,8 +113,8 @@ public class GetPdfPageDetailsHandlerTests : PdfHandlerTestBase
 
         var result = Assert.IsType<GetPdfPageDetailsResult>(res);
 
-        Assert.True(result.Width >= 0);
-        Assert.True(result.Height >= 0);
+        Assert.Equal(595, result.Width);
+        Assert.Equal(842, result.Height);
     }
 
     [Fact]
@@ -149,10 +149,11 @@ public class GetPdfPageDetailsHandlerTests : PdfHandlerTestBase
         var result = Assert.IsType<GetPdfPageDetailsResult>(res);
 
         Assert.NotNull(result.MediaBox);
-        Assert.True(result.MediaBox.Llx >= 0 || result.MediaBox.Llx < 0);
-        Assert.True(result.MediaBox.Lly >= 0 || result.MediaBox.Lly < 0);
-        Assert.True(result.MediaBox.Urx >= 0 || result.MediaBox.Urx < 0);
-        Assert.True(result.MediaBox.Ury >= 0 || result.MediaBox.Ury < 0);
+        // "x >= 0 || x < 0" holds for every number, so it asserted nothing. A page box
+        // describes a rectangle with positive area, and the fixture uses the default
+        // A4-sized page, so the corners must be ordered and the box must be non-empty.
+        Assert.True(result.MediaBox.Urx > result.MediaBox.Llx, "MediaBox has no width");
+        Assert.True(result.MediaBox.Ury > result.MediaBox.Lly, "MediaBox has no height");
     }
 
     [Fact]
@@ -170,10 +171,11 @@ public class GetPdfPageDetailsHandlerTests : PdfHandlerTestBase
         var result = Assert.IsType<GetPdfPageDetailsResult>(res);
 
         Assert.NotNull(result.CropBox);
-        Assert.True(result.CropBox.Llx >= 0 || result.CropBox.Llx < 0);
-        Assert.True(result.CropBox.Lly >= 0 || result.CropBox.Lly < 0);
-        Assert.True(result.CropBox.Urx >= 0 || result.CropBox.Urx < 0);
-        Assert.True(result.CropBox.Ury >= 0 || result.CropBox.Ury < 0);
+        // "x >= 0 || x < 0" holds for every number, so it asserted nothing. A page box
+        // describes a rectangle with positive area, and the fixture uses the default
+        // A4-sized page, so the corners must be ordered and the box must be non-empty.
+        Assert.True(result.CropBox.Urx > result.CropBox.Llx, "CropBox has no width");
+        Assert.True(result.CropBox.Ury > result.CropBox.Lly, "CropBox has no height");
     }
 
     [Fact]
@@ -190,7 +192,7 @@ public class GetPdfPageDetailsHandlerTests : PdfHandlerTestBase
 
         var result = Assert.IsType<GetPdfPageDetailsResult>(res);
 
-        Assert.True(result.Annotations >= 0);
+        Assert.Equal(0, result.Annotations);
     }
 
     [Fact]
@@ -207,7 +209,7 @@ public class GetPdfPageDetailsHandlerTests : PdfHandlerTestBase
 
         var result = Assert.IsType<GetPdfPageDetailsResult>(res);
 
-        Assert.True(result.Paragraphs >= 0);
+        Assert.Equal(0, result.Paragraphs);
     }
 
     [Fact]
@@ -224,7 +226,7 @@ public class GetPdfPageDetailsHandlerTests : PdfHandlerTestBase
 
         var result = Assert.IsType<GetPdfPageDetailsResult>(res);
 
-        Assert.True(result.Images >= 0);
+        Assert.Equal(0, result.Images);
     }
 
     #endregion

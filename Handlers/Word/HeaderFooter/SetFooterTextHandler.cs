@@ -75,16 +75,7 @@ public class SetFooterTextHandler : OperationHandlerBase<Document>
     /// </summary>
     private static void ClearHeaderFooter(Aspose.Words.HeaderFooter hf, bool clearExisting, bool clearTextOnly)
     {
-        if (clearExisting)
-        {
-            if (clearTextOnly)
-                WordHeaderFooterHelper.ClearTextOnly(hf);
-            else
-                hf.RemoveAllChildren();
-        }
-
-        if (!clearTextOnly)
-            hf.RemoveAllChildren();
+        WordHeaderFooterHelper.Clear(hf, clearExisting, clearTextOnly);
     }
 
     /// <summary>
@@ -127,6 +118,7 @@ public class SetFooterTextHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Builds the result message.
     /// </summary>
+    /// <returns>The resulting text.</returns>
     private static string BuildResultMessage(string type, string? left, string? center, string? right, int sectionIndex)
     {
         List<string> contentParts = [];

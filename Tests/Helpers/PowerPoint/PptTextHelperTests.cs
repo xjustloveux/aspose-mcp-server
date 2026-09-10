@@ -1,9 +1,16 @@
 using Aspose.Slides;
 using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Helpers.PowerPoint;
 
-public class PptTextHelperTests
+/// <summary>
+///     Derives from <see cref="TestBase" /> for its licence loading. Without it the class was
+///     order-dependent: it only saw a licensed Aspose.Slides when some other test class had
+///     already triggered the static licence load, so an exact count measured during a full run
+///     failed whenever this class ran on its own.
+/// </summary>
+public class PptTextHelperTests : TestBase
 {
     #region ProcessShapesForReplace Tests
 
@@ -104,7 +111,11 @@ public class PptTextHelperTests
         var result = PptTextHelper.ProcessShapesForReplace(
             slide.Shapes, "find", "replace", StringComparison.OrdinalIgnoreCase);
 
-        Assert.True(result >= 0);
+        // Measured: 1 replacement with a licence, 0 without. An unlicensed Aspose.Slides does not
+        // preserve the text this fixture writes, so the count there describes the evaluation
+        // notice rather than the helper.
+        if (!IsEvaluationMode())
+            Assert.Equal(1, result);
     }
 
     [Fact]

@@ -7,6 +7,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Image;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class AddPptImageHandlerTests : PptHandlerTestBase
 {
     private readonly AddPptImageHandler _handler = new();

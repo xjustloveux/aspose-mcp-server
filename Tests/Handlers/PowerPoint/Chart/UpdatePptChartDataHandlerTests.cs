@@ -9,6 +9,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Chart;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class UpdatePptChartDataHandlerTests : PptHandlerTestBase
 {
     private readonly UpdatePptChartDataHandler _handler = new();

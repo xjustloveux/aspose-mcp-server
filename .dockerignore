@@ -32,3 +32,11 @@ LICENSE
 
 # License files (security)
 *.lic
+
+# Local-only tooling data (gitignored, but the build context is the working tree)
+graphify-out/
+coverage-reports/
+sonar-reports/
+
+graphify/
+__pycache__/

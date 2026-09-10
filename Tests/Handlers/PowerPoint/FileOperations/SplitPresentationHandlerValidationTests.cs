@@ -22,6 +22,7 @@ namespace AsposeMcpServer.Tests.Handlers.PowerPoint.FileOperations;
 ///     tests should make the bug observable as a timeout.
 /// </summary>
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class SplitPresentationHandlerValidationTests : PptHandlerTestBase
 {
     private readonly SplitPresentationHandler _handler = new();

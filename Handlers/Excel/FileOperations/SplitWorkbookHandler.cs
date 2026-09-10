@@ -50,7 +50,8 @@ public class SplitWorkbookHandler : OperationHandlerBase<Workbook>
 
         ValidateParameters(p.InputPath, p.Path, p.SessionId, p.OutputDirectory);
         EnforcePathAllowlist(context, p.InputPath ?? p.Path, p.OutputDirectory);
-        EnsureOutputDirectoryExists(p.OutputDirectory!);
+        var outputDirectory = EnsureOutputDirectoryExists(p.OutputDirectory!,
+            context.ServerConfig?.AllowedBasePaths ?? []);
 
         // File mode opens its own workbook (owned, disposed below); session mode borrows the
         // session-owned workbook and must not dispose it.
@@ -70,11 +71,11 @@ public class SplitWorkbookHandler : OperationHandlerBase<Workbook>
                     $"Split would require {totalWorkUnits} work units (outputSheets² = {outputSheetCount}²). " +
                     $"Maximum allowed is {MaxTotalWorkUnits}. Use sheetIndices to select a smaller subset.");
 
-            var splitFiles = SplitWorksheets(sourceWorkbook, indicesToSplit, p.OutputDirectory!,
+            var splitFiles = SplitWorksheets(sourceWorkbook, indicesToSplit, outputDirectory,
                 p.OutputFileNamePattern, context.ServerConfig?.AllowedBasePaths ?? []);
 
             return new SuccessResult
-                { Message = $"Split workbook into {splitFiles.Count} files. Output: {p.OutputDirectory}" };
+                { Message = $"Split workbook into {splitFiles.Count} files. Output: {outputDirectory}" };
         }
         finally
         {
@@ -139,10 +140,20 @@ public class SplitWorkbookHandler : OperationHandlerBase<Workbook>
     ///     Ensures the output directory exists, creating it if necessary.
     /// </summary>
     /// <param name="outputDirectory">The output directory path.</param>
-    private static void EnsureOutputDirectoryExists(string outputDirectory)
+    /// <param name="allowedBasePaths">Roots the caller may write into.</param>
+    /// <returns>The resolved directory the split files must be written into.</returns>
+    private static string EnsureOutputDirectoryExists(string outputDirectory,
+        IReadOnlyList<string> allowedBasePaths)
     {
-        if (!Directory.Exists(outputDirectory))
-            Directory.CreateDirectory(outputDirectory);
+        // Resolve before creating: a destination outside the allowlist must be refused
+        // rather than brought into existence and then rejected file by file.
+        var resolved = SecurityHelper.ResolveAndEnsureWithinAllowlist(outputDirectory,
+            allowedBasePaths, nameof(outputDirectory));
+
+        if (!Directory.Exists(resolved))
+            Directory.CreateDirectory(resolved);
+
+        return resolved;
     }
 
     /// <summary>

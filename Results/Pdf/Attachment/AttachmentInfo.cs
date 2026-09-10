@@ -8,7 +8,13 @@ namespace AsposeMcpServer.Results.Pdf.Attachment;
 public record AttachmentInfo
 {
     /// <summary>
-    ///     Zero-based index of the attachment.
+    ///     One-based index of the attachment within the PDF embedded-file collection.
+    ///     <para>
+    ///         For display and ordering only. <c>pdf_attachment delete</c> selects by
+    ///         <c>attachmentName</c> and has no index parameter, so following this field as if it
+    ///         were the delete selector produced a request the tool rejects (R2-C03). Where two
+    ///         attachments share a name, deletion by name cannot distinguish them.
+    ///     </para>
     /// </summary>
     [JsonPropertyName("index")]
     public required int Index { get; init; }

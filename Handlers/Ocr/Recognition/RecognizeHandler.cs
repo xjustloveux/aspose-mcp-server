@@ -74,14 +74,16 @@ public class RecognizeHandler : OperationHandlerBase<AsposeOcr>
 
         var p = ExtractParameters(parameters);
         SecurityHelper.ValidateFilePath(p.Path, "path", true);
+        var resolvedPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.Path,
+            context.ServerConfig?.AllowedBasePaths ?? [], "path");
 
-        if (!File.Exists(p.Path))
+        if (!File.Exists(resolvedPath))
             throw new FileNotFoundException("The specified file was not found.");
 
         var ocr = context.Document;
-        var inputType = DetectInputType(p.Path);
+        var inputType = DetectInputType(resolvedPath);
         using var input = new OcrInput(inputType);
-        input.Add(p.Path);
+        input.Add(resolvedPath);
 
         var settings = new RecognitionSettings
         {
@@ -112,16 +114,27 @@ public class RecognizeHandler : OperationHandlerBase<AsposeOcr>
     ///     Accepts both abbreviated (Eng, Chi, Deu) and common names (English, Chinese, German).
     /// </summary>
     /// <param name="language">The language name or abbreviation.</param>
-    /// <returns>The parsed Language enum value, defaults to Eng if parsing fails.</returns>
+    /// <returns>The parsed Language enum value; English when no language was supplied.</returns>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when a language was named but this Aspose.OCR build does not carry it.
+    /// </exception>
     internal static Language ParseLanguage(string language)
     {
+        // No language named at all means the caller accepted the default.
+        if (string.IsNullOrWhiteSpace(language)) return Language.Eng;
+
         if (Enum.TryParse<Language>(language, true, out var result))
             return result;
 
         if (CommonLanguageNames.TryGetValue(language, out var mapped))
             return mapped;
 
-        return Language.Eng;
+        // An unrecognised name used to fall back to English silently, so a caller asking for a
+        // language this build does not carry got English text back with no indication of why.
+        throw new ArgumentException(
+            $"Language '{language}' is not supported. Supported names: "
+            + string.Join(", ", CommonLanguageNames.Keys.Order(StringComparer.OrdinalIgnoreCase))
+            + ". Aspose.OCR language codes such as 'Eng' or 'Chi' are also accepted.");
     }
 
     /// <summary>

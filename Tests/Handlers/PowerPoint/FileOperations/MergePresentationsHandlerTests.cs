@@ -8,6 +8,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.FileOperations;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class MergePresentationsHandlerTests : PptHandlerTestBase
 {
     private readonly MergePresentationsHandler _handler = new();

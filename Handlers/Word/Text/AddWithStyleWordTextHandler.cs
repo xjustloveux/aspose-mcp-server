@@ -224,35 +224,14 @@ public class AddWithStyleWordTextHandler : OperationHandlerBase<Document>
     {
         if (tabStops is not { Count: > 0 }) return;
 
+        // Resolved before anything is cleared, and by the same reader every other tab-stop
+        // operation uses. This one matched its alignment names case-sensitively in PascalCase, so
+        // "center" — which the header, footer and edit operations all honour — was silently taken
+        // as left here (R13-W01).
+        var resolved = WordTabStopHelper.Resolve(tabStops);
+
         para.ParagraphFormat.TabStops.Clear();
-
-        foreach (var tabStopJson in tabStops)
-        {
-            var position = tabStopJson?["position"]?.GetValue<double>() ?? 0;
-            var alignmentStr = tabStopJson?["alignment"]?.GetValue<string>() ?? "Left";
-            var leaderStr = tabStopJson?["leader"]?.GetValue<string>() ?? "None";
-
-            var tabAlignment = alignmentStr switch
-            {
-                "Center" => TabAlignment.Center,
-                "Right" => TabAlignment.Right,
-                "Decimal" => TabAlignment.Decimal,
-                "Bar" => TabAlignment.Bar,
-                _ => TabAlignment.Left
-            };
-
-            var tabLeader = leaderStr switch
-            {
-                "Dots" => TabLeader.Dots,
-                "Dashes" => TabLeader.Dashes,
-                "Line" => TabLeader.Line,
-                "Heavy" => TabLeader.Heavy,
-                "MiddleDot" => TabLeader.MiddleDot,
-                _ => TabLeader.None
-            };
-
-            para.ParagraphFormat.TabStops.Add(new TabStop(position, tabAlignment, tabLeader));
-        }
+        foreach (var stop in resolved) para.ParagraphFormat.TabStops.Add(stop);
     }
 
     /// <summary>

@@ -26,6 +26,11 @@ public class ExcelDataImportExportTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -35,11 +40,14 @@ public class ExcelDataImportExportTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
     /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public ExcelDataImportExportTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry =
             HandlerRegistry<Workbook>.CreateFromNamespace("AsposeMcpServer.Handlers.Excel.DataImportExport");
     }
@@ -57,6 +65,7 @@ public class ExcelDataImportExportTool
     /// <param name="startCell">Starting cell for import (default: 'A1').</param>
     /// <param name="isVertical">Import array vertically (for import_array, default: false).</param>
     /// <param name="separator">CSV separator character (for export_csv, default: ',').</param>
+    /// <param name="sanitizeFormulas">Whether export_csv neutralises formula injection (default: true).</param>
     /// <param name="format">Image format for export (for export_range_image, default: 'png').</param>
     /// <param name="dpi">DPI for image export (for export_range_image, default: 150).</param>
     /// <returns>A message or data indicating the result of the operation.</returns>
@@ -101,15 +110,19 @@ Usage examples:
         bool isVertical = false,
         [Description("CSV separator character (for export_csv, default: ',')")]
         string separator = ",",
+        [Description(
+            "Neutralise CSV formula injection on export_csv by prefixing fields that start with = + - @ with an apostrophe (default: true). Set false only for machine parsers that need byte-faithful values.")]
+        bool sanitizeFormulas = true,
         [Description("Image format (for export_range_image: png, jpeg, bmp, tiff, svg; default: png)")]
         string format = "png",
         [Description("DPI for image export (for export_range_image, default: 150)")]
         int dpi = 150)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor,
+            serverConfig: _serverConfig);
 
         var parameters = BuildParameters(operation, sheetIndex, jsonData, arrayData, startCell, isVertical,
-            outputPath, separator, format, dpi);
+            outputPath, separator, sanitizeFormulas, format, dpi);
 
         var handler = _handlerRegistry.GetHandler(operation);
 
@@ -120,7 +133,8 @@ Usage examples:
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);
@@ -138,7 +152,7 @@ Usage examples:
     /// <returns>OperationParameters configured with all input values.</returns>
     private static OperationParameters BuildParameters(
         string operation, int sheetIndex, string? jsonData, string? arrayData, string startCell,
-        bool isVertical, string? outputPath, string separator, string format, int dpi)
+        bool isVertical, string? outputPath, string separator, bool sanitizeFormulas, string format, int dpi)
     {
         var parameters = new OperationParameters();
         parameters.Set("sheetIndex", sheetIndex);
@@ -147,7 +161,7 @@ Usage examples:
         {
             "import_json" => BuildImportJsonParameters(parameters, jsonData, startCell),
             "import_array" => BuildImportArrayParameters(parameters, arrayData, startCell, isVertical),
-            "export_csv" => BuildExportCsvParameters(parameters, outputPath, separator),
+            "export_csv" => BuildExportCsvParameters(parameters, outputPath, separator, sanitizeFormulas),
             "export_image" => BuildExportRangeImageParameters(parameters, outputPath, format, dpi),
             _ => parameters
         };
@@ -156,6 +170,7 @@ Usage examples:
     /// <summary>
     ///     Builds parameters for the import_json operation.
     /// </summary>
+    /// <returns>The parameters, configured for this operation.</returns>
     private static OperationParameters BuildImportJsonParameters(OperationParameters parameters, string? jsonData,
         string startCell)
     {
@@ -167,6 +182,7 @@ Usage examples:
     /// <summary>
     ///     Builds parameters for the import_array operation.
     /// </summary>
+    /// <returns>The parameters, configured for this operation.</returns>
     private static OperationParameters BuildImportArrayParameters(OperationParameters parameters, string? arrayData,
         string startCell, bool isVertical)
     {
@@ -179,17 +195,20 @@ Usage examples:
     /// <summary>
     ///     Builds parameters for the export_csv operation.
     /// </summary>
+    /// <returns>The parameters, configured for this operation.</returns>
     private static OperationParameters BuildExportCsvParameters(OperationParameters parameters, string? outputPath,
-        string separator)
+        string separator, bool sanitizeFormulas)
     {
         if (outputPath != null) parameters.Set("outputPath", outputPath);
         parameters.Set("separator", separator);
+        parameters.Set("sanitizeFormulas", sanitizeFormulas);
         return parameters;
     }
 
     /// <summary>
     ///     Builds parameters for the export_range_image operation.
     /// </summary>
+    /// <returns>The parameters, configured for this operation.</returns>
     private static OperationParameters BuildExportRangeImageParameters(OperationParameters parameters,
         string? outputPath, string format, int dpi)
     {

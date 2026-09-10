@@ -2,6 +2,7 @@ using Aspose.Pdf;
 using Aspose.Pdf.Text;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Pdf.Table;
@@ -20,7 +21,7 @@ public class AddPdfTableHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="context">The document context.</param>
     /// <param name="parameters">
-    ///     Required: pageIndex, rows, columns
+    ///     Required: rows, columns. Optional: pageIndex (default: 1)
     ///     Optional: data, x, y, columnWidths
     /// </param>
     /// <returns>Success message with table creation details.</returns>
@@ -28,10 +29,9 @@ public class AddPdfTableHandler : OperationHandlerBase<Document>
     {
         var p = ExtractAddParameters(parameters);
 
-        if (p.Rows <= 0)
-            throw new ArgumentException("rows is required and must be greater than 0 for add operation");
-        if (p.Columns <= 0)
-            throw new ArgumentException("columns is required and must be greater than 0 for add operation");
+        // Each dimension was checked for being at least one and nothing more, so the product —
+        // which is what gets allocated — was unbounded (R3-R04).
+        TableBudget.EnsureWithinBudget(p.Rows, p.Columns, what: "PDF table");
 
         var document = context.Document;
 

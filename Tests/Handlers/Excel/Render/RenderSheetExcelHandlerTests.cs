@@ -43,7 +43,7 @@ public class RenderSheetExcelHandlerTests : ExcelHandlerTestBase
 
             var result = Assert.IsType<RenderExcelResult>(res);
             Assert.NotEmpty(result.OutputPaths);
-            Assert.True(result.PageCount >= 0);
+            Assert.Equal(1, result.PageCount);
             Assert.Equal("png", result.Format);
             Assert.Contains("rendered", result.Message);
         }

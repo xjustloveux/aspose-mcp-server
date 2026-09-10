@@ -21,9 +21,11 @@ public class WordPropertiesTool : PropertiesToolBase<Document>
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document operations</param>
     /// <param name="identityAccessor">Optional identity accessor for session isolation</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public WordPropertiesTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
-        : base(sessionManager, identityAccessor, "AsposeMcpServer.Handlers.Word.Properties")
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
+        : base(sessionManager, identityAccessor, "AsposeMcpServer.Handlers.Word.Properties", serverConfig)
     {
     }
 
@@ -33,7 +35,7 @@ public class WordPropertiesTool : PropertiesToolBase<Document>
     /// <param name="operation">The operation to perform: get, set.</param>
     /// <param name="path">Word document file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID for in-memory editing.</param>
-    /// <param name="outputPath">Output file path (for set operation).</param>
+    /// <param name="outputPath">Output file path (file mode only, for set operation, defaults to overwrite input).</param>
     /// <param name="title">Document title (for set).</param>
     /// <param name="subject">Document subject (for set).</param>
     /// <param name="author">Document author (for set).</param>
@@ -69,7 +71,7 @@ Notes:
         string? path = null,
         [Description("Session ID for in-memory editing")]
         string? sessionId = null,
-        [Description("Output file path (if not provided, overwrites input, for set operation)")]
+        [Description("Output file path (file mode only, for set operation, defaults to overwrite input)")]
         string? outputPath = null,
         [Description("Document title (optional, for set operation)")]
         string? title = null,

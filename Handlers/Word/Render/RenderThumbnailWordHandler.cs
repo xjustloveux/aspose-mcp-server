@@ -3,6 +3,7 @@ using Aspose.Words.Saving;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Word.Render;
 
 namespace AsposeMcpServer.Handlers.Word.Render;
@@ -13,6 +14,8 @@ namespace AsposeMcpServer.Handlers.Word.Render;
 [ResultType(typeof(RenderResult))]
 public class RenderThumbnailWordHandler : OperationHandlerBase<Document>
 {
+    private const string OutputPathParameter = "outputPath";
+
     /// <inheritdoc />
     public override string Operation => "thumbnail";
 
@@ -32,12 +35,18 @@ public class RenderThumbnailWordHandler : OperationHandlerBase<Document>
         var p = ExtractThumbnailParameters(parameters);
 
         SecurityHelper.ValidateFilePath(p.Path, allowAbsolutePaths: true);
-        SecurityHelper.ValidateFilePath(p.OutputPath, "outputPath", true);
+        var resolvedPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.Path,
+            context.ServerConfig?.AllowedBasePaths ?? [], "path");
+        SecurityHelper.ValidateFilePath(p.OutputPath, OutputPathParameter, true);
+        SecurityHelper.ValidateNumericRange((long)(p.Scale * 1000), "scale", 1, 10_000);
+        // Refused early; the sink below resolves again immediately before it writes.
+        SecurityHelper.ResolveAndEnsureWithinAllowlist(p.OutputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], OutputPathParameter);
 
         if (p.Scale <= 0 || p.Scale > 1)
             throw new ArgumentException("scale must be between 0 (exclusive) and 1 (inclusive)");
 
-        var doc = new Document(p.Path);
+        var doc = GuardedWordLoader.Load(resolvedPath, context.ServerConfig?.AllowedBasePaths ?? []);
 
         var saveFormat = p.Format.ToLowerInvariant() switch
         {
@@ -47,19 +56,30 @@ public class RenderThumbnailWordHandler : OperationHandlerBase<Document>
                 $"Unknown thumbnail format: {p.Format}. Supported: png, jpeg")
         };
 
+        // One page at a fraction of 96 DPI is small, but the page itself can be large, so the
+        // request is priced from the real page size rather than assumed to be cheap (R2-R01).
+        // The measurement comes from the page that will actually be drawn (R3-R03).
+        var pageInfo = doc.PageCount > 0 ? doc.GetPageInfo(0) : null;
+        new PixelBudget().Add((pageInfo?.WidthInPoints ?? 0) / 72.0,
+            (pageInfo?.HeightInPoints ?? 0) / 72.0, (int)Math.Ceiling(96 * p.Scale));
+
         var options = new ImageSaveOptions(saveFormat)
         {
             Resolution = (float)(96 * p.Scale),
             PageSet = new PageSet(0)
         };
 
-        var outputDir = Path.GetDirectoryName(p.OutputPath);
+        // Creating a directory is itself a filesystem write, so it is derived from the resolved
+        // path rather than the caller's string (R7-T01).
+        var outputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.OutputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], OutputPathParameter);
+        var outputDir = Path.GetDirectoryName(outputPath);
         if (!string.IsNullOrEmpty(outputDir))
             Directory.CreateDirectory(outputDir);
 
         // H1: resolve symlinks immediately before the sink to close TOCTOU (bug 20260415-symlink-toctou-sweep).
-        var outputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.OutputPath,
-            context.ServerConfig?.AllowedBasePaths ?? [], "outputPath");
+        outputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(outputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], OutputPathParameter);
         doc.Save(outputPath, options);
 
         return new RenderResult
@@ -79,7 +99,7 @@ public class RenderThumbnailWordHandler : OperationHandlerBase<Document>
     {
         return new ThumbnailParameters(
             parameters.GetRequired<string>("path"),
-            parameters.GetRequired<string>("outputPath"),
+            parameters.GetRequired<string>(OutputPathParameter),
             parameters.GetOptional("format", "png"),
             parameters.GetOptional("scale", 0.25)
         );

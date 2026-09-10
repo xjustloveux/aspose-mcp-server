@@ -8,6 +8,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Layout;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class ApplyThemeHandlerTests : PptHandlerTestBase
 {
     private readonly ApplyThemeHandler _handler = new();

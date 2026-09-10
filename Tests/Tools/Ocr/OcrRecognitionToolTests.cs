@@ -234,7 +234,7 @@ public class OcrRecognitionToolTests : TestBase
 
         var data = GetResultData<OcrRecognitionResult>(result);
         Assert.NotNull(data.Text);
-        Assert.True(data.PageCount >= 0);
+        Assert.Equal(0, data.PageCount);
         Assert.NotNull(data.Pages);
     }
 
@@ -251,7 +251,7 @@ public class OcrRecognitionToolTests : TestBase
         Assert.Equal(pdfPath, data.SourcePath);
         Assert.Equal(outputPath, data.OutputPath);
         Assert.Equal("docx", data.TargetFormat);
-        Assert.True(data.PageCount >= 0);
+        Assert.Equal(0, data.PageCount);
         Assert.True(File.Exists(outputPath));
     }
 

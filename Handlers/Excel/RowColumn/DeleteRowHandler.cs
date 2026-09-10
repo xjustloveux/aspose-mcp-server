@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Helpers.Excel;
 using AsposeMcpServer.Results.Common;
 
@@ -43,6 +44,9 @@ public class DeleteRowHandler : OperationHandlerBase<Workbook>
         var sheetIndex = parameters.GetOptional("sheetIndex", 0);
         var rowIndex = parameters.GetRequired<int>("rowIndex");
         var count = parameters.GetOptional("count", 1);
+        // A non-positive count is a documented no-op for delete; only the upper bound is
+        // enforced, because that is what sizes the work the request performs.
+        SecurityHelper.ValidateNumericRange(count, "count", int.MinValue, 1_048_576);
 
         return new DeleteRowParameters(sheetIndex, rowIndex, count);
     }

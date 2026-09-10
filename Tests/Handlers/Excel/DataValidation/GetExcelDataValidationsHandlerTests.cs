@@ -169,7 +169,7 @@ public class GetExcelDataValidationsHandlerTests : ExcelHandlerTestBase
 
         var result = Assert.IsType<GetDataValidationsResult>(res);
 
-        Assert.True(result.Count >= 0);
+        Assert.Equal(1, result.Count);
         Assert.NotNull(result.WorksheetName);
         Assert.NotNull(result.Items);
     }

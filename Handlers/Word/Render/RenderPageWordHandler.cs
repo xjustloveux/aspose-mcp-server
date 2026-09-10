@@ -3,6 +3,7 @@ using Aspose.Words.Saving;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Word.Render;
 
 namespace AsposeMcpServer.Handlers.Word.Render;
@@ -13,6 +14,8 @@ namespace AsposeMcpServer.Handlers.Word.Render;
 [ResultType(typeof(RenderResult))]
 public class RenderPageWordHandler : OperationHandlerBase<Document>
 {
+    private const string OutputPathParameter = "outputPath";
+
     /// <inheritdoc />
     public override string Operation => "render";
 
@@ -32,9 +35,34 @@ public class RenderPageWordHandler : OperationHandlerBase<Document>
         var p = ExtractRenderParameters(parameters);
 
         SecurityHelper.ValidateFilePath(p.Path, allowAbsolutePaths: true);
-        SecurityHelper.ValidateFilePath(p.OutputPath, "outputPath", true);
+        var resolvedPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.Path,
+            context.ServerConfig?.AllowedBasePaths ?? [], "path");
+        SecurityHelper.ValidateFilePath(p.OutputPath, OutputPathParameter, true);
+        SecurityHelper.ValidateNumericRange(p.Dpi, "dpi", 10, 1200);
+        _ = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.OutputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], OutputPathParameter);
 
-        var doc = new Document(p.Path);
+        var doc = GuardedWordLoader.Load(resolvedPath, context.ServerConfig?.AllowedBasePaths ?? []);
+
+        // Price the whole request before rendering anything. Each parameter is individually
+        // capped, but the cost is their product, and the real page size matters: a document set
+        // to a large custom page costs several times an A4 page at the same DPI (R2-R01). Every
+        // page is measured on its own, because the first section's setup says nothing about a
+        // later section that switches to a much larger sheet (R3-R03).
+        RenderBudget.EnsureOutputCount(p.PageIndex.HasValue ? 1 : doc.PageCount, "image files");
+
+        var budget = new PixelBudget();
+        if (p.PageIndex.HasValue)
+        {
+            if (p.PageIndex.Value >= 1 && p.PageIndex.Value <= doc.PageCount)
+                AddPageToBudget(budget, doc, p.PageIndex.Value - 1, p.Dpi);
+        }
+        else
+        {
+            for (var page = 0; page < doc.PageCount; page++)
+                AddPageToBudget(budget, doc, page, p.Dpi);
+        }
+
         var saveFormat = ResolveSaveFormat(p.Format);
         var outputPaths = new List<string>();
 
@@ -46,21 +74,30 @@ public class RenderPageWordHandler : OperationHandlerBase<Document>
 
             var options = CreateImageSaveOptions(saveFormat, p.Dpi, p.PageIndex.Value - 1);
 
-            var outputDir = Path.GetDirectoryName(p.OutputPath);
+            // Creating a directory is itself a filesystem write, so it is derived from the
+            // resolved path: taking it from the caller's string left a directory behind at a
+            // location the allowlist was about to refuse (R7-T01).
+            var resolvedOutputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.OutputPath,
+                context.ServerConfig?.AllowedBasePaths ?? [], OutputPathParameter);
+            var outputDir = Path.GetDirectoryName(resolvedOutputPath);
             if (!string.IsNullOrEmpty(outputDir))
                 Directory.CreateDirectory(outputDir);
 
             // H2: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
-            var resolvedOutputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.OutputPath,
-                context.ServerConfig?.AllowedBasePaths ?? [], "outputPath");
+            resolvedOutputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(resolvedOutputPath,
+                context.ServerConfig?.AllowedBasePaths ?? [], OutputPathParameter);
             doc.Save(resolvedOutputPath, options);
             outputPaths.Add(resolvedOutputPath);
         }
         else
         {
-            var outputDir = Path.GetDirectoryName(p.OutputPath);
-            var baseName = Path.GetFileNameWithoutExtension(p.OutputPath);
-            var ext = Path.GetExtension(p.OutputPath);
+            // The per-page names are built from the resolved template for the same reason
+            // (R7-T01).
+            var resolvedTemplate = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.OutputPath,
+                context.ServerConfig?.AllowedBasePaths ?? [], OutputPathParameter);
+            var outputDir = Path.GetDirectoryName(resolvedTemplate);
+            var baseName = Path.GetFileNameWithoutExtension(resolvedTemplate);
+            var ext = Path.GetExtension(resolvedTemplate);
             if (string.IsNullOrEmpty(ext)) ext = $".{p.Format}";
 
             if (!string.IsNullOrEmpty(outputDir))
@@ -136,11 +173,25 @@ public class RenderPageWordHandler : OperationHandlerBase<Document>
     {
         return new RenderParameters(
             parameters.GetRequired<string>("path"),
-            parameters.GetRequired<string>("outputPath"),
+            parameters.GetRequired<string>(OutputPathParameter),
             parameters.GetOptional<int?>("pageIndex"),
             parameters.GetOptional("format", "png"),
             parameters.GetOptional("dpi", 150)
         );
+    }
+
+    /// <summary>
+    ///     Adds one page's real size to the render budget.
+    /// </summary>
+    /// <param name="budget">The budget to charge.</param>
+    /// <param name="document">The document being rendered.</param>
+    /// <param name="pageIndex">Zero-based index of the page about to be rendered.</param>
+    /// <param name="dpi">Resolution the page will be rendered at.</param>
+    /// <exception cref="ArgumentException">Thrown when the page takes the render past the budget.</exception>
+    private static void AddPageToBudget(PixelBudget budget, Document document, int pageIndex, int dpi)
+    {
+        var info = document.GetPageInfo(pageIndex);
+        budget.Add(info.WidthInPoints / 72.0, info.HeightInPoints / 72.0, dpi);
     }
 
     /// <summary>

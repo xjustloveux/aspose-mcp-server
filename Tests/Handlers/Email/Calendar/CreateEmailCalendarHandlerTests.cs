@@ -212,7 +212,7 @@ public class CreateEmailCalendarHandlerTests : HandlerTestBase<object>
     }
 
     [Fact]
-    public void Execute_WithInvalidStartDate_ThrowsFormatException()
+    public void Execute_WithInvalidStartDate_ThrowsArgumentException()
     {
         var outputPath = Path.Combine(TestDir, "bad_date.ics");
         var context = CreateContext(new object());
@@ -222,11 +222,11 @@ public class CreateEmailCalendarHandlerTests : HandlerTestBase<object>
             { "startDate", "not-a-date" }
         });
 
-        Assert.Throws<FormatException>(() => _handler.Execute(context, parameters));
+        Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
     [Fact]
-    public void Execute_WithInvalidEndDate_ThrowsFormatException()
+    public void Execute_WithInvalidEndDate_ThrowsArgumentException()
     {
         var outputPath = Path.Combine(TestDir, "bad_end_date.ics");
         var context = CreateContext(new object());
@@ -237,7 +237,7 @@ public class CreateEmailCalendarHandlerTests : HandlerTestBase<object>
             { "endDate", "invalid-end" }
         });
 
-        Assert.Throws<FormatException>(() => _handler.Execute(context, parameters));
+        Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
     #endregion

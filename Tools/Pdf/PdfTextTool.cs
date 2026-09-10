@@ -26,6 +26,11 @@ public class PdfTextTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     The document session manager for managing in-memory document sessions.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -35,10 +40,13 @@ public class PdfTextTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
     /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
-    public PdfTextTool(DocumentSessionManager? sessionManager = null, ISessionIdentityAccessor? identityAccessor = null)
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
+    public PdfTextTool(DocumentSessionManager? sessionManager = null, ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry = HandlerRegistry<Document>.CreateFromNamespace("AsposeMcpServer.Handlers.Pdf.Text");
     }
 
@@ -111,7 +119,8 @@ Usage examples:
         [Description("Text extraction mode (for extract, default: 'pure')")]
         string extractionMode = "pure")
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor,
+            serverConfig: _serverConfig);
 
         var parameters = BuildParameters(operation, pageIndex, text, x, y, fontName, fontSize,
             oldText, newText, replaceAll, includeFontInfo, extractionMode);
@@ -125,7 +134,8 @@ Usage examples:
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);

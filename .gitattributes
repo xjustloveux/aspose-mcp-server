@@ -12,8 +12,8 @@
 *.bat text eol=crlf
 *.cmd text eol=crlf
 
-# C# source files should use CRLF (Windows default)
-*.cs text eol=crlf
+# C# source files use LF, matching .editorconfig ([*] end_of_line = lf) and the working tree
+*.cs text eol=lf
 
 # JSON files should use LF
 *.json text eol=lf
@@ -25,8 +25,17 @@
 # Markdown files should use LF
 *.md text eol=lf
 
-# XML files should use LF
+# XML files and MSBuild project files should use LF
 *.xml text eol=lf
+*.csproj text eol=lf
+*.props text eol=lf
+*.targets text eol=lf
+
+# Web assets served from docs/ should use LF
+*.html text eol=lf
+*.css text eol=lf
+*.js text eol=lf
+*.svg text eol=lf
 
 # Config files should use LF
 *.config text eol=lf
@@ -39,3 +48,10 @@
 *.pdb binary
 *.zip binary
 
+# Generated and vendored files. Neither is written by hand, so neither should be counted as
+# this project's own source in language statistics or shown expanded in a diff by default
+# (R3-DOC09). Both are still published verbatim by the Pages workflow; these attributes
+# affect how the files are presented, not whether they are shipped.
+docs/architecture-map/index.html linguist-generated=true
+docs/architecture-map/metadata.json linguist-generated=true
+docs/assets/vis-network.min.js linguist-vendored=true

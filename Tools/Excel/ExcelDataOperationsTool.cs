@@ -28,6 +28,11 @@ public class ExcelDataOperationsTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -37,11 +42,14 @@ public class ExcelDataOperationsTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
     /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public ExcelDataOperationsTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry =
             HandlerRegistry<Workbook>.CreateFromNamespace("AsposeMcpServer.Handlers.Excel.DataOperations");
     }
@@ -58,7 +66,7 @@ public class ExcelDataOperationsTool
     /// <param name="outputPath">Output file path (file mode only).</param>
     /// <param name="sheetIndex">Sheet index (0-based).</param>
     /// <param name="range">Cell range (e.g., 'A1:C10', required for sort, optional for get_content).</param>
-    /// <param name="sortColumn">Column index to sort by (0-based, relative to range start, required for sort).</param>
+    /// <param name="sortColumn">Column index to sort by (0-based, relative to range start, optional for sort, default: 0).</param>
     /// <param name="ascending">True for ascending, false for descending.</param>
     /// <param name="hasHeader">Whether the range has a header row.</param>
     /// <param name="findText">Text to find (required for find_replace).</param>
@@ -99,7 +107,7 @@ Usage examples:
         int sheetIndex = 0,
         [Description("Cell range (e.g., 'A1:C10', required for sort, optional for get_content)")]
         string? range = null,
-        [Description("Column index to sort by (0-based, relative to range start, required for sort)")]
+        [Description("Column index to sort by (0-based, relative to range start, optional for sort, default: 0)")]
         int sortColumn = 0,
         [Description("True for ascending, false for descending (default: true)")]
         bool ascending = true,
@@ -116,7 +124,8 @@ Usage examples:
         [Description("Data for batch_write: [{cell:'A1',value:'val1'},...] or JSON object {A1:'val1',B1:'val2'}")]
         JsonNode? data = null)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor,
+            serverConfig: _serverConfig);
 
         var parameters = BuildParameters(operation, sheetIndex, range, sortColumn, ascending, hasHeader,
             findText, replaceText, matchCase, matchEntireCell, data);
@@ -130,7 +139,8 @@ Usage examples:
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);

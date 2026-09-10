@@ -42,6 +42,9 @@ public static class EmailErrorTranslator
     /// </returns>
     public static Exception Translate(Exception ex, string? contextBasename = null)
     {
+        if (ErrorMessageBuilder.IsOutputDirectoryNotWritable(ex.Message))
+            return ex;
+
         switch (ex)
         {
             case UnauthorizedAccessException:
@@ -52,5 +55,34 @@ public static class EmailErrorTranslator
             default:
                 return new InvalidOperationException(ErrorMessageBuilder.ProcessingFailed());
         }
+    }
+
+    /// <summary>
+    ///     Maps a failure raised while writing to the caller's output directory. Unlike
+    ///     <see cref="Translate" />, which wraps a whole operation and therefore cannot tell an
+    ///     input failure from an output one, this is called only around a write, so an
+    ///     <see cref="IOException" /> here is unambiguously an output failure and is reported as
+    ///     one instead of as the generic processing sentinel.
+    /// </summary>
+    /// <param name="ex">The exception raised by the directory creation or the file write.</param>
+    /// <param name="contextBasename">
+    ///     Sanitized basename of the file being written, or <c>null</c> when the failure was
+    ///     creating the directory itself. Never a full path.
+    /// </param>
+    /// <returns>
+    ///     A sanitized exception naming the output directory as the problem. The type mirrors the
+    ///     original so callers that distinguish access failures from other IO still can.
+    /// </returns>
+    public static Exception TranslateOutputFailure(Exception ex, string? contextBasename = null)
+    {
+        var message = ErrorMessageBuilder.OutputDirectoryNotWritable(contextBasename);
+
+        return ex switch
+        {
+            UnauthorizedAccessException => new UnauthorizedAccessException(message),
+            DirectoryNotFoundException => new UnauthorizedAccessException(message),
+            IOException => new IOException(message),
+            _ => new InvalidOperationException(ErrorMessageBuilder.ProcessingFailed())
+        };
     }
 }

@@ -21,7 +21,7 @@ public class EditPdfTableHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="context">The document context.</param>
     /// <param name="parameters">
-    ///     Required: tableIndex
+    ///     Optional: tableIndex (default: 0)
     ///     Optional: cellRow, cellColumn, cellValue
     /// </param>
     /// <returns>Success message with table edit details.</returns>

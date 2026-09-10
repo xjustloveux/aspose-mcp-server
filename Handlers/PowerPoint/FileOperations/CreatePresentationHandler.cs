@@ -1,8 +1,8 @@
 using Aspose.Slides;
-using Aspose.Slides.Export;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
 using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.FileOperations;
@@ -26,6 +26,11 @@ public class CreatePresentationHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with output path.</returns>
     public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
+        // Held for the whole operation: this handler builds or reads presentations of
+        // its own, outside any session, so nothing else stands between it and a library
+        // that fails when two threads are inside it (SlidesGate).
+        using var slidesGate = SlidesGate.Enter();
+
         var p = ExtractCreateParameters(parameters);
 
         var savePath = p.Path ?? p.OutputPath;
@@ -38,7 +43,7 @@ public class CreatePresentationHandler : OperationHandlerBase<Presentation>
         // H21: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
         savePath = SecurityHelper.ResolveAndEnsureWithinAllowlist(savePath,
             context.ServerConfig?.AllowedBasePaths ?? [], nameof(savePath));
-        presentation.Save(savePath, SaveFormat.Pptx);
+        presentation.Save(savePath, PptSaveFormatResolver.Resolve(savePath));
 
         return new SuccessResult { Message = $"PowerPoint presentation created successfully. Output: {savePath}" };
     }

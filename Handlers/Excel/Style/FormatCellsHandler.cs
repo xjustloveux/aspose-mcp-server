@@ -42,11 +42,38 @@ public class FormatCellsHandler : OperationHandlerBase<Workbook>
         ApplyAlignmentSettings(style, formatParams);
         ApplyBorderIfNeeded(style, formatParams);
 
-        var styleFlag = new StyleFlag { All = true, Borders = !string.IsNullOrEmpty(formatParams.BorderStyle) };
-        ApplyStyleToRanges(worksheet, formatParams.Range, formatParams.RangesJson, style, styleFlag);
+        ApplyStyleToRanges(worksheet, formatParams.Range, formatParams.RangesJson, style,
+            BuildStyleFlag(formatParams));
 
         MarkModified(context);
         return new SuccessResult { Message = $"Cells formatted in sheet {formatParams.SheetIndex}." };
+    }
+
+    /// <summary>
+    ///     Builds the flag set describing which attributes this call actually sets.
+    ///     The handler used to apply a brand-new style with <c>StyleFlag.All</c>, which wrote every
+    ///     attribute of that blank style over the cell: a second call that only set bold also reset
+    ///     the background, number format and borders a previous call had applied. Marking only the
+    ///     supplied attributes leaves everything else as it was.
+    /// </summary>
+    /// <param name="p">The parameters of this call.</param>
+    /// <returns>A flag set covering exactly the attributes the caller specified.</returns>
+    private static StyleFlag BuildStyleFlag(FormatParameters p)
+    {
+        return new StyleFlag
+        {
+            FontName = !string.IsNullOrEmpty(p.FontName),
+            FontSize = p.FontSize.HasValue,
+            FontBold = p.Bold.HasValue,
+            FontItalic = p.Italic.HasValue,
+            FontColor = !string.IsNullOrEmpty(p.FontColor),
+            CellShading = !string.IsNullOrEmpty(p.BackgroundColor) || !string.IsNullOrEmpty(p.PatternType)
+                                                                   || !string.IsNullOrEmpty(p.PatternColor),
+            NumberFormat = !string.IsNullOrEmpty(p.NumberFormat),
+            HorizontalAlignment = !string.IsNullOrEmpty(p.HorizontalAlignment),
+            VerticalAlignment = !string.IsNullOrEmpty(p.VerticalAlignment),
+            Borders = !string.IsNullOrEmpty(p.BorderStyle)
+        };
     }
 
     /// <summary>

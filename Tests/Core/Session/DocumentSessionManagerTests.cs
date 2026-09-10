@@ -369,7 +369,7 @@ public class DocumentSessionManagerTests : WordTestBase
 
         var totalMemory = manager.GetTotalMemoryMb();
 
-        Assert.True(totalMemory >= 0);
+        Assert.Equal(0.0272064208984375, totalMemory);
     }
 
     [Fact]

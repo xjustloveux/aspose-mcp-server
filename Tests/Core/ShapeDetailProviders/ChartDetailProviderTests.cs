@@ -51,8 +51,8 @@ public class ChartDetailProviderTests : TestBase
         var chartDetails = Assert.IsType<ChartDetails>(details);
 
         Assert.Equal("ClusteredColumn", chartDetails.ChartType);
-        Assert.True(chartDetails.SeriesCount >= 0);
-        Assert.True(chartDetails.CategoryCount >= 0);
+        Assert.Equal(3, chartDetails.SeriesCount);
+        Assert.Equal(4, chartDetails.CategoryCount);
     }
 
     [Fact]

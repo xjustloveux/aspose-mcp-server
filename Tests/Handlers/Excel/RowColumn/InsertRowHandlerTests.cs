@@ -249,7 +249,7 @@ public class InsertRowHandlerTests : ExcelHandlerTestBase
         });
 
         var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
-        Assert.Contains("Count must be greater than 0", ex.Message);
+        Assert.Contains("count must be between", ex.Message);
     }
 
     [Fact]

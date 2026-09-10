@@ -153,8 +153,13 @@ public class EditPdfAnnotationHandlerTests : PdfHandlerTestBase
         Assert.Equal("Updated Subject", annotation.Subject);
     }
 
+    /// <summary>
+    ///     An edit that names no field to change is a mistake on the caller's side, not a no-op.
+    ///     The handler used to report success and mark the document modified without changing
+    ///     anything, which hid the mistake and dirtied the session (RB-26).
+    /// </summary>
     [Fact]
-    public void Execute_WithoutOptionalParams_PreservesOriginal()
+    public void Execute_WithoutAnyFieldToChange_ShouldBeRejectedAndLeaveTheAnnotationIntact()
     {
         var doc = CreateDocumentWithAnnotation("Original text");
         var annotation = doc.Pages[1].Annotations[1] as MarkupAnnotation;
@@ -167,12 +172,14 @@ public class EditPdfAnnotationHandlerTests : PdfHandlerTestBase
             { "annotationIndex", 1 }
         });
 
-        _handler.Execute(context, parameters);
+        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
 
+        Assert.Contains("Provide 'text', 'title' or 'subject'", ex.Message);
         annotation = doc.Pages[1].Annotations[1] as MarkupAnnotation;
         Assert.Equal("Original text", annotation?.Contents);
         Assert.Equal(originalTitle, annotation?.Title);
         Assert.Equal(originalSubject, annotation?.Subject);
+        Assert.False(context.IsModified);
     }
 
     #endregion

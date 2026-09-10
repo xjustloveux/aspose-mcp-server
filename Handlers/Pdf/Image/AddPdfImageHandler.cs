@@ -29,8 +29,10 @@ public class AddPdfImageHandler : OperationHandlerBase<Document>
         var p = ExtractAddParameters(parameters);
 
         SecurityHelper.ValidateFilePath(p.ImagePath, "imagePath", true);
+        var resolvedImagePath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.ImagePath,
+            context.ServerConfig?.AllowedBasePaths ?? [], "imagePath");
 
-        if (!File.Exists(p.ImagePath))
+        if (!File.Exists(resolvedImagePath))
             throw new FileNotFoundException("The specified file was not found.");
 
         var document = context.Document;
@@ -41,7 +43,7 @@ public class AddPdfImageHandler : OperationHandlerBase<Document>
             throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
 
         var page = document.Pages[p.PageIndex];
-        page.AddImage(p.ImagePath,
+        page.AddImage(resolvedImagePath,
             new Rectangle(p.X, p.Y, p.Width.HasValue ? p.X + p.Width.Value : p.X + 200,
                 p.Height.HasValue ? p.Y + p.Height.Value : p.Y + 200));
 

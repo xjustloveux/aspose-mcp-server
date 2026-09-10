@@ -64,7 +64,7 @@ public class SearchWordTextHandlerTests : WordHandlerTestBase
         Assert.Equal("Header", headerMatch.StoryType);
         Assert.Equal("Primary", headerMatch.HeaderFooterType);
         Assert.Equal(0, headerMatch.ParagraphIndex);
-        Assert.True(headerMatch.DocumentOrderIndex >= 0);
+        Assert.Equal(1, headerMatch.DocumentOrderIndex);
     }
 
     #endregion
@@ -128,10 +128,32 @@ public class SearchWordTextHandlerTests : WordHandlerTestBase
 
     #region Whole Word Match
 
+    /// <summary>
+    ///     Search matches substrings unless <c>wholeWord</c> says otherwise.
+    ///     <para>
+    ///         This case has been rewritten twice, and the history is the point. It was first
+    ///         written as "MatchesAccordingly" for a <c>wholeWord</c> parameter that no handler or
+    ///         tool declared or read — the key was dropped, the search behaved identically either
+    ///         way, and the only assertion was that the count was not negative, so a test named
+    ///         after a feature that did not exist passed for rounds. It was then restated as what
+    ///         actually happened: the flag is accepted and ignored.
+    ///     </para>
+    ///     <para>
+    ///         Now the flag does something, so the row that expected three matches with
+    ///         <c>wholeWord: true</c> is the one that had to change. A test that describes a gap
+    ///         should fail when the gap closes; this one did.
+    ///     </para>
+    /// </summary>
+    /// <param name="wholeWord">Whether only whole-word matches count.</param>
+    /// <param name="documentText">Document body to search.</param>
+    /// <param name="expectedMatches">Matches the search finds.</param>
     [Theory]
-    [InlineData(true, "Hello HelloWorld Hello")]
-    [InlineData(false, "HelloWorld")]
-    public void Execute_WithWholeWordOption_MatchesAccordingly(bool wholeWord, string documentText)
+    [InlineData(true, "Hello HelloWorld Hello", 2)]
+    [InlineData(false, "Hello HelloWorld Hello", 3)]
+    [InlineData(false, "HelloWorld", 1)]
+    [InlineData(true, "HelloWorld", 0)]
+    public void Execute_SearchesSubstrings_UnlessWholeWordIsAskedFor(bool wholeWord,
+        string documentText, int expectedMatches)
     {
         var doc = CreateDocumentWithText(documentText);
         var context = CreateContext(doc);
@@ -145,7 +167,7 @@ public class SearchWordTextHandlerTests : WordHandlerTestBase
 
         var result = Assert.IsType<TextSearchResult>(res);
 
-        Assert.True(result.MatchCount >= 0);
+        Assert.Equal(expectedMatches, result.MatchCount);
         AssertNotModified(context);
     }
 
@@ -170,6 +192,100 @@ public class SearchWordTextHandlerTests : WordHandlerTestBase
         Assert.Equal(0, result.MatchCount);
         Assert.Empty(result.Matches);
         AssertNotModified(context);
+    }
+
+    #endregion
+
+    #region Whole Word
+
+    /// <summary>Runs a search and reports what it matched.</summary>
+    /// <param name="text">The document's body text.</param>
+    /// <param name="options">The search parameters.</param>
+    /// <returns>The matched strings, in order.</returns>
+    private List<string> Search(string text, Dictionary<string, object?> options)
+    {
+        var result = Assert.IsType<TextSearchResult>(
+            _handler.Execute(CreateContext(CreateDocumentWithText(text)),
+                CreateParameters(options)));
+
+        return result.Matches.Select(match => match.Text).ToList();
+    }
+
+    [Fact]
+    public void Execute_WithWholeWord_SkipsMatchesInsideALongerWord()
+    {
+        // `useRegex` with `\bcat\b` has always been able to do this. The parameter is for callers
+        // who should not have to reach for a regex to ask for the obvious thing.
+        var matches = Search("cat concatenate cats cat.", new Dictionary<string, object?>
+        {
+            { "searchText", "cat" },
+            { "wholeWord", true }
+        });
+
+        Assert.Equal(2, matches.Count);
+    }
+
+    [Fact]
+    public void Execute_WithoutWholeWord_StillMatchesInsideALongerWord()
+    {
+        // The default, and the behaviour every existing caller already has.
+        var matches = Search("cat concatenate cats cat.", new Dictionary<string, object?>
+        {
+            { "searchText", "cat" }
+        });
+
+        Assert.Equal(4, matches.Count);
+    }
+
+    [Fact]
+    public void Execute_WithWholeWordAndRegex_AppliesToWhereTheMatchLands()
+    {
+        // The pattern keeps its own meaning: the alternation is the caller's, and whole-word is
+        // decided from the match's position rather than by wrapping the pattern in boundaries,
+        // which would change what the alternation covers.
+        var matches = Search("dog dogged cat concat", new Dictionary<string, object?>
+        {
+            { "searchText", "dog|cat" },
+            { "useRegex", true },
+            { "wholeWord", true }
+        });
+
+        Assert.Equal(["dog", "cat"], matches);
+    }
+
+    [Theory]
+    [InlineData("say cat!", 1)]
+    [InlineData("(cat)", 1)]
+    [InlineData("cat-scan", 1)]
+    [InlineData("cat_scan", 0)]
+    [InlineData("cat9", 0)]
+    [InlineData("9cat", 0)]
+    public void Execute_WithWholeWord_TreatsLettersDigitsAndUnderscoreAsPartOfAWord(
+        string text, int expected)
+    {
+        // The same rule a regex boundary uses, so a caller who switches between the two gets the
+        // same answer. An underscore and a digit are part of a word; punctuation is not.
+        var matches = Search(text, new Dictionary<string, object?>
+        {
+            { "searchText", "cat" },
+            { "wholeWord", true }
+        });
+
+        Assert.Equal(expected, matches.Count);
+    }
+
+    [Fact]
+    public void Execute_WithWholeWordAndNoMatch_TerminatesRatherThanRescanning()
+    {
+        // The literal scan advances past a rejected position as well as an accepted one. Advancing
+        // only on a kept match would find the same rejected occurrence for ever.
+        var matches = Search("concatenate concatenate", new Dictionary<string, object?>
+        {
+            { "searchText", "cat" },
+            { "wholeWord", true }
+        });
+
+        Assert.Empty(matches);
     }
 
     #endregion
@@ -435,7 +551,7 @@ public class SearchWordTextHandlerTests : WordHandlerTestBase
         Assert.All(result.Matches, m =>
         {
             Assert.Equal("Hello", m.Text);
-            Assert.True(m.ParagraphIndex >= 0);
+            Assert.Equal(0, m.ParagraphIndex);
             Assert.NotEmpty(m.Context);
         });
     }

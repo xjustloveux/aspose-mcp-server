@@ -26,6 +26,11 @@ public class ExcelRenderTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -35,11 +40,14 @@ public class ExcelRenderTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
     /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public ExcelRenderTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry =
             HandlerRegistry<Workbook>.CreateFromNamespace("AsposeMcpServer.Handlers.Excel.Render");
     }
@@ -63,7 +71,10 @@ public class ExcelRenderTool
         Destructive = false,
         Idempotent = true,
         OpenWorld = false,
-        ReadOnly = true,
+        // Writes images or a converted document to a caller-supplied path, so it is not
+        // read-only; a client must be able to confirm the call (R2-S10). Destructive stays false
+        // to match convert_document: the source is never modified, only new output is written.
+        ReadOnly = false,
         UseStructuredContent = true)]
     [Description(@"Render Excel worksheets and charts to images. Supports 2 operations: render, render_chart.
 
@@ -91,7 +102,8 @@ Usage examples:
         [Description("Rendering DPI (for render, default: 150)")]
         int dpi = 150)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor,
+            serverConfig: _serverConfig);
 
         var parameters = BuildParameters(operation, sheetIndex, outputPath, chartIndex, format, dpi);
 
@@ -104,7 +116,8 @@ Usage examples:
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);
@@ -135,6 +148,7 @@ Usage examples:
     /// <summary>
     ///     Builds parameters for the render operation.
     /// </summary>
+    /// <returns>The parameters, configured for this operation.</returns>
     private static OperationParameters BuildRenderSheetParameters(OperationParameters parameters, int dpi)
     {
         parameters.Set("dpi", dpi);
@@ -144,6 +158,7 @@ Usage examples:
     /// <summary>
     ///     Builds parameters for the render_chart operation.
     /// </summary>
+    /// <returns>The parameters, configured for this operation.</returns>
     private static OperationParameters BuildRenderChartParameters(OperationParameters parameters, int? chartIndex)
     {
         if (chartIndex.HasValue) parameters.Set("chartIndex", chartIndex.Value);

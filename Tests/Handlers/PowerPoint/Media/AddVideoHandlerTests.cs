@@ -6,6 +6,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Media;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class AddVideoHandlerTests : PptHandlerTestBase
 {
     private readonly AddVideoHandler _handler = new();

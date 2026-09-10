@@ -91,9 +91,83 @@ public class UpdateFieldWordHandlerTests : WordHandlerTestBase
         Assert.Contains("locked", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    ///     R5-C02: an update-all that updated nothing must leave the session clean. The tally was
+    ///     read and then the context was marked modified regardless, so a document with no fields —
+    ///     or one whose every field was locked or refused — reported "Updated 0 field(s)" and still
+    ///     made the close path rewrite an unchanged file.
+    /// </summary>
+    [Fact]
+    public void Execute_WithUpdateAllOnADocumentWithNoFields_ShouldLeaveItUnmodified()
+    {
+        var context = CreateContext(new Document());
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "updateAll", true }
+        });
+
+        var result = Assert.IsType<SuccessResult>(_handler.Execute(context, parameters));
+
+        Assert.Contains("Updated 0 field(s)", result.Message, StringComparison.Ordinal);
+        AssertNotModified(context);
+    }
+
+    [Fact]
+    public void Execute_WithUpdateAllWhenEveryFieldIsLocked_ShouldLeaveItUnmodified()
+    {
+        var context = CreateContext(CreateDocumentWithOnlyLockedFields());
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "updateAll", true }
+        });
+
+        var result = Assert.IsType<SuccessResult>(_handler.Execute(context, parameters));
+
+        Assert.Contains("Updated 0 field(s)", result.Message, StringComparison.Ordinal);
+        Assert.Contains("locked", result.Message, StringComparison.OrdinalIgnoreCase);
+        AssertNotModified(context);
+    }
+
+    [Fact]
+    public void Execute_WithUpdateAllWhenEveryFieldIsRefused_ShouldLeaveItUnmodified()
+    {
+        var context = CreateContext(CreateDocumentWithOnlyRefusedFields());
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "updateAll", true }
+        });
+
+        var result = Assert.IsType<SuccessResult>(_handler.Execute(context, parameters));
+
+        Assert.Contains("Updated 0 field(s)", result.Message, StringComparison.Ordinal);
+        Assert.Contains("external content", result.Message, StringComparison.OrdinalIgnoreCase);
+        AssertNotModified(context);
+    }
+
     #endregion
 
     #region Helper Methods
+
+    private static Document CreateDocumentWithOnlyLockedFields()
+    {
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        foreach (var code in new[] { "DATE", "TIME" })
+        {
+            builder.InsertField(code).IsLocked = true;
+            builder.Writeln();
+        }
+
+        return doc;
+    }
+
+    private static Document CreateDocumentWithOnlyRefusedFields()
+    {
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        builder.InsertField("INCLUDETEXT \"nowhere.docx\"");
+        return doc;
+    }
 
     private static Document CreateDocumentWithField()
     {

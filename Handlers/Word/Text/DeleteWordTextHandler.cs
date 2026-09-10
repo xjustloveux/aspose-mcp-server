@@ -204,6 +204,7 @@ public class DeleteWordTextHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Extracts the text that will be deleted for preview.
     /// </summary>
+    /// <returns>The resulting text.</returns>
     private static string ExtractDeletedText(NodeCollection paragraphs, WordParagraph startPara, WordParagraph endPara,
         int startParagraphIndex, int endParagraphIndex, int startRunIndex, int? endRunIndex)
     {
@@ -223,6 +224,7 @@ public class DeleteWordTextHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Extracts deleted text when start and end are in the same paragraph.
     /// </summary>
+    /// <returns>The resulting text.</returns>
     private static string ExtractFromSameParagraph(WordParagraph para, int startRunIndex, int? endRunIndex)
     {
         var runs = para.GetChildNodes(NodeType.Run, false);
@@ -241,6 +243,7 @@ public class DeleteWordTextHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Extracts deleted text spanning multiple paragraphs.
     /// </summary>
+    /// <returns>The resulting text.</returns>
     private static string ExtractFromMultipleParagraphs(NodeCollection paragraphs, WordParagraph startPara,
         WordParagraph endPara, int startParagraphIndex, int endParagraphIndex, int startRunIndex, int? endRunIndex)
     {
@@ -271,6 +274,7 @@ public class DeleteWordTextHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Validates if the run range is within bounds.
     /// </summary>
+    /// <returns><c>true</c> when it does; otherwise <c>false</c>.</returns>
     private static bool IsValidRunRange(int startRunIndex, int endRunIndex, int runCount)
     {
         return startRunIndex >= 0 && startRunIndex < runCount &&
@@ -302,8 +306,14 @@ public class DeleteWordTextHandler : OperationHandlerBase<Document>
         var actualEndRunIndex = endRunIndex ?? runs.Count - 1;
         if (!IsValidRunRange(startRunIndex, actualEndRunIndex, runs.Count)) return;
 
+        // Indexed before the loop. Removing runs does not invalidate it: the positions are a
+        // snapshot, and every run still asked about is one it already knows.
+        var extents = FieldBoundaryHelper.FieldExtents.Of(para.Document as Document
+                                                          ?? throw new InvalidOperationException(
+                                                              "The paragraph is not part of a document."));
+
         for (var i = actualEndRunIndex; i >= startRunIndex; i--)
-            if (runs[i] is Run run && FieldBoundaryHelper.GetEnclosingField(run) == null)
+            if (runs[i] is Run run && extents.EnclosingField(run) == null)
                 run.Remove();
     }
 
@@ -313,10 +323,27 @@ public class DeleteWordTextHandler : OperationHandlerBase<Document>
     private static void DeleteFromMultipleParagraphs(NodeCollection paragraphs, WordParagraph startPara,
         WordParagraph endPara, int startParagraphIndex, int endParagraphIndex, int startRunIndex, int? endRunIndex)
     {
+        var extents = FieldBoundaryHelper.FieldExtents.Of(startPara.Document as Document
+                                                          ?? throw new InvalidOperationException(
+                                                              "The paragraph is not part of a document."));
+
+        // The run loops below skip a run inside a field; the paragraph loop removed whole
+        // paragraphs with no such check. A field contained in one of them goes with it, which is a
+        // complete removal — but a field that runs *through* one loses a marker and leaves the
+        // document with a field that has no end. Checked here, before the first run is touched:
+        // checking it at the paragraph loop left the start paragraph already truncated when the
+        // refusal came, so a refused delete had still changed the document (§21.3).
+        for (var p = endParagraphIndex - 1; p > startParagraphIndex; p--)
+            if (paragraphs[p] is WordParagraph crossed && extents.WouldSplitAField(crossed))
+                throw new ArgumentException(
+                    "The range crosses a field that begins or ends outside it, so deleting it "
+                    + "would leave the field without one of its markers. Delete the field with "
+                    + "word_field, or choose a range that does not cut through one.");
+
         var startRuns = startPara.GetChildNodes(NodeType.Run, false);
         if (startRuns != null && startRuns.Count > startRunIndex)
             for (var i = startRuns.Count - 1; i >= startRunIndex; i--)
-                if (startRuns[i] is Run run && FieldBoundaryHelper.GetEnclosingField(run) == null)
+                if (startRuns[i] is Run run && extents.EnclosingField(run) == null)
                     run.Remove();
 
         for (var p = endParagraphIndex - 1; p > startParagraphIndex; p--)
@@ -328,7 +355,7 @@ public class DeleteWordTextHandler : OperationHandlerBase<Document>
             var actualEndRunIndex = endRunIndex ?? endRuns.Count - 1;
             for (var i = actualEndRunIndex; i >= 0; i--)
                 if (i < endRuns.Count && endRuns[i] is Run run &&
-                    FieldBoundaryHelper.GetEnclosingField(run) == null)
+                    extents.EnclosingField(run) == null)
                     run.Remove();
         }
     }
@@ -336,6 +363,7 @@ public class DeleteWordTextHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Builds the result message.
     /// </summary>
+    /// <returns>The success result.</returns>
     private static SuccessResult BuildResultMessage(string? searchText, int startPara, int startRun,
         int endPara, int? endRun, string deletedText)
     {

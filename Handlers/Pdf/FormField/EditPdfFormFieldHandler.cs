@@ -33,16 +33,42 @@ public class EditPdfFormFieldHandler : OperationHandlerBase<Document>
         if (field == null)
             throw new ArgumentException($"Form field '{p.FieldName}' not found");
 
-        if (field is TextBoxField textBox && !string.IsNullOrEmpty(p.Value))
-            textBox.Value = p.Value;
-        else if (field is CheckboxField checkBox && p.CheckedValue.HasValue)
-            checkBox.Checked = p.CheckedValue.Value;
-        else if (field is RadioButtonField radioButton && !string.IsNullOrEmpty(p.Value))
-            radioButton.Value = p.Value;
+        if (string.IsNullOrEmpty(p.Value) && !p.CheckedValue.HasValue)
+            throw new ArgumentException("Provide 'value' or 'checked' to edit a form field");
+
+        // Reporting success while changing nothing hid two different problems: a caller who sent
+        // no field at all, and a field type this handler cannot write.
+        var updated = field switch
+        {
+            TextBoxField textBox when !string.IsNullOrEmpty(p.Value) => Assign(() => textBox.Value = p.Value),
+            CheckboxField checkBox when p.CheckedValue.HasValue =>
+                Assign(() => checkBox.Checked = p.CheckedValue.Value),
+            RadioButtonField radioButton when !string.IsNullOrEmpty(p.Value) =>
+                Assign(() => radioButton.Value = p.Value),
+            TextBoxField or CheckboxField or RadioButtonField => false,
+            _ => throw new ArgumentException(
+                $"Editing a field of type '{field.GetType().Name}' is not supported")
+        };
+
+        if (!updated)
+            throw new ArgumentException(
+                $"The supplied values do not apply to form field '{p.FieldName}' of type '{field.GetType().Name}'");
 
         MarkModified(context);
 
         return new SuccessResult { Message = $"Edited form field '{p.FieldName}'." };
+    }
+
+    /// <summary>
+    ///     Runs a field assignment and reports that a change was made, so the switch above can both
+    ///     write the value and record that it applied.
+    /// </summary>
+    /// <param name="assign">The assignment to perform.</param>
+    /// <returns>Always <c>true</c>.</returns>
+    private static bool Assign(Action assign)
+    {
+        assign();
+        return true;
     }
 
     /// <summary>

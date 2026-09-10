@@ -2,6 +2,7 @@ using Aspose.Words;
 using Aspose.Words.Tables;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 using WordParagraph = Aspose.Words.Paragraph;
@@ -48,6 +49,21 @@ public class SplitCellWordTableHandler : OperationHandlerBase<Document>
         if (isMerged)
             throw new InvalidOperationException("Cannot split merged cell. Please unmerge first or edit directly.");
 
+        // Splitting had no bound of its own: splitCols and splitRows were whatever the caller
+        // sent, and each pair becomes a cell object (R3-R04).
+        //
+        // What the caller asked for is validated first. Checking only the computed row width let
+        // splitCols=0 through — the subtraction cancelled it out — and the handler then added a
+        // row and reported success for a split into zero columns (R4-R04).
+        SecurityHelper.ValidateNumericRange(p.SplitRows, "splitRows", 1, TableBudget.MaxRows);
+        SecurityHelper.ValidateNumericRange(p.SplitCols, "splitCols", 1, TableBudget.MaxWordColumns);
+
+        // Then the table as it would be afterwards. A Word table may be ragged, so neither the
+        // widest row nor the cell count can be read off the selected row: another row may already
+        // be near the column limit, and the total is a sum rather than a product. Passing the
+        // selected row's width as if it were the whole table's undercounted both (R4-R04).
+        EnsureSplitTableWithinBudget(table, row, p.SplitRows, p.SplitCols);
+
         var cellText = cell.GetText();
         var parentRow = cell.ParentRow;
         var cellIndex = parentRow.Cells.IndexOf(cell);
@@ -64,6 +80,43 @@ public class SplitCellWordTableHandler : OperationHandlerBase<Document>
             Message =
                 $"Successfully split cell [{p.RowIndex}, {p.ColumnIndex}] into {p.SplitRows} rows x {p.SplitCols} columns."
         };
+    }
+
+    /// <summary>
+    ///     Refuses a split by what the table would actually hold afterwards.
+    ///     <para>
+    ///         The rows the split adds are copies of the selected row as it stands after being
+    ///         split, so each of them is that row's new width.
+    ///     </para>
+    /// </summary>
+    /// <param name="table">The table being split.</param>
+    /// <param name="row">The row holding the cell being split.</param>
+    /// <param name="splitRows">Rows the cell is being split into.</param>
+    /// <param name="splitCols">Columns the cell is being split into.</param>
+    /// <exception cref="ArgumentException">Thrown when the resulting table is over budget.</exception>
+    private static void EnsureSplitTableWithinBudget(Aspose.Words.Tables.Table table, Row row,
+        int splitRows, int splitCols)
+    {
+        checked
+        {
+            long existingCells = 0;
+            long widestExistingRow = 0;
+            for (var rowIndex = 0; rowIndex < table.Rows.Count; rowIndex++)
+            {
+                var existing = table.Rows[rowIndex];
+                existingCells += existing.Cells.Count;
+                widestExistingRow = Math.Max(widestExistingRow, existing.Cells.Count);
+            }
+
+            var splitRowWidth = row.Cells.Count + splitCols - 1L;
+            var addedRows = splitRows - 1L;
+
+            TableBudget.EnsureRaggedTableWithinBudget(
+                table.Rows.Count + addedRows,
+                Math.Max(widestExistingRow, splitRowWidth),
+                existingCells + (splitCols - 1L) + addedRows * splitRowWidth,
+                TableBudget.MaxWordColumns, "split cell");
+        }
     }
 
     /// <summary>

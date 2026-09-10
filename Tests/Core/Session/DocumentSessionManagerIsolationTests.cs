@@ -115,6 +115,50 @@ public class DocumentSessionManagerIsolationTests : IDisposable
 
     #endregion
 
+    #region Group-less Authenticated Identity Tests
+
+    /// <summary>
+    ///     Two principals that authenticated without a group claim must not reach each other's
+    ///     sessions.
+    ///     <para>
+    ///         This is the manager-level counterpart to
+    ///         <see cref="SessionIdentityTests.CanAccess_GroupMode_DifferentUsersWithNoGroup_ShouldDenyAccess" />.
+    ///         Several auth modes complete with a null group — a JWT missing the configured group
+    ///         claim, or a gateway request without the group header — and the authorisation check
+    ///         then matched them on <c>null == null</c> (R2-S03).
+    ///     </para>
+    /// </summary>
+    [Fact]
+    public void GroupMode_GrouplessUserCannotReachAnotherGrouplessUsersSession()
+    {
+        using var manager = CreateManager(SessionIsolationMode.Group);
+
+        var alice = new SessionIdentity { UserId = "alice" };
+        var bob = new SessionIdentity { UserId = "bob" };
+
+        var sessionId = manager.OpenDocument(_testFilePath, alice);
+
+        // Denial surfaces as "not found" rather than "forbidden", so a caller cannot use the
+        // error to learn that someone else's session id exists.
+        Assert.Throws<KeyNotFoundException>(() => manager.GetSession(sessionId, bob));
+        Assert.Null(manager.GetSessionStatus(sessionId, bob));
+        Assert.DoesNotContain(manager.ListSessions(bob), s => s.SessionId == sessionId);
+    }
+
+    [Fact]
+    public void GroupMode_GrouplessUserKeepsAccessToItsOwnSession()
+    {
+        using var manager = CreateManager(SessionIsolationMode.Group);
+
+        var alice = new SessionIdentity { UserId = "alice" };
+        var sessionId = manager.OpenDocument(_testFilePath, alice);
+
+        Assert.NotNull(manager.GetSession(sessionId, alice));
+        Assert.Contains(manager.ListSessions(alice), s => s.SessionId == sessionId);
+    }
+
+    #endregion
+
     #region None Mode Tests
 
     [Fact]

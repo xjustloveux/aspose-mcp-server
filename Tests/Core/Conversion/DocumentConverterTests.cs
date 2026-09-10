@@ -729,7 +729,7 @@ public class DocumentConverterTests : TestBase
         builder.Write("Test content for PDF conversion");
         var outputPath = CreateTestFilePath("output.pdf");
 
-        DocumentConverter.ConvertWordDocument(doc, outputPath, ".pdf", null, new ConversionOptions());
+        DocumentConverter.ConvertWordDocument(doc, outputPath, ".pdf", null, ConversionOptions.WithoutAHost());
 
         Assert.True(File.Exists(outputPath));
         Assert.True(new FileInfo(outputPath).Length > 0);
@@ -744,7 +744,8 @@ public class DocumentConverterTests : TestBase
         var builder = new DocumentBuilder(doc);
         builder.Write("Test content for HTML conversion");
         var outputPath = CreateTestFilePath("output.html");
-        var options = new ConversionOptions { HtmlEmbedImages = true, HtmlSingleFile = true };
+        var options = new ConversionOptions
+            { RecoveryDirectory = Path.GetTempPath(), HtmlEmbedImages = true, HtmlSingleFile = true };
 
         DocumentConverter.ConvertWordDocument(doc, outputPath, ".html", null, options);
 
@@ -761,7 +762,7 @@ public class DocumentConverterTests : TestBase
         var builder = new DocumentBuilder(doc);
         builder.Write("Test content for image conversion");
         var outputPath = CreateTestFilePath("output.png");
-        var options = new ConversionOptions { PageIndex = 1, Dpi = 150 };
+        var options = new ConversionOptions { RecoveryDirectory = Path.GetTempPath(), PageIndex = 1, Dpi = 150 };
 
         DocumentConverter.ConvertWordToImages(doc, outputPath, ".png", options);
 
@@ -842,7 +843,7 @@ public class DocumentConverterTests : TestBase
         workbook.Worksheets[0].Cells["A1"].Value = "Test content";
         var outputPath = CreateTestFilePath("output.pdf");
 
-        DocumentConverter.ConvertExcelDocument(workbook, outputPath, ".pdf", null, new ConversionOptions());
+        DocumentConverter.ConvertExcelDocument(workbook, outputPath, ".pdf", null, ConversionOptions.WithoutAHost());
 
         Assert.True(File.Exists(outputPath));
         Assert.True(new FileInfo(outputPath).Length > 0);
@@ -857,7 +858,7 @@ public class DocumentConverterTests : TestBase
         workbook.Worksheets[0].Cells["A1"].Value = "Test";
         workbook.Worksheets[0].Cells["B1"].Value = "Data";
         var outputPath = CreateTestFilePath("output.csv");
-        var options = new ConversionOptions { CsvSeparator = "," };
+        var options = new ConversionOptions { RecoveryDirectory = Path.GetTempPath(), CsvSeparator = "," };
 
         DocumentConverter.ConvertExcelDocument(workbook, outputPath, ".csv", null, options);
 
@@ -874,7 +875,7 @@ public class DocumentConverterTests : TestBase
         using var workbook = new Workbook();
         workbook.Worksheets[0].Cells["A1"].Value = "Test";
         var outputPath = CreateTestFilePath("output.png");
-        var options = new ConversionOptions { PageIndex = 1, Dpi = 150 };
+        var options = new ConversionOptions { RecoveryDirectory = Path.GetTempPath(), PageIndex = 1, Dpi = 150 };
 
         DocumentConverter.ConvertExcelToImages(workbook, outputPath, ".png", options);
 
@@ -939,7 +940,8 @@ public class DocumentConverterTests : TestBase
         using var presentation = new Presentation();
         var outputPath = CreateTestFilePath("output.pdf");
 
-        DocumentConverter.ConvertPowerPointDocument(presentation, outputPath, ".pdf", null, new ConversionOptions());
+        DocumentConverter.ConvertPowerPointDocument(presentation, outputPath, ".pdf", null,
+            ConversionOptions.WithoutAHost());
 
         Assert.True(File.Exists(outputPath));
         Assert.True(new FileInfo(outputPath).Length > 0);
@@ -953,7 +955,8 @@ public class DocumentConverterTests : TestBase
         using var presentation = new Presentation();
         var outputPath = CreateTestFilePath("output.html");
 
-        DocumentConverter.ConvertPowerPointDocument(presentation, outputPath, ".html", null, new ConversionOptions());
+        DocumentConverter.ConvertPowerPointDocument(presentation, outputPath, ".html", null,
+            ConversionOptions.WithoutAHost());
 
         Assert.True(File.Exists(outputPath));
         Assert.True(new FileInfo(outputPath).Length > 0);
@@ -1012,7 +1015,7 @@ public class DocumentConverterTests : TestBase
         page.Paragraphs.Add(new TextFragment("Test content for DOCX conversion"));
         var outputPath = CreateTestFilePath("output.docx");
 
-        DocumentConverter.ConvertPdfDocument(pdfDoc, outputPath, ".docx", new ConversionOptions());
+        DocumentConverter.ConvertPdfDocument(pdfDoc, outputPath, ".docx", ConversionOptions.WithoutAHost());
 
         Assert.True(File.Exists(outputPath));
         Assert.True(new FileInfo(outputPath).Length > 0);
@@ -1029,7 +1032,7 @@ public class DocumentConverterTests : TestBase
         page.Paragraphs.Add(new TextFragment("Test content for HTML conversion"));
         var outputPath = CreateTestFilePath("output.html");
 
-        DocumentConverter.ConvertPdfDocument(pdfDoc, outputPath, ".html", new ConversionOptions());
+        DocumentConverter.ConvertPdfDocument(pdfDoc, outputPath, ".html", ConversionOptions.WithoutAHost());
 
         Assert.True(File.Exists(outputPath));
         Assert.True(new FileInfo(outputPath).Length > 0);
@@ -1045,7 +1048,7 @@ public class DocumentConverterTests : TestBase
         page.Paragraphs.Add(new TextFragment("Hello plain text extraction"));
         var outputPath = CreateTestFilePath("output.txt");
 
-        DocumentConverter.ConvertPdfDocument(pdfDoc, outputPath, ".txt", new ConversionOptions());
+        DocumentConverter.ConvertPdfDocument(pdfDoc, outputPath, ".txt", ConversionOptions.WithoutAHost());
 
         Assert.True(File.Exists(outputPath));
         var content = File.ReadAllText(outputPath);
@@ -1077,7 +1080,7 @@ public class DocumentConverterTests : TestBase
         var inputPath = CreateTestFilePath("input.pdf");
         pdfDoc.Save(inputPath);
         var outputPath = CreateTestFilePath("output.png");
-        var options = new ConversionOptions { PageIndex = 1, Dpi = 150 };
+        var options = new ConversionOptions { RecoveryDirectory = Path.GetTempPath(), PageIndex = 1, Dpi = 150 };
 
         DocumentConverter.ConvertPdfToImages(inputPath, outputPath, ".png", 1, options);
 
@@ -1095,7 +1098,7 @@ public class DocumentConverterTests : TestBase
         var doc = new Document();
         var builder = new DocumentBuilder(doc);
         builder.Write("Test content");
-        var options = new ConversionOptions { JpegQuality = 50 };
+        var options = new ConversionOptions { RecoveryDirectory = Path.GetTempPath(), JpegQuality = 50 };
 
         using var stream = DocumentConverter.ConvertToStream(doc, DocumentType.Word, "pdf", options);
 
@@ -1109,7 +1112,7 @@ public class DocumentConverterTests : TestBase
         var doc = new Document();
         var builder = new DocumentBuilder(doc);
         builder.Write("Test content");
-        var options = new ConversionOptions { Dpi = 300 };
+        var options = new ConversionOptions { RecoveryDirectory = Path.GetTempPath(), Dpi = 300 };
 
         using var stream = DocumentConverter.ConvertToStream(doc, DocumentType.Word, "pdf", options);
 

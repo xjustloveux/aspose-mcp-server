@@ -95,7 +95,7 @@ public class GetPdfLinksHandlerTests : PdfHandlerTestBase
 
         var result = Assert.IsType<GetLinksResult>(res);
 
-        Assert.True(result.Count >= 0);
+        Assert.Equal(2, result.Count);
     }
 
     [Fact]

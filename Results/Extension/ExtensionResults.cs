@@ -17,6 +17,7 @@ public static class ExtensionResults
         typeof(SetFormatResult),
         typeof(ExtensionStatusResult),
         typeof(ExtensionBindingsResult),
-        typeof(BindingInfoDto)
+        typeof(BindingInfoDto),
+        typeof(SendCommandResult)
     ];
 }

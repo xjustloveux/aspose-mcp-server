@@ -2,6 +2,12 @@ using AsposeMcpServer.Core.Security;
 
 namespace AsposeMcpServer.Tests.Core.Security;
 
+/// <summary>
+///     Joins the environment-configuration collection: this class mutates process-wide
+///     environment variables, which xUnit's default parallelism would otherwise expose to any
+///     other test reading the same configuration.
+/// </summary>
+[Collection("EnvironmentConfiguration")]
 public class AuthConfigTests
 {
     [Fact]
@@ -833,7 +839,12 @@ public class AuthConfigTests
     [Fact]
     public void AuthConfig_Validate_ValidApiKeyGatewayMode_ShouldNotThrow()
     {
-        var config = new AuthConfig { ApiKey = { Enabled = true, Mode = ApiKeyMode.Gateway } };
+        // A-04: gateway mode has to name its trusted proxy; the configuration is only valid
+        // once it does.
+        var config = new AuthConfig
+        {
+            ApiKey = { Enabled = true, Mode = ApiKeyMode.Gateway, TrustedProxies = ["10.0.0.0/8"] }
+        };
 
         config.Validate();
     }
@@ -841,7 +852,10 @@ public class AuthConfigTests
     [Fact]
     public void AuthConfig_Validate_ValidJwtGatewayMode_ShouldNotThrow()
     {
-        var config = new AuthConfig { Jwt = { Enabled = true, Mode = JwtMode.Gateway } };
+        var config = new AuthConfig
+        {
+            Jwt = { Enabled = true, Mode = JwtMode.Gateway, TrustedProxies = ["10.0.0.0/8"] }
+        };
 
         config.Validate();
     }

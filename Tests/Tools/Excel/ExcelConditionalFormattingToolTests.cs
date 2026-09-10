@@ -62,7 +62,7 @@ public class ExcelConditionalFormattingToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithConditionalFormatting("test_get.xlsx");
         var result = _tool.Execute("get", workbookPath, conditionalFormattingIndex: 0);
         var data = GetResultData<GetConditionalFormattingsResult>(result);
-        Assert.True(data.Count >= 0);
+        Assert.Equal(1, data.Count);
     }
 
     [Fact]
@@ -139,7 +139,7 @@ public class ExcelConditionalFormattingToolTests : ExcelTestBase
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("get", sessionId: sessionId);
         var data = GetResultData<GetConditionalFormattingsResult>(result);
-        Assert.True(data.Count >= 0);
+        Assert.Equal(1, data.Count);
         var output = GetResultOutput<GetConditionalFormattingsResult>(result);
         Assert.True(output.IsSession);
     }

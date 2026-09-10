@@ -20,9 +20,11 @@ public class ExcelPropertiesTool : PropertiesToolBase<Workbook>
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
     /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public ExcelPropertiesTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
-        : base(sessionManager, identityAccessor, "AsposeMcpServer.Handlers.Excel.Properties")
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
+        : base(sessionManager, identityAccessor, "AsposeMcpServer.Handlers.Excel.Properties", serverConfig)
     {
     }
 
@@ -37,7 +39,7 @@ public class ExcelPropertiesTool : PropertiesToolBase<Workbook>
     /// <param name="path">Excel file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID for in-memory editing.</param>
     /// <param name="outputPath">Output file path (file mode only).</param>
-    /// <param name="sheetIndex">Sheet index (0-based, default: 0, required for sheet operations).</param>
+    /// <param name="sheetIndex">Sheet index (0-based, optional for sheet operations, default: 0).</param>
     /// <param name="title">Title (optional, for set_workbook_properties).</param>
     /// <param name="subject">Subject (optional, for set_workbook_properties).</param>
     /// <param name="author">Author (optional, for set_workbook_properties).</param>
@@ -85,7 +87,7 @@ Usage examples:
         string? sessionId = null,
         [Description("Output file path (file mode only)")]
         string? outputPath = null,
-        [Description("Sheet index (0-based, default: 0, required for sheet operations)")]
+        [Description("Sheet index (0-based, optional for sheet operations, default: 0)")]
         int sheetIndex = 0,
         [Description("Title (optional, for set_workbook_properties)")]
         string? title = null,

@@ -3,6 +3,7 @@ using System.Drawing.Imaging;
 using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Handlers.PowerPoint.Image;
+using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Results.Common;
 using AsposeMcpServer.Tests.Infrastructure;
 
@@ -13,6 +14,7 @@ using System.Runtime.Versioning;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Image;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class ExtractPptImageHandlerTests : PptHandlerTestBase
 {
     private readonly ExtractPptImageHandler _handler = new();
@@ -39,6 +41,40 @@ public class ExtractPptImageHandlerTests : PptHandlerTestBase
         var parameters = CreateEmptyParameters();
 
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+    }
+
+    #endregion
+
+    #region Output Budget
+
+    /// <summary>
+    ///     The cap was applied to the total shape count, so a deck of text boxes holding no
+    ///     pictures at all was refused for producing too many image files (R3-C05).
+    /// </summary>
+    [SkippableFact]
+    public void Execute_WithManyTextShapesAndNoImages_ShouldNotBeRefused()
+    {
+        SkipIfNotWindows();
+        var outputDir = Path.Combine(TestDir, "text_only_output");
+        var pptxPath = Path.Combine(TestDir, "text_only.pptx");
+
+        using (var authored = new Presentation())
+        {
+            var slide = authored.Slides[0];
+            for (var i = 0; i <= RenderBudget.MaxOutputFiles; i++)
+                slide.Shapes.AddAutoShape(ShapeType.Rectangle, 0, 0, 1, 1);
+
+            authored.Save(pptxPath, SaveFormat.Pptx);
+        }
+
+        using var pres = new Presentation(pptxPath);
+        var context = CreateContextWithPath(pres, pptxPath);
+        var parameters = CreateEmptyParameters();
+        parameters.Set("outputDir", outputDir);
+
+        var result = Assert.IsType<SuccessResult>(_handler.Execute(context, parameters));
+
+        Assert.Contains("Extracted 0 images", result.Message);
     }
 
     #endregion
@@ -196,6 +232,83 @@ public class ExtractPptImageHandlerTests : PptHandlerTestBase
         slide.Shapes.AddPictureFrame(ShapeType.Rectangle, 200, 50, 100, 100, image);
 
         return pres;
+    }
+
+    #endregion
+
+    #region Duplicate Counting
+
+    /// <summary>
+    ///     The cap counted picture frames, but frames sharing an image produce one file between
+    ///     them when duplicates are skipped, so a deck well inside the real output count was
+    ///     refused (R4-R06).
+    /// </summary>
+    [SkippableFact]
+    public void Execute_WithManyFramesSharingOneImage_ShouldNotBeRefusedWhenSkippingDuplicates()
+    {
+        SkipIfNotWindows();
+        var outputDir = Path.Combine(TestDir, "duplicate_frames_output");
+        var pptxPath = Path.Combine(TestDir, "duplicate_frames.pptx");
+
+        using (var authored = new Presentation())
+        {
+            var slide = authored.Slides[0];
+            using var bmp = new Bitmap(4, 4);
+            using var ms = new MemoryStream();
+            bmp.Save(ms, ImageFormat.Bmp);
+            ms.Position = 0;
+            var image = authored.Images.AddImage(ms);
+
+            for (var i = 0; i <= RenderBudget.MaxOutputFiles; i++)
+                slide.Shapes.AddPictureFrame(ShapeType.Rectangle, 0, 0, 4, 4, image);
+
+            authored.Save(pptxPath, SaveFormat.Pptx);
+        }
+
+        using var pres = new Presentation(pptxPath);
+        var context = CreateContextWithPath(pres, pptxPath);
+        var parameters = CreateEmptyParameters();
+        parameters.Set("outputDir", outputDir);
+        parameters.Set("skipDuplicates", true);
+
+        var result = Assert.IsType<SuccessResult>(_handler.Execute(context, parameters));
+
+        Assert.Contains("Extracted 1 images", result.Message);
+        Assert.Single(Directory.GetFiles(outputDir));
+    }
+
+    /// <summary>
+    ///     Without duplicate skipping every frame really does become a file, so the same deck is
+    ///     still refused.
+    /// </summary>
+    [SkippableFact]
+    public void Execute_WithManyFramesAndNoDuplicateSkipping_ShouldStillBeRefused()
+    {
+        SkipIfNotWindows();
+        var outputDir = Path.Combine(TestDir, "duplicate_frames_kept_output");
+        var pptxPath = Path.Combine(TestDir, "duplicate_frames_kept.pptx");
+
+        using (var authored = new Presentation())
+        {
+            var slide = authored.Slides[0];
+            using var bmp = new Bitmap(4, 4);
+            using var ms = new MemoryStream();
+            bmp.Save(ms, ImageFormat.Bmp);
+            ms.Position = 0;
+            var image = authored.Images.AddImage(ms);
+
+            for (var i = 0; i <= RenderBudget.MaxOutputFiles; i++)
+                slide.Shapes.AddPictureFrame(ShapeType.Rectangle, 0, 0, 4, 4, image);
+
+            authored.Save(pptxPath, SaveFormat.Pptx);
+        }
+
+        using var pres = new Presentation(pptxPath);
+        var context = CreateContextWithPath(pres, pptxPath);
+        var parameters = CreateEmptyParameters();
+        parameters.Set("outputDir", outputDir);
+
+        Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
     }
 
     #endregion

@@ -5,6 +5,11 @@ namespace AsposeMcpServer.Tests.Core;
 /// <summary>
 ///     Unit tests for ServerConfig class
 /// </summary>
+/// <summary>
+///     Shares the environment-configuration collection with the tool filter tests: both read or
+///     write process-wide environment variables, so they must not run in parallel.
+/// </summary>
+[Collection("EnvironmentConfiguration")]
 public class ServerConfigTests
 {
     #region Default Values Tests
@@ -21,6 +26,36 @@ public class ServerConfigTests
         Assert.True(config.EnableOcr);
         Assert.True(config.EnableEmail);
         Assert.True(config.EnableBarCode);
+        Assert.Empty(config.LegacyPublishJournalRoots);
+    }
+
+    [Fact]
+    public void LoadFromArgs_WithLegacyPublishJournalRoots_ShouldKeepOnlyExplicitRoots()
+    {
+        var first = Path.GetFullPath(Path.Combine("legacy", "first"));
+        var second = Path.GetFullPath(Path.Combine("legacy", "second"));
+
+        var config = ServerConfig.LoadFromArgs([
+            "--legacy-publish-journal-root", first,
+            $"--legacy-publish-journal-root={second}"
+        ]);
+
+        Assert.Equal([first, second], config.LegacyPublishJournalRoots);
+        Assert.Empty(config.AllowedBasePaths);
+    }
+
+    [Theory]
+    [InlineData("--legacy-publish-journal-root=")]
+    [InlineData("--legacy-publish-journal-root:")]
+    [InlineData("--legacy-publish-journal-root", "   ")]
+    [InlineData("--legacy-publish-journal-root")]
+    [InlineData("--legacy-publish-journal-root", "--word")]
+    public void LoadFromArgs_WithMissingLegacyPublishJournalRoot_ShouldFailFast(params string[] args)
+    {
+        var error = Assert.Throws<ArgumentException>(() => ServerConfig.LoadFromArgs(args));
+
+        Assert.Contains("legacy publish-journal root", error.Message,
+            StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

@@ -33,7 +33,7 @@ public class ListWordStylesHandlerTests : WordHandlerTestBase
 
         Assert.NotNull(result);
         Assert.NotNull(result.ParagraphStyles);
-        Assert.True(result.Count >= 0);
+        Assert.Equal(1, result.Count);
         AssertNotModified(context);
     }
 

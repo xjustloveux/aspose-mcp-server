@@ -27,6 +27,11 @@ public class PptImageTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Session manager for document lifecycle management.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -36,11 +41,14 @@ public class PptImageTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
     /// <param name="identityAccessor">Optional identity accessor for session isolation.</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public PptImageTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry =
             HandlerRegistry<Presentation>.CreateFromNamespace("AsposeMcpServer.Handlers.PowerPoint.Image");
     }
@@ -79,6 +87,8 @@ public class PptImageTool
         UseStructuredContent = true)]
     [Description(@"Manage PowerPoint images. Supports 6 operations: add, edit, delete, get, export_slides, extract.
 
+The 'export_slides' and 'extract' operations write their files as one request: a refusal or a handled failure publishes none of them, so no output file is replaced unless all of them are. An output directory the request had to create may remain, and power loss or a killed process is not covered.
+
 Usage examples:
 - Add image: ppt_image(operation='add', path='presentation.pptx', slideIndex=0, imagePath='image.png', x=100, y=100)
 - Edit image: ppt_image(operation='edit', path='presentation.pptx', slideIndex=0, imageIndex=0, width=300, height=200)
@@ -102,10 +112,10 @@ Usage examples:
         int? imageIndex = null,
         [Description("Image file path (required for add, optional for edit)")]
         string? imagePath = null,
-        [Description("X position in points (optional for add/edit, default: 100)")]
-        float x = 100,
-        [Description("Y position in points (optional for add/edit, default: 100)")]
-        float y = 100,
+        [Description("X position in points (add: default 100; edit: unchanged when omitted)")]
+        float? x = null,
+        [Description("Y position in points (add: default 100; edit: unchanged when omitted)")]
+        float? y = null,
         [Description("Width in points (optional for add/edit)")]
         float? width = null,
         [Description("Height in points (optional for add/edit)")]
@@ -127,7 +137,8 @@ Usage examples:
         [Description("Skip duplicate images based on content hash (optional for extract, default: false)")]
         bool skipDuplicates = false)
     {
-        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor,
+            serverConfig: _serverConfig);
 
         var parameters = BuildParameters(operation, slideIndex, imageIndex, imagePath, x, y, width, height,
             jpegQuality, maxWidth, maxHeight, outputDir, format, scale, slideIndexes, skipDuplicates);
@@ -141,7 +152,8 @@ Usage examples:
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);
@@ -166,8 +178,8 @@ Usage examples:
         int? slideIndex,
         int? imageIndex,
         string? imagePath,
-        float x,
-        float y,
+        float? x,
+        float? y,
         float? width,
         float? height,
         int? jpegQuality,
@@ -202,14 +214,15 @@ Usage examples:
     /// <param name="width">The width in points.</param>
     /// <param name="height">The height in points.</param>
     /// <returns>OperationParameters configured for adding an image.</returns>
-    private static OperationParameters BuildAddParameters(int? slideIndex, string? imagePath, float x, float y,
+    private static OperationParameters BuildAddParameters(int? slideIndex, string? imagePath, float? x, float? y,
         float? width, float? height)
     {
         var parameters = new OperationParameters();
         if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
         if (imagePath != null) parameters.Set("imagePath", imagePath);
-        parameters.Set("x", x);
-        parameters.Set("y", y);
+        // A new picture needs a position, so the documented default applies here.
+        parameters.Set("x", x ?? 100f);
+        parameters.Set("y", y ?? 100f);
         if (width.HasValue) parameters.Set("width", width.Value);
         if (height.HasValue) parameters.Set("height", height.Value);
         return parameters;
@@ -229,15 +242,17 @@ Usage examples:
     /// <param name="maxWidth">The maximum width in pixels for resize.</param>
     /// <param name="maxHeight">The maximum height in pixels for resize.</param>
     /// <returns>OperationParameters configured for editing an image.</returns>
-    private static OperationParameters BuildEditParameters(int? slideIndex, int? imageIndex, string? imagePath, float x,
-        float y, float? width, float? height, int? jpegQuality, int? maxWidth, int? maxHeight)
+    private static OperationParameters BuildEditParameters(int? slideIndex, int? imageIndex, string? imagePath,
+        float? x, float? y, float? width, float? height, int? jpegQuality, int? maxWidth, int? maxHeight)
     {
         var parameters = new OperationParameters();
         if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
         if (imageIndex.HasValue) parameters.Set("imageIndex", imageIndex.Value);
         if (imagePath != null) parameters.Set("imagePath", imagePath);
-        parameters.Set("x", x);
-        parameters.Set("y", y);
+        // Editing must leave the picture where it is unless the caller asked to move it. The
+        // parameters used to default to 100, so compressing an image also moved it to (100,100).
+        if (x.HasValue) parameters.Set("x", x.Value);
+        if (y.HasValue) parameters.Set("y", y.Value);
         if (width.HasValue) parameters.Set("width", width.Value);
         if (height.HasValue) parameters.Set("height", height.Value);
         if (jpegQuality.HasValue) parameters.Set("jpegQuality", jpegQuality.Value);

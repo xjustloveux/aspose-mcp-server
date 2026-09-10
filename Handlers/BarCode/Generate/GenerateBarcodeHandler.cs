@@ -36,6 +36,8 @@ public class GenerateBarcodeHandler : OperationHandlerBase<object>
         var outputPath = parameters.GetRequired<string>("outputPath");
 
         SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+        outputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(outputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], "outputPath");
 
         var typeStr = parameters.GetOptional("type", "QR");
         var encodeType = GetEncodeType(typeStr);

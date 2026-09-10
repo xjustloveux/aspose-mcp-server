@@ -40,6 +40,18 @@ public record ConversionResult
     public long? FileSize { get; init; }
 
     /// <summary>
+    ///     Every file the conversion actually wrote. A multi-page or multi-sheet image conversion
+    ///     produces one file per page or sheet with a numeric suffix, so the single OutputPath the
+    ///     caller supplied names a file that does not exist; this lists what does.
+    /// </summary>
+    public IReadOnlyList<string>? OutputPaths { get; init; }
+
+    /// <summary>
+    ///     Size in bytes of each entry in <see cref="OutputPaths" />, in the same order.
+    /// </summary>
+    public IReadOnlyList<long>? OutputFileSizes { get; init; }
+
+    /// <summary>
     ///     Human-readable message.
     /// </summary>
     [JsonPropertyName("message")]

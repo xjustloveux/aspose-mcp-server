@@ -7,6 +7,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Media;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class DeleteAudioHandlerTests : PptHandlerTestBase
 {
     private readonly DeleteAudioHandler _handler = new();

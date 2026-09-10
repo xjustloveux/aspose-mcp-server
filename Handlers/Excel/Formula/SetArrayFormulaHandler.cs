@@ -93,7 +93,7 @@ public class SetArrayFormulaHandler : OperationHandlerBase<Workbook>
     /// <param name="RangeObj">The range object.</param>
     /// <param name="CleanFormula">The cleaned formula string.</param>
     /// <param name="Range">The range string representation.</param>
-    private sealed record FormulaContext(
+    internal sealed record FormulaContext(
         Worksheet Worksheet,
         Aspose.Cells.Range RangeObj,
         string CleanFormula,
@@ -104,7 +104,7 @@ public class SetArrayFormulaHandler : OperationHandlerBase<Workbook>
     /// </summary>
     /// <param name="IsSuccess">Whether the operation succeeded.</param>
     /// <param name="Message">The result message or error description.</param>
-    private sealed record FormulaResult(bool IsSuccess, string Message);
+    internal sealed record FormulaResult(bool IsSuccess, string Message);
 
     // CS0618 - Using obsolete SetArrayFormula methods for backward compatibility with legacy Excel files
 #pragma warning disable CS0618
@@ -113,7 +113,7 @@ public class SetArrayFormulaHandler : OperationHandlerBase<Workbook>
     /// </summary>
     /// <param name="ctx">The formula context.</param>
     /// <returns>The result of the operation.</returns>
-    private static FormulaResult TrySetArrayFormula(FormulaContext ctx)
+    internal static FormulaResult TrySetArrayFormula(FormulaContext ctx)
     {
         List<string> errors = [];
 
@@ -137,7 +137,7 @@ public class SetArrayFormulaHandler : OperationHandlerBase<Workbook>
     /// </summary>
     /// <param name="ctx">The formula context.</param>
     /// <returns>The result of the operation.</returns>
-    private static FormulaResult TryPrimaryMethod(FormulaContext ctx)
+    internal static FormulaResult TryPrimaryMethod(FormulaContext ctx)
     {
         try
         {
@@ -158,7 +158,7 @@ public class SetArrayFormulaHandler : OperationHandlerBase<Workbook>
     /// </summary>
     /// <param name="ctx">The formula context.</param>
     /// <returns>The result of the operation.</returns>
-    private static FormulaResult TryAlternativeMethod(FormulaContext ctx)
+    internal static FormulaResult TryAlternativeMethod(FormulaContext ctx)
     {
         try
         {
@@ -184,7 +184,7 @@ public class SetArrayFormulaHandler : OperationHandlerBase<Workbook>
     /// </summary>
     /// <param name="ctx">The formula context.</param>
     /// <returns>The result of the operation.</returns>
-    private static FormulaResult TryFallbackMethod(FormulaContext ctx)
+    internal static FormulaResult TryFallbackMethod(FormulaContext ctx)
     {
         try
         {

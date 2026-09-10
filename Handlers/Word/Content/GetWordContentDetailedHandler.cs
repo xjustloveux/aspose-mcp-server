@@ -80,6 +80,7 @@ public class GetWordContentDetailedHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Determines if the header/footer type is a header type.
     /// </summary>
+    /// <returns><c>true</c> when it does; otherwise <c>false</c>.</returns>
     private static bool IsHeaderType(HeaderFooterType type)
     {
         return type == HeaderFooterType.HeaderPrimary ||
@@ -90,6 +91,7 @@ public class GetWordContentDetailedHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Determines if the header/footer type is a footer type.
     /// </summary>
+    /// <returns><c>true</c> when it does; otherwise <c>false</c>.</returns>
     private static bool IsFooterType(HeaderFooterType type)
     {
         return type == HeaderFooterType.FooterPrimary ||

@@ -26,6 +26,11 @@ public class ExcelProtectTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -35,11 +40,14 @@ public class ExcelProtectTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
     /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public ExcelProtectTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry = HandlerRegistry<Workbook>.CreateFromNamespace("AsposeMcpServer.Handlers.Excel.Protect");
     }
 
@@ -65,7 +73,7 @@ public class ExcelProtectTool
     ///     default: false).
     /// </param>
     /// <param name="range">Cell or range (e.g., 'A1' or 'A1:C5', required for set_cell_locked).</param>
-    /// <param name="locked">Locked status (true = locked, false = unlocked, required for set_cell_locked).</param>
+    /// <param name="locked">Locked status (true = locked, false = unlocked, optional for set_cell_locked, default: false).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(
@@ -111,10 +119,11 @@ Usage examples:
         bool protectWindows = false,
         [Description("Cell or range (e.g., 'A1' or 'A1:C5', required for set_cell_locked)")]
         string? range = null,
-        [Description("Locked status (true = locked, false = unlocked, required for set_cell_locked)")]
+        [Description("Locked status (true = locked, false = unlocked, optional for set_cell_locked, default: false)")]
         bool locked = false)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor,
+            serverConfig: _serverConfig);
 
         var parameters = BuildParameters(operation, sheetIndex, password, protectWorkbook, protectStructure,
             protectWindows, range, locked);
@@ -128,7 +137,8 @@ Usage examples:
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);

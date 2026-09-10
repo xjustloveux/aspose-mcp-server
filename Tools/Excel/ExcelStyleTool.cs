@@ -26,6 +26,11 @@ public class ExcelStyleTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -35,11 +40,14 @@ public class ExcelStyleTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
     /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public ExcelStyleTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry = HandlerRegistry<Workbook>.CreateFromNamespace("AsposeMcpServer.Handlers.Excel.Style");
     }
 
@@ -51,8 +59,8 @@ public class ExcelStyleTool
     /// <param name="sessionId">Session ID for in-memory editing.</param>
     /// <param name="outputPath">Output file path (file mode only).</param>
     /// <param name="sheetIndex">Sheet index (0-based, default: 0).</param>
-    /// <param name="sourceSheetIndex">Source sheet index (0-based, required for copy_sheet_format).</param>
-    /// <param name="targetSheetIndex">Target sheet index (0-based, required for copy_sheet_format).</param>
+    /// <param name="sourceSheetIndex">Source sheet index (0-based, optional for copy_sheet_format, default: 0).</param>
+    /// <param name="targetSheetIndex">Target sheet index (0-based, optional for copy_sheet_format, default: 0).</param>
     /// <param name="range">Cell range (e.g., 'A1:C5', required for format).</param>
     /// <param name="cell">Cell address or range (e.g., 'A1' or 'A1:C5', for get_format).</param>
     /// <param name="fields">Comma-separated list of fields: font, color, alignment, border, number, value, all.</param>
@@ -101,9 +109,9 @@ Usage examples:
         string? outputPath = null,
         [Description("Sheet index (0-based, default: 0)")]
         int sheetIndex = 0,
-        [Description("Source sheet index (0-based, required for copy_sheet_format)")]
+        [Description("Source sheet index (0-based, optional for copy_sheet_format, default: 0)")]
         int sourceSheetIndex = 0,
-        [Description("Target sheet index (0-based, required for copy_sheet_format)")]
+        [Description("Target sheet index (0-based, optional for copy_sheet_format, default: 0)")]
         int targetSheetIndex = 0,
         [Description("Cell range (e.g., 'A1:C5', required for format)")]
         string? range = null,
@@ -140,7 +148,8 @@ Usage examples:
         [Description("Copy row heights (default: true)")]
         bool copyRowHeights = true)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor,
+            serverConfig: _serverConfig);
 
         var parameters = BuildParameters(operation, sheetIndex, sourceSheetIndex, targetSheetIndex, range, cell,
             fields, ranges, fontName, fontSize, bold, italic, fontColor, backgroundColor, patternType, patternColor,
@@ -156,7 +165,8 @@ Usage examples:
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);

@@ -75,7 +75,7 @@ public class GetPdfBookmarksHandlerTests : PdfHandlerTestBase
 
         var result = Assert.IsType<GetBookmarksPdfResult>(res);
 
-        Assert.True(result.Count >= 0);
+        Assert.Equal(2, result.Count);
     }
 
     [Fact]

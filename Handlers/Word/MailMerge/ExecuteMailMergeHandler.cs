@@ -55,6 +55,16 @@ public class ExecuteMailMergeHandler : OperationHandlerBase<Document>
             throw new ArgumentException(
                 "Cannot specify both 'data' and 'dataArray'. Use 'data' for single record or 'dataArray' for multiple records");
 
+        // The records arrive as a JSON string, so the bound applied to array parameters at the
+        // tool boundary never saw them: the count only exists after decoding. Each record clones
+        // the whole document and writes a file, so both the count and what it writes are bounded
+        // before the first clone rather than after some of them exist (R3-R05).
+        if (dataArrayObject != null)
+        {
+            SecurityHelper.ValidateArraySize(dataArrayObject, "dataArray");
+            RenderBudget.EnsureOutputCount(dataArrayObject.Count, "merged documents");
+        }
+
         var cleanupOptionsFlags = ParseCleanupOptions(p.CleanupOptions);
 
         if (dataArrayObject is { Count: > 0 })
@@ -96,7 +106,14 @@ public class ExecuteMailMergeHandler : OperationHandlerBase<Document>
         var fieldValues = data.Select(kvp => kvp.Value?.ToString() ?? "").Cast<object>().ToArray();
 
         doc.MailMerge.Execute(fieldNames, fieldValues);
-        doc.Save(outputPath);
+
+        // The single-record path wrote straight to the destination with no size limit at all,
+        // while the multi-record path measured only after the file was already there (R4-R02).
+        // Both now produce the file elsewhere and publish it once it is complete and within
+        // budget, so a refusal leaves the caller's destination as it was.
+        BoundedFilePublisher.Publish(outputPath, RenderBudget.MaxOutputBytes,
+            stream => doc.Save(stream, SaveFormat.Docx), "merged document",
+            context.Recovery, context.ServerConfig?.AllowedBasePaths ?? []);
 
         var actualMergedCount = fieldNames.Count(f => templateFieldNames.Contains(f));
 
@@ -122,11 +139,17 @@ public class ExecuteMailMergeHandler : OperationHandlerBase<Document>
         JsonArray dataArray,
         MailMergeCleanupOptions cleanupOptions)
     {
-        List<string> outputFiles = [];
         var outputDir = Path.GetDirectoryName(outputPath) ?? ".";
         var outputName = Path.GetFileNameWithoutExtension(outputPath);
         var outputExt = Path.GetExtension(outputPath);
         var fieldsMerged = 0;
+
+        // Every record is staged and the batch published at the end. Publishing each record as it
+        // was produced meant a merge refused on its last record had already replaced the
+        // destinations of every record before it, leaving a caller who retried unable to tell
+        // which files belonged to the run that failed (R4-R02).
+        using var batch = new BoundedFileBatch(RenderBudget.MaxOutputBytes, "merged documents",
+            context.Recovery, context.ServerConfig?.AllowedBasePaths ?? []);
 
         for (var i = 0; i < dataArray.Count; i++)
         {
@@ -151,9 +174,13 @@ public class ExecuteMailMergeHandler : OperationHandlerBase<Document>
             // H3: re-resolve each per-record path immediately before its sink (bug 20260415-symlink-toctou-sweep).
             recordOutputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(recordOutputPath,
                 context.ServerConfig?.AllowedBasePaths ?? [], nameof(recordOutputPath));
-            doc.Save(recordOutputPath);
-            outputFiles.Add(recordOutputPath);
+            // A record count says nothing about what lands on disk; one template can produce a
+            // very large document, so each is written through the remaining budget rather than
+            // published first and measured afterwards (R3-R05, R4-R02).
+            batch.Stage(recordOutputPath, stream => doc.Save(stream, SaveFormat.Docx));
         }
+
+        var outputFiles = batch.Publish();
 
         return new MailMergeResult
         {

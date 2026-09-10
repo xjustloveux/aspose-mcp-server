@@ -7,6 +7,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.TextFormat;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class FormatPptTextHandlerTests : PptHandlerTestBase
 {
     private readonly FormatPptTextHandler _handler = new();

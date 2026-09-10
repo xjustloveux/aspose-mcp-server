@@ -89,7 +89,7 @@ public class GetExcelMergedCellsHandlerTests : ExcelHandlerTestBase
 
         var result = Assert.IsType<GetMergedCellsResult>(res);
 
-        Assert.True(result.Count >= 0);
+        Assert.Equal(1, result.Count);
         Assert.NotNull(result.WorksheetName);
         Assert.NotNull(result.Items);
     }
@@ -137,7 +137,7 @@ public class GetExcelMergedCellsHandlerTests : ExcelHandlerTestBase
         var result = Assert.IsType<GetMergedCellsResult>(res);
 
         var item = result.Items[0];
-        Assert.True(item.Index >= 0);
+        Assert.Equal(0, item.Index);
         Assert.NotNull(item.Range);
         Assert.NotNull(item.StartCell);
         Assert.NotNull(item.EndCell);

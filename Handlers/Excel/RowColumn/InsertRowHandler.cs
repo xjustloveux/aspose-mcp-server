@@ -1,6 +1,7 @@
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Helpers.Excel;
 using AsposeMcpServer.Results.Common;
 
@@ -43,6 +44,7 @@ public class InsertRowHandler : OperationHandlerBase<Workbook>
         var sheetIndex = parameters.GetOptional("sheetIndex", 0);
         var rowIndex = parameters.GetRequired<int>("rowIndex");
         var count = parameters.GetOptional("count", 1);
+        SecurityHelper.ValidateNumericRange(count, "count", 1, 1_048_576);
 
         if (count <= 0)
             throw new ArgumentException($"Count must be greater than 0, got {count}");

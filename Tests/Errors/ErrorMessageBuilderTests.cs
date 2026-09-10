@@ -251,4 +251,65 @@ public class ErrorMessageBuilderTests
         foreach (var s in sentinels)
             Assert.DoesNotContain("/", s, StringComparison.Ordinal);
     }
+
+    // ─── output-directory classification (R3-C09) ───────────────────────────────
+
+    /// <param name="basename">A basename the caller supplied.</param>
+    [Theory]
+    [InlineData("report.xlsx")]
+    [InlineData("my document.docx")]
+    [InlineData("a-b_c.1.pdf")]
+    public void IsOutputDirectoryNotWritable_WithItsOwnOutput_ShouldBeRecognised(string basename)
+    {
+        Assert.True(ErrorMessageBuilder.IsOutputDirectoryNotWritable(
+            ErrorMessageBuilder.OutputDirectoryNotWritable(basename)));
+    }
+
+    [Fact]
+    public void IsOutputDirectoryNotWritable_WithTheGenericForm_ShouldBeRecognised()
+    {
+        Assert.True(ErrorMessageBuilder.IsOutputDirectoryNotWritable(
+            ErrorMessageBuilder.OutputDirectoryNotWritable()));
+    }
+
+    /// <summary>
+    ///     Only the opening and closing words were checked, so anything between them was
+    ///     forwarded to the caller verbatim (R3-C09).
+    /// </summary>
+    /// <param name="forged">A message that opens and closes like the authored one.</param>
+    [Theory]
+    [InlineData("The output directory for 'D:\\srv\\secrets\\report.xlsx' cannot be created or is not writable.")]
+    [InlineData("The output directory /home/jaja/keys cannot be created or is not writable.")]
+    [InlineData("The output directory for 'C:/Users/jaja/x.docx' cannot be created or is not writable.")]
+    [InlineData("The output directory at 10.1.2.3 cannot be created or is not writable.")]
+    [InlineData("The output directory for '../../etc/passwd' cannot be created or is not writable.")]
+    public void IsOutputDirectoryNotWritable_WithAForgedMessage_ShouldBeRefused(string forged)
+    {
+        Assert.False(ErrorMessageBuilder.IsOutputDirectoryNotWritable(forged));
+    }
+
+    // ─── range sentinel (R3-C09) ────────────────────────────────────────────────
+
+    [Fact]
+    public void InvalidRange_ShouldRepeatOnlyTheCallersOwnRange()
+    {
+        var message = ErrorMessageBuilder.InvalidRange("A1:C10");
+
+        Assert.Contains("A1:C10", message, StringComparison.Ordinal);
+        AssertNoLeakPatterns(message);
+    }
+
+    [Fact]
+    public void InvalidRange_WithAVeryLongValue_ShouldTruncateIt()
+    {
+        var message = ErrorMessageBuilder.InvalidRange(new string('A', 500));
+
+        Assert.True(message.Length < 200, $"Message was {message.Length} characters long.");
+    }
+
+    [Fact]
+    public void InvalidRange_WithNoRange_ShouldStillBeUsable()
+    {
+        Assert.False(string.IsNullOrWhiteSpace(ErrorMessageBuilder.InvalidRange(null)));
+    }
 }

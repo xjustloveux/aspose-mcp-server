@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Drawing.Imaging;
 using System.Text;
 using Aspose.Cells;
@@ -8,6 +9,7 @@ using Aspose.Pdf.Devices;
 using Aspose.Pdf.Text;
 using Aspose.Slides;
 using Aspose.Slides.Export;
+using Aspose.Words;
 using AsposeMcpServer.Core.Progress;
 using AsposeMcpServer.Core.Session;
 using AsposeMcpServer.Helpers;
@@ -75,7 +77,153 @@ public class ConversionOptions
     ///     An empty list disables allowlist enforcement (open-world mode).
     /// </summary>
     public IReadOnlyList<string> AllowedBasePaths { get; init; } = [];
+
+    /// <summary>
+    ///     The temp directory of the host performing this conversion, which is where its publish
+    ///     records live.
+    /// </summary>
+    /// <remarks>
+    ///     Carried with the options rather than read from a process-wide property, so two hosts in
+    ///     one process do not write each other's journals (R18-ARCH01). Defaults to the process
+    ///     temp directory for a conversion started outside a host.
+    /// </remarks>
+    /// <remarks>
+    ///     Required, not defaulted. It defaulted to the system temp root while
+    ///     <c>CleanupDebtService</c> built its context from the configured session temp
+    ///     directory, so on any host with a temp root of its own a conversion journalled where
+    ///     nothing would ever recover it — and every call site compiled (R19-REC07).
+    /// </remarks>
+    public required string RecoveryDirectory { get; init; }
+
+    /// <summary>Where this conversion's publish records go, and the key they are signed with.</summary>
+    public RecoveryContext Recovery => RecoveryContext.For(RecoveryDirectory);
+
+    /// <summary>
+    ///     Whether an MHT archive may reference resources it does not contain. Converting such a
+    ///     file makes the server fetch them, which reaches hosts the caller cannot otherwise
+    ///     address. Aspose.Pdf 23.10.0 offers no hook to intercept that for MHT, so the reference
+    ///     is refused before conversion unless this is set.
+    /// </summary>
+    public bool AllowExternalResources { get; init; }
+
+    /// <summary>
+    ///     Most model elements the source document may hold for an in-memory conversion, per format.
+    ///     Every default is set rather than <c>null</c>; a caller may raise or disable any of them
+    ///     by passing its own <see cref="InMemoryModelLimits" />.
+    ///     <para>
+    ///         Measured (§19.10.3): peak managed memory during an in-memory conversion tracks the
+    ///         <em>decompressed</em> document, not the result and not the file on disk. The same
+    ///         document shape ran 2,452x, 2,238x and 2,561x its compressed input at three sizes, so
+    ///         <see cref="RenderBudget.MaxInMemoryOutputBytes" /> (what is handed back) and
+    ///         <c>SessionConfig.MaxFileSizeMb</c> (what is read) both miss the thing that decides
+    ///         residency.
+    ///     </para>
+    ///     <para>
+    ///         That measurement says which quantity to bound. It does not say where to put the
+    ///         bound, and the numbers that were put there come from a heuristic —
+    ///         <see cref="InMemoryModelLimits" /> sets out what was measured for each format and,
+    ///         more importantly, what the resulting figure does not cover. Read it before quoting
+    ///         a limit as a memory guarantee, because it is not one. This paragraph claimed the
+    ///         defaults were "measured, not guessed" while the type it points at called them a
+    ///         heuristic that does not bound memory at all; the claim was written when the
+    ///         defaults were first set (R9-C02) and not revisited when they were downgraded
+    ///         (§23.7), leaving one file saying both things — which is the failure the sentence
+    ///         before it was warning about (R13-DOC01).
+    ///     </para>
+    /// </summary>
+    public InMemoryModelLimits ModelLimits { get; init; } = new();
+
+    /// <summary>Options for a conversion with no host behind it.</summary>
+    /// <returns>Options whose publish records go to the system temp root.</returns>
+    /// <remarks>
+    ///     The honest name for what the old default did silently. These public APIs can be called
+    ///     without options at all, and nothing at that layer knows where a host keeps its records
+    ///     — but saying so at each such site is what keeps the next one from inheriting the wrong
+    ///     answer by accident, which is how a conversion came to journal where nothing would ever
+    ///     read it (R19-REC07).
+    /// </remarks>
+    [SuppressMessage("Security", "S5443:Using publicly writable directories is security-sensitive",
+        Justification =
+            "RecoveryContext.For appends a private .aspose-recovery directory, enforces owner-only protection, and fails closed before any state is written.")]
+    public static ConversionOptions WithoutAHost()
+    {
+        return new ConversionOptions { RecoveryDirectory = Path.GetTempPath() };
+    }
 }
+
+/// <summary>
+///     Ceilings on the source document of an in-memory conversion, one per format because one unit
+///     cannot describe four different document models. <c>null</c> disables that format's limit.
+///     <para>
+///         The defaults were chosen from a <em>heuristic</em>: the increase in managed heap during
+///         a conversion of one rich fixture per format, divided by the units in that fixture. That
+///         is not the cost of a conversion — it excludes the source model itself, Aspose's native
+///         allocations and the process working set — so these limits do not bound how much memory
+///         a conversion uses, and nothing here claims they do (§23.7).
+///     </para>
+///     <para>
+///         What the numbers did settle is <em>relative</em>: an earlier round priced the cheapest
+///         shape of each format and warned that richer content would cost more. It does, by
+///         factors that differ by more than an order of magnitude between formats, so a single
+///         safety margin could not stand in for that. Each limit is derived from its own
+///         expensive fixture instead (§19.10.3, R9-C02).
+///     </para>
+///     <list type="bullet">
+///         <item>
+///             Word — 19,504 nodes of four-cell tables added 52 MB of heap: ~2.7 KB per node,
+///             against ~2.5 KB for plain paragraphs. Barely more, so 60,000 nodes stays.
+///         </item>
+///         <item>
+///             Excel — 32,000 cells, one formula in every eighth, added 68 MB: ~2.1 KB per
+///             cell, against ~0.4 KB for short strings. Over five times more, so the limit came down
+///             from 300,000 to 120,000.
+///         </item>
+///         <item>
+///             PowerPoint — 121 slides carrying twelve text shapes each added 49 MB: ~405 KB
+///             per slide, against ~9.5 KB for empty ones. Forty times more, so the limit came down
+///             from 1,000 to 600.
+///         </item>
+///         <item>
+///             PDF — 300 pages of two text fragments each added 28 MB: ~93 KB per page. 2,000
+///             pages stays.
+///         </item>
+///     </list>
+///     <para>
+///         Richer content still exists — a slide of photographs, a scanned page — and these limits
+///         do not bound it. Nor do they bound the shapes that were measured: the heap delta on one
+///         fixture is a comparison, not a budget. What these ceilings really are is a bound on
+///         <em>document size</em>, chosen so that the formats stay in proportion to one another.
+///     </para>
+///     <para>
+///         <strong>The file path is not exempt from the cost, only from the limit.</strong> Measured
+///         on the same rich documents, converting to a file peaked at 85% of the in-memory figure
+///         for Word, 57% for PDF, 51% for PowerPoint and 35% for Excel: the source model is held
+///         either way, and what streaming avoids is holding a second full copy of the result. The
+///         refusal points at the file path because it costs less, not because it costs nothing
+///         (R9-C02).
+///     </para>
+/// </summary>
+/// <param name="WordNodes">
+///     Most nodes an Aspose.Words document may hold. 60,000 is about 162 MB on nodes carrying
+///     table cells, and about 150 MB on plain paragraphs.
+/// </param>
+/// <param name="ExcelCells">
+///     Most cells, summed across worksheets, an Aspose.Cells workbook may hold. 120,000 is about
+///     252 MB on cells carrying formulas, and about 48 MB on plain short strings.
+/// </param>
+/// <param name="PowerPointSlides">
+///     Most slides an Aspose.Slides presentation may hold. 600 is about 243 MB on slides carrying
+///     a dozen text shapes each, and far above any ordinary deck.
+/// </param>
+/// <param name="PdfPages">
+///     Most pages an Aspose.Pdf document may hold. 2,000 leaves room for pages far richer than the
+///     text-only ones measured.
+/// </param>
+public sealed record InMemoryModelLimits(
+    int? WordNodes = 60_000,
+    int? ExcelCells = 120_000,
+    int? PowerPointSlides = 600,
+    int? PdfPages = 2_000);
 
 /// <summary>
 ///     Provides document conversion functionality for various Aspose document types.
@@ -83,6 +231,9 @@ public class ConversionOptions
 /// </summary>
 public static class DocumentConverter
 {
+    private const string MhtmlFormat = "mhtml";
+    private const string ConvertedDocumentDescription = "converted document";
+
     /// <summary>
     ///     MIME type mappings for output formats.
     /// </summary>
@@ -115,7 +266,7 @@ public static class DocumentConverter
         { "md", "text/markdown" },
         { "tex", "application/x-tex" },
         { "mht", "message/rfc822" },
-        { "mhtml", "message/rfc822" }
+        { MhtmlFormat, "message/rfc822" }
     };
 
     /// <summary>
@@ -250,7 +401,7 @@ public static class DocumentConverter
     public static bool IsPdfConvertibleFormat(string extension)
     {
         var ext = NormalizeExtension(extension);
-        return ext is "html" or "htm" or "epub" or "md" or "svg" or "xps" or "tex" or "mht" or "mhtml";
+        return ext is "html" or "htm" or "epub" or "md" or "svg" or "xps" or "tex" or "mht" or MhtmlFormat;
     }
 
     /// <summary>
@@ -365,6 +516,128 @@ public static class DocumentConverter
     #region Stream Conversion (for Extension system)
 
     /// <summary>
+    ///     Reads a presentation's slide count under the gate.
+    ///     <para>
+    ///         Counting slides enters Aspose.Slides, and this runs before the conversion takes its
+    ///         own hold — so on this path the library was touched with nothing held. Found by the
+    ///         syntax analyser checking a claim the gate inventory had only asserted by hand
+    ///         (§23.30).
+    ///     </para>
+    /// </summary>
+    /// <param name="presentation">The presentation to measure.</param>
+    /// <returns>How many slides it holds.</returns>
+    private static int SlideCountOf(Presentation presentation)
+    {
+        using var slidesGate = SlidesGate.Enter();
+        return presentation.Slides.Count;
+    }
+
+    /// <summary>
+    ///     Refuses a source document larger than the operator allowed for an in-memory conversion.
+    ///     <para>
+    ///         The byte caps bound the result and the file; neither bounds the model, which is what
+    ///         peak memory follows (§19.10.3). This is the only place that can look at the model,
+    ///         because by the time a conversion starts the document is already loaded — so the
+    ///         refusal is about the *next* conversion's memory, not this load's.
+    ///     </para>
+    ///     <para>
+    ///         The ceilings are fixed values on <see cref="InMemoryModelLimits" />, like every
+    ///         other <see cref="RenderBudget" /> bound in this server — none of which is a
+    ///         configuration setting. A caller constructing its own <see cref="ConversionOptions" />
+    ///         can raise or disable them; nothing in this tree does, and there is deliberately no
+    ///         operator setting for them (§21.7).
+    ///     </para>
+    /// </summary>
+    /// <param name="document">The loaded source document.</param>
+    /// <param name="documentType">Which model it is.</param>
+    /// <param name="limits">The ceilings in force; any of them may be null to disable it.</param>
+    /// <exception cref="ArgumentException">Thrown when the document is above the configured limit.</exception>
+    private static void EnsureModelWithinLimit(object document, DocumentType documentType,
+        InMemoryModelLimits limits)
+    {
+        var (measured, allowed, unit) = documentType switch
+        {
+            DocumentType.Word when limits.WordNodes.HasValue && document is Document word =>
+                (word.GetChildNodes(NodeType.Any, true).Count, limits.WordNodes, "nodes"),
+            DocumentType.Excel when limits.ExcelCells.HasValue && document is Workbook workbook =>
+                (workbook.Worksheets.Sum(sheet => sheet.Cells.Count), limits.ExcelCells, "cells"),
+            DocumentType.PowerPoint when limits.PowerPointSlides.HasValue
+                                         && document is Presentation presentation =>
+                (SlideCountOf(presentation), limits.PowerPointSlides, "slides"),
+            DocumentType.Pdf when limits.PdfPages.HasValue
+                                  && document is Aspose.Pdf.Document pdf =>
+                (pdf.Pages.Count, limits.PdfPages, "pages"),
+            _ => (0, null, string.Empty)
+        };
+
+        if (allowed == null || measured <= allowed.Value) return;
+
+        // "Costs less", not "costs nothing": converting the same document to a file still holds
+        // the source model, and measured on rich content it peaked at between a third and
+        // six-sevenths of the in-memory figure. Saying the file path avoids this would be telling
+        // the caller something the measurement does not support (R9-C02).
+        throw new ArgumentException(
+            $"The document holds {measured:N0} {unit}, above the {allowed.Value:N0} this server "
+            + "converts in memory. Convert to a file, which costs less memory, or split the "
+            + "document into smaller ones.");
+    }
+
+    /// <summary>
+    ///     Refuses a file that is already over a limit, before any loader opens it.
+    ///     <para>
+    ///         <see cref="EnsureModelWithinLimit" /> can only speak once the model exists, so it
+    ///         bounds whether to continue rather than what the load costs. Where the file states
+    ///         its own size — a presentation package names one part per slide, a PDF's page tree
+    ///         carries its count — that number is available for the price of reading a directory
+    ///         entry, and the refusal can come first (§23.13.1).
+    ///     </para>
+    ///     <para>
+    ///         Silent when the file cannot answer: a legacy binary, an encrypted package, a PDF
+    ///         whose count is not in the tail. Those still reach the loaded-model check. This adds
+    ///         an earlier refusal where one is cheap; it does not replace the later one.
+    ///     </para>
+    /// </summary>
+    /// <param name="path">The file about to be opened.</param>
+    /// <param name="documentType">Which model it will become.</param>
+    /// <param name="limits">The ceilings in force.</param>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when the file itself says it is above the limit.
+    /// </exception>
+    public static void EnsureFileWithinLimit(string path, DocumentType? documentType,
+        InMemoryModelLimits limits)
+    {
+        // A presentation that declares more parts than are ever accepted is refused here,
+        // whether or not a slide limit is configured: "too large to count" and "could not
+        // count" were one null, and null went on to the loader (R22-RES01). One preflight,
+        // read once: the refusal and the slide count came from two opens of the path, which
+        // need not have been the same bytes (R23-PPT01).
+        int? presentationSlides = null;
+        if (documentType == DocumentType.PowerPoint)
+        {
+            var presentation = DocumentSizePreflight.Presentation(path);
+            if (presentation.Refusal is { } refusal)
+                throw new ArgumentException(refusal, nameof(path));
+            presentationSlides = presentation.Slides;
+        }
+
+        var (measured, allowed, unit) = documentType switch
+        {
+            DocumentType.PowerPoint when limits.PowerPointSlides.HasValue =>
+                (presentationSlides, limits.PowerPointSlides, "slides"),
+            DocumentType.Pdf when limits.PdfPages.HasValue =>
+                (DocumentSizePreflight.PageCount(path), limits.PdfPages, "pages"),
+            _ => (null, null, string.Empty)
+        };
+
+        if (measured == null || allowed == null || measured.Value <= allowed.Value) return;
+
+        throw new ArgumentException(
+            $"The file holds {measured.Value:N0} {unit}, above the {allowed.Value:N0} this server "
+            + "converts in memory. Convert to a file, which costs less memory, or split the "
+            + "document into smaller ones.");
+    }
+
+    /// <summary>
     ///     Converts a document to the specified format and returns a Stream.
     /// </summary>
     /// <param name="document">The Aspose document object (Document, Workbook, Presentation, or Aspose.Pdf.Document).</param>
@@ -376,6 +649,38 @@ public static class DocumentConverter
     /// <exception cref="ArgumentException">Thrown when the output format is not supported for the document type.</exception>
     public static Stream ConvertToStream(object document, DocumentType documentType, string outputFormat,
         ConversionOptions? options = null)
+    {
+        // The model first, while refusing still costs nothing: the byte cap below bounds what is
+        // produced, and by then the memory has already been spent (§19.10.3). The limits carry
+        // measured defaults; a caller can raise or disable any of them.
+        EnsureModelWithinLimit(document, documentType,
+            (options ?? ConversionOptions.WithoutAHost()).ModelLimits);
+
+        // The in-memory limit, not the on-disk one: this result is held in memory and usually
+        // copied once more on the way out, so the bound that matters is the smaller one (§17.4.2).
+        return ConvertToStream(document, documentType, outputFormat,
+            RenderBudget.MaxInMemoryOutputBytes, options);
+    }
+
+    /// <summary>
+    ///     Converts a document to the specified format in memory, under the given byte limit.
+    /// </summary>
+    /// <param name="document">The Aspose document object.</param>
+    /// <param name="documentType">The type of the source document.</param>
+    /// <param name="outputFormat">The target output format (e.g., "pdf", "html", "png").</param>
+    /// <param name="maxOutputBytes">
+    ///     Most bytes the conversion may write. Exposed so a fixture can reach the refusal without
+    ///     producing two gigabytes: the production limit is what the public overload passes.
+    /// </param>
+    /// <param name="options">Optional conversion options. If null, defaults are used.</param>
+    /// <returns>A MemoryStream containing the converted document.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when document is null.</exception>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when the output format is not supported for the document type, or the conversion
+    ///     writes more than <paramref name="maxOutputBytes" />.
+    /// </exception>
+    internal static Stream ConvertToStream(object document, DocumentType documentType,
+        string outputFormat, long maxOutputBytes, ConversionOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(document);
 
@@ -392,7 +697,15 @@ public static class DocumentConverter
 
         try
         {
-            ConvertToStreamInternal(document, documentType, format, stream, null, options);
+            // Bounded as it is produced. PixelBudget limits the raster dimensions a render is
+            // asked for, which says nothing about how many bytes a compressed image or a non-image
+            // format then writes, so this path had no limit of its own at all (R4-R01). A refusal
+            // throws, and the partial stream goes with it rather than being returned.
+            using (var bounded = new BoundedWriteStream(stream, maxOutputBytes, "conversion output"))
+            {
+                ConvertToStreamInternal(document, documentType, format, bounded, null, options);
+            }
+
             stream.Position = 0;
             return stream;
         }
@@ -416,8 +729,17 @@ public static class DocumentConverter
     public static byte[] ConvertToBytes(object document, DocumentType documentType, string outputFormat,
         ConversionOptions? options = null)
     {
-        using var stream = ConvertToStream(document, documentType, outputFormat, options);
-        return ((MemoryStream)stream).ToArray();
+        using var buffer = (MemoryStream)ConvertToStream(document, documentType, outputFormat, options);
+
+        // The buffer is handed over whole when it is exactly the right size, which spares the
+        // second full copy that ToArray always makes. Both are bounded by
+        // RenderBudget.MaxInMemoryOutputBytes, so the peak is one copy rather than two of an
+        // unbounded result (§17.4.2).
+        if (buffer.TryGetBuffer(out var segment)
+            && segment.Offset == 0 && segment.Count == segment.Array!.Length)
+            return segment.Array;
+
+        return buffer.ToArray();
     }
 
     #endregion
@@ -432,20 +754,22 @@ public static class DocumentConverter
     /// <param name="outputFormat">The target output format (with or without leading dot).</param>
     /// <param name="progress">Optional progress reporter (only effective for PDF output).</param>
     /// <param name="options">Optional conversion options. If null, defaults are used.</param>
+    /// <returns>
+    ///     The paths written, in output order: one file per page for the image formats,
+    ///     otherwise the single converted document.
+    /// </returns>
     /// <exception cref="ArgumentException">Thrown when the output format is not supported.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when pageIndex is out of range.</exception>
-    public static void ConvertWordDocument(Document document, string outputPath, string outputFormat,
+    public static IReadOnlyList<string> ConvertWordDocument(Document document, string outputPath,
+        string outputFormat,
         IProgress<ProgressNotificationValue>? progress = null, ConversionOptions? options = null)
     {
-        options ??= new ConversionOptions();
+        options ??= ConversionOptions.WithoutAHost();
         document.UpdatePageLayout();
         var format = NormalizeExtension(outputFormat);
 
         if (IsWordImageFormat(format))
-        {
-            ConvertWordToImages(document, outputPath, format, options);
-            return;
-        }
+            return ConvertWordToImages(document, outputPath, format, options);
 
         // H45: resolve symlinks immediately before every write sink (bug 20260415-symlink-toctou-sweep).
         var resolvedOutput = ResolveOutputPath(outputPath, options.AllowedBasePaths);
@@ -457,7 +781,9 @@ public static class DocumentConverter
                 ProgressCallback = new WordsProgressAdapter(progress)
             };
             ApplyWordPdfCompliance(saveOptions, options.PdfCompliance);
-            document.Save(resolvedOutput, saveOptions);
+            BoundedFilePublisher.Publish(resolvedOutput, RenderBudget.MaxOutputBytes,
+                stream => document.Save(stream, saveOptions), ConvertedDocumentDescription, options.Recovery,
+                options.AllowedBasePaths);
         }
         else if (format is "html" or "htm")
         {
@@ -466,13 +792,19 @@ public static class DocumentConverter
                 ExportImagesAsBase64 = options.HtmlEmbedImages || options.HtmlSingleFile,
                 ExportFontsAsBase64 = options.HtmlSingleFile
             };
-            document.Save(resolvedOutput, saveOptions);
+            BoundedFilePublisher.Publish(resolvedOutput, RenderBudget.MaxOutputBytes,
+                stream => document.Save(stream, saveOptions), ConvertedDocumentDescription, options.Recovery,
+                options.AllowedBasePaths);
         }
         else
         {
             var saveFormat = GetWordSaveFormat(format);
-            document.Save(resolvedOutput, saveFormat);
+            BoundedFilePublisher.Publish(resolvedOutput, RenderBudget.MaxOutputBytes,
+                stream => document.Save(stream, saveFormat), ConvertedDocumentDescription, options.Recovery,
+                options.AllowedBasePaths);
         }
+
+        return [resolvedOutput];
     }
 
     /// <summary>
@@ -514,20 +846,22 @@ public static class DocumentConverter
     /// <param name="outputFormat">The target output format (with or without leading dot).</param>
     /// <param name="progress">Optional progress reporter (only effective for PDF output).</param>
     /// <param name="options">Optional conversion options. If null, defaults are used.</param>
+    /// <returns>
+    ///     The paths written, in output order: one file per worksheet for the image formats,
+    ///     otherwise the single converted workbook.
+    /// </returns>
     /// <exception cref="ArgumentException">Thrown when the output format is not supported.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when sheetIndex is out of range.</exception>
-    public static void ConvertExcelDocument(Workbook workbook, string outputPath, string outputFormat,
+    public static IReadOnlyList<string> ConvertExcelDocument(Workbook workbook, string outputPath,
+        string outputFormat,
         IProgress<ProgressNotificationValue>? progress = null, ConversionOptions? options = null)
     {
-        options ??= new ConversionOptions();
+        options ??= ConversionOptions.WithoutAHost();
         workbook.CalculateFormula();
         var format = NormalizeExtension(outputFormat);
 
         if (IsExcelImageFormat(format))
-        {
-            ConvertExcelToImages(workbook, outputPath, format, options);
-            return;
-        }
+            return ConvertExcelToImages(workbook, outputPath, format, options);
 
         // H45: resolve symlinks immediately before every write sink (bug 20260415-symlink-toctou-sweep).
         var resolvedOutput = ResolveOutputPath(outputPath, options.AllowedBasePaths);
@@ -539,7 +873,9 @@ public static class DocumentConverter
                 PageSavingCallback = new CellsProgressAdapter(progress)
             };
             ApplyExcelPdfCompliance(saveOptions, options.PdfCompliance);
-            workbook.Save(resolvedOutput, saveOptions);
+            BoundedFilePublisher.Publish(resolvedOutput, RenderBudget.MaxOutputBytes,
+                stream => workbook.Save(stream, saveOptions), ConvertedDocumentDescription, options.Recovery,
+                options.AllowedBasePaths);
         }
         else if (format is "html" or "htm")
         {
@@ -550,7 +886,9 @@ public static class DocumentConverter
                 ShowAllSheets = options.HtmlSingleFile
             };
 
-            workbook.Save(resolvedOutput, saveOptions);
+            BoundedFilePublisher.Publish(resolvedOutput, RenderBudget.MaxOutputBytes,
+                stream => workbook.Save(stream, saveOptions), ConvertedDocumentDescription, options.Recovery,
+                options.AllowedBasePaths);
         }
         else if (format == "csv")
         {
@@ -558,13 +896,19 @@ public static class DocumentConverter
             {
                 Separator = string.IsNullOrEmpty(options.CsvSeparator) ? ',' : options.CsvSeparator[0]
             };
-            workbook.Save(resolvedOutput, saveOptions);
+            BoundedFilePublisher.Publish(resolvedOutput, RenderBudget.MaxOutputBytes,
+                stream => workbook.Save(stream, saveOptions), ConvertedDocumentDescription, options.Recovery,
+                options.AllowedBasePaths);
         }
         else
         {
             var saveFormat = GetExcelSaveFormat(format);
-            workbook.Save(resolvedOutput, saveFormat);
+            BoundedFilePublisher.Publish(resolvedOutput, RenderBudget.MaxOutputBytes,
+                stream => workbook.Save(stream, saveFormat), ConvertedDocumentDescription, options.Recovery,
+                options.AllowedBasePaths);
         }
+
+        return [resolvedOutput];
     }
 
     /// <summary>
@@ -593,11 +937,20 @@ public static class DocumentConverter
     /// <param name="outputFormat">The target output format (with or without leading dot).</param>
     /// <param name="progress">Optional progress reporter (only effective for PDF output).</param>
     /// <param name="options">Optional conversion options. If null, defaults are used.</param>
+    /// <returns>
+    ///     The paths written, in output order: one file per slide for the image formats,
+    ///     otherwise the single converted presentation.
+    /// </returns>
     /// <exception cref="ArgumentException">Thrown when the output format is not supported.</exception>
-    public static void ConvertPowerPointDocument(Presentation presentation, string outputPath, string outputFormat,
+    public static IReadOnlyList<string> ConvertPowerPointDocument(Presentation presentation, string outputPath,
+        string outputFormat,
         IProgress<ProgressNotificationValue>? progress = null, ConversionOptions? options = null)
     {
-        options ??= new ConversionOptions();
+        // Taken here rather than at each caller: this is where the presentation is handed to
+        // Aspose.Slides, and a caller that already holds the gate re-enters it (SlidesGate).
+        using var slidesGate = SlidesGate.Enter();
+
+        options ??= ConversionOptions.WithoutAHost();
         var format = NormalizeExtension(outputFormat);
 
         // H45: resolve symlinks immediately before every write sink (bug 20260415-symlink-toctou-sweep).
@@ -611,13 +964,19 @@ public static class DocumentConverter
                 JpegQuality = (byte)options.JpegQuality
             };
             ApplySlidesPdfCompliance(saveOptions, options.PdfCompliance);
-            presentation.Save(resolvedOutput, Aspose.Slides.Export.SaveFormat.Pdf, saveOptions);
+            BoundedFilePublisher.Publish(resolvedOutput, RenderBudget.MaxOutputBytes,
+                stream => presentation.Save(stream, Aspose.Slides.Export.SaveFormat.Pdf, saveOptions),
+                ConvertedDocumentDescription, options.Recovery, options.AllowedBasePaths);
         }
         else
         {
             var saveFormat = GetPresentationSaveFormat(format);
-            presentation.Save(resolvedOutput, saveFormat);
+            BoundedFilePublisher.Publish(resolvedOutput, RenderBudget.MaxOutputBytes,
+                stream => presentation.Save(stream, saveFormat), ConvertedDocumentDescription, options.Recovery,
+                options.AllowedBasePaths);
         }
+
+        return [resolvedOutput];
     }
 
     /// <summary>
@@ -651,52 +1010,63 @@ public static class DocumentConverter
     /// <param name="outputPath">The output file path.</param>
     /// <param name="outputFormat">The target output format (with or without leading dot).</param>
     /// <param name="options">Optional conversion options. If null, defaults are used.</param>
+    /// <returns>
+    ///     The paths written, in page order: one file per page for PNG, JPEG and BMP, and a
+    ///     single file for TIFF and for every non-image format.
+    /// </returns>
     /// <exception cref="ArgumentException">Thrown when the output format is not supported.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when pageIndex is out of range.</exception>
-    public static void ConvertPdfDocument(Aspose.Pdf.Document pdfDocument, string outputPath, string outputFormat,
+    public static IReadOnlyList<string> ConvertPdfDocument(Aspose.Pdf.Document pdfDocument, string outputPath,
+        string outputFormat,
         ConversionOptions? options = null)
     {
-        options ??= new ConversionOptions();
+        options ??= ConversionOptions.WithoutAHost();
         var format = NormalizeExtension(outputFormat);
 
         if (IsImageFormat(format))
+            return ConvertPdfToImages(pdfDocument, outputPath, format, options.PageIndex, options);
+
+        // H45: resolve symlinks immediately before every write sink (bug 20260415-symlink-toctou-sweep).
+        var resolvedOutput = ResolveOutputPath(outputPath, options.AllowedBasePaths);
+
+        if (format is "html" or "htm")
         {
-            ConvertPdfToImages(pdfDocument, outputPath, format, options.PageIndex, options);
+            var htmlOptions = new Aspose.Pdf.HtmlSaveOptions
+            {
+                PartsEmbeddingMode = Aspose.Pdf.HtmlSaveOptions.PartsEmbeddingModes.EmbedAllIntoHtml,
+                RasterImagesSavingMode =
+                    Aspose.Pdf.HtmlSaveOptions.RasterImagesSavingModes.AsEmbeddedPartsOfPngPageBackground,
+                FontSavingMode = Aspose.Pdf.HtmlSaveOptions.FontSavingModes.SaveInAllFormats
+            };
+            BoundedFilePublisher.Publish(resolvedOutput, RenderBudget.MaxOutputBytes,
+                stream => pdfDocument.Save(stream, htmlOptions), ConvertedDocumentDescription, options.Recovery,
+                options.AllowedBasePaths);
+        }
+        else if (format == "svg")
+        {
+            var svgOptions = new SvgSaveOptions
+            {
+                CompressOutputToZipArchive = false
+            };
+            BoundedFilePublisher.Publish(resolvedOutput, RenderBudget.MaxOutputBytes,
+                stream => pdfDocument.Save(stream, svgOptions), ConvertedDocumentDescription, options.Recovery,
+                options.AllowedBasePaths);
+        }
+        else if (format == "txt")
+        {
+            BoundedFilePublisher.Publish(resolvedOutput, RenderBudget.MaxOutputBytes,
+                stream => WritePdfPlainText(stream, pdfDocument),
+                ConvertedDocumentDescription, options.Recovery, options.AllowedBasePaths);
         }
         else
         {
-            // H45: resolve symlinks immediately before every write sink (bug 20260415-symlink-toctou-sweep).
-            var resolvedOutput = ResolveOutputPath(outputPath, options.AllowedBasePaths);
-
-            if (format is "html" or "htm")
-            {
-                var htmlOptions = new Aspose.Pdf.HtmlSaveOptions
-                {
-                    PartsEmbeddingMode = Aspose.Pdf.HtmlSaveOptions.PartsEmbeddingModes.EmbedAllIntoHtml,
-                    RasterImagesSavingMode =
-                        Aspose.Pdf.HtmlSaveOptions.RasterImagesSavingModes.AsEmbeddedPartsOfPngPageBackground,
-                    FontSavingMode = Aspose.Pdf.HtmlSaveOptions.FontSavingModes.SaveInAllFormats
-                };
-                pdfDocument.Save(resolvedOutput, htmlOptions);
-            }
-            else if (format == "svg")
-            {
-                var svgOptions = new SvgSaveOptions
-                {
-                    CompressOutputToZipArchive = false
-                };
-                pdfDocument.Save(resolvedOutput, svgOptions);
-            }
-            else if (format == "txt")
-            {
-                File.WriteAllText(resolvedOutput, ExtractPdfPlainText(pdfDocument));
-            }
-            else
-            {
-                var saveFormat = GetPdfSaveFormat(format);
-                pdfDocument.Save(resolvedOutput, saveFormat);
-            }
+            var saveFormat = GetPdfSaveFormat(format);
+            BoundedFilePublisher.Publish(resolvedOutput, RenderBudget.MaxOutputBytes,
+                stream => pdfDocument.Save(stream, saveFormat), ConvertedDocumentDescription, options.Recovery,
+                options.AllowedBasePaths);
         }
+
+        return [resolvedOutput];
     }
 
     /// <summary>
@@ -707,13 +1077,17 @@ public static class DocumentConverter
     /// <param name="outputFormat">The target image format (with or without leading dot).</param>
     /// <param name="pageIndex">Optional 1-based page index for single page output (omit for all pages).</param>
     /// <param name="options">Optional conversion options. If null, defaults are used.</param>
+    /// <returns>
+    ///     The image paths written, in page order: one file per page for PNG, JPEG and BMP,
+    ///     and a single file for TIFF.
+    /// </returns>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when pageIndex is out of range.</exception>
     /// <exception cref="ArgumentException">Thrown when the image format is not supported.</exception>
-    public static void ConvertPdfToImages(string inputPath, string outputPath, string outputFormat,
-        int? pageIndex = null, ConversionOptions? options = null)
+    public static IReadOnlyList<string> ConvertPdfToImages(string inputPath, string outputPath,
+        string outputFormat, int? pageIndex = null, ConversionOptions? options = null)
     {
         using var pdfDoc = new Aspose.Pdf.Document(inputPath);
-        ConvertPdfToImages(pdfDoc, outputPath, outputFormat, pageIndex, options);
+        return ConvertPdfToImages(pdfDoc, outputPath, outputFormat, pageIndex, options);
     }
 
     /// <summary>
@@ -724,12 +1098,17 @@ public static class DocumentConverter
     /// <param name="outputFormat">The target image format (with or without leading dot).</param>
     /// <param name="pageIndex">Optional 1-based page index for single page output (omit for all pages).</param>
     /// <param name="options">Optional conversion options. If null, defaults are used.</param>
+    /// <returns>
+    ///     The image paths written, in page order: one file per page for PNG, JPEG and BMP,
+    ///     and a single file for TIFF.
+    /// </returns>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when pageIndex is out of range.</exception>
     /// <exception cref="ArgumentException">Thrown when the image format is not supported.</exception>
-    public static void ConvertPdfToImages(Aspose.Pdf.Document pdfDocument, string outputPath, string outputFormat,
-        int? pageIndex = null, ConversionOptions? options = null)
+    public static IReadOnlyList<string> ConvertPdfToImages(Aspose.Pdf.Document pdfDocument, string outputPath,
+        string outputFormat, int? pageIndex = null, ConversionOptions? options = null)
     {
-        options ??= new ConversionOptions();
+        List<string> written = [];
+        options ??= ConversionOptions.WithoutAHost();
         var format = NormalizeExtension(outputFormat);
 
         var ext = Path.GetExtension(outputPath);
@@ -745,19 +1124,25 @@ public static class DocumentConverter
                 throw new ArgumentOutOfRangeException(nameof(pageIndex),
                     $"Page index must be between 1 and {pdfDocument.Pages.Count}");
 
+            // One page is still a bitmap, and a page can be far larger than A4. This branch had
+            // no budget check at all, so a single 200-inch sheet at 3,000 DPI was unbounded
+            // (R3-R03).
+            AddPdfPageToBudget(new PixelBudget(), pdfDocument.Pages[pageIndex.Value], options.Dpi);
+
             if (format is "tiff" or "tif")
             {
                 var tiffDevice = new TiffDevice(resolution);
                 // H46: resolve symlinks immediately before the write sink (bug 20260415-symlink-toctou-sweep).
                 var resolvedSingleTiff = ResolveOutputPath(outputPath, options.AllowedBasePaths);
-                using var stream = new FileStream(resolvedSingleTiff, FileMode.Create);
-                tiffDevice.Process(pdfDocument, pageIndex.Value, pageIndex.Value, stream);
+                BoundedFilePublisher.Publish(resolvedSingleTiff, RenderBudget.MaxOutputBytes,
+                    stream => tiffDevice.Process(pdfDocument, pageIndex.Value, pageIndex.Value, stream),
+                    "rendered page", options.Recovery, options.AllowedBasePaths);
+                written.Add(resolvedSingleTiff);
             }
             else
             {
                 // H46: resolve symlinks immediately before the write sink (bug 20260415-symlink-toctou-sweep).
                 var resolvedSinglePage = ResolveOutputPath(outputPath, options.AllowedBasePaths);
-                using var stream = new FileStream(resolvedSinglePage, FileMode.Create);
                 PageDevice device = format switch
                 {
                     "png" => new PngDevice(resolution),
@@ -765,24 +1150,47 @@ public static class DocumentConverter
                     _ => throw new ArgumentException($"Unsupported image format: {format}")
                 };
 
-                device.Process(pdfDocument.Pages[pageIndex.Value], stream);
+                BoundedFilePublisher.Publish(resolvedSinglePage, RenderBudget.MaxOutputBytes,
+                    stream => device.Process(pdfDocument.Pages[pageIndex.Value], stream),
+                    "rendered page", options.Recovery, options.AllowedBasePaths);
+                written.Add(resolvedSinglePage);
             }
 
-            return;
+            return written;
         }
+
+        // Every page is rendered from here on, so the cost is the page count times the area
+        // at the requested resolution — the product no single parameter limit constrains. The
+        // count is checked first because it is cheap; the pixels are then counted from each
+        // page's real size rather than from an A4 assumption (R3-R03).
+        RenderBudget.EnsureOutputCount(pdfDocument.Pages.Count, "image files");
+
+        var pdfBudget = new PixelBudget();
+        foreach (var page in pdfDocument.Pages)
+            AddPdfPageToBudget(pdfBudget, page, options.Dpi);
 
         if (format is "tiff" or "tif")
         {
             var tiffDevice = new TiffDevice(resolution);
             // H46: resolve symlinks immediately before the write sink (bug 20260415-symlink-toctou-sweep).
             var resolvedTiff = ResolveOutputPath(outputPath, options.AllowedBasePaths);
-            using var stream = new FileStream(resolvedTiff, FileMode.Create);
-            tiffDevice.Process(pdfDocument, stream);
-            return;
+            BoundedFilePublisher.Publish(resolvedTiff, RenderBudget.MaxOutputBytes,
+                stream => tiffDevice.Process(pdfDocument, stream),
+                "rendered page", options.Recovery, options.AllowedBasePaths);
+            written.Add(resolvedTiff);
+            return written;
         }
 
         var dir = Path.GetDirectoryName(outputPath) ?? ".";
         var nameWithoutExt = Path.GetFileNameWithoutExtension(outputPath);
+
+        // One batch for the whole fan-out. Publishing each page on its own handed every page a
+        // fresh maximum budget — N pages could produce N times the limit — and put each file at
+        // its destination as it was made, so a failure on the last page left the earlier ones
+        // behind (R8-C03). Staging them all and publishing once gives the request a single byte
+        // budget and an all-or-nothing result.
+        using var pageBatch = new BoundedFileBatch(RenderBudget.MaxOutputBytes, "rendered pages",
+            options.Recovery, options.AllowedBasePaths);
 
         for (var i = 1; i <= pdfDocument.Pages.Count; i++)
         {
@@ -792,7 +1200,6 @@ public static class DocumentConverter
 
             // H46: resolve symlinks immediately before the write sink (bug 20260415-symlink-toctou-sweep).
             var resolvedPagePath = ResolveOutputPath(pagePath, options.AllowedBasePaths);
-            using var stream = new FileStream(resolvedPagePath, FileMode.Create);
             PageDevice device = format switch
             {
                 "png" => new PngDevice(resolution),
@@ -800,8 +1207,14 @@ public static class DocumentConverter
                 _ => throw new ArgumentException($"Unsupported image format: {format}")
             };
 
-            device.Process(pdfDocument.Pages[i], stream);
+            var page = pdfDocument.Pages[i];
+            pageBatch.Stage(resolvedPagePath, stream => device.Process(page, stream));
+            written.Add(resolvedPagePath);
         }
+
+        pageBatch.Publish();
+
+        return written;
     }
 
     /// <summary>
@@ -811,11 +1224,16 @@ public static class DocumentConverter
     /// <param name="outputPath">The output file path (page number will be appended for multi-page output).</param>
     /// <param name="outputFormat">The target image format (png, jpg, jpeg, tiff, tif, bmp, svg).</param>
     /// <param name="options">Conversion options including page index and DPI.</param>
+    /// <returns>
+    ///     The image paths written, in page order — the one requested page, or every page.
+    /// </returns>
     /// <exception cref="ArgumentException">Thrown when the format is not supported.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when pageIndex is out of range.</exception>
-    public static void ConvertWordToImages(Document document, string outputPath, string outputFormat,
+    public static IReadOnlyList<string> ConvertWordToImages(Document document, string outputPath,
+        string outputFormat,
         ConversionOptions options)
     {
+        List<string> written = [];
         var format = NormalizeExtension(outputFormat);
         var saveFormat = format switch
         {
@@ -833,17 +1251,35 @@ public static class DocumentConverter
                 throw new ArgumentOutOfRangeException(nameof(options),
                     $"Page index must be between 1 and {document.PageCount}");
 
+            // A single page was never measured, so a very large page at a high resolution was
+            // an unbounded allocation (R3-R03).
+            AddWordPageToBudget(new PixelBudget(), document, options.PageIndex.Value - 1, options.Dpi);
+
             var imageOptions = CreateWordImageSaveOptions(saveFormat, options);
             imageOptions.PageSet = new PageSet(options.PageIndex.Value - 1);
             // H45: resolve symlinks immediately before the write sink (bug 20260415-symlink-toctou-sweep).
             var resolvedSinglePage = ResolveOutputPath(outputPath, options.AllowedBasePaths);
-            document.Save(resolvedSinglePage, imageOptions);
+            BoundedFilePublisher.Publish(resolvedSinglePage, RenderBudget.MaxOutputBytes,
+                stream => document.Save(stream, imageOptions), ConvertedDocumentDescription, options.Recovery,
+                options.AllowedBasePaths);
+            written.Add(resolvedSinglePage);
         }
         else
         {
+            // Every page is rendered here, so the cost is the page count times the area at the
+            // requested resolution — the product no single parameter limit constrains.
+            RenderBudget.EnsureOutputCount(document.PageCount, "image files");
+
+            var wordBudget = new PixelBudget();
+            for (var page = 0; page < document.PageCount; page++)
+                AddWordPageToBudget(wordBudget, document, page, options.Dpi);
+
             var dir = Path.GetDirectoryName(outputPath) ?? ".";
             var baseName = Path.GetFileNameWithoutExtension(outputPath);
             var ext = Path.GetExtension(outputPath);
+
+            using var pageBatch = new BoundedFileBatch(RenderBudget.MaxOutputBytes,
+                "rendered pages", options.Recovery, options.AllowedBasePaths);
 
             for (var i = 0; i < document.PageCount; i++)
             {
@@ -854,9 +1290,14 @@ public static class DocumentConverter
                     : Path.Combine(dir, $"{baseName}_{i + 1}{ext}");
                 // H45: resolve symlinks immediately before the write sink (bug 20260415-symlink-toctou-sweep).
                 var resolvedPagePath = ResolveOutputPath(pagePath, options.AllowedBasePaths);
-                document.Save(resolvedPagePath, imageOptions);
+                pageBatch.Stage(resolvedPagePath, stream => document.Save(stream, imageOptions));
+                written.Add(resolvedPagePath);
             }
+
+            pageBatch.Publish();
         }
+
+        return written;
     }
 
     /// <summary>
@@ -885,11 +1326,16 @@ public static class DocumentConverter
     /// <param name="outputPath">The output file path (sheet number will be appended for multi-sheet output).</param>
     /// <param name="outputFormat">The target image format (png, jpg, jpeg, tiff, tif, bmp, svg).</param>
     /// <param name="options">Conversion options including sheet index and DPI.</param>
+    /// <returns>
+    ///     The image paths written, in sheet order — the one requested sheet, or every sheet.
+    /// </returns>
     /// <exception cref="ArgumentException">Thrown when the format is not supported.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when sheetIndex is out of range.</exception>
-    public static void ConvertExcelToImages(Workbook workbook, string outputPath, string outputFormat,
+    public static IReadOnlyList<string> ConvertExcelToImages(Workbook workbook, string outputPath,
+        string outputFormat,
         ConversionOptions options)
     {
+        List<string> written = [];
         var format = NormalizeExtension(outputFormat);
         var imageType = format switch
         {
@@ -920,28 +1366,92 @@ public static class DocumentConverter
 
             var sheet = workbook.Worksheets[options.PageIndex.Value - 1];
             var sr = new SheetRender(sheet, imageOptions);
+
+            // A worksheet rendered as one page has no size limit of its own, and this branch
+            // never measured it (R3-R03).
+            AddSheetPageToBudget(new PixelBudget(), sr, 0, options.Dpi);
             // H45: resolve symlinks immediately before the write sink (bug 20260415-symlink-toctou-sweep).
             var resolvedSingleSheet = ResolveOutputPath(outputPath, options.AllowedBasePaths);
-            sr.ToImage(0, resolvedSingleSheet);
+            BoundedFilePublisher.Publish(resolvedSingleSheet, RenderBudget.MaxOutputBytes,
+                stream => sr.ToImage(0, stream), "rendered sheet", options.Recovery, options.AllowedBasePaths);
+            written.Add(resolvedSingleSheet);
         }
         else
         {
+            // Every sheet is rendered here; the same product applies. Each sheet's real page
+            // size is measured as it is reached, before its bitmap exists (R3-R03).
+            RenderBudget.EnsureOutputCount(workbook.Worksheets.Count, "image files");
+            var sheetBudget = new PixelBudget();
+
             var dir = Path.GetDirectoryName(outputPath) ?? ".";
             var baseName = Path.GetFileNameWithoutExtension(outputPath);
             var ext = Path.GetExtension(outputPath);
+
+            using var sheetBatch = new BoundedFileBatch(RenderBudget.MaxOutputBytes,
+                "rendered sheets", options.Recovery, options.AllowedBasePaths);
 
             for (var i = 0; i < workbook.Worksheets.Count; i++)
             {
                 var sheet = workbook.Worksheets[i];
                 var sr = new SheetRender(sheet, imageOptions);
+                AddSheetPageToBudget(sheetBudget, sr, 0, options.Dpi);
                 var sheetPath = workbook.Worksheets.Count == 1
                     ? outputPath
                     : Path.Combine(dir, $"{baseName}_{i + 1}{ext}");
                 // H45: resolve symlinks immediately before the write sink (bug 20260415-symlink-toctou-sweep).
                 var resolvedSheetPath = ResolveOutputPath(sheetPath, options.AllowedBasePaths);
-                sr.ToImage(0, resolvedSheetPath);
+                sheetBatch.Stage(resolvedSheetPath, stream => sr.ToImage(0, stream));
+                written.Add(resolvedSheetPath);
             }
+
+            sheetBatch.Publish();
         }
+
+        return written;
+    }
+
+    /// <summary>
+    ///     Adds one PDF page's real size to a render budget.
+    /// </summary>
+    /// <param name="budget">The budget to charge.</param>
+    /// <param name="page">The page about to be rendered.</param>
+    /// <param name="dpi">Resolution the page will be rendered at.</param>
+    /// <exception cref="ArgumentException">Thrown when the page takes the render past the budget.</exception>
+    private static void AddPdfPageToBudget(PixelBudget budget, Page page, int dpi)
+    {
+        // Aspose reports page geometry in points, which are 1/72 inch.
+        budget.Add(page.Rect.Width / 72.0, page.Rect.Height / 72.0, dpi);
+    }
+
+    /// <summary>
+    ///     Adds one Word page's real size to a render budget.
+    /// </summary>
+    /// <param name="budget">The budget to charge.</param>
+    /// <param name="document">The document being rendered.</param>
+    /// <param name="pageIndex">Zero-based index of the page about to be rendered.</param>
+    /// <param name="dpi">Resolution the page will be rendered at.</param>
+    /// <exception cref="ArgumentException">Thrown when the page takes the render past the budget.</exception>
+    private static void AddWordPageToBudget(PixelBudget budget, Document document, int pageIndex, int dpi)
+    {
+        var info = document.GetPageInfo(pageIndex);
+        budget.Add(info.WidthInPoints / 72.0, info.HeightInPoints / 72.0, dpi);
+    }
+
+    /// <summary>
+    ///     Adds one rendered worksheet page's real size to a render budget.
+    /// </summary>
+    /// <param name="budget">The budget to charge.</param>
+    /// <param name="render">The sheet renderer holding the page.</param>
+    /// <param name="pageIndex">Zero-based index of the page about to be rendered.</param>
+    /// <param name="dpi">Resolution the page will be rendered at.</param>
+    /// <exception cref="ArgumentException">Thrown when the page takes the render past the budget.</exception>
+    private static void AddSheetPageToBudget(PixelBudget budget, SheetRender render, int pageIndex, int dpi)
+    {
+        // A worksheet with nothing printable renders no page, and the caller reports that itself.
+        if (render.PageCount <= pageIndex) return;
+
+        var size = render.GetPageSizeInch(pageIndex);
+        budget.Add(size?[0] ?? 0, size?[1] ?? 0, dpi);
     }
 
     /// <summary>
@@ -953,14 +1463,55 @@ public static class DocumentConverter
     ///     The allowlist of base paths used for symlink resolution before the write sink.
     ///     Pass an empty list to skip allowlist enforcement (allowlist disabled).
     /// </param>
+    /// <param name="allowExternalResources">
+    ///     Accepts that converting an MHT archive may issue outbound requests for resources it
+    ///     does not contain. Off by default; the archive is refused instead.
+    /// </param>
     /// <returns>The source format name for result reporting.</returns>
+    /// <param name="recoveryDirectory">
+    ///     The temp directory of the host performing this conversion, which is where its publish
+    ///     record goes. Null uses the process temp directory, which is where a record with nobody
+    ///     to recover it would sit anyway (R18-ARCH01).
+    /// </param>
     /// <exception cref="ArgumentException">
     ///     Thrown when the input format is not supported or when outputPath resolves outside the allowlist.
     /// </exception>
     public static string ConvertToPdfFromSpecialFormat(string inputPath, string outputPath,
-        IReadOnlyList<string>? allowedBasePaths = null)
+        IReadOnlyList<string>? allowedBasePaths = null, bool allowExternalResources = false,
+        string? recoveryDirectory = null)
     {
+        // Where this conversion's publish record goes. A caller inside a host passes its temp
+        // directory; one outside a host gets the process temp directory, which is where a journal
+        // with nobody to recover it would sit anyway (R18-ARCH01).
+        var recovery = RecoveryContext.For(recoveryDirectory ?? Path.GetTempPath());
+
         var extension = NormalizeExtension(Path.GetExtension(inputPath));
+
+        // None of these inputs' external fetching can be intercepted by this library version.
+        // Measured against the pinned Aspose.Pdf with a localhost probe server: converting HTML,
+        // Markdown, SVG and EPUB each fetched the URL the document named, and for HTML an
+        // instrumented CustomLoaderOfExternalResources recorded zero invocations while the fetch
+        // still happened - the callback below is not consulted for an img src on this path. The
+        // only effective control is refusing the input before it is opened, which is what MHT
+        // already did and what every other convertible format now does too.
+        // One immutable copy, scanned and then parsed. The scanner opened the caller's path and
+        // every loader below opened it again, so a file replaced between those two opens was
+        // converted without having been scanned — and the comment above says that scan is the only
+        // control there is for these formats (R19-CNV01).
+        // Admitted on size before it is staged, at the limit the scanner will hold it to: an
+        // input over the limit used to be copied whole and refused afterwards (R23-RES01).
+        using var authorised = ImmutableInputCopy.Of(inputPath, recovery, allowedBasePaths ?? [],
+            extension is "mht" or MhtmlFormat
+                ? MhtExternalReferenceScanner.MaxEncodedArchiveBytes
+                : MhtExternalReferenceScanner.MaxArchiveBytes);
+        var scannedInput = authorised.Path;
+
+        if (extension is "mht" or MhtmlFormat)
+            MhtExternalReferenceScanner.EnsureSelfContained(scannedInput, allowExternalResources,
+                allowedBasePaths);
+        else
+            MhtExternalReferenceScanner.EnsureNoRemoteReferences(scannedInput,
+                allowExternalResources, allowedBasePaths);
         // H45: resolve symlinks immediately before every write sink (bug 20260415-symlink-toctou-sweep).
         var resolvedOutput = ResolveOutputPath(outputPath, allowedBasePaths ?? []);
 
@@ -968,58 +1519,74 @@ public static class DocumentConverter
         {
             case "html":
             case "htm":
-                using (var pdfDoc = new Aspose.Pdf.Document(inputPath, new HtmlLoadOptions()))
+                using (var pdfDoc = new Aspose.Pdf.Document(scannedInput,
+                           new HtmlLoadOptions
+                           {
+                               CustomLoaderOfExternalResources =
+                                   ExternalResourceGuard.CreatePdfStrategy(allowedBasePaths ?? [])
+                           }))
                 {
-                    pdfDoc.Save(resolvedOutput);
+                    BoundedFilePublisher.Publish(resolvedOutput, RenderBudget.MaxOutputBytes,
+                        stream => pdfDoc.Save(stream), ConvertedDocumentDescription, recovery, allowedBasePaths ?? []);
                 }
 
                 return "HTML";
 
             case "epub":
-                using (var pdfDoc = new Aspose.Pdf.Document(inputPath, new EpubLoadOptions()))
+                using (var pdfDoc = new Aspose.Pdf.Document(scannedInput, new EpubLoadOptions()))
                 {
-                    pdfDoc.Save(resolvedOutput);
+                    BoundedFilePublisher.Publish(resolvedOutput, RenderBudget.MaxOutputBytes,
+                        stream => pdfDoc.Save(stream), ConvertedDocumentDescription, recovery, allowedBasePaths ?? []);
                 }
 
                 return "EPUB";
 
             case "md":
-                using (var pdfDoc = new Aspose.Pdf.Document(inputPath, new MdLoadOptions()))
+                using (var pdfDoc = new Aspose.Pdf.Document(scannedInput, new MdLoadOptions()))
                 {
-                    pdfDoc.Save(resolvedOutput);
+                    BoundedFilePublisher.Publish(resolvedOutput, RenderBudget.MaxOutputBytes,
+                        stream => pdfDoc.Save(stream), ConvertedDocumentDescription, recovery, allowedBasePaths ?? []);
                 }
 
                 return "Markdown";
 
             case "svg":
-                using (var pdfDoc = new Aspose.Pdf.Document(inputPath, new SvgLoadOptions()))
+                using (var pdfDoc = new Aspose.Pdf.Document(scannedInput, new SvgLoadOptions()))
                 {
-                    pdfDoc.Save(resolvedOutput);
+                    BoundedFilePublisher.Publish(resolvedOutput, RenderBudget.MaxOutputBytes,
+                        stream => pdfDoc.Save(stream), ConvertedDocumentDescription, recovery, allowedBasePaths ?? []);
                 }
 
                 return "SVG";
 
             case "xps":
-                using (var pdfDoc = new Aspose.Pdf.Document(inputPath, new XpsLoadOptions()))
+                using (var pdfDoc = new Aspose.Pdf.Document(scannedInput, new XpsLoadOptions()))
                 {
-                    pdfDoc.Save(resolvedOutput);
+                    BoundedFilePublisher.Publish(resolvedOutput, RenderBudget.MaxOutputBytes,
+                        stream => pdfDoc.Save(stream), ConvertedDocumentDescription, recovery, allowedBasePaths ?? []);
                 }
 
                 return "XPS";
 
             case "tex":
-                using (var pdfDoc = new Aspose.Pdf.Document(inputPath, new TeXLoadOptions()))
+                using (var pdfDoc = new Aspose.Pdf.Document(scannedInput, new TeXLoadOptions()))
                 {
-                    pdfDoc.Save(resolvedOutput);
+                    BoundedFilePublisher.Publish(resolvedOutput, RenderBudget.MaxOutputBytes,
+                        stream => pdfDoc.Save(stream), ConvertedDocumentDescription, recovery, allowedBasePaths ?? []);
                 }
 
                 return "LaTeX";
 
             case "mht":
-            case "mhtml":
-                using (var pdfDoc = new Aspose.Pdf.Document(inputPath, new MhtLoadOptions()))
+            case MhtmlFormat:
+                // Aspose.Pdf 23.10.0 exposes CustomLoaderOfExternalResources on HtmlLoadOptions
+                // only, so nothing here can intercept what the library fetches for an MHT archive.
+                // The guard at the top of this method is what closes that gap: an archive holding a
+                // remote reference never reaches this line unless the caller opted in.
+                using (var pdfDoc = new Aspose.Pdf.Document(scannedInput, new MhtLoadOptions()))
                 {
-                    pdfDoc.Save(resolvedOutput);
+                    BoundedFilePublisher.Publish(resolvedOutput, RenderBudget.MaxOutputBytes,
+                        stream => pdfDoc.Save(stream), ConvertedDocumentDescription, recovery, allowedBasePaths ?? []);
                 }
 
                 return "MHT";
@@ -1095,7 +1662,7 @@ public static class DocumentConverter
     private static void ConvertToStreamInternal(object document, DocumentType documentType, string format,
         Stream outputStream, IProgress<ProgressNotificationValue>? progress, ConversionOptions? options)
     {
-        options ??= new ConversionOptions();
+        options ??= ConversionOptions.WithoutAHost();
 
         switch (documentType)
         {
@@ -1146,6 +1713,11 @@ public static class DocumentConverter
                 "svg" => WordSaveFormat.Svg,
                 _ => throw new ArgumentException($"Unsupported image format for Word: {format}")
             };
+            // The file path prices its rasters; this one did not, so the same document rendered
+            // through the extension bridge was unbounded (R4-R01).
+            if (document.PageCount > 0)
+                AddWordPageToBudget(new PixelBudget(), document, 0, options.Dpi);
+
             var imageOptions = new ImageSaveOptions(saveFormat) { PageSet = new PageSet(0) };
             if (saveFormat == WordSaveFormat.Jpeg)
                 imageOptions.JpegQuality = options.JpegQuality;
@@ -1214,6 +1786,7 @@ public static class DocumentConverter
                 imageOptions.Quality = options.JpegQuality;
 
             var sr = new SheetRender(workbook.Worksheets[0], imageOptions);
+            AddSheetPageToBudget(new PixelBudget(), sr, 0, options.Dpi);
             sr.ToImage(0, outputStream);
             return;
         }
@@ -1265,6 +1838,10 @@ public static class DocumentConverter
     private static void ConvertPowerPointToStream(Presentation presentation, string format, Stream outputStream,
         IProgress<ProgressNotificationValue>? progress, ConversionOptions options)
     {
+        // The in-memory counterpart of ConvertPowerPointDocument, and the same boundary
+        // (SlidesGate).
+        using var slidesGate = SlidesGate.Enter();
+
         if (format is "png" or "jpg" or "jpeg")
         {
             ConvertPresentationToImageStream(presentation, format, outputStream, options);
@@ -1303,6 +1880,10 @@ public static class DocumentConverter
     {
         if (presentation.Slides.Count == 0)
             throw new InvalidOperationException("Presentation has no slides to convert.");
+
+        // Slide size is in points, and a deck can set it to anything (R4-R01).
+        new PixelBudget().Add(presentation.SlideSize.Size.Width / 72.0,
+            presentation.SlideSize.Size.Height / 72.0, 96);
 
         var slide = presentation.Slides[0];
 
@@ -1366,8 +1947,7 @@ public static class DocumentConverter
         }
         else if (format == "txt")
         {
-            var textBytes = Encoding.UTF8.GetBytes(ExtractPdfPlainText(pdfDocument));
-            outputStream.Write(textBytes, 0, textBytes.Length);
+            WritePdfPlainText(outputStream, pdfDocument);
         }
         else
         {
@@ -1377,19 +1957,43 @@ public static class DocumentConverter
     }
 
     /// <summary>
-    ///     Extracts the plain text of all pages of a PDF document.
+    ///     Writes the plain text of every page of a PDF document to a stream.
     ///     Plain text has no <see cref="Aspose.Pdf.SaveFormat" /> member, so "txt" output is produced
     ///     via <see cref="Aspose.Pdf.Text.TextAbsorber" /> instead of <c>Document.Save</c>.
     ///     Pending paragraphs are laid out first so unsaved edits are included, matching Save-based paths.
     /// </summary>
+    /// <param name="stream">The destination to write the text to.</param>
     /// <param name="pdfDocument">The PDF document to extract text from.</param>
-    /// <returns>The extracted plain text of all pages.</returns>
-    private static string ExtractPdfPlainText(Aspose.Pdf.Document pdfDocument)
+    private static void WritePdfPlainText(Stream stream, Aspose.Pdf.Document pdfDocument)
     {
         pdfDocument.ProcessParagraphs();
-        var absorber = new TextAbsorber();
-        pdfDocument.Pages.Accept(absorber);
-        return absorber.Text;
+
+        // One page at a time. Absorbing the whole document produced a single string holding every
+        // page's text, which was then encoded into a second full-size array before the bounded
+        // stream saw a byte of it — two copies of an unbounded document ahead of the limit meant
+        // to bound it (R8-C03). The peak is now one page's text, and the cap applies as each page
+        // is written rather than after everything has been built.
+        var encoder = new UTF8Encoding(false).GetEncoder();
+        var buffer = new byte[8192];
+        var chars = new char[2048];
+
+        for (var i = 1; i <= pdfDocument.Pages.Count; i++)
+        {
+            var absorber = new TextAbsorber();
+            pdfDocument.Pages[i].Accept(absorber);
+            var text = absorber.Text;
+
+            for (var offset = 0; offset < text.Length;)
+            {
+                var take = Math.Min(chars.Length, text.Length - offset);
+                text.CopyTo(offset, chars, 0, take);
+                offset += take;
+
+                var flush = offset >= text.Length && i == pdfDocument.Pages.Count;
+                var written = encoder.GetBytes(chars, 0, take, buffer, 0, flush);
+                stream.Write(buffer, 0, written);
+            }
+        }
     }
 
     /// <summary>
@@ -1411,10 +2015,17 @@ public static class DocumentConverter
 
         if (format is "tiff" or "tif")
         {
+            // This one renders the whole document, not the first page, so every page is priced.
+            var wholeDocument = new PixelBudget();
+            foreach (var page in pdfDocument.Pages)
+                AddPdfPageToBudget(wholeDocument, page, options.Dpi);
+
             var tiffDevice = new TiffDevice(resolution);
             tiffDevice.Process(pdfDocument, outputStream);
             return;
         }
+
+        AddPdfPageToBudget(new PixelBudget(), pdfDocument.Pages[1], options.Dpi);
 
         PageDevice device = format switch
         {

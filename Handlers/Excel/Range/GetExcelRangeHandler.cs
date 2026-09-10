@@ -119,7 +119,10 @@ public class GetExcelRangeHandler : OperationHandlerBase<Workbook>
             return cell.Value ?? cell.DisplayStringValue;
 
         var displayValue = cell.Value;
-        if (displayValue is CellValueType.IsError)
+        // cell.Value is an object holding the evaluated result, so testing it against a
+        // CellValueType member was always false and an error cell fell through to the raw
+        // value. The cell's own Type carries the error state.
+        if (cell.Type == CellValueType.IsError)
             displayValue = cell.DisplayStringValue;
 
         if (displayValue != null && !(displayValue is string str && string.IsNullOrEmpty(str)))

@@ -1,8 +1,8 @@
 using Aspose.Slides;
-using Aspose.Slides.Export;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.PowerPoint;
 using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.PowerPoint.FileOperations;
@@ -29,6 +29,11 @@ public class MergePresentationsHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with output path and slide count.</returns>
     public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
+        // Held for the whole operation: this handler builds or reads presentations of
+        // its own, outside any session, so nothing else stands between it and a library
+        // that fails when two threads are inside it (SlidesGate).
+        using var slidesGate = SlidesGate.Enter();
+
         var p = ExtractMergeParameters(parameters);
 
         var savePath = p.Path ?? p.OutputPath;
@@ -36,6 +41,12 @@ public class MergePresentationsHandler : OperationHandlerBase<Presentation>
             throw new ArgumentException("path or outputPath is required for merge operation");
 
         SecurityHelper.ValidateFilePath(savePath, "outputPath", true);
+        savePath = SecurityHelper.ResolveAndEnsureWithinAllowlist(savePath,
+            context.ServerConfig?.AllowedBasePaths ?? [], "outputPath");
+
+        // One request should not be able to pull in an unbounded number of documents; PDF
+        // merge has capped this since RB-29 and the other three families had not.
+        SecurityHelper.ValidateArraySize(p.InputPaths, "inputPaths");
 
         var validPaths = p.InputPaths.Where(path => !string.IsNullOrEmpty(path)).ToList();
 
@@ -77,7 +88,7 @@ public class MergePresentationsHandler : OperationHandlerBase<Presentation>
         // H20: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
         savePath = SecurityHelper.ResolveAndEnsureWithinAllowlist(savePath,
             context.ServerConfig?.AllowedBasePaths ?? [], nameof(savePath));
-        masterPresentation.Save(savePath, SaveFormat.Pptx);
+        masterPresentation.Save(savePath, PptSaveFormatResolver.Resolve(savePath));
 
         return new SuccessResult
         {

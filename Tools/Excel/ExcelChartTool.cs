@@ -26,6 +26,11 @@ public class ExcelChartTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -35,11 +40,14 @@ public class ExcelChartTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
     /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public ExcelChartTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry = HandlerRegistry<Workbook>.CreateFromNamespace("AsposeMcpServer.Handlers.Excel.Chart");
     }
 
@@ -95,7 +103,7 @@ Usage examples:
         [Description("Sheet index (0-based, default: 0)")]
         int sheetIndex = 0,
         [Description("Chart index (0-based, required for edit/delete/update_data/set_properties)")]
-        int chartIndex = 0,
+        int? chartIndex = null,
         [Description(
             "Chart type: Column, Bar, Line, Pie, Area, Scatter, Doughnut, Radar, Bubble, Cylinder, Cone, Pyramid")]
         string? chartType = null,
@@ -122,7 +130,8 @@ Usage examples:
         [Description("Legend visibility (optional, for set_properties)")]
         bool? legendVisible = null)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor,
+            serverConfig: _serverConfig);
 
         var parameters = BuildParameters(operation, sheetIndex, chartIndex, chartType, dataRange, categoryAxisDataRange,
             title, topRow, leftColumn, width, height, showLegend, legendPosition, removeTitle, legendVisible);
@@ -136,7 +145,8 @@ Usage examples:
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);
@@ -158,7 +168,7 @@ Usage examples:
     private static OperationParameters BuildParameters(
         string operation,
         int sheetIndex,
-        int chartIndex,
+        int? chartIndex,
         string? chartType,
         string? dataRange,
         string? categoryAxisDataRange,
@@ -230,11 +240,11 @@ Usage examples:
     /// <param name="showLegend">Whether to show legend.</param>
     /// <param name="legendPosition">Legend position.</param>
     /// <returns>OperationParameters configured for editing a chart.</returns>
-    private static OperationParameters BuildEditParameters(OperationParameters parameters, int chartIndex,
+    private static OperationParameters BuildEditParameters(OperationParameters parameters, int? chartIndex,
         string? title, string? dataRange, string? categoryAxisDataRange, string? chartType, bool? showLegend,
         string? legendPosition)
     {
-        parameters.Set("chartIndex", chartIndex);
+        if (chartIndex.HasValue) parameters.Set("chartIndex", chartIndex.Value);
         if (title != null) parameters.Set("title", title);
         if (dataRange != null) parameters.Set("dataRange", dataRange);
         if (categoryAxisDataRange != null) parameters.Set("categoryAxisDataRange", categoryAxisDataRange);
@@ -250,9 +260,9 @@ Usage examples:
     /// <param name="parameters">Base parameters with sheet index.</param>
     /// <param name="chartIndex">The chart index (0-based).</param>
     /// <returns>OperationParameters with chart index set.</returns>
-    private static OperationParameters BuildChartIndexParameters(OperationParameters parameters, int chartIndex)
+    private static OperationParameters BuildChartIndexParameters(OperationParameters parameters, int? chartIndex)
     {
-        parameters.Set("chartIndex", chartIndex);
+        if (chartIndex.HasValue) parameters.Set("chartIndex", chartIndex.Value);
         return parameters;
     }
 
@@ -264,10 +274,10 @@ Usage examples:
     /// <param name="dataRange">New data range for chart values.</param>
     /// <param name="categoryAxisDataRange">New category axis data range.</param>
     /// <returns>OperationParameters configured for updating chart data.</returns>
-    private static OperationParameters BuildUpdateDataParameters(OperationParameters parameters, int chartIndex,
+    private static OperationParameters BuildUpdateDataParameters(OperationParameters parameters, int? chartIndex,
         string? dataRange, string? categoryAxisDataRange)
     {
-        parameters.Set("chartIndex", chartIndex);
+        if (chartIndex.HasValue) parameters.Set("chartIndex", chartIndex.Value);
         if (dataRange != null) parameters.Set("dataRange", dataRange);
         if (categoryAxisDataRange != null) parameters.Set("categoryAxisDataRange", categoryAxisDataRange);
         return parameters;
@@ -283,10 +293,10 @@ Usage examples:
     /// <param name="legendVisible">Legend visibility.</param>
     /// <param name="legendPosition">Legend position.</param>
     /// <returns>OperationParameters configured for setting chart properties.</returns>
-    private static OperationParameters BuildSetPropertiesParameters(OperationParameters parameters, int chartIndex,
+    private static OperationParameters BuildSetPropertiesParameters(OperationParameters parameters, int? chartIndex,
         string? title, bool removeTitle, bool? legendVisible, string? legendPosition)
     {
-        parameters.Set("chartIndex", chartIndex);
+        if (chartIndex.HasValue) parameters.Set("chartIndex", chartIndex.Value);
         if (title != null) parameters.Set("title", title);
         parameters.Set("removeTitle", removeTitle);
         if (legendVisible.HasValue) parameters.Set("legendVisible", legendVisible.Value);

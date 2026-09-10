@@ -7,6 +7,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Table;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class InsertPptTableColumnHandlerTests : PptHandlerTestBase
 {
     private readonly InsertPptTableColumnHandler _handler = new();

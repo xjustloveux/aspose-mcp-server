@@ -19,10 +19,17 @@ public class BarcodeGenerateTool
     private readonly HandlerRegistry<object> _handlerRegistry;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Initializes a new instance of the <see cref="BarcodeGenerateTool" /> class.
     /// </summary>
-    public BarcodeGenerateTool()
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
+    public BarcodeGenerateTool(ServerConfig? serverConfig = null)
     {
+        _serverConfig = serverConfig;
         _handlerRegistry =
             HandlerRegistry<object>.CreateFromNamespace("AsposeMcpServer.Handlers.BarCode.Generate");
     }
@@ -91,7 +98,8 @@ Supported image formats: PNG, JPEG, BMP, GIF, TIFF, SVG, EMF")]
         {
             Document = new object(),
             SourcePath = null,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);

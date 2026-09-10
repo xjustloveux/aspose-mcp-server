@@ -1,7 +1,8 @@
-using Aspose.Words;
+﻿using Aspose.Words;
 using Aspose.Words.Fields;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Reference;
@@ -43,19 +44,21 @@ public class UpdateTableOfContentsWordHandler : OperationHandlerBase<Document>
             return new SuccessResult { Message = message };
         }
 
-        if (p.TocIndex.HasValue)
-        {
-            if (p.TocIndex.Value < 0 || p.TocIndex.Value >= tocFields.Count)
-                throw new ArgumentException($"tocIndex must be between 0 and {tocFields.Count - 1}");
-            tocFields[p.TocIndex.Value].Update();
-        }
-        else
-        {
-            foreach (var tocField in tocFields)
-                tocField.Update();
-        }
+        // This handler updates the tables of contents and then every other field in the
+        // document. Both passes are checked before either runs: refusing at the second one left
+        // the tables of contents already rebuilt in a document the session keeps (R7-W01).
+        if (p.TocIndex.HasValue && (p.TocIndex.Value < 0 || p.TocIndex.Value >= tocFields.Count))
+            throw new ArgumentException($"tocIndex must be between 0 and {tocFields.Count - 1}");
 
-        doc.UpdateFields();
+        WordFieldPolicy.RefuseNestedDisallowedFields(doc, null);
+
+        if (p.TocIndex.HasValue)
+            WordFieldPolicy.UpdateField(tocFields[p.TocIndex.Value]);
+        else
+            foreach (var tocField in tocFields)
+                WordFieldPolicy.UpdateField(tocField);
+
+        WordFieldPolicy.UpdateAllowedFields(doc);
 
         MarkModified(context);
 

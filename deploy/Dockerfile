@@ -30,13 +30,16 @@ WORKDIR /app
 # - locales: UTF-8 locale for proper CJK character handling
 # - Microsoft core fonts (Arial, Times New Roman, etc.): required by Aspose.PDF.Drawing
 # - fonts-wqy-zenhei: basic CJK (Chinese/Japanese/Korean) font support
+# libgdiplus is deliberately absent: the only System.Drawing.Common reference is the
+# extern-aliased one used by a single test, so no production code path needs it. Graphics
+# come from Aspose.Slides.NET6.CrossPlatform, Aspose.PDF.Drawing, Aspose.Drawing.Common and
+# SkiaSharp native assets, which are managed or ship their own native code.
 RUN sed -i 's/main/main contrib/g' /etc/apt/sources.list.d/debian.sources || \
     echo "deb http://deb.debian.org/debian bookworm contrib" >> /etc/apt/sources.list && \
     apt-get update && \
     apt-get upgrade -y && \
     apt-get install -y --no-install-recommends \
         locales \
-        libgdiplus \
         libx11-6 \
         fontconfig \
         fonts-liberation \
@@ -66,8 +69,29 @@ RUN mkdir -p /app/license /app/documents && \
 # Switch to non-root user
 USER aspose
 
-# Environment variables
+# Environment variables. ASPOSE_HOST defaults to localhost in the application, which binds
+# only inside the container and makes the mapped port unreachable; a container image is
+# always addressed from outside its own namespace, so the container default is 0.0.0.0.
+# Authentication is what limits who may call it - see the warnings in docker-compose.yml.
 ENV DOTNET_RUNNING_IN_CONTAINER=true
+ENV ASPOSE_HOST=0.0.0.0
+ENV ASPOSE_PORT=3000
+
+# Documents the port the HTTP and WebSocket transports listen on. Stdio transport ignores it.
+EXPOSE 3000
+
+# No image-level HEALTHCHECK on purpose (R3-DOC07).
+#
+# This image serves three transports, and only two of them listen on anything: with the
+# default stdio transport there is no endpoint to probe, so no single command can answer
+# "is the server healthy?" for every way the image is run. The previous probe ran
+# `dotnet --info`, which reports success whenever the .NET runtime is installed — it stayed
+# green with the server dead, which is worse than no healthcheck at all because an
+# orchestrator acts on it.
+#
+# For an HTTP or WebSocket deployment, probe the server's own endpoints from the orchestrator:
+# `/health` (the process is up) and `/ready` (it is ready to serve). deploy/docker-compose.yml
+# carries a working example that needs nothing added to this image.
 
 # Entry point (all configuration via environment variables)
 ENTRYPOINT ["dotnet", "AsposeMcpServer.dll"]

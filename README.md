@@ -95,7 +95,9 @@ brew install xjustloveux/tap/aspose-mcp-server
 - `--extension-config 路徑` - 指定擴充功能配置檔案路徑（`extension` 工具）
 - `--license 路徑` - 指定授權檔案路徑（可選）
 - `--allowed-path 路徑` - 限制檔案存取於指定基礎目錄下（可重複指定；未指定則不限制，建議在 HTTP/WebSocket 部署時啟用）
+- `--legacy-publish-journal-root 路徑` - 升級後一次性復原舊版中斷發布 journal 的目錄（可重複指定）；只掃描明確列出的目錄，不會從 `--allowed-path` 推測，確認已排空後應移除此參數
 - `--max-extract-all-bytes 位元組` - OLE 工具單次 `extract_all` 累計寫出上限（預設 10 GiB；≤ 0 表示不設上限；環境變數 `MAX_EXTRACT_ALL_BYTES`）
+- `--allow-external-resources` - 允許轉換時抓取文件未內含的資源（預設關閉；環境變數 `ASPOSE_ALLOW_EXTERNAL_RESOURCES`）。涵蓋 `.mht`／`.mhtml`、`.html`／`.htm`、`.md`、`.svg`、`.epub` 全部特殊格式：預設一律在開檔前拒絕指名遠端 URL 或 `file:` 位址的文件，指向 allowlist 內的本機路徑不受影響。開啟後伺服器會代替呼叫端對外發出請求，屬部署層決定，呼叫端無法自行開關
 
 > **工具過濾**：指定工具參數時，只有啟用的工具類別會出現在 MCP 工具列表中。例如使用 `--word` 時，只會顯示 `word_*` 相關工具。
 
@@ -166,17 +168,20 @@ Claude Desktop 使用者可將 Aspose MCP Server 以原生擴充功能安裝，�
 ## 🔒 安全特性
 
 - **路徑驗證** - 所有檔案路徑經 `SecurityHelper.ValidateFilePath()` 驗證，防止路徑遍歷攻擊；額外拒絕控制字元、NTFS Alternate Data Stream 冒號語法、路徑段末尾點號/空白、及 Windows 保留裝置名稱（CON/NUL/COM1–9 等）；符號連結（symbolic link）在任何 I/O 操作前均會解析至最終目標，並再次比對白名單，確保符號連結無法繞過路徑限制
-- **路徑白名單**（可選強化）- 透過 `--allowed-path` 限制檔案存取於指定基礎目錄下（可重複指定）；未設定時不限制，建議 HTTP/WebSocket 部署時啟用；符號連結的最終目標若位於白名單之外，將被拒絕
-- **輸入驗證** - 陣列大小上限 1000 項、字串長度上限 10000 字元
+- **路徑白名單**（可選強化）- 透過 `--allowed-path` 限制檔案存取於指定基礎目錄下（可重複指定）；未設定時不限制，建議 HTTP/WebSocket 部署時啟用。**未設定 `--allowed-path` 時，文件內指向本機路徑的資源引用（HTML／MHT／內容判定為這些格式的 Word 檔）同樣不受限制**——遠端 URL 與指向其他主機的 UNC／`file://host/...` 一律拒絕，但本機讀取只有在設定白名單後才會被收斂。白名單在所有工具的讀取路徑、輸出路徑與次要檔案參數（憑證、圖章圖片、佈景主題等）上一致生效；路徑的每一段都會解析符號連結與 NTFS junction，最終目標位於白名單之外即拒絕
+- **輸入驗證** - 並非全域套用，而是在個別操作入口呼叫：`ValidateArraySize()`（預設 1000 項，目前由 PDF 合併的 `inputPaths` 使用）、`ValidateStringLength()`（各呼叫端自行指定上限，如附件名稱 255、搜尋型樣 1000）、`ValidateNumericRange()`（列／欄／頁數、DPI、縮放、表格維度，依操作設定上下限）
+- **Gateway 身分標頭** - `gateway` 驗證模式僅在請求來自設定的受信任 proxy 時採信 `X-Group-Id`／`X-User-Id`（`--auth-apikey-trusted-proxies`／`--auth-jwt-trusted-proxies`，支援 IP 與 CIDR）；未設定時 gateway 模式會拒絕啟動，已由外層網路隔離的部署可明確填 `any`
+- **指標端點** - `/metrics` 預設與其他端點一樣需要通過驗證；僅 `/health` 與 `/ready` 無條件開放。受信任的抓取網路可用 `--metrics-allow-anonymous` 明確放行
+- **外部資源載入** - HTML／MHT 及以內容偵測為 HTML 的 Word 輸入不會抓取遠端 URI；本機引用同樣受白名單約束（MHT 仍受 Aspose.Pdf API 限制，見文件說明）
 - **錯誤處理** - 結構化錯誤翻譯器（per-family translator 模式）將 Aspose/BCL 例外對應為固定安全哨兵字串；移除路徑、堆疊追蹤等敏感資訊，確保原始例外訊息不傳遞給呼叫方
 - **Origin 驗證** - HTTP/WebSocket 模式預設啟用，防止 DNS 重綁定攻擊
 
-| 限制項目 | 上限值 |
-|---------|--------|
-| 最大路徑長度 | 260 字元 |
-| 最大檔案名稱長度 | 255 字元 |
-| 最大陣列大小 | 1000 項 |
-| 最大字串長度 | 10000 字元 |
+| 限制項目 | 上限值 | 套用範圍 |
+|---------|--------|---------|
+| 最大路徑長度 | Windows 260 字元，其他平台 4096 字元 | 所有路徑驗證 |
+| 最大檔案名稱長度 | 255 字元 | 檔名清理時截斷 |
+| 陣列大小預設上限 | 1000 項 | `ValidateArraySize()` 的預設值，僅在呼叫該方法的入口生效 |
+| 字串長度預設上限 | 10000 字元 | `ValidateStringLength()` 的預設值；現有呼叫端均自行傳入更小的上限 |
 
 > 📖 完整安全配置請參閱 [功能特性](https://xjustloveux.github.io/aspose-mcp-server/features.html)
 
@@ -188,7 +193,7 @@ Claude Desktop 使用者可將 Aspose MCP Server 以原生擴充功能安裝，�
 | Linux x64 | ✅ | ✅ | 不需要 libgdiplus |
 | macOS Intel x64 | ✅ | ✅ | |
 | macOS ARM64 (M1/M2/M3) | ✅ | ✅ | PPT/OCR 需 Rosetta 2 |
-| Linux ARM64 | ✅ | ❌ | ONNX Runtime 限制 |
+| Linux ARM64 | 未提供預編譯版本 | ❌ | 不在 build/publish 目標內；需自行以 .NET SDK 建置，OCR 受 ONNX Runtime 限制 |
 
 **跨平台方案：** PowerPoint 使用 `Aspose.Slides.NET6.CrossPlatform`、PDF 使用 `Aspose.PDF.Drawing`、Word/Excel 使用 `SkiaSharp`，全部無需外部圖形庫。
 

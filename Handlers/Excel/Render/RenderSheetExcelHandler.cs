@@ -35,11 +35,14 @@ public class RenderSheetExcelHandler : OperationHandlerBase<Workbook>
         var sheetIndex = parameters.GetOptional("sheetIndex", 0);
         var format = parameters.GetOptional("format", "png");
         var dpi = parameters.GetOptional("dpi", 150);
+        SecurityHelper.ValidateNumericRange(dpi, "dpi", 10, 1200);
 
         if (string.IsNullOrEmpty(outputPath))
             throw new ArgumentException("outputPath is required for render_sheet operation");
 
         SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+        outputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(outputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], "outputPath");
 
         try
         {
@@ -58,10 +61,20 @@ public class RenderSheetExcelHandler : OperationHandlerBase<Workbook>
             var sheetRender = new SheetRender(worksheet, options);
             var outputPaths = new List<string>();
 
-            if (sheetRender.PageCount <= 1)
+            // OnePagePerSheet makes the whole worksheet a single page, so the page itself can be
+            // arbitrarily large; the real size in inches is what bounds the raster (R2-R01).
+            var pageSize = sheetRender.PageCount > 0 ? sheetRender.GetPageSizeInch(0) : null;
+            RenderBudget.EnsureWithinBudget(sheetRender.PageCount, dpi,
+                pageSize?[0] ?? 0, pageSize?[1] ?? 0);
+
+            if (sheetRender.PageCount == 0)
+                throw new ArgumentException(
+                    $"Sheet {sheetIndex} has no printable content, so no image was produced. "
+                    + "Add content to the worksheet, or render a sheet that has some.");
+
+            if (sheetRender.PageCount == 1)
             {
-                if (sheetRender.PageCount > 0)
-                    sheetRender.ToImage(0, outputPath);
+                sheetRender.ToImage(0, outputPath);
                 outputPaths.Add(outputPath);
             }
             else

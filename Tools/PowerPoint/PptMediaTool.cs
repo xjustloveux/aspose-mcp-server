@@ -27,6 +27,11 @@ public class PptMediaTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Session manager for document lifecycle management.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -36,11 +41,14 @@ public class PptMediaTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
     /// <param name="identityAccessor">Optional identity accessor for session isolation.</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public PptMediaTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry =
             HandlerRegistry<Presentation>.CreateFromNamespace("AsposeMcpServer.Handlers.PowerPoint.Media");
     }
@@ -52,7 +60,7 @@ public class PptMediaTool
     /// <param name="path">Presentation file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID for in-memory editing.</param>
     /// <param name="outputPath">Output file path (file mode only).</param>
-    /// <param name="slideIndex">Slide index (0-based, required for all operations).</param>
+    /// <param name="slideIndex">Slide index (0-based, optional for all operations, default: 0).</param>
     /// <param name="shapeIndex">Shape index (0-based, required for delete/set_playback).</param>
     /// <param name="audioPath">Audio file path to embed (required for add_audio).</param>
     /// <param name="videoPath">Video file path to embed (required for add_video).</param>
@@ -64,6 +72,12 @@ public class PptMediaTool
     /// <param name="loop">Loop playback (optional, default: false).</param>
     /// <param name="rewind">Rewind video after play (optional, default: false).</param>
     /// <param name="volume">Volume level: mute|low|medium|loud (optional, default: medium).</param>
+    /// <param name="hideIcon">Hide the audio icon during the show (optional, for add_audio).</param>
+    /// <param name="playAcrossSlides">
+    ///     Keep the audio playing across slide changes
+    ///     (optional, for add_audio).
+    /// </param>
+    /// <param name="fullScreenMode">Play the video full screen (optional, for set_playback).</param>
     /// <returns>A message indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(
@@ -95,7 +109,7 @@ Usage examples:
         string? sessionId = null,
         [Description("Output file path (file mode only)")]
         string? outputPath = null,
-        [Description("Slide index (0-based, required for all operations)")]
+        [Description("Slide index (0-based, optional for all operations, default: 0)")]
         int slideIndex = 0,
         [Description("Shape index (0-based, required for delete/set_playback)")]
         int? shapeIndex = null,
@@ -118,12 +132,19 @@ Usage examples:
         [Description("Rewind video after play (optional, default: false)")]
         bool rewind = false,
         [Description("Volume level: mute|low|medium|loud (optional, default: medium)")]
-        string volume = "medium")
+        string volume = "medium",
+        [Description("Hide the audio icon on the slide (optional for add_audio, default: false)")]
+        bool hideIcon = false,
+        [Description("Keep the audio playing across slides (optional for add_audio, default: false)")]
+        bool playAcrossSlides = false,
+        [Description("Play video full screen (optional for set_playback on a video, default: unchanged)")]
+        bool? fullScreenMode = null)
     {
-        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor,
+            serverConfig: _serverConfig);
 
         var parameters = BuildParameters(operation, slideIndex, shapeIndex, audioPath, videoPath,
-            x, y, width, height, playMode, loop, rewind, volume);
+            x, y, width, height, playMode, loop, rewind, volume, hideIcon, playAcrossSlides, fullScreenMode);
 
         var handler = _handlerRegistry.GetHandler(operation);
 
@@ -134,7 +155,8 @@ Usage examples:
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);
@@ -163,17 +185,22 @@ Usage examples:
         string playMode,
         bool loop,
         bool rewind,
-        string volume)
+        string volume,
+        bool hideIcon,
+        bool playAcrossSlides,
+        bool? fullScreenMode)
     {
         var parameters = new OperationParameters();
         parameters.Set("slideIndex", slideIndex);
 
         return operation.ToLowerInvariant() switch
         {
-            "add_audio" => BuildAddAudioParameters(parameters, audioPath, x, y, width, height),
+            "add_audio" => BuildAddAudioParameters(parameters, audioPath, x, y, width, height, hideIcon,
+                playAcrossSlides),
             "add_video" => BuildAddVideoParameters(parameters, videoPath, x, y, width, height),
             "delete_audio" or "delete_video" => BuildDeleteMediaParameters(parameters, shapeIndex),
-            "set_playback" => BuildSetPlaybackParameters(parameters, shapeIndex, playMode, loop, rewind, volume),
+            "set_playback" => BuildSetPlaybackParameters(parameters, shapeIndex, playMode, loop, rewind, volume,
+                fullScreenMode),
             _ => parameters
         };
     }
@@ -187,15 +214,19 @@ Usage examples:
     /// <param name="y">The Y position in points.</param>
     /// <param name="width">The width in points.</param>
     /// <param name="height">The height in points.</param>
+    /// <param name="hideIcon">Whether to hide the audio icon during the show.</param>
+    /// <param name="playAcrossSlides">Whether the audio keeps playing across slide changes.</param>
     /// <returns>OperationParameters configured for adding audio.</returns>
     private static OperationParameters BuildAddAudioParameters(OperationParameters parameters, string? audioPath,
-        float x, float y, float? width, float? height)
+        float x, float y, float? width, float? height, bool hideIcon, bool playAcrossSlides)
     {
         if (audioPath != null) parameters.Set("audioPath", audioPath);
         parameters.Set("x", x);
         parameters.Set("y", y);
         parameters.Set("width", width ?? 80f);
         parameters.Set("height", height ?? 80f);
+        parameters.Set("hideIcon", hideIcon);
+        parameters.Set("playAcrossSlides", playAcrossSlides);
         return parameters;
     }
 
@@ -241,15 +272,17 @@ Usage examples:
     /// <param name="loop">Whether to loop playback.</param>
     /// <param name="rewind">Whether to rewind video after play.</param>
     /// <param name="volume">The volume level (mute, low, medium, loud).</param>
+    /// <param name="fullScreenMode">Whether the video plays full screen.</param>
     /// <returns>OperationParameters configured for setting playback options.</returns>
     private static OperationParameters BuildSetPlaybackParameters(OperationParameters parameters, int? shapeIndex,
-        string playMode, bool loop, bool rewind, string volume)
+        string playMode, bool loop, bool rewind, string volume, bool? fullScreenMode)
     {
         if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
         parameters.Set("playMode", playMode);
         parameters.Set("loop", loop);
         parameters.Set("rewind", rewind);
         parameters.Set("volume", volume);
+        if (fullScreenMode.HasValue) parameters.Set("fullScreenMode", fullScreenMode.Value);
         return parameters;
     }
 }

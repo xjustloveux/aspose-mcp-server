@@ -106,7 +106,7 @@ public class ValidatePdfComplianceHandlerTests : PdfHandlerTestBase
 
         var validateResult = Assert.IsType<ValidateCompliancePdfResult>(result);
         Assert.IsType<bool>(validateResult.IsCompliant);
-        Assert.True(validateResult.ErrorCount >= 0);
+        Assert.Equal(1, validateResult.ErrorCount);
     }
 
     [Fact]

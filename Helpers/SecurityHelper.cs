@@ -6,11 +6,6 @@ namespace AsposeMcpServer.Helpers;
 public static class SecurityHelper
 {
     /// <summary>
-    ///     Windows MAX_PATH limit for file paths
-    /// </summary>
-    private const int MaxPathLength = 260;
-
-    /// <summary>
     ///     Maximum allowed file name length
     /// </summary>
     private const int MaxFileNameLength = 255;
@@ -30,6 +25,33 @@ public static class SecurityHelper
     ///     Bounds pathological nesting that could otherwise cause stack overflow.
     /// </summary>
     private const int MaxRecursionDepth = 256;
+
+    /// <summary>
+    ///     Maximum number of symbolic links followed while resolving a single path. Mirrors the
+    ///     conventional operating-system limit and bounds the work for a maliciously nested chain
+    ///     that the OS itself does not reject.
+    /// </summary>
+    private const int MaxSymlinkHops = 40;
+
+    /// <summary>
+    ///     Windows MAX_PATH limit for file paths
+    /// </summary>
+    /// <summary>
+    ///     Longest accepted path. Windows applies the classic MAX_PATH ceiling; other platforms
+    ///     accept the POSIX limit, so a legitimate deep path on Linux is no longer rejected for
+    ///     being longer than a Windows-only constant.
+    /// </summary>
+    private static readonly int MaxPathLength = OperatingSystem.IsWindows() ? 260 : 4096;
+
+    /// <summary>
+    ///     String comparison used when matching a path against the allowlist. Windows and macOS
+    ///     compare case-insensitively; Linux paths are case-sensitive, and treating them otherwise
+    ///     would let one allowed directory vouch for a different directory that differs only in case.
+    /// </summary>
+    private static readonly StringComparison PathComparison =
+        OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
 
     /// <summary>
     ///     Windows reserved device names that cause OS-level side effects when used as file names.
@@ -106,7 +128,12 @@ public static class SecurityHelper
         if (filePath.Any(c => c is >= '\x01' and <= '\x1F'))
             return false;
 
-        if (filePath.Contains("..", StringComparison.Ordinal) || filePath.Contains('~')) return false;
+        if (ContainsTraversalSegment(filePath)) return false;
+
+        // A leading "~" is a shell home-directory reference. .NET never expands it, so it would be
+        // taken literally, but rejecting it keeps the meaning of a path unambiguous. A tilde
+        // anywhere else is an ordinary filename character ("report~v2.docx", "PROGRA~1").
+        if (filePath.StartsWith('~')) return false;
 
         if (filePath.Contains("//", StringComparison.Ordinal) ||
             filePath.Contains("\\\\", StringComparison.Ordinal)) return false;
@@ -151,6 +178,21 @@ public static class SecurityHelper
         if (ContainsWindowsReservedName(filePath)) return false;
 
         return true;
+    }
+
+    /// <summary>
+    ///     Reports whether any segment of <paramref name="filePath" /> is exactly <c>..</c>.
+    ///     Matching on the segment rather than the substring keeps legitimate names such as
+    ///     <c>v1..2.docx</c> usable while still rejecting real traversal.
+    /// </summary>
+    /// <param name="filePath">The path to inspect.</param>
+    /// <returns><see langword="true" /> when a parent-directory segment is present.</returns>
+    private static bool ContainsTraversalSegment(string filePath)
+    {
+        return filePath.Split(
+                [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+                StringSplitOptions.None)
+            .Any(segment => segment == "..");
     }
 
     /// <summary>
@@ -219,7 +261,7 @@ public static class SecurityHelper
         {
             var normalizedBase = basePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
                                  + Path.DirectorySeparatorChar;
-            if (fullPath.StartsWith(normalizedBase, StringComparison.OrdinalIgnoreCase))
+            if (fullPath.StartsWith(normalizedBase, PathComparison))
                 return;
         }
 
@@ -246,15 +288,47 @@ public static class SecurityHelper
     ///     allowlist step while still enforcing shape validation.
     /// </param>
     /// <param name="paramName">Parameter name used in thrown exception messages.</param>
+    /// <returns>The resulting text.</returns>
     /// <exception cref="ArgumentException">
     ///     Thrown when the path is null/empty, contains traversal sequences or invalid characters,
     ///     contains a circular symbolic link, or resolves outside the configured allowlist.
     /// </exception>
-    public static void ValidateUserPath(string filePath, IReadOnlyList<string> allowedBasePaths,
+    public static string ValidateUserPath(string filePath, IReadOnlyList<string> allowedBasePaths,
         string paramName = "path")
     {
         ValidateFilePath(filePath, paramName, true);
-        ResolveAndEnsureWithinAllowlist(filePath, allowedBasePaths, paramName);
+        return ResolveAndEnsureWithinAllowlist(filePath, allowedBasePaths, paramName);
+    }
+
+    /// <summary>
+    ///     Refuses a caller path that names, or lies under, a recovery directory.
+    /// </summary>
+    /// <param name="fullPath">The path, already made absolute.</param>
+    /// <param name="paramName">What the path is, for the refusal message.</param>
+    /// <exception cref="ArgumentException">Thrown when any segment is the recovery directory's name.</exception>
+    /// <remarks>
+    ///     The server keeps its signing key, recovery ledger, publish journals, cleanup queue and
+    ///     staged input copies under <c>&lt;temp&gt;/.aspose-recovery</c>, a location a caller can
+    ///     predict, and an output path is allowed anywhere the allowlist allows — which, when the
+    ///     allowlist is empty, is everywhere. A tool output aimed at the key or the ledger replaced
+    ///     it, and the next start found a key of the wrong length or a ledger it could not verify
+    ///     and refused to recover anything (R23-REC01). The reservation is by name, on every
+    ///     segment, independent of the allowlist: an operator who allowlists the temp root has
+    ///     allowlisted its siblings, not the server's own state. Nothing of the server's routes
+    ///     its recovery paths through this resolver, so nothing legitimate is refused.
+    /// </remarks>
+    public static void EnsureNotReservedForRecovery(string fullPath, string paramName)
+    {
+        var comparison = OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+        var segments = fullPath.Split(
+            [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+            StringSplitOptions.None);
+        if (segments.Any(segment =>
+                string.Equals(segment, RecoveryContext.DirectoryName, comparison)))
+            throw new ArgumentException(
+                $"{paramName} names the server's recovery state, which no request may read or write");
     }
 
     /// <summary>
@@ -332,6 +406,7 @@ public static class SecurityHelper
         // Step 1: lexical normalisation + initial allowlist check (fast path, no I/O).
         var fullPath = Path.GetFullPath(path);
         ValidatePathWithinAllowedBases(fullPath, allowedBases, paramName);
+        EnsureNotReservedForRecovery(fullPath, paramName);
 
         // Step 2: resolve symlinks. For a path that does not exist yet (write sinks),
         // walk up ancestors until we find an existing node, resolve that, then re-append
@@ -340,8 +415,10 @@ public static class SecurityHelper
         {
             var resolved = ResolveSymlinkChain(fullPath);
 
-            // Step 3: re-check the resolved path against the allowlist.
+            // Step 3: re-check the resolved path against the allowlist, and the reservation
+            // against what the path really names.
             ValidatePathWithinAllowedBases(resolved, allowedBases, paramName);
+            EnsureNotReservedForRecovery(resolved, paramName);
 
             return resolved;
         }
@@ -359,9 +436,11 @@ public static class SecurityHelper
     }
 
     /// <summary>
-    ///     Resolves all symlink components in <paramref name="fullPath" />, walking up to the
-    ///     nearest existing ancestor when the leaf does not exist (write-sink pattern).
-    ///     Re-appends the non-existent tail so the returned path preserves the intended filename.
+    ///     Resolves <paramref name="fullPath" /> the way <c>realpath</c> does: every segment is
+    ///     examined in turn from the path root down, so a symbolic link or NTFS junction anywhere
+    ///     in the chain is followed, not only one at the leaf or at the nearest existing ancestor.
+    ///     Segments below the first non-existent one are appended verbatim (write-sink pattern),
+    ///     preserving the intended filename.
     /// </summary>
     /// <param name="fullPath">
     ///     An absolute, lexically-normalised path (output of <see cref="Path.GetFullPath(string)" />).
@@ -381,53 +460,90 @@ public static class SecurityHelper
     /// </exception>
     private static string ResolveSymlinkChain(string fullPath)
     {
-        // Try direct resolution first (common case: path exists and is not a symlink).
-        // File.Exists is checked before Directory.Exists to avoid a redundant I/O call.
-        FileSystemInfo? fsi;
-        if (File.Exists(fullPath))
-            fsi = new FileInfo(fullPath);
-        else if (Directory.Exists(fullPath))
-            fsi = new DirectoryInfo(fullPath);
-        else
-            fsi = null;
+        var root = Path.GetPathRoot(fullPath) ?? string.Empty;
+        var pending = new LinkedList<string>(SplitPathSegments(fullPath, root.Length));
+        var resolved = root;
+        var hops = 0;
 
-        if (fsi != null)
+        while (pending.First != null)
         {
-            var target = fsi.ResolveLinkTarget(true);
-            // null means the path is not a symlink/reparse point — resolved == fullPath.
-            return target != null ? Path.GetFullPath(target.FullName) : fullPath;
-        }
+            var segment = pending.First.Value;
+            pending.RemoveFirst();
 
-        // Path does not exist (write sink). Walk up to find the nearest existing ancestor
-        // to catch a symlinked intermediate directory (NV-3).
-        var segments = new Stack<string>();
-        var current = fullPath;
-
-        while (true)
-        {
-            var parent = Path.GetDirectoryName(current);
-            if (parent == null || parent == current)
-                // Reached the root; nothing more to resolve.
-                return fullPath;
-
-            segments.Push(Path.GetFileName(current));
-            current = parent;
-
-            if (Directory.Exists(current))
+            if (segment == ".") continue;
+            if (segment == "..")
             {
-                var di = new DirectoryInfo(current);
-                var resolvedTarget = di.ResolveLinkTarget(true);
-                var resolvedBase = resolvedTarget != null
-                    ? Path.GetFullPath(resolvedTarget.FullName)
-                    : current;
-
-                // Re-append the non-existent tail segments after the resolved ancestor.
-                while (segments.Count > 0)
-                    resolvedBase = Path.Combine(resolvedBase, segments.Pop());
-
-                return resolvedBase;
+                resolved = Path.GetDirectoryName(resolved) ?? root;
+                if (resolved.Length == 0) resolved = root;
+                continue;
             }
+
+            var candidate = Path.Combine(resolved, segment);
+
+            // Existence checks follow the link on some platforms, so a symlink whose target is
+            // missing looks like a plain absent entry — and the path is then treated as a
+            // not-yet-created file while a later create or write still follows the link,
+            // possibly outside the allowlist. Link metadata is read directly instead, which
+            // does not depend on the target being there (A-10).
+            FileSystemInfo? fsi = null;
+            var asFile = new FileInfo(candidate);
+            var asDirectory = new DirectoryInfo(candidate);
+
+            if (asFile.LinkTarget != null)
+                fsi = asFile;
+            else if (asDirectory.LinkTarget != null)
+                fsi = asDirectory;
+            else if (File.Exists(candidate))
+                fsi = asFile;
+            else if (Directory.Exists(candidate))
+                fsi = asDirectory;
+
+            // Nothing to resolve: either the segment is a plain entry, or the path does not exist
+            // from here on (write-sink pattern) and the remaining tail is appended verbatim.
+            // ResolveLinkTarget(true) follows the whole chain but returns null for a dangling
+            // link, so the single-hop LinkTarget is the fallback: a link that points nowhere yet
+            // still decides where a later write lands.
+            var target = fsi?.ResolveLinkTarget(true);
+            if (target == null && fsi?.LinkTarget != null)
+            {
+                var danglingTarget = Path.IsPathRooted(fsi.LinkTarget)
+                    ? fsi.LinkTarget
+                    : Path.Combine(resolved, fsi.LinkTarget);
+                target = new FileInfo(Path.GetFullPath(danglingTarget));
+            }
+
+            if (target == null)
+            {
+                resolved = candidate;
+                continue;
+            }
+
+            if (++hops > MaxSymlinkHops)
+                throw new IOException("Too many levels of symbolic links");
+
+            // The link target is itself re-examined segment by segment, so a target whose own
+            // ancestors are links cannot smuggle the path back outside the allowlist.
+            var targetPath = Path.GetFullPath(target.FullName);
+            var targetRoot = Path.GetPathRoot(targetPath) ?? string.Empty;
+            foreach (var part in SplitPathSegments(targetPath, targetRoot.Length).Reverse())
+                pending.AddFirst(part);
+            resolved = targetRoot;
         }
+
+        return resolved.Length == 0 ? fullPath : resolved;
+    }
+
+    /// <summary>
+    ///     Splits the portion of <paramref name="path" /> after its root into directory segments.
+    /// </summary>
+    /// <param name="path">An absolute path.</param>
+    /// <param name="rootLength">Number of leading characters occupied by the path root.</param>
+    /// <returns>The segments below the root, in order, with empty entries removed.</returns>
+    private static string[] SplitPathSegments(string path, int rootLength)
+    {
+        return path[rootLength..]
+            .Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+                StringSplitOptions.RemoveEmptyEntries);
     }
 
     /// <summary>
@@ -457,7 +573,7 @@ public static class SecurityHelper
     /// <remarks>
     ///     <para>
     ///         <b>Symlink handling (NV-2):</b> at each recursion entry the directory's
-    ///         <see cref="DirectoryInfo.LinkTarget" /> is re-checked (not only during the initial
+    ///         <see cref="FileSystemInfo.LinkTarget" /> is re-checked (not only during the initial
     ///         enumeration) to close the mid-walk plant window where an attacker replaces a real
     ///         directory with a symlink between enumeration and descent.
     ///     </para>
@@ -575,7 +691,7 @@ public static class SecurityHelper
             var fullBase = Path.GetFullPath(baseDirectory)
                                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
                            + Path.DirectorySeparatorChar;
-            return fullCandidate.StartsWith(fullBase, StringComparison.OrdinalIgnoreCase);
+            return fullCandidate.StartsWith(fullBase, PathComparison);
         }
         catch
         {
@@ -605,14 +721,41 @@ public static class SecurityHelper
     }
 
     /// <summary>
-    ///     Validates array size to prevent resource exhaustion
+    ///     Validates that a numeric parameter falls inside an operation-specific range.
+    ///     Row, column and page counts, and rendering resolutions, size the allocations a single
+    ///     request performs, so an unbounded value lets one call exhaust memory. Callers state the
+    ///     bound that is meaningful for their operation rather than relying on a global default.
     /// </summary>
-    /// <param name="array">Array to validate</param>
+    /// <param name="value">The supplied value.</param>
+    /// <param name="paramName">Parameter name used in the error message.</param>
+    /// <param name="min">Smallest accepted value, inclusive.</param>
+    /// <param name="max">Largest accepted value, inclusive.</param>
+    /// <exception cref="ArgumentException">Thrown when the value falls outside the range.</exception>
+    public static void ValidateNumericRange(long value, string paramName, long min, long max)
+    {
+        if (value < min || value > max)
+            throw new ArgumentException($"{paramName} must be between {min} and {max}");
+    }
+
+    /// <summary>
+    ///     Validates array size to prevent resource exhaustion.
+    ///     <para>
+    ///         An omitted array carries no items and so cannot exceed any bound. The parameter was
+    ///         non-nullable and reached <c>Count()</c> regardless, which turned a missing optional
+    ///         argument into an <see cref="ArgumentNullException" /> — harmless while only
+    ///         required arrays were checked, but every optional array parameter bounded at a tool
+    ///         entry point is normally null (R2-S07).
+    ///     </para>
+    /// </summary>
+    /// <param name="array">Array to validate; <c>null</c> is treated as empty.</param>
     /// <param name="paramName">Parameter name for error message</param>
     /// <param name="maxSize">Maximum allowed size (default: MaxArraySize)</param>
     /// <exception cref="ArgumentException">Thrown if array is too large</exception>
-    public static void ValidateArraySize<T>(IEnumerable<T> array, string paramName = "array", int? maxSize = null)
+    public static void ValidateArraySize<T>(IEnumerable<T>? array, string paramName = "array",
+        int? maxSize = null)
     {
+        if (array == null) return;
+
         var limit = maxSize ?? MaxArraySize;
 
         var count = array is ICollection<T> collection

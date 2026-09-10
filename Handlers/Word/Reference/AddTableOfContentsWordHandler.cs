@@ -1,6 +1,7 @@
-using Aspose.Words;
+﻿using Aspose.Words;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Reference;
@@ -28,6 +29,13 @@ public class AddTableOfContentsWordHandler : OperationHandlerBase<Document>
         var p = ExtractAddTableOfContentsParameters(parameters);
 
         var doc = context.Document;
+
+        // The refusal comes first, while the document is still untouched. The title and the TOC
+        // field were written before UpdateAllowedFields ran, so a document already holding a
+        // nested disallowed field was refused with a heading and an empty table of contents
+        // already added to it — and a session keeps that document (R8-W02).
+        WordFieldPolicy.RefuseNestedDisallowedFields(doc, null);
+
         var builder = new DocumentBuilder(doc);
 
         if (p.Position == "end")
@@ -54,7 +62,7 @@ public class AddTableOfContentsWordHandler : OperationHandlerBase<Document>
             switches += " \\l";
 
         builder.InsertTableOfContents(switches);
-        doc.UpdateFields();
+        WordFieldPolicy.UpdateAllowedFields(doc);
 
         MarkModified(context);
 

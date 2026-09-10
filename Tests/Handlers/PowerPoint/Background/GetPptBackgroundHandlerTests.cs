@@ -6,6 +6,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Background;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class GetPptBackgroundHandlerTests : PptHandlerTestBase
 {
     private readonly GetPptBackgroundHandler _handler = new();

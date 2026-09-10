@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>部署指南 - Aspose MCP Server</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <link rel="alternate icon" href="favicon.ico">
     <meta name="description" content="Aspose MCP Server 部署指南：Docker、Kubernetes、IIS 部署範例。">
     <meta name="keywords" content="Aspose, MCP, 部署, Docker, Kubernetes, IIS, 範例">
     <link rel="canonical" href="https://xjustloveux.github.io/aspose-mcp-server/deployment.html">
@@ -71,6 +70,9 @@
                 </li>
                 <li>
                     <a href="faq.html">常見問答</a>
+                </li>
+                <li>
+                    <a href="architecture-map/index.html">架構關係圖</a>
                 </li>
             </ul>
             <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme" title="切換亮/暗色主題">🌙</button>
@@ -250,7 +252,6 @@ kubectl get pods -l app=aspose-mcp</pre>
     <h3>前置需求</h3>
     <ul style="margin-left: 20px; margin-bottom: 15px;">
         <li>.NET 8.0 Hosting Bundle</li>
-        <li>IIS 已啟用 WebSocket 功能</li>
         <li>ASP.NET Core Module V2</li>
     </ul>
 
@@ -275,6 +276,12 @@ kubectl get pods -l app=aspose-mcp</pre>
 
     <div class="note">
         <strong>注意：</strong> IIS 部署時，建議啟用 HTTPS 並設定適當的安全標頭。
+    </div>
+
+    <div class="note">
+        <strong>WebSocket 模式不支援 IIS：</strong> WebSocket 傳輸會為每條連線啟動一個子伺服器程序，
+        IIS 的 InProcess 主機模型（<code>w3wp</code>）不允許這麼做，伺服器會在建立連線時明確拒絕並說明原因。
+        IIS 部署請使用 HTTP 模式；需要 WebSocket 時改用 Docker、Kubernetes 或直接執行可執行檔。
     </div>
 </div>
 

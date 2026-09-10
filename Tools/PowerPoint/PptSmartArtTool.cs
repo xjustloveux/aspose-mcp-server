@@ -27,6 +27,11 @@ public class PptSmartArtTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Session manager for document session handling.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -36,11 +41,14 @@ public class PptSmartArtTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory editing.</param>
     /// <param name="identityAccessor">Optional identity accessor for session isolation.</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public PptSmartArtTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry =
             HandlerRegistry<Presentation>.CreateFromNamespace("AsposeMcpServer.Handlers.PowerPoint.SmartArt");
     }
@@ -96,7 +104,7 @@ Usage examples:
         [Description("Output file path (optional, defaults to input path)")]
         string? outputPath = null,
         [Description("Slide index (0-based, required for all operations)")]
-        int slideIndex = 0,
+        int? slideIndex = null,
         [Description("Shape index (0-based, required for manage)")]
         int? shapeIndex = null,
         [Description(
@@ -120,7 +128,8 @@ Usage examples:
         [Description("Insert position for new node (0-based, optional for add action, defaults to append at end)")]
         int? position = null)
     {
-        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor,
+            serverConfig: _serverConfig);
 
         var parameters = BuildParameters(operation, slideIndex, shapeIndex, layout,
             x, y, width, height, action, targetPath, text, position);
@@ -134,7 +143,8 @@ Usage examples:
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);
@@ -152,7 +162,7 @@ Usage examples:
     /// <returns>OperationParameters configured with all input values.</returns>
     private static OperationParameters BuildParameters(
         string operation,
-        int slideIndex,
+        int? slideIndex,
         int? shapeIndex,
         string? layout,
         float x,
@@ -182,11 +192,12 @@ Usage examples:
     /// <param name="width">Width of the SmartArt.</param>
     /// <param name="height">Height of the SmartArt.</param>
     /// <returns>OperationParameters configured for adding SmartArt.</returns>
-    private static OperationParameters BuildAddParameters(int slideIndex, string? layout, float x, float y, float width,
+    private static OperationParameters BuildAddParameters(int? slideIndex, string? layout, float x, float y,
+        float width,
         float height)
     {
         var parameters = new OperationParameters();
-        parameters.Set("slideIndex", slideIndex);
+        if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
         if (layout != null) parameters.Set("layout", layout);
         parameters.Set("x", x);
         parameters.Set("y", y);
@@ -205,11 +216,12 @@ Usage examples:
     /// <param name="text">The node text content.</param>
     /// <param name="position">Insert position for new node.</param>
     /// <returns>OperationParameters configured for managing SmartArt nodes.</returns>
-    private static OperationParameters BuildManageNodesParameters(int slideIndex, int? shapeIndex, string? action,
+    private static OperationParameters BuildManageNodesParameters(int? slideIndex, int? shapeIndex,
+        string? action,
         string? targetPath, string? text, int? position)
     {
         var parameters = new OperationParameters();
-        parameters.Set("slideIndex", slideIndex);
+        if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
         if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
         if (action != null) parameters.Set("action", action);
         if (targetPath != null) parameters.Set("targetPath", targetPath);

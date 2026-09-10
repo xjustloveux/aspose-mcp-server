@@ -7,6 +7,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Table;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class DeletePptTableColumnHandlerTests : PptHandlerTestBase
 {
     private readonly DeletePptTableColumnHandler _handler = new();

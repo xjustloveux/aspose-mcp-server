@@ -26,6 +26,11 @@ public class ExcelConditionalFormattingTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -35,11 +40,14 @@ public class ExcelConditionalFormattingTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
     /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public ExcelConditionalFormattingTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry =
             HandlerRegistry<Workbook>.CreateFromNamespace("AsposeMcpServer.Handlers.Excel.ConditionalFormatting");
     }
@@ -93,7 +101,7 @@ Usage examples:
         [Description("Cell range (e.g., 'A1:A10', required for add)")]
         string? range = null,
         [Description("Conditional formatting index (0-based, required for edit/delete)")]
-        int conditionalFormattingIndex = 0,
+        int? conditionalFormattingIndex = null,
         [Description("Condition index within the formatting rule (0-based, optional for edit)")]
         int? conditionIndex = null,
         [Description("Condition type: GreaterThan, LessThan, Between, Equal (required for add)")]
@@ -105,7 +113,8 @@ Usage examples:
         [Description("Background color for matching cells (default: Yellow)")]
         string backgroundColor = "Yellow")
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor,
+            serverConfig: _serverConfig);
 
         var parameters = BuildParameters(operation, sheetIndex, range, conditionalFormattingIndex,
             conditionIndex, condition, value, formula2, backgroundColor);
@@ -119,7 +128,8 @@ Usage examples:
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);
@@ -142,7 +152,7 @@ Usage examples:
         string operation,
         int sheetIndex,
         string? range,
-        int conditionalFormattingIndex,
+        int? conditionalFormattingIndex,
         int? conditionIndex,
         string? condition,
         string? value,
@@ -195,10 +205,11 @@ Usage examples:
     /// <param name="backgroundColor">The background color for matching cells.</param>
     /// <returns>OperationParameters configured for editing conditional formatting.</returns>
     private static OperationParameters BuildEditParameters(OperationParameters parameters,
-        int conditionalFormattingIndex, int? conditionIndex, string? condition, string? value, string? formula2,
+        int? conditionalFormattingIndex, int? conditionIndex, string? condition, string? value, string? formula2,
         string backgroundColor)
     {
-        parameters.Set("conditionalFormattingIndex", conditionalFormattingIndex);
+        if (conditionalFormattingIndex.HasValue)
+            parameters.Set("conditionalFormattingIndex", conditionalFormattingIndex.Value);
         if (conditionIndex.HasValue) parameters.Set("conditionIndex", conditionIndex.Value);
         if (condition != null) parameters.Set("condition", condition);
         if (value != null) parameters.Set("value", value);
@@ -214,9 +225,10 @@ Usage examples:
     /// <param name="conditionalFormattingIndex">The index of conditional formatting to delete.</param>
     /// <returns>OperationParameters configured for deleting conditional formatting.</returns>
     private static OperationParameters BuildDeleteParameters(OperationParameters parameters,
-        int conditionalFormattingIndex)
+        int? conditionalFormattingIndex)
     {
-        parameters.Set("conditionalFormattingIndex", conditionalFormattingIndex);
+        if (conditionalFormattingIndex.HasValue)
+            parameters.Set("conditionalFormattingIndex", conditionalFormattingIndex.Value);
         return parameters;
     }
 }

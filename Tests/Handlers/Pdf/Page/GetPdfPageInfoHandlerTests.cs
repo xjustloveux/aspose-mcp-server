@@ -152,8 +152,8 @@ public class GetPdfPageInfoHandlerTests : PdfHandlerTestBase
         var result = Assert.IsType<GetPdfPageInfoResult>(res);
 
         var firstItem = result.Items[0];
-        Assert.True(firstItem.Width >= 0);
-        Assert.True(firstItem.Height >= 0);
+        Assert.Equal(595, firstItem.Width);
+        Assert.Equal(842, firstItem.Height);
     }
 
     [Fact]

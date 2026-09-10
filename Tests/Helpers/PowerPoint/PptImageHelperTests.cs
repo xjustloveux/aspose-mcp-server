@@ -4,6 +4,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 
 namespace AsposeMcpServer.Tests.Helpers.PowerPoint;
 
+[Collection("SerialSlides")]
 public class PptImageHelperTests : PptTestBase
 {
     #region GetPictureFrames Tests

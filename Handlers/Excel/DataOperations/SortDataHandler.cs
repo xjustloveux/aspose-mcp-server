@@ -1,4 +1,3 @@
-using System.Globalization;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
@@ -40,9 +39,27 @@ public class SortDataHandler : OperationHandlerBase<Workbook>
             var cells = worksheet.Cells;
             var cellRange = ExcelHelper.CreateRange(cells, sortParams.Range);
 
-            var rows = ExtractRows(cells, cellRange, sortParams.HasHeader);
-            var sortedRows = SortRows(rows, sortParams.SortColumn, sortParams.Ascending, sortParams.HasHeader);
-            WriteRowsToSheet(cells, cellRange, sortedRows);
+            if (sortParams.SortColumn < 0 || sortParams.SortColumn >= cellRange.ColumnCount)
+                throw new ArgumentException(
+                    $"sortColumn must be between 0 and {cellRange.ColumnCount - 1} for range {sortParams.Range}");
+
+            // Aspose's own sorter relocates whole rows, so formulas, styles, comments, hyperlinks
+            // and validation travel with their data. Reading Cell.Value into a list and writing it
+            // back only moved values: a formula became the constant it happened to evaluate to, and
+            // every other per-cell attribute stayed behind at the old coordinates.
+            var sorter = workbook.DataSorter;
+            sorter.Clear();
+            sorter.HasHeaders = sortParams.HasHeader;
+            sorter.AddKey(cellRange.FirstColumn + sortParams.SortColumn,
+                sortParams.Ascending ? SortOrder.Ascending : SortOrder.Descending);
+            sorter.Sort(cells, new CellArea
+            {
+                StartRow = cellRange.FirstRow,
+                StartColumn = cellRange.FirstColumn,
+                EndRow = cellRange.FirstRow + cellRange.RowCount - 1,
+                EndColumn = cellRange.FirstColumn + cellRange.ColumnCount - 1
+            });
+            sorter.Clear();
 
             MarkModified(context);
 
@@ -72,143 +89,6 @@ public class SortDataHandler : OperationHandlerBase<Workbook>
             parameters.GetOptional("ascending", true),
             parameters.GetOptional("hasHeader", false)
         );
-    }
-
-    /// <summary>
-    ///     Extracts rows from a cell range.
-    /// </summary>
-    /// <param name="cells">The cells collection.</param>
-    /// <param name="cellRange">The range to extract rows from.</param>
-    /// <param name="hasHeader">Whether the range has a header row.</param>
-    /// <returns>A list of rows, each containing cell values.</returns>
-    private static List<List<object?>> ExtractRows(Cells cells, Aspose.Cells.Range cellRange, bool hasHeader)
-    {
-        List<List<object?>> rows = [];
-        var startRow = hasHeader ? cellRange.FirstRow + 1 : cellRange.FirstRow;
-
-        if (hasHeader) rows.Add(ExtractRow(cells, cellRange.FirstRow, cellRange.FirstColumn, cellRange.ColumnCount));
-
-        for (var row = startRow; row < cellRange.FirstRow + cellRange.RowCount; row++)
-            rows.Add(ExtractRow(cells, row, cellRange.FirstColumn, cellRange.ColumnCount));
-
-        return rows;
-    }
-
-    /// <summary>
-    ///     Extracts a single row of cell values.
-    /// </summary>
-    /// <param name="cells">The cells collection.</param>
-    /// <param name="row">The row index.</param>
-    /// <param name="startCol">The starting column index.</param>
-    /// <param name="colCount">The number of columns to extract.</param>
-    /// <returns>A list of cell values for the row.</returns>
-    private static List<object?> ExtractRow(Cells cells, int row, int startCol, int colCount)
-    {
-        List<object?> rowData = [];
-        for (var col = startCol; col < startCol + colCount; col++) rowData.Add(cells[row, col].Value);
-
-        return rowData;
-    }
-
-    /// <summary>
-    ///     Sorts the rows by the specified column.
-    /// </summary>
-    /// <param name="rows">The rows to sort.</param>
-    /// <param name="sortColumn">The column index to sort by.</param>
-    /// <param name="ascending">Whether to sort in ascending order.</param>
-    /// <param name="hasHeader">Whether the first row is a header.</param>
-    /// <returns>The sorted rows with header preserved if present.</returns>
-    private static List<List<object?>> SortRows(List<List<object?>> rows, int sortColumn, bool ascending,
-        bool hasHeader)
-    {
-        var dataRows = hasHeader ? rows.Skip(1).ToList() : rows;
-        dataRows.Sort((a, b) => CompareRows(a, b, sortColumn, ascending));
-
-        if (!hasHeader) return dataRows;
-
-        List<List<object?>> result = [rows[0]];
-        result.AddRange(dataRows);
-        return result;
-    }
-
-    /// <summary>
-    ///     Compares two rows by the specified column. Cells in a column can hold mixed types
-    ///     (numbers, text, booleans), which <c>Comparer&lt;object&gt;.Default</c> cannot compare
-    ///     across; values are compared numerically when both are numeric, otherwise numbers sort
-    ///     before text and remaining values compare as ordinal strings (Excel's own sort order).
-    /// </summary>
-    /// <param name="a">The first row.</param>
-    /// <param name="b">The second row.</param>
-    /// <param name="sortColumn">The column index to compare.</param>
-    /// <param name="ascending">Whether to sort in ascending order.</param>
-    /// <returns>A comparison result for sorting.</returns>
-    private static int CompareRows(List<object?> a, List<object?> b, int sortColumn, bool ascending)
-    {
-        var aVal = a[sortColumn];
-        var bVal = b[sortColumn];
-
-        if (aVal == null && bVal == null) return 0;
-        if (aVal == null) return ascending ? -1 : 1;
-        if (bVal == null) return ascending ? 1 : -1;
-
-        var comparison = CompareCellValues(aVal, bVal);
-        return ascending ? comparison : -comparison;
-    }
-
-    /// <summary>
-    ///     Compares two non-null cell values across types.
-    /// </summary>
-    /// <param name="aVal">The first value.</param>
-    /// <param name="bVal">The second value.</param>
-    /// <returns>A comparison result for sorting.</returns>
-    private static int CompareCellValues(object aVal, object bVal)
-    {
-        var aIsNumeric = TryToDouble(aVal, out var aNumber);
-        var bIsNumeric = TryToDouble(bVal, out var bNumber);
-
-        if (aIsNumeric && bIsNumeric) return aNumber.CompareTo(bNumber);
-        if (aIsNumeric) return -1;
-        if (bIsNumeric) return 1;
-
-        return string.CompareOrdinal(aVal.ToString(), bVal.ToString());
-    }
-
-    /// <summary>
-    ///     Attempts to interpret a cell value as a number.
-    /// </summary>
-    /// <param name="value">The cell value.</param>
-    /// <param name="number">The numeric value when convertible.</param>
-    /// <returns><c>true</c> when the value is numeric; otherwise <c>false</c>.</returns>
-    private static bool TryToDouble(object value, out double number)
-    {
-        switch (value)
-        {
-            case sbyte or byte or short or ushort or int or uint or long or ulong or float or double or decimal:
-                number = Convert.ToDouble(value, CultureInfo.InvariantCulture);
-                return true;
-            case DateTime dateTime:
-                number = dateTime.ToOADate();
-                return true;
-            default:
-                number = 0;
-                return false;
-        }
-    }
-
-    /// <summary>
-    ///     Writes the sorted rows back to the worksheet.
-    /// </summary>
-    /// <param name="cells">The cells collection.</param>
-    /// <param name="cellRange">The target range.</param>
-    /// <param name="rows">The rows to write.</param>
-    private static void WriteRowsToSheet(Cells cells, Aspose.Cells.Range cellRange, List<List<object?>> rows)
-    {
-        for (var i = 0; i < rows.Count; i++)
-        {
-            var rowData = rows[i];
-            var targetRow = cellRange.FirstRow + i;
-            for (var j = 0; j < rowData.Count; j++) cells[targetRow, cellRange.FirstColumn + j].Value = rowData[j];
-        }
     }
 
     /// <summary>

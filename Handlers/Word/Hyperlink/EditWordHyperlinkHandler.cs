@@ -41,6 +41,12 @@ public class EditWordHyperlinkHandler : OperationHandlerBase<Document>
         }
 
         var hyperlinkField = hyperlinkFields[p.HyperlinkIndex];
+
+        // Same rule: the address, the sub-address and the display text were all assigned before
+        // the update could refuse, so a refusal left the link pointing somewhere the caller chose
+        // while telling them it had not been changed (R8-W02).
+        WordFieldPolicy.RefuseNestedDisallowedFields(doc, [hyperlinkField]);
+
         List<string> changes = [];
 
         if (!string.IsNullOrEmpty(p.Url))
@@ -68,7 +74,7 @@ public class EditWordHyperlinkHandler : OperationHandlerBase<Document>
             changes.Add($"Tooltip: {p.Tooltip}");
         }
 
-        hyperlinkField.Update();
+        WordFieldPolicy.UpdateField(hyperlinkField);
 
         MarkModified(context);
 

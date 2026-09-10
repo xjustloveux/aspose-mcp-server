@@ -2,6 +2,7 @@ using Aspose.Words;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 using ModelContextProtocol;
 
@@ -13,6 +14,9 @@ namespace AsposeMcpServer.Handlers.Word.File;
 [ResultType(typeof(SuccessResult))]
 public class MergeWordDocumentsHandler : OperationHandlerBase<Document>
 {
+    private const string InputPathsParameter = "inputPaths";
+    private const string OutputPathParameter = "outputPath";
+
     /// <inheritdoc />
     public override string Operation => "merge";
 
@@ -32,17 +36,31 @@ public class MergeWordDocumentsHandler : OperationHandlerBase<Document>
 
         if (p.InputPaths == null || p.InputPaths.Length == 0)
             throw new ArgumentException("inputPaths is required for merge operation");
+
+        // One request should not be able to pull in an unbounded number of documents; PDF
+        // merge has capped this since RB-29 and the other three families had not.
+        SecurityHelper.ValidateArraySize(p.InputPaths, InputPathsParameter);
         if (string.IsNullOrEmpty(p.OutputPath))
             throw new ArgumentException("outputPath is required for merge operation");
 
-        SecurityHelper.ValidateFilePath(p.OutputPath, "outputPath", true);
+        SecurityHelper.ValidateFilePath(p.OutputPath, OutputPathParameter, true);
+        var outputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.OutputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], OutputPathParameter);
 
-        var outputDir = Path.GetDirectoryName(p.OutputPath);
+        var outputDir = Path.GetDirectoryName(outputPath);
         if (!string.IsNullOrEmpty(outputDir))
             Directory.CreateDirectory(outputDir);
 
+        // The canonical paths are kept, not thrown away: validating one path and then
+        // opening a different, still-mutable one is the check-to-use gap the resolver
+        // exists to close (R7-F03).
+        var inputPaths = new List<string>(p.InputPaths.Length);
         foreach (var inputPath in p.InputPaths)
-            SecurityHelper.ValidateFilePath(inputPath, "inputPaths", true);
+        {
+            SecurityHelper.ValidateFilePath(inputPath, InputPathsParameter, true);
+            inputPaths.Add(SecurityHelper.ResolveAndEnsureWithinAllowlist(inputPath,
+                context.ServerConfig?.AllowedBasePaths ?? [], InputPathsParameter));
+        }
 
         var importFormatMode = p.ImportFormatModeStr switch
         {
@@ -51,7 +69,8 @@ public class MergeWordDocumentsHandler : OperationHandlerBase<Document>
             _ => ImportFormatMode.KeepSourceFormatting
         };
 
-        var mergedDoc = new Document(p.InputPaths[0]);
+        var allowedBasePaths = context.ServerConfig?.AllowedBasePaths ?? [];
+        var mergedDoc = GuardedWordLoader.Load(inputPaths[0], allowedBasePaths);
         var totalFiles = p.InputPaths.Length;
 
         var initialProgress = 100 / totalFiles;
@@ -60,7 +79,7 @@ public class MergeWordDocumentsHandler : OperationHandlerBase<Document>
 
         for (var i = 1; i < p.InputPaths.Length; i++)
         {
-            var doc = new Document(p.InputPaths[i]);
+            var doc = GuardedWordLoader.Load(inputPaths[i], allowedBasePaths);
             mergedDoc.AppendDocument(doc, importFormatMode);
 
             var mergeProgress = (i + 1) * 100 / totalFiles;
@@ -78,7 +97,7 @@ public class MergeWordDocumentsHandler : OperationHandlerBase<Document>
 
         // H6: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
         var resolvedOutputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.OutputPath,
-            context.ServerConfig?.AllowedBasePaths ?? [], "outputPath");
+            context.ServerConfig?.AllowedBasePaths ?? [], OutputPathParameter);
         mergedDoc.Save(resolvedOutputPath);
         context.Progress?.Report(new ProgressNotificationValue
             { Progress = 100, Total = 100, Message = "Merge completed" });
@@ -92,8 +111,8 @@ public class MergeWordDocumentsHandler : OperationHandlerBase<Document>
     private static MergeParameters ExtractMergeParameters(OperationParameters parameters)
     {
         return new MergeParameters(
-            parameters.GetOptional<string[]?>("inputPaths"),
-            parameters.GetOptional<string?>("outputPath"),
+            parameters.GetOptional<string[]?>(InputPathsParameter),
+            parameters.GetOptional<string?>(OutputPathParameter),
             parameters.GetOptional("importFormatMode", "KeepSourceFormatting"),
             parameters.GetOptional("unlinkHeadersFooters", false));
     }

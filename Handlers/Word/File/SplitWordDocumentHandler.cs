@@ -3,6 +3,7 @@ using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
 using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.File;
@@ -49,7 +50,9 @@ public class SplitWordDocumentHandler : OperationHandlerBase<Document>
             throw new ArgumentException("outputDir is required for split operation");
 
         SecurityHelper.ValidateFilePath(p.OutputDir, "outputDir", true);
-        Directory.CreateDirectory(p.OutputDir);
+        var resolvedOutputDir = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.OutputDir,
+            context.ServerConfig?.AllowedBasePaths ?? [], "outputDir");
+        Directory.CreateDirectory(resolvedOutputDir);
 
         Document doc;
         string fileBaseName;
@@ -66,27 +69,45 @@ public class SplitWordDocumentHandler : OperationHandlerBase<Document>
         else
         {
             SecurityHelper.ValidateFilePath(p.Path!, allowAbsolutePaths: true);
-            doc = new Document(p.Path);
+            // The loader must see the resolved path, not the caller's string.
+            var resolvedInput = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.Path!,
+                context.ServerConfig?.AllowedBasePaths ?? [], "path");
+            doc = GuardedWordLoader.Load(resolvedInput,
+                context.ServerConfig?.AllowedBasePaths ?? []);
             fileBaseName = SecurityHelper.SanitizeFileName(Path.GetFileNameWithoutExtension(p.Path!));
         }
 
         if (string.Equals(p.SplitBy, "section", StringComparison.OrdinalIgnoreCase))
         {
+            // The page-split branch below prices its work; this one wrote one file per section
+            // with no accounting at all (R2-R02).
+            RenderBudget.EnsureOutputCount(doc.Sections.Count, "section files");
+
+            // Staged as a batch and published once. Publishing each section as it was produced
+            // meant a split refused on a later section had already replaced the destinations of
+            // every section before it (R4-R02, R5-R01).
+            using var sectionBatch = new BoundedFileBatch(RenderBudget.MaxOutputBytes, "split output",
+                context.Recovery, context.ServerConfig?.AllowedBasePaths ?? []);
+
             for (var i = 0; i < doc.Sections.Count; i++)
             {
                 var sectionDoc = new Document();
                 sectionDoc.RemoveAllChildren();
                 sectionDoc.AppendChild(sectionDoc.ImportNode(doc.Sections[i], true));
 
-                var output = Path.Combine(p.OutputDir, $"{fileBaseName}_section_{i + 1}.docx");
+                var output = Path.Combine(resolvedOutputDir, $"{fileBaseName}_section_{i + 1}.docx");
                 // H5: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
                 output = SecurityHelper.ResolveAndEnsureWithinAllowlist(output,
                     context.ServerConfig?.AllowedBasePaths ?? [], nameof(output));
-                sectionDoc.Save(output);
+                // Measured after the write, the section that passed the limit was already on
+                // disk when the request was refused (R3-R07).
+                sectionBatch.Stage(output, stream => sectionDoc.Save(stream, SaveFormat.Docx));
             }
 
+            var sections = sectionBatch.Publish().Count;
+
             return new SuccessResult
-                { Message = $"Document split into {doc.Sections.Count} sections in: {p.OutputDir}" };
+                { Message = $"Document split into {sections} sections in: {resolvedOutputDir}" };
         }
 
         doc.UpdatePageLayout();
@@ -103,17 +124,25 @@ public class SplitWordDocumentHandler : OperationHandlerBase<Document>
                 $"Page-split would require {totalWorkUnits} work units (totalPages² = {pageCount}²). " +
                 $"Maximum allowed is {MaxTotalWorkUnits}. Use section-split mode or a smaller document.");
 
+        // The section branch has been bounded and staged since R3-R07; this one still saved
+        // each page straight to its destination, so it had no byte limit at all and left a
+        // partial set behind when it failed (R5-R01).
+        using var pageBatch = new BoundedFileBatch(RenderBudget.MaxOutputBytes, "split output",
+            context.Recovery, context.ServerConfig?.AllowedBasePaths ?? []);
+
         for (var i = 0; i < pageCount; i++)
         {
             var pageDoc = doc.ExtractPages(i, 1);
-            var output = Path.Combine(p.OutputDir, $"{fileBaseName}_page_{i + 1}.docx");
+            var output = Path.Combine(resolvedOutputDir, $"{fileBaseName}_page_{i + 1}.docx");
             // H5: resolve symlinks immediately before each per-page sink (bug 20260415-symlink-toctou-sweep).
             output = SecurityHelper.ResolveAndEnsureWithinAllowlist(output,
                 context.ServerConfig?.AllowedBasePaths ?? [], nameof(output));
-            pageDoc.Save(output);
+            pageBatch.Stage(output, stream => pageDoc.Save(stream, SaveFormat.Docx));
         }
 
-        return new SuccessResult { Message = $"Document split into {pageCount} pages in: {p.OutputDir}" };
+        var pages = pageBatch.Publish().Count;
+
+        return new SuccessResult { Message = $"Document split into {pages} pages in: {resolvedOutputDir}" };
     }
 
     /// <summary>

@@ -26,6 +26,11 @@ public class PdfLinkTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     The document session manager for managing in-memory document sessions.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -35,10 +40,13 @@ public class PdfLinkTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
     /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
-    public PdfLinkTool(DocumentSessionManager? sessionManager = null, ISessionIdentityAccessor? identityAccessor = null)
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
+    public PdfLinkTool(DocumentSessionManager? sessionManager = null, ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry = HandlerRegistry<Document>.CreateFromNamespace("AsposeMcpServer.Handlers.Pdf.Link");
     }
 
@@ -51,10 +59,10 @@ public class PdfLinkTool
     /// <param name="outputPath">Output file path (optional, defaults to overwrite input).</param>
     /// <param name="pageIndex">Page index (1-based, required for add, delete, edit).</param>
     /// <param name="linkIndex">Link index (0-based, required for delete, edit).</param>
-    /// <param name="x">X position of link area in PDF coordinates (required for add).</param>
-    /// <param name="y">Y position of link area in PDF coordinates (required for add).</param>
-    /// <param name="width">Width of link area in PDF points (required for add).</param>
-    /// <param name="height">Height of link area in PDF points (required for add).</param>
+    /// <param name="x">X position of link area in PDF coordinates (optional for add, default: 0).</param>
+    /// <param name="y">Y position of link area in PDF coordinates (optional for add, default: 0).</param>
+    /// <param name="width">Width of link area in PDF points (optional for add, default: 100).</param>
+    /// <param name="height">Height of link area in PDF points (optional for add, default: 20).</param>
     /// <param name="url">URL to link to (for add, edit).</param>
     /// <param name="targetPage">Target page number (1-based, for add, edit).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
@@ -90,21 +98,24 @@ Usage examples:
         [Description("Page index (1-based, required for add, delete, edit)")]
         int pageIndex = 0,
         [Description("Link index (0-based, required for delete, edit)")]
-        int linkIndex = 0,
-        [Description("X position of link area in PDF coordinates, origin at bottom-left corner (required for add)")]
-        double x = 0,
-        [Description("Y position of link area in PDF coordinates, origin at bottom-left corner (required for add)")]
-        double y = 0,
-        [Description("Width of link area in PDF points (required for add)")]
-        double width = 0,
-        [Description("Height of link area in PDF points (required for add)")]
-        double height = 0,
+        int? linkIndex = null,
+        [Description(
+            "X position of link area in PDF coordinates, origin at bottom-left corner (optional for add, default: 0)")]
+        double? x = null,
+        [Description(
+            "Y position of link area in PDF coordinates, origin at bottom-left corner (optional for add, default: 0)")]
+        double? y = null,
+        [Description("Width of link area in PDF points (optional for add, default: 100)")]
+        double? width = null,
+        [Description("Height of link area in PDF points (optional for add, default: 20)")]
+        double? height = null,
         [Description("URL to link to (for add, edit)")]
         string? url = null,
         [Description("Target page number (1-based, for add, edit)")]
         int? targetPage = null)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor,
+            serverConfig: _serverConfig);
 
         var parameters = BuildParameters(operation, pageIndex, linkIndex, x, y, width, height, url, targetPage);
 
@@ -117,7 +128,8 @@ Usage examples:
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);
@@ -139,11 +151,11 @@ Usage examples:
     private static OperationParameters BuildParameters(
         string operation,
         int pageIndex,
-        int linkIndex,
-        double x,
-        double y,
-        double width,
-        double height,
+        int? linkIndex,
+        double? x,
+        double? y,
+        double? width,
+        double? height,
         string? url,
         int? targetPage)
     {
@@ -168,16 +180,16 @@ Usage examples:
     /// <param name="url">The URL to link to.</param>
     /// <param name="targetPage">The target page number (1-based) for internal links.</param>
     /// <returns>OperationParameters configured for adding a link.</returns>
-    private static OperationParameters BuildAddParameters(int pageIndex, double x, double y, double width,
-        double height,
+    private static OperationParameters BuildAddParameters(int pageIndex, double? x, double? y, double? width,
+        double? height,
         string? url, int? targetPage)
     {
         var parameters = new OperationParameters();
         parameters.Set("pageIndex", pageIndex);
-        parameters.Set("x", x);
-        parameters.Set("y", y);
-        parameters.Set("width", width);
-        parameters.Set("height", height);
+        if (x.HasValue) parameters.Set("x", x.Value);
+        if (y.HasValue) parameters.Set("y", y.Value);
+        if (width.HasValue) parameters.Set("width", width.Value);
+        if (height.HasValue) parameters.Set("height", height.Value);
         if (url != null) parameters.Set("url", url);
         if (targetPage.HasValue) parameters.Set("targetPage", targetPage.Value);
         return parameters;
@@ -189,11 +201,11 @@ Usage examples:
     /// <param name="pageIndex">The page index (1-based) containing the link.</param>
     /// <param name="linkIndex">The link index (0-based) to delete.</param>
     /// <returns>OperationParameters configured for deleting a link.</returns>
-    private static OperationParameters BuildDeleteParameters(int pageIndex, int linkIndex)
+    private static OperationParameters BuildDeleteParameters(int pageIndex, int? linkIndex)
     {
         var parameters = new OperationParameters();
         parameters.Set("pageIndex", pageIndex);
-        parameters.Set("linkIndex", linkIndex);
+        if (linkIndex.HasValue) parameters.Set("linkIndex", linkIndex.Value);
         return parameters;
     }
 
@@ -205,11 +217,11 @@ Usage examples:
     /// <param name="url">The new URL to link to.</param>
     /// <param name="targetPage">The new target page number (1-based) for internal links.</param>
     /// <returns>OperationParameters configured for editing a link.</returns>
-    private static OperationParameters BuildEditParameters(int pageIndex, int linkIndex, string? url, int? targetPage)
+    private static OperationParameters BuildEditParameters(int pageIndex, int? linkIndex, string? url, int? targetPage)
     {
         var parameters = new OperationParameters();
         parameters.Set("pageIndex", pageIndex);
-        parameters.Set("linkIndex", linkIndex);
+        if (linkIndex.HasValue) parameters.Set("linkIndex", linkIndex.Value);
         if (url != null) parameters.Set("url", url);
         if (targetPage.HasValue) parameters.Set("targetPage", targetPage.Value);
         return parameters;

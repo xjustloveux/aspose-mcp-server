@@ -18,6 +18,35 @@ public class AddPdfTableHandlerTests : PdfHandlerTestBase
 
     #endregion
 
+    #region Table Budget
+
+    /// <summary>
+    ///     Each dimension was checked for being at least one and nothing more, so the product —
+    ///     which is what gets allocated — was unbounded (R3-R04).
+    /// </summary>
+    /// <param name="rows">Rows requested.</param>
+    /// <param name="columns">Columns requested.</param>
+    [Theory]
+    [InlineData(100_000, 2)]
+    [InlineData(2, 100_000)]
+    [InlineData(5_000, 1_000)]
+    public void Execute_WithATableAboveTheBudget_ShouldBeRefused(int rows, int columns)
+    {
+        var document = CreateEmptyDocument();
+        var context = CreateContext(document);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "rows", rows },
+            { "columns", columns }
+        });
+
+        Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+
+        Assert.Empty(document.Pages[1].Paragraphs.OfType<Aspose.Pdf.Table>());
+    }
+
+    #endregion
+
     #region Basic Add Table Operations
 
     [SkippableFact]

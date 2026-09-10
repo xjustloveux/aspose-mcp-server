@@ -27,6 +27,11 @@ public class WordTextTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Session manager for document session operations.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -36,11 +41,14 @@ public class WordTextTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document operations.</param>
     /// <param name="identityAccessor">Optional identity accessor for session isolation.</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public WordTextTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry = HandlerRegistry<Document>.CreateFromNamespace("AsposeMcpServer.Handlers.Word.Text");
     }
 
@@ -71,6 +79,11 @@ public class WordTextTool
     /// <param name="replace">Replacement text (for replace).</param>
     /// <param name="searchText">Text to search for (for search/delete).</param>
     /// <param name="caseSensitive">Case sensitive search (for search/replace).</param>
+    /// <param name="wholeWord">
+    ///     Match only where nothing word-like touches either end of the match (for search).
+    ///     Applies to a regex search as well, by where the match lands rather than by
+    ///     rewriting the pattern.
+    /// </param>
     /// <param name="useRegex">Use regular expression (for search/replace).</param>
     /// <param name="replaceInFields">Replace text inside fields (for replace).</param>
     /// <param name="maxResults">Maximum number of results to return (for search).</param>
@@ -92,7 +105,12 @@ public class WordTextTool
     /// <param name="leftIndent">Left indentation in points (for add_styled).</param>
     /// <param name="firstLineIndent">First line indentation in points (for add_styled).</param>
     /// <param name="paragraphIndexForAdd">Paragraph index to insert after (for add_styled).</param>
-    /// <param name="tabStops">Custom tab stops as JSON array (for add_styled).</param>
+    /// <param name="tabStops">
+    ///     Tab stops, as an array of {position, alignment, leader}. position is required, in points from
+    ///     the left margin, between -1584 and 1584. alignment: left, center, right, decimal, bar, clear (default left).
+    ///     leader: none, dots, dashes, line, heavy, middledot (default none). Names are case-insensitive and an unrecognised
+    ///     one is an error, not a default. At most 1500 stops. For add_styled.
+    /// </param>
     /// <param name="storyType">Story the paragraph index is relative to (Body by default).</param>
     /// <param name="headerFooterType">Header/Footer discriminator (Primary by default).</param>
     /// <param name="containerIndex">Instance selector for multi-instance stories (TextBox/Comment/Footnote/Endnote).</param>
@@ -177,8 +195,9 @@ All paragraph indices are story-relative (0-based within their story), addressin
         [Description(
             "Text to search for (required for search operation, optional for delete operation as alternative to startParagraphIndex+endParagraphIndex)")]
         string? searchText = null,
-        [Description("Case sensitive search (optional, default: false, for search operation)")]
+        [Description("Case sensitive matching (optional, default: false, for search and replace operations)")]
         bool caseSensitive = false,
+        bool wholeWord = false,
         [Description("Maximum number of results to return (optional, default: 50, for search operation)")]
         int maxResults = 50,
         [Description(
@@ -248,14 +267,15 @@ All paragraph indices are story-relative (0-based within their story), addressin
 
         var parameters = BuildParameters(text, fontName, fontNameAscii, fontNameFarEast, fontSize, bold, italic,
             underline, color, strikethrough, superscript, subscript, find, replace, useRegex, replaceInFields,
-            searchText, caseSensitive, maxResults, contextLength, startParagraphIndex, startRunIndex,
+            searchText, caseSensitive, wholeWord, maxResults, contextLength, startParagraphIndex, startRunIndex,
             endParagraphIndex, endRunIndex, paragraphIndex, runIndex, insertParagraphIndex, charIndex,
             insertBefore, startCharIndex, endCharIndex, styleName, alignment, indentLevel, leftIndent,
             firstLineIndent, paragraphIndexForAdd, tabStops, storyType, headerFooterType, containerIndex, handle);
 
         var handler = _handlerRegistry.GetHandler(operation);
 
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor,
+            serverConfig: _serverConfig);
 
         var operationContext = new OperationContext<Document>
         {
@@ -264,7 +284,8 @@ All paragraph indices are story-relative (0-based within their story), addressin
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = effectiveOutputPath
+            OutputPath = effectiveOutputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);
@@ -284,7 +305,8 @@ All paragraph indices are story-relative (0-based within their story), addressin
         string? text, string? fontName, string? fontNameAscii, string? fontNameFarEast, double? fontSize,
         bool? bold, bool? italic, string? underline, string? color, bool? strikethrough, bool? superscript,
         bool? subscript, string? find, string? replace, bool useRegex, bool replaceInFields, string? searchText,
-        bool caseSensitive, int maxResults, int contextLength, int? startParagraphIndex, int startRunIndex,
+        bool caseSensitive, bool wholeWord, int maxResults, int contextLength, int? startParagraphIndex,
+        int startRunIndex,
         int? endParagraphIndex, int? endRunIndex, int? paragraphIndex, int? runIndex, int? insertParagraphIndex,
         int? charIndex, bool insertBefore, int? startCharIndex, int? endCharIndex,
         string? styleName, string? alignment, int? indentLevel, double? leftIndent, double? firstLineIndent,
@@ -317,6 +339,7 @@ All paragraph indices are story-relative (0-based within their story), addressin
         // Search parameters
         parameters.Set("searchText", searchText);
         parameters.Set("caseSensitive", caseSensitive);
+        parameters.Set("wholeWord", wholeWord);
         parameters.Set("maxResults", maxResults);
         parameters.Set("contextLength", contextLength);
 

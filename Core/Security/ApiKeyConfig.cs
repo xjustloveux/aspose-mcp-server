@@ -31,6 +31,16 @@ public class ApiKeyConfig
     public string GroupIdentifierHeader { get; set; } = "X-Group-Id";
 
     /// <summary>
+    ///     Addresses or CIDR ranges of the gateways permitted to assert caller identity through
+    ///     headers in Gateway mode. Each entry is a bare address (<c>10.0.0.5</c>) or a range
+    ///     (<c>10.0.0.0/8</c>). An empty list trusts nobody: Gateway mode refuses to start until
+    ///     this names the gateway, because the headers it reads decide who the caller is. A
+    ///     deployment that is isolated at the network boundary can pass <c>any</c>, which says so
+    ///     deliberately rather than by omission (R3-DOC03).
+    /// </summary>
+    public List<string> TrustedProxies { get; set; } = [];
+
+    /// <summary>
     ///     Introspection mode: Endpoint URL for key verification
     /// </summary>
     public string? IntrospectionEndpoint { get; set; }

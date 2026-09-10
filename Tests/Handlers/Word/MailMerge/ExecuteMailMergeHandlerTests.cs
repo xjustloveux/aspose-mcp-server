@@ -35,6 +35,63 @@ public class ExecuteMailMergeHandlerTests : WordHandlerTestBase
 
     #endregion
 
+    #region Request Atomicity
+
+    /// <summary>
+    ///     R4-R02: a merge over several records used to publish each document the moment it was
+    ///     produced, so one that failed on a later record had already replaced the destinations of
+    ///     every record before it — and a caller who retried could not tell which files belonged to
+    ///     the run that failed. The publish for the second record is made to fail by putting a
+    ///     directory where its file has to go.
+    /// </summary>
+    [Fact]
+    public void Execute_WhenALaterRecordCannotBePublished_ShouldWriteNoneOfThem()
+    {
+        var doc = CreateTemplateDocument();
+        var context = CreateContext(doc);
+        var outputPath = Path.Combine(TestDir, "atomic.docx");
+        var first = Path.Combine(TestDir, "atomic_1.docx");
+        var blocked = Path.Combine(TestDir, "atomic_2.docx");
+        Directory.CreateDirectory(blocked);
+
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "outputPath", outputPath },
+            { "dataArray", "[{\"Name\": \"One\"}, {\"Name\": \"Two\"}]" }
+        });
+
+        Assert.ThrowsAny<Exception>(() => _handler.Execute(context, parameters));
+
+        Assert.False(System.IO.File.Exists(first),
+            "the first record was published before the second was known to fail");
+        Assert.DoesNotContain(Directory.GetFiles(TestDir),
+            f => Path.GetFileName(f).Contains(".partial-", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Execute_WithSeveralRecords_ShouldPublishAllOfThemAndLeaveNoStaging()
+    {
+        var doc = CreateTemplateDocument();
+        var context = CreateContext(doc);
+        var outputPath = Path.Combine(TestDir, "batch.docx");
+
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "outputPath", outputPath },
+            { "dataArray", "[{\"Name\": \"One\"}, {\"Name\": \"Two\"}, {\"Name\": \"Three\"}]" }
+        });
+
+        var result = Assert.IsType<MailMergeResult>(_handler.Execute(context, parameters));
+
+        Assert.Equal(3, result.RecordsProcessed);
+        foreach (var file in result.OutputFiles)
+            Assert.True(System.IO.File.Exists(file), $"{file} was reported but not written");
+        Assert.DoesNotContain(Directory.GetFiles(TestDir),
+            f => Path.GetFileName(f).Contains(".partial-", StringComparison.Ordinal));
+    }
+
+    #endregion
+
     #region Result Properties
 
     [Fact]
@@ -343,6 +400,52 @@ public class ExecuteMailMergeHandlerTests : WordHandlerTestBase
 
         var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
         Assert.Contains("No data provided", ex.Message);
+    }
+
+    #endregion
+
+    #region Record Limits
+
+    /// <summary>
+    ///     The records arrive as a JSON string, so the bound on array parameters never saw them.
+    ///     Each record clones the whole document and writes a file (R3-R05).
+    /// </summary>
+    [Fact]
+    public void Execute_WithMoreRecordsThanAllowed_ShouldBeRefusedBeforeCloning()
+    {
+        var outputPath = Path.Combine(TestDir, "too_many_records.docx");
+        var doc = CreateTemplateDocument();
+        var context = CreateContext(doc);
+        var records = string.Join(",",
+            Enumerable.Range(0, 1001).Select(i => $"{{\"Name\": \"n{i}\"}}"));
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "outputPath", outputPath },
+            { "dataArray", "[" + records + "]" }
+        });
+
+        Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+
+        Assert.Empty(Directory.GetFiles(TestDir, "too_many_records*"));
+    }
+
+    [Fact]
+    public void Execute_WithTheAllowedNumberOfRecords_ShouldStillMerge()
+    {
+        var outputPath = Path.Combine(TestDir, "allowed_records.docx");
+        var doc = CreateTemplateDocument();
+        var context = CreateContext(doc);
+        var records = string.Join(",",
+            Enumerable.Range(0, 5).Select(i => $"{{\"Name\": \"n{i}\"}}"));
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "outputPath", outputPath },
+            { "dataArray", "[" + records + "]" }
+        });
+
+        var result = Assert.IsType<MailMergeResult>(_handler.Execute(context, parameters));
+
+        Assert.Equal(5, result.RecordsProcessed);
     }
 
     #endregion

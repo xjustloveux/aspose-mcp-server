@@ -38,9 +38,12 @@ public class GetExcelFreezePanesHandler : OperationHandlerBase<Workbook>
 
         if (isFrozen)
         {
+            // The split cell is reported as-is. The previous -1 existed only to undo the +1 the
+            // freeze handler applied when writing; with both operations on the same contract the
+            // value read back is the value the caller asked for.
             worksheet.GetFreezedPanes(out var r, out var col, out var rows, out var cols);
-            frozenRow = r > 0 ? r - 1 : 0;
-            frozenColumn = col > 0 ? col - 1 : 0;
+            frozenRow = r;
+            frozenColumn = col;
             frozenRows = rows;
             frozenColumns = cols;
         }

@@ -32,6 +32,11 @@ public class ConvertPresentationHandler : OperationHandlerBase<Presentation>
     /// <returns>Success message with output path.</returns>
     public override object Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
+        // Held for the whole operation: this handler builds or reads presentations of
+        // its own, outside any session, so nothing else stands between it and a library
+        // that fails when two threads are inside it (SlidesGate).
+        using var slidesGate = SlidesGate.Enter();
+
         var p = ExtractConvertParameters(parameters);
 
         var sourcePath = p.InputPath ?? p.Path;

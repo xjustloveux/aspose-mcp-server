@@ -13,6 +13,7 @@ namespace AsposeMcpServer.Tests.Tools.PowerPoint;
 ///     Detailed parameter validation and business logic tests are in Handler tests.
 /// </summary>
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class PptFontToolTests : PptTestBase
 {
     private readonly PptFontTool _tool;
@@ -88,7 +89,7 @@ public class PptFontToolTests : PptTestBase
         var pptPath = CreatePresentationWithContent($"test_case_{operation.Replace(" ", "_")}.pptx", "Hello World");
         var result = _tool.Execute(operation, pptPath);
         var data = GetResultData<GetFontsPptResult>(result);
-        Assert.True(data.Count >= 0);
+        Assert.Equal(2, data.Count);
     }
 
     [SkippableFact]
@@ -112,7 +113,7 @@ public class PptFontToolTests : PptTestBase
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("list", sessionId: sessionId);
         var data = GetResultData<GetFontsPptResult>(result);
-        Assert.True(data.Count >= 0);
+        Assert.Equal(2, data.Count);
         var output = GetResultOutput<GetFontsPptResult>(result);
         Assert.Equal(sessionId, output.SessionId);
     }

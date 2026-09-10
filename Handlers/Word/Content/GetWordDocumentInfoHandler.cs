@@ -74,7 +74,7 @@ public class GetWordDocumentInfoHandler : OperationHandlerBase<Document>
             Subject = props.Subject,
             Created = props.CreatedTime.ToString("yyyy-MM-dd HH:mm:ss"),
             Modified = props.LastSavedTime.ToString("yyyy-MM-dd HH:mm:ss"),
-            Pages = props.Pages,
+            Pages = document.PageCount,
             Sections = document.Sections.Count,
             TabStopsIncluded = p.IncludeTabStops,
             TabStops = tabStopsList

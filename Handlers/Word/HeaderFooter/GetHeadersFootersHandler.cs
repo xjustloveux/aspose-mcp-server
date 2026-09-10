@@ -1,6 +1,7 @@
-using Aspose.Words;
+﻿using Aspose.Words;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Word.HeaderFooter;
 using Section = Aspose.Words.Section;
 
@@ -41,7 +42,9 @@ public class GetHeadersFootersHandler : OperationHandlerBase<Document>
     {
         var p = ExtractGetHeadersFootersParameters(parameters);
         var doc = context.Document;
-        doc.UpdateFields();
+        // Reading headers refreshes their fields, so a field that arrived in the caller's own
+        // input file would be resolved here and its content returned (R3-S01).
+        WordFieldPolicy.UpdateAllowedFields(doc);
 
         ValidateSectionIndex(doc, p.SectionIndex);
         var sections = GetTargetSections(doc, p.SectionIndex);

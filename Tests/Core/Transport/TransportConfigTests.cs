@@ -3,8 +3,10 @@ using AsposeMcpServer.Core.Transport;
 namespace AsposeMcpServer.Tests.Core.Transport;
 
 /// <summary>
-///     Unit tests for TransportConfig class
+///     Unit tests for <see cref="TransportConfig" />. The class joins the
+///     environment-configuration collection because it mutates process-wide environment variables.
 /// </summary>
+[Collection("EnvironmentConfiguration")]
 public class TransportConfigTests
 {
     #region Default Values Tests
@@ -81,6 +83,28 @@ public class TransportConfigTests
         var config = TransportConfig.LoadFromArgs(["--port=8080"]);
 
         Assert.Equal(8080, config.Port);
+    }
+
+    /// <summary>
+    ///     `--host` consumed the next token whatever it was, so a missing value silently ate the
+    ///     option that followed and the server ran without it (R3-C01).
+    /// </summary>
+    [Fact]
+    public void LoadFromArgs_WithHostMissingItsValue_ShouldNotConsumeTheNextOption()
+    {
+        var config = TransportConfig.LoadFromArgs(["--host", "--http"]);
+
+        Assert.Equal("localhost", config.Host);
+        Assert.Equal(TransportMode.Http, config.Mode);
+    }
+
+    [Fact]
+    public void LoadFromArgs_WithPortMissingItsValue_ShouldNotConsumeTheNextOption()
+    {
+        var config = TransportConfig.LoadFromArgs(["--port", "--ws"]);
+
+        Assert.Equal(3000, config.Port);
+        Assert.Equal(TransportMode.WebSocket, config.Mode);
     }
 
     [Fact]

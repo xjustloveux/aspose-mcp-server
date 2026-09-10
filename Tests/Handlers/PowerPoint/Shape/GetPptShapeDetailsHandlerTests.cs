@@ -8,6 +8,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Shape;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class GetPptShapeDetailsHandlerTests : PptHandlerTestBase
 {
     private readonly GetPptShapeDetailsHandler _handler = new();
@@ -63,12 +64,12 @@ public class GetPptShapeDetailsHandlerTests : PptHandlerTestBase
         var res = _handler.Execute(context, parameters);
         var result = Assert.IsType<GetShapeDetailsResult>(res);
 
-        Assert.True(result.Index >= 0);
+        Assert.Equal(0, result.Index);
         Assert.NotNull(result.Type);
-        Assert.True(result.X >= 0);
-        Assert.True(result.Y >= 0);
-        Assert.True(result.Width >= 0);
-        Assert.True(result.Height >= 0);
+        Assert.Equal(100, result.X);
+        Assert.Equal(200, result.Y);
+        Assert.Equal(300, result.Width);
+        Assert.Equal(400, result.Height);
         AssertNotModified(context);
     }
 

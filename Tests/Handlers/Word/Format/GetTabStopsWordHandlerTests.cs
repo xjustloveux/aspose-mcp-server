@@ -67,7 +67,7 @@ public class GetTabStopsWordHandlerTests : WordHandlerTestBase
 
         Assert.NotNull(result);
         Assert.NotNull(result.TabStops);
-        Assert.True(result.Count >= 0);
+        Assert.Equal(1, result.Count);
         AssertNotModified(context);
     }
 

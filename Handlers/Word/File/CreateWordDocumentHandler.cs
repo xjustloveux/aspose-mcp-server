@@ -14,6 +14,8 @@ namespace AsposeMcpServer.Handlers.Word.File;
 [ResultType(typeof(SuccessResult))]
 public class CreateWordDocumentHandler : OperationHandlerBase<Document>
 {
+    private const string OutputPathParameter = "outputPath";
+
     /// <inheritdoc />
     public override string Operation => "create";
 
@@ -37,9 +39,11 @@ public class CreateWordDocumentHandler : OperationHandlerBase<Document>
         if (string.IsNullOrEmpty(p.OutputPath))
             throw new ArgumentException("outputPath is required for create operation");
 
-        SecurityHelper.ValidateFilePath(p.OutputPath, "outputPath", true);
+        SecurityHelper.ValidateFilePath(p.OutputPath, OutputPathParameter, true);
+        var outputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.OutputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], OutputPathParameter);
 
-        var outputDir = Path.GetDirectoryName(p.OutputPath);
+        var outputDir = Path.GetDirectoryName(outputPath);
         if (!string.IsNullOrEmpty(outputDir))
             Directory.CreateDirectory(outputDir);
 
@@ -117,7 +121,7 @@ public class CreateWordDocumentHandler : OperationHandlerBase<Document>
 
         // H7: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
         var resolvedOutputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.OutputPath,
-            context.ServerConfig?.AllowedBasePaths ?? [], "outputPath");
+            context.ServerConfig?.AllowedBasePaths ?? [], OutputPathParameter);
         doc.Save(resolvedOutputPath);
         return new SuccessResult { Message = $"Word document created successfully at: {p.OutputPath}" };
     }
@@ -125,7 +129,7 @@ public class CreateWordDocumentHandler : OperationHandlerBase<Document>
     private static CreateParameters ExtractCreateParameters(OperationParameters parameters)
     {
         return new CreateParameters(
-            parameters.GetOptional<string?>("outputPath"),
+            parameters.GetOptional<string?>(OutputPathParameter),
             parameters.GetOptional<string?>("content"),
             parameters.GetOptional("skipInitialContent", false),
             parameters.GetOptional("marginTop", 70.87),

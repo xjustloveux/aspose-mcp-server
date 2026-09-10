@@ -26,6 +26,11 @@ public class PdfTableTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     The document session manager for managing in-memory document sessions.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -35,11 +40,14 @@ public class PdfTableTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
     /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public PdfTableTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry = HandlerRegistry<Document>.CreateFromNamespace("AsposeMcpServer.Handlers.Pdf.Table");
     }
 
@@ -50,14 +58,14 @@ public class PdfTableTool
     /// <param name="path">PDF file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID for in-memory editing.</param>
     /// <param name="outputPath">Output file path (file mode only).</param>
-    /// <param name="pageIndex">Page index (1-based, required for add).</param>
+    /// <param name="pageIndex">Page index (1-based, optional for add, default: 1).</param>
     /// <param name="rows">Number of rows (required for add).</param>
     /// <param name="columns">Number of columns (required for add).</param>
     /// <param name="data">Table data (array of arrays, for add).</param>
     /// <param name="x">X position (left margin) in PDF points (for add).</param>
     /// <param name="y">Y position (top margin) in PDF points (for add).</param>
     /// <param name="columnWidths">Space-separated column widths in PDF points (for add).</param>
-    /// <param name="tableIndex">Table index (0-based, required for edit).</param>
+    /// <param name="tableIndex">Table index (0-based, optional for edit, default: 0).</param>
     /// <param name="cellRow">Cell row index (0-based, for edit).</param>
     /// <param name="cellColumn">Cell column index (0-based, for edit).</param>
     /// <param name="cellValue">New cell value (for edit).</param>
@@ -88,7 +96,7 @@ Note: PDF table editing has limitations. After saving, tables may be converted t
         string? sessionId = null,
         [Description("Output file path (file mode only)")]
         string? outputPath = null,
-        [Description("Page index (1-based, required for add)")]
+        [Description("Page index (1-based, optional for add, default: 1)")]
         int pageIndex = 1,
         [Description("Number of rows (required for add)")]
         int rows = 0,
@@ -102,7 +110,7 @@ Note: PDF table editing has limitations. After saving, tables may be converted t
         double y = 600,
         [Description("Space-separated column widths in PDF points (for add, e.g., '100 150 200')")]
         string? columnWidths = null,
-        [Description("Table index (0-based, required for edit)")]
+        [Description("Table index (0-based, optional for edit, default: 0)")]
         int tableIndex = 0,
         [Description("Cell row index (0-based, for edit)")]
         int? cellRow = null,
@@ -111,7 +119,8 @@ Note: PDF table editing has limitations. After saving, tables may be converted t
         [Description("New cell value (for edit)")]
         string? cellValue = null)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor,
+            serverConfig: _serverConfig);
 
         var parameters = BuildParameters(operation, pageIndex, rows, columns, data, x, y, columnWidths,
             tableIndex, cellRow, cellColumn, cellValue);
@@ -125,7 +134,8 @@ Note: PDF table editing has limitations. After saving, tables may be converted t
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);

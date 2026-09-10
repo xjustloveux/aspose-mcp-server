@@ -31,8 +31,10 @@ public class ExtractExcelImageHandler : OperationHandlerBase<Workbook>
         var extractParams = ExtractExtractParameters(parameters);
 
         SecurityHelper.ValidateFilePath(extractParams.ExportPath, "exportPath", true);
+        var resolvedExportPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(extractParams.ExportPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], "exportPath");
 
-        var extension = Path.GetExtension(extractParams.ExportPath);
+        var extension = Path.GetExtension(resolvedExportPath);
         if (string.IsNullOrEmpty(extension) ||
             !ExcelImageHelper.ExtensionToImageType.TryGetValue(extension, out var imageType))
             throw new ArgumentException(
@@ -47,7 +49,7 @@ public class ExtractExcelImageHandler : OperationHandlerBase<Workbook>
         var picture = pictures[extractParams.ImageIndex];
         var upperLeftCell = CellsHelper.CellIndexToName(picture.UpperLeftRow, picture.UpperLeftColumn);
 
-        var exportDir = Path.GetDirectoryName(extractParams.ExportPath);
+        var exportDir = Path.GetDirectoryName(resolvedExportPath);
         if (!string.IsNullOrEmpty(exportDir) && !Directory.Exists(exportDir))
             Directory.CreateDirectory(exportDir);
 
@@ -55,13 +57,13 @@ public class ExtractExcelImageHandler : OperationHandlerBase<Workbook>
         {
             ImageType = imageType
         };
-        picture.ToImage(extractParams.ExportPath, options);
+        picture.ToImage(resolvedExportPath, options);
 
-        var fileInfo = new FileInfo(extractParams.ExportPath);
+        var fileInfo = new FileInfo(resolvedExportPath);
         return new SuccessResult
         {
             Message =
-                $"Image #{extractParams.ImageIndex} (at {upperLeftCell}) extracted to: {extractParams.ExportPath} ({fileInfo.Length} bytes, {picture.Width}x{picture.Height})"
+                $"Image #{extractParams.ImageIndex} (at {upperLeftCell}) extracted to: {resolvedExportPath} ({fileInfo.Length} bytes, {picture.Width}x{picture.Height})"
         };
     }
 

@@ -23,7 +23,7 @@ public class ReplaceWordTextHandler : OperationHandlerBase<Document>
     /// <param name="context">The document context.</param>
     /// <param name="parameters">
     ///     Required: find, replace.
-    ///     Optional: useRegex, replaceInFields.
+    ///     Optional: useRegex, replaceInFields, caseSensitive.
     /// </param>
     /// <returns>Success message.</returns>
     /// <exception cref="ArgumentException">
@@ -37,14 +37,19 @@ public class ReplaceWordTextHandler : OperationHandlerBase<Document>
 
         var doc = context.Document;
 
-        var options = new FindReplaceOptions();
+        var options = new FindReplaceOptions { MatchCase = p.CaseSensitive };
         if (!p.ReplaceInFields)
             options.ReplacingCallback = new FieldSkipReplacingCallback();
 
         if (p.UseRegex)
-            doc.Range.Replace(new Regex(p.Find, RegexOptions.None, TimeSpan.FromSeconds(30)), p.Replace, options);
+        {
+            var regexOptions = p.CaseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase;
+            doc.Range.Replace(new Regex(p.Find, regexOptions, TimeSpan.FromSeconds(30)), p.Replace, options);
+        }
         else
+        {
             doc.Range.Replace(p.Find, p.Replace, options);
+        }
 
         MarkModified(context);
 
@@ -61,12 +66,14 @@ public class ReplaceWordTextHandler : OperationHandlerBase<Document>
             parameters.GetRequired<string>("find"),
             parameters.GetRequired<string>("replace"),
             parameters.GetOptional("useRegex", false),
-            parameters.GetOptional("replaceInFields", false));
+            parameters.GetOptional("replaceInFields", false),
+            parameters.GetOptional("caseSensitive", false));
     }
 
     private sealed record ReplaceParameters(
         string Find,
         string Replace,
         bool UseRegex,
-        bool ReplaceInFields);
+        bool ReplaceInFields,
+        bool CaseSensitive);
 }

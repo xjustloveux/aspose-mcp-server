@@ -7,6 +7,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Text;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class AddPptTextHandlerTests : PptHandlerTestBase
 {
     private readonly AddPptTextHandler _handler = new();

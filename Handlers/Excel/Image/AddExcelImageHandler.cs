@@ -30,17 +30,19 @@ public class AddExcelImageHandler : OperationHandlerBase<Workbook>
         var addParams = ExtractAddParameters(parameters);
 
         SecurityHelper.ValidateFilePath(addParams.ImagePath, "imagePath", true);
+        var resolvedImagePath = SecurityHelper.ResolveAndEnsureWithinAllowlist(addParams.ImagePath,
+            context.ServerConfig?.AllowedBasePaths ?? [], "imagePath");
 
-        if (!File.Exists(addParams.ImagePath))
+        if (!File.Exists(resolvedImagePath))
             throw new FileNotFoundException("The specified file was not found.");
 
-        ExcelImageHelper.ValidateImageFormat(addParams.ImagePath);
+        ExcelImageHelper.ValidateImageFormat(resolvedImagePath);
 
         var workbook = context.Document;
         var worksheet = ExcelHelper.GetWorksheet(workbook, addParams.SheetIndex);
         var cellObj = worksheet.Cells[addParams.Cell];
 
-        var pictureIndex = worksheet.Pictures.Add(cellObj.Row, cellObj.Column, addParams.ImagePath);
+        var pictureIndex = worksheet.Pictures.Add(cellObj.Row, cellObj.Column, resolvedImagePath);
         var picture = worksheet.Pictures[pictureIndex];
 
         if (addParams.Width.HasValue || addParams.Height.HasValue)

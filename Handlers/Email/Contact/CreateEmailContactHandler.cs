@@ -12,6 +12,8 @@ namespace AsposeMcpServer.Handlers.Email.Contact;
 [ResultType(typeof(SuccessResult))]
 public class CreateEmailContactHandler : OperationHandlerBase<object>
 {
+    private const string OutputPathParameter = "outputPath";
+
     /// <inheritdoc />
     public override string Operation => "create";
 
@@ -27,14 +29,16 @@ public class CreateEmailContactHandler : OperationHandlerBase<object>
     /// <exception cref="ArgumentException">Thrown when outputPath is missing or invalid.</exception>
     public override object Execute(OperationContext<object> context, OperationParameters parameters)
     {
-        var outputPath = parameters.GetRequired<string>("outputPath");
+        var outputPath = parameters.GetRequired<string>(OutputPathParameter);
         var displayName = parameters.GetOptional<string?>("displayName");
         var email = parameters.GetOptional<string?>("email");
         var phone = parameters.GetOptional<string?>("phone");
         var company = parameters.GetOptional<string?>("company");
         var jobTitle = parameters.GetOptional<string?>("jobTitle");
 
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+        SecurityHelper.ValidateFilePath(outputPath, OutputPathParameter, true);
+        outputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(outputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], OutputPathParameter);
 
         var contact = new MapiContact();
         contact.NameInfo = new MapiContactNamePropertySet
@@ -61,7 +65,7 @@ public class CreateEmailContactHandler : OperationHandlerBase<object>
         var ext = Path.GetExtension(outputPath).ToLowerInvariant();
         // H39: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
         var resolvedOutputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(outputPath,
-            context.ServerConfig?.AllowedBasePaths ?? [], "outputPath");
+            context.ServerConfig?.AllowedBasePaths ?? [], OutputPathParameter);
         contact.Save(resolvedOutputPath, ext == ".msg" ? ContactSaveFormat.Msg : ContactSaveFormat.VCard);
 
         return new SuccessResult

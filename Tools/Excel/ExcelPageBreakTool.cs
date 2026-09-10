@@ -26,6 +26,11 @@ public class ExcelPageBreakTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -35,11 +40,14 @@ public class ExcelPageBreakTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
     /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public ExcelPageBreakTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry =
             HandlerRegistry<Workbook>.CreateFromNamespace("AsposeMcpServer.Handlers.Excel.PageBreak");
     }
@@ -99,7 +107,8 @@ Usage examples:
         [Description("Break index (for remove)")]
         int? breakIndex = null)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor,
+            serverConfig: _serverConfig);
 
         var parameters = BuildParameters(operation, sheetIndex, row, column, breakType, breakIndex);
 
@@ -112,7 +121,8 @@ Usage examples:
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);
@@ -155,6 +165,7 @@ Usage examples:
     /// <summary>
     ///     Builds parameters for the add_horizontal operation.
     /// </summary>
+    /// <returns>The parameters, configured for this operation.</returns>
     private static OperationParameters BuildAddHorizontalParameters(OperationParameters parameters, int? row)
     {
         if (row.HasValue) parameters.Set("row", row.Value);
@@ -164,6 +175,7 @@ Usage examples:
     /// <summary>
     ///     Builds parameters for the add_vertical operation.
     /// </summary>
+    /// <returns>The parameters, configured for this operation.</returns>
     private static OperationParameters BuildAddVerticalParameters(OperationParameters parameters, int? column)
     {
         if (column.HasValue) parameters.Set("column", column.Value);
@@ -173,6 +185,7 @@ Usage examples:
     /// <summary>
     ///     Builds parameters for the remove operation.
     /// </summary>
+    /// <returns>The parameters, configured for this operation.</returns>
     private static OperationParameters BuildRemoveParameters(OperationParameters parameters, string? breakType,
         int? breakIndex)
     {
@@ -184,6 +197,7 @@ Usage examples:
     /// <summary>
     ///     Builds parameters for the clear operation.
     /// </summary>
+    /// <returns>The parameters, configured for this operation.</returns>
     private static OperationParameters BuildClearParameters(OperationParameters parameters, string? breakType)
     {
         if (breakType != null) parameters.Set("breakType", breakType);

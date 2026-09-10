@@ -2,6 +2,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Reference;
@@ -23,7 +24,10 @@ public class AddIndexWordHandler : OperationHandlerBase<Document>
     ///     Required: indexEntries (JSON array)
     ///     Optional: insertIndexAtEnd (default: true), headingStyle (default: Heading 1)
     /// </param>
-    /// <returns>Success message with count of entries added.</returns>
+    /// <returns>Success message naming the entries inserted and those skipped.</returns>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when the JSON is not an array, or holds more entries than one call may insert.
+    /// </exception>
     public override object
         Execute(OperationContext<Document> context,
             OperationParameters parameters)
@@ -33,27 +37,47 @@ public class AddIndexWordHandler : OperationHandlerBase<Document>
         var indexEntriesArray = JsonNode.Parse(p.IndexEntriesJson)?.AsArray()
                                 ?? throw new ArgumentException("indexEntries must be a valid JSON array");
 
+        // The array arrives as a JSON string, so the bound applied to array parameters at the tool
+        // boundary never saw these elements: the count only exists after decoding. Checking it here
+        // is the first point at which it can be checked, and it happens before the first field is
+        // inserted rather than after some of them are (R3-R05).
+        SecurityHelper.ValidateArraySize(indexEntriesArray, "indexEntries");
+
         var doc = context.Document;
         var builder = new DocumentBuilder(doc);
+        var inserted = 0;
+        var skipped = 0;
 
         foreach (var entryObj in indexEntriesArray)
-            if (entryObj is JsonObject entry)
+        {
+            // An element that is not an object, or carries no usable text, produces no field. The
+            // result used to report the length of the array, so those entries were reported as
+            // added while nothing was written for them (R3-C06).
+            if (entryObj is not JsonObject entry)
             {
-                var text = entry["text"]?.GetValue<string>();
-                var subEntry = entry["subEntry"]?.GetValue<string>();
-                var pageRangeBookmark = entry["pageRangeBookmark"]?.GetValue<string>();
-
-                if (!string.IsNullOrEmpty(text))
-                {
-                    builder.MoveToDocumentEnd();
-                    var xeField = $"XE \"{text}\"";
-                    if (!string.IsNullOrEmpty(subEntry))
-                        xeField += $" \\t \"{subEntry}\"";
-                    if (!string.IsNullOrEmpty(pageRangeBookmark))
-                        xeField += $" \\r \"{pageRangeBookmark}\"";
-                    builder.InsertField(xeField);
-                }
+                skipped++;
+                continue;
             }
+
+            var text = ReadString(entry, "text");
+            if (string.IsNullOrEmpty(text))
+            {
+                skipped++;
+                continue;
+            }
+
+            var subEntry = ReadString(entry, "subEntry");
+            var pageRangeBookmark = ReadString(entry, "pageRangeBookmark");
+
+            builder.MoveToDocumentEnd();
+            var xeField = $"XE \"{text}\"";
+            if (!string.IsNullOrEmpty(subEntry))
+                xeField += $" \\t \"{subEntry}\"";
+            if (!string.IsNullOrEmpty(pageRangeBookmark))
+                xeField += $" \\r \"{pageRangeBookmark}\"";
+            builder.InsertField(xeField);
+            inserted++;
+        }
 
         if (p.InsertIndexAtEnd)
         {
@@ -73,7 +97,21 @@ public class AddIndexWordHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        return new SuccessResult { Message = $"Index entries added. Total entries: {indexEntriesArray.Count}" };
+        var message = $"Index entries added. Inserted: {inserted}";
+        if (skipped > 0) message += $" (skipped {skipped} entries with no usable text)";
+
+        return new SuccessResult { Message = message };
+    }
+
+    /// <summary>
+    ///     Reads a property as text, treating a non-string value as absent.
+    /// </summary>
+    /// <param name="entry">The entry object.</param>
+    /// <param name="name">Property to read.</param>
+    /// <returns>The value, or <c>null</c> when the property is missing or not a string.</returns>
+    private static string? ReadString(JsonObject entry, string name)
+    {
+        return entry[name] is JsonValue value && value.TryGetValue<string>(out var text) ? text : null;
     }
 
     private static AddIndexParameters ExtractAddIndexParameters(OperationParameters parameters)

@@ -12,6 +12,8 @@ namespace AsposeMcpServer.Handlers.Email.Contact;
 [ResultType(typeof(SuccessResult))]
 public class SetPhotoEmailContactHandler : OperationHandlerBase<object>
 {
+    private const string OutputPathParameter = "outputPath";
+
     /// <inheritdoc />
     public override string Operation => "set_photo";
 
@@ -28,11 +30,13 @@ public class SetPhotoEmailContactHandler : OperationHandlerBase<object>
     public override object Execute(OperationContext<object> context, OperationParameters parameters)
     {
         var path = parameters.GetRequired<string>("path");
-        var outputPath = parameters.GetRequired<string>("outputPath");
+        var outputPath = parameters.GetRequired<string>(OutputPathParameter);
         var photoPath = parameters.GetRequired<string>("photoPath");
 
         SecurityHelper.ValidateFilePath(path, "path", true);
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+        SecurityHelper.ValidateFilePath(outputPath, OutputPathParameter, true);
+        outputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(outputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], OutputPathParameter);
         SecurityHelper.ValidateFilePath(photoPath, "photoPath", true);
 
         if (!File.Exists(path))
@@ -51,7 +55,7 @@ public class SetPhotoEmailContactHandler : OperationHandlerBase<object>
 
         var ext = Path.GetExtension(outputPath).ToLowerInvariant();
         var resolvedOutputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(outputPath,
-            context.ServerConfig?.AllowedBasePaths ?? [], "outputPath");
+            context.ServerConfig?.AllowedBasePaths ?? [], OutputPathParameter);
         contact.Save(resolvedOutputPath, ext == ".msg" ? ContactSaveFormat.Msg : ContactSaveFormat.VCard);
 
         return new SuccessResult

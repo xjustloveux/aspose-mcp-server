@@ -1,11 +1,13 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using System.Text.Json;
 using Aspose.Cells;
+using Aspose.Pdf;
 using Aspose.Slides;
-using Aspose.Words;
 using AsposeMcpServer.Helpers;
-using SaveFormat = Aspose.Slides.Export.SaveFormat;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Helpers.Word;
 
 namespace AsposeMcpServer.Core.Session;
 
@@ -14,6 +16,19 @@ namespace AsposeMcpServer.Core.Session;
 /// </summary>
 public class DocumentSessionManager : IDisposable
 {
+    /// <summary>
+    ///     Optional server configuration. When non-null, every user-supplied path entering the
+    ///     session manager is checked against <see cref="ServerConfig.AllowedBasePaths" /> in
+    ///     addition to the standard <see cref="SecurityHelper.ValidateFilePath" /> shape check.
+    ///     Test constructions and DI consumers that don't supply this leave it null →
+    ///     allowlist becomes a no-op (backward compatible).
+    /// </summary>
+    /// <summary>
+    ///     How long auto-save waits for a session's in-flight operations before skipping it for
+    ///     this tick. Kept short so one busy session cannot stall the whole auto-save pass.
+    /// </summary>
+    private const int AutoSaveDrainTimeoutMs = 2_000;
+
     /// <summary>
     ///     Timer for periodic auto-save of dirty sessions
     /// </summary>
@@ -29,13 +44,6 @@ public class DocumentSessionManager : IDisposable
     /// </summary>
     private readonly ILogger<DocumentSessionManager>? _logger;
 
-    /// <summary>
-    ///     Optional server configuration. When non-null, every user-supplied path entering the
-    ///     session manager is checked against <see cref="ServerConfig.AllowedBasePaths" /> in
-    ///     addition to the standard <see cref="SecurityHelper.ValidateFilePath" /> shape check.
-    ///     Test constructions and DI consumers that don't supply this leave it null →
-    ///     allowlist becomes a no-op (backward compatible).
-    /// </summary>
     private readonly ServerConfig? _serverConfig;
 
     /// <summary>
@@ -95,6 +103,30 @@ public class DocumentSessionManager : IDisposable
     }
 
     /// <summary>
+    ///     Invoked once a close has taken the session exclusively, before the final save and
+    ///     dispose.
+    ///     <para>
+    ///         That span is where a request holding a reference from before the close used to be
+    ///         able to acquire the session (R4-S06). A fixture cannot land inside it by racing,
+    ///         so this lets one act there every time. Unset in production, where it costs a null
+    ///         check.
+    ///     </para>
+    /// </summary>
+    internal Action<DocumentSession>? OnSessionSealed { get; set; }
+
+    /// <summary>
+    ///     How long a close waits for the operations already running before it seals the session
+    ///     without them.
+    ///     <para>
+    ///         The production value is the session's own drain timeout. A fixture lowers it so the
+    ///         whole ordered sequence — an operation in flight, a close that unregisters the session
+    ///         and hands the document on, then that operation finishing last — can be driven in
+    ///         milliseconds instead of half a minute (R4-S06).
+    ///     </para>
+    /// </summary>
+    internal int ClosingDrainTimeoutMs { get; set; } = DocumentSession.DrainTimeoutMs;
+
+    /// <summary>
     ///     Gets the session configuration.
     /// </summary>
     public SessionConfig Config { get; }
@@ -111,11 +143,25 @@ public class DocumentSessionManager : IDisposable
         _cleanupTimer?.Dispose();
         _autoSaveTimer?.Dispose();
 
-        foreach (var ownerSessions in _sessionsByOwner.Values)
-        foreach (var session in ownerSessions.Values)
-            session.Dispose();
+        // Disposal must apply the same disconnect policy as an orderly shutdown. Disposing the
+        // sessions directly would drop unsaved changes whenever disposal is reached by a path
+        // other than SessionLifetimeService, which is the case for a host that faults during
+        // startup or a test that disposes the manager itself. OnServerShutdown is idempotent:
+        // it drains, saves or discards per configuration, disposes, and clears the registry.
+        try
+        {
+            OnServerShutdown();
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error applying disconnect policy while disposing the session manager");
 
-        _sessionsByOwner.Clear();
+            foreach (var ownerSessions in _sessionsByOwner.Values)
+            foreach (var session in ownerSessions.Values)
+                session.Dispose();
+
+            _sessionsByOwner.Clear();
+        }
     }
 
     /// <summary>
@@ -128,6 +174,9 @@ public class DocumentSessionManager : IDisposable
     ///     Event raised when a session is closed.
     ///     Parameters: sessionId, owner identity.
     /// </summary>
+    [SuppressMessage("Major Code Smell", "S3264:Events should be invoked",
+        Justification =
+            "NotifySessionClosed invokes each subscriber from GetInvocationList so one failing subscriber cannot block the others.")]
     public event Action<string, SessionIdentity>? SessionClosed;
 
     /// <summary>
@@ -163,7 +212,9 @@ public class DocumentSessionManager : IDisposable
         // side channel (bug 20260415-session-loader-path, HIGH-3) and the four
         // LoadDocument read sinks (Word/Excel/PPT/PDF) at once. Single upstream guard
         // mirrors the Core/Session/DocumentContext.cs:147-149 in-repo precedent.
-        SecurityHelper.ValidateUserPath(path, _serverConfig?.AllowedBasePaths ?? []);
+        // The loader below opens the canonical path, not the one the caller wrote, so a link
+        // swapped between the check and the open cannot redirect it (R3-S03).
+        path = SecurityHelper.ValidateUserPath(path, _serverConfig?.AllowedBasePaths ?? []);
 
         var ownerKey = owner.GetStorageKey(Config.IsolationMode);
         var ownerSessions =
@@ -361,8 +412,8 @@ public class DocumentSessionManager : IDisposable
         // 20260415-session-loader-path, U2). Null/empty means "use session.Path", which
         // was validated when the session was opened.
         if (!string.IsNullOrEmpty(outputPath))
-            SecurityHelper.ValidateUserPath(outputPath, _serverConfig?.AllowedBasePaths ?? [],
-                nameof(outputPath));
+            outputPath = SecurityHelper.ValidateUserPath(outputPath,
+                _serverConfig?.AllowedBasePaths ?? [], nameof(outputPath));
 
         var session = FindSessionWithAuth(sessionId, requestor);
         if (session == null)
@@ -377,10 +428,32 @@ public class DocumentSessionManager : IDisposable
         // mutable (Core/ServerConfig.cs:226-241). A configuration reload that narrows
         // the allowlist must not let pre-existing sessions auto-save outside the new
         // bounds. Path-shape is immutable so ValidateFilePath is not re-run.
-        ReassertAllowlistForResolvedPath(savePath, nameof(savePath));
+        savePath = ReassertAllowlistForResolvedPath(savePath, nameof(savePath));
 
-        session.Execute(doc => SaveDocumentToFile(doc, session.Type, savePath));
-        session.IsDirty = false;
+        // A handler mutates the document outside the session lock (it holds a usage scope instead),
+        // so the lock alone does not stop a save from capturing a half-applied change. Waiting for
+        // in-flight operations to finish makes the saved file a complete state, never a torn one.
+        // BeginExclusive rather than a bare drain: waiting for the count to reach zero says
+        // nothing unless new operations are refused while the save runs (R2-S09).
+        if (!session.BeginExclusive())
+            throw new InvalidOperationException(
+                $"Session {sessionId} is busy with another operation and cannot be saved right now.");
+
+        try
+        {
+            session.Execute(doc => SaveDocumentToFile(doc, session.Type, savePath));
+            session.IsDirty = false;
+        }
+        finally
+        {
+            // The session keeps serving requests after an explicit save. The exception is a close
+            // that gave up waiting for this save: it leaves the document here rather than disposing
+            // it underneath the write (R4-S06), and the session is unregistered by then, so
+            // releasing it is this caller's job — nothing else can reach it.
+            // EndExclusive settles this itself now, so there is one place that decides rather
+            // than a copy of the rule at every release site (R8-S03).
+            session.EndExclusive();
+        }
 
         _logger?.LogInformation("Saved session {SessionId} to {Path}", sessionId, savePath);
     }
@@ -391,6 +464,13 @@ public class DocumentSessionManager : IDisposable
     /// <param name="sessionId">Session ID to close</param>
     /// <param name="discard">If true, discard unsaved changes; otherwise auto-save</param>
     /// <exception cref="KeyNotFoundException">Thrown when session not found</exception>
+    /// <remarks>
+    ///     The session is taken exclusively before anything is saved, and is never released: once
+    ///     a close begins, a reference obtained earlier can no longer be used (R4-S06). If
+    ///     in-flight operations do not finish within the drain timeout the document is not saved,
+    ///     because it may be mid-mutation; the close still completes and the session still goes
+    ///     away.
+    /// </remarks>
     public void CloseDocument(string sessionId, bool discard = false)
     {
         CloseDocument(sessionId, SessionIdentity.GetAnonymous(), discard);
@@ -436,11 +516,30 @@ public class DocumentSessionManager : IDisposable
             ((ICollection<KeyValuePair<string, ConcurrentDictionary<string, DocumentSession>>>)_sessionsByOwner)
                 .Remove(new KeyValuePair<string, ConcurrentDictionary<string, DocumentSession>>(ownerKey, ownerDict));
 
-        SessionClosed?.Invoke(sessionId, session.Owner);
+        // Notified after the session is closed, not before. The session had already been taken
+        // out of the registry by this point, so a subscriber that threw skipped the seal, the save
+        // and the dispose below and left a document nothing could reach and nothing would release
+        // (R8-S01). Each subscriber is now isolated as well, so one failing observer cannot stop
+        // the others being told either.
+        //
+        // Unregistering stops new lookups, but a request that already holds a reference can be
+        // sitting between GetSession() and AcquireUsage(): draining alone let it acquire the
+        // moment the count reached zero and then race the save and dispose below (R4-S06). The
+        // barrier goes up first and is never released, so nothing can acquire again.
+        var outcome = session.BeginClosing(ClosingDrainTimeoutMs);
+        OnSessionSealed?.Invoke(session);
+        LogSealOutcome(sessionId, outcome);
 
-        // The session is already unregistered, so no new operation can start; wait for in-flight
-        // operations to finish so the save below cannot capture a document mid-mutation.
-        session.WaitForActiveUsersToDrain();
+        // Only an outright seal means the document is this caller's to write and to release. A
+        // save still holding it will finish and release it itself; disposing it here is what
+        // failed that save and lost both copies of the work (R4-S06).
+        if (outcome != SessionSealOutcome.Sealed)
+        {
+            // The document belongs to whoever is still using it; they release it when they finish.
+            _logger?.LogInformation("Closed session {SessionId} (discard={Discard})", sessionId, discard);
+            NotifySessionClosed(sessionId, session.Owner);
+            return;
+        }
 
         var sessionType = session.Type;
         var sessionPath = session.Path;
@@ -448,16 +547,40 @@ public class DocumentSessionManager : IDisposable
         {
             if (!discard && session.IsDirty)
             {
-                ReassertAllowlistForResolvedPath(sessionPath, nameof(sessionPath));
+                sessionPath = ReassertAllowlistForResolvedPath(sessionPath, nameof(sessionPath));
                 session.Execute(doc => SaveDocumentToFile(doc, sessionType, sessionPath));
             }
         }
         finally
         {
-            session.Dispose();
+            // Sealed means this close is the last one out, but it still asks: an exclusive holder
+            // or a usage scope must never dispose the same document (R4-S06).
+            if (session.TryClaimDisposeOwnership()) session.Dispose();
+            NotifySessionClosed(sessionId, session.Owner);
         }
 
         _logger?.LogInformation("Closed session {SessionId} (discard={Discard})", sessionId, discard);
+    }
+
+    /// <summary>
+    ///     Tells every <see cref="SessionClosed" /> subscriber, one at a time, and never lets one
+    ///     of them affect the caller.
+    /// </summary>
+    /// <param name="sessionId">The session that closed.</param>
+    /// <param name="owner">Who owned it.</param>
+    private void NotifySessionClosed(string sessionId, SessionIdentity owner)
+    {
+        foreach (var subscriber in SessionClosed?.GetInvocationList() ?? [])
+            try
+            {
+                ((Action<string, SessionIdentity>)subscriber)(sessionId, owner);
+            }
+            catch (Exception error)
+            {
+                _logger?.LogWarning(error,
+                    "A SessionClosed subscriber failed for session {SessionId}; the session was "
+                    + "closed regardless", sessionId);
+            }
     }
 
     /// <summary>
@@ -634,29 +757,77 @@ public class DocumentSessionManager : IDisposable
     ///     <c>Config.TempDirectory</c>).
     /// </param>
     /// <param name="paramName">Parameter name used in thrown exception messages.</param>
+    /// <returns>
+    ///     The canonical path. Callers must write to this rather than to the path they passed in:
+    ///     the two differ exactly when something was resolved, which is the case the check exists
+    ///     for (R3-S03).
+    /// </returns>
     /// <exception cref="ArgumentException">
     ///     Thrown when the path (after following symlinks) is outside the configured allowlist,
     ///     or when a circular symbolic link is detected.
     /// </exception>
-    private void ReassertAllowlistForResolvedPath(string resolvedPath, string paramName)
+    private string ReassertAllowlistForResolvedPath(string resolvedPath, string paramName)
     {
         var allowed = _serverConfig?.AllowedBasePaths;
-        if (allowed is { Count: > 0 })
-            SecurityHelper.ResolveAndEnsureWithinAllowlist(resolvedPath, allowed, paramName);
+        return allowed is { Count: > 0 }
+            ? SecurityHelper.ResolveAndEnsureWithinAllowlist(resolvedPath, allowed, paramName)
+            : resolvedPath;
+    }
+
+    /// <summary>
+    ///     Records why a close could not take the document, if it could not.
+    /// </summary>
+    /// <param name="sessionId">The session being closed.</param>
+    /// <param name="outcome">What sealing it achieved.</param>
+    private void LogSealOutcome(string sessionId, SessionSealOutcome outcome)
+    {
+        switch (outcome)
+        {
+            case SessionSealOutcome.HeldByAnotherOperation:
+                _logger?.LogError(
+                    "Session {SessionId} was held by another save after the timeout; that operation " +
+                    "owns the document and this close neither wrote nor released it",
+                    sessionId);
+                break;
+            case SessionSealOutcome.ActiveOperationsRemain:
+                _logger?.LogError(
+                    "Session {SessionId} still had in-flight operations after the drain timeout; " +
+                    "unsaved changes were not written because the document may be mid-mutation",
+                    sessionId);
+                break;
+            case SessionSealOutcome.AlreadyClosing:
+                _logger?.LogWarning(
+                    "Session {SessionId} was already being closed by another caller", sessionId);
+                break;
+            case SessionSealOutcome.Sealed:
+            default:
+                break;
+        }
     }
 
     /// <summary>
     ///     Handles disconnect behavior for a session based on configuration.
-    ///     Always disposes the session, even if save fails or session is not dirty.
+    ///     Disposes the session once it is sealed, whether or not the save succeeded and whether or
+    ///     not it was dirty. A session another operation still holds is left to that operation to
+    ///     release, because disposing it there fails the save that is writing it (R4-S06).
     /// </summary>
     /// <param name="session">Session to handle disconnect for</param>
     private void HandleDisconnect(DocumentSession session)
     {
-        SessionClosed?.Invoke(session.SessionId, session.Owner);
-
-        // Wait for in-flight operations to finish so a save below cannot capture a document
-        // mid-mutation and the Dispose in the finally cannot destroy a document still in use.
-        session.WaitForActiveUsersToDrain();
+        // Same rule on this path: the notification happens once the session has actually been
+        // dealt with, so a throwing subscriber cannot skip the seal (R8-S01).
+        //
+        // Sealing, not borrowing the save barrier: a disconnect handled while an explicit save
+        // held the session reported a drain timeout it had not observed, then disposed the
+        // document under that save (R4-S06). A save in flight is waited for, and if it outlasts
+        // the timeout the document is left to it rather than taken away.
+        var outcome = session.BeginClosing(ClosingDrainTimeoutMs);
+        LogSealOutcome(session.SessionId, outcome);
+        if (outcome != SessionSealOutcome.Sealed)
+        {
+            NotifySessionClosed(session.SessionId, session.Owner);
+            return;
+        }
 
         var sessionType = session.Type;
         var sessionPath = session.Path;
@@ -671,7 +842,7 @@ public class DocumentSessionManager : IDisposable
             switch (Config.OnDisconnect)
             {
                 case DisconnectBehavior.AutoSave:
-                    ReassertAllowlistForResolvedPath(sessionPath, nameof(sessionPath));
+                    sessionPath = ReassertAllowlistForResolvedPath(sessionPath, nameof(sessionPath));
                     session.Execute(doc => SaveDocumentToFile(doc, sessionType, sessionPath));
                     DeleteSessionTempFiles(session.SessionId);
                     _logger?.LogInformation("Auto-saved session {SessionId} and cleaned up temp files",
@@ -680,7 +851,7 @@ public class DocumentSessionManager : IDisposable
 
                 case DisconnectBehavior.SaveToTemp:
                     var tempPath = GetTempPath(session);
-                    ReassertAllowlistForResolvedPath(tempPath, nameof(tempPath));
+                    tempPath = ReassertAllowlistForResolvedPath(tempPath, nameof(tempPath));
                     session.Execute(doc => SaveDocumentToFile(doc, sessionType, tempPath));
                     SaveSessionMetadata(session, tempPath);
                     _logger?.LogInformation("Saved session {SessionId} to temp: {TempPath}", session.SessionId,
@@ -695,7 +866,7 @@ public class DocumentSessionManager : IDisposable
 
                 case DisconnectBehavior.PromptOnReconnect:
                     var promptTempPath = GetTempPath(session);
-                    ReassertAllowlistForResolvedPath(promptTempPath, nameof(promptTempPath));
+                    promptTempPath = ReassertAllowlistForResolvedPath(promptTempPath, nameof(promptTempPath));
                     session.Execute(doc => SaveDocumentToFile(doc, sessionType, promptTempPath));
                     SaveSessionMetadata(session, promptTempPath, true);
                     _logger?.LogInformation("Saved session {SessionId} for prompt on reconnect", session.SessionId);
@@ -704,7 +875,8 @@ public class DocumentSessionManager : IDisposable
         }
         finally
         {
-            session.Dispose();
+            if (session.TryClaimDisposeOwnership()) session.Dispose();
+            NotifySessionClosed(session.SessionId, session.Owner);
         }
     }
 
@@ -785,11 +957,32 @@ public class DocumentSessionManager : IDisposable
             _logger?.LogDebug("Auto-saving {Count} dirty sessions", dirtySessions.Count);
 
             foreach (var session in dirtySessions)
+            {
+                // A busy session is skipped rather than captured mid-mutation; the next tick
+                // retries, and the session stays dirty until one of them succeeds. The acquisition
+                // is outside the try so the finally below can only ever release a lock this loop
+                // actually took: releasing after a refused acquisition tore down whichever save or
+                // close did hold it (R3-S04).
+                if (!session.BeginExclusive(AutoSaveDrainTimeoutMs))
+                {
+                    _logger?.LogDebug("Skipped auto-save of busy session {SessionId}", session.SessionId);
+                    continue;
+                }
+
                 try
                 {
                     var tempPath = GetTempPath(session);
-                    ReassertAllowlistForResolvedPath(tempPath, nameof(tempPath));
-                    session.Execute(doc => SaveDocumentToFile(doc, session.Type, tempPath));
+                    tempPath = ReassertAllowlistForResolvedPath(tempPath, nameof(tempPath));
+
+                    // Write beside the slot and swap, so a failure part-way through leaves the
+                    // previous recovery file intact instead of a truncated one.
+                    // Resolved in its own right: it is a different leaf from the temp path
+                    // resolved above, so a symlink planted at this name was never checked and the
+                    // library's save followed it out of the allowlist (R4-S07).
+                    var stagingPath = ReassertAllowlistForResolvedPath(
+                        BuildStagingPath(tempPath), "stagingPath");
+                    session.Execute(doc => SaveDocumentToFile(doc, session.Type, stagingPath));
+                    File.Move(stagingPath, tempPath, true);
                     SaveSessionMetadata(session, tempPath);
                     _logger?.LogInformation("Auto-saved dirty session {SessionId} to temp: {TempPath}",
                         session.SessionId, tempPath);
@@ -798,11 +991,43 @@ public class DocumentSessionManager : IDisposable
                 {
                     _logger?.LogError(ex, "Error auto-saving session {SessionId}", session.SessionId);
                 }
+                finally
+                {
+                    // The session goes on serving requests after an auto-save, so the barrier this
+                    // loop took must come down on every path out — including the failure one. A
+                    // close that gave up waiting for this auto-save left the document here, so
+                    // releasing it is then this loop's job (R4-S06).
+                    session.EndExclusive();
+                }
+            }
         }
         finally
         {
             Volatile.Write(ref _autoSaveRunning, 0);
         }
+    }
+
+    /// <summary>
+    ///     Builds the path auto-save writes to before swapping it over the recovery slot.
+    ///     <para>
+    ///         The suffix goes before the extension, not after it. Appending <c>.new</c> to
+    ///         <c>session.pptx</c> produced <c>session.pptx.new</c>, and the save format is
+    ///         resolved from the extension: <see cref="Helpers.PowerPoint.PptSaveFormatResolver" />
+    ///         refuses <c>.new</c> outright, so every periodic auto-save of a PowerPoint session
+    ///         threw and was swallowed by the surrounding catch, leaving nothing but a log line
+    ///         (R2-C01). Keeping the real extension keeps the staging file the same format as the
+    ///         file it replaces.
+    ///     </para>
+    /// </summary>
+    /// <param name="finalPath">Path the staging file will be moved onto.</param>
+    /// <returns>The staging path, carrying the same extension as <paramref name="finalPath" />.</returns>
+    internal static string BuildStagingPath(string finalPath)
+    {
+        var directory = Path.GetDirectoryName(finalPath);
+        var stem = Path.GetFileNameWithoutExtension(finalPath);
+        var extension = Path.GetExtension(finalPath);
+        var name = $"{stem}.new{extension}";
+        return string.IsNullOrEmpty(directory) ? name : Path.Combine(directory, name);
     }
 
     /// <summary>
@@ -840,16 +1065,32 @@ public class DocumentSessionManager : IDisposable
     /// <param name="type">Document type to load as</param>
     /// <returns>Loaded Aspose document object</returns>
     /// <exception cref="NotSupportedException">Thrown when document type is not supported</exception>
-    private static object LoadDocument(string path, DocumentType type)
+    private object LoadDocument(string path, DocumentType type)
     {
         return type switch
         {
-            DocumentType.Word => new Document(path),
+            DocumentType.Word => GuardedWordLoader.Load(path, _serverConfig?.AllowedBasePaths ?? []),
             DocumentType.Excel => new Workbook(path),
-            DocumentType.PowerPoint => new Presentation(path),
-            DocumentType.Pdf => new Aspose.Pdf.Document(path),
+            DocumentType.PowerPoint => LoadPresentation(path),
+            DocumentType.Pdf => new Document(path),
             _ => throw new NotSupportedException($"Unsupported document type: {type}")
         };
+    }
+
+    /// <summary>
+    ///     Opens a presentation with this process's Aspose.Slides serialisation in force.
+    ///     <para>
+    ///         The library raised a null-dereference from its own loading path when another thread
+    ///         was inside it; the session's own lock does not help because it is per session and
+    ///         this load happens before there is one (SlidesGate).
+    ///     </para>
+    /// </summary>
+    /// <param name="path">The presentation to open.</param>
+    /// <returns>The loaded presentation.</returns>
+    private static Presentation LoadPresentation(string path)
+    {
+        using var gate = SlidesGate.Enter();
+        return new Presentation(path);
     }
 
     /// <summary>
@@ -863,31 +1104,38 @@ public class DocumentSessionManager : IDisposable
         switch (type)
         {
             case DocumentType.Word:
-                ((Document)document).Save(path);
+                ((Aspose.Words.Document)document).Save(path);
                 break;
             case DocumentType.Excel:
                 ((Workbook)document).Save(path);
                 break;
             case DocumentType.PowerPoint:
-                ((Presentation)document).Save(path, SaveFormat.Pptx);
+                // Every save of a presentation funnels through here — explicit save, save on
+                // close, all three disconnect behaviours and autosave — so this one gate covers
+                // five call sites that each had nothing between them and the library (SlidesGate).
+                using (SlidesGate.Enter())
+                {
+                    ((Presentation)document).Save(path, PptSaveFormatResolver.Resolve(path));
+                }
+
                 break;
             case DocumentType.Pdf:
-                ((Aspose.Pdf.Document)document).Save(path);
+                ((Document)document).Save(path);
                 break;
         }
     }
 
-
     /// <summary>
-    ///     Generates a temporary file path for session recovery
+    ///     Returns the recovery file path for a session. Every auto-save of the same session writes
+    ///     the same slot, so a long-lived session keeps exactly one recovery file instead of one per
+    ///     tick, and <c>list_temp_files</c> shows one entry rather than a growing history.
     /// </summary>
     /// <param name="session">Session to generate temp path for</param>
     /// <returns>Full path to temporary file</returns>
     private string GetTempPath(DocumentSession session)
     {
         var ext = Path.GetExtension(session.Path);
-        var timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
-        return Path.Combine(Config.TempDirectory, $"aspose_session_{session.SessionId}_{timestamp}{ext}");
+        return Path.Combine(Config.TempDirectory, $"aspose_session_{session.SessionId}_autosave{ext}");
     }
 
     /// <summary>

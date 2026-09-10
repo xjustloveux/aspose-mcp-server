@@ -40,6 +40,8 @@ public class RenderChartExcelHandler : OperationHandlerBase<Workbook>
             throw new ArgumentException("chartIndex is required for render_chart operation");
 
         SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+        outputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(outputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], "outputPath");
 
         try
         {

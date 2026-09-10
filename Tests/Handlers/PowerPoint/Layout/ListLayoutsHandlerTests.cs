@@ -6,6 +6,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Layout;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class ListLayoutsHandlerTests : PptHandlerTestBase
 {
     private readonly ListLayoutsHandler _handler = new();

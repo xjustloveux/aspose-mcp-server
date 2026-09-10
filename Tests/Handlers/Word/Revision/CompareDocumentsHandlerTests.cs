@@ -55,7 +55,7 @@ public class CompareDocumentsHandlerTests : WordHandlerTestBase
 
         var result = Assert.IsType<CompareDocumentsResult>(res);
 
-        Assert.True(result.RevisionCount >= 0);
+        Assert.Equal(2, result.RevisionCount);
         Assert.Equal(outputPath, result.OutputPath);
     }
 

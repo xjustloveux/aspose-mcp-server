@@ -39,6 +39,8 @@ public class DeleteRangeWordTextHandler : OperationHandlerBase<Document>
         var startPara = paragraphs[p.StartParagraphIndex];
         var endPara = paragraphs[p.EndParagraphIndex];
 
+        ValidateRangeOrdering(p, startPara, endPara);
+
         if (p.StartParagraphIndex == p.EndParagraphIndex)
             DeleteWithinSameParagraph(startPara, p.StartCharIndex, p.EndCharIndex);
         else
@@ -74,6 +76,59 @@ public class DeleteRangeWordTextHandler : OperationHandlerBase<Document>
     }
 
     /// <summary>
+    ///     Rejects a range that does not describe a forward span inside its paragraphs.
+    ///     <para>
+    ///         Each index was bounds-checked on its own, so a reversed pair reached the deletion
+    ///         logic: across paragraphs it worked from the later one back, and within a paragraph
+    ///         the span helper returned early, deleting nothing while the call still reported
+    ///         success (R2-C04). Character indices were never checked against the paragraph's own
+    ///         length either.
+    ///     </para>
+    /// </summary>
+    /// <param name="p">The requested range.</param>
+    /// <param name="startPara">Paragraph the range starts in.</param>
+    /// <param name="endPara">Paragraph the range ends in.</param>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when the range runs backwards or a character index lies outside its paragraph.
+    /// </exception>
+    private static void ValidateRangeOrdering(DeleteRangeParameters p, WordParagraph startPara,
+        WordParagraph endPara)
+    {
+        if (p.EndParagraphIndex < p.StartParagraphIndex)
+            throw new ArgumentException(
+                $"endParagraphIndex ({p.EndParagraphIndex}) must not precede startParagraphIndex "
+                + $"({p.StartParagraphIndex}).");
+
+        EnsureCharIndexWithin(p.StartCharIndex, startPara, nameof(p.StartCharIndex));
+        EnsureCharIndexWithin(p.EndCharIndex, endPara, nameof(p.EndCharIndex));
+
+        if (p.StartParagraphIndex == p.EndParagraphIndex && p.EndCharIndex < p.StartCharIndex)
+            throw new ArgumentException(
+                $"endCharIndex ({p.EndCharIndex}) must not precede startCharIndex "
+                + $"({p.StartCharIndex}) within the same paragraph.");
+    }
+
+    /// <summary>
+    ///     Rejects a character index that does not address a position in the paragraph.
+    /// </summary>
+    /// <param name="value">The requested character index.</param>
+    /// <param name="para">Paragraph the index applies to.</param>
+    /// <param name="name">Parameter name for the error message.</param>
+    /// <exception cref="ArgumentException">Thrown when the index is outside the paragraph.</exception>
+    private static void EnsureCharIndexWithin(int value, WordParagraph para, string name)
+    {
+        // The end index is exclusive, so addressing one past the last character is legitimate.
+        // Measured over the paragraph's own runs, which is the character space DeleteSpan edits.
+        // Paragraph.GetText() also counts the paragraph terminator and any text inside an inline
+        // shape, so it accepted indices the deletion could never reach and reported a length the
+        // caller could not address (R3-C03).
+        var length = WordRunHelper.GetDirectRunTextLength(para);
+        if (value < 0 || value > length)
+            throw new ArgumentException(
+                $"{name} ({value}) is outside the paragraph, which holds {length} character(s).");
+    }
+
+    /// <summary>
     ///     Deletes text within a single paragraph.
     /// </summary>
     /// <param name="para">The paragraph.</param>
@@ -81,91 +136,48 @@ public class DeleteRangeWordTextHandler : OperationHandlerBase<Document>
     /// <param name="endCharIndex">The end character index.</param>
     private static void DeleteWithinSameParagraph(WordParagraph para, int startCharIndex, int endCharIndex)
     {
-        var runs = para.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
-        var (startRunIndex, startRunCharIndex, endRunIndex, endRunCharIndex) =
-            FindRunRange(runs, startCharIndex, endCharIndex);
-
-        if (startRunIndex < 0 || endRunIndex < 0) return;
-
-        if (startRunIndex == endRunIndex)
-            DeleteWithinSameRun(runs[startRunIndex], startRunCharIndex, endRunCharIndex);
-        else
-            DeleteAcrossRuns(runs, startRunIndex, startRunCharIndex, endRunIndex, endRunCharIndex);
+        DeleteSpan(para, startCharIndex, endCharIndex);
     }
 
     /// <summary>
-    ///     Finds the run indices and character positions for the deletion range.
+    ///     Deletes the half-open character span [<paramref name="startCharIndex" />,
+    ///     <paramref name="endCharIndex" />) from a paragraph's own runs.
+    ///     The span is measured across every direct run so it can cover any number of them, which
+    ///     the previous per-run truncation could not: it edited a single run at each end and left
+    ///     the rest of the requested range in place while still reporting success. Runs inside a
+    ///     field are skipped so field content stays intact, but they still occupy their positions
+    ///     in the character space, keeping indices stable for the caller.
     /// </summary>
-    /// <param name="runs">The list of runs.</param>
-    /// <param name="startCharIndex">The start character index.</param>
-    /// <param name="endCharIndex">The end character index.</param>
-    /// <returns>Tuple of start run index, start char index, end run index, end char index.</returns>
-    private static (int startRunIndex, int startRunCharIndex, int endRunIndex, int endRunCharIndex)
-        FindRunRange(List<Run> runs, int startCharIndex, int endCharIndex)
+    /// <param name="para">The paragraph to edit.</param>
+    /// <param name="startCharIndex">First character to delete, inclusive.</param>
+    /// <param name="endCharIndex">First character to keep after the deletion, exclusive.</param>
+    private static void DeleteSpan(WordParagraph para, int startCharIndex, int endCharIndex)
     {
-        var totalChars = 0;
-        int startRunIndex = -1, endRunIndex = -1;
-        int startRunCharIndex = 0, endRunCharIndex = 0;
+        if (endCharIndex <= startCharIndex) return;
 
-        for (var i = 0; i < runs.Count; i++)
+        // Indexed once for the whole span; asking per run would number the document per run.
+        var extents = FieldBoundaryHelper.FieldExtents.Of(para.Document as Document
+                                                          ?? throw new InvalidOperationException(
+                                                              "The paragraph is not part of a document."));
+
+        var offset = 0;
+        foreach (var run in WordRunHelper.GetDirectRuns(para))
         {
-            var runLength = runs[i].Text.Length;
+            var runStart = offset;
+            var runEnd = offset + run.Text.Length;
+            offset = runEnd;
 
-            if (startRunIndex == -1 && totalChars + runLength > startCharIndex)
-            {
-                startRunIndex = i;
-                startRunCharIndex = startCharIndex - totalChars;
-            }
+            if (extents.EnclosingField(run) != null) continue;
+            if (runEnd <= startCharIndex || runStart >= endCharIndex) continue;
 
-            if (totalChars + runLength > endCharIndex)
-            {
-                endRunIndex = i;
-                endRunCharIndex = endCharIndex - totalChars;
-                break;
-            }
+            var from = Math.Max(0, startCharIndex - runStart);
+            var to = Math.Min(run.Text.Length, endCharIndex - runStart);
+            var kept = run.Text[..from] + run.Text[to..];
 
-            totalChars += runLength;
-        }
-
-        return (startRunIndex, startRunCharIndex, endRunIndex, endRunCharIndex);
-    }
-
-    /// <summary>
-    ///     Deletes text within a single run.
-    /// </summary>
-    /// <param name="run">The run.</param>
-    /// <param name="startCharIndex">The start character index within the run.</param>
-    /// <param name="endCharIndex">The end character index within the run.</param>
-    private static void DeleteWithinSameRun(Run run, int startCharIndex, int endCharIndex)
-    {
-        if (FieldBoundaryHelper.GetEnclosingField(run) != null) return;
-        run.Text = run.Text.Remove(startCharIndex, endCharIndex - startCharIndex);
-    }
-
-    /// <summary>
-    ///     Deletes text across multiple runs.
-    /// </summary>
-    /// <param name="runs">The list of runs.</param>
-    /// <param name="startRunIndex">The start run index.</param>
-    /// <param name="startRunCharIndex">The start character index within the start run.</param>
-    /// <param name="endRunIndex">The end run index.</param>
-    /// <param name="endRunCharIndex">The end character index within the end run.</param>
-    private static void DeleteAcrossRuns(List<Run> runs, int startRunIndex, int startRunCharIndex,
-        int endRunIndex, int endRunCharIndex)
-    {
-        var startRun = runs[startRunIndex];
-        if (FieldBoundaryHelper.GetEnclosingField(startRun) == null)
-            startRun.Text = startRun.Text.Substring(0, startRunCharIndex);
-
-        for (var i = startRunIndex + 1; i < endRunIndex; i++)
-            if (FieldBoundaryHelper.GetEnclosingField(runs[i]) == null)
-                runs[i].Remove();
-
-        if (endRunIndex < runs.Count)
-        {
-            var endRun = runs[endRunIndex];
-            if (FieldBoundaryHelper.GetEnclosingField(endRun) == null)
-                endRun.Text = endRun.Text.Substring(endRunCharIndex);
+            if (kept.Length == 0)
+                run.Remove();
+            else
+                run.Text = kept;
         }
     }
 
@@ -183,6 +195,10 @@ public class DeleteRangeWordTextHandler : OperationHandlerBase<Document>
         WordParagraph endPara,
         int startParagraphIndex, int endParagraphIndex, int startCharIndex, int endCharIndex)
     {
+        // Before anything is truncated. Refusing partway through would leave the start paragraph
+        // already shortened by an operation that reported failure (§21.3).
+        RefuseIfTheRangeCutsAField(paragraphs, startParagraphIndex, endParagraphIndex);
+
         TruncateStartParagraph(startPara, startCharIndex);
         RemoveMiddleParagraphs(paragraphs, startParagraphIndex, endParagraphIndex);
         TruncateEndParagraph(endPara, endCharIndex);
@@ -195,11 +211,11 @@ public class DeleteRangeWordTextHandler : OperationHandlerBase<Document>
     /// <param name="startCharIndex">The character index from which to truncate.</param>
     private static void TruncateStartParagraph(WordParagraph para, int startCharIndex)
     {
-        var runs = para.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
-        var lastRun = runs.LastOrDefault();
-        if (lastRun != null && lastRun.Text.Length > startCharIndex &&
-            FieldBoundaryHelper.GetEnclosingField(lastRun) == null)
-            lastRun.Text = lastRun.Text.Substring(0, startCharIndex);
+        // Everything from startCharIndex to the end of the paragraph is inside the range, which can
+        // span any number of runs. The previous version compared a paragraph-relative index against
+        // one run's length and edited only the last run, so a multi-run paragraph kept text the
+        // caller had asked to delete while the operation still reported success.
+        DeleteSpan(para, startCharIndex, WordRunHelper.GetDirectRunTextLength(para));
     }
 
     /// <summary>
@@ -215,21 +231,44 @@ public class DeleteRangeWordTextHandler : OperationHandlerBase<Document>
     }
 
     /// <summary>
+    ///     Refuses a range that would take one marker of a field and leave the other behind.
+    /// </summary>
+    /// <param name="paragraphs">The list of paragraphs.</param>
+    /// <param name="startIndex">The start paragraph index.</param>
+    /// <param name="endIndex">The end paragraph index.</param>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when a paragraph in the range carries part of a field that begins or ends
+    ///     outside it. A field contained wholly in a removed paragraph goes with it, which is a
+    ///     complete removal; one that runs through the range is cut in half (§21.3).
+    /// </exception>
+    private static void RefuseIfTheRangeCutsAField(List<WordParagraph> paragraphs,
+        int startIndex, int endIndex)
+    {
+        if (endIndex - startIndex <= 1) return;
+
+        var document = paragraphs[startIndex].Document as Document
+                       ?? throw new InvalidOperationException("The paragraph is not part of a document.");
+        var extents = FieldBoundaryHelper.FieldExtents.Of(document);
+
+        for (var i = startIndex + 1; i < endIndex; i++)
+            if (extents.WouldSplitAField(paragraphs[i]))
+                throw new ArgumentException(
+                    "The range crosses a field that begins or ends outside it, so deleting it "
+                    + "would leave the field without one of its markers. Delete the field with "
+                    + "word_field, or choose a range that does not cut through one.");
+    }
+
+    /// <summary>
     ///     Truncates text in the end paragraph up to the specified position.
     /// </summary>
     /// <param name="para">The paragraph.</param>
     /// <param name="endCharIndex">The character index up to which to truncate.</param>
     private static void TruncateEndParagraph(WordParagraph para, int endCharIndex)
     {
-        var runs = para.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
-        if (runs.Count > 0 && endCharIndex < runs[0].Text.Length)
-        {
-            if (FieldBoundaryHelper.GetEnclosingField(runs[0]) == null)
-                runs[0].Text = runs[0].Text.Substring(endCharIndex);
-            for (var i = 1; i < runs.Count; i++)
-                if (FieldBoundaryHelper.GetEnclosingField(runs[i]) == null)
-                    runs[i].Remove();
-        }
+        // Everything from the start of the paragraph up to endCharIndex is inside the range. The
+        // previous version only shortened the first run, and did nothing at all once endCharIndex
+        // reached past that run, leaving the deleted text in place.
+        DeleteSpan(para, 0, endCharIndex);
     }
 
     private sealed record DeleteRangeParameters(

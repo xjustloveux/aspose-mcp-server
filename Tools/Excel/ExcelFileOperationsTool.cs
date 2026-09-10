@@ -116,6 +116,9 @@ Usage examples:
         string outputFileNamePattern = "sheet_{name}.xlsx",
         IProgress<ProgressNotificationValue>? progress = null)
     {
+        SecurityHelper.ValidateArraySize(inputPaths, nameof(inputPaths));
+        SecurityHelper.ValidateArraySize(sheetIndices, nameof(sheetIndices));
+
         var parameters = BuildParameters(operation, sessionId, path, outputPath, inputPath, outputDirectory,
             sheetName, inputPaths, mergeSheets, sheetIndices, outputFileNamePattern);
 

@@ -20,7 +20,7 @@ public class CopySheetFormatHandler : OperationHandlerBase<Workbook>
     /// </summary>
     /// <param name="context">The workbook context.</param>
     /// <param name="parameters">
-    ///     Required: sourceSheetIndex, targetSheetIndex
+    ///     Optional: sourceSheetIndex (default: 0), targetSheetIndex (default: 0)
     ///     Optional: copyColumnWidths, copyRowHeights
     /// </param>
     /// <returns>Success message.</returns>

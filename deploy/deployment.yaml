@@ -1,3 +1,10 @@
+# SECURITY: this manifest defines only a Deployment. It does not create a Service or Ingress, so the
+# pod is not reachable from outside the cluster on its own; ASPOSE_HOST=0.0.0.0 only binds inside the
+# pod's own network namespace. Whoever adds a Service, Ingress or port-forward makes it reachable, and
+# at that point the commented-out ASPOSE_AUTH_* settings below must be enabled: without them the server
+# accepts any caller and applies no session isolation. Pair it with a NetworkPolicy, and when a gateway
+# terminates authentication set ASPOSE_AUTH_APIKEY_TRUSTED_PROXIES / ASPOSE_AUTH_JWT_TRUSTED_PROXIES so
+# identity headers are honoured only from that gateway.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -79,7 +86,7 @@ spec:
             #   value: "3"                  # Max restart attempts (default: 3)
             # - name: ASPOSE_EXTENSION_HEALTH_INTERVAL
             #   value: "30"                 # Health check interval in seconds (default: 30)
-            # - name: ASPOSE_EXTENSION_DEBOUNCE_DELAY_DEFAULT
+            # - name: ASPOSE_EXTENSION_DEBOUNCE_DELAY
             #   value: "100"                # Debounce delay in milliseconds (default: 100)
             # - name: ASPOSE_EXTENSION_FRAME_INTERVAL_DEFAULT
             #   value: "100"                # Frame interval in milliseconds (default: 100)

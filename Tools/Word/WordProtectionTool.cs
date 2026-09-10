@@ -27,6 +27,11 @@ public class WordProtectionTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Session manager for document session operations
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -36,11 +41,14 @@ public class WordProtectionTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document operations</param>
     /// <param name="identityAccessor">Optional identity accessor for session isolation</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public WordProtectionTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry = HandlerRegistry<Document>.CreateFromNamespace("AsposeMcpServer.Handlers.Word.Protection");
     }
 
@@ -92,14 +100,15 @@ Notes:
         [Description("Protection password (required for protect operation, optional for unprotect)")]
         string? password = null,
         [Description(
-            "Protection type: 'ReadOnly', 'AllowOnlyComments', 'AllowOnlyFormFields', 'AllowOnlyRevisions' (required for protect operation)")]
+            "Protection type: 'ReadOnly', 'AllowOnlyComments', 'AllowOnlyFormFields', 'AllowOnlyRevisions' (optional for protect operation, default: 'ReadOnly')")]
         string protectionType = "ReadOnly")
     {
         var parameters = BuildParameters(operation, password, protectionType);
 
         var handler = _handlerRegistry.GetHandler(operation);
 
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor, password);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor, password,
+            _serverConfig);
 
         var effectiveOutputPath = outputPath ?? path;
 
@@ -110,7 +119,8 @@ Notes:
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = effectiveOutputPath
+            OutputPath = effectiveOutputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);

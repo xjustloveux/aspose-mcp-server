@@ -8,10 +8,20 @@ namespace AsposeMcpServer.Helpers.Word;
 public static class WordParagraphHelper
 {
     /// <summary>
+    ///     Converts a line spacing rule string to LineSpacingRule enum.
+    /// </summary>
+    /// <summary>The line spacing rules <c>word_paragraph</c> documents, in its own wording.</summary>
+    private const string LineSpacingRules = "single, oneAndHalf, double, atLeast, exactly, multiple";
+
+    /// <summary>
     ///     Converts an alignment string to ParagraphAlignment enum.
     /// </summary>
     /// <param name="alignment">Alignment string (left, center, right, justify).</param>
     /// <returns>Corresponding ParagraphAlignment value.</returns>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when the value is not one this helper knows. It used to return Left, so a typo
+    ///     became a silent left-alignment and the request reported success (§23.13.1).
+    /// </exception>
     public static ParagraphAlignment GetAlignment(string alignment)
     {
         return alignment.ToLower() switch
@@ -20,22 +30,30 @@ public static class WordParagraphHelper
             "center" => ParagraphAlignment.Center,
             "right" => ParagraphAlignment.Right,
             "justify" => ParagraphAlignment.Justify,
-            _ => ParagraphAlignment.Left
+            _ => throw new ArgumentException(
+                $"Unknown alignment '{alignment}'. Use left, center, right or justify.")
         };
     }
 
-    /// <summary>
-    ///     Converts a line spacing rule string to LineSpacingRule enum.
-    /// </summary>
-    /// <param name="rule">Line spacing rule string (atleast, exactly, or default multiple).</param>
+    /// <param name="rule">
+    ///     Line spacing rule string. The multiple-based rules — single, oneAndHalf, double and
+    ///     multiple — all map to <see cref="LineSpacingRule.Multiple" />; which multiple is
+    ///     decided by the accompanying spacing value.
+    /// </param>
     /// <returns>Corresponding LineSpacingRule value.</returns>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when the value is not one the tool documents. It used to return Multiple, so a
+    ///     typo became silent single spacing (§23.13.1).
+    /// </exception>
     public static LineSpacingRule GetLineSpacingRule(string rule)
     {
         return rule.ToLower() switch
         {
             "atleast" => LineSpacingRule.AtLeast,
             "exactly" => LineSpacingRule.Exactly,
-            _ => LineSpacingRule.Multiple
+            "single" or "oneandhalf" or "double" or "multiple" => LineSpacingRule.Multiple,
+            _ => throw new ArgumentException(
+                $"Unknown lineSpacingRule '{rule}'. Use one of: {LineSpacingRules}.")
         };
     }
 
@@ -54,7 +72,9 @@ public static class WordParagraphHelper
             "decimal" => TabAlignment.Decimal,
             "bar" => TabAlignment.Bar,
             "clear" => TabAlignment.Clear,
-            _ => TabAlignment.Left
+            _ => throw new ArgumentException(
+                $"Unknown tab alignment '{alignment}'. Use left, center, right, decimal, bar or "
+                + "clear.")
         };
     }
 
@@ -73,7 +93,8 @@ public static class WordParagraphHelper
             "line" => TabLeader.Line,
             "heavy" => TabLeader.Heavy,
             "middledot" => TabLeader.MiddleDot,
-            _ => TabLeader.None
+            _ => throw new ArgumentException(
+                $"Unknown tab leader '{leader}'. Use none, dots, dashes, line, heavy or middledot.")
         };
     }
 }

@@ -52,7 +52,7 @@ public class GetWordHyperlinksHandlerTests : WordHandlerTestBase
 
         var result = Assert.IsType<GetHyperlinksResult>(res);
 
-        Assert.True(result.Count >= 0);
+        Assert.Equal(2, result.Count);
     }
 
     [Fact]

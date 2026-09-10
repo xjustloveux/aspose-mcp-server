@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 
 namespace AsposeMcpServer.Core.Session;
 
@@ -30,6 +30,30 @@ public class SessionIdentity
     public bool IsAnonymous => string.IsNullOrEmpty(GroupId) && string.IsNullOrEmpty(UserId);
 
     /// <summary>
+    ///     The value that decides session ownership under group isolation.
+    ///     <para>
+    ///         Several authentication modes complete successfully without producing a group: a JWT
+    ///         whose configured group claim is absent, or a gateway request that carries no group
+    ///         header. Comparing raw group ids then matched two unrelated principals on
+    ///         <c>null == null</c>, so each could reach the other's sessions (R2-S03). Falling back
+    ///         to the subject keeps such a principal isolated without locking it out of its own
+    ///         sessions. The prefixes stop a group named after a user from colliding with that user.
+    ///     </para>
+    ///     <para>
+    ///         Null means the identity carries no owner at all, which is the shared anonymous case.
+    ///     </para>
+    /// </summary>
+    private string? IsolationKey
+    {
+        get
+        {
+            if (!string.IsNullOrEmpty(GroupId))
+                return "group:" + GroupId;
+            return !string.IsNullOrEmpty(UserId) ? "user:" + UserId : null;
+        }
+    }
+
+    /// <summary>
     ///     Gets a static anonymous identity instance
     /// </summary>
     /// <returns>The shared anonymous identity instance</returns>
@@ -49,7 +73,7 @@ public class SessionIdentity
         if (isolationMode == SessionIsolationMode.None)
             return true;
 
-        return GroupId == sessionOwner.GroupId;
+        return IsolationKey == sessionOwner.IsolationKey;
     }
 
     /// <summary>
@@ -63,8 +87,11 @@ public class SessionIdentity
         if (IsAnonymous || isolationMode == SessionIsolationMode.None)
             return "__anonymous__";
 
-        var encodedGroupId = EncodeId(GroupId);
-        return $"group:{encodedGroupId}";
+        // Mirrors IsolationKey: an authenticated identity with no group gets its own bucket
+        // rather than sharing the empty-group one with every other group-less principal.
+        return !string.IsNullOrEmpty(GroupId)
+            ? $"group:{EncodeId(GroupId)}"
+            : $"user:{EncodeId(UserId)}";
     }
 
     /// <summary>

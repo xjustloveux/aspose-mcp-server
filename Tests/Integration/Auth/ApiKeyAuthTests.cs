@@ -119,12 +119,13 @@ public class ApiKeyAuthTests : IDisposable
     }
 
     /// <summary>
-    ///     Verifies that health endpoints don't require authentication.
+    ///     Verifies that the liveness endpoints don't require authentication. The metrics endpoint
+    ///     is deliberately absent: it carries operational data and is authenticated by default,
+    ///     with an explicit opt-out for a trusted scrape network (RB / NEW-SEC-01).
     /// </summary>
     [Theory]
     [InlineData("/health")]
     [InlineData("/ready")]
-    [InlineData("/metrics")]
     public async Task ApiKey_HealthEndpoints_NoAuthRequired(string path)
     {
         var context = CreateHttpContext(path);
@@ -137,6 +138,25 @@ public class ApiKeyAuthTests : IDisposable
         });
 
         Assert.True(nextCalled);
+    }
+
+    /// <summary>
+    ///     Verifies that the metrics endpoint is authenticated like any other endpoint by default.
+    /// </summary>
+    [Fact]
+    public async Task ApiKey_MetricsEndpoint_RequiresAuthByDefault()
+    {
+        var context = CreateHttpContext("/metrics");
+        var nextCalled = false;
+
+        await _middleware.InvokeAsync(context, _ =>
+        {
+            nextCalled = true;
+            return Task.CompletedTask;
+        });
+
+        Assert.False(nextCalled);
+        Assert.Equal(401, context.Response.StatusCode);
     }
 
     private static DefaultHttpContext CreateHttpContext(string path)

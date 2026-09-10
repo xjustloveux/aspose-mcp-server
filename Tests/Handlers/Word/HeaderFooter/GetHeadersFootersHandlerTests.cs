@@ -65,7 +65,7 @@ public class GetHeadersFootersHandlerTests : WordHandlerTestBase
 
         var result = Assert.IsType<GetHeadersFootersResult>(res);
 
-        Assert.True(result.TotalSections >= 0);
+        Assert.Equal(1, result.TotalSections);
         Assert.NotNull(result.Sections);
     }
 

@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aspose MCP Server - MCP 辦公文檔處理服務器</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <link rel="alternate icon" href="favicon.ico">
     <meta name="description" content="為 MCP 客戶端提供 118 個辦公文檔處理工具。支援 Word、Excel、PowerPoint、PDF、OCR、Email、BarCode、跨格式轉換及擴充功能系統。">
     <meta name="keywords" content="Aspose, MCP, Model Context Protocol, Word, Excel, PowerPoint, PDF, 文檔處理, 辦公文檔">
     <link rel="canonical" href="https://xjustloveux.github.io/aspose-mcp-server/">
@@ -302,6 +301,9 @@
                 <li>
                     <a href="faq.html">常見問答</a>
                 </li>
+                <li>
+                    <a href="architecture-map/index.html">架構關係圖</a>
+                </li>
             </ul>
             <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme" title="切換亮/暗色主題">🌙</button>
             <button class="menu-toggle" aria-label="Toggle menu">☰</button>
@@ -424,17 +426,17 @@
 
         <div class="feature-card">
             <h3>🎯 MCP 2026-07-28 規範</h3>
-            <p>完全符合最新 MCP 協議規範，自動工具註解基於命名約定，完整的 JSON-RPC 2.0 錯誤處理。</p>
+            <p>完全符合最新 MCP 協議規範，工具註解由 <code>[McpServerTool]</code> 屬性明確宣告，完整的 JSON-RPC 2.0 錯誤處理。</p>
         </div>
 
         <div class="feature-card">
             <h3>🔧 自動工具發現</h3>
-            <p>基於命名約定的自動工具註冊系統，無需手動配置即可發現和使用所有工具。</p>
+            <p>掃描 <code>[McpServerToolType]</code> 與 <code>[McpServerTool]</code> 屬性自動註冊，無需手動配置即可發現和使用所有工具。</p>
         </div>
 
         <div class="feature-card">
             <h3>🧪 完整測試套件</h3>
-            <p>780+ 個測試類，10,000+ 個測試用例，使用 xUnit 測試框架，CI/CD 自動測試。</p>
+            <p>854 個測試類，10,800+ 個測試用例，使用 xUnit 測試框架，CI/CD 自動測試。</p>
         </div>
     </div>
 

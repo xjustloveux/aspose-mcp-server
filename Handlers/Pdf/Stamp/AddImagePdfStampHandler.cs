@@ -34,13 +34,15 @@ public class AddImagePdfStampHandler : OperationHandlerBase<Document>
             throw new ArgumentException("imagePath is required for add_image operation");
 
         SecurityHelper.ValidateFilePath(p.ImagePath, "imagePath", true);
+        var resolvedImagePath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.ImagePath,
+            context.ServerConfig?.AllowedBasePaths ?? [], "imagePath");
 
-        if (!File.Exists(p.ImagePath))
+        if (!File.Exists(resolvedImagePath))
             throw new FileNotFoundException("The specified file was not found.");
 
         var document = context.Document;
 
-        var stamp = new ImageStamp(p.ImagePath)
+        var stamp = new ImageStamp(resolvedImagePath)
         {
             Opacity = p.Opacity,
             RotateAngle = p.Rotation
@@ -65,7 +67,7 @@ public class AddImagePdfStampHandler : OperationHandlerBase<Document>
 
         var pageDesc = p.PageIndex == 0 ? "all pages" : $"page {p.PageIndex}";
         return new SuccessResult
-            { Message = $"Image stamp added to {pageDesc}. Image: {Path.GetFileName(p.ImagePath)}" };
+            { Message = $"Image stamp added to {pageDesc}. Image: {Path.GetFileName(resolvedImagePath)}" };
     }
 
     /// <summary>

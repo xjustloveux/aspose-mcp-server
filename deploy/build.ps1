@@ -21,8 +21,26 @@ $env:DOTNET_CLI_UI_LANGUAGE = "en-US"
 $configuration = if ($Debug) { "Debug" } else { "Release" }
 
 # Build the main project explicitly
-dotnet build AsposeMcpServer.csproj --configuration $configuration
+# --no-incremental, because a build that recompiles nothing reports no warnings, and a warning
+# count from such a build reads exactly like a clean one. Successive incremental runs of this
+# script printed 2, then 4, then 0 warnings for the same tree, and the zero was the artefact
+# (R18-BUILD01).
+$output = & dotnet build AsposeMcpServer.csproj --configuration $configuration --no-incremental 2>&1
+$buildExitCode = $LASTEXITCODE
+$output | ForEach-Object { Write-Host $_ }
 
-# Exit with the same exit code as dotnet build
-exit $LASTEXITCODE
+if ($buildExitCode -ne 0) { exit $buildExitCode }
+
+# The project's rule is 0 warnings and 0 errors. `dotnet build` exits 0 with warnings, so the rule
+# was left to whoever read the output rather than being enforced by the thing that checks it.
+$warnings = @($output | Select-String -Pattern ": warning [A-Z]+[0-9]+" -AllMatches)
+if ($warnings.Count -gt 0) {
+    Write-Host ""
+    Write-Host "=== Build Warnings ===" -ForegroundColor Red
+    Write-Host "$($warnings.Count) warning line(s). This project requires 0 warnings and 0 errors." `
+        -ForegroundColor Red
+    exit 1
+}
+
+exit 0
 

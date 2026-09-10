@@ -111,7 +111,7 @@ public class GetWordTablesHandlerTests : WordHandlerTestBase
 
         var result = Assert.IsType<GetTablesWordResult>(res);
 
-        Assert.True(result.Count >= 0);
+        Assert.Equal(1, result.Count);
         Assert.NotNull(result.Tables);
         AssertNotModified(context);
     }

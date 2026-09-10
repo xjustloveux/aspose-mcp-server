@@ -7,6 +7,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Notes;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class ClearNotesHandlerTests : PptHandlerTestBase
 {
     private static readonly int[] SlideIndicesZeroTwo = [0, 2];

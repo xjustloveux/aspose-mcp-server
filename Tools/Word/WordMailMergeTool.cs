@@ -27,6 +27,11 @@ public class WordMailMergeTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     The document session manager for managing in-memory document sessions.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -36,11 +41,14 @@ public class WordMailMergeTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document operations.</param>
     /// <param name="identityAccessor">Optional identity accessor for session isolation.</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public WordMailMergeTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry = HandlerRegistry<Document>.CreateFromNamespace("AsposeMcpServer.Handlers.Word.MailMerge");
     }
 
@@ -73,6 +81,8 @@ public class WordMailMergeTool
 Template must contain Word MERGEFIELD fields (e.g., {MERGEFIELD Name}).
 Data keys must match field names: data={'Name':'John'} replaces {MERGEFIELD Name}.
 Note: This is different from word_file create_from_template which uses LINQ <<[ds.X]>> syntax.
+
+A multi-record merge (dataArray) writes its documents as one request: a refusal or a handled failure publishes none of them, so no output file is replaced unless all of them are. An output directory the request had to create may remain, and power loss or a killed process is not covered.
 
 Usage examples:
 - Single record: word_mail_merge(templatePath='template.docx', outputPath='output.docx', data={'Name':'John','Address':'123 Main St'})
@@ -113,7 +123,8 @@ Default: 'removeUnusedFields,removeEmptyParagraphs'")]
 
         var handler = _handlerRegistry.GetHandler(operation);
 
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, templatePath, _identityAccessor);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, templatePath, _identityAccessor,
+            serverConfig: _serverConfig);
 
         var operationContext = new OperationContext<Document>
         {
@@ -122,7 +133,8 @@ Default: 'removeUnusedFields,removeEmptyParagraphs'")]
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = templatePath,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);

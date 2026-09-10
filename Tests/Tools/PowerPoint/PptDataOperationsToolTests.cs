@@ -11,6 +11,7 @@ namespace AsposeMcpServer.Tests.Tools.PowerPoint;
 ///     Detailed parameter validation and business logic tests are in Handler tests.
 /// </summary>
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class PptDataOperationsToolTests : PptTestBase
 {
     private readonly PptDataOperationsTool _tool;
@@ -29,8 +30,11 @@ public class PptDataOperationsToolTests : PptTestBase
         var pptPath = CreatePresentation("test_get_statistics.pptx");
         var result = _tool.Execute("statistics", pptPath);
         var data = GetResultData<GetStatisticsResult>(result);
-        Assert.True(data.TotalSlides >= 0);
-        Assert.True(data.TotalShapes >= 0);
+        Assert.Equal(1, data.TotalSlides);
+        // The fixture presentation carries no shapes. Without a licence Aspose.Slides adds its
+        // evaluation notice as a real shape, so the count says nothing about the fixture there.
+        if (!IsEvaluationMode())
+            Assert.Equal(0, data.TotalShapes);
         Assert.NotNull(data.SlideSize);
     }
 
@@ -41,7 +45,7 @@ public class PptDataOperationsToolTests : PptTestBase
         var pptPath = CreatePresentation("test_get_content.pptx");
         var result = _tool.Execute("get", pptPath);
         var data = GetResultData<GetContentPptResult>(result);
-        Assert.True(data.TotalSlides >= 0);
+        Assert.Equal(1, data.TotalSlides);
         Assert.NotNull(data.Slides);
     }
 
@@ -54,7 +58,8 @@ public class PptDataOperationsToolTests : PptTestBase
         var data = GetResultData<GetSlideDetailsResult>(result);
         Assert.Equal(0, data.SlideIndex);
         Assert.NotNull(data.SlideSize);
-        Assert.True(data.ShapesCount >= 0);
+        if (!IsEvaluationMode())
+            Assert.Equal(0, data.ShapesCount);
     }
 
     #endregion
@@ -71,7 +76,7 @@ public class PptDataOperationsToolTests : PptTestBase
         var pptPath = CreatePresentation($"test_case_stats_{operation.Replace("_", "")}.pptx");
         var result = _tool.Execute(operation, pptPath);
         var data = GetResultData<GetStatisticsResult>(result);
-        Assert.True(data.TotalSlides >= 0);
+        Assert.Equal(1, data.TotalSlides);
     }
 
     [SkippableFact]
@@ -95,7 +100,7 @@ public class PptDataOperationsToolTests : PptTestBase
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("statistics", sessionId: sessionId);
         var data = GetResultData<GetStatisticsResult>(result);
-        Assert.True(data.TotalSlides >= 0);
+        Assert.Equal(1, data.TotalSlides);
     }
 
     [SkippableFact]

@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using AsposeMcpServer.Core.Extension.Transport;
 
 namespace AsposeMcpServer.Core.Extension;
@@ -12,6 +13,9 @@ namespace AsposeMcpServer.Core.Extension;
 /// </summary>
 public class Extension : IAsyncDisposable
 {
+    private const string StateChangedSubscriberFailureMessage =
+        "StateChanged event subscriber threw exception for extension {ExtensionId}";
+
     /// <summary>
     ///     Threshold in seconds - if crash happens within this time of start, it's a rapid crash.
     /// </summary>
@@ -39,6 +43,13 @@ public class Extension : IAsyncDisposable
     ///     Longer timeout after process kill to ensure streams are properly drained.
     /// </summary>
     private const int ReaderTaskCleanupTimeoutSeconds = 10;
+
+    /// <summary>
+    ///     Matches a <c>${NAME}</c> reference. The name is restricted to the characters an
+    ///     environment variable may carry so an unrelated literal is left alone.
+    /// </summary>
+    private static readonly Regex EnvironmentReference = new(
+        @"\$\{([A-Za-z_][A-Za-z0-9_]*)\}", RegexOptions.Compiled, TimeSpan.FromSeconds(2));
 
     /// <summary>
     ///     Extension configuration containing restart limits and timeouts.
@@ -415,6 +426,7 @@ public class Extension : IAsyncDisposable
     ///     containing the extension's metadata (name, version, etc.).
     /// </summary>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A task that completes when the work is done.</returns>
     /// <exception cref="InvalidOperationException">
     ///     Thrown when the extension is not in a valid state for handshake,
     ///     or when the extension does not provide required metadata.
@@ -1101,6 +1113,7 @@ public class Extension : IAsyncDisposable
     ///     Stops the extension process.
     /// </summary>
     /// <param name="resetRestartCount">Whether to reset the restart counter (for normal shutdowns).</param>
+    /// <returns>A task that completes when the work is done.</returns>
     public async Task StopAsync(bool resetRestartCount = false)
     {
         // Note: Don't check _disposed here - StopAsync is called from DisposeAsync
@@ -1208,6 +1221,7 @@ public class Extension : IAsyncDisposable
     /// <param name="sessionId">Session identifier.</param>
     /// <param name="owner">Session owner information.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A task that completes when the work is done.</returns>
     public async Task NotifySessionClosedAsync(
         string sessionId,
         SessionOwner? owner,
@@ -1262,6 +1276,7 @@ public class Extension : IAsyncDisposable
     /// <param name="sessionId">Session identifier that was unbound.</param>
     /// <param name="owner">Session owner information.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A task that completes when the work is done.</returns>
     public async Task NotifySessionUnboundAsync(
         string sessionId,
         SessionOwner? owner,
@@ -1419,9 +1434,28 @@ public class Extension : IAsyncDisposable
 
         if (command.Environment != null)
             foreach (var kvp in command.Environment)
-                startInfo.EnvironmentVariables[kvp.Key] = kvp.Value;
+                startInfo.EnvironmentVariables[kvp.Key] = ExpandEnvironmentReferences(kvp.Value);
 
         return startInfo;
+    }
+
+    /// <summary>
+    ///     Replaces <c>${NAME}</c> references in an extension's environment value with the server
+    ///     process's own environment. The configuration format documents this substitution and the
+    ///     shipped example relies on it, but the value used to be passed through literally, so an
+    ///     extension received the text <c>${CLOUD_API_KEY}</c> instead of the secret.
+    ///     An undefined name expands to an empty string, matching how a shell behaves; the name is
+    ///     never written to a log, so a secret cannot leak through a diagnostic message.
+    /// </summary>
+    /// <param name="value">The configured value, which may contain references.</param>
+    /// <returns>The value with every reference expanded.</returns>
+    private static string ExpandEnvironmentReferences(string value)
+    {
+        if (string.IsNullOrEmpty(value) || !value.Contains("${", StringComparison.Ordinal))
+            return value;
+
+        return EnvironmentReference.Replace(value,
+            match => Environment.GetEnvironmentVariable(match.Groups[1].Value) ?? string.Empty);
     }
 
     /// <summary>
@@ -1884,9 +1918,6 @@ public class Extension : IAsyncDisposable
     {
         try
         {
-            if (_state is ExtensionState.Stopping or ExtensionState.Unloaded or ExtensionState.Starting)
-                return;
-
             var exitCode = -1;
             try
             {
@@ -1897,11 +1928,12 @@ public class Extension : IAsyncDisposable
                 // Ignore: process may have already been disposed
             }
 
+            if (!TrySetCrashedState())
+                return;
+
             _logger.LogWarning(
                 "Extension {ExtensionId} exited unexpectedly with code {ExitCode}",
                 _definition.Id, exitCode);
-
-            SetState(ExtensionState.Crashed);
         }
         catch (Exception ex)
         {
@@ -2027,7 +2059,7 @@ public class Extension : IAsyncDisposable
         catch (Exception ex)
         {
             _logger.LogWarning(ex,
-                "StateChanged event subscriber threw exception for extension {ExtensionId}",
+                StateChangedSubscriberFailureMessage,
                 _definition.Id);
         }
     }
@@ -2073,9 +2105,46 @@ public class Extension : IAsyncDisposable
         catch (Exception ex)
         {
             _logger.LogWarning(ex,
-                "StateChanged event subscriber threw exception for extension {ExtensionId}",
+                StateChangedSubscriberFailureMessage,
                 _definition.Id);
         }
+    }
+
+    /// <summary>
+    ///     Moves the extension to <see cref="ExtensionState.Crashed" /> unless it is already
+    ///     being shut down or started, deciding and writing under a single lock.
+    /// </summary>
+    /// <returns><c>true</c> when the state was changed to Crashed; otherwise <c>false</c>.</returns>
+    private bool TrySetCrashedState()
+    {
+        ExtensionState oldState;
+
+        lock (_stateLock)
+        {
+            if (_state is ExtensionState.Stopping or ExtensionState.Unloaded or ExtensionState.Starting
+                or ExtensionState.Crashed)
+                return false;
+
+            oldState = _state;
+            _state = ExtensionState.Crashed;
+        }
+
+        _logger.LogDebug(
+            "Extension {ExtensionId} state changed: {OldState} -> {NewState}",
+            _definition.Id, oldState, ExtensionState.Crashed);
+
+        try
+        {
+            StateChanged?.Invoke(this, ExtensionState.Crashed);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex,
+                StateChangedSubscriberFailureMessage,
+                _definition.Id);
+        }
+
+        return true;
     }
 
     /// <summary>
@@ -2107,7 +2176,7 @@ public class Extension : IAsyncDisposable
         catch (Exception ex)
         {
             _logger.LogWarning(ex,
-                "StateChanged event subscriber threw exception for extension {ExtensionId}",
+                StateChangedSubscriberFailureMessage,
                 _definition.Id);
         }
     }

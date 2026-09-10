@@ -6,6 +6,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Section;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class AddPptSectionHandlerTests : PptHandlerTestBase
 {
     private readonly AddPptSectionHandler _handler = new();

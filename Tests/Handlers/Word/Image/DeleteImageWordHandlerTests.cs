@@ -80,6 +80,43 @@ public class DeleteImageWordHandlerTests : WordHandlerTestBase
         Assert.Contains("Remaining images: 2", result.Message);
     }
 
+    /// <summary>
+    ///     Three identical images could not show which one a delete removed, so an off-by-one in
+    ///     the index would still have passed. Distinct images make the survivors identifiable.
+    /// </summary>
+    [Fact]
+    public void Execute_ShouldDeleteTheAddressedImageAndKeepTheOrderOfTheRest()
+    {
+        var first = CreateTempImageFile(10);
+        var second = CreateTempImageFile(120);
+        var third = CreateTempImageFile(240);
+        var doc = CreateDocumentWithDistinctImages(first, second, third);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?> { { "imageIndex", 1 } });
+
+        var sizesBefore = ImageByteLengths(doc);
+        _handler.Execute(context, parameters);
+        var sizesAfter = ImageByteLengths(doc);
+
+        Assert.Equal(3, sizesBefore.Count);
+        Assert.Equal(2, sizesAfter.Count);
+        Assert.Equal([sizesBefore[0], sizesBefore[2]], sizesAfter);
+    }
+
+    /// <summary>
+    ///     Reads each image's stored bytes so images can be compared by content.
+    /// </summary>
+    /// <param name="doc">The document to read.</param>
+    /// <returns>The image bytes, in document order.</returns>
+    private static List<string> ImageByteLengths(Document doc)
+    {
+        return doc.GetChildNodes(NodeType.Shape, true)
+            .Cast<WordShape>()
+            .Where(shape => shape.HasImage)
+            .Select(shape => Convert.ToBase64String(shape.ImageData.ImageBytes))
+            .ToList();
+    }
+
     #endregion
 
     #region Error Handling
@@ -133,6 +170,25 @@ public class DeleteImageWordHandlerTests : WordHandlerTestBase
         for (var i = 0; i < count; i++)
         {
             builder.InsertImage(imagePath);
+            builder.InsertParagraph();
+        }
+
+        return doc;
+    }
+
+    /// <summary>
+    ///     Builds a document holding one image per supplied path, so the caller can identify which
+    ///     image survived a deletion.
+    /// </summary>
+    /// <param name="imagePaths">Distinct image files, in insertion order.</param>
+    /// <returns>The document.</returns>
+    private static Document CreateDocumentWithDistinctImages(params string[] imagePaths)
+    {
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        foreach (var path in imagePaths)
+        {
+            builder.InsertImage(path);
             builder.InsertParagraph();
         }
 

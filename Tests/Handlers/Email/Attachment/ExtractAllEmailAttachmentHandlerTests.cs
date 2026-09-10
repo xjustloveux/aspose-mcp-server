@@ -39,6 +39,36 @@ public class ExtractAllEmailAttachmentHandlerTests : HandlerTestBase<object>
         Assert.Throws<FileNotFoundException>(() => _handler.Execute(context, parameters));
     }
 
+    /// <summary>
+    ///     R5-R01: extraction published each attachment as it was produced, so a message whose later
+    ///     attachment failed left the earlier ones on top of the caller's files. The publish for the
+    ///     second attachment is made to fail by putting a directory where its file has to go.
+    /// </summary>
+    [Fact]
+    public void Execute_WhenALaterAttachmentCannotBePublished_ShouldWriteNoneOfThem()
+    {
+        var emlPath = CreateEmlWithNamedAttachments("atomic.eml", "first.txt", "second.txt");
+        var outputDir = Path.Combine(TestDir, "atomic_attachments");
+        Directory.CreateDirectory(outputDir);
+
+        var first = Path.Combine(outputDir, "first.txt");
+        Directory.CreateDirectory(Path.Combine(outputDir, "second.txt"));
+
+        var context = CreateContext(new object());
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "path", emlPath },
+            { "outputDir", outputDir }
+        });
+
+        Assert.ThrowsAny<Exception>(() => _handler.Execute(context, parameters));
+
+        Assert.False(File.Exists(first),
+            "the first attachment was published before the second was known to fail");
+        Assert.DoesNotContain(Directory.GetFiles(outputDir),
+            f => Path.GetFileName(f).Contains(".partial-", StringComparison.Ordinal));
+    }
+
     #endregion
 
     #region Helper Methods

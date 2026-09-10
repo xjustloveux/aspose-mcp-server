@@ -35,6 +35,9 @@ public class EditPdfBookmarkHandler : OperationHandlerBase<Document>
 
         var bookmark = document.Outlines[editParams.BookmarkIndex];
 
+        if (string.IsNullOrEmpty(editParams.Title) && !editParams.PageIndex.HasValue)
+            throw new ArgumentException("Provide 'title' or 'pageIndex' to edit a bookmark");
+
         if (!string.IsNullOrEmpty(editParams.Title))
             bookmark.Title = editParams.Title;
 

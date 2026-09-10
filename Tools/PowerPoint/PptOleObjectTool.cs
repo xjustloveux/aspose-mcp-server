@@ -121,7 +121,8 @@ public class PptOleObjectTool
         }
 
         using var ctx = DocumentContext<Presentation>.Create(
-            _sessionManager, sessionId, path, _identityAccessor, password);
+            _sessionManager, sessionId, path, _identityAccessor, password,
+            _serverConfig);
         var passwordIgnored = !string.IsNullOrEmpty(sessionId) && !string.IsNullOrEmpty(password);
 
         var parameters = BuildParameters(outputDirectory, oleIndex, outputFileName, outputPath);

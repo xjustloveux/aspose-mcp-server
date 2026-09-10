@@ -33,6 +33,8 @@ public class RemoveEmailAttachmentHandler : OperationHandlerBase<object>
         var idx = parameters.GetRequired<int>("index");
 
         SecurityHelper.ValidateFilePath(path, "path", true);
+        path = SecurityHelper.ResolveAndEnsureWithinAllowlist(path,
+            context.ServerConfig?.AllowedBasePaths ?? [], "path");
         SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
         if (!File.Exists(path))

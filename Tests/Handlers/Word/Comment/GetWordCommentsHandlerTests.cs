@@ -72,7 +72,7 @@ public class GetWordCommentsHandlerTests : WordHandlerTestBase
 
         var result = Assert.IsType<GetCommentsResult>(res);
 
-        Assert.True(result.Count >= 0);
+        Assert.Equal(2, result.Count);
     }
 
     [Fact]

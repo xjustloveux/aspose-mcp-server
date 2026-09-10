@@ -38,7 +38,7 @@ public class WriteExcelCellHandler : OperationHandlerBase<Workbook>
         var worksheet = ExcelHelper.GetWorksheet(workbook, writeParams.SheetIndex);
         var cellObj = worksheet.Cells[writeParams.Cell];
 
-        ExcelHelper.SetCellValue(cellObj, writeParams.Value);
+        ExcelHelper.SetCellValue(cellObj, writeParams.Value, writeParams.AsText);
 
         MarkModified(context);
 
@@ -60,11 +60,16 @@ public class WriteExcelCellHandler : OperationHandlerBase<Workbook>
             parameters.GetRequired<string>("cell"),
             parameters.GetRequired<string>("value"),
             parameters.GetOptional("sheetIndex", 0)
-        );
+            ,
+            parameters.GetOptional("asText", false));
     }
 
     /// <summary>
     ///     Record to hold write cell parameters.
     /// </summary>
-    private sealed record WriteParameters(string Cell, string Value, int SheetIndex);
+    private sealed record WriteParameters(
+        string Cell,
+        string Value,
+        int SheetIndex,
+        bool AsText = false);
 }

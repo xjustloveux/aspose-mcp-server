@@ -26,6 +26,11 @@ public class ExcelSheetTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -35,11 +40,14 @@ public class ExcelSheetTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
     /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public ExcelSheetTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry = HandlerRegistry<Workbook>.CreateFromNamespace("AsposeMcpServer.Handlers.Excel.Sheet");
     }
 
@@ -87,7 +95,7 @@ Usage examples:
         [Description("Output file path (file mode only)")]
         string? outputPath = null,
         [Description("Sheet index (0-based, required for delete/rename/move/copy/hide)")]
-        int sheetIndex = 0,
+        int? sheetIndex = null,
         [Description("Name of the sheet (required for add operation)")]
         string? sheetName = null,
         [Description("New name for the sheet (required for rename, max 31 characters)")]
@@ -99,7 +107,8 @@ Usage examples:
         [Description("Target file path for copy operation (optional)")]
         string? copyToPath = null)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor,
+            serverConfig: _serverConfig);
 
         var parameters = BuildParameters(operation, sheetIndex, sheetName, newName, insertAt, targetIndex, copyToPath);
 
@@ -112,7 +121,8 @@ Usage examples:
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);
@@ -133,7 +143,7 @@ Usage examples:
     /// <returns>OperationParameters configured with all input values.</returns>
     private static OperationParameters BuildParameters(
         string operation,
-        int sheetIndex,
+        int? sheetIndex,
         string? sheetName,
         string? newName,
         int? insertAt,
@@ -141,7 +151,7 @@ Usage examples:
         string? copyToPath)
     {
         var parameters = new OperationParameters();
-        parameters.Set("sheetIndex", sheetIndex);
+        if (sheetIndex.HasValue) parameters.Set("sheetIndex", sheetIndex.Value);
 
         return operation.ToLowerInvariant() switch
         {

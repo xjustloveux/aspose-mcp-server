@@ -2,6 +2,12 @@ using AsposeMcpServer.Core.Tracking;
 
 namespace AsposeMcpServer.Tests.Core.Tracking;
 
+/// <summary>
+///     Joins the environment-configuration collection: this class mutates process-wide
+///     environment variables, which xUnit's default parallelism would otherwise expose to any
+///     other test reading the same configuration.
+/// </summary>
+[Collection("EnvironmentConfiguration")]
 public class TrackingConfigTests
 {
     [Fact]

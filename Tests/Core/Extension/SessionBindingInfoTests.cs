@@ -354,7 +354,7 @@ public class SessionBindingInfoTests
             OutputFormat = "pdf",
             NeedsSend = false
         };
-        var options = new ConversionOptions { JpegQuality = 85 };
+        var options = new ConversionOptions { RecoveryDirectory = Path.GetTempPath(), JpegQuality = 85 };
 
         binding.UpdateFormatAndOptions("html", options);
 
@@ -370,7 +370,7 @@ public class SessionBindingInfoTests
         binding.RecordConversionFailure();
         binding.RecordConversionFailure();
 
-        binding.UpdateFormatAndOptions("html", new ConversionOptions());
+        binding.UpdateFormatAndOptions("html", ConversionOptions.WithoutAHost());
 
         Assert.Equal(0, binding.ConversionFailures);
     }
@@ -383,7 +383,7 @@ public class SessionBindingInfoTests
         binding.RecordConversionFailure();
         Assert.True(binding.IsInBackoff());
 
-        binding.UpdateFormatAndOptions("html", new ConversionOptions());
+        binding.UpdateFormatAndOptions("html", ConversionOptions.WithoutAHost());
 
         Assert.False(binding.IsInBackoff());
     }
@@ -405,6 +405,7 @@ public class SessionBindingInfoTests
     {
         var options = new ConversionOptions
         {
+            RecoveryDirectory = Path.GetTempPath(),
             JpegQuality = 90,
             Dpi = 150,
             CsvSeparator = ";"
@@ -427,6 +428,7 @@ public class SessionBindingInfoTests
         {
             ConversionOptions = new ConversionOptions
             {
+                RecoveryDirectory = Path.GetTempPath(),
                 JpegQuality = 85,
                 Dpi = 300
             }
@@ -443,11 +445,11 @@ public class SessionBindingInfoTests
     {
         var binding1 = new SessionBindingInfo
         {
-            ConversionOptions = new ConversionOptions { JpegQuality = 85 }
+            ConversionOptions = new ConversionOptions { RecoveryDirectory = Path.GetTempPath(), JpegQuality = 85 }
         };
         var binding2 = new SessionBindingInfo
         {
-            ConversionOptions = new ConversionOptions { JpegQuality = 90 }
+            ConversionOptions = new ConversionOptions { RecoveryDirectory = Path.GetTempPath(), JpegQuality = 90 }
         };
 
         var key1 = binding1.GetOptionsCacheKey();
@@ -463,6 +465,7 @@ public class SessionBindingInfoTests
         {
             ConversionOptions = new ConversionOptions
             {
+                RecoveryDirectory = Path.GetTempPath(),
                 JpegQuality = 85,
                 CsvSeparator = ",",
                 PdfCompliance = "PDF/A-1b",

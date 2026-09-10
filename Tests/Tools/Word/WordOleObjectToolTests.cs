@@ -493,7 +493,9 @@ public class WordOleObjectToolTests : IDisposable
         var raw = tool.Execute("list", path, password: "hunter2");
 
         var data = ((FinalizedResult<OleListResult>)raw).Data;
-        Assert.True(data.Count >= 0, "List operation must succeed after correct password");
+        // The fixture embeds no OLE object; what the correct password buys is the ability to
+        // open the file and list at all, so an empty list is the expected success.
+        Assert.Empty(data.Items);
     }
 
     /// <summary>

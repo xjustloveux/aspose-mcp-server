@@ -30,6 +30,8 @@ public class ConvertEmailFileHandler : OperationHandlerBase<object>
         var path = parameters.GetRequired<string>("path");
         var outputPath = parameters.GetRequired<string>("outputPath");
         SecurityHelper.ValidateFilePath(path, "path", true);
+        path = SecurityHelper.ResolveAndEnsureWithinAllowlist(path,
+            context.ServerConfig?.AllowedBasePaths ?? [], "path");
         SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
         if (!File.Exists(path))

@@ -25,7 +25,11 @@ public static class WordTableHelper
             if (sectionIndex.Value < 0 || sectionIndex.Value >= doc.Sections.Count)
                 throw new ArgumentException($"Section index {sectionIndex.Value} out of range");
             var section = doc.Sections[sectionIndex.Value];
-            return section.Body.GetChildNodes(NodeType.Table, true).Cast<Table>().ToList();
+            // The whole section, not just its body: the document-wide branch below walks headers
+            // and footers too, so scanning only the body gave the two branches different index
+            // spaces. A template with a header table then made the same index name a different
+            // table depending on whether sectionIndex was supplied, and deletes hit the wrong one.
+            return section.GetChildNodes(NodeType.Table, true).Cast<Table>().ToList();
         }
 
         return doc.GetChildNodes(NodeType.Table, true).Cast<Table>().ToList();
@@ -230,6 +234,7 @@ public static class WordTableHelper
     /// <summary>
     ///     Validates if the merge range is valid.
     /// </summary>
+    /// <returns><c>true</c> when it does; otherwise <c>false</c>.</returns>
     private static bool IsValidMergeRange(Table table, int startRow, int endRow, int startCol,
         int endCol)
     {

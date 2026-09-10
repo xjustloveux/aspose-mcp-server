@@ -13,6 +13,8 @@ namespace AsposeMcpServer.Handlers.Pdf.FormField;
 [ResultType(typeof(SuccessResult))]
 public class ImportPdfFormDataHandler : OperationHandlerBase<Document>
 {
+    private const string DataPathParameter = "dataPath";
+
     /// <inheritdoc />
     public override string Operation => "import";
 
@@ -31,11 +33,13 @@ public class ImportPdfFormDataHandler : OperationHandlerBase<Document>
     {
         var p = ExtractImportParameters(parameters);
 
-        SecurityHelper.ValidateFilePath(p.DataPath, "dataPath", true);
-        if (!File.Exists(p.DataPath))
+        SecurityHelper.ValidateFilePath(p.DataPath, DataPathParameter, true);
+        var dataPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.DataPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], DataPathParameter);
+        if (!File.Exists(dataPath))
             throw new FileNotFoundException("The specified file was not found.");
 
-        var format = p.Format ?? DetectFormatFromExtension(p.DataPath);
+        var format = p.Format ?? DetectFormatFromExtension(dataPath);
 
         // Form is intentionally NOT wrapped in 'using': disposing the facade disposes the bound document,
         // which is owned by the caller (the session in session mode, the pipeline in file mode), not by this
@@ -44,8 +48,8 @@ public class ImportPdfFormDataHandler : OperationHandlerBase<Document>
         var form = new Form(context.Document);
         // H49: resolve symlinks immediately before the read sink (bug 20260415-symlink-toctou-sweep).
         var resolvedDataPath =
-            SecurityHelper.ResolveAndEnsureWithinAllowlist(p.DataPath, context.ServerConfig?.AllowedBasePaths ?? [],
-                "dataPath");
+            SecurityHelper.ResolveAndEnsureWithinAllowlist(dataPath, context.ServerConfig?.AllowedBasePaths ?? [],
+                DataPathParameter);
         using var stream = new FileStream(resolvedDataPath, FileMode.Open, FileAccess.Read);
 
         switch (format.ToLowerInvariant())
@@ -96,7 +100,7 @@ public class ImportPdfFormDataHandler : OperationHandlerBase<Document>
     private static ImportParameters ExtractImportParameters(OperationParameters parameters)
     {
         return new ImportParameters(
-            parameters.GetRequired<string>("dataPath"),
+            parameters.GetRequired<string>(DataPathParameter),
             parameters.GetOptional<string?>("format")
         );
     }

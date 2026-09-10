@@ -27,6 +27,11 @@ public class PptDataOperationsTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Session manager for document lifecycle management.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -36,11 +41,14 @@ public class PptDataOperationsTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
     /// <param name="identityAccessor">Optional identity accessor for session isolation.</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public PptDataOperationsTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry =
             HandlerRegistry<Presentation>.CreateFromNamespace("AsposeMcpServer.Handlers.PowerPoint.DataOperations");
     }
@@ -82,7 +90,8 @@ Usage examples:
         [Description("Include Base64 encoded thumbnail image (optional for slide_details, default false)")]
         bool includeThumbnail = false)
     {
-        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor,
+            serverConfig: _serverConfig);
 
         var parameters = BuildParameters(operation, slideIndex, includeThumbnail);
 
@@ -94,7 +103,8 @@ Usage examples:
             SessionManager = _sessionManager,
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
-            SourcePath = path
+            SourcePath = path,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);

@@ -7,6 +7,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Text;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class ReplacePptTextHandlerTests : PptHandlerTestBase
 {
     private readonly ReplacePptTextHandler _handler = new();

@@ -72,6 +72,9 @@ public class AuthMiddlewareTests : IDisposable
         {
             Enabled = true,
             Mode = ApiKeyMode.Gateway,
+            // A-04: gateway mode trusts nobody until a proxy is named; this case is about
+            // header handling, so it declares the boundary as enforced elsewhere.
+            TrustedProxies = [TrustedProxyEvaluator.TrustAnyEntry],
             HeaderName = "X-API-Key",
             GroupIdentifierHeader = "X-Group-Id"
         };

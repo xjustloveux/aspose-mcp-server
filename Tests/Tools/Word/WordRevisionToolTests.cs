@@ -110,7 +110,7 @@ public class WordRevisionToolTests : WordTestBase
             originalPath: originalPath, revisedPath: revisedPath);
         Assert.True(File.Exists(outputPath));
         var data = GetResultData<CompareDocumentsResult>(result);
-        Assert.True(data.RevisionCount >= 0);
+        Assert.Equal(2, data.RevisionCount);
         Assert.Equal(outputPath, data.OutputPath);
     }
 

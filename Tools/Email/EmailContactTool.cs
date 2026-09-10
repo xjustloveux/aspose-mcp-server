@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Errors.Email;
 using AsposeMcpServer.Helpers;
 using ModelContextProtocol.Server;
 
@@ -19,10 +20,17 @@ public class EmailContactTool
     private readonly HandlerRegistry<object> _handlerRegistry;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Initializes a new instance of the <see cref="EmailContactTool" /> class.
     /// </summary>
-    public EmailContactTool()
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
+    public EmailContactTool(ServerConfig? serverConfig = null)
     {
+        _serverConfig = serverConfig;
         _handlerRegistry =
             HandlerRegistry<object>.CreateFromNamespace("AsposeMcpServer.Handlers.Email.Contact");
     }
@@ -95,10 +103,23 @@ Supported formats: VCF (vCard), MSG (Outlook)")]
         {
             Document = new object(),
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
-        var result = handler.Execute(operationContext, parameters);
+        object result;
+        try
+        {
+            result = handler.Execute(operationContext, parameters);
+        }
+        catch (Exception ex) when (ex is not ArgumentException and not KeyNotFoundException
+                                       and not FileNotFoundException and not UnauthorizedAccessException)
+        {
+            // Aspose.Email failures reached the caller as the global sentinel, which said nothing
+            // about what went wrong. The family translator turns the ones it recognises into an
+            // actionable message and still sanitises everything else.
+            throw EmailErrorTranslator.Translate(ex, Path.GetFileName(path ?? string.Empty));
+        }
 
         return ResultHelper.FinalizeResult((dynamic)result, outputPath ?? path, (string?)null);
     }

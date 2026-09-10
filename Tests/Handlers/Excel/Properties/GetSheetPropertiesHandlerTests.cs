@@ -65,8 +65,8 @@ public class GetSheetPropertiesHandlerTests : ExcelHandlerTestBase
         var res = _handler.Execute(context, parameters);
 
         var result = Assert.IsType<GetSheetPropertiesResult>(res);
-        Assert.True(result.DataRowCount >= 0);
-        Assert.True(result.DataColumnCount >= 0);
+        Assert.Equal(2, result.DataRowCount);
+        Assert.Equal(2, result.DataColumnCount);
     }
 
     [Fact]
@@ -94,10 +94,10 @@ public class GetSheetPropertiesHandlerTests : ExcelHandlerTestBase
         var res = _handler.Execute(context, parameters);
 
         var result = Assert.IsType<GetSheetPropertiesResult>(res);
-        Assert.True(result.CommentsCount >= 0);
-        Assert.True(result.ChartsCount >= 0);
-        Assert.True(result.PicturesCount >= 0);
-        Assert.True(result.HyperlinksCount >= 0);
+        Assert.Equal(0, result.CommentsCount);
+        Assert.Equal(0, result.ChartsCount);
+        Assert.Equal(0, result.PicturesCount);
+        Assert.Equal(0, result.HyperlinksCount);
     }
 
     #endregion

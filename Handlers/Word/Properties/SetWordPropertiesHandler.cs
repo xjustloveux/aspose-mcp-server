@@ -1,8 +1,8 @@
-﻿using System.Globalization;
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using Aspose.Words;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Properties;
@@ -33,14 +33,16 @@ public class SetWordPropertiesHandler : OperationHandlerBase<Document>
         var doc = context.Document;
         var props = doc.BuiltInDocumentProperties;
 
-        if (!string.IsNullOrEmpty(setParams.Title)) props.Title = setParams.Title;
-        if (!string.IsNullOrEmpty(setParams.Subject)) props.Subject = setParams.Subject;
-        if (!string.IsNullOrEmpty(setParams.Author)) props.Author = setParams.Author;
-        if (!string.IsNullOrEmpty(setParams.Keywords)) props.Keywords = setParams.Keywords;
-        if (!string.IsNullOrEmpty(setParams.Comments)) props.Comments = setParams.Comments;
-        if (!string.IsNullOrEmpty(setParams.Category)) props.Category = setParams.Category;
-        if (!string.IsNullOrEmpty(setParams.Company)) props.Company = setParams.Company;
-        if (!string.IsNullOrEmpty(setParams.Manager)) props.Manager = setParams.Manager;
+        // null means the caller did not supply the field; an empty string means clear it.
+        // Testing IsNullOrEmpty collapsed the two, so a field could never be cleared.
+        if (setParams.Title != null) props.Title = setParams.Title;
+        if (setParams.Subject != null) props.Subject = setParams.Subject;
+        if (setParams.Author != null) props.Author = setParams.Author;
+        if (setParams.Keywords != null) props.Keywords = setParams.Keywords;
+        if (setParams.Comments != null) props.Comments = setParams.Comments;
+        if (setParams.Category != null) props.Category = setParams.Category;
+        if (setParams.Company != null) props.Company = setParams.Company;
+        if (setParams.Manager != null) props.Manager = setParams.Manager;
 
         if (!string.IsNullOrEmpty(setParams.CustomPropertiesJson))
         {
@@ -99,7 +101,7 @@ public class SetWordPropertiesHandler : OperationHandlerBase<Document>
 
             if (jv.TryGetValue<string>(out var strVal) && !string.IsNullOrEmpty(strVal))
             {
-                if (DateTime.TryParse(strVal, CultureInfo.InvariantCulture, out var dateVal))
+                if (IsoDateTimeHelper.TryParse(strVal, out var dateVal))
                 {
                     doc.CustomDocumentProperties.Add(key, dateVal);
                     return;

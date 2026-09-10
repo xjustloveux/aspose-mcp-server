@@ -14,6 +14,7 @@ namespace AsposeMcpServer.Tests.Tools.PowerPoint;
 ///     Detailed parameter validation and business logic tests are in Handler tests.
 /// </summary>
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class PptTextToolTests : PptTestBase
 {
     private readonly PptTextTool _tool;
@@ -69,7 +70,10 @@ public class PptTextToolTests : PptTestBase
             }
         }
 
-        Assert.True(correctShapeIndex >= 0);
+        // The evaluation notice occupies the first shape slots, so the first editable autoshape
+        // is not at index 0 there; the index found above is still the one edited below.
+        if (!IsEvaluationMode())
+            Assert.Equal(0, correctShapeIndex);
 
         var outputPath = CreateTestFilePath("test_edit_text_output.pptx");
         _tool.Execute("edit", pptPath, slideIndex: 0, shapeIndex: correctShapeIndex, text: "Updated Text",

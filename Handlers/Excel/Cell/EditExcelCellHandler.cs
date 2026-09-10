@@ -40,7 +40,7 @@ public class EditExcelCellHandler : OperationHandlerBase<Workbook>
         else if (!string.IsNullOrEmpty(editParams.Formula))
             cellObj.Formula = editParams.Formula;
         else if (!string.IsNullOrEmpty(editParams.Value))
-            ExcelHelper.SetCellValue(cellObj, editParams.Value);
+            ExcelHelper.SetCellValue(cellObj, editParams.Value, editParams.AsText);
         else
             throw new ArgumentException("Either value, formula, or clearValue must be provided");
 
@@ -62,11 +62,18 @@ public class EditExcelCellHandler : OperationHandlerBase<Workbook>
             parameters.GetOptional<string?>("value"),
             parameters.GetOptional<string?>("formula"),
             parameters.GetOptional("clearValue", false)
-        );
+            ,
+            parameters.GetOptional("asText", false));
     }
 
     /// <summary>
     ///     Record to hold edit cell parameters.
     /// </summary>
-    private sealed record EditParameters(string Cell, int SheetIndex, string? Value, string? Formula, bool ClearValue);
+    private sealed record EditParameters(
+        string Cell,
+        int SheetIndex,
+        string? Value,
+        string? Formula,
+        bool ClearValue,
+        bool AsText = false);
 }

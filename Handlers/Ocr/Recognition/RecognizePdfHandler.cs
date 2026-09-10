@@ -1,9 +1,9 @@
 using System.IO.Compression;
 using Aspose.OCR;
-using Aspose.Words;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Ocr;
 using SaveFormat = Aspose.OCR.SaveFormat;
 
@@ -18,6 +18,8 @@ namespace AsposeMcpServer.Handlers.Ocr.Recognition;
 [ResultType(typeof(OcrConversionResult))]
 public class RecognizePdfHandler : OperationHandlerBase<AsposeOcr>
 {
+    private const string OutputPathParameter = "outputPath";
+
     /// <inheritdoc />
     public override string Operation => "recognize_pdf";
 
@@ -43,12 +45,16 @@ public class RecognizePdfHandler : OperationHandlerBase<AsposeOcr>
 
         var p = ExtractParameters(parameters);
         SecurityHelper.ValidateFilePath(p.Path, "path", true);
-        SecurityHelper.ValidateFilePath(p.OutputPath, "outputPath", true);
+        var resolvedPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.Path,
+            context.ServerConfig?.AllowedBasePaths ?? [], "path");
+        SecurityHelper.ValidateFilePath(p.OutputPath, OutputPathParameter, true);
+        _ = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.OutputPath,
+            context.ServerConfig?.AllowedBasePaths ?? [], OutputPathParameter);
 
-        if (!File.Exists(p.Path))
+        if (!File.Exists(resolvedPath))
             throw new FileNotFoundException("The specified file was not found.");
 
-        var ext = Path.GetExtension(p.Path);
+        var ext = Path.GetExtension(resolvedPath);
         if (!string.Equals(ext, ".pdf", StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException($"Input file must be a PDF. Got: {ext}");
 
@@ -56,7 +62,7 @@ public class RecognizePdfHandler : OperationHandlerBase<AsposeOcr>
 
         var ocr = context.Document;
         using var input = new OcrInput(InputType.PDF);
-        input.Add(p.Path);
+        input.Add(resolvedPath);
 
         var settings = new RecognitionSettings
         {
@@ -71,7 +77,7 @@ public class RecognizePdfHandler : OperationHandlerBase<AsposeOcr>
 
         // H43: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
         var resolvedOutputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.OutputPath,
-            context.ServerConfig?.AllowedBasePaths ?? [], "outputPath");
+            context.ServerConfig?.AllowedBasePaths ?? [], OutputPathParameter);
         AsposeOcr.SaveMultipageDocument(resolvedOutputPath, saveFormat, results);
 
         if (p.Validate && formatLower == "docx" && HasInvalidXmlValues(resolvedOutputPath))
@@ -92,7 +98,7 @@ public class RecognizePdfHandler : OperationHandlerBase<AsposeOcr>
         var fileInfo = new FileInfo(resolvedOutputPath);
         return new OcrConversionResult
         {
-            SourcePath = p.Path,
+            SourcePath = resolvedPath,
             OutputPath = p.OutputPath,
             TargetFormat = formatLower,
             PageCount = results.Count,
@@ -107,13 +113,13 @@ public class RecognizePdfHandler : OperationHandlerBase<AsposeOcr>
     ///     SaveMultipageDocument may produce DOCX files with "∞" or "-∞" in XML attributes,
     ///     which are not valid OOXML values and prevent the file from opening in Microsoft Word.
     /// </summary>
-    /// <param name="docxPath">The DOCX file path to check.</param>
+    /// <param name="resolvedDocxPath">The allowlist-resolved DOCX file path to check.</param>
     /// <returns>True if the file contains invalid XML values; false otherwise.</returns>
-    internal static bool HasInvalidXmlValues(string docxPath)
+    internal static bool HasInvalidXmlValues(string resolvedDocxPath)
     {
         try
         {
-            using var zip = ZipFile.OpenRead(docxPath);
+            using var zip = ZipFile.OpenRead(resolvedDocxPath);
             var entry = zip.GetEntry("word/document.xml");
             if (entry == null)
                 return false;
@@ -134,11 +140,13 @@ public class RecognizePdfHandler : OperationHandlerBase<AsposeOcr>
     ///     Opens the file with Aspose.Words (which tolerates invalid XML values)
     ///     and re-saves it, producing clean OOXML output.
     /// </summary>
-    /// <param name="docxPath">The DOCX file path to repair.</param>
-    internal static void RepairDocxWithAsposeWords(string docxPath)
+    /// <param name="resolvedDocxPath">The allowlist-resolved DOCX file path to repair.</param>
+    internal static void RepairDocxWithAsposeWords(string resolvedDocxPath)
     {
-        var doc = new Document(docxPath);
-        doc.Save(docxPath, Aspose.Words.SaveFormat.Docx);
+        // A file this handler produced, so nothing here is caller-supplied; it still goes
+        // through the guarded loader so no Word load in the codebase is an exception.
+        var doc = GuardedWordLoader.Load(resolvedDocxPath, []);
+        doc.Save(resolvedDocxPath, Aspose.Words.SaveFormat.Docx);
     }
 
     /// <summary>
@@ -209,7 +217,7 @@ public class RecognizePdfHandler : OperationHandlerBase<AsposeOcr>
     {
         return new RecognizePdfParameters(
             parameters.GetRequired<string>("path"),
-            parameters.GetRequired<string>("outputPath"),
+            parameters.GetRequired<string>(OutputPathParameter),
             parameters.GetRequired<string>("targetFormat"),
             parameters.GetOptional("language", "Eng"),
             parameters.GetOptional("validate", false),

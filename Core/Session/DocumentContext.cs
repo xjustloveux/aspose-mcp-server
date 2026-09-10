@@ -1,9 +1,11 @@
+using System.Diagnostics.CodeAnalysis;
 using Aspose.Cells;
 using Aspose.Slides;
 using Aspose.Words;
 using AsposeMcpServer.Helpers;
-using LoadOptions = Aspose.Words.Loading.LoadOptions;
-using SaveFormat = Aspose.Slides.Export.SaveFormat;
+using AsposeMcpServer.Helpers.PowerPoint;
+using AsposeMcpServer.Helpers.Word;
+using LoadOptions = Aspose.Cells.LoadOptions;
 
 namespace AsposeMcpServer.Core.Session;
 
@@ -22,6 +24,19 @@ public sealed class DocumentContext<T> : IDisposable
     ///     Indicates whether this context owns the document and should dispose it
     /// </summary>
     private readonly bool _ownsDocument;
+
+    /// <summary>
+    ///     Server configuration used to enforce the configured path allowlist on every file sink.
+    ///     Null when no allowlist enforcement is wired (direct construction in tests, or a host
+    ///     that registered no <see cref="ServerConfig" />).
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
+    ///     The session this context operates on, held directly so a change can still be recorded
+    ///     when the session has already been unregistered by a concurrent close or disconnect.
+    /// </summary>
+    private readonly DocumentSession? _session;
 
     /// <summary>
     ///     Session ID if this context is from a session
@@ -44,6 +59,12 @@ public sealed class DocumentContext<T> : IDisposable
     private bool _disposed;
 
     /// <summary>
+    ///     This context's hold on <see cref="SlidesGate" />, for a PowerPoint document. Null for
+    ///     every other format, which is unaffected.
+    /// </summary>
+    private IDisposable? _slidesGate;
+
+    /// <summary>
     ///     Creates a new document context
     /// </summary>
     /// <param name="document">The document instance</param>
@@ -53,9 +74,16 @@ public sealed class DocumentContext<T> : IDisposable
     /// <param name="ownsDocument">Whether this context owns and should dispose the document</param>
     /// <param name="identity">The requestor identity for session isolation</param>
     /// <param name="usageScope">Usage scope to hold during the lifetime of this context (null for file mode)</param>
+    /// <param name="serverConfig">Server config used to enforce the path allowlist on save (null to skip)</param>
+    /// <param name="session">The session instance backing this context (null for file mode)</param>
+    [SuppressMessage("Maintainability", "S107:Methods should not have too many parameters",
+        Justification =
+            "The private constructor is the single composition point for file and session contexts; a parameter object would only hide required ownership invariants.")]
     private DocumentContext(T document, DocumentSessionManager? sessionManager, string? sessionId, string? path,
-        bool ownsDocument, SessionIdentity identity, IDisposable? usageScope = null)
+        bool ownsDocument, SessionIdentity identity, IDisposable? usageScope = null,
+        ServerConfig? serverConfig = null, DocumentSession? session = null)
     {
+        _session = session;
         Document = document;
         _sessionManager = sessionManager;
         _sessionId = sessionId;
@@ -63,6 +91,7 @@ public sealed class DocumentContext<T> : IDisposable
         _ownsDocument = ownsDocument;
         _identity = identity;
         _usageScope = usageScope;
+        _serverConfig = serverConfig;
     }
 
     /// <summary>
@@ -96,6 +125,10 @@ public sealed class DocumentContext<T> : IDisposable
 
         _usageScope?.Dispose();
         if (_ownsDocument && Document is IDisposable disposable) disposable.Dispose();
+
+        // Released last: the document is only finished with once it has been disposed, and this
+        // gate exists because Aspose.Slides is not safe to touch from two threads (SlidesGate).
+        _slidesGate?.Dispose();
     }
 
     /// <summary>
@@ -121,6 +154,40 @@ public sealed class DocumentContext<T> : IDisposable
     {
         var identity = identityAccessor?.GetCurrentIdentity() ?? SessionIdentity.GetAnonymous();
 
+        // Taken before the document is loaded and held until this context is disposed, because the
+        // failures observed were in loading as well as in editing (SlidesGate).
+        var slidesGate = typeof(T) == typeof(Presentation) ? SlidesGate.Enter() : null;
+        try
+        {
+            var context = CreateCore(sessionManager, sessionId, path, identity, password, serverConfig);
+            context._slidesGate = slidesGate;
+            return context;
+        }
+        catch
+        {
+            slidesGate?.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>
+    ///     Creates the context itself, once the format's concurrency rules have been satisfied.
+    /// </summary>
+    /// <param name="sessionManager">Session manager (can be null if sessions not enabled)</param>
+    /// <param name="sessionId">Session ID (if using session mode)</param>
+    /// <param name="path">File path (if using file mode)</param>
+    /// <param name="identity">The resolved caller identity.</param>
+    /// <param name="password">Optional password for encrypted documents</param>
+    /// <param name="serverConfig">Server configuration for path validation</param>
+    /// <returns>The document context.</returns>
+    private static DocumentContext<T> CreateCore(
+        DocumentSessionManager? sessionManager,
+        string? sessionId,
+        string? path,
+        SessionIdentity identity,
+        string? password,
+        ServerConfig? serverConfig)
+    {
         if (!string.IsNullOrEmpty(sessionId))
         {
             if (sessionManager == null)
@@ -132,7 +199,8 @@ public sealed class DocumentContext<T> : IDisposable
             try
             {
                 var doc = session.GetDocument<T>();
-                return new DocumentContext<T>(doc, sessionManager, sessionId, null, false, identity, usageScope);
+                return new DocumentContext<T>(doc, sessionManager, sessionId, null, false, identity, usageScope,
+                    serverConfig, session);
             }
             catch
             {
@@ -145,11 +213,17 @@ public sealed class DocumentContext<T> : IDisposable
             throw new ArgumentException("Either sessionId or path must be provided");
 
         SecurityHelper.ValidateFilePath(path, nameof(path), true);
-        if (serverConfig != null)
-            SecurityHelper.ValidatePathWithinAllowedBases(path, serverConfig.AllowedBasePaths);
 
-        var document = LoadDocument(path, password);
-        return new DocumentContext<T>(document, null, null, path, true, identity);
+        // The loader is given the resolved path, not the one the caller wrote. Validating the
+        // original and then opening it again by name leaves a window in which a symlink inside
+        // the allowlist can be repointed between the two (R2-S06); passing the canonical result
+        // through means the check and the open refer to the same file.
+        if (serverConfig != null)
+            path = SecurityHelper.ResolveAndEnsureWithinAllowlist(path, serverConfig.AllowedBasePaths,
+                nameof(path));
+
+        var document = LoadDocument(path, password, serverConfig);
+        return new DocumentContext<T>(document, null, null, path, true, identity, null, serverConfig);
     }
 
     /// <summary>
@@ -157,7 +231,14 @@ public sealed class DocumentContext<T> : IDisposable
     /// </summary>
     public void MarkDirty()
     {
-        if (_sessionId != null && _sessionManager != null) _sessionManager.MarkDirty(_sessionId, _identity);
+        if (_sessionId == null) return;
+
+        // Set the flag on the session instance first. A concurrent close or disconnect unregisters
+        // the session before it drains in-flight operations, so a manager lookup at this moment
+        // finds nothing and the change would be dropped while the operation still reports success.
+        if (_session != null) _session.IsDirty = true;
+
+        _sessionManager?.MarkDirty(_sessionId, _identity);
     }
 
     /// <summary>
@@ -165,6 +246,10 @@ public sealed class DocumentContext<T> : IDisposable
     /// </summary>
     /// <param name="outputPath">Output path (optional, defaults to source path)</param>
     /// <exception cref="InvalidOperationException">Thrown when no output path is available</exception>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when the resolved save path has an unsafe shape or falls outside the configured
+    ///     allowlist. The check runs before any bytes are written, so a rejected save leaves no file.
+    /// </exception>
     public void Save(string? outputPath = null)
     {
         if (_sessionId != null)
@@ -174,6 +259,14 @@ public sealed class DocumentContext<T> : IDisposable
         }
 
         var savePath = outputPath ?? SourcePath ?? throw new InvalidOperationException("No output path available");
+        SecurityHelper.ValidateFilePath(savePath, nameof(outputPath), true);
+
+        // As in Create: the write goes to the resolved path so the check and the sink cannot be
+        // separated by a link swap (R2-S06).
+        if (_serverConfig != null)
+            savePath = SecurityHelper.ResolveAndEnsureWithinAllowlist(savePath,
+                _serverConfig.AllowedBasePaths, nameof(outputPath));
+
         SaveDocument(Document, savePath);
     }
 
@@ -182,14 +275,15 @@ public sealed class DocumentContext<T> : IDisposable
     /// </summary>
     /// <param name="path">The file path to load the document from.</param>
     /// <param name="password">Optional password for encrypted documents.</param>
+    /// <param name="serverConfig">Server config whose allowlist bounds any referenced resource.</param>
     /// <returns>The loaded document instance.</returns>
     /// <exception cref="NotSupportedException">Thrown when the document type is not supported.</exception>
-    private static T LoadDocument(string path, string? password)
+    private static T LoadDocument(string path, string? password, ServerConfig? serverConfig)
     {
         var type = typeof(T);
 
         if (type == typeof(Document))
-            return (T)(object)LoadWordDocument(path, password);
+            return (T)(object)LoadWordDocument(path, password, serverConfig);
 
         if (type == typeof(Workbook))
             return (T)(object)LoadExcelWorkbook(path, password);
@@ -208,20 +302,18 @@ public sealed class DocumentContext<T> : IDisposable
     /// </summary>
     /// <param name="path">The file path to load.</param>
     /// <param name="password">The optional password for protected documents.</param>
+    /// <param name="serverConfig">
+    ///     Server configuration supplying the path allowlist, which bounds where a resource the
+    ///     document references may be read from.
+    /// </param>
     /// <returns>The loaded Word document.</returns>
     /// <exception cref="IncorrectPasswordException">
     ///     Thrown when <paramref name="password" /> is supplied but does not match the
     ///     protected document. Previously swallowed (bug 20260415-session-pwd-swallow).
     /// </exception>
-    private static Document LoadWordDocument(string path, string? password)
+    private static Document LoadWordDocument(string path, string? password, ServerConfig? serverConfig)
     {
-        if (!string.IsNullOrEmpty(password))
-        {
-            var loadOptions = new LoadOptions { Password = password };
-            return new Document(path, loadOptions);
-        }
-
-        return new Document(path);
+        return GuardedWordLoader.Load(path, serverConfig?.AllowedBasePaths ?? [], password);
     }
 
     /// <summary>
@@ -241,7 +333,7 @@ public sealed class DocumentContext<T> : IDisposable
         if (!string.IsNullOrEmpty(password))
             try
             {
-                var loadOptions = new Aspose.Cells.LoadOptions { Password = password };
+                var loadOptions = new LoadOptions { Password = password };
                 return new Workbook(path, loadOptions);
             }
             catch (CellsException ex) when (ex.Code == ExceptionType.IncorrectPassword)
@@ -307,7 +399,7 @@ public sealed class DocumentContext<T> : IDisposable
                 workbook.Save(path);
                 break;
             case Presentation presentation:
-                presentation.Save(path, SaveFormat.Pptx);
+                presentation.Save(path, PptSaveFormatResolver.Resolve(path));
                 break;
             case Aspose.Pdf.Document pdfDoc:
                 pdfDoc.Save(path);

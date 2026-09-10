@@ -28,29 +28,29 @@ public class WebSocketConnectionHandlerTests
     [Fact]
     public void Constructor_WithValidParameters_ShouldStoreFields()
     {
-        var handler = new WebSocketConnectionHandler("/path/to/executable", "--arg1");
+        var handler = new WebSocketConnectionHandler("/path/to/executable", ["--arg1", "--stdio"]);
 
         Assert.NotNull(handler);
         var executableField = typeof(WebSocketConnectionHandler)
             .GetField("_executablePath", BindingFlags.NonPublic | BindingFlags.Instance);
-        var toolArgsField = typeof(WebSocketConnectionHandler)
-            .GetField("_toolArgs", BindingFlags.NonPublic | BindingFlags.Instance);
+        var argumentsField = typeof(WebSocketConnectionHandler)
+            .GetField("_childArguments", BindingFlags.NonPublic | BindingFlags.Instance);
         Assert.Equal("/path/to/executable", executableField?.GetValue(handler));
-        Assert.Equal("--arg1", toolArgsField?.GetValue(handler));
+        Assert.Equal(["--arg1", "--stdio"], (IReadOnlyList<string>?)argumentsField?.GetValue(handler));
     }
 
     [Fact]
     public void Constructor_WithEmptyExecutablePath_ShouldStoreEmptyValues()
     {
-        var handler = new WebSocketConnectionHandler("", "");
+        var handler = new WebSocketConnectionHandler("", ["--stdio"]);
 
         Assert.NotNull(handler);
         var executableField = typeof(WebSocketConnectionHandler)
             .GetField("_executablePath", BindingFlags.NonPublic | BindingFlags.Instance);
-        var toolArgsField = typeof(WebSocketConnectionHandler)
-            .GetField("_toolArgs", BindingFlags.NonPublic | BindingFlags.Instance);
+        var argumentsField = typeof(WebSocketConnectionHandler)
+            .GetField("_childArguments", BindingFlags.NonPublic | BindingFlags.Instance);
         Assert.Equal("", executableField?.GetValue(handler));
-        Assert.Equal("", toolArgsField?.GetValue(handler));
+        Assert.Equal(["--stdio"], (IReadOnlyList<string>?)argumentsField?.GetValue(handler));
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public class WebSocketConnectionHandlerTests
             .Setup(x => x.CreateLogger(It.IsAny<string>()))
             .Returns(mockLogger.Object);
 
-        var handler = new WebSocketConnectionHandler("/path/to/exe", "--args", mockLoggerFactory.Object);
+        var handler = new WebSocketConnectionHandler("/path/to/exe", ["--args", "--stdio"], mockLoggerFactory.Object);
 
         Assert.NotNull(handler);
         var loggerField = typeof(WebSocketConnectionHandler)
@@ -74,7 +74,7 @@ public class WebSocketConnectionHandlerTests
     [Fact]
     public void Constructor_WithNullLoggerFactory_ShouldHaveNullLogger()
     {
-        var handler = new WebSocketConnectionHandler("/path/to/exe", "--args");
+        var handler = new WebSocketConnectionHandler("/path/to/exe", ["--args", "--stdio"]);
 
         Assert.NotNull(handler);
         var loggerField = typeof(WebSocketConnectionHandler)

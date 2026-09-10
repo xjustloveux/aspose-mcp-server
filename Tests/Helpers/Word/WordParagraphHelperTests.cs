@@ -24,16 +24,25 @@ public class WordParagraphHelperTests
         Assert.Equal(expected, result);
     }
 
+    /// <summary>
+    ///     A value this helper does not know is refused, not quietly turned into the default.
+    ///     <para>
+    ///         It used to return Left, so <c>alignment: "centered"</c> left-aligned the paragraph
+    ///         and reported success — the caller was never told their value meant nothing
+    ///         (§23.13.1).
+    ///     </para>
+    /// </summary>
+    /// <param name="input">A value outside the documented set.</param>
     [Theory]
     [InlineData("invalid")]
     [InlineData("unknown")]
     [InlineData("")]
     [InlineData("centered")]
-    public void GetAlignment_WithInvalidValues_ReturnsLeft(string input)
+    public void GetAlignment_WithUnknownValues_IsRefused(string input)
     {
-        var result = WordParagraphHelper.GetAlignment(input);
+        var refusal = Assert.Throws<ArgumentException>(() => WordParagraphHelper.GetAlignment(input));
 
-        Assert.Equal(ParagraphAlignment.Left, result);
+        Assert.Contains("Unknown alignment", refusal.Message, StringComparison.Ordinal);
     }
 
     #endregion
@@ -53,12 +62,19 @@ public class WordParagraphHelperTests
         Assert.Equal(expected, result);
     }
 
+    /// <summary>
+    ///     The four multiple-based rules the tool documents all map to Multiple; anything else is
+    ///     refused. The whitelist comes from <c>word_paragraph</c>'s own parameter description —
+    ///     writing it from the switch arms instead is how <c>double</c>, a value in real use,
+    ///     nearly became a refusal (§23.13.1).
+    /// </summary>
+    /// <param name="input">A documented multiple-based rule.</param>
     [Theory]
     [InlineData("multiple")]
-    [InlineData("invalid")]
-    [InlineData("")]
     [InlineData("single")]
-    public void GetLineSpacingRule_WithInvalidOrDefaultValues_ReturnsMultiple(string input)
+    [InlineData("oneAndHalf")]
+    [InlineData("double")]
+    public void GetLineSpacingRule_WithDocumentedMultipleRules_ReturnsMultiple(string input)
     {
         var result = WordParagraphHelper.GetLineSpacingRule(input);
 
@@ -89,16 +105,18 @@ public class WordParagraphHelperTests
         Assert.Equal(expected, result);
     }
 
+    /// <summary>A tab alignment outside the documented set is refused.</summary>
+    /// <param name="input">A value outside the documented set.</param>
     [Theory]
     [InlineData("invalid")]
     [InlineData("unknown")]
     [InlineData("")]
     [InlineData("centered")]
-    public void GetTabAlignment_WithInvalidValues_ReturnsLeft(string input)
+    public void GetTabAlignment_WithUnknownValues_IsRefused(string input)
     {
-        var result = WordParagraphHelper.GetTabAlignment(input);
+        var refusal = Assert.Throws<ArgumentException>(() => WordParagraphHelper.GetTabAlignment(input));
 
-        Assert.Equal(TabAlignment.Left, result);
+        Assert.Contains("Unknown tab alignment", refusal.Message, StringComparison.Ordinal);
     }
 
     #endregion
@@ -125,16 +143,18 @@ public class WordParagraphHelperTests
         Assert.Equal(expected, result);
     }
 
+    /// <summary>A tab leader outside the documented set is refused.</summary>
+    /// <param name="input">A value outside the documented set.</param>
     [Theory]
     [InlineData("invalid")]
     [InlineData("unknown")]
     [InlineData("")]
     [InlineData("spaces")]
-    public void GetTabLeader_WithInvalidValues_ReturnsNone(string input)
+    public void GetTabLeader_WithUnknownValues_IsRefused(string input)
     {
-        var result = WordParagraphHelper.GetTabLeader(input);
+        var refusal = Assert.Throws<ArgumentException>(() => WordParagraphHelper.GetTabLeader(input));
 
-        Assert.Equal(TabLeader.None, result);
+        Assert.Contains("Unknown tab leader", refusal.Message, StringComparison.Ordinal);
     }
 
     #endregion

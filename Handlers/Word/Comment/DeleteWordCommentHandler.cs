@@ -1,6 +1,7 @@
 using Aspose.Words;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.Comment;
@@ -29,15 +30,18 @@ public class DeleteWordCommentHandler : OperationHandlerBase<Document>
         var p = ExtractDeleteParameters(parameters);
 
         var doc = context.Document;
-        var comments = doc.GetChildNodes(NodeType.Comment, true);
+
+        // The index space must be the one get and reply use: top-level comments ordered by date.
+        // A raw NodeType.Comment walk also returns replies and follows document order, so on a
+        // document with replies or out-of-order dates the same index named a different comment
+        // depending on which operation the caller had used, and delete removed the wrong one.
+        var comments = WordCommentHelper.GetTopLevelComments(doc);
 
         if (p.CommentIndex < 0 || p.CommentIndex >= comments.Count)
             throw new ArgumentException(
                 $"Comment index {p.CommentIndex} is out of range (document has {comments.Count} comments)");
 
-        var commentToDelete = comments[p.CommentIndex] as Aspose.Words.Comment;
-        if (commentToDelete == null)
-            throw new InvalidOperationException($"Unable to find comment at index {p.CommentIndex}");
+        var commentToDelete = comments[p.CommentIndex];
 
         var author = commentToDelete.Author;
 
@@ -56,7 +60,8 @@ public class DeleteWordCommentHandler : OperationHandlerBase<Document>
 
         MarkModified(context);
 
-        var remainingCount = doc.GetChildNodes(NodeType.Comment, true).Count;
+        // Reported in the same space as the index the caller supplied: top-level comments only.
+        var remainingCount = WordCommentHelper.GetTopLevelComments(doc).Count;
 
         return new SuccessResult
         {

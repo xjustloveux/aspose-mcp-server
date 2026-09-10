@@ -115,6 +115,7 @@ public static class ParagraphResolver
     ///     handle minted before an edit still resolves after indices shift). Throws when the handle is
     ///     unknown to this document instance or the paragraph it named has since been removed.
     /// </summary>
+    /// <returns>The paragraph ref.</returns>
     private static ParagraphRef ResolveByHandle(Document doc, string handle)
     {
         var node = HandleTables.TryGetValue(doc, out var registry) ? registry.Lookup(handle) : null;
@@ -291,6 +292,7 @@ public static class ParagraphResolver
     ///     Returns every text-bearing shape (text box) in document order, the container set that
     ///     TextBox addresses index into.
     /// </summary>
+    /// <returns>The shape found, in order.</returns>
     private static List<Shape> GetTextBoxShapes(Document doc)
     {
         return doc.GetChildNodes(NodeType.Shape, true).Cast<Shape>()
@@ -301,6 +303,7 @@ public static class ParagraphResolver
     /// <summary>
     ///     Returns the footnotes or endnotes in document order (the set a note container index selects).
     /// </summary>
+    /// <returns>The footnote found, in order.</returns>
     private static List<Footnote> GetNotes(Document doc, bool endnotes)
     {
         return doc.GetChildNodes(NodeType.Footnote, true).Cast<Footnote>()
@@ -311,6 +314,7 @@ public static class ParagraphResolver
     /// <summary>
     ///     Selects a container by ordinal index and returns its own story paragraphs.
     /// </summary>
+    /// <returns>The word paragraph found, in order.</returns>
     private static List<WordParagraph> GetContainerParagraphs(IReadOnlyList<CompositeNode> containers,
         int containerIndex, string label)
     {
@@ -326,6 +330,7 @@ public static class ParagraphResolver
     ///     Returns the paragraphs of the comment selected by the address. For Comment stories the
     ///     container index is the comment's stable id, not a positional ordinal.
     /// </summary>
+    /// <returns>The word paragraph found, in order.</returns>
     private static List<WordParagraph> GetCommentParagraphs(Document doc, ParagraphAddress address)
     {
         var comments = doc.GetChildNodes(NodeType.Comment, true).Cast<Comment>().ToList();
@@ -345,6 +350,7 @@ public static class ParagraphResolver
     /// <summary>
     ///     Returns the paragraphs of the footnote / endnote selected by the address.
     /// </summary>
+    /// <returns>The word paragraph found, in order.</returns>
     private static List<WordParagraph> GetNoteParagraphs(Document doc, ParagraphAddress address)
     {
         var endnotes = address.StoryType == StoryTypes.Endnote;

@@ -59,8 +59,12 @@ public class RecognizeHandlerTests : HandlerTestBase<AsposeOcr>
 
         var ex = Record.Exception(() => _handler.Execute(context, parameters));
 
-        if (ex is ArgumentException argEx)
-            Assert.DoesNotContain("Unsupported file format", argEx.Message);
+        // The fixture is not a real image, so recognition itself is expected to fail; what this
+        // test guards is that the format was accepted. Asserting only inside an `if` meant the
+        // test made no assertion at all whenever a different exception type came back, so it
+        // passed even if the handler had started rejecting the format outright.
+        var message = ex?.Message ?? string.Empty;
+        Assert.DoesNotContain("Unsupported file format", message);
     }
 
     #endregion
@@ -127,15 +131,28 @@ public class RecognizeHandlerTests : HandlerTestBase<AsposeOcr>
         Assert.NotEqual(Language.None, result);
     }
 
+    /// <summary>
+    ///     Naming a language this build does not carry used to fall back to English silently, so
+    ///     the caller received English text with no indication that their choice was ignored.
+    /// </summary>
     [Theory]
     [InlineData("InvalidLanguage")]
-    [InlineData("")]
     [InlineData("xyz")]
-    public void ParseLanguage_WithInvalidLanguage_ShouldDefaultToEng(string input)
+    [InlineData("Japanese")]
+    [InlineData("Korean")]
+    public void ParseLanguage_WithUnsupportedLanguage_ShouldBeRejected(string input)
     {
-        var result = RecognizeHandler.ParseLanguage(input);
+        var ex = Assert.Throws<ArgumentException>(() => RecognizeHandler.ParseLanguage(input));
 
-        Assert.Equal(Language.Eng, result);
+        Assert.Contains("is not supported", ex.Message);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void ParseLanguage_WithNoLanguage_ShouldDefaultToEng(string input)
+    {
+        Assert.Equal(Language.Eng, RecognizeHandler.ParseLanguage(input));
     }
 
     #endregion
@@ -200,7 +217,7 @@ public class RecognizeHandlerTests : HandlerTestBase<AsposeOcr>
 
         var ocrResult = Assert.IsType<OcrRecognitionResult>(result);
         Assert.NotNull(ocrResult.Text);
-        Assert.True(ocrResult.PageCount >= 0);
+        Assert.Equal(0, ocrResult.PageCount);
         Assert.NotNull(ocrResult.Pages);
         AssertNotModified(context);
     }

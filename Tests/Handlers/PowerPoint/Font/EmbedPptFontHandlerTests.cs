@@ -6,6 +6,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Font;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class EmbedPptFontHandlerTests : PptHandlerTestBase
 {
     private readonly EmbedPptFontHandler _handler = new();

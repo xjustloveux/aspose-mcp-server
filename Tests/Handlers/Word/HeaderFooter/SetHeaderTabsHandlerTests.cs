@@ -275,8 +275,11 @@ public class SetHeaderTabsHandlerTests : WordHandlerTestBase
     }
 
     [Fact]
-    public void Execute_WithNullValuesInTabStop_UsesDefaults()
+    public void Execute_WithATabStopThatOmitsItsPosition_IsRefused()
     {
+        // It used to be accepted and turned into a stop at position 0 — the left margin, which is
+        // no stop at all. The request asked for one, got nothing usable, and was told it had
+        // succeeded (R13-W01).
         var doc = CreateEmptyDocument();
         var context = CreateContext(doc);
         var tabStops = new JsonArray
@@ -288,21 +291,62 @@ public class SetHeaderTabsHandlerTests : WordHandlerTestBase
             { "tabStops", tabStops }
         });
 
-        var res = _handler.Execute(context, parameters);
+        var refusal = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
 
-        Assert.IsType<SuccessResult>(res);
+        Assert.Contains("'position' is required", refusal.Message, StringComparison.Ordinal);
+    }
 
-        if (!IsEvaluationMode(AsposeLibraryType.Words))
+    [Fact]
+    public void Execute_WithAnUnknownAlignment_IsRefusedRatherThanQuietlyLeft()
+    {
+        // The old reader fell back to left for anything it did not recognise, so a misspelling
+        // produced a document that was not what was asked for and said nothing about it.
+        var doc = CreateEmptyDocument();
+        var context = CreateContext(doc);
+        var tabStops = new JsonArray
         {
-            var header = doc.FirstSection.HeadersFooters[HeaderFooterType.HeaderPrimary];
-            Assert.NotNull(header);
-            var para = header.FirstParagraph;
-            Assert.NotNull(para);
-            Assert.Equal(1, para.ParagraphFormat.TabStops.Count);
-            Assert.Equal(0.0, para.ParagraphFormat.TabStops[0].Position);
-            Assert.Equal(TabAlignment.Left, para.ParagraphFormat.TabStops[0].Alignment);
-            Assert.Equal(TabLeader.None, para.ParagraphFormat.TabStops[0].Leader);
-        }
+            new JsonObject { ["position"] = 100.0, ["alignment"] = "centre" }
+        };
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "tabStops", tabStops }
+        });
+
+        var refusal = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+
+        Assert.Contains("centre", refusal.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Execute_WithAMalformedEntryLaterInTheArray_LeavesTheExistingStops()
+    {
+        // The array is read in full before anything is cleared. Reading it as it was applied meant
+        // a bad entry threw after Clear(), so the header came back with no stops at all and the
+        // request reported failure — worse than either accepting or refusing it (§23.4).
+        var doc = CreateEmptyDocument();
+        var context = CreateContext(doc);
+
+        var good = new JsonArray { new JsonObject { ["position"] = 120.0 } };
+        _handler.Execute(context, CreateParameters(new Dictionary<string, object?>
+        {
+            { "tabStops", good }
+        }));
+
+        var bad = new JsonArray
+        {
+            new JsonObject { ["position"] = 60.0 },
+            new JsonObject { ["position"] = "not a number" }
+        };
+
+        Assert.Throws<ArgumentException>(() => _handler.Execute(context,
+            CreateParameters(new Dictionary<string, object?> { { "tabStops", bad } })));
+
+        if (IsEvaluationMode(AsposeLibraryType.Words)) return;
+
+        var stops = doc.FirstSection.HeadersFooters[HeaderFooterType.HeaderPrimary]!
+            .FirstParagraph!.ParagraphFormat.TabStops;
+        Assert.Equal(1, stops.Count);
+        Assert.Equal(120.0, stops[0].Position);
     }
 
     #endregion

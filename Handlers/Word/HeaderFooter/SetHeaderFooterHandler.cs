@@ -103,16 +103,7 @@ public class SetHeaderFooterHandler : OperationHandlerBase<Document>
     /// <param name="clearTextOnly">Whether to clear text only.</param>
     private static void ClearHeaderFooter(Aspose.Words.HeaderFooter hf, bool clearExisting, bool clearTextOnly)
     {
-        if (clearExisting)
-        {
-            if (clearTextOnly)
-                WordHeaderFooterHelper.ClearTextOnly(hf);
-            else
-                hf.RemoveAllChildren();
-        }
-
-        if (!clearTextOnly)
-            hf.RemoveAllChildren();
+        WordHeaderFooterHelper.Clear(hf, clearExisting, clearTextOnly);
     }
 
     /// <summary>

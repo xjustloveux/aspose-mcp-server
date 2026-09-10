@@ -26,6 +26,11 @@ public class PdfSignatureTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     The document session manager for managing in-memory document sessions.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -35,11 +40,14 @@ public class PdfSignatureTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
     /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public PdfSignatureTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry = HandlerRegistry<Document>.CreateFromNamespace("AsposeMcpServer.Handlers.Pdf.Signature");
     }
 
@@ -54,7 +62,8 @@ public class PdfSignatureTool
     /// <param name="certificatePassword">Certificate password (required for sign).</param>
     /// <param name="reason">Reason for signing (for sign, optional).</param>
     /// <param name="location">Location of signing (for sign, optional).</param>
-    /// <param name="signatureIndex">Signature index (0-based, required for delete).</param>
+    /// <param name="signatureIndex">Signature index (0-based); supply this or signatureName for delete.</param>
+    /// <param name="signatureName">Signature field name; supply this or signatureIndex for delete.</param>
     /// <param name="pageIndex">Page index to place signature (1-based, for sign, default: 1).</param>
     /// <param name="x">X position of signature in PDF coordinates (for sign).</param>
     /// <param name="y">Y position of signature in PDF coordinates (for sign).</param>
@@ -78,6 +87,7 @@ Usage examples:
 - Sign with position: pdf_signature(operation='sign', path='doc.pdf', certificatePath='cert.pfx', certificatePassword='password', pageIndex=1, x=100, y=100, width=200, height=100)
 - Sign with image: pdf_signature(operation='sign', path='doc.pdf', certificatePath='cert.pfx', certificatePassword='password', imagePath='stamp.png')
 - Delete signature: pdf_signature(operation='delete', path='doc.pdf', signatureIndex=0)
+- Delete by name: pdf_signature(operation='delete', path='doc.pdf', signatureName='Signature1')
 - Get signatures: pdf_signature(operation='get', path='doc.pdf')")]
     public object Execute(
         [Description("Operation: sign, delete, get")]
@@ -96,8 +106,10 @@ Usage examples:
         string reason = "Document approval",
         [Description("Location of signing (for sign, optional)")]
         string location = "",
-        [Description("Signature index (0-based, required for delete)")]
-        int signatureIndex = 0,
+        [Description("Signature index (0-based; supply this or signatureName for delete)")]
+        int? signatureIndex = null,
+        [Description("Signature field name (supply this or signatureIndex for delete)")]
+        string? signatureName = null,
         [Description("Page index to place signature (1-based, for sign, default: 1)")]
         int pageIndex = 1,
         [Description("X position of signature in PDF coordinates (for sign, default: 100)")]
@@ -111,10 +123,11 @@ Usage examples:
         [Description("Path to signature appearance image (for sign, optional)")]
         string? imagePath = null)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor,
+            serverConfig: _serverConfig);
 
         var parameters = BuildParameters(operation, certificatePath, certificatePassword, reason, location,
-            signatureIndex, pageIndex, x, y, width, height, imagePath);
+            signatureIndex, signatureName, pageIndex, x, y, width, height, imagePath);
 
         var handler = _handlerRegistry.GetHandler(operation);
 
@@ -125,7 +138,8 @@ Usage examples:
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);
@@ -150,7 +164,8 @@ Usage examples:
         string? certificatePassword,
         string reason,
         string location,
-        int signatureIndex,
+        int? signatureIndex,
+        string? signatureName,
         int pageIndex,
         int x,
         int y,
@@ -162,7 +177,7 @@ Usage examples:
         {
             "sign" => BuildSignParameters(certificatePath, certificatePassword, reason, location, pageIndex, x, y,
                 width, height, imagePath),
-            "delete" => BuildDeleteParameters(signatureIndex),
+            "delete" => BuildDeleteParameters(signatureIndex, signatureName),
             _ => new OperationParameters()
         };
     }
@@ -201,12 +216,18 @@ Usage examples:
     /// <summary>
     ///     Builds parameters for the delete signature operation.
     /// </summary>
-    /// <param name="signatureIndex">The signature index to delete (0-based).</param>
+    /// <param name="signatureIndex">The signature index to delete (0-based), or null.</param>
+    /// <param name="signatureName">The signature field name to delete, or null.</param>
     /// <returns>OperationParameters configured for deleting a signature.</returns>
-    private static OperationParameters BuildDeleteParameters(int signatureIndex)
+    private static OperationParameters BuildDeleteParameters(int? signatureIndex, string? signatureName)
     {
         var parameters = new OperationParameters();
-        parameters.Set("signatureIndex", signatureIndex);
+        // Only forward what the caller actually supplied. The index used to be a non-nullable
+        // parameter defaulting to 0, so omitting it looked identical to asking for signature 0 and
+        // the handler's "name or index is required" check could never fire: a delete with no
+        // selector silently removed the first signature.
+        if (signatureIndex.HasValue) parameters.Set("signatureIndex", signatureIndex.Value);
+        if (!string.IsNullOrEmpty(signatureName)) parameters.Set("signatureName", signatureName);
         return parameters;
     }
 }

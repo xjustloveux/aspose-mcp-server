@@ -29,6 +29,8 @@ public class GetHeadersEmailContentHandler : OperationHandlerBase<object>
     {
         var path = parameters.GetRequired<string>("path");
         SecurityHelper.ValidateFilePath(path, "path", true);
+        path = SecurityHelper.ResolveAndEnsureWithinAllowlist(path,
+            context.ServerConfig?.AllowedBasePaths ?? [], "path");
 
         if (!File.Exists(path))
             throw new FileNotFoundException("The specified file was not found.");

@@ -303,8 +303,8 @@ public class TempFileManager : IHostedService, IDisposable
         // Validate user-supplied targetPath BEFORE doing any disk work
         // (bug 20260415-session-loader-path, U3).
         if (!string.IsNullOrEmpty(targetPath))
-            SecurityHelper.ValidateUserPath(targetPath, _serverConfig?.AllowedBasePaths ?? [],
-                nameof(targetPath));
+            targetPath = SecurityHelper.ValidateUserPath(targetPath,
+                _serverConfig?.AllowedBasePaths ?? [], nameof(targetPath));
 
         try
         {
@@ -377,7 +377,7 @@ public class TempFileManager : IHostedService, IDisposable
             // it through the same pipeline: metadata is attacker-influenceable on disk
             // (CRITICAL-1). A user-supplied targetPath was already validated above.
             if (string.IsNullOrEmpty(targetPath))
-                SecurityHelper.ValidateUserPath(destination,
+                destination = SecurityHelper.ValidateUserPath(destination,
                     _serverConfig?.AllowedBasePaths ?? [], "destination");
 
             var targetDir = Path.GetDirectoryName(destination);
@@ -388,11 +388,14 @@ public class TempFileManager : IHostedService, IDisposable
             // second resolve: narrows the TOCTOU window between the defence-in-depth check
             // above and the actual sink; a symlink could be planted between those two points.
             // (bug 20260415-symlink-toctou-sweep, Phase 1)
-            SecurityHelper.ResolveAndEnsureWithinAllowlist(
+            // The resolver's answer is what gets read: calling it and then copying from the
+            // path that was handed in leaves the check describing one file and the read taking
+            // another (R4-S07).
+            var resolvedTempPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(
                 metadata.TempPath,
                 [_config.TempDirectory],
                 "tempPath");
-            File.Copy(metadata.TempPath, destination, true);
+            File.Copy(resolvedTempPath, destination, true);
 
             result.Success = true;
             result.RecoveredPath = destination;

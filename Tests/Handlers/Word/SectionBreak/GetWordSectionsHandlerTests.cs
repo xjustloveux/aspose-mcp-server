@@ -140,8 +140,8 @@ public class GetWordSectionsHandlerTests : WordHandlerTestBase
         Assert.NotNull(result.Sections);
         Assert.NotEmpty(result.Sections);
         Assert.NotNull(result.Sections[0].ContentStatistics);
-        Assert.True(result.Sections[0].ContentStatistics.Paragraphs >= 0);
-        Assert.True(result.Sections[0].ContentStatistics.Tables >= 0);
+        Assert.Equal(1, result.Sections[0].ContentStatistics.Paragraphs);
+        Assert.Equal(0, result.Sections[0].ContentStatistics.Tables);
     }
 
     #endregion

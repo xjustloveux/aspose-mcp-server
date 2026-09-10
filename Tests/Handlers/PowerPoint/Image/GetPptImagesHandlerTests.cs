@@ -12,6 +12,7 @@ using System.Runtime.Versioning;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Image;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class GetPptImagesHandlerTests : PptHandlerTestBase
 {
     private readonly GetPptImagesHandler _handler = new();
@@ -105,7 +106,7 @@ public class GetPptImagesHandlerTests : PptHandlerTestBase
 
         var result = Assert.IsType<GetImagesPptResult>(res);
 
-        Assert.True(result.ImageCount >= 0);
+        Assert.Equal(1, result.ImageCount);
         Assert.NotNull(result.Images);
     }
 
@@ -144,10 +145,10 @@ public class GetPptImagesHandlerTests : PptHandlerTestBase
 
         Assert.True(result.Images.Count > 0);
         var firstImage = result.Images[0];
-        Assert.True(firstImage.X >= 0);
-        Assert.True(firstImage.Y >= 0);
-        Assert.True(firstImage.Width >= 0);
-        Assert.True(firstImage.Height >= 0);
+        Assert.Equal(50, firstImage.X);
+        Assert.Equal(50, firstImage.Y);
+        Assert.Equal(100, firstImage.Width);
+        Assert.Equal(100, firstImage.Height);
     }
 
     #endregion

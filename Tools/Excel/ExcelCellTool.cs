@@ -26,6 +26,11 @@ public class ExcelCellTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -35,11 +40,14 @@ public class ExcelCellTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
     /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public ExcelCellTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry = HandlerRegistry<Workbook>.CreateFromNamespace("AsposeMcpServer.Handlers.Excel.Cell");
     }
 
@@ -53,6 +61,10 @@ public class ExcelCellTool
     /// <param name="sheetIndex">Sheet index (0-based).</param>
     /// <param name="cell">Cell reference (e.g., 'A1', 'B2', 'AA100').</param>
     /// <param name="value">Value to write.</param>
+    /// <param name="asText">
+    ///     Write the value as text rather than letting the spreadsheet
+    ///     interpret it (optional, for write and edit).
+    /// </param>
     /// <param name="formula">Formula to set (optional, for edit, overrides value).</param>
     /// <param name="clearValue">Clear cell value (optional, for edit).</param>
     /// <param name="calculateFormula">Calculate formulas before reading value (optional, for get).</param>
@@ -91,6 +103,9 @@ Usage examples:
         [Description("Cell reference (e.g., 'A1', 'B2', 'AA100')")]
         string? cell = null,
         [Description("Value to write")] string? value = null,
+        [Description(
+            "Store the value exactly as written, with no number, boolean or date detection (default: false). Use it for identifiers and codes that merely look numeric.")]
+        bool asText = false,
         [Description("Formula to set (optional, for edit, overrides value)")]
         string? formula = null,
         [Description("Clear cell value (optional, for edit)")]
@@ -106,9 +121,10 @@ Usage examples:
         [Description("Clear cell format (optional, for clear, default: false)")]
         bool clearFormat = false)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor,
+            serverConfig: _serverConfig);
 
-        var parameters = BuildParameters(operation, sheetIndex, cell, value, formula, clearValue,
+        var parameters = BuildParameters(operation, sheetIndex, cell, value, asText, formula, clearValue,
             calculateFormula, includeFormula, includeFormat, clearContent, clearFormat);
 
         var handler = _handlerRegistry.GetHandler(operation);
@@ -120,7 +136,8 @@ Usage examples:
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);
@@ -141,6 +158,7 @@ Usage examples:
         int sheetIndex,
         string? cell,
         string? value,
+        bool asText,
         string? formula,
         bool clearValue,
         bool calculateFormula,
@@ -155,8 +173,8 @@ Usage examples:
 
         return operation.ToLowerInvariant() switch
         {
-            "write" => BuildWriteParameters(parameters, value),
-            "edit" => BuildEditParameters(parameters, value, formula, clearValue),
+            "write" => BuildWriteParameters(parameters, value, asText),
+            "edit" => BuildEditParameters(parameters, value, asText, formula, clearValue),
             "get" => BuildGetParameters(parameters, calculateFormula, includeFormula, includeFormat),
             "clear" => BuildClearParameters(parameters, clearContent, clearFormat),
             _ => parameters
@@ -168,10 +186,16 @@ Usage examples:
     /// </summary>
     /// <param name="parameters">Base parameters with sheet index and cell reference.</param>
     /// <param name="value">The value to write to the cell.</param>
+    /// <param name="asText">
+    ///     Whether to write the value as text rather than letting the
+    ///     spreadsheet interpret it.
+    /// </param>
     /// <returns>OperationParameters configured for writing cell value.</returns>
-    private static OperationParameters BuildWriteParameters(OperationParameters parameters, string? value)
+    private static OperationParameters BuildWriteParameters(OperationParameters parameters, string? value,
+        bool asText)
     {
         if (value != null) parameters.Set("value", value);
+        parameters.Set("asText", asText);
         return parameters;
     }
 
@@ -180,13 +204,18 @@ Usage examples:
     /// </summary>
     /// <param name="parameters">Base parameters with sheet index and cell reference.</param>
     /// <param name="value">The value to set in the cell.</param>
+    /// <param name="asText">
+    ///     Whether to write the value as text rather than letting the
+    ///     spreadsheet interpret it.
+    /// </param>
     /// <param name="formula">The formula to set in the cell.</param>
     /// <param name="clearValue">Whether to clear the cell value.</param>
     /// <returns>OperationParameters configured for editing cell.</returns>
     private static OperationParameters BuildEditParameters(OperationParameters parameters, string? value,
-        string? formula, bool clearValue)
+        bool asText, string? formula, bool clearValue)
     {
         if (value != null) parameters.Set("value", value);
+        parameters.Set("asText", asText);
         if (formula != null) parameters.Set("formula", formula);
         parameters.Set("clearValue", clearValue);
         return parameters;

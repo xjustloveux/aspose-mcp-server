@@ -6,6 +6,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Handout;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class SetHeaderFooterPptHandoutHandlerTests : PptHandlerTestBase
 {
     private readonly SetHeaderFooterPptHandoutHandler _handler = new();

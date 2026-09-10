@@ -1,6 +1,7 @@
 using Aspose.Email;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Errors.Email;
 using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Results.Common;
 
@@ -33,6 +34,8 @@ public class ExtractEmailAttachmentHandler : OperationHandlerBase<object>
         var idx = parameters.GetRequired<int>("index");
 
         SecurityHelper.ValidateFilePath(path, "path", true);
+        path = SecurityHelper.ResolveAndEnsureWithinAllowlist(path,
+            context.ServerConfig?.AllowedBasePaths ?? [], "path");
         SecurityHelper.ValidateFilePath(outputDir, "outputDir", true);
 
         if (!File.Exists(path))
@@ -49,7 +52,19 @@ public class ExtractEmailAttachmentHandler : OperationHandlerBase<object>
                 $"Attachment index {idx} is out of range. Email has {message.Attachments.Count} attachment(s).");
 #pragma warning restore CA2208, S3928
 
-        Directory.CreateDirectory(outputDir);
+        // Resolve before creating anything: a refused destination must not leave a
+        // directory behind outside the allowlist.
+        outputDir = SecurityHelper.ResolveAndEnsureWithinAllowlist(outputDir,
+            context.ServerConfig?.AllowedBasePaths ?? [], "outputDir");
+
+        try
+        {
+            Directory.CreateDirectory(outputDir);
+        }
+        catch (Exception ex)
+        {
+            throw EmailErrorTranslator.TranslateOutputFailure(ex);
+        }
 
         var attachment = message.Attachments[idx];
         var fileName = SecurityHelper.SanitizeFileName(attachment.Name);
@@ -57,7 +72,22 @@ public class ExtractEmailAttachmentHandler : OperationHandlerBase<object>
         // H42: resolve symlinks immediately before the sink (bug 20260415-symlink-toctou-sweep).
         outputPath = SecurityHelper.ResolveAndEnsureWithinAllowlist(outputPath,
             context.ServerConfig?.AllowedBasePaths ?? [], nameof(outputPath));
-        attachment.Save(outputPath);
+        try
+        {
+            // Extracting one attachment had no size limit at all, while extracting all of them
+            // did — the same operation with a different scope answered differently (R3-R07).
+            BoundedFilePublisher.Publish(outputPath, RenderBudget.MaxOutputBytes,
+                attachment.Save, "extracted attachment",
+                context.Recovery, context.ServerConfig?.AllowedBasePaths ?? []);
+        }
+        catch (ArgumentException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw EmailErrorTranslator.TranslateOutputFailure(ex, fileName);
+        }
 
         return new SuccessResult
         {

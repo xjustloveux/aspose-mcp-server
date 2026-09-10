@@ -1,8 +1,8 @@
-using System.Globalization;
 using Aspose.Words;
 using Aspose.Words.Markup;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Helpers;
 using AsposeMcpServer.Results.Common;
 
 namespace AsposeMcpServer.Handlers.Word.ContentControl;
@@ -80,7 +80,7 @@ public class SetValueWordContentControlHandler : OperationHandlerBase<Document>
                 break;
 
             case SdtType.Date:
-                if (!DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateValue))
+                if (!IsoDateTimeHelper.TryParse(value, out var dateValue))
                     throw new ArgumentException(
                         $"Invalid date value: '{value}'. Use ISO 8601 format (e.g., '2024-01-15').");
                 sdt.FullDate = dateValue;

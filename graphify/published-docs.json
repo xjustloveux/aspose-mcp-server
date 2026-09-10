@@ -1,0 +1,41 @@
+{
+  "_comment": [
+    "Every file the Pages workflow may publish. deploy-pages.yml uploads the whole docs/ tree,",
+    "so this list is the only thing that decides what goes live outside docs/architecture-map/,",
+    "which verify-public-map.ps1 gates separately.",
+    "",
+    "Read by graphify/verify-published-docs.ps1 (the gate the workflow runs) and by",
+    "PublishedDocsInventoryTests (the same rules, exercised with negative fixtures). One file, so",
+    "the two cannot drift: an earlier version kept the list only in the test, which meant the",
+    "deploy path never consulted it at all (R13-G01)."
+  ],
+
+  "published": [
+    "docs/index.html",
+    "docs/features.html",
+    "docs/getting-started.html",
+    "docs/configuration.html",
+    "docs/tools.html",
+    "docs/developers.html",
+    "docs/deployment.html",
+    "docs/extensions.html",
+    "docs/faq.html",
+
+    "docs/theme.css",
+    "docs/theme.js",
+    "docs/favicon.svg",
+    "docs/robots.txt",
+    "docs/sitemap.xml",
+    "docs/google4306c34db5f2dde4.html",
+    "docs/images/aspose-mcp-preview-demo.gif",
+
+    "docs/assets/vis-network.min.js",
+    "docs/assets/THIRD-PARTY-NOTICES.md",
+
+    "docs/architecture-map/index.html",
+    "docs/architecture-map/relationships.json",
+    "docs/architecture-map/metadata.json"
+  ],
+
+  "pendingRemoval": []
+}

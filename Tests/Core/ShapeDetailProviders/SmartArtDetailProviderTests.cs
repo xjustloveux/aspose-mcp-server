@@ -53,7 +53,7 @@ public class SmartArtDetailProviderTests : TestBase
         Assert.Equal("BasicBlockList", smartArtDetails.Layout);
         Assert.False(string.IsNullOrEmpty(smartArtDetails.QuickStyle));
         Assert.False(string.IsNullOrEmpty(smartArtDetails.ColorStyle));
-        Assert.True(smartArtDetails.NodeCount >= 0);
+        Assert.Equal(5, smartArtDetails.NodeCount);
     }
 
     [Fact]

@@ -26,6 +26,11 @@ public class ExcelRowColumnTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -35,11 +40,14 @@ public class ExcelRowColumnTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
     /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public ExcelRowColumnTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry = HandlerRegistry<Workbook>.CreateFromNamespace("AsposeMcpServer.Handlers.Excel.RowColumn");
     }
 
@@ -93,9 +101,9 @@ Usage examples:
         [Description("Sheet index (0-based, default: 0)")]
         int sheetIndex = 0,
         [Description("Row index (0-based, required for insert_row/delete_row)")]
-        int rowIndex = 0,
+        int? rowIndex = null,
         [Description("Column index (0-based, required for insert_column/delete_column)")]
-        int columnIndex = 0,
+        int? columnIndex = null,
         [Description("Cell range (e.g., 'A1:C5', required for insert_cells/delete_cells)")]
         string? range = null,
         [Description("Number of rows/columns to insert/delete (default: 1)")]
@@ -108,7 +116,8 @@ Usage examples:
             throw new ArgumentException(
                 $"Operation 'set_column_width' is not supported by excel_row_column. Please use excel_view_settings operation instead. Example: excel_view_settings(operation='set_column_width', path='{path}', columnIndex=0, width=15)");
 
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor,
+            serverConfig: _serverConfig);
 
         var parameters = BuildParameters(operation, sheetIndex, rowIndex, columnIndex, range, count, shiftDirection);
 
@@ -121,7 +130,8 @@ Usage examples:
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);
@@ -140,8 +150,8 @@ Usage examples:
     private static OperationParameters BuildParameters(
         string operation,
         int sheetIndex,
-        int rowIndex,
-        int columnIndex,
+        int? rowIndex,
+        int? columnIndex,
         string? range,
         int count,
         string? shiftDirection)
@@ -165,9 +175,9 @@ Usage examples:
     /// <param name="rowIndex">The row index (0-based).</param>
     /// <param name="count">Number of rows to insert/delete.</param>
     /// <returns>OperationParameters configured for row operations.</returns>
-    private static OperationParameters BuildRowParameters(OperationParameters parameters, int rowIndex, int count)
+    private static OperationParameters BuildRowParameters(OperationParameters parameters, int? rowIndex, int count)
     {
-        parameters.Set("rowIndex", rowIndex);
+        if (rowIndex.HasValue) parameters.Set("rowIndex", rowIndex.Value);
         parameters.Set("count", count);
         return parameters;
     }
@@ -179,9 +189,10 @@ Usage examples:
     /// <param name="columnIndex">The column index (0-based).</param>
     /// <param name="count">Number of columns to insert/delete.</param>
     /// <returns>OperationParameters configured for column operations.</returns>
-    private static OperationParameters BuildColumnParameters(OperationParameters parameters, int columnIndex, int count)
+    private static OperationParameters BuildColumnParameters(OperationParameters parameters, int? columnIndex,
+        int count)
     {
-        parameters.Set("columnIndex", columnIndex);
+        if (columnIndex.HasValue) parameters.Set("columnIndex", columnIndex.Value);
         parameters.Set("count", count);
         return parameters;
     }

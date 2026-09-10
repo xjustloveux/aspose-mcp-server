@@ -293,4 +293,95 @@ public class SetRecipientsEmailContentHandlerTests : HandlerTestBase<object>
     }
 
     #endregion
+
+    #region Recipient Limits
+
+    /// <summary>
+    ///     Builds an address list of the requested size.
+    ///     <para>
+    ///         The addresses are kept short on purpose. A header value is also bounded by the
+    ///         shared string-length limit, and with ordinary-looking addresses that limit is
+    ///         reached first — a fixture written that way passes while never reaching the
+    ///         recipient cap it claims to test.
+    ///     </para>
+    /// </summary>
+    /// <param name="count">Number of addresses.</param>
+    /// <param name="prefix">Local-part prefix, so the three fields do not overlap.</param>
+    /// <returns>A comma-separated address list.</returns>
+    private static string AddressList(int count, string prefix)
+    {
+        return string.Join(",", Enumerable.Range(0, count).Select(i => $"{prefix}{i}@e.co"));
+    }
+
+    /// <summary>
+    ///     Each field was bounded on its own, so three full fields addressed three times the
+    ///     limit (R3-C08).
+    /// </summary>
+    [Fact]
+    public void Execute_WithTheLimitSpreadAcrossThreeFields_ShouldBeRefused()
+    {
+        var path = CreateTestEmlFile("test_recipient_total.eml");
+        var before = MailMessage.Load(path);
+        var context = CreateContext(new object());
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "path", path },
+            { "to", AddressList(400, "t") },
+            { "cc", AddressList(400, "c") },
+            { "bcc", AddressList(400, "b") }
+        });
+
+        var exception = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+
+        Assert.Contains("1200", exception.Message);
+
+        // A refused call must leave the message as it was.
+        var loaded = MailMessage.Load(path);
+        Assert.Equal(before.To.Count, loaded.To.Count);
+        Assert.Empty(loaded.CC);
+    }
+
+    [Fact]
+    public void Execute_WithTheLimitExactlyReached_ShouldStillSucceed()
+    {
+        var path = CreateTestEmlFile("test_recipient_total_ok.eml");
+        var context = CreateContext(new object());
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "path", path },
+            { "to", AddressList(500, "t") },
+            { "cc", AddressList(499, "c") },
+            { "bcc", AddressList(1, "b") }
+        });
+
+        Assert.IsType<SuccessResult>(_handler.Execute(context, parameters));
+
+        var loaded = MailMessage.Load(path);
+        Assert.Equal(500, loaded.To.Count);
+        Assert.Equal(499, loaded.CC.Count);
+    }
+
+    /// <summary>
+    ///     A field the caller does not supply keeps the addresses it already has, so those still
+    ///     count towards what the message would carry.
+    /// </summary>
+    [Fact]
+    public void Execute_WithUntouchedFields_ShouldCountTheirExistingRecipients()
+    {
+        var path = CreateTestEmlFile("test_recipient_total_existing.eml");
+        var context = CreateContext(new object());
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "path", path },
+            { "cc", AddressList(1000, "c") }
+        });
+
+        // A full CC field on its own is allowed; it is the To recipient already on the message
+        // that takes the total past the limit.
+        var exception = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+
+        Assert.Contains("1001", exception.Message);
+    }
+
+    #endregion
 }

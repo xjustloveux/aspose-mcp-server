@@ -125,6 +125,9 @@ After binding, the extension will automatically receive document snapshots when 
     {
         var options = new ConversionOptions
         {
+            // The extension host's own root, so a render it publishes is recovered by the service
+            // that owns this process's records (R19-REC07).
+            RecoveryDirectory = _sessionBridge.TemporaryDirectory,
             JpegQuality = Math.Clamp(jpegQuality, 1, 100),
             CsvSeparator = csvSeparator,
             PdfCompliance = pdfCompliance,
@@ -266,11 +269,13 @@ After binding, the extension will automatically receive document snapshots when 
                 UnboundCount = 0
             };
 
+        var identity = _identityAccessor.GetCurrentIdentity();
+
         int count;
         if (string.IsNullOrEmpty(extensionId))
-            count = await _sessionBridge.UnbindAllAndNotifyAsync(sessionId);
+            count = await _sessionBridge.UnbindAllAndNotifyAsync(sessionId, requestor: identity);
         else
-            count = await _sessionBridge.UnbindAndNotifyAsync(sessionId, extensionId) ? 1 : 0;
+            count = await _sessionBridge.UnbindAndNotifyAsync(sessionId, extensionId, requestor: identity) ? 1 : 0;
 
         return new UnbindExtensionResult
         {
@@ -405,7 +410,7 @@ After binding, the extension will automatically receive document snapshots when 
                 Bindings = []
             };
 
-        var bindings = _sessionBridge.GetBindings(sessionId)
+        var bindings = _sessionBridge.GetBindings(sessionId, _identityAccessor.GetCurrentIdentity())
             .Select(b => new BindingInfoDto
             {
                 SessionId = b.SessionId,
@@ -491,6 +496,19 @@ After binding, the extension will automatically receive document snapshots when 
                     CommandType = commandType
                 };
             }
+
+        // A command is addressed at a bound session, so the caller must own that session.
+        if (_sessionBridge.GetBindings(sessionId, _identityAccessor.GetCurrentIdentity())
+            .All(b => b.ExtensionId != extensionId))
+            return new SendCommandResult
+            {
+                Success = false,
+                ErrorCode = ExtensionErrorCode.BindingNotFound,
+                Error = $"No binding found for session '{sessionId}' and extension '{extensionId}'",
+                SessionId = sessionId,
+                ExtensionId = extensionId,
+                CommandType = commandType
+            };
 
         // Get extension instance
         var extension = await _extensionManager.GetExtensionAsync(extensionId);

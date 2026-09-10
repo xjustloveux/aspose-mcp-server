@@ -69,10 +69,18 @@ public class AddPptHyperlinkHandler : OperationHandlerBase<Presentation>
     /// <returns>The AutoShape.</returns>
     private static IAutoShape GetOrCreateAutoShape(ISlide slide, HyperlinkParameters p)
     {
-        if (p.ShapeIndex is >= 0 && p.ShapeIndex.Value < slide.Shapes.Count)
+        if (p.ShapeIndex.HasValue)
         {
+            // An out-of-range index used to fall through to creating a rectangle, so a typo in the
+            // index silently added a shape instead of reporting that the addressed one is missing.
+            // A new shape is created only when the caller named no shape at all.
+            if (p.ShapeIndex.Value < 0 || p.ShapeIndex.Value >= slide.Shapes.Count)
+                throw new ArgumentException(
+                    $"shapeIndex must be between 0 and {slide.Shapes.Count - 1} for this slide");
+
             if (slide.Shapes[p.ShapeIndex.Value] is IAutoShape existingAutoShape)
                 return existingAutoShape;
+
             throw new ArgumentException($"Shape at index {p.ShapeIndex.Value} is not an AutoShape");
         }
 

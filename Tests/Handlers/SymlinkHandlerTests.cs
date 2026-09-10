@@ -586,6 +586,7 @@ public class SymlinkHandlerTests : TestBase
         var doc = new Document();
         var options = new ConversionOptions
         {
+            RecoveryDirectory = Path.GetTempPath(),
             AllowedBasePaths = [inside.Root]
         };
 

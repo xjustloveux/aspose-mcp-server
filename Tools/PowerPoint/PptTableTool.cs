@@ -26,6 +26,11 @@ public class PptTableTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     Session manager for document session handling.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -35,11 +40,14 @@ public class PptTableTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory editing.</param>
     /// <param name="identityAccessor">Optional identity accessor for session isolation.</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public PptTableTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry =
             HandlerRegistry<Presentation>.CreateFromNamespace("AsposeMcpServer.Handlers.PowerPoint.Table");
     }
@@ -64,6 +72,11 @@ public class PptTableTool
     /// <param name="data">2D array of cell data (optional, for add/edit).</param>
     /// <param name="rowIndex">Row index (0-based, required for insert_row/delete_row/edit_cell).</param>
     /// <param name="columnIndex">Column index (0-based, required for insert_column/delete_column/edit_cell).</param>
+    /// <param name="copyFromRow">Row to copy formatting from (0-based, optional for insert_row).</param>
+    /// <param name="copyFromColumn">
+    ///     Column to copy formatting from (0-based, optional for
+    ///     insert_column).
+    /// </param>
     /// <param name="text">Cell text content (required for edit_cell).</param>
     /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
     /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
@@ -122,15 +135,22 @@ Usage examples:
         string[][]? data = null,
         [Description("Row index (0-based, required for insert_row/delete_row/edit_cell)")]
         int? rowIndex = null,
+        [Description(
+            "Row to copy formatting from when inserting a row (0-based, optional for insert_row)")]
+        int? copyFromRow = null,
+        [Description(
+            "Column to copy formatting from when inserting a column (0-based, optional for insert_column)")]
+        int? copyFromColumn = null,
         [Description("Column index (0-based, required for insert_column/delete_column/edit_cell)")]
         int? columnIndex = null,
         [Description("Cell text content (required for edit_cell)")]
         string? text = null)
     {
-        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor,
+            serverConfig: _serverConfig);
 
         var parameters = BuildParameters(operation, slideIndex, shapeIndex, rows, columns, x, y, data,
-            rowIndex, columnIndex, text);
+            rowIndex, columnIndex, copyFromRow, copyFromColumn, text);
 
         var handler = _handlerRegistry.GetHandler(operation);
 
@@ -141,7 +161,8 @@ Usage examples:
             IdentityAccessor = _identityAccessor,
             SessionId = sessionId,
             SourcePath = path,
-            OutputPath = outputPath
+            OutputPath = outputPath,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);
@@ -171,6 +192,8 @@ Usage examples:
         string[][]? data,
         int? rowIndex,
         int? columnIndex,
+        int? copyFromRow,
+        int? copyFromColumn,
         string? text)
     {
         var parameters = new OperationParameters();
@@ -181,8 +204,9 @@ Usage examples:
             "add" => BuildAddParameters(parameters, rows, columns, x, y, data),
             "edit" => BuildEditParameters(parameters, shapeIndex, data),
             "delete" or "get" => BuildShapeIndexParameters(parameters, shapeIndex),
-            "insert_row" or "delete_row" => BuildRowParameters(parameters, shapeIndex, rowIndex),
-            "insert_column" or "delete_column" => BuildColumnParameters(parameters, shapeIndex, columnIndex),
+            "insert_row" or "delete_row" => BuildRowParameters(parameters, shapeIndex, rowIndex, copyFromRow),
+            "insert_column" or "delete_column" =>
+                BuildColumnParameters(parameters, shapeIndex, columnIndex, copyFromColumn),
             "edit_cell" => BuildEditCellParameters(parameters, shapeIndex, rowIndex, columnIndex, text),
             _ => parameters
         };
@@ -242,12 +266,14 @@ Usage examples:
     /// <param name="parameters">The base operation parameters.</param>
     /// <param name="shapeIndex">The shape index of the table (0-based).</param>
     /// <param name="rowIndex">The row index (0-based).</param>
+    /// <param name="copyFromRow">The row to copy formatting from (0-based), or null.</param>
     /// <returns>OperationParameters configured for row operations.</returns>
     private static OperationParameters BuildRowParameters(OperationParameters parameters, int? shapeIndex,
-        int? rowIndex)
+        int? rowIndex, int? copyFromRow)
     {
         if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
         if (rowIndex.HasValue) parameters.Set("rowIndex", rowIndex.Value);
+        if (copyFromRow.HasValue) parameters.Set("copyFromRow", copyFromRow.Value);
         return parameters;
     }
 
@@ -257,12 +283,14 @@ Usage examples:
     /// <param name="parameters">The base operation parameters.</param>
     /// <param name="shapeIndex">The shape index of the table (0-based).</param>
     /// <param name="columnIndex">The column index (0-based).</param>
+    /// <param name="copyFromColumn">The column to copy formatting from (0-based), or null.</param>
     /// <returns>OperationParameters configured for column operations.</returns>
     private static OperationParameters BuildColumnParameters(OperationParameters parameters, int? shapeIndex,
-        int? columnIndex)
+        int? columnIndex, int? copyFromColumn)
     {
         if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
         if (columnIndex.HasValue) parameters.Set("columnIndex", columnIndex.Value);
+        if (copyFromColumn.HasValue) parameters.Set("copyFromColumn", copyFromColumn.Value);
         return parameters;
     }
 

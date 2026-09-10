@@ -39,8 +39,10 @@ public class SignPdfHandler : OperationHandlerBase<Document>
         var p = ExtractSignParameters(parameters);
 
         SecurityHelper.ValidateFilePath(p.CertificatePath, "certificatePath", true);
+        var resolvedCertificatePath = SecurityHelper.ResolveAndEnsureWithinAllowlist(p.CertificatePath,
+            context.ServerConfig?.AllowedBasePaths ?? [], "certificatePath");
 
-        if (!File.Exists(p.CertificatePath))
+        if (!File.Exists(resolvedCertificatePath))
             throw new FileNotFoundException("The specified file was not found.");
 
         var document = context.Document;
@@ -48,7 +50,7 @@ public class SignPdfHandler : OperationHandlerBase<Document>
         if (p.PageIndex < 1 || p.PageIndex > document.Pages.Count)
             throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
 
-        var pkcs = new PKCS7(p.CertificatePath, p.Password)
+        var pkcs = new PKCS7(resolvedCertificatePath, p.Password)
         {
             Reason = p.Reason,
             Location = p.Location,

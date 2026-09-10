@@ -28,6 +28,11 @@ public class PptFileOperationsTool
     private readonly ISessionIdentityAccessor? _identityAccessor;
 
     /// <summary>
+    ///     Server configuration for path-allowlist enforcement.
+    /// </summary>
+    private readonly ServerConfig? _serverConfig;
+
+    /// <summary>
     ///     The document session manager for managing in-memory document sessions.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -37,11 +42,14 @@ public class PptFileOperationsTool
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document operations.</param>
     /// <param name="identityAccessor">Optional identity accessor for session isolation.</param>
+    /// <param name="serverConfig">Optional server config for path allowlist enforcement.</param>
     public PptFileOperationsTool(DocumentSessionManager? sessionManager = null,
-        ISessionIdentityAccessor? identityAccessor = null)
+        ISessionIdentityAccessor? identityAccessor = null,
+        ServerConfig? serverConfig = null)
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _serverConfig = serverConfig;
         _handlerRegistry =
             HandlerRegistry<Presentation>.CreateFromNamespace("AsposeMcpServer.Handlers.PowerPoint.FileOperations");
     }
@@ -117,6 +125,8 @@ Usage examples:
         string outputFileNamePattern = "slide_{index}.pptx",
         IProgress<ProgressNotificationValue>? progress = null)
     {
+        SecurityHelper.ValidateArraySize(inputPaths, nameof(inputPaths));
+
         var parameters = BuildParameters(operation, sessionId, path, outputPath, inputPath, outputDirectory,
             format, slideIndex, inputPaths, keepSourceFormatting, slidesPerFile,
             startSlideIndex, endSlideIndex, outputFileNamePattern);
@@ -131,7 +141,8 @@ Usage examples:
             SessionId = sessionId,
             SourcePath = inputPath ?? path,
             OutputPath = outputPath,
-            Progress = progress
+            Progress = progress,
+            ServerConfig = _serverConfig
         };
 
         var result = handler.Execute(operationContext, parameters);

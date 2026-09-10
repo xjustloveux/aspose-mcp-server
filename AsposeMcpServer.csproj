@@ -6,10 +6,18 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PublishAot>false</PublishAot>
+    <!-- Tool methods intentionally carry explicit Description attributes whose wording is part
+         of the public MCP contract. MCP002 only offers to generate those attributes from XML
+         comments by making every tool and method partial, so it is inapplicable here. -->
+    <NoWarn>$(NoWarn);MCP002</NoWarn>
     <!-- Enable UTF-8 encoding for better Chinese character support -->
     <UseUTF8Encoding>true</UseUTF8Encoding>
-    <!-- Exclude build outputs and publish directories to prevent nested directory issues -->
-    <DefaultItemExcludes>$(DefaultItemExcludes);bin\**;obj\**;publish\**;.backup\**;Tests\**</DefaultItemExcludes>
+    <!-- Exclude build outputs, publish directories and local-only tooling data to prevent nested directory issues.
+         graphify-out/, coverage-reports/ and sonar-reports/ are gitignored working data; without this exclusion the
+         Web SDK's default globs pick their files up as None/Content items (every **/*.json becomes Content with
+         CopyToOutputDirectory/CopyToPublishDirectory=PreserveNewest), which copies them into bin/, publish output,
+         the Docker image and the SonarScanner analysis scope. .gitignore does not affect MSBuild item globs. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);bin\**;obj\**;publish\**;.backup\**;Tests\**;graphify-out\**;coverage-reports\**;sonar-reports\**</DefaultItemExcludes>
     <!-- Project ships no .resx files. Under Microsoft.NET.Sdk.Web + Razor on .NET 8.0.4xx, the auto-injected EmbeddedResource Include="**/*.resx" glob is retained as a literal item when it matches zero files and fails CoreResGen with MSB3552. Re-enable (or explicitly Include resx) if localization is added. -->
     <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
     <!-- Version will be set by GetGitVersion target if not explicitly provided -->
@@ -18,6 +26,10 @@
     <VersionSuffix Condition="'$(VersionSuffix)' == ''"></VersionSuffix>
     <!-- Flag to track if version was explicitly set -->
     <VersionExplicitlySet Condition="'$(Version)' != ''">true</VersionExplicitlySet>
+    <!-- Generating the documentation file turns CS1591 and CS1573 on, which is what makes
+         an undocumented public member or an undocumented parameter fail the build rather
+         than pass unnoticed (R3-DOC10). The file ships beside the assembly. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
   
   <!-- Embed the project icon into the Windows PE executable.
@@ -67,7 +79,10 @@
     <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="2.88.6" />
     <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="2.88.6" />
     <PackageReference Include="Aspose.Drawing.Common" Version="23.10.0" />
-    <!-- Extern alias to resolve type conflicts with Aspose.Slides.NET6.CrossPlatform -->
+    <!-- System.Drawing.Common arrives transitively through the Aspose packages. The explicit
+         reference exists to pin the version and, above all, to apply Aliases="SysDrawing":
+         without the alias its types land in the global namespace and Encoder collides with
+         Aspose.Slides.Encoder (CS0433). Do not remove it as an unused dependency. -->
     <PackageReference Include="System.Drawing.Common" Version="7.0.0" Aliases="SysDrawing" />
     <PackageReference Include="System.Text.Json" Version="10.0.10" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.15.0" />
@@ -89,6 +104,14 @@
     <Compile Remove="Tests\**" />
     <EmbeddedResource Remove="Tests\**" />
     <None Remove="Tests\**" />
+  </ItemGroup>
+
+  <!-- docs/ is the GitHub Pages website source, never a build input. The Web SDK's default
+       **/*.json Content glob otherwise picks up docs/architecture-map/metadata.json with
+       CopyToOutputDirectory/CopyToPublishDirectory=PreserveNewest, shipping the generated
+       architecture map into bin/, the publish output and the Docker image. -->
+  <ItemGroup>
+    <Content Remove="docs\**" />
   </ItemGroup>
 
   <!-- Allow test project to access internal types -->
@@ -128,4 +151,3 @@
   </ItemGroup>
 
 </Project>
-

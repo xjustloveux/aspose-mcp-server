@@ -59,8 +59,8 @@ public class GetFormulasHandler : OperationHandlerBase<Workbook>
         for (var row = startRow; row <= endRow && row <= 10000; row++)
         for (var col = startCol; col <= endCol && col <= 1000; col++)
         {
-            var cell = cells[row, col];
-            if (!string.IsNullOrEmpty(cell.Formula))
+            var cell = cells.CheckCell(row, col);
+            if (cell != null && !string.IsNullOrEmpty(cell.Formula))
                 formulaList.Add(new FormulaInfo
                 {
                     Cell = CellsHelper.CellIndexToName(row, col),

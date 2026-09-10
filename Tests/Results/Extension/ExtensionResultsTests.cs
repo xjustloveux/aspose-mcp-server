@@ -23,12 +23,26 @@ public class ExtensionResultsTests
         Assert.Contains(typeof(ExtensionStatusResult), types);
         Assert.Contains(typeof(ExtensionBindingsResult), types);
         Assert.Contains(typeof(BindingInfoDto), types);
+        Assert.Contains(typeof(SendCommandResult), types);
     }
 
+    /// <summary>
+    ///     Every result type the extension tool can return must be listed, otherwise the generated
+    ///     output schema omits it. Asserting the membership rather than a fixed count means adding
+    ///     a result type fails here for the right reason instead of on an arbitrary number.
+    /// </summary>
     [Fact]
-    public void ExtensionResults_AllTypes_HasCorrectCount()
+    public void ExtensionResults_AllTypes_ShouldListEveryExtensionResultType()
     {
-        Assert.Equal(8, ExtensionResults.AllTypes.Length);
+        var declared = typeof(ListExtensionsResult).Assembly
+            .GetTypes()
+            .Where(type => type.Namespace == typeof(ListExtensionsResult).Namespace)
+            .Where(type => type is { IsClass: true, IsAbstract: false, IsNested: false })
+            .ToList();
+
+        Assert.NotEmpty(declared);
+        foreach (var type in declared)
+            Assert.Contains(type, ExtensionResults.AllTypes);
     }
 
     #endregion

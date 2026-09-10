@@ -3,6 +3,7 @@ using Aspose.Words.Comparing;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Helpers;
+using AsposeMcpServer.Helpers.Word;
 using AsposeMcpServer.Results.Word.Revision;
 
 namespace AsposeMcpServer.Handlers.Word.Revision;
@@ -31,8 +32,15 @@ public class CompareDocumentsHandler : OperationHandlerBase<Document>
     {
         var p = ExtractCompareDocumentsParameters(parameters);
 
-        var originalDoc = new Document(p.OriginalPath);
-        var revisedDoc = new Document(p.RevisedPath);
+        // Both inputs are caller-supplied: resolve them against the allowlist and let the
+        // guarded loader apply the external-resource policy.
+        var allowedBasePaths = context.ServerConfig?.AllowedBasePaths ?? [];
+        var originalDoc = GuardedWordLoader.Load(
+            SecurityHelper.ResolveAndEnsureWithinAllowlist(p.OriginalPath, allowedBasePaths, "originalPath"),
+            allowedBasePaths);
+        var revisedDoc = GuardedWordLoader.Load(
+            SecurityHelper.ResolveAndEnsureWithinAllowlist(p.RevisedPath, allowedBasePaths, "revisedPath"),
+            allowedBasePaths);
 
         var compareOptions = new CompareOptions
         {

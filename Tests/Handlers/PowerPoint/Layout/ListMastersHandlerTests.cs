@@ -6,6 +6,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Layout;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class ListMastersHandlerTests : PptHandlerTestBase
 {
     private readonly ListMastersHandler _handler = new();
@@ -35,7 +36,7 @@ public class ListMastersHandlerTests : PptHandlerTestBase
 
         var result = Assert.IsType<GetMastersResult>(res);
 
-        Assert.True(result.Count >= 0);
+        Assert.Equal(1, result.Count);
         Assert.NotNull(result.Masters);
         AssertNotModified(context);
     }
@@ -86,7 +87,12 @@ public class ListMastersHandlerTests : PptHandlerTestBase
         var result = Assert.IsType<GetMastersResult>(res);
 
         Assert.NotNull(result.Masters);
-        if (result.Masters.Count > 0) Assert.True(result.Masters[0].LayoutCount >= 0);
+        // A default presentation carries one master, and a master always owns at least one
+        // layout; the previous form was guarded by a count check and then compared against zero,
+        // so neither half could fail.
+        Assert.NotEmpty(result.Masters);
+        Assert.True(result.Masters[0].LayoutCount > 0,
+            $"a master must own at least one layout, got {result.Masters[0].LayoutCount}");
     }
 
     [SkippableFact]
@@ -182,7 +188,7 @@ public class ListMastersHandlerTests : PptHandlerTestBase
             var master = result.Masters[i];
             Assert.Equal(i, master.Index);
             Assert.IsType<GetMasterInfo>(master);
-            Assert.True(master.LayoutCount >= 0);
+            Assert.Equal(11, master.LayoutCount);
             Assert.NotNull(master.Layouts);
         }
     }

@@ -6,6 +6,7 @@ using AsposeMcpServer.Tests.Infrastructure;
 namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Comment;
 
 [SupportedOSPlatform("windows")]
+[Collection("SerialSlides")]
 public class AddPptCommentHandlerTests : PptHandlerTestBase
 {
     private readonly AddPptCommentHandler _handler = new();

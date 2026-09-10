@@ -27,7 +27,10 @@ public class SetRecipientsEmailContentHandler : OperationHandlerBase<object>
     ///     outputPath (save location, defaults to path).
     /// </param>
     /// <returns>A <see cref="SuccessResult" /> indicating the recipients were set successfully.</returns>
-    /// <exception cref="ArgumentException">Thrown when required parameters are missing or invalid.</exception>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when required parameters are missing or invalid, or when the change would address
+    ///     more recipients than one message may carry.
+    /// </exception>
     /// <exception cref="FileNotFoundException">Thrown when the email file does not exist.</exception>
     public override object Execute(OperationContext<object> context, OperationParameters parameters)
     {
@@ -38,7 +41,14 @@ public class SetRecipientsEmailContentHandler : OperationHandlerBase<object>
         var cc = parameters.GetOptional<string?>("cc");
         var bcc = parameters.GetOptional<string?>("bcc");
         SecurityHelper.ValidateFilePath(path, "path", true);
+        path = SecurityHelper.ResolveAndEnsureWithinAllowlist(path,
+            context.ServerConfig?.AllowedBasePaths ?? [], "path");
         SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+
+        EmailAddressListHelper.EnsureNoHeaderInjection(from, "from");
+        EmailAddressListHelper.EnsureNoHeaderInjection(to, "to");
+        EmailAddressListHelper.EnsureNoHeaderInjection(cc, "cc");
+        EmailAddressListHelper.EnsureNoHeaderInjection(bcc, "bcc");
 
         if (!File.Exists(path))
             throw new FileNotFoundException("The specified file was not found.");
@@ -48,24 +58,37 @@ public class SetRecipientsEmailContentHandler : OperationHandlerBase<object>
         if (from != null)
             message.From = from;
 
-        if (to != null)
+        // Each field was bounded on its own, so three full fields addressed three times the
+        // limit (R3-C08). The total is counted over the message as it would be afterwards — a
+        // field the caller did not supply keeps the addresses it already has — and it is counted
+        // before anything is cleared, so a refused call leaves the message untouched.
+        var newTo = to != null ? SplitAddresses(to) : null;
+        var newCc = cc != null ? SplitAddresses(cc) : null;
+        var newBcc = bcc != null ? SplitAddresses(bcc) : null;
+
+        EmailAddressListHelper.EnsureRecipientTotal(
+            (newTo?.Count ?? message.To.Count)
+            + (newCc?.Count ?? message.CC.Count)
+            + (newBcc?.Count ?? message.Bcc.Count));
+
+        if (newTo != null)
         {
             message.To.Clear();
-            foreach (var address in SplitAddresses(to))
+            foreach (var address in newTo)
                 message.To.Add(address);
         }
 
-        if (cc != null)
+        if (newCc != null)
         {
             message.CC.Clear();
-            foreach (var address in SplitAddresses(cc))
+            foreach (var address in newCc)
                 message.CC.Add(address);
         }
 
-        if (bcc != null)
+        if (newBcc != null)
         {
             message.Bcc.Clear();
-            foreach (var address in SplitAddresses(bcc))
+            foreach (var address in newBcc)
                 message.Bcc.Add(address);
         }
 
@@ -82,13 +105,12 @@ public class SetRecipientsEmailContentHandler : OperationHandlerBase<object>
     }
 
     /// <summary>
-    ///     Splits a comma-separated string of email addresses into individual addresses.
+    ///     Splits an address list into individual addresses, honouring quoted display names.
     /// </summary>
-    /// <param name="addresses">Comma-separated email addresses.</param>
-    /// <returns>An enumerable of trimmed, non-empty email addresses.</returns>
-    private static IEnumerable<string> SplitAddresses(string addresses)
+    /// <param name="addresses">The address list, e.g. <c>"Last, First" &lt;a@b.com&gt;, c@d.com</c>.</param>
+    /// <returns>The individual address entries, trimmed, with empty entries removed.</returns>
+    private static IReadOnlyList<string> SplitAddresses(string addresses)
     {
-        return addresses.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Where(a => !string.IsNullOrWhiteSpace(a));
+        return EmailAddressListHelper.Split(addresses);
     }
 }

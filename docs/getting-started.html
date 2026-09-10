@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>快速開始 - Aspose MCP Server</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <link rel="alternate icon" href="favicon.ico">
     <meta name="description" content="Aspose MCP Server 快速開始指南：下載、配置、使用。">
     <meta name="keywords" content="Aspose, MCP, 快速開始, 安裝指南, 配置, 使用教學">
     <link rel="canonical" href="https://xjustloveux.github.io/aspose-mcp-server/getting-started.html">
@@ -95,6 +94,9 @@
                 </li>
                 <li>
                     <a href="faq.html">常見問答</a>
+                </li>
+                <li>
+                    <a href="architecture-map/index.html">架構關係圖</a>
                 </li>
             </ul>
             <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme" title="切換亮/暗色主題">🌙</button>
@@ -401,7 +403,7 @@
             const button = codeBlock.parentElement.querySelector('.copy-button');
             const copyText = document.getElementById('copy-text');
             const copyIcon = document.getElementById('copy-icon');
-            
+
             // 获取代码内容，排除按钮文本
             const codeText = `{
   "mcpServers": {
@@ -411,12 +413,12 @@
     }
   }
 }`;
-            
+
             navigator.clipboard.writeText(codeText).then(function() {
                 button.classList.add('copied');
                 copyText.textContent = '已複製！';
                 copyIcon.textContent = '✓';
-                
+
                 setTimeout(function() {
                     button.classList.remove('copied');
                     copyText.textContent = '複製';

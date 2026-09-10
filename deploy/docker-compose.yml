@@ -1,4 +1,10 @@
-version: '3.8'
+# SECURITY: this example publishes port 3000 on the host and binds the server to 0.0.0.0 while every
+# ASPOSE_AUTH_* setting below is commented out, so as written the service answers any caller that can
+# reach the host with no authentication and no per-caller session isolation. Before exposing it beyond
+# a private host, uncomment one of the authentication blocks below and, when running behind a gateway,
+# set ASPOSE_AUTH_APIKEY_TRUSTED_PROXIES / ASPOSE_AUTH_JWT_TRUSTED_PROXIES so identity headers are
+# only honoured from that gateway. Metrics require authentication by default; ASPOSE_METRICS_REQUIRE_AUTH=false
+# opts out and should only be used on a trusted scrape network.
 
 services:
   aspose-mcp:
@@ -38,7 +44,7 @@ services:
       # - ASPOSE_EXTENSION_SNAPSHOT_TTL_DEFAULT=30  # Snapshot TTL in seconds (default: 30)
       # - ASPOSE_EXTENSION_MAX_RESTARTS=3   # Max restart attempts (default: 3)
       # - ASPOSE_EXTENSION_HEALTH_INTERVAL=30  # Health check interval in seconds (default: 30)
-      # - ASPOSE_EXTENSION_DEBOUNCE_DELAY_DEFAULT=100  # Debounce delay in milliseconds (default: 100)
+      # - ASPOSE_EXTENSION_DEBOUNCE_DELAY=100  # Debounce delay in milliseconds (default: 100)
       # - ASPOSE_EXTENSION_FRAME_INTERVAL_DEFAULT=100  # Frame interval in milliseconds (default: 100)
 
       # === API Key Authentication (Optional) ===
@@ -103,9 +109,28 @@ services:
     # === Restart Policy (Optional) ===
     # restart: unless-stopped
 
-    # === Health Check (Optional) ===
-    # healthcheck:
-    #   test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
-    #   interval: 30s
-    #   timeout: 3s
-    #   retries: 3
+    # === Health Check ===
+    # The image defines no HEALTHCHECK of its own, because with the stdio transport there is
+    # nothing to probe (R3-DOC07). This one is for the http/ws transports configured above and
+    # asks the server itself.
+    #
+    # It runs bash explicitly. CMD-SHELL hands the command to the image's default shell,
+    # which on this Debian-based runtime image is dash — and /dev/tcp and `exec 3<>` are
+    # bash extensions, so the probe reported unhealthy whatever the server was doing
+    # (R4-DOC01).
+    #
+    # It fails when the process is gone, when it is not listening, and when /ready answers
+    # anything other than 200 — which is what "healthy" is supposed to mean.
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -ec
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/${ASPOSE_PORT:-3000};
+          printf 'GET /ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3;
+          head -1 <&3 | grep -q ' 200 '
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
