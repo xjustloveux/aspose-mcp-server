@@ -132,10 +132,11 @@ public class SecurityHelperTests
         Assert.True(result);
     }
 
+    /// <summary>Rejects a path only after it exceeds the current platform's supported ceiling.</summary>
     [Fact]
-    public void IsSafeFilePath_WithLongPath_ShouldReturnFalse()
+    public void IsSafeFilePath_WithPathBeyondPlatformLimit_ShouldReturnFalse()
     {
-        var longPath = new string('a', 300);
+        var longPath = new string('a', OperatingSystem.IsWindows() ? 261 : 4097);
 
         Assert.False(SecurityHelper.IsSafeFilePath(longPath));
     }
@@ -184,10 +185,14 @@ public class SecurityHelperTests
 
     #region IsSafeFilePath — Trailing Dot/Space Per Segment Tests (hardening 20260416)
 
+    /// <summary>Rejects trailing dots or spaces even when a segment uses non-native separators.</summary>
+    /// <param name="path">The path shape to validate.</param>
     [Theory]
     [InlineData("/tmp/file.txt.")]
     [InlineData("/tmp/file ")]
     [InlineData("/tmp/dir./file.txt")]
+    [InlineData("safe\\bad.\\file.txt")]
+    [InlineData("safe/bad \\file.txt")]
     public void IsSafeFilePath_WithTrailingDotOrSpaceInSegment_ShouldReturnFalse(string path)
     {
         Assert.False(SecurityHelper.IsSafeFilePath(path, true));
@@ -204,6 +209,8 @@ public class SecurityHelperTests
 
     #region IsSafeFilePath — Windows Reserved Device Name Tests (hardening 20260416)
 
+    /// <summary>Rejects Windows device names even when a segment uses non-native separators.</summary>
+    /// <param name="path">The path shape to validate.</param>
     [Theory]
     [InlineData("/tmp/CON")]
     [InlineData("/tmp/nul.txt")]
@@ -213,6 +220,8 @@ public class SecurityHelperTests
     [InlineData("/tmp/PRN")]
     [InlineData("/tmp/con")]
     [InlineData("/tmp/Nul.TXT")]
+    [InlineData("safe\\NUL.txt")]
+    [InlineData("safe/COM1\\file.txt")]
     public void IsSafeFilePath_WithReservedDeviceName_ShouldReturnFalse(string path)
     {
         Assert.False(SecurityHelper.IsSafeFilePath(path, true));

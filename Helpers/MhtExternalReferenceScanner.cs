@@ -933,6 +933,8 @@ public static class MhtExternalReferenceScanner
     }
 
     /// <summary>Whether a character may appear in an RFC-style MIME field name.</summary>
+    /// <param name="value">The character to inspect.</param>
+    /// <returns><c>true</c> when the character is valid in a MIME field name.</returns>
     private static bool IsMimeHeaderNameCharacter(char value)
     {
         return value is >= (char)33 and <= (char)126 && value != ':';
@@ -1323,6 +1325,9 @@ public static class MhtExternalReferenceScanner
     }
 
     /// <summary>Reads MIME lines without constructing whole-file replacement strings.</summary>
+    /// <param name="bytes">The original MHT bytes.</param>
+    /// <param name="lines">Receives the MIME lines when the bounded read succeeds.</param>
+    /// <returns><c>true</c> when the complete input fits within the provenance line budget.</returns>
     private static bool TryReadProvenanceLines(byte[] bytes, out List<string> lines)
     {
         lines = [];
@@ -1350,6 +1355,9 @@ public static class MhtExternalReferenceScanner
     ///     Builds a conservative MIME part model. A malformed header block is not guessed at:
     ///     failing this proof simply keeps the vendor notice in the security scan.
     /// </summary>
+    /// <param name="lines">The original MIME lines to describe.</param>
+    /// <param name="parts">Receives the active text parts when the MIME structure is valid.</param>
+    /// <returns><c>true</c> when the MIME structure was described completely and unambiguously.</returns>
     private static bool TryDescribeOriginalTextParts(IReadOnlyList<string> lines,
         out List<OriginalTextPart> parts)
     {
@@ -1428,6 +1436,10 @@ public static class MhtExternalReferenceScanner
     }
 
     /// <summary>Matches one declared MIME boundary with optional transport-added padding.</summary>
+    /// <param name="line">The MIME line to inspect.</param>
+    /// <param name="boundary">The declared boundary, including its leading dashes.</param>
+    /// <param name="closing">Receives whether the line is the closing form of the boundary.</param>
+    /// <returns><c>true</c> when the line contains exactly the declared boundary and allowed padding.</returns>
     private static bool IsBoundaryDelimiterLine(string line, string boundary, out bool closing)
     {
         var closeMarker = boundary + "--";
@@ -1444,6 +1456,9 @@ public static class MhtExternalReferenceScanner
     }
 
     /// <summary>Checks the optional space or tab padding allowed after a MIME delimiter.</summary>
+    /// <param name="line">The delimiter line to inspect.</param>
+    /// <param name="start">The first character after the declared delimiter.</param>
+    /// <returns><c>true</c> when every remaining character is transport padding.</returns>
     private static bool ContainsOnlyTransportPadding(string line, int start)
     {
         for (var index = start; index < line.Length; index++)
@@ -1454,6 +1469,16 @@ public static class MhtExternalReferenceScanner
     }
 
     /// <summary>Completes one MIME header block and records active text content.</summary>
+    /// <param name="contentType">The unfolded Content-Type header, when declared.</param>
+    /// <param name="transferEncoding">The unfolded Content-Transfer-Encoding header, when declared.</param>
+    /// <param name="openingBoundary">The boundary that opened this part, when nested.</param>
+    /// <param name="bodyStart">The index of the first body line.</param>
+    /// <param name="boundaries">Known multipart boundaries, updated for a multipart part.</param>
+    /// <param name="parts">The collection that receives active text parts.</param>
+    /// <returns>
+    ///     <c>true</c> when the header block is supported and any active text part was recorded;
+    ///     supported inactive parts are accepted and skipped.
+    /// </returns>
     private static bool TryAddOriginalTextPart(string? contentType, string? transferEncoding,
         string? openingBoundary, int bodyStart, HashSet<string> boundaries,
         List<OriginalTextPart> parts)
@@ -1497,6 +1522,9 @@ public static class MhtExternalReferenceScanner
     }
 
     /// <summary>Resolves a declared MIME charset with strict decoding semantics.</summary>
+    /// <param name="charset">The declared charset, or an empty value for strict US-ASCII.</param>
+    /// <param name="encoding">Receives the strict encoding when resolution succeeds.</param>
+    /// <returns><c>true</c> when the charset is known and can be decoded without replacement.</returns>
     private static bool TryGetStrictEncoding(string charset, out Encoding encoding)
     {
         try
@@ -1516,6 +1544,8 @@ public static class MhtExternalReferenceScanner
     }
 
     /// <summary>Decodes the transfer-encoding features needed to recognise caller provenance.</summary>
+    /// <param name="value">The quoted-printable body text.</param>
+    /// <returns>The decoded body bytes.</returns>
     private static byte[] DecodeQuotedPrintable(string value)
     {
         using var decoded = new MemoryStream(value.Length);

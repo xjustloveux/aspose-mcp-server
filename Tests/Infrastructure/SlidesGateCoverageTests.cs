@@ -44,7 +44,7 @@ public class SlidesGateCoverageTests : TestBase
         "GetDocument<Presentation>",
         "(Presentation)",
         "is Aspose.Slides.Presentation",
-        "is Presentation "
+        "is Presentation"
     ];
 
     /// <summary>

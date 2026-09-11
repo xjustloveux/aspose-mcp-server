@@ -20,9 +20,6 @@ import os
 import tempfile
 from pathlib import Path
 
-from graphify.diagnostics import diagnose_extraction
-
-
 EXPECTED_USING_KINDS = frozenset({"namespace", "alias", "static"})
 
 
@@ -204,6 +201,10 @@ def _replace_json(path: Path, value: dict) -> None:
 
 def main() -> int:
     """Normalize one staged extraction and save its public diagnostic evidence."""
+    # Keep the pure normalization helpers importable by the repository self-test. The Graphify
+    # runtime is required only when this command computes diagnostics for a real extraction.
+    from graphify.diagnostics import diagnose_extraction
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--corpus", required=True, help="Graphify staging directory")
     args = parser.parse_args()

@@ -18,6 +18,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import re
 
 NL = chr(10)
 import shutil
@@ -314,10 +315,16 @@ def test_artifacts_share_one_run() -> None:
 
 
 
+def synthetic_credential(*fragments: str) -> str:
+    """Builds a scanner fixture without storing a provider-shaped token in Git."""
+    return "".join(fragments)
+
+
 MUST_REFUSE = (
     ("Windows drive path", "D:" + chr(92) + "GIT" + chr(92) + "JaJa" + chr(92) + "server"),
     # R23-G03: GitHub fine-grained tokens, `github_pat_` + 22 + `_` + 59 characters.
-    ("GitHub fine-grained token", "token = github_pat_" + "A1b2C3d4E5" * 2 + "Ab" + "_" + "Zz9y8X7w6V" * 5 + "Q1w2E3r4t"),
+    ("GitHub fine-grained token", "token = " + synthetic_credential(
+        "git", "hub_pat_", "A1b2C3d4E5" * 2, "Ab", "_", "Zz9y8X7w6V" * 5, "Q1w2E3r4t")),
     ("UNC share", chr(92) * 2 + "fileserver" + chr(92) + "share" + chr(92) + "build"),
     ("Windows device path", chr(92) * 2 + "?" + chr(92) + "C:" + chr(92) + "long"),
     ("POSIX home", "/home/jaja/src/main.cs"),
@@ -350,10 +357,10 @@ MUST_REFUSE = (
     ("docker secret mount", "/run/secrets/github_token"),
     ("kubernetes serviceaccount token", "/var/run/secrets/kubernetes.io/serviceaccount/token"),
     ("workflow secret reference", "${{ secrets.GITHUB_TOKEN }}"),
-    ("AWS access key id", "AKIAIOSFODNN7EXAMPLE"),
-    ("Google API key", "AIzaSyA1234567890abcdefghijklmnopqrstuv"),
-    ("Slack token", "xoxb-1234567890-abcdefghij"),
-    ("GitLab personal access token", "glpat-abcdefghijklmnopqrst"),
+    ("AWS access key id", synthetic_credential("AK", "IA", "IOSFODNN7EXAMPLE")),
+    ("Google API key", synthetic_credential("AI", "za", "SyA1234567890abcdefghijklmnopqrstuv")),
+    ("Slack token", synthetic_credential("xo", "xb-", "1234567890-abcdefghij")),
+    ("GitLab personal access token", synthetic_credential("gl", "pat-", "abcdefghijklmnopqrst")),
     # R20-G01: three the direct probe walked straight through.
     ("quoted client secret", '{"client_secret": "abcdefghijkl"}'),
     ("AWS secret access key assignment", "aws_secret_access_key = wJalrXUtnFEMIK7MDENG"),
@@ -405,6 +412,24 @@ MUST_ALLOW = (
     ("prose that mentions a private key", "keep your private key somewhere safe"),
 )
 
+def test_credential_fixtures_are_not_stored_as_provider_tokens() -> None:
+    """R31-G01: test credentials must not look usable in the repository blob."""
+    print("R31-G01 synthetic credentials are assembled only at runtime")
+    source = Path(__file__).read_text(encoding="utf-8")
+    provider_patterns = (
+        ("AWS access key", r"\b(?:AKIA|ASIA)[0-9A-Z]{16}\b"),
+        ("Google API key", r"\bAIza[0-9A-Za-z_-]{35}\b"),
+        ("Slack token", r"\bxox[abprs]-[A-Za-z0-9-]{10,}"),
+        ("GitLab personal access token", r"\bglpat-[A-Za-z0-9_-]{20,}"),
+        ("GitHub token", r"\b(?:github_pat_[A-Za-z0-9_]{60,}|gh[pousr]_[A-Za-z0-9]{20,})"),
+        ("OpenAI key", r"\bsk-[A-Za-z0-9]{16,}"),
+    )
+
+    for description, pattern in provider_patterns:
+        check(f"the source contains no complete {description} fixture",
+              re.search(pattern, source) is None)
+
+
 SCANNER_DRIVER = """
 Import-Module (Join-Path '{module_dir}' 'LeakScanner.psm1') -Force
 $samples = Get-Content -Raw -LiteralPath '{samples}' | ConvertFrom-Json
@@ -440,7 +465,8 @@ SCOPED = (
     ("Authored", "a credential in prose is still refused", '{"api_key": "abcdefghijkl"}', True),
     ("Binary", "three bytes that happen to spell a drive letter are allowed", "GIF89a\u00e5E:" + chr(92) + "\u0001\u00ff", False),
     ("Binary", "a real path embedded as ASCII is refused", "Comment: E:" + chr(92) + "Users" + chr(92) + "jaja" + chr(92) + "demo.gif", True),
-    ("Binary", "a vendor key embedded as ASCII is refused", "\u0001AKIAIOSFODNN7EXAMPLE\u0002", True),
+    ("Binary", "a vendor key embedded as ASCII is refused",
+     "\u0001" + synthetic_credential("AK", "IA", "IOSFODNN7EXAMPLE") + "\u0002", True),
     ("Binary", "a loopback host in binary is not looked for", "\u00ff localhost \u00ff", False),
 )
 
@@ -1002,7 +1028,8 @@ def test_gate_fails_closed() -> None:
         # inventory must see it (it is not in the manifest) and so must the scan.
         republish(good, published_page, original)
         hidden = good / ".env"
-        hidden.write_text("GITHUB_TOKEN=github_pat_" + "A1b2C3d4E5" * 8 + "Zz" + NL, encoding="utf-8")
+        hidden.write_text("GITHUB_TOKEN=" + synthetic_credential(
+            "git", "hub_pat_", "A1b2C3d4E5" * 8, "Zz") + NL, encoding="utf-8")
         if os.name == "nt":
             os.system(f'attrib +h "{hidden}"')
         check("a hidden file with a secret in the map directory fails the map gate", run_gate(good) != 0)
@@ -1943,7 +1970,11 @@ def test_publish_target_is_bounded() -> None:
                 refuses(lambda: resolve("docs/architecture-map-link-probe"),
                         "a link standing in for the publish directory is refused")
             finally:
-                linked.rmdir()
+                if linked.is_symlink():
+                    linked.unlink()
+                else:
+                    # Windows directory junctions are removed as directories rather than links.
+                    linked.rmdir()
 
     # And nothing is created just by asking: the directory appears only once the artifacts have
     # been checked, so a refused build leaves no empty directory behind.
@@ -2145,6 +2176,7 @@ def main() -> int:
     test_staged_manifest_binds_bytes()
     test_artifacts_share_one_run()
     test_page_hardening()
+    test_credential_fixtures_are_not_stored_as_provider_tokens()
     test_leak_scanner()
     test_leak_scanner_scopes()
     test_workflow_triggers()

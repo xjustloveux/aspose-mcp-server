@@ -44,6 +44,11 @@ public static class SecurityHelper
     private static readonly int MaxPathLength = OperatingSystem.IsWindows() ? 260 : 4096;
 
     /// <summary>
+    ///     Separators recognized in untrusted path text, independent of the host platform.
+    /// </summary>
+    private static readonly char[] UserPathSeparators = ['/', '\\'];
+
+    /// <summary>
     ///     String comparison used when matching a path against the allowlist. Windows and macOS
     ///     compare case-insensitively; Linux paths are case-sensitive, and treating them otherwise
     ///     would let one allowed directory vouch for a different directory that differs only in case.
@@ -165,9 +170,7 @@ public static class SecurityHelper
         if (filePath.IndexOf(':', adsCheckStart) >= 0) return false;
 
         // Reject trailing dots or spaces in any path segment (Windows silently strips them).
-        foreach (var segment in filePath.Split(
-                     [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
-                     StringSplitOptions.None))
+        foreach (var segment in filePath.Split(UserPathSeparators, StringSplitOptions.None))
         {
             if (segment.Length == 0) continue;
             var last = segment[^1];
@@ -189,9 +192,7 @@ public static class SecurityHelper
     /// <returns><see langword="true" /> when a parent-directory segment is present.</returns>
     private static bool ContainsTraversalSegment(string filePath)
     {
-        return filePath.Split(
-                [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
-                StringSplitOptions.None)
+        return filePath.Split(UserPathSeparators, StringSplitOptions.None)
             .Any(segment => segment == "..");
     }
 
@@ -200,8 +201,8 @@ public static class SecurityHelper
     ///     with or without an extension (e.g. <c>CON</c>, <c>NUL.txt</c>).
     /// </summary>
     /// <param name="filePath">
-    ///     The path to inspect; all segments split on both <see cref="Path.DirectorySeparatorChar" />
-    ///     and <see cref="Path.AltDirectorySeparatorChar" /> are checked.
+    ///     The path to inspect; segments split on both slash forms are checked regardless of the
+    ///     host platform.
     /// </param>
     /// <returns>
     ///     <see langword="true" /> if any segment matches a reserved name (with or without extension);
@@ -209,9 +210,7 @@ public static class SecurityHelper
     /// </returns>
     private static bool ContainsWindowsReservedName(string filePath)
     {
-        foreach (var segment in filePath.Split(
-                     [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
-                     StringSplitOptions.None))
+        foreach (var segment in filePath.Split(UserPathSeparators, StringSplitOptions.None))
         {
             if (segment.Length == 0) continue;
             // Reserved names match with or without extension: "CON", "CON.txt", "NUL.anything".
