@@ -473,8 +473,8 @@ public class ReplaceWordTextHandlerTests : WordHandlerTestBase
     }
 
     [Theory]
-    [InlineData("Unicode: 中�?", "?��?")]
-    [InlineData("?�本語�??��?", "置�?済み")]
+    [InlineData("Unicode: 中文", "替換")]
+    [InlineData("日本語テスト", "置換済み")]
     public void Execute_WithUnicode_ReplacesCorrectly(string find, string replace)
     {
         var doc = CreateDocumentWithText(find);

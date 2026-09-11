@@ -368,8 +368,10 @@ public class DocumentSessionManagerTests : WordTestBase
         manager.OpenDocument(doc2);
 
         var totalMemory = manager.GetTotalMemoryMb();
+        var expectedMemory = (new FileInfo(doc1).Length + new FileInfo(doc2).Length) * 2
+                             / (1024.0 * 1024.0);
 
-        Assert.Equal(0.0272064208984375, totalMemory);
+        Assert.Equal(expectedMemory, totalMemory);
     }
 
     [Fact]

@@ -198,4 +198,17 @@ public class ChildProcessArgumentsTests
         else
             Assert.Empty(prefix);
     }
+
+    [Fact]
+    public void DotnetHost_ShouldLaunchTheEntryAssemblyFromTheApplicationBaseDirectory()
+    {
+        var baseDirectory = Path.Combine(Path.GetTempPath(), "aspose-mcp-server");
+        var dotnetPath = Path.Combine(Path.GetPathRoot(baseDirectory)!, "dotnet.exe");
+
+        var (executable, prefix) = ChildProcessArguments.ResolveHostCommandForRuntime(
+            dotnetPath, "AsposeMcpServer", baseDirectory);
+
+        Assert.Equal(dotnetPath, executable);
+        Assert.Equal([Path.Combine(baseDirectory, "AsposeMcpServer.dll")], prefix);
+    }
 }

@@ -168,6 +168,7 @@ public class CleanupDebtQueueTests : TestBase
 
             Assert.Equal([Path.GetFullPath(outside)], swept.Refused);
             Assert.True(File.Exists(outside));
+            Assert.Single(queue.Pending());
         }
         finally
         {

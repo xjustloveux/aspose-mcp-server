@@ -81,7 +81,26 @@ public static class ChildProcessArguments
     /// </exception>
     public static (string Executable, IReadOnlyList<string> Prefix) ResolveHostCommand()
     {
-        var processPath = Environment.ProcessPath;
+        return ResolveHostCommandForRuntime(
+            Environment.ProcessPath,
+            Assembly.GetEntryAssembly()?.GetName().Name,
+            AppContext.BaseDirectory);
+    }
+
+    /// <summary>
+    ///     Resolves a host command from the process and application identity supplied by the
+    ///     runtime.
+    /// </summary>
+    /// <param name="processPath">Path of the current process.</param>
+    /// <param name="entryAssemblyName">Simple name of the managed entry assembly.</param>
+    /// <param name="applicationBaseDirectory">Directory containing the managed application.</param>
+    /// <returns>The executable to run and any arguments that must precede server options.</returns>
+    /// <exception cref="InvalidOperationException">
+    ///     Thrown when the supplied identity does not describe a launchable server host.
+    /// </exception>
+    internal static (string Executable, IReadOnlyList<string> Prefix) ResolveHostCommandForRuntime(
+        string? processPath, string? entryAssemblyName, string applicationBaseDirectory)
+    {
         if (string.IsNullOrEmpty(processPath))
             throw new InvalidOperationException(
                 "WebSocket mode cannot determine the current executable and cannot start child processes.");
@@ -90,11 +109,11 @@ public static class ChildProcessArguments
 
         if (processName.Equals("dotnet", StringComparison.OrdinalIgnoreCase))
         {
-            var entryAssembly = Assembly.GetEntryAssembly()?.Location;
-            if (string.IsNullOrEmpty(entryAssembly))
+            if (string.IsNullOrEmpty(entryAssemblyName))
                 throw new InvalidOperationException(
                     "WebSocket mode is running through the dotnet muxer but the entry assembly path is unavailable.");
 
+            var entryAssembly = Path.Combine(applicationBaseDirectory, entryAssemblyName + ".dll");
             return (processPath, [entryAssembly]);
         }
 

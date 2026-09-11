@@ -161,7 +161,7 @@ public class WriteExcelCellHandlerTests : ExcelHandlerTestBase
     [InlineData("Simple text")]
     [InlineData("Text with numbers 12345")]
     [InlineData("Special chars: !@#$%^&*()")]
-    [InlineData("Unicode: 中�?測試")]
+    [InlineData("Unicode: 中文測試")]
     public void Execute_WritesVariousStringFormats(string value)
     {
         var workbook = CreateEmptyWorkbook();

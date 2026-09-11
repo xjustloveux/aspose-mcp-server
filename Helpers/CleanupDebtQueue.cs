@@ -455,14 +455,15 @@ public sealed class CleanupDebtQueue
                     continue;
                 }
 
-                if (!MayDelete(debt.Path))
+                var eligibility = ClassifyDeletion(debt.Path);
+                if (eligibility != DeletionEligibility.Allowed)
                 {
-                    // Refused here means "not mine to delete", not "nobody's". Dropping it from
-                    // the remaining list took it away from a host whose allowlist does cover it
-                    // (R20-REC06) — and abandoning it on expiry did the same thing a day later
-                    // (R21-REC06). Expiry is the covering host's decision; this one keeps it.
                     refused.Add(debt.Path);
-                    remaining.Add(debt);
+                    if (eligibility == DeletionEligibility.OutsideThisHost)
+                        // This host cannot decide the debt's expiry: another host sharing the
+                        // queue may have an allowlist that covers it (R20-REC06, R21-REC06).
+                        remaining.Add(debt);
+
                     continue;
                 }
 
@@ -590,15 +591,20 @@ public sealed class CleanupDebtQueue
     }
 
     /// <summary>
-    ///     Whether this path may be deleted right now, judged from the filesystem as it is.
+    ///     Classifies whether this host may delete the path now, judged from the filesystem as it
+    ///     is.
     /// </summary>
     /// <param name="path">The recorded path.</param>
-    /// <returns><c>true</c> when the path is inside the allowlist and is a real file.</returns>
-    private bool MayDelete(string path)
+    /// <returns>
+    ///     <see cref="DeletionEligibility.Allowed" /> when the target is inside this host's
+    ///     allowlist and contains no links; <see cref="DeletionEligibility.OutsideThisHost" />
+    ///     when another host may cover it; otherwise <see cref="DeletionEligibility.UnsafePath" />.
+    /// </returns>
+    private DeletionEligibility ClassifyDeletion(string path)
     {
         var canonical = Canonical(path);
-        if (canonical == null) return false;
-        if (!string.Equals(canonical, path, PathComparison)) return false;
+        if (canonical == null) return DeletionEligibility.UnsafePath;
+        if (!string.Equals(canonical, path, PathComparison)) return DeletionEligibility.UnsafePath;
 
         string? root = null;
         if (_allowedBasePaths.Count > 0)
@@ -606,10 +612,12 @@ public sealed class CleanupDebtQueue
             root = _allowedBasePaths
                 .Select(Canonical)
                 .FirstOrDefault(candidate => candidate != null && IsUnder(canonical, candidate));
-            if (root == null) return false;
+            if (root == null) return DeletionEligibility.OutsideThisHost;
         }
 
-        return NothingOnThePathIsALink(canonical, root);
+        return NothingOnThePathIsALink(canonical, root)
+            ? DeletionEligibility.Allowed
+            : DeletionEligibility.UnsafePath;
     }
 
     /// <summary>Whether a canonical path lies under a canonical root.</summary>
@@ -811,6 +819,19 @@ public sealed class CleanupDebtQueue
                 $"The cleanup debt queue at '{_queueFile}' could not be written, so "
                 + $"{debts.Count:N0} pending cleanup(s) will not survive a restart: {ex.Message}");
         }
+    }
+
+    /// <summary>How the current host should handle a recorded deletion target.</summary>
+    private enum DeletionEligibility
+    {
+        /// <summary>The target is inside this host's allowlist and has no link components.</summary>
+        Allowed,
+
+        /// <summary>Another host may cover the target, so the debt must remain queued.</summary>
+        OutsideThisHost,
+
+        /// <summary>The path changed or became unsafe, so the debt must not be replayed later.</summary>
+        UnsafePath
     }
 
     /// <summary>One file a publish replaced but could not remove.</summary>

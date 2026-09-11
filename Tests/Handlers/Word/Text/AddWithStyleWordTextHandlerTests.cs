@@ -26,7 +26,7 @@ public class AddWithStyleWordTextHandlerTests : WordHandlerTestBase
     [Theory]
     [InlineData("Simple text")]
     [InlineData("Text with numbers 123")]
-    [InlineData("Unicode: 中�?測試")]
+    [InlineData("Unicode: 中文測試")]
     public void Execute_AddsTextToDocument(string text)
     {
         var doc = CreateEmptyDocument();
