@@ -1,5 +1,5 @@
 # PowerShell script to run JetBrains CleanupCode and/or InspectCode
-# HTML files are formatted, but CSS ensures code blocks won't break layout
+# Hand-authored HTML is formatted; hash-bound Graphify publication files are excluded.
 
 param(
     [switch]$CleanupCode,
@@ -22,8 +22,11 @@ if (-not $CleanupCode -and -not $InspectCode) {
     $InspectCode = $true
 }
 
-# Build exclude parameter
-$excludeParam = $Exclude -join ";"
+# These files are generated as one hash-bound publication. Formatting any of them after
+# graphify/build-public-map.py runs invalidates the provenance recorded in metadata.json.
+$generatedPublicationExcludes = @("docs/architecture-map/**", "docs/assets/**")
+$effectiveExcludes = @($Exclude + $generatedPublicationExcludes | Select-Object -Unique)
+$excludeParam = $effectiveExcludes -join ";"
 
 $exitCode = 0
 

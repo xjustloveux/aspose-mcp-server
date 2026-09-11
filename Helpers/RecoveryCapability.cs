@@ -170,7 +170,7 @@ public sealed class RecoveryCapability
 
             // Whose it is, which is the question that decides this. What the file looks like — its
             // length, its type — is entirely the attacker's choice; its owner is not.
-            if (!BelongsToThisHandle(stream, path)) return null;
+            if (!BelongsToTrustedOwner(stream, path)) return null;
 
             var bytes = new byte[KeyBytes];
             var read = 0;
@@ -192,7 +192,7 @@ public sealed class RecoveryCapability
         }
     }
 
-    /// <summary>Whether the file behind an open handle belongs to this account.</summary>
+    /// <summary>Whether the file behind an open handle belongs to a trusted owner.</summary>
     /// <param name="stream">The open key file.</param>
     /// <param name="path">Its path, for the platforms whose API takes one.</param>
     /// <returns><c>true</c> when it does, and <c>false</c> when it does not or cannot be told.</returns>
@@ -203,7 +203,7 @@ public sealed class RecoveryCapability
     ///     directory: a file nobody but its owner may read, that this process is reading, is this
     ///     process's own.
     /// </remarks>
-    private static bool BelongsToThisHandle(FileStream stream, string path)
+    private static bool BelongsToTrustedOwner(FileStream stream, string path)
     {
         if (!OperatingSystem.IsWindows()) return OwnedByThisUnixUser(path);
 
@@ -213,7 +213,7 @@ public sealed class RecoveryCapability
             using var identity = WindowsIdentity.GetCurrent();
 
             return identity.User is { } self
-                   && owner is SecurityIdentifier sid && sid.Equals(self);
+                   && owner is SecurityIdentifier sid && IsTrustedWindowsIdentity(sid, self);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException
                                        or PrivilegeNotHeldException
@@ -277,7 +277,7 @@ public sealed class RecoveryCapability
 
             // Type and ownership before anything is written to it: this must never narrow, widen
             // or otherwise touch the permissions of a directory belonging to somebody else.
-            if (!IsARealDirectoryOwnedHere(directory)) return false;
+            if (!IsARealDirectoryOwnedByTrustedIdentity(directory)) return false;
 
             // Already right is the ordinary case — every start after the first — and writing the
             // ACL anyway is not free: two hosts establishing the same root at once collided on
@@ -302,10 +302,10 @@ public sealed class RecoveryCapability
         }
     }
 
-    /// <summary>Whether a path is a real directory, not a link, belonging to this account.</summary>
+    /// <summary>Whether a path is a real directory, not a link, with a trusted owner.</summary>
     /// <param name="directory">The directory to judge.</param>
     /// <returns><c>true</c> when it is; <c>false</c> when it is not or cannot be told.</returns>
-    private static bool IsARealDirectoryOwnedHere(string directory)
+    private static bool IsARealDirectoryOwnedByTrustedIdentity(string directory)
     {
         try
         {
@@ -321,7 +321,7 @@ public sealed class RecoveryCapability
             using var identity = WindowsIdentity.GetCurrent();
             return identity.User is { } self
                    && info.GetAccessControl().GetOwner(typeof(SecurityIdentifier))
-                       is SecurityIdentifier owner && owner.Equals(self);
+                       is SecurityIdentifier owner && IsTrustedWindowsIdentity(owner, self);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException
                                        or PrivilegeNotHeldException
@@ -418,7 +418,7 @@ public sealed class RecoveryCapability
     {
         try
         {
-            if (!IsARealDirectoryOwnedHere(directory)) return false;
+            if (!IsARealDirectoryOwnedByTrustedIdentity(directory)) return false;
 
             return OperatingSystem.IsWindows()
                 ? IsAPrivateWindowsDirectory(directory)

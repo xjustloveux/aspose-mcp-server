@@ -82,6 +82,7 @@ _ReSharper*/
 *.[Rr]e[Ss]harper
 *.DotSettings.user
 *.sln.iml
+/report.xml
 
 # Visual Studio Code (allow some shared settings)
 !.vscode/settings.json

@@ -606,6 +606,51 @@ def test_workflow_triggers() -> None:
           "verify-public-map.ps1" in pages)
 
 
+def test_code_quality_preserves_generated_publication() -> None:
+    """R32-G01: code cleanup must not rewrite the hash-bound public artifacts."""
+    print("R32-G01 code quality preserves generated publication")
+
+    pwsh = shutil.which("pwsh")
+    check("PowerShell is available to exercise code-quality.ps1", pwsh is not None)
+    if pwsh is None:
+        return
+
+    with tempfile.TemporaryDirectory() as temporary:
+        root = Path(temporary)
+        capture = root / "jb-arguments.json"
+        driver = root / "driver.ps1"
+        driver.write_text(
+            "$env:GRAPHIFY_JB_CAPTURE = " + json.dumps(str(capture)) + NL
+            + "function global:jb {" + NL
+            + "    $json = ConvertTo-Json -Compress -InputObject @($args)" + NL
+            + "    [System.IO.File]::WriteAllText($env:GRAPHIFY_JB_CAPTURE, $json)" + NL
+            + "    $global:LASTEXITCODE = 0" + NL
+            + "}" + NL
+            + "& " + json.dumps(str(REPO_ROOT / "code-quality.ps1"))
+            + " -CleanupCode -Exclude @('custom/**')" + NL,
+            encoding="utf-8",
+        )
+
+        completed = subprocess.run(
+            [pwsh, "-NoProfile", "-File", str(driver)],
+            cwd=REPO_ROOT,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+        arguments = json.loads(capture.read_text(encoding="utf-8")) \
+            if capture.exists() else []
+        exclude = next((value for value in arguments
+                        if isinstance(value, str) and value.startswith("--exclude=")), "")
+
+        check("the wrapper reaches CleanupCode through the real script", completed.returncode == 0)
+        check("a caller's exclusions are retained", "custom/**" in exclude)
+        check("the generated map is always excluded from cleanup",
+              "docs/architecture-map/**" in exclude)
+        check("the hash-bound vendor assets are always excluded from cleanup",
+              "docs/assets/**" in exclude)
+
+
 def run_gate(map_dir: Path, python_on_path: Path | None = None,
              ci: dict[str, str] | None = None, require_commit: str | None = None) -> int:
     """Runs the publish gate against a fixture directory and returns its exit code.
@@ -2180,6 +2225,7 @@ def main() -> int:
     test_leak_scanner()
     test_leak_scanner_scopes()
     test_workflow_triggers()
+    test_code_quality_preserves_generated_publication()
     test_artifacts_derive_from_each_other()
     test_lossless_relationship_artifact()
     test_deleted_sources_count_as_dirty()
