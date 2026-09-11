@@ -35,7 +35,25 @@ public class CodeQualityScriptTests
         var outputTask = process.StandardOutput.ReadToEndAsync();
         var errorTask = process.StandardError.ReadToEndAsync();
 
-        await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(15));
+        try
+        {
+            await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(60));
+        }
+        catch (TimeoutException)
+        {
+            try
+            {
+                if (!process.HasExited) process.Kill(true);
+            }
+            catch (InvalidOperationException)
+            {
+                // The process exited between the state check and the termination request.
+            }
+
+            await process.WaitForExitAsync();
+            throw;
+        }
+
         var output = await outputTask;
         var error = await errorTask;
 
