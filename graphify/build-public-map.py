@@ -450,6 +450,34 @@ def script_safe_json(value) -> str:
     return text.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
 
 
+# The Graphify template lays <body> out as a flex row holding #graph (flex:1) and #sidebar. The
+# banner inserted as the first child of <body> became a third item in that row, and its sentence
+# claimed the whole width, so #graph shrank to zero and the canvas drew nothing while the sidebar
+# still listed every node. The body is re-laid as a grid whose first row belongs to the banner
+# alone; verify-public-map.ps1 refuses a page without both rules.
+BANNER_ROW_STYLE = "grid-column:1/-1"
+BANNER_LAYOUT_STYLE = (
+    "<style>body{display:grid;grid-template-columns:minmax(0,1fr) 280px;"
+    "grid-template-rows:auto minmax(0,1fr)}#graph,#sidebar{min-width:0;min-height:0}</style>"
+)
+
+
+def place_banner(html: str, banner: str) -> str:
+    """Inserts the provenance banner so that it sits above the graph rather than beside it.
+
+    <param name="html">The generated page.</param>
+    <param name="banner">The banner element, whose style carries BANNER_ROW_STYLE.</param>
+    <returns>The page with the layout rule in its head and the banner opening its body.</returns>
+    <exception cref="SystemExit">Raised when the page has no head or body to place them in.</exception>
+    """
+    html, styled = re.subn(r"</head>", lambda _: BANNER_LAYOUT_STYLE + "</head>", html, count=1)
+    html, placed = re.subn(r"<body[^>]*>", lambda m: m.group(0) + banner, html, count=1)
+    if not styled or not placed:
+        raise SystemExit("Expected a <head> and a <body> to place the banner in; the page has "
+                         "neither or only one, so the graph would not be laid out around it.")
+    return html
+
+
 def harden_page(html: str) -> str:
     """Removes the two ways graph text could escape its context in the published page.
 
@@ -1399,7 +1427,8 @@ def main() -> int:
 
     banner = (
         '<div style="padding:10px 14px;background:#1f2933;color:#e6edf3;'
-        'font:13px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;border-bottom:1px solid #364049">'
+        'font:13px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;border-bottom:1px solid #364049;'
+        f'{BANNER_ROW_STYLE}">'
         f'<strong>Aspose MCP Server architecture map</strong> &middot; source commit '
         f'<code style="color:#9ecbff">{shown_commit}</code> &middot; generated {generated} &middot; '
         f'{scale} &middot; test code excluded &middot; '
@@ -1408,10 +1437,7 @@ def main() -> int:
         'read directly from the source, so treat those as a reading of the code, not a fact about it.'
         '</div>'
     )
-    if "<body" in html:
-        html = re.sub(r"(<body[^>]*>)", r"\1" + banner, html, count=1)
-    else:
-        html = banner + html
+    html = place_banner(html, banner)
 
     # The directory is created here, once every artifact check above has passed, so a
     # refused build leaves nothing behind (R8-G05).

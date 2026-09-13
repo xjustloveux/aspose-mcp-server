@@ -521,6 +521,16 @@ if ((Test-Path $indexPath) -and $null -ne $metadata) {
     }
     else {
         $banner = $bannerMatch.Value
+
+        # The template lays <body> out as a flex row of #graph and #sidebar. A banner placed in
+        # that row took the whole width and left the graph zero pixels wide, so the page listed
+        # every node and drew none of them, and every check above still passed.
+        $layoutRule = '<style>body{display:grid;grid-template-columns:minmax(0,1fr) 280px;' +
+                      'grid-template-rows:auto minmax(0,1fr)}#graph,#sidebar{min-width:0;min-height:0}</style></head>'
+        if ($banner -notmatch [regex]::Escape('grid-column:1/-1') -or
+            -not $indexHtml.Contains($layoutRule)) {
+            Add-Violation "index.html banner shares the graph's row, so the graph is drawn zero pixels wide"
+        }
     }
 }
 

@@ -28,8 +28,11 @@
     <VersionExplicitlySet Condition="'$(Version)' != ''">true</VersionExplicitlySet>
     <!-- Generating the documentation file turns CS1591 and CS1573 on, which is what makes
          an undocumented public member or an undocumented parameter fail the build rather
-         than pass unnoticed (R3-DOC10). The file ships beside the assembly. -->
+         than pass unnoticed (R3-DOC10). The file stays in bin/ for the Tests project and IDEs;
+         nothing consumes the server as a library, so it is kept out of the publish output
+         and therefore out of the release archives, .mcpb bundles and the Docker image. -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PublishDocumentationFile>false</PublishDocumentationFile>
   </PropertyGroup>
   
   <!-- Embed the project icon into the Windows PE executable.
@@ -109,9 +112,13 @@
   <!-- docs/ is the GitHub Pages website source, never a build input. The Web SDK's default
        **/*.json Content glob otherwise picks up docs/architecture-map/metadata.json with
        CopyToOutputDirectory/CopyToPublishDirectory=PreserveNewest, shipping the generated
-       architecture map into bin/, the publish output and the Docker image. -->
+       architecture map into bin/, the publish output and the Docker image.
+       graphify/ holds the map's build and gate tooling and is caught by the same glob:
+       graphify/published-docs.json was copied into publish/<platform>/graphify/, which the
+       publish scripts' top-level *.json cleanup never reaches, so it shipped in every release. -->
   <ItemGroup>
     <Content Remove="docs\**" />
+    <Content Remove="graphify\**" />
   </ItemGroup>
 
   <!-- Allow test project to access internal types -->

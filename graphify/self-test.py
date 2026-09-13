@@ -993,6 +993,17 @@ def test_gate_fails_closed() -> None:
         check("a banner that disagrees with the metadata fails the gate", run_gate(good) != 0)
         index_path.write_bytes(page)
 
+        # The banner once sat in the body's flex row beside the graph and left it zero pixels
+        # wide. Republished with a matching digest, so only the layout check can refuse it.
+        original_text = page.decode("utf-8")
+        builder_layout = load("build_public_map_layout", "build-public-map.py")
+        unlaid = original_text.replace(builder_layout.BANNER_LAYOUT_STYLE, "", 1)
+        check("the layout fixture actually changed the page", unlaid != original_text)
+        republish(good, unlaid, original)
+        check("a banner that shares the graph's row fails the gate", run_gate(good) != 0)
+        republish(good, original_text, original)
+        check("the map passes again once the banner has its own row", run_gate(good) == 0)
+
         # R7-G03: the metadata described graphify-out/graph.html, which is the page before the
         # title change, the CDN rewrite, the hardening and the banner. Nothing described the file
         # a reader downloads, so a byte changed afterwards contradicted nothing.
@@ -1109,6 +1120,19 @@ def test_page_hardening() -> None:
             'const hyperedges = [{"id": "h1", "label": ' + json.dumps(label) + '}];\n'
             '${c.label} ${c.color} ${c.count}\n')
     hardened = builder.harden_page(page)
+
+    template = ('<html><head><style>body { display: flex; }</style></head>'
+                '<body><div id="graph"></div><div id="sidebar"></div></body></html>')
+    banner = f'<div style="padding:10px 14px;{builder.BANNER_ROW_STYLE}">b</div>'
+    placed = builder.place_banner(template, banner)
+    check("the layout rule follows the template's own style, so it wins",
+          placed.index(builder.BANNER_LAYOUT_STYLE) > placed.index("display: flex"))
+    check("the banner opens the body, above the graph",
+          placed.index("<body>" + banner) < placed.index('id="graph"'))
+    refuses(lambda: builder.place_banner(template.replace("</head>", ""), banner),
+            "a page without a head to carry the layout rule is refused")
+    refuses(lambda: builder.place_banner(template.replace("<body>", ""), banner),
+            "a page without a body to carry the banner is refused")
 
     check("the script element can no longer be closed early", "</script>" not in hardened)
     check("the legend literal is hardened too (R20-G02)",
