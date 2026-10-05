@@ -45,9 +45,9 @@ macOS 的執行權限及隔離標記處理請參閱專案
 | `aspose-mcp-server-codex-plugin.zip` | 單一外掛封存，供「上傳外掛封存檔」入口選取 |
 
 單一外掛 ZIP 的根目錄包含 `plugin.json`、`mcp.json`、`.codex-plugin/`、
-`README.md` 與 MIT `LICENSE`，不包含市集清單。上傳入口的本機 stdio MCP
-相容性尚未實測；官方提交入口的 Skills only 流程會排除 MCP 設定，不能用來
-安裝此 MCP 外掛。若介面拒絕本機 MCP 套件，請使用下方已驗證的自訂市集方式。
+`README.md` 與 MIT `LICENSE`，不包含市集清單。已驗證個人外掛的上傳入口可匯入
+此 stdio MCP 套件，匯入後需在桌面應用程式使用。公開目錄提交的 Skills only
+流程會排除 MCP 設定，與個人外掛上傳不同。
 
 使用專案原始碼時，在專案根目錄執行以下指令。使用發行的
 `aspose-mcp-server-codex-marketplace.zip` 時，先解壓縮，再進入包含
@@ -74,14 +74,16 @@ codex plugin list --marketplace aspose-local --available --json
 
 ## 3. 授權、工具類別與文件
 
-在作業系統使用者環境設定 `ASPOSE_LICENSE_PATH` 為自己的 Aspose 授權檔絕對路徑，
-再重開 Codex。也可以將授權檔放在執行檔旁，沿用伺服器的自動搜尋功能。
+建議將自己的 Aspose 授權檔放在執行檔旁，沿用伺服器的自動搜尋功能。
+`ASPOSE_LICENSE_PATH` 也可指定授權路徑，但必須由客戶端傳入 MCP 子程序；
+只設定作業系統環境變數不保證客戶端會轉送。
 沒有授權時使用評估模式，輸出可能有浮水印及其他 Aspose 評估限制。
 專案原始碼的 MIT 授權與 Aspose 元件授權分別適用；市集 ZIP 不包含 Aspose 授權檔。
 
-預設啟用所有文件類別。可透過 `ASPOSE_TOOLS=word,excel,pdf` 等使用者環境設定
-選擇所需類別；外掛只傳入 `--stdio`，並透過 Codex 的 `env_vars` 明確轉送
-`ASPOSE_LICENSE_PATH` 與 `ASPOSE_TOOLS`。這些變數必須存在於啟動 Codex 的環境中。
+預設啟用所有文件類別。需要自訂時，可在自己的本機 MCP 設定中使用
+`--word --excel --pdf` 參數，或明確設定 `env.ASPOSE_TOOLS`。
+可攜式 `mcp.json` 不接受 Codex 專用的 `env_vars`；加入該欄位會使 MCP 宣告失效，
+導致上傳回報套件沒有有效 skill、MCP server 或 app。使用者授權及私人路徑不要加入發行封裝。
 Session 與 Extension 沿用伺服器預設設定。
 
 傳給工具的文件路徑必須是 MCP 執行環境可存取的絕對路徑。遠端主機、WSL 與本機
@@ -100,6 +102,7 @@ python deploy/pack-codex.py --format plugin --version 0.1.0 --output publish/asp
 輸出路徑必須尚不存在。打包只讀取明確列出的市集設定、manifest、MCP 設定、
 本說明與 MIT LICENSE；不會修改原始碼中的版本或收集工作目錄的其他檔案。
 CI 使用同次發行的版本號產生 ZIP，與平台執行檔一起發布。
+封裝器會拒絕不屬於 Agent Plugins stdio schema 的 server 欄位，例如 `env_vars`。
 
 修改外掛來源後，刷新市集並重新安裝／重新啟用外掛，再開啟新聊天確認工具載入。
 Codex 使用安裝快取中的外掛副本，不直接執行這個來源目錄的設定。

@@ -55,6 +55,28 @@ def read_payloads(root: Path, archive_format: str) -> dict[str, bytes]:
     return payloads
 
 
+def validate_mcp(payload: bytes) -> None:
+    """Check the local server identity and the portable stdio field boundary.
+
+    Args:
+        payload: UTF-8 MCP configuration read from the distribution sources.
+
+    Returns:
+        None when the server uses the supported identity and field names.
+
+    Raises:
+        ValueError: JSON is invalid, the server identity differs, or a server
+            field is outside the Agent Plugins 1.0 stdio schema.
+    """
+    mcp = json.loads(payload)
+    server = mcp.get("mcpServers", {}).get("aspose", {})
+    if server.get("type") != "stdio" or server.get("command") != "AsposeMcpServer":
+        raise ValueError("MCP configuration must use the local AsposeMcpServer over stdio")
+    unsupported = set(server) - {"type", "command", "args", "env", "cwd"}
+    if unsupported:
+        raise ValueError("Unsupported portable stdio MCP fields: " + ", ".join(sorted(unsupported)))
+
+
 def package(repo_root: Path, output: Path, version: str, archive_format: str = "marketplace") -> None:
     """Validate inputs and write a new ZIP without overwriting files.
 
@@ -99,10 +121,7 @@ def package(repo_root: Path, output: Path, version: str, archive_format: str = "
             "source": "local", "path": f"./{PLUGIN_ROOT}",
         } or entries[0].get("name") != manifest["name"]:
             raise ValueError("Marketplace must point to the packaged local plugin")
-    mcp = json.loads(payloads[f"{PLUGIN_ROOT}/mcp.json"])
-    server = mcp.get("mcpServers", {}).get("aspose", {})
-    if server.get("type") != "stdio" or server.get("command") != "AsposeMcpServer":
-        raise ValueError("MCP configuration must use the local AsposeMcpServer over stdio")
+    validate_mcp(payloads[f"{PLUGIN_ROOT}/mcp.json"])
 
     output.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(output, "x", compression=zipfile.ZIP_DEFLATED) as archive:

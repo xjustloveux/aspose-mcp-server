@@ -118,6 +118,27 @@ class CodexPackagingTests(unittest.TestCase):
         self.assertNotEqual(0, result.returncode)
         self.assertEqual(b"existing plugin archive", self.output.read_bytes())
 
+    def test_codex_only_server_fields_are_rejected_before_packaging(self):
+        """Prevent native Codex options from invalidating a portable MCP server."""
+        config_path = self.plugin / "mcp.json"
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+        config["mcpServers"]["aspose"]["env_vars"] = ["ASPOSE_LICENSE_PATH"]
+        config_path.write_text(json.dumps(config), encoding="utf-8")
+        for archive_format in ("marketplace", "plugin"):
+            with self.subTest(archive_format=archive_format):
+                result = self.pack(archive_format=archive_format)
+                self.assertNotEqual(0, result.returncode)
+                self.assertIn("env_vars", result.stderr)
+                self.assertFalse(self.output.exists())
+
+    def test_repository_mcp_uses_only_portable_stdio_fields(self):
+        """Check the shipped server against the closed Agent Plugins stdio field set."""
+        config_path = SCRIPT.parent.parent / "plugins/aspose-mcp-server/mcp.json"
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+        server = config["mcpServers"]["aspose"]
+        self.assertEqual("stdio", server["type"])
+        self.assertEqual(set(), set(server) - {"type", "command", "args", "env", "cwd"})
+
     def test_existing_output_is_preserved(self):
         """Verify failure leaves an existing archive byte-for-byte intact."""
         self.output.write_bytes(b"existing archive")

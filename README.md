@@ -133,8 +133,8 @@ Claude Desktop 使用者可將 Aspose MCP Server 以原生擴充功能安裝，�
 ## Codex 自訂外掛市集
 
 Codex 使用者可透過本專案的自訂市集安裝 **Aspose MCP Server** 外掛。
-先下載對應平台執行檔並將其資料夾加入 `PATH`；有 Aspose 授權時設定
-`ASPOSE_LICENSE_PATH`，然後完整重啟 Codex。
+先下載對應平台執行檔並將其資料夾加入 `PATH`；有 Aspose 授權時可將授權檔放在
+執行檔旁，然後完整重啟 Codex。
 
 在專案根目錄（或發行的 `aspose-mcp-server-codex-marketplace.zip` 解壓縮根目錄）執行：
 
@@ -145,7 +145,7 @@ codex plugin marketplace add .
 在 Codex 外掛目錄選擇 **Aspose Local Document Tools** 市集，安裝外掛後開啟新聊天。
 
 發行另提供 `aspose-mcp-server-codex-plugin.zip` 單一外掛封存，供「上傳外掛封存檔」
-入口使用；該入口對本機 stdio MCP 的支援尚未實測，若拒絕套件請採用上述市集方式。
+入口使用；已驗證可匯入並辨識本機 stdio MCP，匯入後需在桌面應用程式使用。
 市集套件包含本機 stdio MCP 設定，執行檔與授權由使用者環境提供。
 詳細平台配置、工具選擇與更新方式請參閱 [Codex 安裝說明](plugins/aspose-mcp-server/README.md)。
 

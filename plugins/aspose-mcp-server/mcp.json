@@ -5,7 +5,6 @@
       "type": "stdio",
       "command": "AsposeMcpServer",
       "args": ["--stdio"],
-      "env_vars": ["ASPOSE_LICENSE_PATH", "ASPOSE_TOOLS"],
       "env": {
         "ASPOSE_TRANSPORT": "stdio"
       }
