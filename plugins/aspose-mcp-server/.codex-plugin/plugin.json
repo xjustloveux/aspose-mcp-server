@@ -1,0 +1,22 @@
+{
+  "name": "aspose-mcp-server",
+  "version": "0.1.0",
+  "description": "Process local office documents with Aspose MCP Server over stdio.",
+  "author": {
+    "name": "JaJa",
+    "url": "https://github.com/xjustloveux"
+  },
+  "homepage": "https://xjustloveux.github.io/aspose-mcp-server",
+  "repository": "https://github.com/xjustloveux/aspose-mcp-server",
+  "license": "MIT",
+  "mcpServers": "./mcp.json",
+  "interface": {
+    "displayName": "Aspose MCP Server",
+    "shortDescription": "Read, edit, and convert local office documents.",
+    "longDescription": "Uses a locally installed AsposeMcpServer executable over stdio. Download the executable for your platform and add its directory to PATH before use. Configure ASPOSE_LICENSE_PATH for licensed use; without a license, Aspose evaluation restrictions apply.",
+    "developerName": "JaJa",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "websiteURL": "https://xjustloveux.github.io/aspose-mcp-server"
+  }
+}

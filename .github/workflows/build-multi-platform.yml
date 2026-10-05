@@ -14,6 +14,8 @@ on:
       - '*.csproj'
       - '*.sln'
       - 'deploy/**'
+      - 'plugins/**'
+      - '.agents/plugins/marketplace.json'
       - '.github/workflows/build-multi-platform.yml'
   pull_request:
     branches: [ main, master ]
@@ -28,10 +30,25 @@ on:
       - '*.csproj'
       - '*.sln'
       - 'deploy/**'
+      - 'plugins/**'
+      - '.agents/plugins/marketplace.json'
       - '.github/workflows/build-multi-platform.yml'
   workflow_dispatch:
 
 jobs:
+  validate-codex:
+    name: Validate Codex marketplace
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+    - name: Validate packaging
+      shell: bash
+      run: |
+        python3 -m unittest discover -s deploy -p test_pack_codex.py -v
+        python3 deploy/pack-codex.py --version 0.1.0 --output "$RUNNER_TEMP/aspose-codex-validation.zip"
+        python3 deploy/pack-codex.py --format plugin --version 0.1.0 --output "$RUNNER_TEMP/aspose-codex-plugin-validation.zip"
+
   prepare:
     name: Calculate Next Version
     runs-on: ubuntu-latest
@@ -186,7 +203,7 @@ jobs:
 
   create-release:
     name: Create Release
-    needs: [prepare, build]
+    needs: [prepare, build, validate-codex]
     runs-on: ubuntu-latest
     # Security: Only create releases for pushes to main/master branches, not for PRs
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
@@ -240,6 +257,15 @@ jobs:
         cd ..
         ls -lh ./aspose-mcp-server-*
     
+    - name: Test and pack Codex marketplace
+      shell: bash
+      env:
+        RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+      run: |
+        python3 -m unittest discover -s deploy -p test_pack_codex.py -v
+        python3 deploy/pack-codex.py --version "$RELEASE_VERSION" --output aspose-mcp-server-codex-marketplace.zip
+        python3 deploy/pack-codex.py --format plugin --version "$RELEASE_VERSION" --output aspose-mcp-server-codex-plugin.zip
+
     - name: Generate icon.png from SVG
       shell: bash
       run: |
@@ -305,6 +331,15 @@ jobs:
         tar xzf aspose-mcp-server-linux-x64.tar.gz
         ./AsposeMcpServer --word
         ```
+
+        ### Codex 自訂外掛市集
+
+        下載並解壓縮 `aspose-mcp-server-codex-marketplace.zip`，在解壓縮根目錄執行
+        `codex plugin marketplace add .`，再從「Aspose Local Document Tools」市集安裝外掛。
+        另下載對應平台執行檔並將其資料夾加入 `PATH`；有授權時設定 `ASPOSE_LICENSE_PATH`，
+        完整重啟 Codex 後開啟新聊天。詳細設定見套件內的 `plugins/aspose-mcp-server/README.md`。
+        單一外掛封存另提供 `aspose-mcp-server-codex-plugin.zip`，根目錄包含外掛 manifest。
+        「上傳外掛封存檔」入口的本機 stdio MCP 相容性尚未實測；若拒絕套件請使用市集方式。
 
         ### Claude Desktop 一鍵安裝（.mcpb）
 

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "aspose": {
+      "type": "stdio",
+      "command": "AsposeMcpServer",
+      "args": ["--stdio"],
+      "env_vars": ["ASPOSE_LICENSE_PATH", "ASPOSE_TOOLS"],
+      "env": {
+        "ASPOSE_TRANSPORT": "stdio"
+      }
+    }
+  }
+}
